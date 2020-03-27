@@ -175,13 +175,28 @@ export class InvestJob extends React.Component {
     // The n_workers value always needs to be inserted into args
     let args_dict = JSON.parse(argsValuesFromSpec(this.state.args));
     args_dict['n_workers'] = this.props.investSettings.nWorkers;
+    
+    // TODO: is there much to be gained by outsourcing this to datastack.py via flask?
+    // It would insert the invest version string and enable an option to pass
+    // relative_paths=True. This is what that looks like:
+    // const payload = {
+    //   parameterSetPath: datastackPath, 
+    //   moduleName: this.state.modelSpec.module,
+    //   relativePaths: false,
+    //   args: JSON.stringify(args_dict)
+    // }
+    // await writeParametersToFile(payload);
+
+    // But for now I'm switching to this simple nodejs approach.
+    // It's nice that it can be tested without any mocking.
+    // invest_version key is required later on datastack.py extracts
+    // values from this file.
     const payload = {
-      parameterSetPath: datastackPath, 
-      moduleName: this.state.modelSpec.module,
-      relativePaths: false,
-      args: JSON.stringify(args_dict)
+      model_name: this.state.modelSpec.module,
+      args: args_dict,
+      invest_version: "somethingsomething"
     }
-    await writeParametersToFile(payload);
+    fs.writeFileSync(datastackPath, JSON.stringify(payload, null, 2))
   }
 
   async investExecute() {

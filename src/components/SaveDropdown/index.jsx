@@ -1,5 +1,5 @@
 import React from 'react';
-import Electron from 'electron'
+import { remote } from 'electron'
 import PropTypes from 'prop-types';
 
 import Row from 'react-bootstrap/Row';
@@ -20,11 +20,14 @@ export class SaveParametersButton extends React.Component {
     this.browseSaveFile = this.browseSaveFile.bind(this);
   }
 
-  browseSaveFile(event) {
-    Electron.remote.dialog.showSaveDialog(
-      { defaultPath: 'invest_args.json' }, (filepath) => {
-      this.props.argsToJsonFile(filepath);
-    });
+  async browseSaveFile(event) {
+    const data = await remote.dialog.showSaveDialog(
+      { defaultPath: 'invest_args.json' })
+    if (data.filePath) {   
+      this.props.argsToJsonFile(data.filePath);
+    } else {
+      console.log('save parameters was cancelled')
+    }
   }
 
   render() {
@@ -56,11 +59,14 @@ export class SavePythonButton extends React.Component {
     this.browseFile = this.browseFile.bind(this);
   }
 
-  browseFile(event) {
-    Electron.remote.dialog.showSaveDialog(
-      { defaultPath: 'execute_invest.py' }, (filepath) => {
-      this.props.savePythonScript(filepath)
-    });
+  async browseFile(event) {
+    const data = await remote.dialog.showSaveDialog(
+      { defaultPath: 'execute_invest.py' })
+    if (data.filePath) {
+      this.props.savePythonScript(data.filePath)
+    } else {
+      console.log('save to python was cancelled')
+    }
   }
 
   render() {

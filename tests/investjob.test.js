@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import events from 'events';
 import React from 'react';
 import { fireEvent, render,
@@ -149,7 +151,7 @@ test('LoadParameters: Dialog callback does nothing when canceled', async () => {
 })
 
 
-test('Save Parameters/Python enable after model select ', async () => {
+test('SaveParameters/Python enable after model select ', async () => {
   getSpec.mockResolvedValue(SAMPLE_SPEC);
   fetchValidation.mockResolvedValue([]);
   const { getByText, debug } = render(
@@ -176,6 +178,70 @@ test('Save Parameters/Python enable after model select ', async () => {
   });
 })
 
+test('SaveParametersButton produces a datastack.py compliant json ', async () => {
+  const tmpdir = fs.mkdtempSync('tests/data/');
+  const datastackPath = path.join(tmpdir, 'foo.json')
+  const mockDialogData = {
+    filePath: datastackPath
+  }
+  remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData)
+  fetchValidation.mockResolvedValue([]);
+
+  const { getByText, findByText, debug } = render(
+    <InvestJob 
+      investList={{}}
+      investSettings={{nWorkers: '-1'}}
+      recentSessions={MOCK_RECENT_SESSIONS_VALUE}
+      updateRecentSessions={() => {}}
+      saveSettings={() => {}}
+    />);
+
+  fireEvent.click(getByText('carbon_setup'));
+  fireEvent.click(getByText('Save')); // click the dropdown to mount the next button
+  const saveButton = await findByText('Save parameters to JSON')
+  fireEvent.click(saveButton);
+
+  await wait(() => {
+    const datastack = JSON.parse(fs.readFileSync(datastackPath))
+    expect(Object.keys(datastack).includes(['args', 'model_name', 'invest_version']))
+  })
+  fs.readdirSync(tmpdir).forEach(file => {
+    fs.unlinkSync(path.join(tmpdir, file))
+    })
+  fs.rmdirSync(tmpdir)
+})
+
+test.only('SavePythonButton produces a python script ', async () => {
+  // mock the server call, instead just returning
+  // the payload. At least we can assert the payload is what 
+  // the flask endpoint needs to build the python script.
+  saveToPython.mockImplementation((payload) => {
+    return payload
+  })
+  const mockDialogData = { filePath: 'foo.py' }
+  remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData)
+  fetchValidation.mockResolvedValue([]);
+
+  const { getByText, findByText, debug } = render(
+    <InvestJob 
+      investList={{}}
+      investSettings={{nWorkers: '-1'}}
+      recentSessions={MOCK_RECENT_SESSIONS_VALUE}
+      updateRecentSessions={() => {}}
+      saveSettings={() => {}}
+    />);
+
+  fireEvent.click(getByText('carbon_setup'));
+  fireEvent.click(getByText('Save')); // click the dropdown to mount the next button
+  const saveButton = await findByText('Save to Python script')
+  fireEvent.click(saveButton);
+
+  await wait(() => {
+    expect(Object.keys(saveToPython.mock.results[0].value).includes(
+      ['filepath', 'modelname', 'pyname', 'args']))
+    expect(saveToPython).toHaveBeenCalledTimes(1)
+  })
+})
 // test('Execute launches a python subprocess', async () => {
 //   /*
 //   This functionality might be better tested in an end-end test,

@@ -123,7 +123,10 @@ def write_parameter_set_file():
     return ('parameter set saved')
 
 
-# Borrowed this function from natcap.invest.model
+# Borrowed this function from natcap.invest.model because I assume
+# that module won't persist if we eventually deprecate the Qt UI.
+# TODO: we could consider refactoring this to javascript, though
+# there is one call here to `natcap.invest.cli.__version__`
 @app.route('/save_to_python', methods=['POST'])
 def save_to_python():
     payload = request.get_json()
