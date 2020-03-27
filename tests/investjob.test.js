@@ -211,7 +211,7 @@ test('SaveParametersButton produces a datastack.py compliant json ', async () =>
   fs.rmdirSync(tmpdir)
 })
 
-test.only('SavePythonButton produces a python script ', async () => {
+test('SavePythonButton produces a python script ', async () => {
   // mock the server call, instead just returning
   // the payload. At least we can assert the payload is what 
   // the flask endpoint needs to build the python script.
@@ -241,6 +241,72 @@ test.only('SavePythonButton produces a python script ', async () => {
       ['filepath', 'modelname', 'pyname', 'args']))
     expect(saveToPython).toHaveBeenCalledTimes(1)
   })
+})
+
+test('SaveParametersButton: Dialog callback does nothing when canceled', async () => {
+  // this resembles the callback data if the dialog is canceled instead of 
+  // a save file selected.
+  const mockDialogData = {
+    filePath: ''
+  }
+  remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData)
+  getSpec.mockResolvedValue(SAMPLE_SPEC)
+  fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE)
+  // Spy on this method so we can assert it was never called.
+  // Don't forget to restore! Otherwise the beforeEach will 'resetAllMocks'
+  // will silently turn this spy into a function that returns nothing.
+  const spy = jest.spyOn(InvestJob.prototype, 'argsToJsonFile')
+
+  const { getByText, findByText, debug } = render(
+    <InvestJob 
+      investList={{Carbon: {internal_name: 'carbon'}}}
+      investSettings={null}
+      recentSessions={[]}
+      updateRecentSessions={() => {}}
+      saveSettings={() => {}}
+    />);
+  
+  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText('Save')); // click the dropdown to mount the next button
+  const saveButton = await findByText('Save parameters to JSON')
+  fireEvent.click(saveButton);
+
+  // These are the calls that would have triggered if a file was selected
+  expect(spy).toHaveBeenCalledTimes(0)
+  spy.mockRestore() // restores to unmocked implementation
+})
+
+test('SavePythonButton: Dialog callback does nothing when canceled', async () => {
+  // this resembles the callback data if the dialog is canceled instead of 
+  // a save file selected.
+  const mockDialogData = {
+    filePath: ''
+  }
+  remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData)
+  getSpec.mockResolvedValue(SAMPLE_SPEC)
+  fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE)
+  // Spy on this method so we can assert it was never called.
+  // Don't forget to restore! Otherwise the beforeEach will 'resetAllMocks'
+  // will silently turn this spy into a function that returns nothing.
+  const spy = jest.spyOn(InvestJob.prototype, 'savePythonScript')
+
+  const { getByText, findByText, debug } = render(
+    <InvestJob 
+      investList={{Carbon: {internal_name: 'carbon'}}}
+      investSettings={null}
+      recentSessions={[]}
+      updateRecentSessions={() => {}}
+      saveSettings={() => {}}
+    />);
+  
+  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText('Save')); // click the dropdown to mount the next button
+  const saveButton = await findByText('Save to Python script')
+  fireEvent.click(saveButton);
+
+  // These are the calls that would have triggered if a file was selected
+  expect(spy).toHaveBeenCalledTimes(0)
+  spy.mockRestore() // restores to unmocked implementation
 })
 // test('Execute launches a python subprocess', async () => {
 //   /*
