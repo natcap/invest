@@ -2,10 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import events from 'events';
 import React from 'react';
+import { remote } from 'electron';
 import { fireEvent, render,
          wait, waitForElement } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { remote } from 'electron';
 
 import { InvestJob } from '../src/InvestJob';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
@@ -31,7 +31,8 @@ beforeEach(() => {
   jest.resetAllMocks(); 
   // Careful with reset because "resetting a spy results
   // in a function with no return value". I had been using spies to observe
-  // function calls, but not to mock return values. For now I'm removing spies.
+  // function calls, but not to mock return values. Spies used for that 
+  // purpose should be 'restored' not 'reset'. Do that inside the test as-needed.
 })
 
 test('Clicking an invest button renders SetupTab', async () => {

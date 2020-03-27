@@ -1,5 +1,5 @@
 import React from 'react';
-import Electron from 'electron';
+import { remote } from 'electron';
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
@@ -90,18 +90,18 @@ class ArgsForm extends React.Component {
     this.props.updateArg(name, value);
   }
 
-  selectFile(event) {
+  async selectFile(event) {
     /** Handle clicks on browse-button inputs */
-    const dialog = Electron.remote.dialog;
     const argtype = event.target.value;
     const argname = event.target.name;
     const prop = (argtype === 'directory') ? 'openDirectory' : 'openFile'
     // TODO: could add more filters based on argType (e.g. only show .csv)
-    dialog.showOpenDialog({
-      properties: [prop]
-    }).then((data) => {
-      this.props.updateArg(argname, data.filePaths[0]); // 0 because we only allow 1 selection
-    })
+    const data = await remote.dialog.showOpenDialog({ properties: [prop] })
+    if (data.filePaths.length) {
+      this.props.updateArg(argname, data.filePaths[0]); // dialog defaults allow only 1 selection
+    } else {
+      console.log('browse dialog was cancelled')
+    }
   }
 
   async onDragDrop(event) {

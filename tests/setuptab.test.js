@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import React from 'react';
+import { remote } from 'electron';
 import { fireEvent, render,
          wait, waitForElement } from '@testing-library/react'
 import '@testing-library/jest-dom'
@@ -22,6 +23,10 @@ jest.mock('../src/server_requests');
 //   boolean: "radio",
 //   option_string: "select"
 // }
+
+beforeEach(() => {
+  jest.resetAllMocks()
+})
 
 function renderSetupFromSpec(spec) {
   getSpec.mockResolvedValue(spec);
@@ -57,6 +62,8 @@ test('SetupTab: expect an input form for a directory', async () => {
 })
 
 test('SetupTab: expect an input form for a csv', async () => {
+  /** Also testing the browse button functionality */
+
   const spec = { args: { arg: { name: 'foo', type: 'csv' } } }
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
@@ -65,6 +72,7 @@ test('SetupTab: expect an input form for a csv', async () => {
   const input = await waitForElement(() => {
     return getByLabelText(spec.args.arg.name)
   })
+  // Typing in a value
   fireEvent.change(input, { target: { value: 'foo' } })
   await wait(() => {
     expect(input).toHaveValue('foo')
@@ -73,6 +81,28 @@ test('SetupTab: expect an input form for a csv', async () => {
     expect(getByText('Browse'))
     expect(getByText('invalid because', { exact: false }))
   })
+
+  // Browsing for a file
+  const filepath = 'grilled_cheese.csv'
+  let mockDialogData = { filePaths: [filepath] }
+  remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
+  fireEvent.click(getByText('Browse'))
+  await wait(() => {
+    expect(input).toHaveValue(filepath)
+    expect(input.classList.contains('is-invalid')).toBeTruthy();
+    expect(getByText('invalid because', { exact: false }))
+  })
+
+  // Now browse again, but this time cancel it and expect the previous value
+  mockDialogData = { filePaths: [] } // empty array is a mocked 'Cancel'
+  remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
+  fireEvent.click(getByText('Browse'))
+  await wait(() => {
+    expect(input).toHaveValue(filepath)
+    expect(input.classList.contains('is-invalid')).toBeTruthy();
+    expect(getByText('invalid because', { exact: false }))
+  })
+
 })
 
 test('SetupTab: expect an input form for a vector', async () => {
@@ -166,6 +196,7 @@ test('SetupTab: expect an input form for an option_string', async () => {
     name: 'foo', 
     type: 'option_string', 
     validation_options: { options: ['a', 'b'] } } } }
+  fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
   const input = await waitForElement(() => {
