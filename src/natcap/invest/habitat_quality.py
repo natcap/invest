@@ -1084,9 +1084,6 @@ def validate(args, limit_to=None):
     if ("threats_table_path" not in invalid_keys and 
             "sensitivity_table_path" not in invalid_keys and
             "threat_raster_folder" not in invalid_keys):
-        print("Checking Sensitivity and Threat rasters for validation")
-        # check that the threat names in the threats table match with the threats
-        # columns in the sensitivity table. 
         
         # Get CSVs as dictionaries and ensure the key is a string for threats.
         threat_dict = {
@@ -1095,15 +1092,15 @@ def validate(args, limit_to=None):
         sensitivity_dict = utils.build_lookup_from_csv(
             args['sensitivity_table_path'], 'LULC', to_lower=False)
 
+        # check that the threat names in the threats table match with the threats
+        # columns in the sensitivity table. 
         sens_header_list = list(sensitivity_dict.values())[0]
         missing_sens_header_list = []
         for threat in threat_dict:
             if 'L_' + threat not in sens_header_list:
                 missing_sens_header_list.append(threat)
         
-        print("missing_sens_header_list : ", missing_sens_header_list)
         if missing_sens_header_list:
-            print("if list")
             validation_warnings.append((
                 ['sensitivity_table_path'],
                 (f'Threats "{missing_sens_header_list}" does not match any'
@@ -1112,33 +1109,29 @@ def validate(args, limit_to=None):
                 
             invalid_keys.add('sensitivity_table_path')
    
-        # Validate threat raster paths and nodata values
-        print("validate threat raster paths and nodata")
+        # Validate threat raster paths and their nodata values
         bad_threat_paths = []
         bad_threat_nodatas = []
         for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
                                     ('_f', 'lulc_fut_path'),
                                     ('_b', 'lulc_bas_path')):
             if lulc_args in args:
-                print("lulc_args: ", lulc_args)
                 # for each threat given in the CSV file try opening the associated
                 # raster which should be found in threat_raster_folder
                 for threat in threat_dict:
-                    # it's okay to have no threat raster for baseline scenario
                     threat_path = _resolve_ambiguous_raster_path(
                         os.path.join(args['threat_raster_folder'], threat + lulc_key),
                             raise_error=False)
-                    print("threat_path : ", threat_path)
+                    # it's okay to have no threat raster for baseline scenario
                     if lulc_key != '_b' and threat_path is None:
                         bad_threat_paths.append(threat)
                         continue
-                    # Check NODATA value of the threat raster
+                    # Check NODATA value of the valid threat raster
                     threat_raster_info = pygeoprocessing.get_raster_info(threat_path)
                     if threat_raster_info['nodata'][0] is None:
                         bad_threat_nodatas.append(threat)
-        print("bad_threat_paths: ", bad_threat_paths)            
+        
         if bad_threat_paths:
-            print("if bad threat paths")
             validation_warnings.append((
                 ['threat_raster_folder'],
                 (f'A threat raster for threats: {bad_threat_paths}'
@@ -1155,5 +1148,5 @@ def validate(args, limit_to=None):
                   ' the NODATA value for all threat rasters.')))
             if not bad_threat_paths:
                 invalid_keys.add('threat_raster_folder')
-    print("returnt validation_warnings")
+    
     return validation_warnings
