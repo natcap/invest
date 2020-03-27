@@ -286,7 +286,7 @@ def execute(args):
                 
     # get the half saturation constant
     try:
-        half_saturation = float(args['half_saturation_constant'])
+        half_saturation_constant = float(args['half_saturation_constant'])
     except ValueError:
         raise ValueError('Half-saturation constant is not a numeric number.'
                          'It is: %s' % args['half_saturation_constant'])
@@ -1082,8 +1082,9 @@ def validate(args, limit_to=None):
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     
     if ("threats_table_path" not in invalid_keys and 
-            "sensitivity_table_path" not in invalid_keys
-            and "threat_raster_folder" not in invalid_keys):
+            "sensitivity_table_path" not in invalid_keys and
+            "threat_raster_folder" not in invalid_keys):
+        print("Checking Sensitivity and Threat rasters for validation")
         # check that the threat names in the threats table match with the threats
         # columns in the sensitivity table. 
         
@@ -1100,42 +1101,50 @@ def validate(args, limit_to=None):
             if 'L_' + threat not in sens_header_list:
                 missing_sens_header_list.append(threat)
         
+        print("missing_sens_header_list : ", missing_sens_header_list)
         if missing_sens_header_list:
+            print("if list")
             validation_warnings.append((
                 ['sensitivity_table_path'],
-                ('Threats "%s" does not match any column in the sensitivity '
-                 'table. Sensitivity columns: %s' % 
-                 (missing_sens_header_list, sens_header_list))))
+                (f'Threats "{missing_sens_header_list}" does not match any'
+                  ' column in the sensitivity table. Sensitivity columns:'
+                 f' {sens_header_list}')))
                 
             invalid_keys.add('sensitivity_table_path')
    
+        # Validate threat raster paths and nodata values
+        print("validate threat raster paths and nodata")
         bad_threat_paths = []
         bad_threat_nodatas = []
         for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
                                     ('_f', 'lulc_fut_path'),
                                     ('_b', 'lulc_bas_path')):
             if lulc_args in args:
+                print("lulc_args: ", lulc_args)
                 # for each threat given in the CSV file try opening the associated
                 # raster which should be found in threat_raster_folder
                 for threat in threat_dict:
                     # it's okay to have no threat raster for baseline scenario
                     threat_path = _resolve_ambiguous_raster_path(
                         os.path.join(args['threat_raster_folder'], threat + lulc_key),
-                            raise_error=False))
+                            raise_error=False)
+                    print("threat_path : ", threat_path)
                     if lulc_key != '_b' and threat_path is None:
-                        bad_threat_paths.append(threat_path)
+                        bad_threat_paths.append(threat)
+                        continue
                     # Check NODATA value of the threat raster
-                    threat_raster_info = pygeoprocessing.get_raster_info(threa_path)
+                    threat_raster_info = pygeoprocessing.get_raster_info(threat_path)
                     if threat_raster_info['nodata'][0] is None:
-                        bad_threat_nodatas.append(threat_path)
-                        
+                        bad_threat_nodatas.append(threat)
+        print("bad_threat_paths: ", bad_threat_paths)            
         if bad_threat_paths:
+            print("if bad threat paths")
             validation_warnings.append((
                 ['threat_raster_folder'],
                 (f'A threat raster for threats: {bad_threat_paths}'
                   ' was not found in the threat raster folder, or'
-                  ' it could not be opened by GDAL.'))
-
+                  ' it could not be opened by GDAL.')))
+ 
             invalid_keys.add('threat_raster_folder')
 
         if bad_threat_nodatas:
@@ -1143,8 +1152,8 @@ def validate(args, limit_to=None):
                 ['threat_raster_folder'],
                 (f'A threat raster for threats: {bad_threat_nodatas}'
                   ' has an undefined NODATA value. Please define' 
-                  ' the NODATA value for all threat rasters.')
+                  ' the NODATA value for all threat rasters.')))
             if not bad_threat_paths:
                 invalid_keys.add('threat_raster_folder')
-
+    print("returnt validation_warnings")
     return validation_warnings
