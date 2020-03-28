@@ -2,13 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { remote } from 'electron';
-import { fireEvent, render,
+import { createEvent, fireEvent, render,
          wait, waitForElement } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 import { InvestJob } from '../src/InvestJob';
 // import { SetupTab } from '../src/components/SetupTab';
-import { getSpec, fetchValidation } from '../src/server_requests';
+import { getSpec, fetchDatastackFromFile, fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
 
 // generated this file from `invest getspec carbon --json`
@@ -275,4 +275,57 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
     expect(getByText('Execute')).toBeDisabled();
     expect(getByText(invalidFeedback, { exact: false })).toBeInTheDocument()
   })
+})
+
+test('SetupTab: test dragover of a datastack/logfile', async () => {
+  /** Fire a drop event and mock the resolved datastack.
+  * This expects batchUpdateArgs to update form values after the drop.
+  */
+  const spec = {
+    args: {
+      arg1: { name: 'Workspace', type: 'directory' },
+      arg2: { name: 'AOI', type: 'vector' }
+    },
+    module: 'natcap.invest.carbon'
+  }
+  
+  fetchValidation.mockResolvedValue(
+    [[Object.keys(spec.args), 'invalid because']])
+  
+  const mock_datastack = {
+    module_name: spec.module,
+    args: { arg1: 'circle', arg2: 'square'}
+  }
+  fetchDatastackFromFile.mockResolvedValue(mock_datastack)
+
+  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
+  fireEvent.click(getByText('Carbon'));
+  const setupForm = await waitForElement(() => {
+    return utils.getByTestId('setup-form')
+  })
+
+  // This should work but doesn't due to lack of dataTransfer object in jsdom:
+  // https://github.com/jsdom/jsdom/issues/1568
+  // const dropEvent = new Event('drop', 
+  //   { dataTransfer: { files: ['foo.txt'] } 
+  // })
+  // fireEvent.drop(setupForm, dropEvent)
+  
+  // Below is a patch similar to the one described here:
+  // https://github.com/testing-library/react-testing-library/issues/339
+  const fileDropEvent = createEvent.drop(setupForm)
+  const fileArray = ['foo.txt']
+  Object.defineProperty(fileDropEvent, 'dataTransfer', {
+    value: { files : fileArray }
+  })
+  fireEvent(setupForm, fileDropEvent)
+
+  // using `findBy...`, which returns a promise, is much better
+  // than wrapping `getBy...` and the `expect` calls inside `await wait()`
+  // because the latter will timeout instead of failing if the expect fails.
+  // TODO: look for places to replace getBy...
+  const arg1 = await utils.findByLabelText(spec.args.arg1.name)
+  const arg2 = await utils.findByLabelText(spec.args.arg2.name)
+  expect(arg1).toHaveValue(mock_datastack.args.arg1)
+  expect(arg2).toHaveValue(mock_datastack.args.arg2)
 })

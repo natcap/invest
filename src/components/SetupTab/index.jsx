@@ -120,6 +120,7 @@ class ArgsForm extends React.Component {
     if (datastack['module_name'] === this.props.modulename) {
       this.props.batchUpdateArgs(datastack['args']);
     } else {
+      console.log('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
       throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
     }
   }
@@ -243,7 +244,7 @@ class ArgsForm extends React.Component {
     }
 
     return (
-      <Form 
+      <Form data-testid='setup-form'
         validated={false}
         onDrop={this.onDragDrop}
         onDragOver={dragover_handler}>
