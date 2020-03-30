@@ -8,7 +8,6 @@ from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
 import numpy
-import pygeoprocessing.testing
 
 
 def make_simple_poly(origin):
@@ -38,12 +37,15 @@ def make_simple_poly(origin):
     return poly
 
 
-def make_raster_from_array(base_array, base_raster_path):
+def make_raster_from_array(
+        base_array, base_raster_path, nodata_val=None, gdal_type=gdal.GDT_Int32):
     """Make a raster from an array on a designated path.
 
     Parameters:
-        array (numpy.ndarray): the 2D array for making the raster.
-        raster_path (str): the path for the raster to be created.
+        base_array (numpy.ndarray): the 2D array for making the raster.
+        nodata_val (float): nodata value for the raster.
+        gdal_type (): gdal datatype for the raster.
+        base_raster_path (str): the path for the raster to be created.
 
     Returns:
         None.
@@ -53,13 +55,20 @@ def make_raster_from_array(base_array, base_raster_path):
     srs.ImportFromEPSG(26910)  # UTM Zone 10N
     project_wkt = srs.ExportToWkt()
 
-    pygeoprocessing.testing.create_raster_on_disk(
-        [base_array],
-        (1180000, 690000),
-        project_wkt,
-        -1,
-        (1, -1),  # Each pixel is 1x1 m
-        filename=base_raster_path)
+    gtiff_driver = gdal.GetDriverByName('GTiff')
+    ny, nx = base_array.shape
+    new_raster = gtiff_driver.Create(
+        base_raster_path, nx, ny, 1, gdal_type)
+    
+    new_raster.SetProjection(project_wkt)
+    new_raster.SetGeoTransform([1, 1.0, 0.0, 1, 0.0, -1.0])
+    new_band = new_raster.GetRasterBand(1)
+    if nodata_val is not None:
+        new_band.SetNoDataValue(nodata_val)
+    new_band.WriteArray(base_array)
+    new_raster.FlushCache()
+    new_band = None
+    new_raster = None
 
 
 def make_access_shp(access_shp_path):
@@ -110,7 +119,7 @@ def make_access_shp(access_shp_path):
 
 
 def make_lulc_raster(raster_path, lulc_val, side_length=100):
-    """Create a 100x100 raster on raster path with designated LULC code.
+    """Create a 100x100 raster on raster_path with designated LULC code.
 
     Parameters:
         raster_path (str): the path for the LULC raster.
@@ -122,7 +131,7 @@ def make_lulc_raster(raster_path, lulc_val, side_length=100):
     """
     lulc_array = numpy.ones((side_length, side_length), dtype=numpy.int8)
     lulc_array[50:, :] = lulc_val
-    make_raster_from_array(lulc_array, raster_path)
+    make_raster_from_array(lulc_array, raster_path, nodata_val=-1)
 
 
 def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
@@ -157,7 +166,7 @@ def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
             if make_empty_raster:
                 open(raster_path, 'a').close()  # writes an empty raster.
             else:
-                make_raster_from_array(threat_array, raster_path)
+                make_raster_from_array(threat_array, raster_path, nodata_val=-1)
 
 
 def make_sensitivity_samp_csv(csv_path,
@@ -367,7 +376,7 @@ class HabitatQualityTests(unittest.TestCase):
                 raster_path = os.path.join(threats_folder,
                                            threat + suffix + '.tif')
                 threat_array[100//(i+1):, :] = 1  # making variations among threats
-                make_raster_from_array(threat_array, raster_path)
+                make_raster_from_array(threat_array, raster_path, nodata_val=-1)
 
         threat_csv_path = os.path.join(self.workspace_dir, 'threats.csv')
         with open(threat_csv_path, 'w') as open_table:
