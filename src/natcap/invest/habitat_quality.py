@@ -357,11 +357,12 @@ def execute(args):
     lulc_pixel_size = lulc_raster_info['pixel_size']
     lulc_bbox = lulc_raster_info['bounding_box']
 
-    # Attempt to grab that right extension and not just .tif
+    # Attempt to grab the right extension and not just .tif, but replacing 
+    # with .tif files moving forward.
     # NOTE this does not support a raster as a folder
     aligned_raster_list = [
         os.path.join(intermediate_output_dir, os.path.basename(path).replace(
-            os.path.splitext(path)[1], f'_aligned{os.path.splitext(path)[1]}'))
+            os.path.splitext(path)[1], f'_aligned{file_suffix}.tif'))
         for path in lulc_and_threat_raster_list]
 
     LOGGER.debug(f"aligned raster list: {aligned_raster_list}")
@@ -386,24 +387,26 @@ def execute(args):
         lulc_path_dict[lulc_key] = os.path.join(
             intermediate_output_dir, os.path.basename(lulc_path).replace(
                 os.path.splitext(lulc_path)[1], 
-                f'_aligned{os.path.splitext(lulc_path)[1]}'))
+                f'_aligned{file_suffix}.tif'))
         for threat in threat_dict:
             threat_path = threat_path_dict['threat' + lulc_key][threat]
             if threat_path in lulc_and_threat_raster_list:
                 aligned_threat_path = os.path.join(
                     intermediate_output_dir, os.path.basename(threat_path).replace(
                         os.path.splitext(threat_path)[1], 
-                        f'_aligned{os.path.splitext(threat_path)[1]}'))
+                        f'_aligned{file_suffix}.tif'))
                 aligned_updated_threat_path = os.path.join(
                     intermediate_output_dir,
                     os.path.basename(aligned_threat_path).replace(
                         os.path.splitext(aligned_threat_path)[1], 
-                        f'_updated{os.path.splitext(aligned_threat_path)[1]}'))
                         '.tif', '_updated.tif'))
                 # Use these updated threat raster paths in future calculations
                 threat_path_dict['threat' + lulc_key][threat] = (
                     aligned_updated_threat_path)
 
+                # Update threat raster pixel values as needed so that:
+                #  * Nodata values are replaced with 0
+                #  * Anything other than 0 or nodata is replaced with 1
                 update_threat_task = graph.add_task(
                     _update_threat_pixels,
                     args=(aligned_threat_path, aligned_updated_threat_path),
@@ -458,15 +461,12 @@ def execute(args):
     LOGGER.debug('lulc_path_dict : %s', lulc_path_dict)
 
     # for each land cover raster provided compute habitat quality
-    habitat_raster_lookup = {}
-    threat_convolve_lookup = {}
-    sensitivity_lookup = {}
     for lulc_key, lulc_path in lulc_path_dict.items():
         LOGGER.info('Calculating habitat quality for landuse: %s', lulc_path)
 
-        habitat_raster_lookup[lulc_key] = []
-        threat_convolve_lookup[lulc_key] = []
-        sensitivity_lookup[lulc_key] = []
+        habitat_raster_lookup = []
+        threat_convolve_lookup = []
+        sensitivity_lookup = []
 
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
@@ -481,7 +481,7 @@ def execute(args):
                     },
                 dependent_task_list=[align_task],
                 task_name=f'habitat_raster{lulc_key}')
-        habitat_raster_lookup[lulc_key].append(habitat_raster_task)
+        habitat_raster_lookup.append(habitat_raster_task)
 
         # initialize a list that will store all the threat/threat rasters
         # after they have been adjusted for distance, weight, and access
@@ -496,14 +496,14 @@ def execute(args):
 
         # adjust each threat/threat raster for distance, weight, and access
         for threat, threat_data in threat_dict.items():
-            LOGGER.info('Calculating threat: %s.\nThreat data: %s' %
+            LOGGER.debug('Calculating threat: %s.\nThreat data: %s' %
                         (threat, threat_data))
 
             # get the threat raster for the specific threat
             threat_raster_path = threat_path_dict['threat' + lulc_key][threat]
-            LOGGER.info('threat_raster_path %s', threat_raster_path)
+            LOGGER.debug('threat_raster_path %s', threat_raster_path)
             if threat_raster_path is None:
-                LOGGER.info(
+                LOGGER.warning(
                     'The threat raster for %s could not be found for the land '
                     'cover %s. Skipping Habitat Quality calculation for this '
                     'land cover.' % (threat, lulc_key))
@@ -535,7 +535,7 @@ def execute(args):
                 target_path_list=[filtered_threat_raster_path],
                 dependent_task_list=[*updated_threat_tasks, decay_threat_task],
                 task_name=f'convolve_{decay_type}_{lulc_key}_{threat}')
-            threat_convolve_lookup[lulc_key].append(convolve_task)
+            threat_convolve_lookup.append(convolve_task)
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
@@ -551,7 +551,7 @@ def execute(args):
                 target_path_list=[sens_raster_path],
                 dependent_task_list=[align_task],
                 task_name=f'sens_raster_{decay_type}_{lulc_key}_{threat}')
-            sensitivity_lookup[lulc_key].append(sens_threat_task)
+            sensitivity_lookup.append(sens_threat_task)
 
             # get the normalized weight for each threat
             weight_avg = threat_data['WEIGHT'] / weight_sum
@@ -577,7 +577,7 @@ def execute(args):
         deg_raster_list.append(access_raster_path)
 
         deg_sum_raster_path = os.path.join(
-            output_dir, 'deg_sum' + lulc_key + file_suffix + '.tif')
+            output_dir, f'deg_sum{lulc_key}{file_suffix}.tif')
 
         LOGGER.info('Starting raster calculation on total_degradation')
 
@@ -585,8 +585,8 @@ def execute(args):
             _calculate_total_degradation,
             args=(deg_raster_list, deg_sum_raster_path, weight_list),
             target_path_list=[deg_sum_raster_path],
-            dependent_task_list=[*threat_convolve_lookup[lulc_key],
-                *sensitivity_lookup[lulc_key], access_base_task],
+            dependent_task_list=[*threat_convolve_lookup,
+                *sensitivity_lookup, access_base_task],
             task_name=f'tot_degradation_{decay_type}{lulc_key}_{threat}')
 
         LOGGER.info('Finished raster calculation on total_degradation')
@@ -596,7 +596,7 @@ def execute(args):
         ksq = half_saturation_constant**_SCALING_PARAM
 
         quality_path = os.path.join(
-            output_dir, 'quality' + lulc_key + file_suffix + '.tif')
+            output_dir, f'quality{lulc_key}{file_suffix}.tif')
 
         LOGGER.info('Starting raster calculation on quality_op')
 
@@ -606,7 +606,7 @@ def execute(args):
             _calculate_habitat_quality,
             args=(deg_hab_raster_list, quality_path, ksq),
             target_path_list=[quality_path],
-            dependent_task_list=[*habitat_raster_lookup[lulc_key],
+            dependent_task_list=[*habitat_raster_lookup,
                 total_degradation_task],
             task_name=f'habitat_quality')
 
@@ -626,10 +626,10 @@ def execute(args):
             lulc_time = 'current' if lulc_key == '_c' else 'future'
 
             new_cover_path = os.path.join(
-                intermediate_output_dir, 'new_cover' + lulc_key + file_suffix + '.tif')
+                intermediate_output_dir, f'new_cover{lulc_key}{file_suffix}.tif')
 
             rarity_path = os.path.join(
-                output_dir, 'rarity' + lulc_key + file_suffix + '.tif')
+                output_dir, f'rarity{lulc_key}{file_suffix}.tif')
 
             rarity_task = graph.add_task(
                 _compute_rarity_operation,
