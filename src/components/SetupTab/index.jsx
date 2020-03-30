@@ -7,6 +7,7 @@ import Form from 'react-bootstrap/Form';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
+import Modal from 'react-bootstrap/Modal';
 
 import { fetchDatastackFromFile } from '../../server_requests';
 import { argsValuesFromSpec } from '../../utils';
@@ -139,6 +140,7 @@ class ArgsForm extends React.Component {
             <Form.Label column sm="3"  htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="8">
               <InputGroup>
+                <AboutModal argument={argument}/>
                 <Form.Control
                   id={argname}
                   name={argname}
@@ -171,18 +173,21 @@ class ArgsForm extends React.Component {
           <Form.Group as={Row} key={argname}>
             <Form.Label column sm="3"  htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="4">
-              <Form.Control
-                id={argname}
-                name={argname}
-                type="text" 
-                value={argument.value || ''} // empty string is handled better than `undefined`
-                onChange={this.handleChange}
-                isValid={argument.touched && argument.valid}
-                isInvalid={argument.touched && argument.validationMessage}
-              />
-              <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
-                {argument.type + ' : ' + (argument.validationMessage || '')}
-              </Form.Control.Feedback>
+              <InputGroup>
+                <AboutModal argument={argument}/>
+                <Form.Control
+                  id={argname}
+                  name={argname}
+                  type="text" 
+                  value={argument.value || ''} // empty string is handled better than `undefined`
+                  onChange={this.handleChange}
+                  isValid={argument.touched && argument.valid}
+                  isInvalid={argument.touched && argument.validationMessage}
+                />
+                <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
+                  {argument.type + ' : ' + (argument.validationMessage || '')}
+                </Form.Control.Feedback>
+              </InputGroup>
             </Col>
           </Form.Group>)
       
@@ -196,6 +201,7 @@ class ArgsForm extends React.Component {
           <Form.Group as={Row} key={argname}>
             <Form.Label column sm="3" htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="8">
+              <AboutModal argument={argument}/>
               <Form.Check
                 id={argname}
                 inline
@@ -225,19 +231,22 @@ class ArgsForm extends React.Component {
           <Form.Group as={Row} key={argname}>
             <Form.Label column sm="3" htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="4">
-              <Form.Control
-                id={argname}
-                as='select'
-                name={argname}
-                value={argument.value}
-                onChange={this.handleChange}>
-                {argument.validation_options.options.map(opt =>
-                  <option value={opt} key={opt}>{opt}</option>
-                )}
-              </Form.Control>
-              <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
-                {argument.type + ' : ' + (argument.validationMessage || '')}
-              </Form.Control.Feedback>
+              <InputGroup>
+                <AboutModal argument={argument}/>
+                <Form.Control
+                  id={argname}
+                  as='select'
+                  name={argname}
+                  value={argument.value}
+                  onChange={this.handleChange}>
+                  {argument.validation_options.options.map(opt =>
+                    <option value={opt} key={opt}>{opt}</option>
+                  )}
+                </Form.Control>
+                <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
+                  {argument.type + ' : ' + (argument.validationMessage || '')}
+                </Form.Control.Feedback>
+              </InputGroup>
             </Col>
           </Form.Group>)
       }
@@ -262,6 +271,50 @@ ArgsForm.propTypes = {
   updateArg: SetupTab.propTypes.updateArg,
   batchUpdateArgs: SetupTab.propTypes.batchUpdateArgs,
   investValidate: SetupTab.propTypes.investValidate,
+}
+
+class AboutModal extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      aboutShow: false
+    }
+    this.handleAboutOpen = this.handleAboutOpen.bind(this);
+    this.handleAboutClose = this.handleAboutClose.bind(this);
+  }
+
+  handleAboutClose() {
+    this.setState({aboutShow: false});
+  }
+
+  handleAboutOpen() {
+    this.setState({aboutShow: true});
+  }
+
+  render() {
+    return(
+      <React.Fragment>
+        <Button  className="mr-3"
+          onClick={this.handleAboutOpen}
+          variant="outline-info">
+          i
+        </Button>
+        <Modal show={this.state.aboutShow} onHide={this.handleAboutClose}>
+          <Modal.Header>
+            <Modal.Title>{this.props.argument.name}</Modal.Title>
+            </Modal.Header>
+          <Modal.Body>{this.props.argument.about}</Modal.Body>
+        </Modal>
+      </React.Fragment>
+    );
+  }
+}
+
+AboutModal.propTypes = {
+  argument: PropTypes.shape({
+    name: PropTypes.string,
+    about: PropTypes.string
+  })
 }
 
 function dragover_handler(event) {
