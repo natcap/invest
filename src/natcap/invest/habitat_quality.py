@@ -517,13 +517,15 @@ def execute(args):
 
             decay_threat_task = graph.add_task(
                 _decay_threat,
-                args=(threat_raster_path, kernel_path, threat_data),
+                args=(threat_raster_path, kernel_path, decay_type, 
+                    threat_data['MAX_DIST']),
                 target_path_list=[kernel_path],
                 dependent_task_list=[*updated_threat_tasks],
                 task_name=f'decay_kernel_{decay_type}{lulc_key}_{threat}')
 
             filtered_threat_raster_path = os.path.join(
-                intermediate_output_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, file_suffix))
+                intermediate_output_dir, 
+                'filtered_%s%s%s.tif' % (threat, lulc_key, file_suffix))
 
             convolve_task = graph.add_task(
                 pygeoprocessing.convolve_2d,
@@ -539,7 +541,8 @@ def execute(args):
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
-                intermediate_output_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, file_suffix))
+                intermediate_output_dir, 
+                'sens_%s%s%s.tif' % (threat, lulc_key, file_suffix))
 
             sens_threat_task = graph.add_task(
                 _map_raster_to_dict_values,
@@ -643,7 +646,16 @@ def execute(args):
 
 
 def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
-    """ """
+    """Calculate habitat quality from degradation inputs.
+
+    Parameters:
+        deg_hab_raster_list (list): list of string paths for the degraded
+            habitat rasters.
+        quality_out_path (string): path to output the habitat quality raster.
+        ksq (float): a number representing half-saturation**_SCALING_PARAM
+    Returns:
+        None
+    """
     def quality_op(degradation, habitat):
         """Vectorized function that computes habitat quality given
             a degradation and habitat value.
@@ -671,8 +683,20 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
         quality_out_path, gdal.GDT_Float32, _OUT_NODATA)
 
 
-def _calculate_total_degradation(deg_raster_list, deg_sum_raster_path, weight_list):
-    """ """
+def _calculate_total_degradation(deg_raster_list, deg_sum_raster_path, 
+        weight_list):
+    """Calculate habitat degradation.
+
+    Parameters:
+        deg_raster_list (list): list of string paths for the degraded
+            threat rasters.
+        deg_sum_raster_path (string): path to output the habitat quality 
+            degradation raster.
+        weight_list (list): normalized weight for each threat corresponding 
+            to threats in ``deg_raster_list``.
+    Returns:
+        None
+    """
     def total_degradation(*raster):
         """A vectorized function that computes the degradation value for
             each pixel based on each threat and then sums them together
@@ -712,8 +736,19 @@ def _calculate_total_degradation(deg_raster_list, deg_sum_raster_path, weight_li
     pygeoprocessing.raster_calculator(deg_raster_band_list, total_degradation,
             deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA)
 
-def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path, rarity_path):
-    """ """
+def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path, 
+        rarity_path):
+    """Calculate habitat rarity.
+
+    Parameters:
+        lulc_base_path (string): path to input base LULC raster.
+        lulc_path (string): path to LULC for current or future scenario.
+        new_cover_path (string): path to intermediate raster file for trimming
+            ``lulc_path`` to ``lulc_base_path``.
+        rarity_path (string): path to output rarity raster.
+    Returns:
+        None
+    """
     # get the area of a base pixel to use for computing rarity where the
     # pixel sizes are different between base and cur/fut rasters
     base_pixel_size = pygeoprocessing.get_raster_info(
@@ -786,10 +821,18 @@ def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path, rarity_
                 % os.path.basename(lulc_path))
 
 
-def _decay_threat(threat_raster_path, kernel_path, threat_data):
-    """ """
-    decay_type = threat_data['DECAY']
+def _decay_threat(threat_raster_path, kernel_path, decay_type, max_dist): 
+    """Create a decay kernel as a raster.
 
+    Parameters:
+        threat_raster_path (string): path to threat raster to decay.
+        kernel_path (string): path to output kernel raster.
+        decay_type (string): type of decay kernel to create, either 
+            'linear' | 'exponentional'.
+        max_dist (float): max distance of threat in KM.
+    Returns:
+        None
+    """
     # need the pixel size for the threat raster so we can create
     # an appropriate kernel for convolution
     threat_pixel_size = pygeoprocessing.get_raster_info(
@@ -799,7 +842,7 @@ def _decay_threat(threat_raster_path, kernel_path, threat_data):
         abs(threat_pixel_size[0]) + abs(threat_pixel_size[1]))/2.0
 
     # convert max distance (given in KM) to meters
-    max_dist_m = threat_data['MAX_DIST'] * 1000.0
+    max_dist_m = max_dist * 1000.0
 
     # convert max distance from meters to the number of pixels that
     # represents on the raster
@@ -821,7 +864,17 @@ def _decay_threat(threat_raster_path, kernel_path, threat_data):
     decay_func(max_dist_pixel, kernel_path)
 
 def _compare_lucodes_sensitivity(sensitivity_dict, unique_lucode_pickle_lookup):
-    """ """
+    """Compare LULC unique codes to codes listed in dictionary.
+
+    Parameters:
+        sensitivity_dict (dict): dictionary representing sensitivity for LULC
+            values with a column of 'codes'.
+        unique_lucode_pickle_lookup (list): list of paths to pickle files that
+            represent a python set of unique LULC values for the LULC rasters
+            provided in the model.
+    Returns:
+        None
+    """
     raster_unique_lucodes = set()
     for lucode_path in unique_lucode_pickle_lookup:
         with open(lucode_path, 'rb') as fh:
@@ -841,7 +894,15 @@ def _compare_lucodes_sensitivity(sensitivity_dict, unique_lucode_pickle_lookup):
 
 
 def _collect_unique_lucodes(raster_path_band, pickle_path):
-    """ """
+    """Get unique pixel values from raster and pickle as a Python set.
+
+    Parameters:
+        raster_path_band (tuple): a 2 tuple of the form 
+            (filepath to raster, band index).
+        pickle_path (string): a path to output of a pickled Python set.
+    Returns:
+        None
+    """
     lulc_path = raster_path_band[0]
     # declare a set to store unique codes from lulc rasters
     raster_unique_lucodes = set()
@@ -862,6 +923,7 @@ def _collect_unique_lucodes(raster_path_band, pickle_path):
     data = {'codes': raster_unique_lucodes}
     with open(pickle_path, 'wb') as fh:
         pickle.dump(data, fh, pickle.HIGHEST_PROTOCOL)
+
 
 def _resolve_ambiguous_raster_path(path, raise_error=True):
     """Determine real path when we don't know true path extension.
@@ -1028,11 +1090,19 @@ def _make_linear_decay_kernel_path(max_distance, kernel_path):
         kernel_band.WriteArray(kernel_row, 0, row_index)
 
 def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
-    """Iterate through the threat raster and pixel values."""
-    # Iterate though the threat raster and update pixel values
-    # as needed so that:
-    #  * Nodata values are replaced with 0
-    #  * Anything other than 0 or nodata is replaced with 1
+    """Update raster's nodata values.
+
+    Iterate though the threat raster and update pixel values as needed so that:
+      * Nodata values are replaced with 0
+      * Anything other than 0 or nodata is replaced with 1
+
+    Parameters:
+        aligned_threat_path (string): a path to the threat raster on disk.
+        updated_pixel_threat_path (string): an output path for the updated
+            raster.
+    Returns:
+        None
+    """
     LOGGER.info('Preprocessing threat values for %s',
                 aligned_threat_path)
     threat_nodata = pygeoprocessing.get_raster_info(
