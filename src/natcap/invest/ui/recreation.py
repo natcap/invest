@@ -8,81 +8,81 @@ class Recreation(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=u'Recreation Model',
+            label='Recreation Model',
             target=recmodel_client.execute,
             validator=recmodel_client.validate,
-            localdoc=u'recreation.html')
+            localdoc='recreation.html')
 
         self.internet_warning = inputs.Label(
             text=(
-                u"Note, this computer must have an Internet connection "
-                u"in order to run this model."))
+                "Note, this computer must have an Internet connection "
+                "in order to run this model."))
         self.aoi_path = inputs.File(
-            args_key=u'aoi_path',
+            args_key='aoi_path',
             helptext=(
-                u"An OGR-supported vector file representing the area "
-                u"of interest where the model will run the analysis."),
-            label=u'Area of Interest (Vector)',
+                "An OGR-supported vector file representing the area "
+                "of interest where the model will run the analysis."),
+            label='Area of Interest (Vector)',
             validator=self.validator)
         self.add_input(self.aoi_path)
         self.start_year = inputs.Text(
-            args_key=u'start_year',
-            helptext=u'Year to start PUD calculations, date starts on Jan 1st.',
-            label=u'Start Year (inclusive, must be >= 2005)',
+            args_key='start_year',
+            helptext='Year to start PUD calculations, date starts on Jan 1st.',
+            label='Start Year (inclusive, must be >= 2005)',
             validator=self.validator)
         self.add_input(self.start_year)
         self.end_year = inputs.Text(
-            args_key=u'end_year',
+            args_key='end_year',
             helptext=(
-                u'Year to end PUD calculations, date ends and includes '
-                u'Dec 31st.'),
-            label=u'End Year (inclusive, must be <= 2017)',
+                'Year to end PUD calculations, date ends and includes '
+                'Dec 31st.'),
+            label='End Year (inclusive, must be <= 2017)',
             validator=self.validator)
         self.add_input(self.end_year)
         self.regression_container = inputs.Container(
-            args_key=u'compute_regression',
+            args_key='compute_regression',
             expandable=True,
             expanded=True,
-            label=u'Compute Regression')
+            label='Compute Regression')
         self.add_input(self.regression_container)
         self.predictor_table_path = inputs.File(
-            args_key=u'predictor_table_path',
+            args_key='predictor_table_path',
             helptext=(
-                u"A table that maps predictor IDs to files and their "
-                u"types with required headers of 'id', 'path', and "
-                u"'type'.  The file paths can be absolute, or relative "
-                u"to the table."),
-            label=u'Predictor Table',
+                "A table that maps predictor IDs to files and their "
+                "types with required headers of 'id', 'path', and "
+                "'type'.  The file paths can be absolute, or relative "
+                "to the table."),
+            label='Predictor Table',
             validator=self.validator)
         self.regression_container.add_input(self.predictor_table_path)
         self.scenario_predictor_table_path = inputs.File(
-            args_key=u'scenario_predictor_table_path',
+            args_key='scenario_predictor_table_path',
             helptext=(
-                u"A table that maps predictor IDs to files and their "
-                u"types with required headers of 'id', 'path', and "
-                u"'type'.  The file paths can be absolute, or relative "
-                u"to the table."),
-            label=u'Scenario Predictor Table (optional)',
+                "A table that maps predictor IDs to files and their "
+                "types with required headers of 'id', 'path', and "
+                "'type'.  The file paths can be absolute, or relative "
+                "to the table."),
+            label='Scenario Predictor Table (optional)',
             validator=self.validator)
         self.regression_container.add_input(self.scenario_predictor_table_path)
         self.grid_container = inputs.Container(
-            args_key=u'grid_aoi',
+            args_key='grid_aoi',
             expandable=True,
             expanded=True,
-            label=u'Grid the AOI')
+            label='Grid the AOI')
         self.add_input(self.grid_container)
         self.grid_type = inputs.Dropdown(
-            args_key=u'grid_type',
-            label=u'Grid Type',
-            options=[u'square', u'hexagon'])
+            args_key='grid_type',
+            label='Grid Type',
+            options=['square', 'hexagon'])
         self.grid_container.add_input(self.grid_type)
         self.cell_size = inputs.Text(
-            args_key=u'cell_size',
+            args_key='cell_size',
             helptext=(
-                u"The size of the grid units measured in the "
-                u"projection units of the AOI. For example, UTM "
-                u"projections use meters."),
-            label=u'Cell Size',
+                "The size of the grid units measured in the "
+                "projection units of the AOI. For example, UTM "
+                "projections use meters."),
+            label='Cell Size',
             validator=self.validator)
         self.grid_container.add_input(self.cell_size)
 

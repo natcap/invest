@@ -14,11 +14,6 @@ import pygeoprocessing.testing
 from .. import reporting
 from .. import utils
 
-try:
-    unicode
-except NameError:
-    # No unicode in Python 3
-    unicode = str
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
 
@@ -690,7 +685,7 @@ def _create_intermediate_csv(vars_dict):
         basename = os.path.splitext(os.path.basename(
             vars_dict['population_csv_path']))[0]
         filename = 'population_by_time_step_' + basename + '.csv'
-    elif vars_dict['results_suffix'] is not '':
+    elif vars_dict['results_suffix'] != '':
         filename = 'population_by_time_step_' + vars_dict[
             'results_suffix'] + '.csv'
     else:
@@ -744,7 +739,7 @@ def _create_results_csv(vars_dict):
         basename = os.path.splitext(os.path.basename(
             vars_dict['population_csv_path']))[0]
         filename = 'results_table_' + basename + '.csv'
-    elif vars_dict['results_suffix'] is not '':
+    elif vars_dict['results_suffix'] != '':
         filename = 'results_table_' + vars_dict['results_suffix'] + '.csv'
     else:
         filename = 'results_table.csv'
@@ -817,7 +812,7 @@ def _create_results_html(vars_dict):
         basename = os.path.splitext(os.path.basename(
             vars_dict['population_csv_path']))[0]
         filename = 'results_page_' + basename + '.html'
-    elif vars_dict['results_suffix'] is not '':
+    elif vars_dict['results_suffix'] != '':
         filename = 'results_page_' + vars_dict['results_suffix'] + '.html'
     else:
         filename = 'results_page.html'
@@ -998,7 +993,7 @@ def _create_results_aoi(vars_dict):
         basename2 = os.path.splitext(os.path.basename(
             vars_dict['population_csv_path']))[0]
         filename = basename + '_results_aoi_' + basename2 + '.shp'
-    elif vars_dict['results_suffix'] is not '':
+    elif vars_dict['results_suffix'] != '':
         filename = basename + '_results_aoi_' + vars_dict[
             'results_suffix'] + '.shp'
     else:

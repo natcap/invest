@@ -32,7 +32,7 @@ class PollinationTests(unittest.TestCase):
         from natcap.invest import pollination
 
         args = {
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'pollination_example_landcover.tif'),
@@ -84,7 +84,7 @@ class PollinationTests(unittest.TestCase):
         from natcap.invest import pollination
 
         args = {
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'pollination_example_landcover.tif'),
@@ -105,7 +105,7 @@ class PollinationTests(unittest.TestCase):
         from natcap.invest import pollination
 
         args = {
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'pollination_example_landcover.tif'),
@@ -126,7 +126,7 @@ class PollinationTests(unittest.TestCase):
         from natcap.invest import pollination
 
         args = {
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'pollination_example_landcover.tif'),
@@ -145,7 +145,7 @@ class PollinationTests(unittest.TestCase):
         from natcap.invest import pollination
 
         args = {
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
@@ -170,7 +170,7 @@ class PollinationTests(unittest.TestCase):
         from natcap.invest import pollination
 
         args = {
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
@@ -205,7 +205,7 @@ class PollinationTests(unittest.TestCase):
             bad_guild_table.write(
                 'bee,0.9,1400,0.1\n')
         args = {
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
@@ -230,7 +230,7 @@ class PollinationTests(unittest.TestCase):
                 'lucode,nesting_cavity_availability_index,nesting_ground_index\n'
                 '1,0.3,0.2\n')
         args = {
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
@@ -265,7 +265,7 @@ class PollinationTests(unittest.TestCase):
             bad_guild_table.write(
                 'bee,0.9,0.5,1400,0.5\n')
         args = {
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
@@ -299,7 +299,7 @@ class PollinationTests(unittest.TestCase):
             vector_format='ESRI Shapefile', filename=farm_shape_path)
 
         args = {
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
@@ -317,7 +317,7 @@ class PollinationTests(unittest.TestCase):
         from natcap.invest import pollination
 
         args = {
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 REGRESSION_DATA, 'input',

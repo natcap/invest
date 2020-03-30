@@ -233,6 +233,7 @@ class GLOBIOTests(unittest.TestCase):
             gdal.Dataset.__swig_destroy__(result_vector)
             result_vector = None
 
+
 class GlobioValidationTests(unittest.TestCase):
     """Tests for the GLOBIO Model ARGS_SPEC and validation."""
 

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Preprocessor."""
-from __future__ import absolute_import
 import os
 import itertools
 from itertools import product

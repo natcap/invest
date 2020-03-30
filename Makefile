@@ -8,9 +8,9 @@ GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
 GIT_TEST_DATA_REPO_REV      := 0dfeed7f216f6c1f9af815aabb3e7e04f8cf662b
 
-HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
-HG_UG_REPO_PATH             := doc/users-guide
-HG_UG_REPO_REV              := ec7070b5dea47089718795e71beff182240d4203
+GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
+GIT_UG_REPO_PATH             := doc/users-guide
+GIT_UG_REPO_REV              := 0f8c6328d0ff1cf1f452e56de1e86095d08657b3
 
 
 ENV = env
@@ -58,7 +58,7 @@ else
 	endif
 endif
 
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs hg
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs
 ifeq ($(OS),Windows_NT)
 	REQUIRED_PROGRAMS += makensis
 endif
@@ -75,13 +75,12 @@ DIST_DIR := dist
 DIST_DATA_DIR := $(DIST_DIR)/data
 BUILD_DIR := build
 
-# The fork name and user here are derived from the mercurial path.
-# They will need to be set manually (e.g. make FORKNAME=natcap/invest)
-# if someone wants to build from source outside of mercurial (like if
-# they grabbed a zipfile of the source code)
-# FORKUSER should not need to be set from the CLI.
-FORKNAME := $(filter-out ssh: http: https:, $(subst /, ,$(shell hg config paths.default)))
-FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
+# The fork name and user here are derived from the git path on github.
+# The fork name will need to be set manually (e.g. make FORKNAME=natcap/invest)
+# if someone wants to build from source outside of git (like if they grabbed
+# a zipfile of the source code).
+FORKNAME := $(word 2, $(subst github.com/, ,$(shell git remote get-url origin)))
+FORKUSER := $(word 1, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
 	BUCKET := gs://releases.naturalcapitalproject.org
 	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
@@ -109,7 +108,7 @@ MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(HG_UG_REPO_REV)
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -158,7 +157,7 @@ clean:
 
 purge: clean
 	-$(RM_DATA_DIR)
-	-$(RMDIR) $(HG_UG_REPO_PATH)
+	-$(RMDIR) $(GIT_UG_REPO_PATH)
 	-$(RMDIR) $(ENV)
 
 check:
@@ -170,17 +169,16 @@ check:
 
 
 # Subrepository management.
-$(HG_UG_REPO_PATH):
-	-hg clone --noupdate $(HG_UG_REPO) $(HG_UG_REPO_PATH)
-	-hg pull $(HG_UG_REPO) -R $(HG_UG_REPO_PATH)
-	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH)
+$(GIT_UG_REPO_PATH):
+	-git clone $(GIT_UG_REPO) $(GIT_UG_REPO_PATH)
+	git -C $(GIT_UG_REPO_PATH) fetch
+	git -C $(GIT_UG_REPO_PATH) checkout $(GIT_UG_REPO_REV)
 
 $(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_SAMPLE_DATA_REPO) $(GIT_SAMPLE_DATA_REPO_PATH)
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs install
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs fetch
-	git -C $(GIT_SAMPLE_DATA_REPO_PATH) fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) checkout $(GIT_SAMPLE_DATA_REPO_REV)
 
 $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
@@ -188,10 +186,9 @@ $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	git -C $(GIT_TEST_DATA_REPO_PATH) fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs install
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs fetch
-	git -C $(GIT_TEST_DATA_REPO_PATH) fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
 
-fetch: $(HG_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
+fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
 
 
 # Python environment management
@@ -250,8 +247,8 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_HTML_DIR))"
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
-$(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide html
+$(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
+	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
 	-$(RMDIR) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
@@ -361,9 +358,12 @@ signcode_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
-	$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
-	$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
+
+    ifeq ($(OS),Windows_NT)
+		$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+		$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+    endif
 	@echo "Binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
     ifeq ($(BUCKET),gs://releases.naturalcapitalproject.org)  # ifeq cannot follow TABs, only spaces

@@ -15,19 +15,6 @@ import xlwt
 from osgeo import gdal, osr
 import numpy
 
-try:
-    from builtins import basestring
-except ImportError:
-    # Python3 doesn't have a basestring.
-    basestring = str
-
-
-# Python3 doesn't know about basestring, only str.
-try:
-    basestring
-except NameError:
-    basestring = str
-
 
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
@@ -520,8 +507,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         return file_warning
 
     try:
-        # Check if the file encoding is UTF-8 BOM first, related to issue
-        # https://bitbucket.org/natcap/invest/issues/3832/invest-table-parsing-does-not-support-utf
+        # Check if the file encoding is UTF-8 BOM first
         encoding = None
         with open(filepath) as file_obj:
             first_line = file_obj.readline()
@@ -823,14 +809,14 @@ def invest_validator(validate_func):
 
         assert isinstance(args, dict), 'args parameter must be a dictionary.'
         assert (isinstance(limit_to, type(None)) or
-                isinstance(limit_to, basestring)), (
+                isinstance(limit_to, str)), (
                     'limit_to parameter must be either a string key or None.')
         if limit_to is not None:
             assert limit_to in args, ('limit_to key "%s" must exist in args.'
                                       % limit_to)
 
         for key, value in args.items():
-            assert isinstance(key, basestring), (
+            assert isinstance(key, str), (
                 'All args keys must be strings.')
 
         # If the module has an ARGS_SPEC defined, validate against that.

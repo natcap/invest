@@ -6,11 +6,6 @@ import logging
 
 LOGGER = logging.getLogger('natcap.invest.reporting.html')
 
-try:
-    from builtins import long
-except ImportError:
-    # Python3 doesn't have a long.
-    long = int
 
 try:
     locale.setlocale(locale.LC_ALL, '')
@@ -220,7 +215,7 @@ class _TableOfContents(object):
 
 def cell_format(data):
     """Formats the data to put in a table cell."""
-    if isinstance(data, (int, long)):
+    if isinstance(data, int):
         # Add commas to integers.
         return locale.format("%d", data, grouping=True)
     elif isinstance(data, float):

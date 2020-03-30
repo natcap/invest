@@ -8,7 +8,6 @@ import textwrap
 
 import pygeoprocessing.testing
 from osgeo import ogr
-import six
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         '..', 'data', 'invest-test-data', 'data_stack')
 
@@ -24,7 +23,7 @@ class DatastacksTest(unittest.TestCase):
         from natcap.invest import datastack
         params = {
             'a': 1,
-            'b': u'hello there',
+            'b': 'hello there',
             'c': 'plain bytestring',
             'd': '',
         }
@@ -43,7 +42,7 @@ class DatastacksTest(unittest.TestCase):
             json.load(open(
                 os.path.join(out_directory,
                              datastack.DATASTACK_PARAMETER_FILENAME)))['args'],
-            {'a': 1, 'b': u'hello there', 'c': u'plain bytestring', 'd': ''})
+            {'a': 1, 'b': 'hello there', 'c': 'plain bytestring', 'd': ''})
 
     def test_collect_multipart_gdal_raster(self):
         from natcap.invest import datastack
@@ -295,7 +294,7 @@ class DatastacksTest(unittest.TestCase):
         params = {
             'blank': '',
             'a': 1,
-            'b': u'hello there',
+            'b': 'hello there',
             'c': 'plain bytestring',
             'foo': os.path.join(self.workspace, 'foo.txt'),
             'bar': os.path.join(self.workspace, 'foo.txt'),
@@ -369,7 +368,7 @@ class DatastacksTest(unittest.TestCase):
 
         params = {
             'a': 1,
-            'b': u'hello there',
+            'b': 'hello there',
             'c': 'plain bytestring',
             'd': 'true',
             'nested': {
@@ -412,7 +411,7 @@ class DatastacksTest(unittest.TestCase):
 
         params = {
             'a': 1,
-            'b': u'hello there',
+            'b': 'hello there',
             'c': 'plain bytestring',
             'nested': {
                 'level1': 123,
@@ -475,10 +474,10 @@ class DatastacksTest(unittest.TestCase):
         params = datastack.extract_parameters_from_logfile(logfile_path)
 
         expected_params = datastack.ParameterSet(
-            {u'suffix': u'foo',
-             u'some_int': 1,
-             u'some_float': 2.33,
-             u'workspace_dir': u'some_workspace_dir'},
+            {'suffix': 'foo',
+             'some_int': 1,
+             'some_float': 2.33,
+             'workspace_dir': 'some_workspace_dir'},
             'some_model',
             'some_version')
 
@@ -504,7 +503,7 @@ class DatastacksTest(unittest.TestCase):
 
         params = {
             'a': 1,
-            'b': u'hello there',
+            'b': 'hello there',
             'c': 'plain bytestring',
             'd': '',
         }
@@ -524,7 +523,7 @@ class DatastacksTest(unittest.TestCase):
 
         params = {
             'a': 1,
-            'b': u'hello there',
+            'b': 'hello there',
             'c': 'plain bytestring',
             'd': '',
         }
@@ -611,8 +610,8 @@ class DatastacksTest(unittest.TestCase):
         with open(paramset_path) as saved_parameters:
             args = json.loads(saved_parameters.read())['args']
             expected_args = {
-                'windows_path': os.path.join(u'dir1', u'filepath1.txt'),
-                'linux_path': os.path.join(u'dir2', u'filepath2.txt'),
+                'windows_path': os.path.join('dir1', 'filepath1.txt'),
+                'linux_path': os.path.join('dir2', 'filepath2.txt'),
             }
             self.assertEqual(expected_args, args)
 
@@ -654,10 +653,10 @@ class DatastacksTest(unittest.TestCase):
                                                              extraction_path)
 
         expected_args = {
-            u'windows_path': os.path.join(extraction_path, 'data',
-                                          u'filepath1.txt'),
-            u'linux_path': os.path.join(extraction_path, u'data',
-                                        u'filepath2.txt'),
+            'windows_path': os.path.join(extraction_path, 'data',
+                                          'filepath1.txt'),
+            'linux_path': os.path.join(extraction_path, 'data',
+                                        'filepath2.txt'),
         }
         self.maxDiff = None  # show whole exception on failure
         self.assertEqual(extracted_args, expected_args)
@@ -675,7 +674,7 @@ class UtilitiesTest(unittest.TestCase):
 
         args_string = format_args_dict(args_dict=args_dict,
                                        model_name='test_model')
-        expected_string = six.text_type(
+        expected_string = str(
             'Arguments for InVEST test_model %s:\n'
             'foo      bar\n'
             'some_arg [1, 2, 3, 4]\n') % __version__

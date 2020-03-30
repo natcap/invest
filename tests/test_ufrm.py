@@ -7,6 +7,7 @@ import os
 
 from osgeo import gdal
 import numpy
+import pygeoprocessing
 
 
 class UFRMTests(unittest.TestCase):
@@ -16,7 +17,7 @@ class UFRMTests(unittest.TestCase):
         """Override setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempfile.mkdtemp(suffix=u'\U0001f60e')  # smiley
+        self.workspace_dir = tempfile.mkdtemp(suffix='\U0001f60e')  # smiley
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -91,6 +92,29 @@ class UFRMTests(unittest.TestCase):
         # expected result observed from regression run.
         expected_result = 156070.36
         self.assertAlmostEqual(result_sum, expected_result, places=0)
+
+    def test_ufrm_value_error_on_bad_soil(self):
+        """UFRM: assert exception on bad soil raster values."""
+        from natcap.invest import urban_flood_risk_mitigation
+        args = self._make_args()
+
+        bad_soil_raster = os.path.join(self.workspace_dir, 'bad_soilgroups.tif')
+        value_map = {
+            1: 1,
+            2: 2,
+            3: 9,  # only 1, 2, 3, 4 are valid values for this raster.
+            4: 4
+        }
+        pygeoprocessing.reclassify_raster(
+            (args['soils_hydrological_group_raster_path'], 1), value_map,
+            bad_soil_raster, gdal.GDT_Int16, -9)
+        args['soils_hydrological_group_raster_path'] = bad_soil_raster
+
+        with self.assertRaises(ValueError) as cm:
+            urban_flood_risk_mitigation.execute(args)
+            actual_message = str(cm.exception)
+            expected_message = 'Check that the Soil Group raster does not contain'
+            self.assertTrue(expected_message in actual_message)
 
     def test_validate(self):
         """UFRM: test validate function."""

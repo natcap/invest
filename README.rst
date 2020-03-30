@@ -26,8 +26,8 @@ General Information
 -------------------
 
 * Website: https://naturalcapitalproject.org/invest
-* Source code: https://bitbucket.org/natcap/invest
-* Issue tracker: https://bitbucket.org/natcap/invest/issues
+* Source code: https://github.com/natcap/invest
+* Issue tracker: https://github.com/natcap/invest/issues
 * Users' guide: http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/
 * API documentation: http://invest.readthedocs.io/en/latest/
 
@@ -254,4 +254,4 @@ Copyright and license information
 
 A file called ``LICENSE.txt`` should have accompanied this distribution.  If it
 is missing, the license may be found on our project page,
-https://bitbucket.org/natcap/invest
+https://github.com/natcap/invest

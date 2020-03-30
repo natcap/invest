@@ -11,14 +11,8 @@ import threading
 import traceback
 import uuid
 
-try:
-    from urllib.request import urlopen, Request
-    from urllib.parse import urlencode
-    string_types = (str,)
-except ImportError:
-    from urllib2 import urlopen, Request
-    from urllib import urlencode
-    string_types = (str, unicode)
+from urllib.request import urlopen, Request
+from urllib.parse import urlencode
 
 from osgeo import gdal
 from osgeo import osr
@@ -130,7 +124,7 @@ def _calculate_args_bounding_box(args_dict):
             bounding boxes are None.
         """
         def _is_spatial(arg):
-            if isinstance(arg, string_types) and os.path.exists(arg):
+            if isinstance(arg, str) and os.path.exists(arg):
                 with utils.capture_gdal_logging():
                     dataset = gdal.OpenEx(arg)
                     if dataset is not None:
@@ -223,8 +217,8 @@ def _log_exit_status(session_id, status):
         log_finish_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['FINISH']
 
-        # The data must be a python string of bytes.  This will be ``str``
-        # in python2, ``bytes`` in python3.
+        # The data must be a python string of bytes. This will be ``bytes`` 
+        # in python3.
         urlopen(Request(log_finish_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.
@@ -276,8 +270,8 @@ def _log_model(model_name, model_args, session_id=None):
         log_start_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['START']
 
-        # The data must be a python string of bytes.  This will be ``str``
-        # in python2, ``bytes`` in python3.
+        # The data must be a python string of bytes. This will be ``bytes`` 
+        # in python3.
         urlopen(Request(log_start_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.
