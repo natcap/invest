@@ -238,6 +238,7 @@ def execute(args):
 
     # Check to see if each of the workspace folders exists.  If not, create the
     # folder in the filesystem.
+    LOGGER.info("Creating workspace")
     output_dir = args['workspace_dir']
     intermediate_output_dir = os.path.join(args['workspace_dir'], 'intermediate')
     kernel_dir = os.path.join(intermediate_output_dir, 'kernels')
@@ -253,6 +254,7 @@ def execute(args):
         n_workers = -1  # Synchronous mode.
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
+    LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
     threat_dict = {
         str(key): value for key, value in utils.build_lookup_from_csv(
@@ -295,12 +297,12 @@ def execute(args):
     # pertaining to the different threats
     lulc_path_dict = {}
     threat_path_dict = {}
-    # store land cover and threat rasters in a list
+    # store land cover and threat rasters in a list for convenient access
     lulc_and_threat_raster_list = []
     # lookup for the unique lucode tasks
     unique_lucode_lookup = []
     unique_lucode_pickle_lookup = []
-    LOGGER.debug("Collect and find Threat rasters")
+    LOGGER.info("Find threat rasters and collect unique LULC codes")
     # compile all the threat rasters associated with the land cover
     for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
                                 ('_f', 'lulc_fut_path'),
@@ -309,10 +311,10 @@ def execute(args):
             lulc_path = args[lulc_args]
             lulc_path_dict[lulc_key] = lulc_path
             # save land cover paths in a list for alignment and resize
-            # TODO: This is assuming they are .tif files
             lulc_and_threat_raster_list.append(lulc_path)
 
-            unique_lucode_pickle_path = os.path.join(intermediate_output_dir, f'unique_lulc{lulc_key}.pickle')
+            unique_lucode_pickle_path = os.path.join(
+                intermediate_output_dir, f'unique_lulc{lulc_key}.pickle')
             # save unique codes to check if it's missing in sensitivity table
             unique_lucode_task = graph.add_task(
                     _collect_unique_lucodes,
@@ -340,31 +342,31 @@ def execute(args):
                 if threat_path:
                     lulc_and_threat_raster_list.append(threat_path)
 
-    LOGGER.debug("Checking LULC codes against Sensitivity table")
-
+    LOGGER.info("Checking LULC codes against Sensitivity table")
     compare_lucodes_sens_task = graph.add_task(
             _compare_lucodes_sensitivity,
             args=(sensitivity_dict, unique_lucode_pickle_lookup),
             dependent_task_list=[*unique_lucode_lookup],
             task_name='lucode_sens_comparison')
 
-    # don't continue if the compare_lucodes_task throws error
+    # don't continue if the compare_lucodes_sens_task throws error
     compare_lucodes_sens_task.join()
 
-    # Align and resize all the land cover and threat rasters,
-    # and store them in the intermediate folder
-    LOGGER.info('Starting aligning and resizing land cover and threat rasters')
-
+    LOGGER.info('Starting to align and resize land cover and threat rasters')
     lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_cur_path'])
     lulc_pixel_size = lulc_raster_info['pixel_size']
     lulc_bbox = lulc_raster_info['bounding_box']
 
-    # Assuming .tif rasters here...
-    print("lulc and threat raster list: ", lulc_and_threat_raster_list)
+    # Attempt to grab that right extension and not just .tif
+    # NOTE this does not support a raster as a folder
     aligned_raster_list = [
         os.path.join(intermediate_output_dir, os.path.basename(path).replace(
-            '.tif', '_aligned.tif')) for path in lulc_and_threat_raster_list]
+            os.path.splitext(path)[1], f'_aligned{os.path.splitext(path)[1]}'))
+        for path in lulc_and_threat_raster_list]
 
+    LOGGER.debug(f"aligned raster list: {aligned_raster_list}")
+    # Align and resize all the land cover and threat rasters,
+    # and store them in the intermediate folder
     align_task = graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
@@ -375,24 +377,28 @@ def execute(args):
         task_name='align_input_rasters')
 
     LOGGER.info('Finished aligning and resizing land cover and threat rasters')
-
     # list of tracking updated threat pixel rasters
     updated_threat_tasks = []
     threat_pixels_update_lookup = []
+    LOGGER.debug("Updating dict raster paths to reflect aligned paths")
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
     for lulc_key, lulc_path in lulc_path_dict.items():
         lulc_path_dict[lulc_key] = os.path.join(
             intermediate_output_dir, os.path.basename(lulc_path).replace(
-                '.tif', '_aligned.tif'))
+                os.path.splitext(lulc_path)[1], 
+                f'_aligned{os.path.splitext(lulc_path)[1]}'))
         for threat in threat_dict:
             threat_path = threat_path_dict['threat' + lulc_key][threat]
             if threat_path in lulc_and_threat_raster_list:
                 aligned_threat_path = os.path.join(
                     intermediate_output_dir, os.path.basename(threat_path).replace(
-                        '.tif', '_aligned.tif'))
+                        os.path.splitext(threat_path)[1], 
+                        f'_aligned{os.path.splitext(threat_path)[1]}'))
                 aligned_updated_threat_path = os.path.join(
                     intermediate_output_dir,
                     os.path.basename(aligned_threat_path).replace(
+                        os.path.splitext(aligned_threat_path)[1], 
+                        f'_updated{os.path.splitext(aligned_threat_path)[1]}'))
                         '.tif', '_updated.tif'))
                 # Use these updated threat raster paths in future calculations
                 threat_path_dict['threat' + lulc_key][threat] = (
