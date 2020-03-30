@@ -326,3 +326,38 @@ class CarbonValidationTests(unittest.TestCase):
              'discount_rate',
              'rate_change'])
         self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_no_spatial_overlp(self):
+        """Carbon Validate: assert no spatial overlap detected."""
+        from natcap.invest import carbon
+        from natcap.invest import validation
+
+        driver = gdal.GetDriverByName('GTiff')
+        filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
+        filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
+
+        # Filepaths 1 and 2 do not overlap each other.
+        for filepath, geotransform, epsg_code in (
+                (filepath_1, [1, 1, 0, 1, 0, 1], 32731),  # UTM 31N
+                (filepath_2, [100, 1, 0, 100, 1, 1], 32731)):
+            raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
+            wgs84_srs = osr.SpatialReference()
+            wgs84_srs.ImportFromEPSG(epsg_code)
+            raster.SetProjection(wgs84_srs.ExportToWkt())
+            raster.SetGeoTransform(geotransform)
+            raster = None
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'do_valuation': False,
+            'lulc_cur_year': 2016,
+            'lulc_fut_year': 2030,
+            'n_workers': -1,
+            'lulc_cur_path': filepath_1,
+            'lulc_fut_path': filepath_2,
+        }
+        args['carbon_pools_path'] = os.path.join(args['workspace_dir'],
+                                                 'pools.csv')
+        make_pools_csv(args['carbon_pools_path'])
+        validation_errors = carbon.validate(args)
+        print(validation_errors)
