@@ -555,6 +555,7 @@ def check_spatial_overlap(spatial_filepaths_list,
     wgs84_wkt = wgs84_srs.ExportToWkt()
 
     bounding_boxes = []
+    checked_file_list = []
     for filepath in spatial_filepaths_list:
         try:
             info = pygeoprocessing.get_raster_info(filepath)
@@ -572,11 +573,17 @@ def check_spatial_overlap(spatial_filepaths_list,
             continue
 
         bounding_boxes.append(bounding_box)
+        checked_file_list.append(filepath)
 
     try:
         pygeoprocessing.merge_bounding_box_list(bounding_boxes, 'intersection')
     except ValueError as error:
-        return str(error)
+        LOGGER.debug(error)
+        formatted_lists = ' | '.join(
+            [a + ': ' + str(b) for a, b in zip(
+                checked_file_list, bounding_boxes)])
+        message = f"Bounding boxes do not intersect: {formatted_lists}"
+        return message
     return None
 
 
@@ -755,9 +762,11 @@ def validate(args, spec, spatial_overlap_opts=None):
         if len(spatial_keys.difference(
                 invalid_keys.union(insufficient_keys))) >= 2:
             spatial_files = []
+            checked_keys = []
             for key in spatial_keys:
                 if key in args and args[key] not in ('', None):
                     spatial_files.append(args[key])
+                    checked_keys.append(key)
 
             try:
                 different_projections_ok = (
@@ -769,7 +778,7 @@ def validate(args, spec, spatial_overlap_opts=None):
                 spatial_files, different_projections_ok)
             if spatial_overlap_error:
                 validation_warnings.append(
-                    (sorted(spatial_keys), spatial_overlap_error))
+                    (checked_keys, spatial_overlap_error))
 
     return validation_warnings
 
