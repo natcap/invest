@@ -398,7 +398,6 @@ def execute(args):
                 aligned_updated_threat_path = os.path.join(
                     intermediate_output_dir,
                     os.path.basename(aligned_threat_path).replace(
-                        os.path.splitext(aligned_threat_path)[1], 
                         '.tif', '_updated.tif'))
                 # Use these updated threat raster paths in future calculations
                 threat_path_dict['threat' + lulc_key][threat] = (
