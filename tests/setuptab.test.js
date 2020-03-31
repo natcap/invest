@@ -43,7 +43,10 @@ function renderSetupFromSpec(spec) {
 }
 
 test('SetupTab: expect an input form for a directory', async () => {
-  const spec = { args: { arg: { name: 'Workspace', type: 'directory' } } }
+  const spec = { args: { arg: { 
+    name: 'Workspace',
+    type: 'directory',
+    about: 'this is a workspace' } } }
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
@@ -59,6 +62,10 @@ test('SetupTab: expect an input form for a directory', async () => {
     expect(getByText('Browse'))
     expect(getByText('invalid because', { exact: false }))
   })
+
+  // Expect the info dialog contains the about text, when clicked
+  fireEvent.click(getByText('i'))
+  expect(getByText(spec.args.arg.about)).toBeTruthy()
 })
 
 test('SetupTab: expect an input form for a csv', async () => {
