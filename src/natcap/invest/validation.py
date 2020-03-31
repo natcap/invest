@@ -757,13 +757,15 @@ def validate(args, spec, spatial_overlap_opts=None):
     if spatial_overlap_opts:
         spatial_keys = set(spatial_overlap_opts['spatial_keys'])
 
-        # Only test for spatial overlap if all other validation passes and
-        # at least two spatial_keys are sufficient
-        if len(spatial_keys.difference(
-                invalid_keys.union(insufficient_keys))) >= 2:
+        # Only test for spatial overlap once all the sufficient spatial keys
+        # are otherwise valid. And then only when there are at least 2.
+        valid_spatial_keys = spatial_keys.difference(
+            invalid_keys.union(insufficient_keys))
+
+        if len(valid_spatial_keys) >= 2:
             spatial_files = []
             checked_keys = []
-            for key in spatial_keys:
+            for key in valid_spatial_keys:
                 if key in args and args[key] not in ('', None):
                     spatial_files.append(args[key])
                     checked_keys.append(key)
