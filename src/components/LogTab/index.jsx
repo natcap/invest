@@ -2,11 +2,13 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Tail } from 'tail';
 import os from 'os';
+import { shell } from 'electron';
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
 import Alert from 'react-bootstrap/Alert';
+import Button from 'react-bootstrap/Button';
 
 const logStyle = {
   whiteSpace: 'pre-line',
@@ -46,6 +48,7 @@ export class LogTab extends React.Component {
       logdata: ''
     }
     this.tail = null;
+    this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
   }
 
   componentDidUpdate(prevProps) {
@@ -70,20 +73,44 @@ export class LogTab extends React.Component {
     }
   }
 
+  handleOpenWorkspace() {
+    shell.showItemInFolder(this.props.logfile)
+  }
+
   render() {    
-    let renderedAlert;
+    let RenderedAlert;
+    const WorkspaceButton = <Button className='float-right float-bottom'
+      variant='outline-dark'
+      onClick={this.handleOpenWorkspace}
+      disabled={this.props.jobStatus === 'running'}>
+      Open Workspace
+    </Button>
+
     if (this.props.jobStatus === 'error') {
-      renderedAlert = <Alert variant={'danger'}>{this.props.logStdErr}</Alert>
+      RenderedAlert = <Alert className='py-4 mt-3'
+        variant={'danger'}>
+        {this.props.logStdErr}
+        {WorkspaceButton}
+      </Alert>
     } else if (this.props.jobStatus === 'success') {
-      renderedAlert = <Alert variant={'success'}>{'Model Completed'}</Alert>
+      RenderedAlert = <Alert className='py-4 mt-3'
+        variant={'success'}>
+        <span>Model Completed</span>
+        {WorkspaceButton}
+      </Alert>
     }
+
 
     return (
       <Container>
         <Row>
           <LogDisplay logdata={this.state.logdata}/>
         </Row>
-        <Row>{renderedAlert}</Row>
+        <Row>
+          <Col>
+            {RenderedAlert}
+          </Col>
+        </Row>
       </Container>
     );
   }

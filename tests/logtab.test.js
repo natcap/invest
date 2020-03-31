@@ -25,7 +25,7 @@ describe('LogTab: integration testing', () => {
 
   beforeEach(() => {
     // It's critical to add this line-ending as the file is
-    // read back in with `tail.on('line'...`
+    // read back in with `tail.on('line'...)`
     fs.writeFileSync(logFile, logContent + os.EOL)
   })
 
@@ -34,7 +34,7 @@ describe('LogTab: integration testing', () => {
   })
 
   test('LogTab: integration testing', async () => {
-    /*
+    /* TODO:
     It is bad practice to call `rerender` in order to update props.
     It would be much better to manipulate the parent component
     and let the props get passed around naturally. But in this
@@ -86,6 +86,7 @@ describe('LogTab: integration testing', () => {
       />)
     await wait(() => {
       expect(getByText('Model Completed')).toBeInTheDocument()
+      expect(getByText('Open Workspace')).toBeEnabled()
     }) 
 
     // Then maybe a new invest subprocess starts
@@ -101,6 +102,7 @@ describe('LogTab: integration testing', () => {
         { exact: false })).toBeInTheDocument()
     }) 
     expect(queryByText('Model Completed')).toBeNull()
+    expect(queryByText('Open Workspace')).toBeNull()
 
     // And that subprocess exits with an error
     rerender(
@@ -114,6 +116,7 @@ describe('LogTab: integration testing', () => {
         logContent,
         { exact: false })).toBeInTheDocument()
       expect(getByText('ValueError: bad data')).toHaveClass('alert-danger')
+      expect(getByText('Open Workspace')).toBeEnabled()
     }) 
   })
 })
