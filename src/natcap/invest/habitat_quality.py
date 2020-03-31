@@ -858,7 +858,8 @@ def _decay_threat(threat_raster_path, kernel_path, decay_type, max_dist):
         raise ValueError(
             "Unknown type of decay in biophysical table, should be "
             "either 'linear' or 'exponential'. Input was %s for threat"
-            " %s." % (decay_type, threat))
+            " %s." % (decay_type, 
+                os.path.splitext(os.path.basename(threat_raster_path))[0]))
 
     decay_func(max_dist_pixel, kernel_path)
 

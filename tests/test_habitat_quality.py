@@ -8,6 +8,7 @@ from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
 import numpy
+import pygeoprocessing
 
 
 def make_simple_poly(origin):
@@ -38,7 +39,7 @@ def make_simple_poly(origin):
 
 
 def make_raster_from_array(
-        base_array, base_raster_path, nodata_val=None, gdal_type=gdal.GDT_Int32):
+        base_array, base_raster_path, nodata_val=-1, gdal_type=gdal.GDT_Int32):
     """Make a raster from an array on a designated path.
 
     Parameters:
@@ -61,7 +62,8 @@ def make_raster_from_array(
         base_raster_path, nx, ny, 1, gdal_type)
     
     new_raster.SetProjection(project_wkt)
-    new_raster.SetGeoTransform([1, 1.0, 0.0, 1, 0.0, -1.0])
+    origin = (1180000, 690000)
+    new_raster.SetGeoTransform([origin[0], 1.0, 0.0, origin[1], 0.0, -1.0])
     new_band = new_raster.GetRasterBand(1)
     if nodata_val is not None:
         new_band.SetNoDataValue(nodata_val)
@@ -131,7 +133,7 @@ def make_lulc_raster(raster_path, lulc_val, side_length=100):
     """
     lulc_array = numpy.ones((side_length, side_length), dtype=numpy.int8)
     lulc_array[50:, :] = lulc_val
-    make_raster_from_array(lulc_array, raster_path, nodata_val=-1)
+    make_raster_from_array(lulc_array, raster_path)
 
 
 def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
@@ -166,7 +168,7 @@ def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
             if make_empty_raster:
                 open(raster_path, 'a').close()  # writes an empty raster.
             else:
-                make_raster_from_array(threat_array, raster_path, nodata_val=-1)
+                make_raster_from_array(threat_array, raster_path)
 
 
 def make_sensitivity_samp_csv(csv_path,
@@ -267,6 +269,7 @@ class HabitatQualityTests(unittest.TestCase):
             'half_saturation_constant': '0.5',
             'results_suffix': 'regression',
             'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],
@@ -301,8 +304,7 @@ class HabitatQualityTests(unittest.TestCase):
                 'quality_f_regression.tif': 4916.338,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000}.items():
-            raster_path = os.path.join(args['workspace_dir'], 'output',
-                                       output_filename)
+            raster_path = os.path.join(args['workspace_dir'], output_filename)
             # Check that the raster's computed values are what we expect.
             # In this case, the LULC and threat rasters should have been
             # expanded to be beyond the bounds of the original threat values,
@@ -317,6 +319,7 @@ class HabitatQualityTests(unittest.TestCase):
             'half_saturation_constant': '0.5',
             'results_suffix': 'regression',
             'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],
@@ -353,8 +356,7 @@ class HabitatQualityTests(unittest.TestCase):
                                 'quality_f_regression.tif',
                                 'rarity_c_regression.tif',
                                 'rarity_f_regression.tif']:
-            raster_path = os.path.join(args['workspace_dir'], 'output',
-                                       output_filename)
+            raster_path = os.path.join(args['workspace_dir'], output_filename)
 
             # Check that the output raster has the same bounding box as the
             # LULC rasters.
@@ -376,7 +378,7 @@ class HabitatQualityTests(unittest.TestCase):
                 raster_path = os.path.join(threats_folder,
                                            threat + suffix + '.tif')
                 threat_array[100//(i+1):, :] = 1  # making variations among threats
-                make_raster_from_array(threat_array, raster_path, nodata_val=-1)
+                make_raster_from_array(threat_array, raster_path)
 
         threat_csv_path = os.path.join(self.workspace_dir, 'threats.csv')
         with open(threat_csv_path, 'w') as open_table:
@@ -393,7 +395,8 @@ class HabitatQualityTests(unittest.TestCase):
             'sensitivity_table_path': os.path.join(self.workspace_dir,
                                                    'sensitivity_samp.csv'),
             'access_vector_path': os.path.join(self.workspace_dir,
-                                               'access_samp.shp')
+                                               'access_samp.shp'),
+            'n_workers': -1,
         }
         make_access_shp(args['access_vector_path'])
 
@@ -421,7 +424,7 @@ class HabitatQualityTests(unittest.TestCase):
                 'rarity_f_regression.tif': 2500.0000000
         }.items():
             assert_array_sum(
-                os.path.join(args['workspace_dir'], 'output', output_filename),
+                os.path.join(args['workspace_dir'], output_filename),
                 assert_value)
 
     def test_habitat_quality_missing_sensitivity_threat(self):
@@ -431,6 +434,7 @@ class HabitatQualityTests(unittest.TestCase):
         args = {
             'half_saturation_constant': '0.5',
             'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],
@@ -464,6 +468,7 @@ class HabitatQualityTests(unittest.TestCase):
         args = {
             'half_saturation_constant': '0.5',
             'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],
@@ -497,6 +502,7 @@ class HabitatQualityTests(unittest.TestCase):
         args = {
             'half_saturation_constant': '0.5',
             'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],
@@ -530,6 +536,7 @@ class HabitatQualityTests(unittest.TestCase):
         args = {
             'half_saturation_constant': '0.5',
             'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
         }
 
         args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
@@ -559,6 +566,7 @@ class HabitatQualityTests(unittest.TestCase):
         args = {
             'half_saturation_constant': '0.5',
             'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
         }
 
         args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
@@ -580,7 +588,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Reasonable to just check quality out in this case
         assert_array_sum(
-            os.path.join(args['workspace_dir'], 'output', 'quality_c.tif'),
+            os.path.join(args['workspace_dir'], 'quality_c.tif'),
             5951.2827)
 
     def test_habitat_quality_nodata_fut(self):
@@ -590,6 +598,7 @@ class HabitatQualityTests(unittest.TestCase):
         args = {
             'half_saturation_constant': '0.5',
             'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
         }
 
         args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
@@ -613,7 +622,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Reasonable to just check quality out in this case
         assert_array_sum(
-            os.path.join(args['workspace_dir'], 'output', 'quality_c.tif'),
+            os.path.join(args['workspace_dir'], 'quality_c.tif'),
             5951.2827)
 
     def test_habitat_quality_missing_lucodes_in_table(self):
@@ -623,6 +632,7 @@ class HabitatQualityTests(unittest.TestCase):
         args = {
             'half_saturation_constant': '0.5',
             'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],
@@ -679,6 +689,7 @@ class HabitatQualityTests(unittest.TestCase):
             'results_suffix': 'regression',
             'workspace_dir': self.workspace_dir,
             'threat_raster_folder': self.workspace_dir,
+            'n_workers': -1,
         }
 
         validation_results = habitat_quality.validate(args)
