@@ -173,10 +173,9 @@ class SDRTests(unittest.TestCase):
         # forget to add a 'ws_id' field
         layer.CreateField(ogr.FieldDefn("ws_id", ogr.OFTInteger))
         feature = ogr.Feature(layer.GetLayerDefn())
-        # Point coordinates taken from the projected bounds noted on
-        # https://spatialreference.org/ref/epsg/nad83-utm-zone-10n/
+        # Point coordinates taken from within bounds of other test data
         feature.SetGeometry(ogr.CreateGeometryFromWkt(
-            "POINT(224215.89977 3810589.922)"))
+            "POINT(463250 4929700)"))
 
         # intentionally not setting ws_id
         layer.CreateFeature(feature)
