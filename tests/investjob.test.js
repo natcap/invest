@@ -21,7 +21,7 @@ const MOCK_RECENT_SESSIONS_VALUE =
       {
         "model": "carbon",
         "workspace": { "directory": "carbon_setup", "suffix": null },
-        "statefile": "carbon_setup.json",
+        "statefile": "tests/data/carbon_setup.json",
         "status": null,
         "humanTime": "3/5/2020, 10:43:14 AM",
         "systemTime": 1583259376573.759,

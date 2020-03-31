@@ -149,9 +149,9 @@ export class InvestJob extends React.Component {
     * @params {string} sessionFilename - path to a JSON file.
     */
 
-    const filename = path.join(CACHE_DIR, sessionFilename);
-    if (fs.existsSync(filename)) {
-      const loadedState = JSON.parse(fs.readFileSync(filename, 'utf8'));
+    // const filename = path.join(CACHE_DIR, sessionFilename);
+    if (fs.existsSync(sessionFilename)) {
+      const loadedState = JSON.parse(fs.readFileSync(sessionFilename, 'utf8'));
       this.setState(loadedState,
         () => {
           this.switchTabs(loadedState.sessionProgress);
@@ -162,7 +162,7 @@ export class InvestJob extends React.Component {
           // which controls whether the validation messages appear or not.
         });
     } else {
-      console.log('state file not found: ' + filename);
+      console.log('state file not found: ' + sessionFilename);
     }
   }
 
