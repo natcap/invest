@@ -1,7 +1,7 @@
 {
   "name": "invest-electron",
   "productName": "invest-electron",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha",
   "description": "My Electron application description",
   "main": "src/main.js",
   "homepage": "./",
