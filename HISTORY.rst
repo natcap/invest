@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixed a bug in validation where checking for spatial overlap would be skipped
+  entirely in cases where optional model arguments were not used.
 * Bumping the ``psutil`` dependency requirement to ``psutil>=5.6.6`` to address
   a double-free vulnerability documented in CVE-2019-18874.
 * Adding a GitHub Actions workflow for building python wheels for Mac and Windows
