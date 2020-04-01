@@ -17,7 +17,8 @@ class HabitatQuality(model.InVESTModel):
             helptext=(
                 "A GDAL-supported raster file.  The current LULC must "
                 "have its' own threat rasters, where each threat "
-                "raster file path has a suffix of <b>_c</b>.<br/><br/> "
+                "raster file path is defined in the <b>Threats Data</b> "
+                "CSV..<br/><br/> "
                 "Each cell should represent a LULC code as an Integer. "
                 "The dataset should be in a projection where the units "
                 "are in meters and the projection used should be "
@@ -33,8 +34,8 @@ class HabitatQuality(model.InVESTModel):
                 "a future LULC will generate degradation, habitat "
                 "quality, and habitat rarity (If baseline is input) "
                 "outputs.  The future LULC must have it's own threat "
-                "rasters, where each threat raster file path has a "
-                "suffix of <b>_f</b>.<br/><br/>Each cell should "
+                "rasters, where each threat raster file path is defined "
+                "in the <b>Threats Data</b> CSV.<br/><br/>Each cell should "
                 "represent a LULC code as an Integer.  The dataset "
                 "should be in a projection where the units are in "
                 "meters and the projection used should be defined. "
@@ -50,8 +51,9 @@ class HabitatQuality(model.InVESTModel):
                 "baseline LULC is provided, rarity outputs will be "
                 "created for the current and future LULC. The baseline "
                 "LULC can have it's own threat rasters (optional), "
-                "where each threat raster file path has a suffix of "
-                "<b>_b</b>. If no threat rasters are found, "
+                "where each threat raster file path is defined in the "
+                "<b>Threats Data</b> CSV. If there are no threat rasters and "
+                "the threat paths are left blank in the CSV column, "
                 "degradation and habitat quality outputs will not be "
                 "generated for the baseline LULC.<br/><br/> Each cell "
                 "should  represent a LULC code as an Integer.  The "
@@ -64,31 +66,21 @@ class HabitatQuality(model.InVESTModel):
             label='Baseline Land Cover (Raster) (Optional)',
             validator=self.validator)
         self.add_input(self.baseline_landcover)
-        self.threat_rasters = inputs.Folder(
-            args_key='threat_raster_folder',
-            helptext=(
-                "The selected folder is used as the location to find "
-                "all threat rasters for the threats listed in the "
-                "below table."),
-            label='Folder Containing Threat Rasters',
-            validator=self.validator)
-        self.add_input(self.threat_rasters)
         self.threats_data = inputs.File(
             args_key='threats_table_path',
             helptext=(
-                "A CSV file of all the threats for the model to "
-                "consider.  Each row in the table is a degradation "
-                "source and each column contains a different attribute "
-                "of each degradation source (THREAT, MAX_DIST, "
-                "WEIGHT).<br/><br/><b>THREAT:</b> The name of the "
-                "threat source and this name must match exactly to the "
-                "name of the threat raster and to the name of it's "
-                "corresponding column in the sensitivity table. "
-                "<b>NOTE:</b> The threat raster path should have a "
-                "suffix indicator ( _c, _f, _b ) and the sensitivity "
-                "column should have a prefix indicator (L_). The "
-                "THREAT name in the threat table should not include "
-                "either the suffix or prefix. "
+                "A CSV file of all the threats for the model to consider. "
+                "Each row in the table is a degradation source. The columns "
+                "(THREAT, MAX_DIST, WEIGHT, DECAY) are different attributes "
+                "of each degradation source. The columns (BASE_PATH, CUR_PATH, "
+                "FUT_PATH) specify the filepath name for the degradation "
+                "source where the path is relative to the THREAT CSV. "
+                "<br/><br/><b>THREAT:</b> The name of the "
+                "threat source must match exactly to the name "
+                "of it's corresponding column in the sensitivity table. "
+                "<b>NOTE:</b> The sensitivity column should have a prefix "
+                "indicator (L_). The THREAT name in the threat table should "
+                "not include the prefix. "
                 "<br/><br/><b>MAX_DIST:</b> A number in kilometres "
                 "(km) for the maximum distance a threat has an "
                 "affect.<br/><br/><b>WEIGHT:</b> A floating point "
@@ -99,8 +91,17 @@ class HabitatQuality(model.InVESTModel):
                 "threats.<br/><br/><b>DECAY:</b> A string value of "
                 "either <b>exponential</b> or <b>linear</b> "
                 "representing the type of decay over space for the "
-                "threat.<br/><br/>See the user's guide for valid "
-                "values for these columns."),
+                "threat. <br/><br/><b>BASE_PATH:</b> The THREAT raster "
+                "filepath for the base scenario (if present, can be left "
+                "blank) where the filepath is relative to the THREAT CSV "
+                "input. <br/><br/><b>CUR_PATH:</b> "
+                "The THREAT raster filepath for the current scenario "
+                "where the filepath is relative to the THREAT CSV input. "
+                "<br/><br/><b>FUT_PATH:</b> The THREAT raster filepath for "
+                "the future scenario (if present) where the filepath is "
+                "relative to the THREAT CSV input."
+                "<br/><br/>See the user's guide for valid values for these "
+                "columns."),
             label='Threats Data',
             validator=self.validator)
         self.add_input(self.threats_data)
@@ -163,7 +164,6 @@ class HabitatQuality(model.InVESTModel):
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
             self.current_landcover.args_key: self.current_landcover.value(),
-            self.threat_rasters.args_key: self.threat_rasters.value(),
             self.threats_data.args_key: self.threats_data.value(),
             self.sensitivity_data.args_key: self.sensitivity_data.value(),
             self.half_saturation_constant.args_key:

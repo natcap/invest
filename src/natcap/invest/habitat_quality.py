@@ -36,11 +36,11 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file.  The current LULC must have "
                 "its' own threat rasters, where each threat raster file path "
-                "has a suffix of <b>_c</b>.  Each cell should "
-                "represent a LULC code as an Integer. The dataset should be "
-                "in a projection where the units are in meters and the "
-                "projection used should be defined.  The LULC codes must "
-                "match the codes in the Sensitivity table."),
+                "is defined in the <b>Threats Data</b> CSV.<br/><br/> "
+                "Each cell should represent a LULC code as an Integer. "
+                "The dataset should be in a projection where the units are "
+                "in meters and the projection used should be defined.  The "
+                "LULC codes must match the codes in the Sensitivity table."),
             "name": "Current Land Cover"
         },
         "lulc_fut_path": {
@@ -54,12 +54,12 @@ ARGS_SPEC = {
                 "future LULC will generate degradation, habitat quality, and "
                 "habitat rarity (If baseline is input) outputs.  The future "
                 "LULC must have it's own threat rasters, where each threat "
-                "raster file path has a suffix of _f. Each "
-                "cell should represent a LULC code as an Integer.  The "
-                "dataset should be in a projection where the units are in "
-                "meters and the projection used should be defined. The "
-                "LULC codes must match the codes in the Sensitivity "
-                "table."),
+                "raster file path is defined in the <b>Threats Data</b> CSV. "
+                "<br/><br/>Each cell should represent a LULC code as an "
+                "Integer.  The dataset should be in a projection where the "
+                "units are in meters and the projection used should be "
+                "defined. The LULC codes must match the codes in the "
+                "Sensitivity table."),
             "name": "Future Land Cover"
         },
         "lulc_bas_path": {
@@ -73,15 +73,16 @@ ARGS_SPEC = {
                 "LULC is provided, rarity outputs will be created for the "
                 "current and future LULC. The baseline LULC can have it's "
                 "own threat rasters (optional), where each threat raster "
-                "file path has a suffix of <b>_b</b>. If no threat rasters "
-                "are found, degradation and habitat quality outputs will not "
-                "be generated for the baseline LULC.<br/><br/> Each cell "
-                "should  represent a LULC code as an Integer.  The dataset "
-                "should be in a projection where the units are in meters and "
-                "the projection used should be defined. The LULC codes must "
-                "match the codes in the Sensitivity table.  If possible the "
-                "baseline map should refer to a time when intensive "
-                "management of the landscape was relatively rare."),
+                "file path is defined in the <b>Threats Data</b> CSV. "
+                "If there are no threat rasters and the threat paths are "
+                "left blank in the CSV column, degradation and habitat quality "
+                "outputs will not be generated for the baseline LULC.<br/><br/> "
+                "Each cell should represent a LULC code as an Integer.  The "
+                "dataset should be in a projection where the units are in "
+                "meters and the projection used should be defined. The LULC "
+                "codes must match the codes in the Sensitivity table.  If "
+                "possible the baseline map should refer to a time when "
+                "intensive management of the landscape was relatively rare."),
             "name": "Baseline Land Cover"
         },
         "threats_table_path": {
@@ -95,8 +96,8 @@ ARGS_SPEC = {
             "about": (
                 "A CSV file of all the threats for the model to consider. "
                 "Each row in the table is a degradation source. The columns "
-                "(THREAT, MAX_DIST, WEIGHT) are different attributes of each "
-                "degradation source. The columns (BASE_PATH, CUR_PATH, "
+                "(THREAT, MAX_DIST, WEIGHT, DECAY) are different attributes "
+                "of each degradation source. The columns (BASE_PATH, CUR_PATH, "
                 "FUT_PATH) specify the filepath name for the degradation "
                 "source where the path is relative to the THREAT CSV. "
                 "THREAT: "
