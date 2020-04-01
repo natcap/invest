@@ -1,5 +1,5 @@
 name: Python distributions
-on: [push, pull_request]
+on: [push, pull_request, release]
 jobs:
     build-wheels:
         name: Wheel
@@ -26,9 +26,7 @@ jobs:
 
         steps:
             - uses: actions/checkout@v2
-              with:
-                  # Fetch complete history for accurate versioning
-                  fetch-depth: 0
+            - run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Set up python ${{ matrix.python-version }} ${{ matrix.python-arch }}
               uses: actions/setup-python@v1
@@ -47,14 +45,22 @@ jobs:
                   name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-arch }}
                   path: dist
 
+            - name: Upload distribution to release
+              if: github.event_name == 'release'
+              run: |
+                  pip install github3.py
+                  python ci/release/upload-to-github-release.py \
+                    $GITHUB_REPOSITORY \
+                    ${GITHUB_REF:10} \
+                    ${{ secrets.GITHUB_TOKEN }} \
+                    $(find dist -name "*.whl")
+
     build-sdist:
         name: Source Dist
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
-              with:
-                  # Fetch complete history for accurate versioning
-                  fetch-depth: 0
+            - run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Set up python
               uses: actions/setup-python@v1
@@ -71,3 +77,13 @@ jobs:
               with:
                   name: Source distribution
                   path: dist
+
+            - name: Upload distribution to release
+              if: github.event_name == 'release'
+              run: |
+                  pip install github3.py
+                  python ci/release/upload-to-github-release.py \
+                    $GITHUB_REPOSITORY \
+                    ${GITHUB_REF:10} \
+                    ${{ secrets.GITHUB_TOKEN }} \
+                    $(find dist -name "*.tar.gz")
