@@ -5,9 +5,10 @@ import { fireEvent, render, wait } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 import App from '../src/app';
-import { investList } from '../src/server_requests';
+import { getInvestList, getFlaskIsReady } from '../src/server_requests';
 jest.mock('../src/server_requests');
-investList.mockResolvedValue({});
+getFlaskIsReady.mockResolvedValue('Flask ready');
+getInvestList.mockResolvedValue({});
 
 const TEST_JOB_DATA = path.join(__dirname, './data/jobdb.json');
 

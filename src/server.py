@@ -56,7 +56,7 @@ def shutdown_server():
 
 @app.route('/ready', methods=['GET'])
 def get_is_ready():
-    return json.dumps('Flask ready')
+    return 'Flask ready'
 
 
 @app.route('/shutdown', methods=['GET'])

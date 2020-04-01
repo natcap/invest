@@ -1,10 +1,9 @@
-// require("@babel/register");
 require = require('esm')(module)
 const spawn = require('child_process').spawn;
 const app = require('electron').app
 const BrowserWindow = require('electron').BrowserWindow
-// const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
 const shutdownPythonProcess = require('./server_requests').shutdownPythonProcess;
+const getFlaskIsReady = require('./server_requests').getFlaskIsReady;
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -12,11 +11,10 @@ let mainWindow;
 
 const isDevMode = process.execPath.match(/[\\/]electron/);
 if (isDevMode) {
+  // load the '.env' file from the project root
   const dotenv = require('dotenv');
-  dotenv.config();  // loads a '.env' file
+  dotenv.config();  
 }
-
-// if (isDevMode) enableLiveReload({ strategy: 'react-hmr' });
 
 let PYTHON = 'python';
 if (process.env.PYTHON) {  // if it was set, override
@@ -24,13 +22,10 @@ if (process.env.PYTHON) {  // if it was set, override
 }
 
 const createWindow = async () => {
-  // Creating the process here with await because sometimes,
-  // but not always, the window loads and the first request
-  // is made before the server is ready. Unfortunately, it's
-  // an intermittent problem, and I'm not certain that await
-  // works here, because createPythonProcess is not a Promise.
-  // UPDATE: await does not deal with the problem.
-  await createPythonProcess();
+  /** Much of this is electron app boilerplate, but here is also
+  * where we fire up the python flask server.
+  */
+  createPythonFlaskProcess();
 
   // Create the browser window.
   mainWindow = new BrowserWindow({
@@ -43,13 +38,12 @@ const createWindow = async () => {
 
   // and load the index.html of the app.
   mainWindow.loadURL(`file://${__dirname}/index.html`);
-  // mainWindow.loadURL(isDevMode ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
-  // mainWindow.loadURL(`${__dirname}/index.html`);
 
   // Open the DevTools.
   if (isDevMode) {
     const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
     await installExtension(REACT_DEVELOPER_TOOLS);
+    // enableLiveReload({ strategy: 'react-hmr' });
     mainWindow.webContents.openDevTools();
   }
 
@@ -63,7 +57,8 @@ const createWindow = async () => {
 };
 
 let pythonServerProcess;
-function createPythonProcess() {
+function createPythonFlaskProcess() {
+  /** Spawn a child process running the Python Flask server.*/
   pythonServerProcess = spawn(
     PYTHON, ['-m', 'flask', 'run'], {
       shell: true,
@@ -99,11 +94,11 @@ app.on('window-all-closed', async () => {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
-    shutdownPythonProcess();
-    // It's crucial to wait before the app.quit here, otherwise
-    // the parent process dies before flask has time to kill its server.
-    setTimeout(app.quit, 10);
+    // It's crucial to await here, otherwise the parent
+    // process dies before flask has time to kill its server.
+    await shutdownPythonProcess();
   }
+  // TODO: handle flask shutdown on darwin
 });
 
 app.on('activate', () => {

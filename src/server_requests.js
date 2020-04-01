@@ -4,16 +4,42 @@ import fetch from 'node-fetch';
 // .then chaining of callbacks. Consider refactoring
 // everything here with async/await.
 
-export function shutdownPythonProcess() {
-  fetch('http://localhost:5000/shutdown', {
-    method: 'get',
-  })
-  .then((response) => { return response.text() })
-  .then((text) => { console.log(text) })
-  .catch((error) => { console.log(error) })
+export function getFlaskIsReady() {
+  return(
+    fetch('http://localhost:5000/ready', {
+      method: 'get',
+    })
+    .then((response) => { return response.text() })
+    .then((text) => { console.log(text) })
+    .catch(async (error) => {
+      if (error.code === 'ECONNREFUSED') {
+        // try again after a short pause
+        await new Promise(resolve => setTimeout(resolve, 50));
+        console.log('recursive call coming')
+        return await getFlaskIsReady()
+      } else {
+        console.log(error)
+        return error 
+      }
+   })
+  )
 }
 
-export function investList() {
+export function shutdownPythonProcess() {
+  // even though we don't need a response sent back
+  // from this fetch, we must ``return`` a Promise 
+  // in order to ``await writeParametersToFile``.
+  return(
+    fetch('http://localhost:5000/shutdown', {
+      method: 'get',
+    })
+    .then((response) => { return response.text() })
+    .then((text) => { console.log(text) })
+    .catch((error) => { console.log(error) })
+  )
+}
+
+export function getInvestList() {
   return(
     fetch('http://localhost:5000/models', {
       method: 'get',
@@ -84,7 +110,7 @@ export function saveToPython(payload) {
 
 export function writeParametersToFile(payload) {
   // even though we don't need a response sent back
-  // from this fetch, ``return`` seems to be required
+  // from this fetch, we must ``return`` a Promise 
   // in order to ``await writeParametersToFile``.
   return (
     fetch('http://localhost:5000/write_parameter_set_file', {

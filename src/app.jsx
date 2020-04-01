@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 import { InvestJob } from './InvestJob';
-import { investList } from './server_requests';
+import { getInvestList, getFlaskIsReady } from './server_requests';
 import { updateRecentSessions, loadRecentSessions } from './utils';
 
 export default class App extends React.Component {
@@ -24,10 +24,11 @@ export default class App extends React.Component {
   async componentDidMount() {
     /** Initialize the list of available invest models and recent invest jobs.
     */
+    await getFlaskIsReady();  // The app's first server calls follow this
     const investList = await getInvestList();
     const recentSessions = await loadRecentSessions(this.props.appdata)
     // TODO: also load and set investSettings from a cached state, instead 
-    // of always re-setting to these hardcoded values.
+    // of always re-setting to these hardcoded values on first launch?
     this.setState(
       {
         investList: investList,
@@ -73,17 +74,4 @@ export default class App extends React.Component {
 
 App.propTypes = {
   appdata: PropTypes.string
-}
-
-function getInvestList() {
-  /** A wrapper around a server call that waits before making the request
-  * because the flask server only just launched in a subprocess. 
-  * TODO: is there a better way to control that this request never
-  * happens before the server is ready?
-  */
-  return new Promise(function(resolve, reject) {
-    setTimeout(() => {
-      resolve(investList())
-    }, 500)  // wait, the server only just launched in a subprocess.
-  });
 }
