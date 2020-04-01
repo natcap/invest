@@ -121,11 +121,15 @@ jobs:
 
                   make GSUTIL=$env:GSUTIL_PATH deploy
 
-            - name: Save build artifacts
-              uses: actions/upload-artifact@v1
+            - uses: actions/upload-artifact@v2-preview
               with:
-                  name: InVEST Windows build artifacts
-                  path: dist
+                  name: InVEST windows installer
+                  path: dist/*.exe
+
+            - uses: actions/upload-artifact@v2-preview
+              with:
+                  name: InVEST user guide
+                  path: dist/InVEST_*_userguide.zip
 
     build-mac-binaries:
         name: "Build mac binaries"
@@ -189,11 +193,10 @@ jobs:
               if: github.event_name != 'pull_request'
               run: make deploy
 
-            - name: Save build artifacts
-              uses: actions/upload-artifact@v1
+            - uses: actions/upload-artifact@v2-preview
               with:
-                  name: InVEST Mac build artifacts
-                  path: dist
+                  name: InVEST mac binaries
+                  path: dist/InVEST-*-mac.zip
 
     build-single-sampledata-archive:
         name: Build a single sampledata archive
@@ -205,50 +208,55 @@ jobs:
 
             - run: make sampledata_single
 
-            - uses: actions/upload-artifact@v1
+            - uses: actions/upload-artifact@v2-preview
               with:
                   name: InVEST sample data
-                  path: dist
+                  path: dist/*.zip
 
     upload-binaries-to-release:
         name: Upload binaries to the release
-        needs: [build-mac-binaries, build-windows-binaries]
+        needs: [build-mac-binaries,
+                build-windows-binaries,
+                build-single-sampledata-archive]
         runs-on: ubuntu-latest
         if: github.event_name == 'release'
         steps:
             - uses: actions/checkout@v2
             - run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - uses: actions/download_artifact@v2
+            - uses: actions/download-artifact@v2-preview
               with:
-                  name: InVEST Windows build artifacts
+                  name: InVEST windows installer
                   path: dist
 
-            - uses: actions/download_artifact@v2
+            - uses: actions/download-artifact@v2-preview
               with:
-                  name: InVEST Mac build artifacts
+                  name: InVEST mac binaries
                   path: dist
 
-            - uses: actions/download-artifact@v2
+            - uses: actions/download-artifact@v2-preview
               with:
                   name: InVEST sample data
+                  path: dist
+
+            - uses: actions/download-artifact@v2-preview
+              with:
+                  name: InVEST user guide
                   path: dist
 
             - uses: actions/setup-python@v1
               with:
                   python-version: 3.7
 
-            - run: pip install github3.py
-
-              # TODO: make the sampledata - single-archive
-              # TODO: don't archive the data files between runs
             - run: |
+                pip install github3.py
                 python ci/release/upload-to-github-release.py \
                     $GITHUB_REPOSITORY \  # Example: natcap/invest
                     ${GITHUB_REF:10} \ # Chars 10 and on are the tag
                     ${{ secrets.GITHUB_TOKEN }} \
-                    $(make qprint-USERGUIDE_ZIP_FILE) \
-                    $(make qprint-MAC_BINARIES_ZIP_FILE) \
-                    $(make qprint-WINDOWS_INSTALLER_FILE) \
+                    $(make jprint-USERGUIDE_ZIP_FILE) \
+                    $(make jprint-MAC_BINARIES_ZIP_FILE) \
+                    $(make jprint-WINDOWS_INSTALLER_FILE) \
+                    $(make jprint-SAMPLEDATA_SINGLE_ARCHIVE) \
                     $(find dist -name "*.whl") \  # python wheels
                     $(find dist -name "*.tar.gz"  # python source dist
