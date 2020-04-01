@@ -12,6 +12,7 @@ import github3
 MIME_TYPE_BY_FILE_EXT = {
     'zip': 'application/zip',
     'exe': 'application/vnd.microsoft.portable-executable',
+    'gz': 'application/gzip',
 
     # No standard for Wheels yet.  See this stackoverflow post for
     # the suggestion used here: # https://stackoverflow.com/a/58543864/299084
@@ -36,7 +37,6 @@ def upload_file(repo, tagname, token, filepaths):
             extension = os.path.splitext(filepath)[1].lower()[1:]
             content_type = MIME_TYPE_BY_FILE_EXT[extension]
         except KeyError:
-            import pdb; pdb.set_trace()
             content_type, content_encoding = mimetypes.guess_type(filepath)
             if not content_type:
                 files_with_unknown_filetypes.append(filepath)
