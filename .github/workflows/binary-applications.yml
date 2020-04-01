@@ -33,6 +33,8 @@ jobs:
             PYTHON_ARCH: x86
         steps:
             - uses: actions/checkout@v2
+              with:
+                  fetch-depth: 0  # fetch complete history
             - run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Restore pip cache
@@ -140,6 +142,8 @@ jobs:
             PYTHON_ARCH: x86
         steps:
             - uses: actions/checkout@v2
+              with:
+                  fetch-depth: 0  # fetch complete history
             - run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Install homebrew dependencies
@@ -204,6 +208,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
+              with:
+                  fetch-depth: 0  # Fetch complete history
             - run: git fetch origin +refs/tags/*:refs/tags/*
 
             - uses: actions/setup-python@v1
@@ -230,6 +236,8 @@ jobs:
         if: github.event_name == 'release'
         steps:
             - uses: actions/checkout@v2
+              with:
+                  fetch-depth: 0  # fetch complete history
             - run: git fetch origin +refs/tags/*:refs/tags/*
 
             - uses: actions/download-artifact@v2-preview
