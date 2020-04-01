@@ -60,13 +60,12 @@ def make_raster_from_array(
     ny, nx = base_array.shape
     new_raster = gtiff_driver.Create(
         base_raster_path, nx, ny, 1, gdal_type)
-    
+
     new_raster.SetProjection(project_wkt)
     origin = (1180000, 690000)
     new_raster.SetGeoTransform([origin[0], 1.0, 0.0, origin[1], 0.0, -1.0])
     new_band = new_raster.GetRasterBand(1)
-    if nodata_val is not None:
-        new_band.SetNoDataValue(nodata_val)
+    new_band.SetNoDataValue(nodata_val)
     new_band.WriteArray(base_array)
     new_raster.FlushCache()
     new_band = None
@@ -137,7 +136,7 @@ def make_lulc_raster(raster_path, lulc_val, side_length=100):
 
 
 def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
-                        threat_values=None):
+                        threat_values=None, nodata_val=-1):
     """Create a side_lengthXside_length raster on designated path with 1 as
     threat and 0 as none.
 
@@ -168,7 +167,8 @@ def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
             if make_empty_raster:
                 open(raster_path, 'a').close()  # writes an empty raster.
             else:
-                make_raster_from_array(threat_array, raster_path)
+                make_raster_from_array(
+                    threat_array, raster_path, nodata_val=nodata_val)
 
 
 def make_sensitivity_samp_csv(csv_path,
@@ -699,3 +699,219 @@ class HabitatQualityTests(unittest.TestCase):
             'lulc_cur_path', 'threats_table_path', 'sensitivity_table_path',
             'half_saturation_constant'])
         self.assertEqual(set(validation_results[0][0]), keys_without_value)
+
+    def test_habtitat_quality_validate_complete(self):
+        """Habitat Quality: test regular validation."""
+        from natcatp.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'],
+                            threat_values=[0.5, 6.6])
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.assertFalse(
+            validate_result, # List should be empty if validation passes
+            f"expected no failed validations instead got {validate_result}.")
+
+
+    def test_habtitat_quality_validation_wrong_spatial_types(self):
+        """Habitat Quality: test validation for wrong GIS types."""
+        from natcatp.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'],
+                            threat_values=[0.5, 6.6])
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
+
+        args['lulc_c_path'], args['access_vector_path'] = (
+            args['access_vector_path'], args['lulc_c_path'])
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            "expected failed validations instead didn't get any")
+        for (validation_keys, error_msg), phrase in zip(
+                validate_result, ['GDAL raster', 'GDAL vector']):
+            self.assertTrue(phrase in error_msg)
+
+
+    def test_habtitat_quality_validation_missing_sens_header(self):
+        """Habitat Quality: test validation for sens threat header."""
+        from natcatp.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(
+            args['sensitivity_table_path'], include_threat=False)
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'],
+                            threat_values=[0.5, 6.6])
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
+
+        args['lulc_c_path'], args['access_vector_path'] = (
+            args['access_vector_path'], args['lulc_c_path'])
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.asserTrue(
+            validate_result,
+            "expected failed validations instead didn't get any.")
+        self.assertTrue(
+            'any column in the sensitivity table' in validate_result[0][1])
+
+
+    def test_habtitat_quality_validation_bad_threat_path(self):
+        """Habitat Quality: test validation for bad threat paths."""
+        from natcatp.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        #make_threats_raster(args['threat_raster_folder'],
+        #                    threat_values=[0.5, 6.6])
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
+
+        args['lulc_c_path'], args['access_vector_path'] = (
+            args['access_vector_path'], args['lulc_c_path'])
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.asserTrue(
+            validate_result,
+            "expected failed validations instead didn't get any.")
+        self.assertTrue(
+            'not found in the threat raster folder' in validate_result[0][1])
+
+
+    def test_habtitat_quality_validation_bad_threat_nodata(self):
+        """Habitat Quality: test validation for bad threat nodata."""
+        from natcatp.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'],
+                            threat_values=[0.5, 6.6], nodata_val=None)
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
+
+        args['lulc_c_path'], args['access_vector_path'] = (
+            args['access_vector_path'], args['lulc_c_path'])
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.asserTrue(
+            validate_result,
+            "expected failed validations instead didn't get any.")
+        self.assertTrue(
+            'has an undefined NODATA value' in validate_result[0][1])
