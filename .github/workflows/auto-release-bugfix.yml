@@ -47,6 +47,11 @@ jobs:
                     # Create a release object based on the text from HISTORY.
                     # This requires that the tag already exists in the
                     # repository on github.
+                    # NOTE: creating a GitHub release creates the tag.
+                    #       The InVEST binaries are created in response to
+                    #       this release object being created.  See the
+                    #       upload-binaries-to-release build job in
+                    #       .github/workflows/binary-applications.yml.
                     python ci/release/create-github-release.py \
                         --tag=$BUGFIX_VERSION \
                         --oauthtoken=$GITHUB_TOKEN \
