@@ -79,14 +79,16 @@ BUILD_DIR := build
 # The fork name will need to be set manually (e.g. make FORKNAME=natcap/invest)
 # if someone wants to build from source outside of git (like if they grabbed
 # a zipfile of the source code).
-FORKNAME := $(word 2, $(subst github.com/, ,$(shell git remote get-url origin)))
+FORKNAME := $(word 2, $(subst :,,$(subst github.com, ,$(shell git remote get-url origin))))
 FORKUSER := $(word 1, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
 	BUCKET := gs://releases.naturalcapitalproject.org
 	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
+	INSTALLER_NAME_FORKUSER :=
 else
 	BUCKET := gs://natcap-dev-build-artifacts
 	DIST_URL_BASE := $(BUCKET)/invest/$(FORKUSER)/$(VERSION)
+	INSTALLER_NAME_FORKUSER := $(FORKUSER)
 endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
@@ -309,11 +311,6 @@ $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
 # Installers for each platform.
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
-ifeq ($(FORKUSER), natcap)
-	INSTALLER_NAME_FORKUSER :=
-else
-	INSTALLER_NAME_FORKUSER := $(FORKUSER)
-endif
 WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(INSTALLER_NAME_FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 windows_installer: $(WINDOWS_INSTALLER_FILE)
 $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) build/vcredist_x86.exe | $(GIT_SAMPLE_DATA_REPO_PATH)
