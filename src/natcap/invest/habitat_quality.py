@@ -267,9 +267,9 @@ def execute(args):
     
     # check that the required headers exist in the threat table.
     # Raise exception if they don't.
-    threat_header_list = list(list(a.values())[0].keys())
+    threat_header_list = list(list(threat_dict.values())[0].keys())
     required_threat_header_list = [
-        'WEIGHT', 'MAX_DIST', 'BASE_PATH', 'CUR_PATH', 'FUT_PATH']
+        'WEIGHT', 'MAX_DIST', 'DECAY', 'BASE_PATH', 'CUR_PATH', 'FUT_PATH']
     missing_threat_header_list = [
         h for h in required_threat_header_list if h not in threat_header_list]
     if missing_threat_header_list:
@@ -353,7 +353,7 @@ def execute(args):
                 # Threat path from threat CSV is relative to CSV
                 threat_path = os.path.join(
                         threat_csv_basepath, 
-                        threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])) 
+                        threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]]) 
 
                 # it's okay to have no threat raster for baseline scenario
                 validated_threat_path = _resolve_threat_raster_path(
@@ -388,12 +388,12 @@ def execute(args):
         if not ext: 
             aligned_raster_list.append(
                 os.path.join(intermediate_output_dir, 
-                    f'{os.path.basename}_aligned{file_suffix}.tif'))
+                    f'{os.path.basename(path)}_aligned{file_suffix}.tif'))
         else:
             aligned_raster_list.append(
                 os.path.join(intermediate_output_dir, 
                     os.path.basename(path).replace(
-                        ext, f'_aligned{file_suffix}.tif'))
+                        ext, f'_aligned{file_suffix}.tif')))
 
     LOGGER.debug(f"aligned raster list: {aligned_raster_list}")
     # Align and resize all the land cover and threat rasters,
@@ -531,6 +531,8 @@ def execute(args):
             # get the threat raster for the specific threat
             threat_raster_path = threat_path_dict['threat' + lulc_key][threat]
             LOGGER.debug('threat_raster_path %s', threat_raster_path)
+            # if threat path is None then must be in Base scenario where 
+            # threats are not required.
             if threat_raster_path is None:
                 LOGGER.warning(
                     'The threat raster for %s could not be found for the land '
@@ -982,7 +984,7 @@ def _resolve_threat_raster_path(path, raise_error=True):
         except ValueError:
             # If GDAL can't open the raster, our GDAL error handler will be
             # executed and ValueError raised.
-            continue
+            pass
 
     gdal.PopErrorHandler()
 
@@ -1216,9 +1218,9 @@ def validate(args, limit_to=None):
                     # Threat path from threat CSV is relative to CSV
                     threat_path = os.path.join(
                             threat_csv_basepath, 
-                            threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])) 
+                            threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]]) 
 
-                    validated_threat_path = _resolve_ambiguous_raster_path(
+                    validated_threat_path = _resolve_threat_raster_path(
                             threat_path, raise_error=False)
                     # it's okay to have no threat raster for baseline scenario
                     if lulc_key != '_b' and validated_threat_path is None:
