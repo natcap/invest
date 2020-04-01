@@ -234,6 +234,12 @@ jobs:
                   name: InVEST sample data
                   path: dist
 
+            - uses: actions/setup-python@v1
+              with:
+                  python-version: 3.7
+
+            - run: pip install github3.py
+
             # Upload:
             #   * mac binary
             #   * windows binary
