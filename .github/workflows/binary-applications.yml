@@ -206,6 +206,12 @@ jobs:
             - uses: actions/checkout@v2
             - run: git fetch origin +refs/tags/*:refs/tags/*
 
+            - uses: actions/setup-python@v1
+              with:
+                  python-version: 3.7
+
+            - run: pip install setuptools_scm
+
             - run: make sampledata_single
 
             - uses: actions/upload-artifact@v2-preview
