@@ -169,4 +169,5 @@ jobs:
                   python setup.py install
 
             - name: Run UI tests
+              timeout-minutes: 10  # Tests usually only take a few minutes to run.
               run: make test_ui
