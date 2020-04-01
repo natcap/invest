@@ -240,16 +240,15 @@ jobs:
 
             - run: pip install github3.py
 
-            # Upload:
-            #   * mac binary
-            #   * windows binary
-            #   * userguide
-            #   * sampledata
-            #   * python wheels
-            - uses: actions/upload-release-asset@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  asset_path:
-                  asset_name:
-                  asset_content_type:
+              # TODO: make the sampledata - single-archive
+              # TODO: don't archive the data files between runs
+            - run: |
+                python ci/release/upload-to-github-release.py \
+                    $GITHUB_REPOSITORY \  # Example: natcap/invest
+                    ${GITHUB_REF:10} \ # Chars 10 and on are the tag
+                    ${{ secrets.GITHUB_TOKEN }} \
+                    $(make qprint-USERGUIDE_ZIP_FILE) \
+                    $(make qprint-MAC_BINARIES_ZIP_FILE) \
+                    $(make qprint-WINDOWS_INSTALLER_FILE) \
+                    $(find dist -name "*.whl") \  # python wheels
+                    $(find dist -name "*.tar.gz"  # python source dist

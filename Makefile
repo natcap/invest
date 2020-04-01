@@ -115,6 +115,12 @@ MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 print-%:
 	@echo "$* = $($*)"
 
+# Very useful for printing variables within scripts!
+# Like `make print-<variable>, only without also printing the variable name.
+# the 'j' prefix stands for just.  We're just printing the variable name.
+jprint-%:
+	@echo "$($*)"
+
 help:
 	@echo "Please use make <target> where <target> is one of"
 	@echo "  check             to verify all needed programs and packages are installed"
