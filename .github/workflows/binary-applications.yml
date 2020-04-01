@@ -210,7 +210,8 @@ jobs:
               with:
                   python-version: 3.7
 
-            - run: pip install setuptools_scm
+            - run: |
+                pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - run: make sampledata_single
 
