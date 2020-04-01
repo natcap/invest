@@ -84,34 +84,28 @@ ARGS_SPEC = {
                 "management of the landscape was relatively rare."),
             "name": "Baseline Land Cover"
         },
-        "threat_raster_folder": {
-            "validation_options": {
-                "exists": True,
-            },
-            "type": "directory",
-            "required": True,
-            "about": (
-                "A path to the directory that will contain all "
-                "threat rasters."),
-        },
         "threats_table_path": {
             "validation_options": {
-                "required_fields": ["THREAT", "MAX_DIST", "WEIGHT"],
+                "required_fields": [
+                    "THREAT", "MAX_DIST", "WEIGHT", "BASE_PATH", 
+                    "CUR_PATH", "FUT_PATH"],
             },
             "type": "csv",
             "required": True,
             "about": (
                 "A CSV file of all the threats for the model to consider. "
-                "Each row in the table is a degradation source and each "
-                "column contains a different attribute of each degradation "
-                "source (THREAT, MAX_DIST, WEIGHT). THREAT: "
+                "Each row in the table is a degradation source. The columns "
+                "(THREAT, MAX_DIST, WEIGHT) are different attributes of each "
+                "degradation source. The columns (BASE_PATH, CUR_PATH, "
+                "FUT_PATH) specify the filepath name for the degradation "
+                "source where the path is relative to the THREAT CSV. "
+                "THREAT: "
                 "The name of the threat source and this name must match "
-                "exactly to the name of the threat raster and to the name of "
-                "it's corresponding column in the sensitivity table. "
-                "NOTE: The threat raster path should have a suffix indicator "
-                "( _c, _f, _b ) and the sensitivity column should have a "
+                "exactly to the name of it's corresponding column in the "
+                "sensitivity table. "
+                "NOTE: The sensitivity column should have a "
                 "prefix indicator (L_). The THREAT name in the threat table "
-                "should not include either the suffix or prefix. "
+                "should not include 'L_' prefix. "
                 "MAX_DIST: A number in kilometres (km) for the maximum "
                 "distance a threat has an affect. WEIGHT: A "
                 "floating point value between 0 and 1 for the threats "
@@ -121,7 +115,16 @@ ARGS_SPEC = {
                 "DECAY: A string value of either exponential or "
                 "linear representing the type of decay over space for "
                 "the threat. See the user's guide for valid values "
-                "for these columns."),
+                "for these columns. "
+                "BASE_PATH: optional. The THREAT raster filepath for "
+                "the base scenario (if present) where the filepath is "
+                "relative to the THREAT CSV input. CUR_PATH: required.  "
+                "The THREAT raster filepath for the current scenario "
+                "where the filepath is relative to the THREAT CSV input. "
+                "FUT_PATH: optional. The THREAT raster filepath for the "
+                "future scenario (if present) where the filepath is "
+                "relative to the THREAT CSV input."
+                ),
             "name": "Threats Data"
         },
         "access_vector_path": {
@@ -190,6 +193,7 @@ ARGS_SPEC = {
 _OUT_NODATA = -1.0
 _RARITY_NODATA = -64329.0
 _SCALING_PARAM = 2.5
+_THREAT_SCENARIO_MAP = {'_c':'CUR_PATH', '_f':'FUT_PATH','_b':'BASE_PATH'}
 
 
 def execute(args):
@@ -209,12 +213,11 @@ def execute(args):
             (optional)
         args['lulc_bas_path'] (string): a path to an input land use/land cover raster
             (optional, but required for rarity calculations)
-        args['threat_raster_folder'] (string): a path to the directory that will
-            contain all threat rasters (required)
         args['threats_table_path'] (string): a path to an input CSV containing data
             of all the considered threats. Each row is a degradation source
             and each column a different attribute of the source with the
-            following names: 'THREAT','MAX_DIST','WEIGHT' (required).
+            following names: 'THREAT','MAX_DIST','WEIGHT', 'BASE_PATH', 
+            'CUR_PATH', 'FUT_PATH' (required).
         args['access_vector_path'] (string): a path to an input polygon shapefile
             containing data on the relative protection against threats (optional)
         args['sensitivity_table_path'] (string): a path to an input CSV file of LULC
@@ -262,6 +265,18 @@ def execute(args):
     sensitivity_dict = utils.build_lookup_from_csv(
         args['sensitivity_table_path'], 'LULC', to_lower=False)
     
+    # check that the required headers exist in the threat table.
+    # Raise exception if they don't.
+    threat_header_list = list(list(a.values())[0].keys())
+    required_threat_header_list = [
+        'WEIGHT', 'MAX_DIST', 'BASE_PATH', 'CUR_PATH', 'FUT_PATH']
+    missing_threat_header_list = [
+        h for h in required_threat_header_list if h not in threat_header_list]
+    if missing_threat_header_list:
+        raise ValueError(
+            'Column(s) %s are missing in the threat table' %
+            (', '.join(missing_threat_header_list)))    
+
     # check that the required headers exist in the sensitivity table.
     # Raise exception if they don't.
     sens_header_list = list(sensitivity_dict.values())[0]
@@ -286,6 +301,10 @@ def execute(args):
             'table. Sensitivity columns: %s' % 
             (missing_threat_header_list, sens_header_list))
                 
+    # Get the directory path for the Threats CSV, used for locating threat 
+    # rasters, which are relative to this path
+    threat_csv_basepath = os.path.dirname(args['threats_table_path'])
+
     # get the half saturation constant
     try:
         half_saturation_constant = float(args['half_saturation_constant'])
@@ -329,18 +348,22 @@ def execute(args):
             threat_path_dict['threat' + lulc_key] = {}
 
             # for each threat given in the CSV file try opening the associated
-            # raster which should be found in threat_raster_folder
+            # raster which should be found relative to the Threat CSV 
             for threat in threat_dict:
-                # it's okay to have no threat raster for baseline scenario
-                threat_path_dict['threat' + lulc_key][threat] = (
-                    _resolve_ambiguous_raster_path(
-                        os.path.join(args['threat_raster_folder'], threat + lulc_key),
-                        raise_error=(lulc_key != '_b')))
+                # Threat path from threat CSV is relative to CSV
+                threat_path = os.path.join(
+                        threat_csv_basepath, 
+                        threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])) 
 
+                # it's okay to have no threat raster for baseline scenario
+                validated_threat_path = _resolve_threat_raster_path(
+                        threat_path, raise_error=(lulc_key != '_b'))
+                    
+                threat_path_dict['threat' + lulc_key][threat] = (
+                        validated_threat_path)
                 # save threat paths in a list for alignment and resize
-                threat_path = threat_path_dict['threat' + lulc_key][threat]
-                if threat_path:
-                    lulc_and_threat_raster_list.append(threat_path)
+                if validated_threat_path:
+                    lulc_and_threat_raster_list.append(validated_threat_path)
 
     LOGGER.info("Checking LULC codes against Sensitivity table")
     compare_lucodes_sens_task = graph.add_task(
@@ -357,13 +380,20 @@ def execute(args):
     lulc_pixel_size = lulc_raster_info['pixel_size']
     lulc_bbox = lulc_raster_info['bounding_box']
 
-    # Attempt to grab the right extension and not just .tif, but replacing 
-    # with .tif files moving forward.
-    # NOTE this does not support a raster as a folder
-    aligned_raster_list = [
-        os.path.join(intermediate_output_dir, os.path.basename(path).replace(
-            os.path.splitext(path)[1], f'_aligned{file_suffix}.tif'))
-        for path in lulc_and_threat_raster_list]
+    # create paths for aligned rasters checking for the case the raster path
+    # is a folder
+    aligned_raster_list = []
+    for path in lulc_and_threat_raster_list:
+        ext = os.path.splitext(path)[1]
+        if not ext: 
+            aligned_raster_list.append(
+                os.path.join(intermediate_output_dir, 
+                    f'{os.path.basename}_aligned{file_suffix}.tif'))
+        else:
+            aligned_raster_list.append(
+                os.path.join(intermediate_output_dir, 
+                    os.path.basename(path).replace(
+                        ext, f'_aligned{file_suffix}.tif'))
 
     LOGGER.debug(f"aligned raster list: {aligned_raster_list}")
     # Align and resize all the land cover and threat rasters,
@@ -925,18 +955,16 @@ def _collect_unique_lucodes(raster_path_band, pickle_path):
         pickle.dump(data, fh, pickle.HIGHEST_PROTOCOL)
 
 
-def _resolve_ambiguous_raster_path(path, raise_error=True):
-    """Determine real path when we don't know true path extension.
+def _resolve_threat_raster_path(path, raise_error=True):
+    """Determine if path is a valid gdal raster file.
 
     Parameters:
-        path (string): file path that includes the name of the file but not
-            its extension
-
+        path (string): file path.
         raise_error (boolean): if True then function will raise an
             ValueError if a valid raster file could not be found.
 
     Return:
-        the full path, plus extension, to the valid raster.
+        ``path`` if valid raster, otherwise ``None`` if not raise_error.
     """
     # Turning on exceptions so that if an error occurs when trying to open a
     # file path we can catch it and handle it properly
@@ -946,19 +974,11 @@ def _resolve_ambiguous_raster_path(path, raise_error=True):
         raise ValueError()
     gdal.PushErrorHandler(_error_handler)
 
-    # a list of possible extensions for raster datasets. We currently can
-    # handle .tif and directory paths
-    possible_ext = ['', '.tif', '.img']
-
     # initialize dataset to None in the case that all paths do not exist
     dataset = None
-    for ext in possible_ext:
-        full_path = path + ext
-        if not os.path.exists(full_path):
-            continue
+    if os.path.exists(path):
         try:
-            dataset = gdal.OpenEx(full_path, gdal.GA_ReadOnly)
-            break
+            dataset = gdal.OpenEx(path, gdal.GA_ReadOnly)
         except ValueError:
             # If GDAL can't open the raster, our GDAL error handler will be
             # executed and ValueError raised.
@@ -971,16 +991,14 @@ def _resolve_ambiguous_raster_path(path, raise_error=True):
     if dataset is None:
         if raise_error:
             raise ValueError(
-                'There was an Error locating a threat raster in the input '
-                'folder. One of the threat names in the CSV table does not '
-                'match to a threat raster in the input folder. Please check '
-                'that the names correspond. The threat raster that could not '
-                'be found is: %s' % path)
+                'There was an Error locating a threat raster from the path in '
+                'CSV. The path in the CSV should be relative to the threat CSV. '
+                'The threat raster path that could not be found is: %s' % path)
         else:
-            full_path = None
+            path = None
 
     dataset = None
-    return full_path
+    return path
 
 
 def _raster_pixel_count(raster_path):
@@ -1195,15 +1213,19 @@ def validate(args, limit_to=None):
                 # for each threat given in the CSV file try opening the associated
                 # raster which should be found in threat_raster_folder
                 for threat in threat_dict:
-                    threat_path = _resolve_ambiguous_raster_path(
-                        os.path.join(args['threat_raster_folder'], threat + lulc_key),
-                            raise_error=False)
+                    # Threat path from threat CSV is relative to CSV
+                    threat_path = os.path.join(
+                            threat_csv_basepath, 
+                            threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])) 
+
+                    validated_threat_path = _resolve_ambiguous_raster_path(
+                            threat_path, raise_error=False)
                     # it's okay to have no threat raster for baseline scenario
-                    if lulc_key != '_b' and threat_path is None:
+                    if lulc_key != '_b' and validated_threat_path is None:
                         bad_threat_paths.append(threat)
                         continue
                     # Check NODATA value of the valid threat raster
-                    threat_raster_info = pygeoprocessing.get_raster_info(threat_path)
+                    threat_raster_info = pygeoprocessing.get_raster_info(validated_threat_path)
                     if threat_raster_info['nodata'][0] is None:
                         bad_threat_nodatas.append(threat)
         
