@@ -35,7 +35,6 @@
 </body>
 <script>
   require = require("esm")(module)
-  // why can't this load with relative path when esm's require is used?
   require("file://".concat(__dirname, "/index.js"))
 </script>
 
