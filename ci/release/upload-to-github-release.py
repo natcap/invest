@@ -1,10 +1,12 @@
 # encoding=UTF-8
+"""Upload binaries to an established GitHub release."""
 import argparse
+import logging
 import mimetypes
 import os
-import logging
 
 import github3
+
 import retrying
 
 logging.basicConfig(level=logging.DEBUG)
@@ -25,6 +27,21 @@ LOGGER = logging.getLogger(__name__)
 
 
 def upload_file(repo, tagname, token, filepaths):
+    """Upload file to a given release.
+
+    Parameters:
+        repo (string): The repository containing the target release, in the
+            form "username/repository".  Example: "natcap/invest"
+        tagname (string): The tag associated with the target release.  This
+            release must already exist on the repository.
+        token (string): The authentication token for the target repository.
+        filepaths (list): A list of filepaths to be uploaded as assets
+            on the target release.
+
+    Returns:
+        ``None``
+
+    """
     session = github3.GitHub(token=token)
     repository = session.repository(*repo.split('/'))
     release = repository.release_from_tag(tagname)
@@ -65,9 +82,19 @@ def upload_file(repo, tagname, token, filepaths):
 
 
 def main(args=None):
+    """Parse command-line arguments for this script.
+
+    Parameters:
+        args=None (list or None): A list of string parameters to be parsed.
+
+    Returns:
+        An ``argparse.Namespace`` object with the parsed parameters.
+
+    """
     parser = argparse.ArgumentParser(description=(
         "Upload the target files to an existing github release. "
-        "This script requires github3.py (pip install github3.py) to work."
+        "This script requires github3.py and retrying "
+        "(pip install github3.py retrying) to work."
     ))
 
     parser.add_argument('repo', help=(
