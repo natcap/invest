@@ -3,7 +3,7 @@ on:
     release:
         types: [created]
     push:
-        branches:  # only build on branches
+        tags-ignore:  # only build on branches
             - '*'
     pull_request:
 jobs:
