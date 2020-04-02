@@ -314,6 +314,6 @@ jobs:
                     "${{ secrets.GITHUB_TOKEN }}" \
                     "$(make jprint-USERGUIDE_ZIP_FILE)" \
                     "$(make jprint-MAC_BINARIES_ZIP_FILE)" \
-                    "$(make jprint-WINDOWS_INSTALLER_FILE)" \
+                    "$(make PYTHON_ARCH=x86 jprint-WINDOWS_INSTALLER_FILE)" \
                     "$(make jprint-SAMPLEDATA_SINGLE_ARCHIVE)"
                     # python distributions are uploaded in a different workflow.
