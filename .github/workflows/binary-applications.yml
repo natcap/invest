@@ -130,12 +130,14 @@ jobs:
 
                   make GSUTIL=$env:GSUTIL_PATH deploy
 
-            - uses: actions/upload-artifact@v2-preview
+            - name: Upload installer artifact
+              uses: actions/upload-artifact@v2-preview
               with:
                   name: InVEST-windows-installer
                   path: dist/*.exe
 
-            - uses: actions/upload-artifact@v2-preview
+            - name: Upload user's guide artifact
+              uses: actions/upload-artifact@v2-preview
               with:
                   name: InVEST-user-guide
                   path: dist/InVEST_*_userguide.zip
@@ -206,7 +208,8 @@ jobs:
               if: github.event_name != 'pull_request' && github.event_name != 'release'
               run: make deploy
 
-            - uses: actions/upload-artifact@v2-preview
+            - name: Upload binaries artifact
+              uses: actions/upload-artifact@v2-preview
               with:
                   name: InVEST-mac-binaries
                   path: dist/InVEST-*-mac.zip
@@ -231,7 +234,8 @@ jobs:
 
             - run: make sampledata_single
 
-            - uses: actions/upload-artifact@v2-preview
+            - name: Upload sample data artifact
+              uses: actions/upload-artifact@v2-preview
               with:
                   name: InVEST-sample-data
                   path: dist/*.zip
@@ -249,22 +253,26 @@ jobs:
                   fetch-depth: 0  # fetch complete history
             - run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - uses: actions/download-artifact@v2-preview
+            - name: Download windows installer artifact
+              uses: actions/download-artifact@v2-preview
               with:
                   name: InVEST-windows-installer
                   path: dist
 
-            - uses: actions/download-artifact@v2-preview
+            - name: Download mac binaries artifact
+              uses: actions/download-artifact@v2-preview
               with:
                   name: InVEST-mac-binaries
                   path: dist
 
-            - uses: actions/download-artifact@v2-preview
+            - name: Download sample data artifact
+              uses: actions/download-artifact@v2-preview
               with:
                   name: InVEST-sample-data
                   path: dist
 
-            - uses: actions/download-artifact@v2-preview
+            - name: Download user's guide artifact
+              uses: actions/download-artifact@v2-preview
               with:
                   name: InVEST-user-guide
                   path: dist
