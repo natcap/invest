@@ -54,14 +54,22 @@ export class LogTab extends React.Component {
   componentDidUpdate(prevProps) {
     // if there is a logfile and it's new, start tailing the file.
     if (this.props.logfile && prevProps.logfile !== this.props.logfile) {
-      this.tail = new Tail(this.props.logfile, {
-        fromBeginning: true
-      });
-      let logdata = Object.assign('', this.state.logdata);
-      this.tail.on('line', (data) => {
-        logdata += `${data}` + os.EOL
-        this.setState({ logdata: logdata })
-      })
+      try {
+        this.tail = new Tail(this.props.logfile, {
+          fromBeginning: true
+        });
+        let logdata = Object.assign('', this.state.logdata);
+        this.tail.on('line', (data) => {
+          logdata += `${data}` + os.EOL
+          this.setState({ logdata: logdata })
+        })
+      } catch(error) {
+        // in case a recent session was loaded but the logfile
+        // no longer exists 
+        this.setState({logdata: `Logfile is missing: ${os.EOL}${this.props.logfile}`})
+        console.log(error)
+        console.log(`Not able to read ${this.props.logfile}`)
+      }
 
     // No new logfile. No existing logdata.
     } else if (this.state.logdata === '') {
@@ -69,7 +77,12 @@ export class LogTab extends React.Component {
 
     // No new logfile. Existing logdata. Invest process exited. 
     } else if (['success', 'error'].includes(this.props.jobStatus)) {
-      this.tail.unwatch()
+      try {
+        this.tail.unwatch()
+      }
+      catch(error) {
+        console.log(error)
+      }
     }
   }
 
