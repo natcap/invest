@@ -79,6 +79,9 @@ jobs:
             - name: Build sampledata
               run: make -j3 sampledata
 
+            - name: Build user's Guide
+              run: make userguide
+
             - name: Build windows binaries
               run: make binaries
 
