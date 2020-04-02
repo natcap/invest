@@ -386,10 +386,11 @@ def execute(args):
     aligned_raster_list = []
     for path in lulc_and_threat_raster_list:
         ext = os.path.splitext(path)[1]
-        if not ext: 
+        if not ext:
+            threat_dir_name = os.path.basename(os.path.dirname(path))
             aligned_raster_list.append(
                 os.path.join(intermediate_output_dir, 
-                    f'{os.path.basename(path)}_aligned{file_suffix}.tif'))
+                    f'{threat_dir_name}_aligned{file_suffix}.tif'))
         else:
             aligned_raster_list.append(
                 os.path.join(intermediate_output_dir, 
@@ -977,11 +978,11 @@ def _resolve_threat_raster_path(path, raise_error=True):
         raise ValueError()
     gdal.PushErrorHandler(_error_handler)
 
-    # initialize dataset to None in the case that all paths do not exist
+    # initialize dataset to None in the case that path does not exist
     dataset = None
     if os.path.exists(path):
         try:
-            dataset = gdal.OpenEx(path, gdal.GA_ReadOnly)
+            dataset = gdal.OpenEx(path, gdal.OF_RASTER | gdal.GA_ReadOnly)
         except ValueError:
             # If GDAL can't open the raster, our GDAL error handler will be
             # executed and ValueError raised.
@@ -1206,6 +1207,11 @@ def validate(args, limit_to=None):
                 
             invalid_keys.add('sensitivity_table_path')
    
+
+        # Get the directory path for the Threats CSV, used for locating threat 
+        # rasters, which are relative to this path
+        threat_csv_basepath = os.path.dirname(args['threats_table_path'])
+        
         # Validate threat raster paths and their nodata values
         bad_threat_paths = []
         bad_threat_nodatas = []
@@ -1227,10 +1233,11 @@ def validate(args, limit_to=None):
                     if lulc_key != '_b' and validated_threat_path is None:
                         bad_threat_paths.append(threat)
                         continue
-                    # Check NODATA value of the valid threat raster
-                    threat_raster_info = pygeoprocessing.get_raster_info(validated_threat_path)
-                    if threat_raster_info['nodata'][0] is None:
-                        bad_threat_nodatas.append(threat)
+                    if validated_threat_path:
+                        # Check NODATA value of the valid threat raster
+                        threat_raster_info = pygeoprocessing.get_raster_info(validated_threat_path)
+                        if threat_raster_info['nodata'][0] is None:
+                            bad_threat_nodatas.append(threat)
         
         if bad_threat_paths:
             validation_warnings.append((
