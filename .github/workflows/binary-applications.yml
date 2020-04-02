@@ -1,6 +1,10 @@
 name: Build InVEST App Binaries
 
-on: [push, pull_request, check_run, release]
+on:
+    release:
+        types: [created]
+    push:
+    pull_request:
 
 jobs:
     check-syntax-errors:
