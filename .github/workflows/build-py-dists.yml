@@ -3,6 +3,8 @@ on:
     release:
         types: [created]
     push:
+        branches:
+            - '*'
         tags-ignore:  # only build on branches
             - '*'
     pull_request:

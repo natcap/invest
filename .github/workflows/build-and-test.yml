@@ -2,6 +2,8 @@ name: Run InVEST Tests
 
 on:
     push:
+        branches:
+            - '*'
         tags-ignore:  # only build on branches
             - '*'
     pull_request:
