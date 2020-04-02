@@ -53,7 +53,7 @@ jobs:
               if: github.event_name == 'release'
               shell: bash
               run: |
-                  pip install github3.py
+                  pip install github3.py retrying
                   python ci/release/upload-to-github-release.py \
                     $GITHUB_REPOSITORY \
                     ${GITHUB_REF:10} \
@@ -87,7 +87,7 @@ jobs:
               if: github.event_name == 'release'
               shell: bash
               run: |
-                  pip install github3.py
+                  pip install github3.py retrying
                   python ci/release/upload-to-github-release.py \
                     $GITHUB_REPOSITORY \
                     ${GITHUB_REF:10} \
