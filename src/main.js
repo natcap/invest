@@ -2,8 +2,8 @@ require = require('esm')(module)
 const spawn = require('child_process').spawn;
 const app = require('electron').app
 const BrowserWindow = require('electron').BrowserWindow
-const shutdownPythonProcess = require('./server_requests').shutdownPythonProcess;
-const getFlaskIsReady = require('./server_requests').getFlaskIsReady;
+const shutdownPythonProcess = require('./server_requests.mjs').shutdownPythonProcess;
+const getFlaskIsReady = require('./server_requests.mjs').getFlaskIsReady;
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
