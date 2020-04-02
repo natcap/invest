@@ -221,7 +221,7 @@ jobs:
                   path: dist/InVEST-*-mac.zip
 
     build-sampledata:
-        name: Build a single sampledata archive
+        name: Build sampledata archives
         needs: check-syntax-errors
         runs-on: ubuntu-latest
         steps:
