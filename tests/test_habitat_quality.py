@@ -65,7 +65,8 @@ def make_raster_from_array(
     origin = (1180000, 690000)
     new_raster.SetGeoTransform([origin[0], 1.0, 0.0, origin[1], 0.0, -1.0])
     new_band = new_raster.GetRasterBand(1)
-    new_band.SetNoDataValue(nodata_val)
+    if nodata_val != None:
+        new_band.SetNoDataValue(nodata_val)
     new_band.WriteArray(base_array)
     new_raster.FlushCache()
     new_band = None
@@ -376,7 +377,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         threatnames = ['1111', '2222']
         threats_folder = self.workspace_dir
-        os.makedirs(threats_folder)
+        #os.makedirs(threats_folder)
         for suffix in ['_c', '_f']:
             for i, threat in enumerate(threatnames):
                 raster_path = os.path.join(threats_folder,
@@ -386,9 +387,9 @@ class HabitatQualityTests(unittest.TestCase):
 
         threat_csv_path = os.path.join(self.workspace_dir, 'threats.csv')
         with open(threat_csv_path, 'w') as open_table:
-            open_table.write('MAX_DIST,WEIGHT,THREAT,DECAY\n')
-            open_table.write('0.9,0.7,%s,linear\n' % threatnames[0])
-            open_table.write('0.5,1.0,%s,exponential\n' % threatnames[1])
+            open_table.write('MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write('0.9,0.7,%s,linear,,1111_c.tif,1111_f.tif\n' % threatnames[0])
+            open_table.write('0.5,1.0,%s,exponential,,2222_c.tif,2222_f.tif\n' % threatnames[1])
 
         args = {
             'half_saturation_constant': '0.5',
@@ -697,7 +698,7 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habtitat_quality_validate_complete(self):
         """Habitat Quality: test regular validation."""
-        from natcatp.invest import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'half_saturation_constant': '0.5',
@@ -735,7 +736,7 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habtitat_quality_validation_wrong_spatial_types(self):
         """Habitat Quality: test validation for wrong GIS types."""
-        from natcatp.invest import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'half_saturation_constant': '0.5',
@@ -765,8 +766,8 @@ class HabitatQualityTests(unittest.TestCase):
                                                   'threats_samp.csv')
         make_threats_csv(args['threats_table_path'])
 
-        args['lulc_c_path'], args['access_vector_path'] = (
-            args['access_vector_path'], args['lulc_c_path'])
+        args['lulc_cur_path'], args['access_vector_path'] = (
+            args['access_vector_path'], args['lulc_cur_path'])
 
         validate_result = habitat_quality.validate(args, limit_to=None)
         self.assertTrue(
@@ -779,7 +780,7 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habtitat_quality_validation_missing_sens_header(self):
         """Habitat Quality: test validation for sens threat header."""
-        from natcatp.invest import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'half_saturation_constant': '0.5',
@@ -810,11 +811,8 @@ class HabitatQualityTests(unittest.TestCase):
                                                   'threats_samp.csv')
         make_threats_csv(args['threats_table_path'])
 
-        args['lulc_c_path'], args['access_vector_path'] = (
-            args['access_vector_path'], args['lulc_c_path'])
-
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.asserTrue(
+        self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertTrue(
@@ -823,7 +821,7 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habtitat_quality_validation_bad_threat_path(self):
         """Habitat Quality: test validation for bad threat paths."""
-        from natcatp.invest import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'half_saturation_constant': '0.5',
@@ -853,11 +851,8 @@ class HabitatQualityTests(unittest.TestCase):
                                                   'threats_samp.csv')
         make_threats_csv(args['threats_table_path'])
 
-        args['lulc_c_path'], args['access_vector_path'] = (
-            args['access_vector_path'], args['lulc_c_path'])
-
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.asserTrue(
+        self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertTrue(
@@ -866,7 +861,7 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habtitat_quality_validation_bad_threat_nodata(self):
         """Habitat Quality: test validation for bad threat nodata."""
-        from natcatp.invest import habitat_quality
+        from natcap.invest import habitat_quality
 
         args = {
             'half_saturation_constant': '0.5',
@@ -896,11 +891,8 @@ class HabitatQualityTests(unittest.TestCase):
                                                   'threats_samp.csv')
         make_threats_csv(args['threats_table_path'])
 
-        args['lulc_c_path'], args['access_vector_path'] = (
-            args['access_vector_path'], args['lulc_c_path'])
-
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.asserTrue(
+        self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertTrue(
