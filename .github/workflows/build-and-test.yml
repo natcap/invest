@@ -1,6 +1,10 @@
 name: Run InVEST Tests
 
-on: [push, pull_request, check_run]
+on:
+    push:
+        tags-ignore:  # only build on branches
+            - '*'
+    pull_request:
 
 jobs:
     # This job will check for obvious syntax errors.
