@@ -24,9 +24,13 @@ export default class App extends React.Component {
   async componentDidMount() {
     /** Initialize the list of available invest models and recent invest jobs.
     */
-    await getFlaskIsReady();  // The app's first server calls follow this
+    // TODO: intermittently (10 - 20% of times) we don't get to getInvestList.
+    const readydata = await getFlaskIsReady();  // The app's first server calls follow this
+    console.log(readydata)
     const investList = await getInvestList();
+    console.log('app invest list')
     const recentSessions = await loadRecentSessions(this.props.appdata)
+    console.log('app load recents')
     // TODO: also load and set investSettings from a cached state, instead 
     // of always re-setting to these hardcoded values on first launch?
     this.setState(
@@ -37,7 +41,7 @@ export default class App extends React.Component {
           nWorkers: '-1',
           loggingLevel: 'INFO',
         }
-      });
+      }, () => {console.log('app first setstate')});
   }
 
   async updateRecentSessions(jobdata) {
