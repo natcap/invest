@@ -14,7 +14,7 @@ class VizErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div>{'This model has no visualization'}</div>
+        <div>{'Placeholder: This model has no visualization'}</div>
       );
     }
     return this.props.children;
