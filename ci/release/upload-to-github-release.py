@@ -28,6 +28,16 @@ def upload_file(repo, tagname, token, filepaths):
     repository = session.repository(*repo.split('/'))
     release = repository.release_from_tag(tagname)
 
+    @retrying.retry(stop_max_attempt_number=5,
+                    wait_exponential_multiplier=10000,
+                    wait_exponential_max=10000):
+    def _upload(content_type, filepath):
+        release.upload_asset(
+            content_type=content_type,
+            name=os.path.basename(filepath),
+            asset=open(filepath, 'rb'),
+        )
+
     files_with_unknown_filetypes = []
     for filepath in filepaths:
         # If we don't know the filetype of the file, guess via python
@@ -43,15 +53,6 @@ def upload_file(repo, tagname, token, filepaths):
                 files_with_unknown_filetypes.append(filepath)
                 continue
 
-        @retrying.retry(stop_max_attempt_number=5,
-                        wait_exponential_multiplier=10000,
-                        wait_exponential_max=10000):
-        def _upload(content_type, filepath):
-            release.upload_asset(
-                content_type=content_type,
-                name=os.path.basename(filepath),
-                asset=open(filepath, 'rb'),
-            )
         _upload(content_type, filepath)
 
     if files_with_unknown_filetypes:
