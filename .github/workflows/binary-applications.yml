@@ -72,6 +72,7 @@ jobs:
                   ./ci/windows-ci-binary-install.ps1
 
             - name: Clone sample data repo (non-lfs)
+              shell: bash
               run: |
                   GIT_URL=$(make jprint-GIT_SAMPLE_DATA_REPO)
                   LOCALPATH=$(make jprint-GIT_SAMPLE_DATA_REPO_PATH)
