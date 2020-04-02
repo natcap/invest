@@ -5,7 +5,7 @@
       "directory": null,
       "suffix": null
     },
-    "statefile": "carbon_setup.json",
+    "statefile": "cache/carbon_setup.json",
     "status": null,
     "humanTime": "3/5/2020, 10:43:14 AM",
     "systemTime": 1583259376573.759,
@@ -17,7 +17,7 @@
       "directory": "duck",
       "suffix": "goose"
     },
-    "statefile": "duck.json",
+    "statefile": "cache/duck.json",
     "status": "success",
     "humanTime": "3/5/2020, 10:43:14 AM",
     "SystemTime": 1243259376573.759,
