@@ -3,10 +3,11 @@ import argparse
 import mimetypes
 import os
 import logging
-logging.basicConfig(level=logging.DEBUG)
 
 import github3
 import retrying
+
+logging.basicConfig(level=logging.DEBUG)
 
 # The full list of standard media types can be found at
 # https://www.iana.org/assignments/media-types/media-types.xhtml
@@ -39,6 +40,7 @@ def upload_file(repo, tagname, token, filepaths):
         )
 
     files_with_unknown_filetypes = []
+
     for filepath in filepaths:
         # If we don't know the filetype of the file, guess via python
         # mimetypes library.  If it's still not known, raise an error later.
@@ -49,6 +51,7 @@ def upload_file(repo, tagname, token, filepaths):
             content_type = MIME_TYPE_BY_FILE_EXT[extension]
         except KeyError:
             content_type, content_encoding = mimetypes.guess_type(filepath)
+
             if not content_type:
                 files_with_unknown_filetypes.append(filepath)
                 continue
