@@ -81,7 +81,7 @@ jobs:
                   # Only clone the files ... deliberately not cloning LFS data
                   # Installer needs .invest.json files only, and these are not
                   # stored in LFS.
-                  git clone $GIT_URL $LOCALPATH
+                  GIT_LFS_SKIP_SMUDGE=1 git clone $GIT_URL $LOCALPATH
                   git -C $LOCALPATH checkout $GIT_REV
 
             - name: Build user's Guide
