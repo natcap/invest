@@ -276,7 +276,7 @@ jobs:
             - name: Upload distributions to release
               shell: bash
               run: |
-                pip install github3.py
+                pip install github3.py retrying
                 python ci/release/upload-to-github-release.py \
                     "$GITHUB_REPOSITORY" \  # Example: natcap/invest
                     "${GITHUB_REF:10}" \ # Chars 10 and on are the tag

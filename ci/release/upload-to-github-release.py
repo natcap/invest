@@ -6,6 +6,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 import github3
+import retrying
 
 # The full list of standard media types can be found at
 # https://www.iana.org/assignments/media-types/media-types.xhtml
@@ -42,11 +43,14 @@ def upload_file(repo, tagname, token, filepaths):
                 files_with_unknown_filetypes.append(filepath)
                 continue
 
-        release.upload_asset(
-            content_type=content_type,
-            name=os.path.basename(filepath),
-            asset=open(filepath, 'rb'),
-        )
+        with retrying.Retrying(stop_max_attempt_number=5,
+                               wait_exponential_multiplier=10000,
+                               wait_exponential_max=10000):
+            release.upload_asset(
+                content_type=content_type,
+                name=os.path.basename(filepath),
+                asset=open(filepath, 'rb'),
+            )
 
     if files_with_unknown_filetypes:
         raise ValueError(
