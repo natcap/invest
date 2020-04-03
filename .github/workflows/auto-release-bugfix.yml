@@ -23,6 +23,12 @@ jobs:
             - run: python -m pip install --upgrade requests
 
             - run: |
+                if hub ci-status master
+                then
+                    echo "There are test failures on master; aborting release."
+                    exit 1
+                fi
+
                 # Don't do a bugfix release if master's HEAD already has a tag
                 # git-describe exits 0 if a tag is found, 128 if not.
                 if ! git describe --exact-match --tags master
