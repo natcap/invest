@@ -302,7 +302,7 @@ jobs:
               shell: bash
               run: |
                 pip install github3.py retrying toml
-                if python ci/release/github-release-exists.py
+                if python ci/release/github-release-exists.py $GITHUB_REPOSITORY ${GITHUB_REF:10}
                 then
                     ls -la dist
                     pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
