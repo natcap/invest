@@ -6,3 +6,4 @@ src/__pycache__/
 cache/
 !cache/carbon_setup.json
 .env
+jobdb.json
