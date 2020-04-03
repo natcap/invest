@@ -89,21 +89,27 @@ class RecentInvestJobs extends React.Component {
   
   constructor(props) {
     super(props);
-    // this.handleClick = this.handleClick.bind(this);
   }
-
-  // handleClick(sessionFilename) {
-  //   this.props.loadState(sessionFilename);
-  // }
 
   render() {
 
     // Buttons to load each recently saved state
     let recentButtons = [];
     this.props.recentSessions.forEach(session => {
-      const name = session[0];
-      const model = session[1].model;
-      const workspaceDir = session[1].workspace.directory;
+
+      // These properties are required, if they don't exist,
+      // the session data was corrupted and should be skipped
+      let name, model, workspaceDir;
+      try {
+        name = session[0];
+        model = session[1].model;
+        workspaceDir = session[1].workspace.directory;
+      } catch(error) {
+        return
+      }
+      
+      // These are optional and the rest of the render method
+      // should be robust to undefined values
       const suffix = session[1].workspace.suffix;
       const status = session[1]['status'];
       const description = session[1]['description'];
@@ -112,12 +118,10 @@ class RecentInvestJobs extends React.Component {
       const headerStyle = {
         backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
       }
-
       recentButtons.push(
         <Card className="text-left session-card border-0"
           as="button"
           key={name}
-          // value={session[1]['statefile']} 
           onClick={() => this.props.loadState(session[1]['statefile'])}>
           <Card.Body>
             <Card.Header as="h4" style={headerStyle}>
@@ -144,9 +148,13 @@ class RecentInvestJobs extends React.Component {
         <div>
           Select Recent Session:
         </div>
-        <CardGroup className='session-card-group'>
-          {recentButtons}
-        </CardGroup>
+        {recentButtons.length
+          ? <CardGroup className='session-card-group'>{recentButtons}</CardGroup>
+          : <div>
+              No recent sessions yet.<br></br> 
+              Try the <b>Load Parameters</b> button to load a sample data json file
+            </div>
+        }
       </React.Fragment>
     );
   }
