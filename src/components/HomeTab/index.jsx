@@ -152,7 +152,7 @@ class RecentInvestJobs extends React.Component {
           ? <CardGroup className='session-card-group'>{recentButtons}</CardGroup>
           : <div>
               No recent sessions yet.<br></br> 
-              Try the <b>Load Parameters</b> button to load a sample data json file
+              Try the <b>Load</b> button to load a sample data json file
             </div>
         }
       </React.Fragment>
