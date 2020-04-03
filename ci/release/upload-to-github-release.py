@@ -47,7 +47,7 @@ def upload_file(repo, tagname, token, filepaths):
     release = repository.release_from_tag(tagname)
 
     @retrying.retry(stop_max_attempt_number=5,
-                    wait_exponential_multiplier=10000,
+                    wait_exponential_multiplier=1000,
                     wait_exponential_max=10000)
     def _upload(content_type, filepath):
         release.upload_asset(
