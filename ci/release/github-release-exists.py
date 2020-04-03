@@ -1,3 +1,5 @@
+# encoding=UTF-8
+"""Check if a release exists on a GitHub repository."""
 import argparse
 
 import github3
