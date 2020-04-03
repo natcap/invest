@@ -1,7 +1,5 @@
 name: Python distributions
 on:
-    release:
-        types: [created]
     push:
     pull_request:
 jobs:
@@ -50,15 +48,19 @@ jobs:
                   path: dist
 
             - name: Upload distribution to release
-              if: github.event_name == 'release'
               shell: bash
               run: |
-                  pip install github3.py retrying
-                  python ci/release/upload-to-github-release.py \
-                    $GITHUB_REPOSITORY \
-                    ${GITHUB_REF:10} \
-                    ${{ secrets.GITHUB_TOKEN }} \
-                    $(find dist -name "*.whl")
+                if python ci/release/github-release-exists.py
+                then
+                    pip install github3.py retrying
+                    python ci/release/upload-to-github-release.py \
+                        $GITHUB_REPOSITORY \
+                        ${GITHUB_REF:10} \
+                        ${{ secrets.GITHUB_TOKEN }} \
+                        $(find dist -name "*.whl")
+                else
+                    echo "Release for ${GITHUB_REF:10} not found; skipping binary upload."
+                fi
 
     build-sdist:
         name: Source Dist
@@ -84,12 +86,16 @@ jobs:
                   path: dist
 
             - name: Upload distribution to release
-              if: github.event_name == 'release'
               shell: bash
               run: |
-                  pip install github3.py retrying
-                  python ci/release/upload-to-github-release.py \
-                    $GITHUB_REPOSITORY \
-                    ${GITHUB_REF:10} \
-                    ${{ secrets.GITHUB_TOKEN }} \
-                    $(find dist -name "*.tar.gz")
+                if python ci/release/github-release-exists.py
+                then
+                    pip install github3.py retrying
+                    python ci/release/upload-to-github-release.py \
+                        $GITHUB_REPOSITORY \
+                        ${GITHUB_REF:10} \
+                        ${{ secrets.GITHUB_TOKEN }} \
+                        $(find dist -name "*.tar.gz")
+                else
+                    echo "Release for ${GITHUB_REF:10} not found; skipping binary upload."
+                fi

@@ -1,8 +1,6 @@
 name: Build InVEST App Binaries
 
 on:
-    release:
-        types: [created]
     push:
     pull_request:
 
@@ -126,7 +124,7 @@ jobs:
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request' && github.event_name != 'release'
+              if: github.event_name != 'pull_request'
               run: |
                   $env:GSUTIL_PATH = (Get-Command gsutil).path
 
@@ -203,7 +201,7 @@ jobs:
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
               # We only want to upload artifacts to a release object in a release.
-              if: github.event_name != 'pull_request' && github.event_name != 'release'
+              if: github.event_name != 'pull_request'
               uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
               with:
                   version: '281.0.0'
@@ -211,8 +209,7 @@ jobs:
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
-              # We only want to upload artifacts to a release object in a release.
-              if: github.event_name != 'pull_request' && github.event_name != 'release'
+              if: github.event_name != 'pull_request'
               run: make deploy
 
             - name: Upload binaries artifact
@@ -252,7 +249,7 @@ jobs:
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
               # We only want to upload artifacts to a release object in a release.
-              if: github.event_name != 'pull_request' && github.event_name != 'release'
+              if: github.event_name != 'pull_request'
               run: make deploy
 
             - name: Upload sample data artifact
@@ -262,12 +259,11 @@ jobs:
                   path: dist/*.zip
 
     upload-binaries-to-release:
-        name: Upload binaries to the release
+        name: Upload binaries to a release
         needs: [build-mac-binaries,
                 build-windows-binaries,
                 build-sampledata]
         runs-on: ubuntu-latest
-        if: github.event_name == 'release'
         steps:
             - uses: actions/checkout@v2
               with:
@@ -305,15 +301,20 @@ jobs:
             - name: Upload distributions to release
               shell: bash
               run: |
-                ls -la dist
-                pip install github3.py retrying toml
-                pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-                python ci/release/upload-to-github-release.py \
-                    "$GITHUB_REPOSITORY" \
-                    "${GITHUB_REF:10}" \
-                    "${{ secrets.GITHUB_TOKEN }}" \
-                    "$(make jprint-USERGUIDE_ZIP_FILE)" \
-                    "$(make jprint-MAC_BINARIES_ZIP_FILE)" \
-                    "$(make PYTHON_ARCH=x86 jprint-WINDOWS_INSTALLER_FILE)" \
-                    "$(make jprint-SAMPLEDATA_SINGLE_ARCHIVE)"
-                    # python distributions are uploaded in a different workflow.
+                if python ci/release/github-release-exists.py
+                then
+                    ls -la dist
+                    pip install github3.py retrying toml
+                    pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                    python ci/release/upload-to-github-release.py \
+                        "$GITHUB_REPOSITORY" \
+                        "${GITHUB_REF:10}" \
+                        "${{ secrets.GITHUB_TOKEN }}" \
+                        "$(make jprint-USERGUIDE_ZIP_FILE)" \
+                        "$(make jprint-MAC_BINARIES_ZIP_FILE)" \
+                        "$(make PYTHON_ARCH=x86 jprint-WINDOWS_INSTALLER_FILE)" \
+                        "$(make jprint-SAMPLEDATA_SINGLE_ARCHIVE)"
+                        # python distributions are uploaded in a different workflow.
+                else
+                    echo "Release for ${GITHUB_REF:10} not found; skipping binary upload"
+                fi
