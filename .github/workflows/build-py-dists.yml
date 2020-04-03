@@ -51,7 +51,7 @@ jobs:
               shell: bash
               run: |
                 pip install github3.py retrying
-                if python ci/release/github-release-exists.py
+                if python ci/release/github-release-exists.py $GITHUB_REPOSITORY ${GITHUB_REF:10}
                 then
                     python ci/release/upload-to-github-release.py \
                         $GITHUB_REPOSITORY \
@@ -89,7 +89,7 @@ jobs:
               shell: bash
               run: |
                 pip install github3.py retrying
-                if python ci/release/github-release-exists.py
+                if python ci/release/github-release-exists.py $GITHUB_REPOSITORY ${GITHUB_REF:10}
                 then
                     python ci/release/upload-to-github-release.py \
                         $GITHUB_REPOSITORY \
