@@ -29,7 +29,7 @@ import { Provider } from 'react-redux';
 import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
 const store = createStore(rootReducer)
 
-let INVEST_EXE = 'invest.exe'
+let INVEST_EXE = 'invest'
 if (process.env.INVEST) {  // if it was set, override
   INVEST_EXE = process.env.INVEST
 }
@@ -72,9 +72,9 @@ export class InvestJob extends React.Component {
       },                               // only set values when execute starts the subprocess
       logfile: null,                   // path to the invest logfile associated with invest job
       logStdErr: null,                 // stderr data from the invest subprocess
-      sessionProgress: 'home',         // 'home', 'setup', 'log', 'results', 'resources' (i.e. one of the tabs)
-      activeTab: 'home',               // controls which tab is currently visible
-      jobStatus: null                  // 'running', 'error', 'success'
+      sessionProgress: 'home',         // 'home', 'setup', 'log' - used on loadState to decide which tab to activate
+      jobStatus: null,                 // 'running', 'error', 'success'
+      activeTab: 'home'                // controls which tab is currently visible
     };
     
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
@@ -226,7 +226,6 @@ export class InvestJob extends React.Component {
     const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
     
     const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
-    console.log(cmdArgs)
     const investRun = spawn(INVEST_EXE, cmdArgs, {
         cwd: process.cwd(),
         shell: true, // without true, IOError when datastack.py loads json
@@ -258,9 +257,14 @@ export class InvestJob extends React.Component {
       }
     });
 
-    // Capture stderr to a string
+    // Capture stderr to a string separate from the invest log
+    // so that it can be displayed separately when invest exits,
+    // and because it could actually be stderr emitted from the 
+    // invest CLI or even the shell, rather than the invest model,
+    // in which case it's useful to console.log too.
     let stderr = Object.assign('', this.state.logStdErr);
     investRun.stderr.on('data', (data) => {
+      console.log(`${data}`)
       stderr += `${data}`
       this.setState({
         logStdErr: stderr,
@@ -274,10 +278,8 @@ export class InvestJob extends React.Component {
       // differently from one-another, but right now they are all exit code 1.
       // E.g. this callback is designed with a model crash in mind, but not a fail to 
       // launch, in which case the saveState call will probably crash.
-      const progress = (code === 0 ? 'results' : 'log')
       const status = (code === 0 ? 'success' : 'error')
       this.setState({
-        sessionProgress: progress,
         jobStatus: status,
       }, () => {
         this.saveState();
@@ -468,10 +470,9 @@ export class InvestJob extends React.Component {
 
   render () {
     const activeTab = this.state.activeTab;
-    const sessionProgress = this.state.sessionProgress;
     const setupDisabled = !(this.state.args); // enable once modelSpec has loaded
-    const logDisabled = ['home', 'setup'].includes(sessionProgress);  // enable during and after execution
-    const resultsDisabled = (sessionProgress !== 'results');  // enable only on complete execute with no errors
+    const logDisabled = (this.state.jobStatus == null);  // enable during and after execution
+    const resultsDisabled = (this.state.jobStatus !== 'success');  // enable only on complete execute with no errors
     const dropdownsDisabled = (this.state.args == null);
     
     return(
