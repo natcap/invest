@@ -50,9 +50,9 @@ jobs:
             - name: Upload distribution to release
               shell: bash
               run: |
+                pip install github3.py retrying
                 if python ci/release/github-release-exists.py
                 then
-                    pip install github3.py retrying
                     python ci/release/upload-to-github-release.py \
                         $GITHUB_REPOSITORY \
                         ${GITHUB_REF:10} \
@@ -88,9 +88,9 @@ jobs:
             - name: Upload distribution to release
               shell: bash
               run: |
+                pip install github3.py retrying
                 if python ci/release/github-release-exists.py
                 then
-                    pip install github3.py retrying
                     python ci/release/upload-to-github-release.py \
                         $GITHUB_REPOSITORY \
                         ${GITHUB_REF:10} \
