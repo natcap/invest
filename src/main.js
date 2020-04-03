@@ -1,9 +1,6 @@
-require = require('esm')(module)
 const spawn = require('child_process').spawn;
 const app = require('electron').app
 const BrowserWindow = require('electron').BrowserWindow
-const shutdownPythonProcess = require('./server_requests.mjs').shutdownPythonProcess;
-const getFlaskIsReady = require('./server_requests.mjs').getFlaskIsReady;
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -82,6 +79,17 @@ function createPythonFlaskProcess() {
     console.log(code);
     console.log('Child process terminated due to signal ' + signal);
   });
+}
+
+function shutdownPythonProcess() {
+  return(
+    fetch('http://localhost:5000/shutdown', {
+      method: 'get',
+    })
+    .then((response) => { return response.text() })
+    .then((text) => { console.log(text) })
+    .catch((error) => { console.log(error) })
+  )
 }
 
 // This method will be called when Electron has finished

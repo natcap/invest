@@ -25,20 +25,6 @@ export function getFlaskIsReady() {
   )
 }
 
-export function shutdownPythonProcess() {
-  // even though we don't need a response sent back
-  // from this fetch, we must ``return`` a Promise 
-  // in order to ``await writeParametersToFile``.
-  return(
-    fetch('http://localhost:5000/shutdown', {
-      method: 'get',
-    })
-    .then((response) => { return response.text() })
-    .then((text) => { console.log(text) })
-    .catch((error) => { console.log(error) })
-  )
-}
-
 export function getInvestList() {
   return(
     fetch('http://localhost:5000/models', {
