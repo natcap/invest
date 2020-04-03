@@ -209,6 +209,13 @@ export class InvestJob extends React.Component {
     * When the process exits, job metadata is saved again (overwriting previous)
     * with the final status of the invest run.
     */
+    const workspace = {
+      directory: this.state.args.workspace_dir.value,
+      suffix: this.state.args.results_suffix.value
+    }
+    // model name, workspace, and suffix are suitable for a unique job identifier
+    const sessionName = [
+      this.state.modelName, workspace.directory, workspace.suffix].join('-')
 
     // Write a temporary datastack json for passing as a command-line arg
     const temp_dir = fs.mkdtempSync(path.join(process.cwd(), TEMP_DIR, 'data-'))
@@ -219,26 +226,21 @@ export class InvestJob extends React.Component {
     const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
     
     const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
+    console.log(cmdArgs)
     const investRun = spawn(INVEST_EXE, cmdArgs, {
         cwd: process.cwd(),
         shell: true, // without true, IOError when datastack.py loads json
         env: gdalEnv
       });
 
-    const workspace = {
-      directory: this.state.args.workspace_dir.value,
-      suffix: this.state.args.results_suffix.value
-    }
-    // model name, workspace, and suffix are suitable for a unique job identifier
-    const sessionName = [
-      this.state.modelName, workspace.directory, workspace.suffix].join('-')
     
     // There's no general way to know that a spawned process started,
     // so this logic when listening for stdout seems like the way.
     let logfilename = ''
-    investRun.stdout.on('data', async () => {
+    investRun.stdout.on('data', async (data) => {
       if (!logfilename) {
         logfilename = await findMostRecentLogfile(workspace.directory)
+        console.log(logfilename)
         // TODO: handle case when logfilename is undefined? It seems like
         // sometimes there is some stdout emitted before a logfile exists.
         this.setState(
@@ -268,6 +270,10 @@ export class InvestJob extends React.Component {
     // Set some state when the invest process exits and update the app's
     // persistent database by calling saveState.
     investRun.on('close', (code) => {
+      // TODO: there are non-zero exit cases that should be handled
+      // differently from one-another, but right now they are all exit code 1.
+      // E.g. this callback is designed with a model crash in mind, but not a fail to 
+      // launch, in which case the saveState call will probably crash.
       const progress = (code === 0 ? 'results' : 'log')
       const status = (code === 0 ? 'success' : 'error')
       this.setState({
