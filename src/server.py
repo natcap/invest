@@ -47,6 +47,8 @@ MODEL_MODULE_MAP = {
     "wind_energy": "wind_energy"
 }
 
+INVERTED_MODULE_MODEL_MAP = {v: k for k, v in MODEL_MODULE_MAP.items()}
+
 
 def shutdown_server():
     func = request.environ.get('werkzeug.server.shutdown')
@@ -67,6 +69,7 @@ def shutdown():
 
 @app.route('/models', methods=['GET'])
 def get_invest_models():
+    LOGGER.debug('get model list')
     return natcap.invest.cli.build_model_list_json()
 
 
@@ -101,10 +104,13 @@ def post_datastack_file():
     filepath = request.get_json()['datastack_path']
     stack_type, stack_info = natcap.invest.datastack.get_datastack_info(
         filepath)
+    model_run_name = INVERTED_MODULE_MODEL_MAP[stack_info.model_name.replace('natcap.invest.', '')]
+    LOGGER.debug(model_run_name)
     result_dict = {
         'type': stack_type,
         'args': stack_info.args,
         'module_name': stack_info.model_name,
+        'model_run_name': model_run_name,
         'invest_version': stack_info.invest_version
     }
     return json.dumps(result_dict)
