@@ -76,6 +76,7 @@
     "glob": "^7.1.6",
     "google-palette": "^1.1.0",
     "leaflet": "^1.6.0",
+    "node-fetch": "^2.6.0",
     "papaparse": "^5.1.1",
     "prop-types": "^15.7.2",
     "radium": "^0.25.2",
