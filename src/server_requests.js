@@ -10,8 +10,9 @@ export function getFlaskIsReady() {
       method: 'get',
     })
     .then((response) => { return response.text() })
-    .then((text) => { console.log(text) })
+    // .then((text) => { console.log(text) })
     .catch(async (error) => {
+      console.log(error)
       if (error.code === 'ECONNREFUSED') {
         // try again after a short pause
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -25,10 +26,17 @@ export function getFlaskIsReady() {
   )
 }
 
+// TODO: sometimes this fetch doesn't complete or error,
+// hence the logging
 export function getInvestList() {
+  console.log('pre-fetch models')
   return(
     fetch('http://localhost:5000/models', {
       method: 'get',
+    })
+    .then((response) => { 
+      console.log(response)
+      return response
     })
     .then((response) => { return response.json() })
     .catch((error) => { console.log(error) })

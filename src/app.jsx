@@ -22,9 +22,10 @@ export default class App extends React.Component {
   }
 
   async componentDidMount() {
-    /** Initialize the list of available invest models and recent invest jobs.
-    */
+    /** Initialize the list of available invest models and recent invest jobs.*/
+
     // TODO: intermittently (10 - 20% of times) we don't get to getInvestList.
+    // Hence all the logging here.
     const readydata = await getFlaskIsReady();  // The app's first server calls follow this
     console.log(readydata)
     const investList = await getInvestList();
