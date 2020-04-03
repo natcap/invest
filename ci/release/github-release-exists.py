@@ -32,7 +32,7 @@ def main(args=None):
     repository = session.repository(*parsed_args.repo.split('/'))
 
     @retrying.retry(stop_max_attempt_number=10,
-                    wait_exponential_multiplier=10000,
+                    wait_exponential_multiplier=1000,
                     wait_exponential_max=10000)
     def _get_release():
         try:
