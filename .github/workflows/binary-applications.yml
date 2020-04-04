@@ -299,24 +299,22 @@ jobs:
                   python-version: 3.7
 
             - run: |
-                pip install github3.py retrying toml
+                pip install toml
                 pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Upload distributions to release
               shell: bash
               run: |
-                if python ci/release/github-release-exists.py $GITHUB_REPOSITORY ${GITHUB_REF:10}
+                if hub release show ${GITHUB_REF:10}
                 then
                     ls -la dist
-                    python ci/release/upload-to-github-release.py \
-                        "$GITHUB_REPOSITORY" \
-                        "${GITHUB_REF:10}" \
-                        "${{ secrets.GITHUB_TOKEN }}" \
-                        "$(make jprint-USERGUIDE_ZIP_FILE)" \
-                        "$(make jprint-MAC_BINARIES_ZIP_FILE)" \
-                        "$(make PYTHON_ARCH=x86 jprint-WINDOWS_INSTALLER_FILE)" \
-                        "$(make jprint-SAMPLEDATA_SINGLE_ARCHIVE)"
-                        # python distributions are uploaded in a different workflow.
-                else
+                    hub release \
+                        --attach $(make jprint-USERGUIDE_ZIP_FILE) \
+                        --attach $(make jprint-MAC_BINARIES_ZIP_FILE) \
+                        --attach $(make PYTHON_ARCH=x86 jprint-WINDOWS_INSTALLER_FILE) \
+                        --attach $(make jprint-SAMPLEDATA_SINGLE_ARCHIVE) \
+                        --message $(hub release show ${GITHUB_REF:10}) \
+                        ${GITHUB_REF:10}
+                else:
                     echo "Release for ${GITHUB_REF:10} not found; skipping binary upload"
                 fi

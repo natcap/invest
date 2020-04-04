@@ -41,7 +41,6 @@ jobs:
               run: |
                   pip install ${{ matrix.numpy }}
                   pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-                  pip install github3.py retrying
 
             - name: Build wheel
               run: python setup.py bdist_wheel
@@ -54,15 +53,14 @@ jobs:
             - name: Upload distribution to release
               shell: bash
               run: |
-                if python ci/release/github-release-exists.py $GITHUB_REPOSITORY ${GITHUB_REF:10}
+                if hub release show ${GITHUB_REF:10}
                 then
-                    python ci/release/upload-to-github-release.py \
-                        $GITHUB_REPOSITORY \
-                        ${GITHUB_REF:10} \
-                        ${{ secrets.GITHUB_TOKEN }} \
-                        $(find dist -name "*.whl")
+                    hub release edit \
+                        --attach $(find dist -name "*.whl") \
+                        --message $(hub release show ${GITHUB_REF:10} \
+                         ${GITHUB_REF:10}
                 else
-                    echo "Release for ${GITHUB_REF:10} not found; skipping binary upload."
+                    echo "Release for ${GITHUB_REF:10} not found; skipping wheel upload."
                 fi
 
     build-sdist:
@@ -78,8 +76,9 @@ jobs:
                   python-version: 3.7
 
             - name: Install python dependencies
+              shell: bash
               run: |
-                pip install github3.py retrying toml
+                pip install toml
                 pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build source distribution
@@ -93,13 +92,12 @@ jobs:
             - name: Upload distribution to release
               shell: bash
               run: |
-                if python ci/release/github-release-exists.py $GITHUB_REPOSITORY ${GITHUB_REF:10}
+                if hub release show ${GITHUB_REF:10}
                 then
-                    python ci/release/upload-to-github-release.py \
-                        $GITHUB_REPOSITORY \
-                        ${GITHUB_REF:10} \
-                        ${{ secrets.GITHUB_TOKEN }} \
-                        $(find dist -name "*.tar.gz")
+                    hub release edit \
+                        --attach $(find dist -name "*.tar.gz") \
+                        --message $(hub release show ${GITHUB_REF:10} \
+                         ${GITHUB_REF:10}
                 else
-                    echo "Release for ${GITHUB_REF:10} not found; skipping binary upload."
+                    echo "Release for ${GITHUB_REF:10} not found; skipping sdist upload."
                 fi
