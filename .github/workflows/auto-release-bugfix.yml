@@ -37,9 +37,11 @@ jobs:
                 # git-describe exits 0 if a tag is found, 128 if not.
                 if ! git describe --exact-match --tags $TARGET_BRANCH
                 then
-                    BUGFIX_VERSION=$(python ci/release/get-release-number.py)
+                    BUGFIX_VERSION=$(python setup.py --version | awk -F '.' '{print $1"."$2"."$3+1}')
 
                     # Update the UG hash in the Makefile
+                    # This could be done with curl and sed, but it'll be easier
+                    # to read this way.
                     python ci/release/increment-userguide-revision.py
 
                     # Update HISTORY with the tag and today's date.
