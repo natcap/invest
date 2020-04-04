@@ -27,58 +27,58 @@ jobs:
             -   env:
                     TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
                 run: |
-                if hub ci-status $TARGET_BRANCH
-                then
-                    echo "There are test failures on $TARGET_BRANCH; aborting release."
-                    exit 1
-                fi
+                    if hub ci-status $TARGET_BRANCH
+                    then
+                        echo "There are test failures on $TARGET_BRANCH; aborting release."
+                        exit 1
+                    fi
 
-                # Don't do a bugfix release if target branch's HEAD already has a tag
-                # git-describe exits 0 if a tag is found, 128 if not.
-                if ! git describe --exact-match --tags $TARGET_BRANCH
-                then
-                    BUGFIX_VERSION=$(python setup.py --version | awk -F '.' '{print $1"."$2"."$3+1}')
+                    # Don't do a bugfix release if target branch's HEAD already has a tag
+                    # git-describe exits 0 if a tag is found, 128 if not.
+                    if ! git describe --exact-match --tags $TARGET_BRANCH
+                    then
+                        BUGFIX_VERSION=$(python setup.py --version | awk -F '.' '{print $1"."$2"."$3+1}')
 
-                    # Update the UG hash in the Makefile
-                    # This could be done with curl and sed, but it'll be easier
-                    # to read this way.
-                    python ci/release/increment-userguide-revision.py
+                        # Update the UG hash in the Makefile
+                        # This could be done with curl and sed, but it'll be easier
+                        # to read this way.
+                        python ci/release/increment-userguide-revision.py
 
-                    # Update HISTORY with the tag and today's date.
-                    python ci/release/update-history.py $BUGFIX_VERSION $(date "+%Y-%m-%d")
+                        # Update HISTORY with the tag and today's date.
+                        python ci/release/update-history.py $BUGFIX_VERSION $(date "+%Y-%m-%d")
 
-                    # Commit changes and make an annotated tag.
-                    git commit Makefile HISTORY.rst \
-                        -m "Auto-committing updates for the $BUGFIX_VERSION release"
-                    git tag -a $BUGFIX_VERSION "$BUGFIX_VERSION release."
+                        # Commit changes and make an annotated tag.
+                        git commit Makefile HISTORY.rst \
+                            -m "Auto-committing updates for the $BUGFIX_VERSION release"
+                        git tag -a $BUGFIX_VERSION "$BUGFIX_VERSION release."
 
-                    # Only push revisions needed to push the tag created.
-                    git push \
-                        https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git\
-                        $BUGFIX_VERSION
+                        # Only push revisions needed to push the tag created.
+                        git push \
+                            https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git\
+                            $BUGFIX_VERSION
 
-                    # Format the HISTORY of this release for the release.
-                    # This file represents both the title and the body of the
-                    # release.  A blank line separates the title from the body.
-                    RELEASE_MESSAGE_FILE=release_message.txt
-                    echo "${GITHUB_REF:10}" >> $RELEASE_MESSAGE_FILE
-                    echo "" >> $RELEASE_MESSAGE_FILE
+                        # Format the HISTORY of this release for the release.
+                        # This file represents both the title and the body of the
+                        # release.  A blank line separates the title from the body.
+                        RELEASE_MESSAGE_FILE=release_message.txt
+                        echo "${GITHUB_REF:10}" >> $RELEASE_MESSAGE_FILE
+                        echo "" >> $RELEASE_MESSAGE_FILE
 
-                    # Read HISTORY from the released tag up until the first
-                    # blank line
-                    sed -n "/${GITHUB_REF:10}/,/^$/p" HISTORY.rst | tail -n +3 >> $RELEASE_MESSAGE_FILE
-                    cat $RELEASE_MESSAGE_FILE  # for debugging, just in case.
+                        # Read HISTORY from the released tag up until the first
+                        # blank line
+                        sed -n "/${GITHUB_REF:10}/,/^$/p" HISTORY.rst | tail -n +3 >> $RELEASE_MESSAGE_FILE
+                        cat $RELEASE_MESSAGE_FILE  # for debugging, just in case.
 
-                    # Create a release object based on the text from HISTORY.
-                    # This requires that the tag already exists in the
-                    # repository on github.
-                    # NOTE: creating a GitHub release creates the tag.
-                    #       The InVEST binaries are created in response to
-                    #       this release object being created.  See the
-                    #       upload-binaries-to-release build job in
-                    #       .github/workflows/binary-applications.yml.
-                    hub release create \
-                        --file $RELEASE_MESSAGE_FILE \
-                        --commitish $TARGET_BRANCH \
-                        $BUGFIX_VERSION
-                fi
+                        # Create a release object based on the text from HISTORY.
+                        # This requires that the tag already exists in the
+                        # repository on github.
+                        # NOTE: creating a GitHub release creates the tag.
+                        #       The InVEST binaries are created in response to
+                        #       this release object being created.  See the
+                        #       upload-binaries-to-release build job in
+                        #       .github/workflows/binary-applications.yml.
+                        hub release create \
+                            --file $RELEASE_MESSAGE_FILE \
+                            --commitish $TARGET_BRANCH \
+                            $BUGFIX_VERSION
+                    fi
