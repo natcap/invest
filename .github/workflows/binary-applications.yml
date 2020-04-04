@@ -177,7 +177,9 @@ jobs:
                   python-version: 3.7
 
             - name: Install python dependencies
-              run: pip install --upgrade pip setuptools requests setuptools_scm cython numpy
+              run: |
+                  pip install toml requests
+                  pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build conda env
               shell: bash
@@ -308,7 +310,7 @@ jobs:
                 if hub release show ${GITHUB_REF:10}
                 then
                     ls -la dist
-                    hub release \
+                    hub release edit \
                         --attach $(make jprint-USERGUIDE_ZIP_FILE) \
                         --attach $(make jprint-MAC_BINARIES_ZIP_FILE) \
                         --attach $(make PYTHON_ARCH=x86 jprint-WINDOWS_INSTALLER_FILE) \
