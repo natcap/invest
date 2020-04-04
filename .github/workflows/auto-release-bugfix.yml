@@ -8,10 +8,12 @@ jobs:
     create-bugfix-release:
         name: Create a bugfix release
         runs-on: ubuntu-latest
+        env:
+            TARGET_BRANCH: master
         steps:
             - uses: actions/checkout@v2
               with:
-                  ref: master  # enforce that the release is happening on master
+                  ref: ${{ env.TARGET_BRANCH }}
                   fetch-depth: 0  # fetch complete history
 
             - run: git fetch origin +refs/tags/*:refs/tags/*
@@ -22,16 +24,18 @@ jobs:
 
             - run: python -m pip install --upgrade requests
 
-            - run: |
-                if hub ci-status master
+            -   env:
+                    TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
+                run: |
+                if hub ci-status $TARGET_BRANCH
                 then
-                    echo "There are test failures on master; aborting release."
+                    echo "There are test failures on $TARGET_BRANCH; aborting release."
                     exit 1
                 fi
 
-                # Don't do a bugfix release if master's HEAD already has a tag
+                # Don't do a bugfix release if target branch's HEAD already has a tag
                 # git-describe exits 0 if a tag is found, 128 if not.
-                if ! git describe --exact-match --tags master
+                if ! git describe --exact-match --tags $TARGET_BRANCH
                 then
                     BUGFIX_VERSION=$(python ci/release/get-release-number.py)
 
@@ -51,6 +55,18 @@ jobs:
                         https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git\
                         $BUGFIX_VERSION
 
+                    # Format the HISTORY of this release for the release.
+                    # This file represents both the title and the body of the
+                    # release.  A blank line separates the title from the body.
+                    RELEASE_MESSAGE_FILE=release_message.txt
+                    echo "${GITHUB_REF:10}" >> $RELEASE_MESSAGE_FILE
+                    echo "" >> $RELEASE_MESSAGE_FILE
+
+                    # Read HISTORY from the released tag up until the first
+                    # blank line
+                    sed -n "/${GITHUB_REF:10}/,/^$/p" HISTORY.rst | tail -n +3 >> $RELEASE_MESSAGE_FILE
+                    cat $RELEASE_MESSAGE_FILE  # for debugging, just in case.
+
                     # Create a release object based on the text from HISTORY.
                     # This requires that the tag already exists in the
                     # repository on github.
@@ -59,8 +75,8 @@ jobs:
                     #       this release object being created.  See the
                     #       upload-binaries-to-release build job in
                     #       .github/workflows/binary-applications.yml.
-                    python ci/release/create-github-release.py \
-                        --tag=$BUGFIX_VERSION \
-                        --oauthtoken=$GITHUB_TOKEN \
-                        --repo=$GITHUB_REPOSITORY
+                    hub release create \
+                        --file $RELEASE_MESSAGE_FILE \
+                        --commitish $TARGET_BRANCH \
+                        $BUGFIX_VERSION
                 fi
