@@ -96,7 +96,7 @@ jobs:
                 then
                     hub release edit \
                         --attach $(find dist -name "*.tar.gz") \
-                        --message $(hub release show ${GITHUB_REF:10} \
+                        --message $(hub release show ${GITHUB_REF:10}) \
                          ${GITHUB_REF:10}
                 else
                     echo "Release for ${GITHUB_REF:10} not found; skipping sdist upload."
