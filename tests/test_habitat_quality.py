@@ -531,7 +531,7 @@ class HabitatQualityTests(unittest.TestCase):
             habitat_quality.execute(args)
 
     def test_habitat_quality_bad_rasters(self):
-        """Habitat Quality: on threats that aren't real rasters."""
+        """Habitat Quality: raise error on threats that aren't real rasters."""
         from natcap.invest import habitat_quality
 
         args = {
@@ -556,8 +556,14 @@ class HabitatQualityTests(unittest.TestCase):
                                                   'threats_samp.csv')
         make_threats_csv(args['threats_table_path'])
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             habitat_quality.execute(args)
+        
+        actual_message = str(cm.exception)
+        self.assertTrue(
+            'There was an Error locating a threat raster from '
+            'the path in CSV for column: CUR_PATH and threat: threat_1' in
+            actual_message, actual_message)
 
     def test_habitat_quality_nodata(self):
         """Habitat Quality: on missing base and future LULC rasters."""
@@ -844,6 +850,7 @@ class HabitatQualityTests(unittest.TestCase):
                                                       'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
+        # intentialy do not make the threat rasters
         #make_threats_raster(args['workspace_dir'],
         #                    threat_values=[0.5, 6.6])
 
@@ -856,7 +863,10 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertTrue(
-            'not found in the threat raster folder' in validate_result[0][1])
+            "A threat raster for threats: [('threat_1', 'CUR_PATH'), " 
+            "('threat_2', 'CUR_PATH'), ('threat_1', 'FUT_PATH'), ('threat_2', 'FUT_PATH')] "
+            "was not found or it could not be opened by GDAL." in 
+            validate_result[0][1], validate_result[0][1])
 
 
     def test_habtitat_quality_validation_bad_threat_nodata(self):
@@ -947,3 +957,244 @@ class HabitatQualityTests(unittest.TestCase):
             actual_message, actual_message)
 
 
+    def test_habitat_quality_missing_fut_threat_path(self):
+        """Habitat Quality: test for missing threat paths in future."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'],
+                            threat_values=[0.5, 6.6], nodata_val=None)
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,threat_1_c.tif,\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,threat_2_f.tif\n')
+
+        with self.assertRaises(ValueError) as cm:
+            habitat_quality.execute(args)
+
+        actual_message = str(cm.exception)
+        self.assertTrue(
+            'There was an Error locating a threat raster from '
+            'the path in CSV for column: FUT_PATH and threat: threat_1' in
+            actual_message, actual_message)
+    
+    def test_habitat_quality_misspelled_cur_threat_path(self):
+        """Habitat Quality: test for a misspelled current threat path."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'],
+                            threat_values=[0.5, 6.6], nodata_val=None)
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,threat_2_f.tif\n')
+
+        with self.assertRaises(ValueError) as cm:
+            habitat_quality.execute(args)
+
+        actual_message = str(cm.exception)
+        self.assertTrue(
+            'There was an Error locating a threat raster from '
+            'the path in CSV for column: CUR_PATH and threat: threat_1' in
+            actual_message, actual_message)
+    
+    def test_habitat_quality_validate_missing_cur_threat_path(self):
+        """Habitat Quality: test validate for missing threat paths in current."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'],
+                            threat_values=[0.5, 6.6], nodata_val=None)
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,,threat_1_f.tif\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,threat_2_f.tif\n')
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            "expected failed validations instead didn't get any.")
+        self.assertTrue(
+            "A threat raster for threats: [('threat_1', 'CUR_PATH')] was not found " 
+            "or it could not be opened by GDAL." in 
+            validate_result[0][1])
+
+
+    def test_habitat_quality_validate_missing_fut_threat_path(self):
+        """Habitat Quality: test validate for missing threat paths in future."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'],
+                            threat_values=[0.5, 6.6], nodata_val=None)
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,threat_1_c.tif,\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,threat_2_f.tif\n')
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            "expected failed validations instead didn't get any.")
+        self.assertTrue(
+            "A threat raster for threats: [('threat_1', 'FUT_PATH')] was not found " 
+            "or it could not be opened by GDAL." in 
+            validate_result[0][1])
+   
+
+    def test_habitat_quality_validate_misspelled_cur_threat_path(self):
+        """Habitat Quality: test validate for a misspelled current threat path."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'],
+                            threat_values=[0.5, 6.6], nodata_val=None)
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,threat_2_f.tif\n')
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            "expected failed validations instead didn't get any.")
+        self.assertTrue(
+            "A threat raster for threats: [('threat_1', 'CUR_PATH')] was not found " 
+            "or it could not be opened by GDAL." in 
+            validate_result[0][1], validate_result[0][1])

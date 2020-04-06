@@ -1231,7 +1231,8 @@ def validate(args, limit_to=None):
                             threat_path)
                     # it's okay to have no threat raster for baseline scenario
                     if lulc_key != '_b' and validated_threat_path is None:
-                        bad_threat_paths.append(threat)
+                        bad_threat_paths.append(
+                                (threat, _THREAT_SCENARIO_MAP[lulc_key]))
                         continue
                     if validated_threat_path:
                         # Check NODATA value of the valid threat raster
@@ -1243,8 +1244,7 @@ def validate(args, limit_to=None):
             validation_warnings.append((
                 ['threat_raster_folder'],
                 (f'A threat raster for threats: {bad_threat_paths}'
-                  ' was not found in the threat raster folder, or'
-                  ' it could not be opened by GDAL.')))
+                  ' was not found or it could not be opened by GDAL.')))
  
             invalid_keys.add('threat_raster_folder')
 
