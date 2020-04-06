@@ -372,7 +372,16 @@ def execute(args):
                         validated_threat_path)
                 # save threat paths in a list for alignment and resize
                 if validated_threat_path:
-                    lulc_and_threat_raster_list.append(validated_threat_path)
+                    # check for duplicate absolute threat path names that 
+                    # cause errors when trying to write aligned versions
+                    if not validated_threat_path in lulc_and_threat_raster_list:
+                        lulc_and_threat_raster_list.append(validated_threat_path)
+                    else:
+                        raise ValueError(
+                            'Threat paths cannot be the same and must have '
+                            'unique absolute filepaths. The threat path: '
+                            f'{os.path.basename(validated_threat_path)} is a '
+                            'duplicate.')
 
     LOGGER.info("Checking LULC codes against Sensitivity table")
     compare_lucodes_sens_task = graph.add_task(
@@ -1215,6 +1224,8 @@ def validate(args, limit_to=None):
         # Validate threat raster paths and their nodata values
         bad_threat_paths = []
         bad_threat_nodatas = []
+        duplicate_paths = []
+        threat_paths = []
         for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
                                     ('_f', 'lulc_fut_path'),
                                     ('_b', 'lulc_bas_path')):
@@ -1234,27 +1245,48 @@ def validate(args, limit_to=None):
                         bad_threat_paths.append(
                                 (threat, _THREAT_SCENARIO_MAP[lulc_key]))
                         continue
+                    
                     if validated_threat_path:
+                        # check for duplicate absolute threat path names that 
+                        # cause errors when trying to write aligned versions
+                        if not validated_threat_path in threat_paths:
+                            threat_paths.append(validated_threat_path)
+                        else:
+                            duplicate_paths.append(
+                                os.path.basename(validated_threat_path))
+                        
                         # Check NODATA value of the valid threat raster
-                        threat_raster_info = pygeoprocessing.get_raster_info(validated_threat_path)
+                        threat_raster_info = pygeoprocessing.get_raster_info(
+                                                validated_threat_path)
                         if threat_raster_info['nodata'][0] is None:
                             bad_threat_nodatas.append(threat)
         
         if bad_threat_paths:
             validation_warnings.append((
-                ['threat_raster_folder'],
+                ['threats_table_path'],
                 (f'A threat raster for threats: {bad_threat_paths}'
                   ' was not found or it could not be opened by GDAL.')))
  
-            invalid_keys.add('threat_raster_folder')
+            invalid_keys.add('threats_table_path')
+
+        if duplicate_paths:
+            validation_warnings.append((
+                ['threats_table_path'],
+                ('Threat paths cannot be the same and must have unique '
+                f'absolute filepaths. The threat paths: {duplicate_paths} were '
+                'duplicates.')))
+
+            if not 'threats_table_path' in invalid_keys:
+                invalid_keys.add('threats_table_path')
 
         if bad_threat_nodatas:
             validation_warnings.append((
-                ['threat_raster_folder'],
+                ['threats_table_path'],
                 (f'A threat raster for threats: {bad_threat_nodatas}'
                   ' has an undefined NODATA value. Please define' 
                   ' the NODATA value for all threat rasters.')))
-            if not bad_threat_paths:
-                invalid_keys.add('threat_raster_folder')
+            
+            if not 'threats_table_path' in invalid_keys:
+                invalid_keys.add('threats_table_path')
     
     return validation_warnings
