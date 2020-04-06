@@ -357,9 +357,17 @@ def execute(args):
                         threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]]) 
 
                 # it's okay to have no threat raster for baseline scenario
-                validated_threat_path = _resolve_threat_raster_path(
-                        threat_path, raise_error=(lulc_key != '_b'))
+                validated_threat_path = _resolve_threat_raster_path(threat_path)
                     
+                if validated_threat_path is None:
+                    if lulc_key != '_b':
+                        raise ValueError(
+                            'There was an Error locating a threat raster from '
+                            'the path in CSV for column: '
+                            f'{_THREAT_SCENARIO_MAP[lulc_key]} and threat: '
+                            f'{threat}. The path in the CSV column should be '
+                            'relative to the threat CSV table.')
+
                 threat_path_dict['threat' + lulc_key][threat] = (
                         validated_threat_path)
                 # save threat paths in a list for alignment and resize
@@ -959,16 +967,14 @@ def _collect_unique_lucodes(raster_path_band, pickle_path):
         pickle.dump(data, fh, pickle.HIGHEST_PROTOCOL)
 
 
-def _resolve_threat_raster_path(path, raise_error=True):
+def _resolve_threat_raster_path(path):
     """Determine if path is a valid gdal raster file.
 
     Parameters:
         path (string): file path.
-        raise_error (boolean): if True then function will raise an
-            ValueError if a valid raster file could not be found.
 
     Return:
-        ``path`` if valid raster, otherwise ``None`` if not raise_error.
+        ``path`` if valid raster, otherwise ``None``.
     """
     # Turning on exceptions so that if an error occurs when trying to open a
     # file path we can catch it and handle it properly
@@ -990,16 +996,10 @@ def _resolve_threat_raster_path(path, raise_error=True):
 
     gdal.PopErrorHandler()
 
-    # If a dataset comes back None, then it could not be found / opened and we
-    # should fail gracefully
+    # If a dataset comes back None, then it could not be found, set path 
+    # to None and return
     if dataset is None:
-        if raise_error:
-            raise ValueError(
-                'There was an Error locating a threat raster from the path in '
-                'CSV. The path in the CSV should be relative to the threat CSV. '
-                'The threat raster path that could not be found is: %s' % path)
-        else:
-            path = None
+        path = None
 
     dataset = None
     return path
@@ -1228,7 +1228,7 @@ def validate(args, limit_to=None):
                             threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]]) 
 
                     validated_threat_path = _resolve_threat_raster_path(
-                            threat_path, raise_error=False)
+                            threat_path)
                     # it's okay to have no threat raster for baseline scenario
                     if lulc_key != '_b' and validated_threat_path is None:
                         bad_threat_paths.append(threat)

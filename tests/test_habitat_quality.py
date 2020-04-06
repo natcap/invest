@@ -897,3 +897,53 @@ class HabitatQualityTests(unittest.TestCase):
             "expected failed validations instead didn't get any.")
         self.assertTrue(
             'has an undefined NODATA value' in validate_result[0][1])
+
+    def test_habitat_quality_missing_cur_threat_path(self):
+        """Habitat Quality: test for missing threat paths in current."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'],
+                            threat_values=[0.5, 6.6], nodata_val=None)
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,,threat_1_f.tif\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,threat_2_f.tif\n')
+
+        with self.assertRaises(ValueError) as cm:
+            habitat_quality.execute(args)
+
+        actual_message = str(cm.exception)
+        self.assertTrue(
+            'There was an Error locating a threat raster from '
+            'the path in CSV for column: CUR_PATH and threat: threat_1' in
+            actual_message, actual_message)
+
+
