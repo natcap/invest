@@ -10,11 +10,9 @@ from osgeo import ogr
 from osgeo import osr
 from osgeo import gdal
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr',
-    'input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
+SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
 
 
 def assert_expected_results_in_vector(expected_results, vector_path):
@@ -33,13 +31,13 @@ def assert_expected_results_in_vector(expected_results, vector_path):
         #     expected_results[key], actual_results[key], decimal=6)
 
         # In order to pass with GDAL<2.3 and GDAL>2.3:
-        # asserting equality to 5 signicant figures instead of 6 decimal
+        # asserting equality to 5 significant figures instead of 6 decimal
         # places. GDAL 2.3 introduced new warping behavior yielding different
         # pixel values when also using a smoothing interpolation method.
         # Surprisingly, these differences are not washed out by an
         # aggregation such as zonal statistics.
         numpy.testing.assert_approx_equal(
-            expected_results[key], actual_results[key], significant=2)
+            actual_results[key], expected_results[key], significant=2)
 
 
 class SDRTests(unittest.TestCase):
@@ -219,9 +217,9 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
         expected_results = {
             'usle_tot': 12.69931602478,
-            'sed_retent': 392771.84375,
-            'sed_export': 0.77038854361,
-            'sed_dep': 8.29587092076114,
+            'sed_retent': 402704.96875,
+            'sed_export': 0.7930983305,
+            'sed_dep': 8.58807754517,
         }
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
@@ -268,8 +266,8 @@ class SDRTests(unittest.TestCase):
 
         sdr.execute(args)
         expected_results = {
-            'sed_retent': 392771.84375,
-            'sed_export': 0.77038854361,
+            'sed_retent': 402704.96875,
+            'sed_export': 0.7930983305,
             'usle_tot': 12.69931602478,
         }
         vector_path = os.path.join(
@@ -291,8 +289,8 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_retent': 339973.96875,
-            'sed_export': 0.6207485795,
+            'sed_retent': 345797.375,
+            'sed_export': 0.63070225716,
             'usle_tot': 11.46732711792,
         }
         vector_path = os.path.join(
@@ -315,8 +313,8 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_retent': 425966.0,
-            'sed_export': 0.91835135221,
+            'sed_retent': 436809.59375,
+            'sed_export': 0.94600570202,
             'usle_tot': 11.59875869751,
         }
         vector_path = os.path.join(
