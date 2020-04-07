@@ -35,6 +35,9 @@ jobs:
             - uses: actions/checkout@v2
             - run: git fetch --prune --unshallow
 
+            - name: Fetch git tags
+              run: git fetch origin +refs/tags/*:refs/tags/*
+
             - name: Restore pip cache
               uses: actions/cache@v1
               with:
@@ -122,6 +125,7 @@ jobs:
                   make GSUTIL=$env:GSUTIL_PATH deploy
 
             - name: Save build artifacts
+              if: always()
               uses: actions/upload-artifact@v1
               with:
                   name: InVEST Windows build artifacts
@@ -137,6 +141,9 @@ jobs:
         steps:
             - uses: actions/checkout@v2
             - run: git fetch --prune --unshallow
+
+            - name: Fetch git tags
+              run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Install homebrew dependencies
               run: |
@@ -190,6 +197,7 @@ jobs:
               run: make deploy
 
             - name: Save build artifacts
+              if: always()
               uses: actions/upload-artifact@v1
               with:
                   name: InVEST Mac build artifacts

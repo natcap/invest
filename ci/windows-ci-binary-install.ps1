@@ -14,6 +14,14 @@
 choco install make vcredist140 pandoc zip 7zip unzip
 $env:PATH += ";C:\ProgramData\chocolatey\bin"
 
+# Install Zip.  This has been failing recently, so better to just install directly.
+# See http://gnuwin32.sourceforge.net/setup.html for full list of installer CLI flags.
+# The installer doesn't add the target directory to the PATH, so we need to do that too.
+Write-Host "Installing GNU Zip"
+Invoke-WebRequest https://managedway.dl.sourceforge.net/project/gnuwin32/zip/3.0/zip-3.0-setup.exe -OutFile zip-setup.exe
+& ./zip-setup.exe /VERYSILENT /SP /SUPPRESSMSGBOXES
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Program Files (x86)\GnuWin32\bin", "Machine")
+
 # Choco-provided command to reload environment variables
 refreshenv
 

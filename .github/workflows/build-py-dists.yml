@@ -30,6 +30,9 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
+            - name: Fetch git tags
+              run: git fetch origin +refs/tags/*:refs/tags/*
+
             - name: Set up python ${{ matrix.python-version }} ${{ matrix.python-arch }}
               uses: actions/setup-python@v1
               with:
@@ -55,6 +58,9 @@ jobs:
               with:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
+
+            - name: Fetch git tags
+              run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Set up python
               uses: actions/setup-python@v1
