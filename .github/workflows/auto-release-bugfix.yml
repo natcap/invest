@@ -31,6 +31,7 @@ jobs:
 
             -   env:
                     TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                 run: |
                     if hub ci-status $TARGET_BRANCH
                     then
@@ -40,8 +41,10 @@ jobs:
 
                     # Don't do a bugfix release if target branch's HEAD already has a tag
                     # git-describe exits 0 if a tag is found, 128 if not.
-                    if ! git describe --exact-match --tags $TARGET_BRANCH
+                    if git describe --exact-match --tags $TARGET_BRANCH
                     then
+                        echo "The latest commit on $TARGET_BRANCH already has a tag"
+                    else
                         export BUGFIX_VERSION=$(python setup.py --version | awk -F '.' '{print $1"."$2"."$3+1}')
 
                         # Update the UG hash in the Makefile
@@ -67,7 +70,7 @@ jobs:
 
                         # Only push revisions needed to push the tag created.
                         git push \
-                            https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY.git\
+                            https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git\
                             $TARGET_BRANCH
 
                         RELEASE_MESSAGE_FILE=release_message.md
@@ -82,7 +85,7 @@ jobs:
                         #       this release object being created.  See the
                         #       upload-binaries-to-release build job in
                         #       .github/workflows/binary-applications.yml.
-                        GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} hub release create \
+                        hub release create \
                             --file $RELEASE_MESSAGE_FILE \
                             --commitish $TARGET_BRANCH \
                             $BUGFIX_VERSION
