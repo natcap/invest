@@ -1,6 +1,10 @@
 .. :changelog:
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.2 (2020-04-07)
 ------------------
 * Bumping the ``psutil`` dependency requirement to ``psutil>=5.6.6`` to address
   a double-free vulnerability documented in CVE-2019-18874.
