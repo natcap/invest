@@ -60,7 +60,7 @@ jobs:
                         # Commit changes and make an annotated tag.
                         git commit Makefile HISTORY.rst \
                             -m "Auto-committing updates for the $BUGFIX_VERSION release"
-                        git tag -a $BUGFIX_VERSION "$BUGFIX_VERSION release."
+                        git tag -a $BUGFIX_VERSION -m "$BUGFIX_VERSION release."
 
                         # Only push revisions needed to push the tag created.
                         git push \
