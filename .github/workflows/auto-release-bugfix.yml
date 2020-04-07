@@ -79,7 +79,7 @@ jobs:
                         #       this release object being created.  See the
                         #       upload-binaries-to-release build job in
                         #       .github/workflows/binary-applications.yml.
-                        hub release create \
+                        GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} hub release create \
                             --file $RELEASE_MESSAGE_FILE \
                             --commitish $TARGET_BRANCH \
                             $BUGFIX_VERSION
