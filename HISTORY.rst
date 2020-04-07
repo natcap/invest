@@ -2,6 +2,16 @@
 
 Unreleased Changes
 ------------------
+* Refactor of Habitat Quality that implements TaskGraph and the following:
+  * Threat files are now indicated in the Threat Table csv input under 
+    required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``. 
+  * Threat raster input folder has been removed.
+  * Validation enhancements that look for undefined nodata values in threat
+    rasters and whether threat raster paths are valid.
+  * HQ update to User's Guide.
+  * Changing sample data to reflect Threat Table csv input changes and 
+    bumping revision.
+  * More comprehensive testing for Habitat Quality and validation.
 * Fixing an issue with SDR's ``LS`` calculations.  The ``x`` term is now
   the weighted mean of proportional flow from the current pixel into its
   neighbors.  Note that for ease of debugging, this has been implemented as a
