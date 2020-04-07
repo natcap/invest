@@ -15,6 +15,8 @@ RELEASE_MESSAGE_RST_FILE=release_message.rst
 rm -f $RELEASE_MESSAGE_RST_FILE  # remove the file if it exists
 echo "$VERSION" >> $RELEASE_MESSAGE_RST_FILE
 echo "" >> $RELEASE_MESSAGE_RST_FILE
+echo "This bugfix release includes the following fixes and features:"
+echo ""  # extra line to clarify we're starting a bulleted list.
 
 # Read HISTORY from the released tag up until the first
 # blank line
