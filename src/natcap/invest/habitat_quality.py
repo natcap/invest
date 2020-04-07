@@ -567,7 +567,7 @@ def execute(args):
 
             decay_threat_task = graph.add_task(
                 _decay_threat,
-                args=(threat_raster_path, kernel_path, decay_type, 
+                args=((threat_raster_path, 1), kernel_path, decay_type, 
                     threat_data['MAX_DIST']),
                 target_path_list=[kernel_path],
                 dependent_task_list=[*updated_threat_tasks],
@@ -686,13 +686,16 @@ def execute(args):
 
             rarity_task = graph.add_task(
                 _compute_rarity_operation,
-                args=(lulc_base_path, lulc_path, new_cover_path, rarity_path),
+                args=((lulc_base_path, 1), (lulc_path, 1), 
+                    (new_cover_path, 1), rarity_path),
                 dependent_task_list=[align_task],
                 task_name=f'rarity{lulc_time}')
 
         LOGGER.info('Finished habitat_quality biophysical calculations')
 
+    graph.close()
     graph.join()
+    LOGGER.info("Habitat Quality Model complete.")
 
 
 def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
@@ -790,31 +793,34 @@ def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path,
         rarity_path):
     """Calculate habitat rarity.
 
+        raster_path_band (tuple): a 2 tuple of the form 
+            (filepath to raster, band index) for threat raster to decay.
     Parameters:
-        lulc_base_path (string): path to input base LULC raster.
-        lulc_path (string): path to LULC for current or future scenario.
-        new_cover_path (string): path to intermediate raster file for trimming
-            ``lulc_path`` to ``lulc_base_path``.
+        lulc_base_path (tuple): a 2 tuple for the path to input base 
+            LULC raster of the form (path, band index).
+        lulc_path (tuple):  a 2 tuple for the path to LULC for current 
+            or future scenario of the form (path, band index).
+        new_cover_path (tuple): a 2 tuple for the path to intermediate 
+            raster file for trimming ``lulc_path`` to ``lulc_base_path``
+            of the form (path, band index).
         rarity_path (string): path to output rarity raster.
     Returns:
         None
     """
     # get the area of a base pixel to use for computing rarity where the
     # pixel sizes are different between base and cur/fut rasters
-    base_pixel_size = pygeoprocessing.get_raster_info(
-        lulc_base_path)['pixel_size']
+    base_raster_info = pygeoprocessing.get_raster_info(lulc_base_path[0])
+    base_pixel_size = base_raster_info['pixel_size']
     base_area = float(abs(base_pixel_size[0]) * abs(base_pixel_size[1]))
-    base_nodata = pygeoprocessing.get_raster_info(
-        lulc_base_path)['nodata'][0]
+    base_nodata = base_raster_info['nodata'][0]
 
-    lulc_code_count_b = _raster_pixel_count((lulc_base_path, 1))
+    lulc_code_count_b = _raster_pixel_count(lulc_base_path)
 
     # get the area of a cur/fut pixel
-    lulc_pixel_size = pygeoprocessing.get_raster_info(
-        lulc_path)['pixel_size']
+    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_path)
+    lulc_pixel_size = lulc_raster_info['pixel_size']
     lulc_area = float(abs(lulc_pixel_size[0]) * abs(lulc_pixel_size[1]))
-    lulc_nodata = pygeoprocessing.get_raster_info(
-        lulc_path)['nodata'][0]
+    lulc_nodata = lulc_raster_info['nodata'][0]
 
     def trim_op(base, cover_x):
         """Trim cover_x to the mask of base.
@@ -833,19 +839,19 @@ def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path,
             base_nodata, cover_x)
 
     LOGGER.info('Starting masking %s land cover to base land cover.'
-                % os.path.basename(lulc_path))
+                % os.path.basename(lulc_path[0]))
 
     pygeoprocessing.raster_calculator(
-        [(lulc_base_path, 1), (lulc_path, 1)], trim_op, new_cover_path,
+        [lulc_base_path, lulc_path], trim_op, new_cover_path,
         gdal.GDT_Float32, _OUT_NODATA)
 
     LOGGER.info('Finished masking %s land cover to base land cover.'
-                % os.path.basename(lulc_path))
+                % os.path.basename(lulc_path[0]))
 
     LOGGER.info('Starting rarity computation on %s land cover.'
-                % os.path.basename(lulc_path))
+                % os.path.basename(lulc_path[0]))
 
-    lulc_code_count_x = _raster_pixel_count((new_cover_path, 1))
+    lulc_code_count_x = _raster_pixel_count(new_cover_path)
 
     # a dictionary to map LULC types to a number that depicts how
     # rare they are considered
@@ -864,18 +870,19 @@ def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path,
             code_index[code] = 0.0
 
     pygeoprocessing.reclassify_raster(
-        (new_cover_path, 1), code_index, rarity_path, gdal.GDT_Float32,
+        new_cover_path, code_index, rarity_path, gdal.GDT_Float32,
             _RARITY_NODATA)
 
     LOGGER.info('Finished rarity computation on %s land cover.'
-                % os.path.basename(lulc_path))
+                % os.path.basename(lulc_path[0]))
 
 
-def _decay_threat(threat_raster_path, kernel_path, decay_type, max_dist): 
+def _decay_threat(raster_band_path, kernel_path, decay_type, max_dist): 
     """Create a decay kernel as a raster.
 
     Parameters:
-        threat_raster_path (string): path to threat raster to decay.
+        raster_path_band (tuple): a 2 tuple of the form 
+            (filepath to raster, band index) for threat raster to decay.
         kernel_path (string): path to output kernel raster.
         decay_type (string): type of decay kernel to create, either 
             'linear' | 'exponentional'.
@@ -886,7 +893,7 @@ def _decay_threat(threat_raster_path, kernel_path, decay_type, max_dist):
     # need the pixel size for the threat raster so we can create
     # an appropriate kernel for convolution
     threat_pixel_size = pygeoprocessing.get_raster_info(
-        threat_raster_path)['pixel_size']
+        raster_band_path[0])['pixel_size']
     # pixel size tuple could have negative value
     mean_threat_pixel_size = (
         abs(threat_pixel_size[0]) + abs(threat_pixel_size[1]))/2.0
@@ -910,7 +917,7 @@ def _decay_threat(threat_raster_path, kernel_path, decay_type, max_dist):
             "Unknown type of decay in biophysical table, should be "
             "either 'linear' or 'exponential'. Input was %s for threat"
             " %s." % (decay_type, 
-                os.path.splitext(os.path.basename(threat_raster_path))[0]))
+                os.path.splitext(os.path.basename(raster_band_path[0]))[0]))
 
     decay_func(max_dist_pixel, kernel_path)
 
