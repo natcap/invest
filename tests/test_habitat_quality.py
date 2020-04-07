@@ -123,8 +123,7 @@ def make_access_shp(access_shp_path):
 
 def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
                         threat_values=None, nodata_val=-1):
-    """Create a side_lengthXside_length raster on designated path with 1 as
-    threat and 0 as none.
+    """Create a side_lengthXside_length raster on designated path.
 
     Parameters:
         folder_path (str): the folder path for saving the threat rasters.
@@ -135,6 +134,7 @@ def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
             used for the two threat rasters created.  Otherwise, a 2-element
             list should include numeric threat values for the two threat
             rasters.
+        nodata_val (number): a number for the output nodata value
 
     Returns:
         None.
@@ -157,13 +157,14 @@ def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
                     threat_array, raster_path, nodata_val=nodata_val)
 
 
-def make_sensitivity_samp_csv(csv_path,
-                              include_threat=True, missing_lines=False):
+def make_sensitivity_samp_csv(
+        csv_path, include_threat=True, missing_lines=False):
     """Create a simplified sensitivity csv file with five land cover types.
 
     Parameters:
         csv_path (str): the path of sensitivity csv.
         include_threat (bool): whether the "threat" column is included in csv.
+        missing_lines (bool): whether to intentionally leave out lulc rows.
 
     Returns:
         None.
@@ -191,6 +192,7 @@ def assert_array_sum(base_raster_path, desired_sum, include_nodata=True):
     Parameters:
         base_raster_path (str): the filepath of the raster to be asserted.
         desired_sum (float): the value to be compared with the raster sum.
+        include_nodata (bool): whether to inlude nodata in the sum. 
 
     Returns:
         None.
