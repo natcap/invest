@@ -23,6 +23,7 @@ jobs:
                   python-version: 3.7
 
             - run: python -m pip install --upgrade requests
+            - run: sudo apt-get update && sudo apt-get install pandoc
 
             -   env:
                     TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
@@ -57,16 +58,8 @@ jobs:
                             https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git\
                             $BUGFIX_VERSION
 
-                        # Format the HISTORY of this release for the release.
-                        # This file represents both the title and the body of the
-                        # release.  A blank line separates the title from the body.
-                        RELEASE_MESSAGE_FILE=release_message.txt
-                        echo "${GITHUB_REF:10}" >> $RELEASE_MESSAGE_FILE
-                        echo "" >> $RELEASE_MESSAGE_FILE
-
-                        # Read HISTORY from the released tag up until the first
-                        # blank line
-                        sed -n "/${GITHUB_REF:10}/,/^$/p" HISTORY.rst | tail -n +3 >> $RELEASE_MESSAGE_FILE
+                        RELEASE_MESSAGE_FILE=release_message.md
+                        ./build-release-text-from-history.sh > $RELEASE_MESSAGE_FILE
                         cat $RELEASE_MESSAGE_FILE  # for debugging, just in case.
 
                         # Create a release object based on the text from HISTORY.
