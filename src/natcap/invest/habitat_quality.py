@@ -457,7 +457,7 @@ def execute(args):
                 #  * Anything other than 0 or nodata is replaced with 1
                 update_threat_task = graph.add_task(
                     _update_threat_pixels,
-                    args=(aligned_threat_path, aligned_updated_threat_path),
+                    args=((aligned_threat_path, 1), aligned_updated_threat_path),
                     target_path_list=[aligned_updated_threat_path],
                     dependent_task_list=[align_task],
                     task_name=f'update_threat{lulc_key}_{threat}')
@@ -522,7 +522,7 @@ def execute(args):
 
         habitat_raster_task = graph.add_task(
                 _map_raster_to_dict_values,
-                args=(lulc_path, habitat_raster_path, sensitivity_dict,
+                args=((lulc_path, 1), habitat_raster_path, sensitivity_dict,
                     'HABITAT', _OUT_NODATA),
                 kwargs={
                     'values_required': False
@@ -596,7 +596,7 @@ def execute(args):
 
             sens_threat_task = graph.add_task(
                 _map_raster_to_dict_values,
-                args=(lulc_path, sens_raster_path, sensitivity_dict,
+                args=((lulc_path, 1), sens_raster_path, sensitivity_dict,
                     'L_' + threat, _OUT_NODATA),
                 kwargs={
                     'values_required': True
@@ -1048,13 +1048,14 @@ def _map_raster_to_dict_values(
     raise an Exception if ``values_required`` is True
 
     Parameters:
-        key_raster_path (string): a GDAL raster path whose pixel values relate to
-            the keys in ``attr_dict``
-        out_path (string): a string for the output path of the created raster
+        key_raster_path (tuple): a 2 tuple of the form (filepath, band index) 
+            for a GDAL raster whose pixel values relate to the keys in 
+            ``attr_dict``.
+        out_path (string): a string for the output path of the created raster.
         attr_dict (dict): a dictionary representing a table of values we are 
-            interested in making into a raster
+            interested in making into a raster.
         field (string): a string of which field in the table or key in the 
-            dictionary to use as the new raster pixel values
+            dictionary to use as the new raster pixel values.
         out_nodata (number): a value that is the nodata value.
         values_required (bool): decides how to handle the case where the
             value from ``key_raster_path`` is not found in ``attr_dict``. 
@@ -1069,7 +1070,7 @@ def _map_raster_to_dict_values(
         int_attr_dict[int(key)] = float(attr_dict[key][field])
 
     pygeoprocessing.reclassify_raster(
-        (key_raster_path, 1), int_attr_dict, out_path, gdal.GDT_Float32,
+        key_raster_path, int_attr_dict, out_path, gdal.GDT_Float32,
         out_nodata, values_required)
 
 
@@ -1132,7 +1133,8 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
       * Anything other than 0 or nodata is replaced with 1
 
     Parameters:
-        aligned_threat_path (string): a path to the threat raster on disk.
+        aligned_threat_path (tuple): a 2 tuple for a GDAL raster path with 
+            the form (filepath, band index) to the threat raster on disk.
         updated_pixel_threat_path (string): an output path for the updated
             raster.
     Returns:
@@ -1140,17 +1142,16 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
     """
     LOGGER.info('Preprocessing threat values for %s',
                 aligned_threat_path)
-    threat_nodata = pygeoprocessing.get_raster_info(
-        aligned_threat_path)['nodata'][0]
+    raster_info = pygeoprocessing.get_raster_info(aligned_threat_path[0])
+    threat_nodata = raster_info['nodata'][0]
     
     if threat_nodata is None:
         raise TypeError(
             'Raster NODATA value for Threat path'
-            f' [ {os.path.basename(aligned_threat_path)} ] is UNDEFINED.'
+            f' [ {os.path.basename(aligned_threat_path[0])} ] is UNDEFINED.'
             ' Please make sure each threat raster has a defined NODATA value.')
     
-    threat_datatype = pygeoprocessing.get_raster_info(
-        aligned_threat_path)['datatype']
+    threat_datatype = raster_info['datatype']
 
     def _update_op(block):
         """ """
@@ -1166,7 +1167,7 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
         return block
     
     pygeoprocessing.raster_calculator(
-        [(aligned_threat_path, 1)], _update_op, updated_pixel_threat_path,
+        [aligned_threat_path], _update_op, updated_pixel_threat_path,
         threat_datatype, threat_nodata)
 
 
