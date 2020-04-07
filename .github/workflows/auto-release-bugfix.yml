@@ -87,28 +87,3 @@ jobs:
                             --commitish $TARGET_BRANCH \
                             $BUGFIX_VERSION
                     fi
-
-            # On failure, undo anything that had been done.
-            - if: failure()
-              env:
-                  TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
-              run: |
-                  # delete the release object (does not remove tag)
-                  hub release delete $BUGFIX_VERSION
-
-                  # Delete the most recent commit and push deletion
-                  git reset --hard HEAD^
-                  git push \
-                      https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY.git\
-                      +$TARGET_BRANCH
-
-                  # Delete the tag
-                  git push --delete \
-                      https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY.git\
-                      $BUGFIX_VERSION
-
-
-
-
-
-
