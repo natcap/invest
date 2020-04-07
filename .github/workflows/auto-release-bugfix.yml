@@ -42,7 +42,7 @@ jobs:
                     # git-describe exits 0 if a tag is found, 128 if not.
                     if ! git describe --exact-match --tags $TARGET_BRANCH
                     then
-                        BUGFIX_VERSION=$(python setup.py --version | awk -F '.' '{print $1"."$2"."$3+1}')
+                        export BUGFIX_VERSION=$(python setup.py --version | awk -F '.' '{print $1"."$2"."$3+1}')
 
                         # Update the UG hash in the Makefile
                         # This could be done with curl and sed, but it'll be easier
@@ -58,13 +58,16 @@ jobs:
                         git config user.name "James Douglass"
 
                         # Commit changes and make an annotated tag.
+                        # Commit SHA saved to $NEW_COMMIT_SHA for future
+                        # reference
                         git commit Makefile HISTORY.rst \
                             -m "Auto-committing updates for the $BUGFIX_VERSION release"
+                        export NEW_COMMIT_SHA=$(git log -n1 --format=format:"%H")
                         git tag -a $BUGFIX_VERSION -m "$BUGFIX_VERSION release."
 
                         # Only push revisions needed to push the tag created.
                         git push \
-                            https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git\
+                            https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY.git\
                             $BUGFIX_VERSION
 
                         RELEASE_MESSAGE_FILE=release_message.md
@@ -84,3 +87,28 @@ jobs:
                             --commitish $TARGET_BRANCH \
                             $BUGFIX_VERSION
                     fi
+
+            # On failure, undo anything that had been done.
+            - if: failure()
+              env:
+                  TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
+              run: |
+                  # delete the release object (does not remove tag)
+                  hub release delete $BUGFIX_VERSION
+
+                  # Delete the most recent commit and push deletion
+                  git reset --hard HEAD^
+                  git push \
+                      https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY.git\
+                      +$TARGET_BRANCH
+
+                # Delete the tag
+                  git push --delete \
+                      https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY.git\
+                      $BUGFIX_VERSION
+
+
+
+
+
+
