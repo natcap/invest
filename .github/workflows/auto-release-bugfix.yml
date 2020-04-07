@@ -4,8 +4,8 @@ on:
         # Noon PST on Tuesday of each week
         #- cron: '0 20 * * 2'
         #
-        # For debugging, run this once every 6 minutes
-        - cron: '*/10 * * * *'
+        # For debugging, run this once every 5 minutes
+        - cron: '*/5 * * * *'
 
 jobs:
     create-bugfix-release:
@@ -51,6 +51,11 @@ jobs:
 
                         # Update HISTORY with the tag and today's date.
                         python ci/release/update-history.py $BUGFIX_VERSION $(date "+%Y-%m-%d")
+
+                        # Need to set up these committer details before
+                        # anything can be committed.
+                        git config user.email "jdouglass@stanford.edu"
+                        git config user.name "James Douglass"
 
                         # Commit changes and make an annotated tag.
                         git commit Makefile HISTORY.rst \
