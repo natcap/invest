@@ -102,7 +102,7 @@ jobs:
                       https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY.git\
                       +$TARGET_BRANCH
 
-                # Delete the tag
+                  # Delete the tag
                   git push --delete \
                       https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY.git\
                       $BUGFIX_VERSION
