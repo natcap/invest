@@ -1,8 +1,9 @@
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* This is a test.
 
 3.8.2 (2020-04-07)
 ------------------
@@ -18,11 +19,11 @@
   attempting to synchronize nonexistent sample data zipfiles with a storage
   bucket on GCP.  Sample data zipfiles are only built on Windows, and so
   ``make deploy`` will only attempt to upload them when running on Windows.
-* Fixed a bug in CLI logging where logfiles created by the CLI were 
+* Fixed a bug in CLI logging where logfiles created by the CLI were
   incompatible with the ``natcap.invest.datastack`` operation that
   allows the UI to load model arguments from logfiles.
 * Added error-handling in Urban Flood Risk Mitigation to tell users to
-  "Check that the Soil Group raster does not contain values other than 
+  "Check that the Soil Group raster does not contain values other than
   (1, 2, 3, 4)" when a ``ValueError`` is raised from ``_lu_to_cn_op``.
 * Updated the ``Makefile`` to use the new git location of the InVEST User's
   Guide repository at https://github.com/natcap/invest.users-guide
@@ -32,7 +33,7 @@
 * Makefile has been updated to fetch the version string from ``git`` rather
   than ``hg``.  A mercurial client is still needed in order to clone the
   InVEST User's Guide.
-* Removing Python 2 compatibility code such as ``future``, ``pyqt4``, 
+* Removing Python 2 compatibility code such as ``future``, ``pyqt4``,
   ``basestring``, ``unicode``, ``six``, unicode casting, etc...
 * Update api-docs conf file to mock sdr.sdr_core and to use updated unittest
   mock
