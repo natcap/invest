@@ -27,7 +27,7 @@ jobs:
 
             - run: pip install --upgrade requests toml
             - run: pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-            - run: sudo apt-get update && sudo apt-get install pandoc
+            - run: sudo apt-get update --fix-missing && sudo apt-get install pandoc
 
             -   env:
                     TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
