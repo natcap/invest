@@ -59,7 +59,7 @@ jobs:
                             $BUGFIX_VERSION
 
                         RELEASE_MESSAGE_FILE=release_message.md
-                        ./build-release-text-from-history.sh > $RELEASE_MESSAGE_FILE
+                        VERSION=$BUGFIX_VERSION ./ci/release/build-release-text-from-history.sh > $RELEASE_MESSAGE_FILE
                         cat $RELEASE_MESSAGE_FILE  # for debugging, just in case.
 
                         # Create a release object based on the text from HISTORY.
