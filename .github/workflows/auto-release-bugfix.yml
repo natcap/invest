@@ -1,4 +1,4 @@
-name: Automated Bugfix Release on Master
+name: Automated Bugfix Release
 on:
     schedule:
         # Noon PST on Tuesday of each week
