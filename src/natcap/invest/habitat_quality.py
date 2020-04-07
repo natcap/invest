@@ -807,7 +807,7 @@ def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path,
     base_nodata = pygeoprocessing.get_raster_info(
         lulc_base_path)['nodata'][0]
 
-    lulc_code_count_b = _raster_pixel_count(lulc_base_path)
+    lulc_code_count_b = _raster_pixel_count((lulc_base_path, 1))
 
     # get the area of a cur/fut pixel
     lulc_pixel_size = pygeoprocessing.get_raster_info(
@@ -845,7 +845,7 @@ def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path,
     LOGGER.info('Starting rarity computation on %s land cover.'
                 % os.path.basename(lulc_path))
 
-    lulc_code_count_x = _raster_pixel_count(new_cover_path)
+    lulc_code_count_x = _raster_pixel_count((new_cover_path, 1))
 
     # a dictionary to map LULC types to a number that depicts how
     # rare they are considered
@@ -1014,18 +1014,20 @@ def _resolve_threat_raster_path(path):
     return path
 
 
-def _raster_pixel_count(raster_path):
+def _raster_pixel_count(raster_path_band):
     """Count unique pixel values in raster.
 
     Parameters:
-        raster_path (string): path to a raster
+        raster_path_band (tuple): a 2 tuple of the form 
+            (filepath to raster, band index).
 
     Returns:
         dict of pixel values to frequency.
     """
-    nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
+    nodata = pygeoprocessing.get_raster_info(
+                raster_path_band[0])['nodata'][0]
     counts = collections.defaultdict(int)
-    for _, raster_block in pygeoprocessing.iterblocks((raster_path, 1)):
+    for _, raster_block in pygeoprocessing.iterblocks(raster_path_band)):
         for value, count in zip(
                 *numpy.unique(raster_block, return_counts=True)):
             if value == nodata:
@@ -1035,31 +1037,32 @@ def _raster_pixel_count(raster_path):
 
 
 def _map_raster_to_dict_values(
-        key_raster_path, out_path, attr_dict, field, out_nodata, values_required):
-    """Creates a new raster from 'key_raster' where the pixel values from
-       'key_raster' are the keys to a dictionary 'attr_dict'. The values
-       corresponding to those keys is what is written to the new raster. If a
-       value from 'key_raster' does not appear as a key in 'attr_dict' then
-       raise an Exception if 'raise_error' is True, otherwise return a
-       'out_nodata'
+        key_raster_path, out_path, attr_dict, field, out_nodata, 
+        values_required):
+    """Creates a new raster from ``key_raster_path`` using dictionary map.
 
-       key_raster_path - a GDAL raster path dataset whose pixel values relate to
-                     the keys in 'attr_dict'
-       out_path - a string for the output path of the created raster
-       attr_dict - a dictionary representing a table of values we are interested
-                   in making into a raster
-       field - a string of which field in the table or key in the dictionary
-               to use as the new raster pixel values
-       out_nodata - a floating point value that is the nodata value.
-       raise_error - a string that decides how to handle the case where the
-           value from 'key_raster' is not found in 'attr_dict'. If 'raise_error'
-           is 'values_required', raise Exception, if 'none', return 'out_nodata'
+    The new raster is created where the pixel values from
+    ``key_raster_path`` are the keys to a dictionary ``attr_dict``. The values
+    corresponding to those keys is what is written to the new raster. If a
+    value from ``key_raster_path`` does not appear as a key in ``attr_dict`` then
+    raise an Exception if ``values_required`` is True
 
-       returns - a GDAL raster, or raises an Exception and fail if:
-           1) raise_error is True and
-           2) the value from 'key_raster' is not a key in 'attr_dict'
+    Parameters:
+        key_raster_path (string): a GDAL raster path whose pixel values relate to
+            the keys in ``attr_dict``
+        out_path (string): a string for the output path of the created raster
+        attr_dict (dict): a dictionary representing a table of values we are 
+            interested in making into a raster
+        field (string): a string of which field in the table or key in the 
+            dictionary to use as the new raster pixel values
+        out_nodata (number): a value that is the nodata value.
+        values_required (bool): decides how to handle the case where the
+            value from ``key_raster_path`` is not found in ``attr_dict``. 
+            If True raise ValueError
+
+    Returns:
+        None
     """
-
     LOGGER.info('Starting map_raster_to_dict_values')
     int_attr_dict = {}
     for key in attr_dict:
@@ -1079,7 +1082,7 @@ def _make_linear_decay_kernel_path(max_distance, kernel_path):
     Parameters:
         max_distance (int): number of pixels out until the decay is 0.
         kernel_path (string): path to output raster whose values are in (0,1)
-            representing distance to edge.  Size is (max_distance * 2 + 1)^2
+            representing distance to edge.  Size is (``max_distance`` * 2 + 1)^2
 
     Returns:
         None
@@ -1169,15 +1172,15 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    """Validate args to ensure they conform to `execute`'s contract.
+    """Validate args to ensure they conform to ``execute``'s contract.
 
     Parameters:
         args (dict): dictionary of key(str)/value pairs where keys and
-            values are specified in `execute` docstring.
+            values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation
             should only occur on the args[limit_to] value. The intent that
             individual key validation could be significantly less expensive
-            than validating the entire `args` dictionary.
+            than validating the entire ``args`` dictionary.
 
     Returns:
         list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
