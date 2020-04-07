@@ -278,6 +278,66 @@ class HabitatQualityTests(unittest.TestCase):
             # so we should exclude those new nodata pixel values.
             assert_array_sum(raster_path, assert_value, include_nodata=False)
 
+    
+    def test_habitat_quality_nworkers_regression(self):
+        """Habitat Quality: n_workers=2 regression test w/ simplified data."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': 2,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'],
+                            threat_values=[0.5, 6.6])
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,threat_2_f.tif\n')
+
+        habitat_quality.execute(args)
+
+        # Assert values were obtained by summing each output raster.
+        for output_filename, assert_value in {
+                'deg_sum_c_regression.tif': 1792.8088,
+                'deg_sum_f_regression.tif': 2308.9636,
+                'quality_c_regression.tif': 6928.5293,
+                'quality_f_regression.tif': 4916.338,
+                'rarity_c_regression.tif': 2500.0000000,
+                'rarity_f_regression.tif': 2500.0000000}.items():
+            raster_path = os.path.join(args['workspace_dir'], output_filename)
+            # Check that the raster's computed values are what we expect.
+            # In this case, the LULC and threat rasters should have been
+            # expanded to be beyond the bounds of the original threat values,
+            # so we should exclude those new nodata pixel values.
+            assert_array_sum(raster_path, assert_value, include_nodata=False)
+    
+
     def test_habitat_quality_lulc_bbox(self):
         """Habitat Quality: regression test for bbox sizes."""
         from natcap.invest import habitat_quality
@@ -1426,3 +1486,216 @@ class HabitatQualityTests(unittest.TestCase):
         # assert that the path for the duplicate was in the error message
         self.assertTrue(
             'threat_1_c.tif' in actual_message, actual_message)
+
+
+    def test_habitat_quality_argspec_spatial_overlap(self):
+        """Habitat Quality: raise error on incorrect spatial overlap."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(lulc_array, args['lulc' + scenario + 'path'])
+
+        # make future LULC with different origin
+        args['lulc_fut_path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp_fut_b.tif') 
+        lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+        lulc_array[50:, :] = 3 
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+
+        gtiff_driver = gdal.GetDriverByName('GTiff')
+        ny, nx = lulc_array.shape
+        new_raster = gtiff_driver.Create(
+            args['lulc_fut_path'], nx, ny, 1, gdal.GDT_Int32)
+
+        new_raster.SetProjection(project_wkt)
+        origin = (1180200, 690200)
+        new_raster.SetGeoTransform([origin[0], 1.0, 0.0, origin[1], 0.0, -1.0])
+        new_band = new_raster.GetRasterBand(1)
+        new_band.SetNoDataValue(-1)
+        new_band.WriteArray(lulc_array)
+        new_raster.FlushCache()
+        new_band = None
+        new_raster = None
+        
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        # create threat rasters for the test
+        threat_names = ['threat_1', 'threat_2']
+        threat_values = [1, 1]  
+
+        threat_array = numpy.zeros((100, 100), dtype=numpy.int8)
+
+        for suffix in ['_c', '_f']:
+            for (i, threat), value in zip(enumerate(threat_names), threat_values):
+                raster_path = os.path.join(args['workspace_dir'], threat + suffix + '.tif')
+                threat_array[100//(i+1):, :] = value  # making variations among threats
+                make_raster_from_array(threat_array, raster_path, nodata_val=-1)
+
+        # create threats table for the test
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,threat_2_f.tif\n')
+ 
+        validate_result = habitat_quality.validate(args)
+        self.assertTrue(
+            validate_result,
+            "expected failed validations instead didn't get any.")
+        self.assertTrue(
+            "Bounding boxes do not intersect" in
+            validate_result[0][1], validate_result[0][1])
+
+    
+    def test_habitat_quality_argspec_projected(self):
+        """Habitat Quality: raise error on incorrect projection."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        # make lulc cur without projection
+        lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+        lulc_array[50:, :] = 1
+        args['lulc_cur_path'] = os.path.join(
+            args['workspace_dir'], 'lc_samp_cur_b.tif')
+
+        lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+        lulc_array[50:, :] = 1 
+        #srs = osr.SpatialReference()
+        #srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        #project_wkt = srs.ExportToWkt()
+
+        gtiff_driver = gdal.GetDriverByName('GTiff')
+        ny, nx = lulc_array.shape
+        new_raster = gtiff_driver.Create(
+            args['lulc_cur_path'], nx, ny, 1, gdal.GDT_Int32)
+
+        #new_raster.SetProjection(project_wkt)
+        origin = (1180200, 690200)
+        new_raster.SetGeoTransform([origin[0], 1.0, 0.0, origin[1], 0.0, -1.0])
+        new_band = new_raster.GetRasterBand(1)
+        new_band.SetNoDataValue(-1)
+        new_band.WriteArray(lulc_array)
+        new_raster.FlushCache()
+        new_band = None
+        new_raster = None
+        
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        # create threat rasters for the test
+        threat_names = ['threat_1', 'threat_2']
+        threat_values = [1, 1]  
+
+        threat_array = numpy.zeros((100, 100), dtype=numpy.int8)
+
+        for suffix in ['_c', '_f']:
+            for (i, threat), value in zip(enumerate(threat_names), threat_values):
+                raster_path = os.path.join(args['workspace_dir'], threat + suffix + '.tif')
+                threat_array[100//(i+1):, :] = value  # making variations among threats
+                make_raster_from_array(threat_array, raster_path, nodata_val=-1)
+
+        # create threats table for the test
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,threat_2_f.tif\n')
+ 
+        validate_result = habitat_quality.validate(args)
+        self.assertTrue(
+            validate_result,
+            "expected failed validations instead didn't get any.")
+        self.assertTrue(
+            "Dataset must be projected in linear units" in
+            validate_result[0][1], validate_result[0][1])
+
+    
+    def test_habitat_quality_argspec_missing_threat_header(self):
+        """Habitat Quality: test validate for a threat header."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'],
+                            threat_values=[0.5, 6.6], nodata_val=None)
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,threat_2_f.tif\n')
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            "expected failed validations instead didn't get any.")
+        self.assertTrue(
+            "Fields are missing from this table: ['BASE_PATH']" in 
+            validate_result[0][1], validate_result[0][1])
