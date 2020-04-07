@@ -88,7 +88,7 @@ ARGS_SPEC = {
         "threats_table_path": {
             "validation_options": {
                 "required_fields": [
-                    "THREAT", "MAX_DIST", "WEIGHT", "BASE_PATH", 
+                    "THREAT", "MAX_DIST", "WEIGHT", "DECAY", "BASE_PATH", 
                     "CUR_PATH", "FUT_PATH"],
             },
             "type": "csv",
@@ -1120,6 +1120,7 @@ def _make_linear_decay_kernel_path(max_distance, kernel_path):
         kernel_row /= integration
         kernel_band.WriteArray(kernel_row, 0, row_index)
 
+
 def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
     """Update raster's nodata values.
 
@@ -1138,6 +1139,13 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
                 aligned_threat_path)
     threat_nodata = pygeoprocessing.get_raster_info(
         aligned_threat_path)['nodata'][0]
+    
+    if threat_nodata is None:
+        raise TypeError(
+            'Raster NODATA value for Threat path'
+            f' [ {os.path.basename(aligned_threat_path)} ] is UNDEFINED.'
+            ' Please make sure each threat raster has a defined NODATA value.')
+    
     threat_datatype = pygeoprocessing.get_raster_info(
         aligned_threat_path)['datatype']
 
@@ -1154,15 +1162,9 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
 
         return block
     
-    try:
-        pygeoprocessing.raster_calculator(
-            [(aligned_threat_path, 1)], _update_op, updated_pixel_threat_path,
-            threat_datatype, threat_nodata)
-    except TypeError:
-        raise TypeError(
-            'Raster NODATA value for Threat path'
-            f' [ {os.path.basename(aligned_threat_path)} ] is UNDEFINED.'
-            ' Please make sure each threat raster has a defined NODATA value.')
+    pygeoprocessing.raster_calculator(
+        [(aligned_threat_path, 1)], _update_op, updated_pixel_threat_path,
+        threat_datatype, threat_nodata)
 
 
 @validation.invest_validator
