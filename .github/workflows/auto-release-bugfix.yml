@@ -25,7 +25,8 @@ jobs:
               with:
                   python-version: 3.7
 
-            - run: python -m pip install --upgrade requests
+            - run: pip install --upgrade requests toml
+            - run: pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
             - run: sudo apt-get update && sudo apt-get install pandoc
 
             -   env:
