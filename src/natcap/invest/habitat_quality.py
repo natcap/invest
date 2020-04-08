@@ -75,8 +75,9 @@ ARGS_SPEC = {
                 "own threat rasters (optional), where each threat raster "
                 "file path is defined in the <b>Threats Data</b> CSV. "
                 "If there are no threat rasters and the threat paths are "
-                "left blank in the CSV column, degradation and habitat quality "
-                "outputs will not be generated for the baseline LULC.<br/><br/> "
+                "left blank in the CSV column, degradation and habitat "
+                "quality outputs will not be generated for the baseline "
+                "LULC.<br/><br/> "
                 "Each cell should represent a LULC code as an Integer.  The "
                 "dataset should be in a projection where the units are in "
                 "meters and the projection used should be defined. The LULC "
@@ -88,7 +89,7 @@ ARGS_SPEC = {
         "threats_table_path": {
             "validation_options": {
                 "required_fields": [
-                    "THREAT", "MAX_DIST", "WEIGHT", "DECAY", "BASE_PATH", 
+                    "THREAT", "MAX_DIST", "WEIGHT", "DECAY", "BASE_PATH",
                     "CUR_PATH", "FUT_PATH"],
             },
             "type": "csv",
@@ -97,10 +98,10 @@ ARGS_SPEC = {
                 "A CSV file of all the threats for the model to consider. "
                 "Each row in the table is a degradation source. The columns "
                 "(THREAT, MAX_DIST, WEIGHT, DECAY) are different attributes "
-                "of each degradation source. The columns (BASE_PATH, CUR_PATH, "
-                "FUT_PATH) specify the filepath name for the degradation "
-                "source where the path is relative to the THREAT CSV. "
-                "THREAT: "
+                "of each degradation source. The columns "
+                "(BASE_PATH, CUR_PATH, FUT_PATH) specify the filepath name "
+                "for the degradation source where the path is relative to "
+                "the THREAT CSV. THREAT: "
                 "The name of the threat source and this name must match "
                 "exactly to the name of it's corresponding column in the "
                 "sensitivity table. "
@@ -194,7 +195,7 @@ ARGS_SPEC = {
 _OUT_NODATA = -1.0
 _RARITY_NODATA = -64329.0
 _SCALING_PARAM = 2.5
-_THREAT_SCENARIO_MAP = {'_c':'CUR_PATH', '_f':'FUT_PATH','_b':'BASE_PATH'}
+_THREAT_SCENARIO_MAP = {'_c': 'CUR_PATH', '_f': 'FUT_PATH', '_b': 'BASE_PATH'}
 
 
 def execute(args):
@@ -206,29 +207,31 @@ def execute(args):
     current and future LULC.
 
     Parameters:
-        args['workspace_dir'] (string): a path to the directory that will write output
-            and other temporary files (required)
-        args['lulc_cur_path'] (string): a path to an input land use/land cover raster
-            (required)
-        args['lulc_fut_path'] (string): a path to an input land use/land cover raster
-            (optional)
-        args['lulc_bas_path'] (string): a path to an input land use/land cover raster
-            (optional, but required for rarity calculations)
-        args['threats_table_path'] (string): a path to an input CSV containing data
-            of all the considered threats. Each row is a degradation source
-            and each column a different attribute of the source with the
-            following names: 'THREAT','MAX_DIST','WEIGHT', 'BASE_PATH', 
-            'CUR_PATH', 'FUT_PATH' (required).
-        args['access_vector_path'] (string): a path to an input polygon shapefile
-            containing data on the relative protection against threats (optional)
-        args['sensitivity_table_path'] (string): a path to an input CSV file of LULC
-            types, whether they are considered habitat, and their sensitivity
-            to each threat (required)
-        args['half_saturation_constant'] (float): a python float that determines
-            the spread and central tendency of habitat quality scores
-            (required)
-        args['results_suffix'] (string): a python string that will be inserted into all
-            raster path paths just before the file extension.
+        args['workspace_dir'] (string): a path to the directory that will
+            write output and other temporary files (required)
+        args['lulc_cur_path'] (string): a path to an input land use/land
+            cover raster (required)
+        args['lulc_fut_path'] (string): a path to an input land use/land
+            cover raster (optional)
+        args['lulc_bas_path'] (string): a path to an input land use/land
+            cover raster (optional, but required for rarity calculations)
+        args['threats_table_path'] (string): a path to an input CSV
+            containing data of all the considered threats. Each row is a
+            degradation source and each column a different attribute of the
+            source with the following names:
+            'THREAT','MAX_DIST','WEIGHT', 'BASE_PATH', 'CUR_PATH', 'FUT_PATH'
+            (required).
+        args['access_vector_path'] (string): a path to an input polygon
+            shapefile containing data on the relative protection against
+            threats (optional)
+        args['sensitivity_table_path'] (string): a path to an input CSV file
+            of LULC types, whether they are considered habitat, and their
+            sensitivity to each threat (required)
+        args['half_saturation_constant'] (float): a python float that
+            determines the spread and central tendency of habitat quality
+            scores (required)
+        args['results_suffix'] (string): a python string that will be inserted
+            into all raster path paths just before the file extension.
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process.
@@ -244,11 +247,13 @@ def execute(args):
     # folder in the filesystem.
     LOGGER.info("Creating workspace")
     output_dir = args['workspace_dir']
-    intermediate_output_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    intermediate_output_dir = os.path.join(
+            args['workspace_dir'], 'intermediate')
     kernel_dir = os.path.join(intermediate_output_dir, 'kernels')
     utils.make_directories([intermediate_output_dir, output_dir, kernel_dir])
 
-    work_token_dir = os.path.join(intermediate_output_dir, '_taskgraph_working_dir')
+    work_token_dir = os.path.join(
+            intermediate_output_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -265,7 +270,7 @@ def execute(args):
             args['threats_table_path'], 'THREAT', to_lower=False).items()}
     sensitivity_dict = utils.build_lookup_from_csv(
         args['sensitivity_table_path'], 'LULC', to_lower=False)
-    
+
     # check that the required headers exist in the threat table.
     # Raise exception if they don't.
     threat_header_list = list(list(threat_dict.values())[0].keys())
@@ -276,7 +281,7 @@ def execute(args):
     if missing_threat_header_list:
         raise ValueError(
             'Column(s) %s are missing in the threat table' %
-            (', '.join(missing_threat_header_list)))    
+            (', '.join(missing_threat_header_list)))
 
     # check that the required headers exist in the sensitivity table.
     # Raise exception if they don't.
@@ -287,22 +292,22 @@ def execute(args):
     if missing_sens_header_list:
         raise ValueError(
             'Column(s) %s are missing in the sensitivity table' %
-            (', '.join(missing_sens_header_list)))    
-    
+            (', '.join(missing_sens_header_list)))
+
     # check that the threat names in the threats table match with the threats
-    # columns in the sensitivity table. 
-    missing_threat_header_list = [] 
+    # columns in the sensitivity table.
+    missing_threat_header_list = []
     for threat in threat_dict:
         if 'L_' + threat not in sens_header_list:
-            missing_threat_header_list.append(threat) 
+            missing_threat_header_list.append(threat)
 
     if missing_threat_header_list:
         raise ValueError(
             'Threats "%s" does not match any column in the sensitivity '
-            'table. Sensitivity columns: %s' % 
+            'table. Sensitivity columns: %s' %
             (missing_threat_header_list, sens_header_list))
-                
-    # Get the directory path for the Threats CSV, used for locating threat 
+
+    # Get the directory path for the Threats CSV, used for locating threat
     # rasters, which are relative to this path
     threat_csv_basepath = os.path.dirname(args['threats_table_path'])
 
@@ -349,16 +354,17 @@ def execute(args):
             threat_path_dict['threat' + lulc_key] = {}
 
             # for each threat given in the CSV file try opening the associated
-            # raster which should be found relative to the Threat CSV 
+            # raster which should be found relative to the Threat CSV
             for threat in threat_dict:
                 # Threat path from threat CSV is relative to CSV
                 threat_path = os.path.join(
-                        threat_csv_basepath, 
-                        threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]]) 
+                        threat_csv_basepath,
+                        threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
 
                 # it's okay to have no threat raster for baseline scenario
-                validated_threat_path = _resolve_threat_raster_path(threat_path)
-                    
+                validated_threat_path = _resolve_threat_raster_path(
+                        threat_path)
+
                 if validated_threat_path is None:
                     if lulc_key != '_b':
                         raise ValueError(
@@ -372,10 +378,12 @@ def execute(args):
                         validated_threat_path)
                 # save threat paths in a list for alignment and resize
                 if validated_threat_path:
-                    # check for duplicate absolute threat path names that 
+                    # check for duplicate absolute threat path names that
                     # cause errors when trying to write aligned versions
-                    if not validated_threat_path in lulc_and_threat_raster_list:
-                        lulc_and_threat_raster_list.append(validated_threat_path)
+                    if (validated_threat_path not in
+                            lulc_and_threat_raster_list):
+                        lulc_and_threat_raster_list.append(
+                                validated_threat_path)
                     else:
                         raise ValueError(
                             'Threat paths cannot be the same and must have '
@@ -406,11 +414,13 @@ def execute(args):
         if not ext:
             threat_dir_name = os.path.basename(os.path.dirname(path))
             aligned_raster_list.append(
-                os.path.join(intermediate_output_dir, 
+                os.path.join(
+                    intermediate_output_dir,
                     f'{threat_dir_name}_aligned{file_suffix}.tif'))
         else:
             aligned_raster_list.append(
-                os.path.join(intermediate_output_dir, 
+                os.path.join(
+                    intermediate_output_dir,
                     os.path.basename(path).replace(
                         ext, f'_aligned{file_suffix}.tif')))
 
@@ -435,19 +445,21 @@ def execute(args):
     for lulc_key, lulc_path in lulc_path_dict.items():
         lulc_path_dict[lulc_key] = os.path.join(
             intermediate_output_dir, os.path.basename(lulc_path).replace(
-                os.path.splitext(lulc_path)[1], 
+                os.path.splitext(lulc_path)[1],
                 f'_aligned{file_suffix}.tif'))
         for threat in threat_dict:
             threat_path = threat_path_dict['threat' + lulc_key][threat]
             if threat_path in lulc_and_threat_raster_list:
                 aligned_threat_path = os.path.join(
-                    intermediate_output_dir, os.path.basename(threat_path).replace(
-                        os.path.splitext(threat_path)[1], 
+                    intermediate_output_dir,
+                    os.path.basename(threat_path).replace(
+                        os.path.splitext(threat_path)[1],
                         f'_aligned{file_suffix}.tif'))
                 aligned_updated_threat_path = os.path.join(
                     intermediate_output_dir,
                     os.path.basename(aligned_threat_path).replace(
-                        f'aligned{file_suffix}', f'aligned_updated_{file_suffix}'))
+                        f'aligned{file_suffix}',
+                        f'aligned_updated_{file_suffix}'))
                 # Use these updated threat raster paths in future calculations
                 threat_path_dict['threat' + lulc_key][threat] = (
                     aligned_updated_threat_path)
@@ -457,7 +469,8 @@ def execute(args):
                 #  * Anything other than 0 or nodata is replaced with 1
                 update_threat_task = graph.add_task(
                     _update_threat_pixels,
-                    args=((aligned_threat_path, 1), aligned_updated_threat_path),
+                    args=(
+                        (aligned_threat_path, 1), aligned_updated_threat_path),
                     target_path_list=[aligned_updated_threat_path],
                     dependent_task_list=[align_task],
                     task_name=f'update_threat{lulc_key}_{threat}')
@@ -478,7 +491,7 @@ def execute(args):
         access_base_task = graph.add_task(
             pygeoprocessing.new_raster_from_base,
             args=(cur_lulc_path, access_raster_path, gdal.GDT_Float32,
-                [_OUT_NODATA]),
+                  [_OUT_NODATA]),
             kwargs={
                 'fill_value_list': [fill_value]
                 },
@@ -518,12 +531,13 @@ def execute(args):
 
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
-            intermediate_output_dir, 'habitat%s%s.tif' % (lulc_key, file_suffix))
+            intermediate_output_dir,
+            'habitat%s%s.tif' % (lulc_key, file_suffix))
 
         habitat_raster_task = graph.add_task(
                 _map_raster_to_dict_values,
                 args=((lulc_path, 1), habitat_raster_path, sensitivity_dict,
-                    'HABITAT', _OUT_NODATA),
+                      'HABITAT', _OUT_NODATA),
                 kwargs={
                     'values_required': False
                     },
@@ -545,12 +559,12 @@ def execute(args):
         # adjust each threat/threat raster for distance, weight, and access
         for threat, threat_data in threat_dict.items():
             LOGGER.debug('Calculating threat: %s.\nThreat data: %s' %
-                        (threat, threat_data))
+                         (threat, threat_data))
 
             # get the threat raster for the specific threat
             threat_raster_path = threat_path_dict['threat' + lulc_key][threat]
             LOGGER.debug('threat_raster_path %s', threat_raster_path)
-            # if threat path is None then must be in Base scenario where 
+            # if threat path is None then must be in Base scenario where
             # threats are not required.
             if threat_raster_path is None:
                 LOGGER.warning(
@@ -561,26 +575,27 @@ def execute(args):
                 break
 
             kernel_path = os.path.join(
-                kernel_dir, 'kernel_%s%s%s.tif' % (threat, lulc_key, file_suffix))
+                kernel_dir,
+                'kernel_%s%s%s.tif' % (threat, lulc_key, file_suffix))
 
             decay_type = threat_data['DECAY']
 
             decay_threat_task = graph.add_task(
                 _decay_threat,
-                args=((threat_raster_path, 1), kernel_path, decay_type, 
-                    threat_data['MAX_DIST']),
+                args=((threat_raster_path, 1), kernel_path, decay_type,
+                      threat_data['MAX_DIST']),
                 target_path_list=[kernel_path],
                 dependent_task_list=[*updated_threat_tasks],
                 task_name=f'decay_kernel_{decay_type}{lulc_key}_{threat}')
 
             filtered_threat_raster_path = os.path.join(
-                intermediate_output_dir, 
+                intermediate_output_dir,
                 'filtered_%s%s%s.tif' % (threat, lulc_key, file_suffix))
 
             convolve_task = graph.add_task(
                 pygeoprocessing.convolve_2d,
                 args=((threat_raster_path, 1), (kernel_path, 1),
-                    filtered_threat_raster_path),
+                      filtered_threat_raster_path),
                 kwargs={
                     'ignore_nodata': True
                     },
@@ -591,13 +606,13 @@ def execute(args):
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
-                intermediate_output_dir, 
+                intermediate_output_dir,
                 'sens_%s%s%s.tif' % (threat, lulc_key, file_suffix))
 
             sens_threat_task = graph.add_task(
                 _map_raster_to_dict_values,
                 args=((lulc_path, 1), sens_raster_path, sensitivity_dict,
-                    'L_' + threat, _OUT_NODATA),
+                      'L_' + threat, _OUT_NODATA),
                 kwargs={
                     'values_required': True
                     },
@@ -638,8 +653,9 @@ def execute(args):
             _calculate_total_degradation,
             args=(deg_raster_list, deg_sum_raster_path, weight_list),
             target_path_list=[deg_sum_raster_path],
-            dependent_task_list=[*threat_convolve_lookup,
-                *sensitivity_lookup, access_base_task],
+            dependent_task_list=[
+                *threat_convolve_lookup, *sensitivity_lookup,
+                access_base_task],
             task_name=f'tot_degradation_{decay_type}{lulc_key}_{threat}')
 
         LOGGER.info('Finished raster calculation on total_degradation')
@@ -659,8 +675,8 @@ def execute(args):
             _calculate_habitat_quality,
             args=(deg_hab_raster_list, quality_path, ksq),
             target_path_list=[quality_path],
-            dependent_task_list=[*habitat_raster_lookup,
-                total_degradation_task],
+            dependent_task_list=[
+                *habitat_raster_lookup, total_degradation_task],
             task_name=f'habitat_quality')
 
         LOGGER.info('Finished raster calculation on quality_op')
@@ -679,15 +695,16 @@ def execute(args):
             lulc_time = 'current' if lulc_key == '_c' else 'future'
 
             new_cover_path = os.path.join(
-                intermediate_output_dir, f'new_cover{lulc_key}{file_suffix}.tif')
+                intermediate_output_dir,
+                f'new_cover{lulc_key}{file_suffix}.tif')
 
             rarity_path = os.path.join(
                 output_dir, f'rarity{lulc_key}{file_suffix}.tif')
 
             rarity_task = graph.add_task(
                 _compute_rarity_operation,
-                args=((lulc_base_path, 1), (lulc_path, 1), 
-                    (new_cover_path, 1), rarity_path),
+                args=((lulc_base_path, 1), (lulc_path, 1), (new_cover_path, 1),
+                      rarity_path),
                 dependent_task_list=[align_task],
                 task_name=f'rarity{lulc_time}')
 
@@ -732,20 +749,21 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
     deg_hab_raster_band_list = [
         (path, 1) for path in deg_hab_raster_list]
 
-    pygeoprocessing.raster_calculator(deg_hab_raster_band_list, quality_op,
-        quality_out_path, gdal.GDT_Float32, _OUT_NODATA)
+    pygeoprocessing.raster_calculator(
+            deg_hab_raster_band_list, quality_op, quality_out_path,
+            gdal.GDT_Float32, _OUT_NODATA)
 
 
-def _calculate_total_degradation(deg_raster_list, deg_sum_raster_path, 
-        weight_list):
+def _calculate_total_degradation(
+        deg_raster_list, deg_sum_raster_path, weight_list):
     """Calculate habitat degradation.
 
     Parameters:
         deg_raster_list (list): list of string paths for the degraded
             threat rasters.
-        deg_sum_raster_path (string): path to output the habitat quality 
+        deg_sum_raster_path (string): path to output the habitat quality
             degradation raster.
-        weight_list (list): normalized weight for each threat corresponding 
+        weight_list (list): normalized weight for each threat corresponding
             to threats in ``deg_raster_list``.
     Returns:
         None
@@ -786,21 +804,21 @@ def _calculate_total_degradation(deg_raster_list, deg_sum_raster_path,
 
     deg_raster_band_list = [(path, 1) for path in deg_raster_list]
 
-    pygeoprocessing.raster_calculator(deg_raster_band_list, total_degradation,
-            deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA)
+    pygeoprocessing.raster_calculator(
+        deg_raster_band_list, total_degradation, deg_sum_raster_path,
+        gdal.GDT_Float32, _OUT_NODATA)
 
-def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path, 
-        rarity_path):
+
+def _compute_rarity_operation(
+        lulc_base_path, lulc_path, new_cover_path, rarity_path):
     """Calculate habitat rarity.
 
-        raster_path_band (tuple): a 2 tuple of the form 
-            (filepath to raster, band index) for threat raster to decay.
     Parameters:
-        lulc_base_path (tuple): a 2 tuple for the path to input base 
+        lulc_base_path (tuple): a 2 tuple for the path to input base
             LULC raster of the form (path, band index).
-        lulc_path (tuple):  a 2 tuple for the path to LULC for current 
+        lulc_path (tuple):  a 2 tuple for the path to LULC for current
             or future scenario of the form (path, band index).
-        new_cover_path (tuple): a 2 tuple for the path to intermediate 
+        new_cover_path (tuple): a 2 tuple for the path to intermediate
             raster file for trimming ``lulc_path`` to ``lulc_base_path``
             of the form (path, band index).
         rarity_path (string): path to output rarity raster.
@@ -871,20 +889,20 @@ def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path,
 
     pygeoprocessing.reclassify_raster(
         new_cover_path, code_index, rarity_path, gdal.GDT_Float32,
-            _RARITY_NODATA)
+        _RARITY_NODATA)
 
     LOGGER.info('Finished rarity computation on %s land cover.'
                 % os.path.basename(lulc_path[0]))
 
 
-def _decay_threat(raster_band_path, kernel_path, decay_type, max_dist): 
+def _decay_threat(raster_band_path, kernel_path, decay_type, max_dist):
     """Create a decay kernel as a raster.
 
     Parameters:
-        raster_path_band (tuple): a 2 tuple of the form 
+        raster_path_band (tuple): a 2 tuple of the form
             (filepath to raster, band index) for threat raster to decay.
         kernel_path (string): path to output kernel raster.
-        decay_type (string): type of decay kernel to create, either 
+        decay_type (string): type of decay kernel to create, either
             'linear' | 'exponentional'.
         max_dist (float): max distance of threat in KM.
     Returns:
@@ -916,12 +934,15 @@ def _decay_threat(raster_band_path, kernel_path, decay_type, max_dist):
         raise ValueError(
             "Unknown type of decay in biophysical table, should be "
             "either 'linear' or 'exponential'. Input was %s for threat"
-            " %s." % (decay_type, 
-                os.path.splitext(os.path.basename(raster_band_path[0]))[0]))
+            " %s." %
+            (decay_type,
+             os.path.splitext(os.path.basename(raster_band_path[0]))[0]))
 
     decay_func(max_dist_pixel, kernel_path)
 
-def _compare_lucodes_sensitivity(sensitivity_dict, unique_lucode_pickle_lookup):
+
+def _compare_lucodes_sensitivity(
+        sensitivity_dict, unique_lucode_pickle_lookup):
     """Compare LULC unique codes to codes listed in dictionary.
 
     Parameters:
@@ -945,9 +966,9 @@ def _compare_lucodes_sensitivity(sensitivity_dict, unique_lucode_pickle_lookup):
     missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
     if missing_lucodes:
         raise ValueError(
-            'The following land cover codes were found in your landcover rasters '
-            'but not in your sensitivity table. Check your sensitivity table '
-            'to see if they are missing: %s. \n\n' %
+            'The following land cover codes were found in your landcover '
+            'rasters but not in your sensitivity table. Check your '
+            'sensitivity table to see if they are missing: %s. \n\n' %
             ', '.join([str(x) for x in sorted(missing_lucodes)]))
 
 
@@ -955,7 +976,7 @@ def _collect_unique_lucodes(raster_path_band, pickle_path):
     """Get unique pixel values from raster and pickle as a Python set.
 
     Parameters:
-        raster_path_band (tuple): a 2 tuple of the form 
+        raster_path_band (tuple): a 2 tuple of the form
             (filepath to raster, band index).
         pickle_path (string): a path to output of a pickled Python set.
     Returns:
@@ -1012,7 +1033,7 @@ def _resolve_threat_raster_path(path):
 
     gdal.PopErrorHandler()
 
-    # If a dataset comes back None, then it could not be found, set path 
+    # If a dataset comes back None, then it could not be found, set path
     # to None and return
     if dataset is None:
         path = None
@@ -1025,7 +1046,7 @@ def _raster_pixel_count(raster_path_band):
     """Count unique pixel values in raster.
 
     Parameters:
-        raster_path_band (tuple): a 2 tuple of the form 
+        raster_path_band (tuple): a 2 tuple of the form
             (filepath to raster, band index).
 
     Returns:
@@ -1044,28 +1065,28 @@ def _raster_pixel_count(raster_path_band):
 
 
 def _map_raster_to_dict_values(
-        key_raster_path, out_path, attr_dict, field, out_nodata, 
+        key_raster_path, out_path, attr_dict, field, out_nodata,
         values_required):
     """Creates a new raster from ``key_raster_path`` using dictionary map.
 
     The new raster is created where the pixel values from
     ``key_raster_path`` are the keys to a dictionary ``attr_dict``. The values
     corresponding to those keys is what is written to the new raster. If a
-    value from ``key_raster_path`` does not appear as a key in ``attr_dict`` then
-    raise an Exception if ``values_required`` is True
+    value from ``key_raster_path`` does not appear as a key in ``attr_dict``
+    then raise an Exception if ``values_required`` is True
 
     Parameters:
-        key_raster_path (tuple): a 2 tuple of the form (filepath, band index) 
-            for a GDAL raster whose pixel values relate to the keys in 
+        key_raster_path (tuple): a 2 tuple of the form (filepath, band index)
+            for a GDAL raster whose pixel values relate to the keys in
             ``attr_dict``.
         out_path (string): a string for the output path of the created raster.
-        attr_dict (dict): a dictionary representing a table of values we are 
+        attr_dict (dict): a dictionary representing a table of values we are
             interested in making into a raster.
-        field (string): a string of which field in the table or key in the 
+        field (string): a string of which field in the table or key in the
             dictionary to use as the new raster pixel values.
         out_nodata (number): a value that is the nodata value.
         values_required (bool): decides how to handle the case where the
-            value from ``key_raster_path`` is not found in ``attr_dict``. 
+            value from ``key_raster_path`` is not found in ``attr_dict``.
             If True raise ValueError
 
     Returns:
@@ -1090,7 +1111,8 @@ def _make_linear_decay_kernel_path(max_distance, kernel_path):
     Parameters:
         max_distance (int): number of pixels out until the decay is 0.
         kernel_path (string): path to output raster whose values are in (0,1)
-            representing distance to edge.  Size is (``max_distance`` * 2 + 1)^2
+            representing distance to edge.
+            Size is (``max_distance`` * 2 + 1)^2
 
     Returns:
         None
@@ -1140,7 +1162,7 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
       * Anything other than 0 or nodata is replaced with 1
 
     Parameters:
-        aligned_threat_path (tuple): a 2 tuple for a GDAL raster path with 
+        aligned_threat_path (tuple): a 2 tuple for a GDAL raster path with
             the form (filepath, band index) to the threat raster on disk.
         updated_pixel_threat_path (string): an output path for the updated
             raster.
@@ -1151,13 +1173,13 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
                 aligned_threat_path)
     raster_info = pygeoprocessing.get_raster_info(aligned_threat_path[0])
     threat_nodata = raster_info['nodata'][0]
-    
+
     if threat_nodata is None:
         raise TypeError(
             'Raster NODATA value for Threat path'
             f' [ {os.path.basename(aligned_threat_path[0])} ] is UNDEFINED.'
             ' Please make sure each threat raster has a defined NODATA value.')
-    
+
     threat_datatype = raster_info['datatype']
 
     def _update_op(block):
@@ -1166,13 +1188,13 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
         # No need to perform unnecessary writes!
         if set(numpy.unique(block)) == set([0, 1]):
             return block
-        
+
         zero_threat = numpy.isclose(block, threat_nodata)
         block[zero_threat] = 0
         block[~numpy.isclose(block, 0)] = 1
 
         return block
-    
+
     pygeoprocessing.raster_calculator(
         [aligned_threat_path], _update_op, updated_pixel_threat_path,
         threat_datatype, threat_nodata)
@@ -1200,11 +1222,11 @@ def validate(args, limit_to=None):
         args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
-    
-    if ("threats_table_path" not in invalid_keys and 
+
+    if ("threats_table_path" not in invalid_keys and
             "sensitivity_table_path" not in invalid_keys and
             "threat_raster_folder" not in invalid_keys):
-        
+
         # Get CSVs as dictionaries and ensure the key is a string for threats.
         threat_dict = {
             str(key): value for key, value in utils.build_lookup_from_csv(
@@ -1212,28 +1234,27 @@ def validate(args, limit_to=None):
         sensitivity_dict = utils.build_lookup_from_csv(
             args['sensitivity_table_path'], 'LULC', to_lower=False)
 
-        # check that the threat names in the threats table match with the threats
-        # columns in the sensitivity table. 
+        # check that the threat names in the threats table match with the
+        # threats columns in the sensitivity table.
         sens_header_list = list(sensitivity_dict.values())[0]
         missing_sens_header_list = []
         for threat in threat_dict:
             if 'L_' + threat not in sens_header_list:
                 missing_sens_header_list.append(threat)
-        
-        if missing_sens_header_list:
-            validation_warnings.append((
-                ['sensitivity_table_path'],
-                (f'Threats "{missing_sens_header_list}" does not match any'
-                  ' column in the sensitivity table. Sensitivity columns:'
-                 f' {sens_header_list}')))
-                
-            invalid_keys.add('sensitivity_table_path')
-   
 
-        # Get the directory path for the Threats CSV, used for locating threat 
+        if missing_sens_header_list:
+            validation_warnings.append(
+                (['sensitivity_table_path'],
+                 (f'Threats "{missing_sens_header_list}" does not match any'
+                  ' column in the sensitivity table. Sensitivity columns:'
+                  f' {sens_header_list}')))
+
+            invalid_keys.add('sensitivity_table_path')
+
+        # Get the directory path for the Threats CSV, used for locating threat
         # rasters, which are relative to this path
         threat_csv_basepath = os.path.dirname(args['threats_table_path'])
-        
+
         # Validate threat raster paths and their nodata values
         bad_threat_paths = []
         bad_threat_nodatas = []
@@ -1243,13 +1264,14 @@ def validate(args, limit_to=None):
                                     ('_f', 'lulc_fut_path'),
                                     ('_b', 'lulc_bas_path')):
             if lulc_args in args:
-                # for each threat given in the CSV file try opening the associated
-                # raster which should be found in threat_raster_folder
+                # for each threat given in the CSV file try opening the
+                # associated raster which should be found in
+                # threat_raster_folder
                 for threat in threat_dict:
                     # Threat path from threat CSV is relative to CSV
                     threat_path = os.path.join(
-                            threat_csv_basepath, 
-                            threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]]) 
+                        threat_csv_basepath,
+                        threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
 
                     validated_threat_path = _resolve_threat_raster_path(
                             threat_path)
@@ -1258,48 +1280,48 @@ def validate(args, limit_to=None):
                         bad_threat_paths.append(
                                 (threat, _THREAT_SCENARIO_MAP[lulc_key]))
                         continue
-                    
+
                     if validated_threat_path:
-                        # check for duplicate absolute threat path names that 
+                        # check for duplicate absolute threat path names that
                         # cause errors when trying to write aligned versions
-                        if not validated_threat_path in threat_paths:
+                        if validated_threat_path not in threat_paths:
                             threat_paths.append(validated_threat_path)
                         else:
                             duplicate_paths.append(
                                 os.path.basename(validated_threat_path))
-                        
+
                         # Check NODATA value of the valid threat raster
                         threat_raster_info = pygeoprocessing.get_raster_info(
                                                 validated_threat_path)
                         if threat_raster_info['nodata'][0] is None:
                             bad_threat_nodatas.append(threat)
-        
+
         if bad_threat_paths:
-            validation_warnings.append((
-                ['threats_table_path'],
-                (f'A threat raster for threats: {bad_threat_paths}'
+            validation_warnings.append(
+                (['threats_table_path'],
+                 (f'A threat raster for threats: {bad_threat_paths}'
                   ' was not found or it could not be opened by GDAL.')))
- 
+
             invalid_keys.add('threats_table_path')
 
         if duplicate_paths:
             validation_warnings.append((
                 ['threats_table_path'],
                 ('Threat paths cannot be the same and must have unique '
-                f'absolute filepaths. The threat paths: {duplicate_paths} were '
-                'duplicates.')))
+                 f'absolute filepaths. The threat paths: {duplicate_paths} '
+                 'were duplicates.')))
 
-            if not 'threats_table_path' in invalid_keys:
+            if 'threats_table_path' not in invalid_keys:
                 invalid_keys.add('threats_table_path')
 
         if bad_threat_nodatas:
             validation_warnings.append((
                 ['threats_table_path'],
                 (f'A threat raster for threats: {bad_threat_nodatas}'
-                  ' has an undefined NODATA value. Please define' 
-                  ' the NODATA value for all threat rasters.')))
-            
-            if not 'threats_table_path' in invalid_keys:
+                 ' has an undefined NODATA value. Please define'
+                 ' the NODATA value for all threat rasters.')))
+
+            if 'threats_table_path' not in invalid_keys:
                 invalid_keys.add('threats_table_path')
-    
+
     return validation_warnings
