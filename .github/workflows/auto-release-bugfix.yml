@@ -1,11 +1,11 @@
 name: Automated Bugfix Release
-on:
-    schedule:
+#on:
+    #schedule:
         # Noon PST on Tuesday of each week
         #- cron: '0 20 * * 2'
         #
         # For debugging, run this once every 5 minutes
-        - cron: '*/5 * * * *'
+        #- cron: '*/5 * * * *'
 
 jobs:
     create-bugfix-release:
@@ -69,6 +69,9 @@ jobs:
                         git tag -a $BUGFIX_VERSION -m "$BUGFIX_VERSION release."
 
                         # Only push revisions needed to push the tag created.
+                        # NOTE: If changes were pushed to $TARGET_BRANCH before
+                        # we try to push this release, the push will fail and
+                        # we'll avoid the race condition.
                         git push \
                             https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git\
                             $TARGET_BRANCH
@@ -90,3 +93,9 @@ jobs:
                             --commitish $TARGET_BRANCH \
                             $BUGFIX_VERSION
                     fi
+
+            - if: failure()
+              env:
+                  SLACK_API_TOKEN: ${{ secrets.SLACK_API_TOKEN }}
+              run: |
+                  echo "Do a slack message."
