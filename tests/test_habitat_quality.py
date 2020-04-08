@@ -10,6 +10,13 @@ from osgeo import ogr
 import numpy
 import pygeoprocessing
 
+REGRESSION_DATA = os.path.join(
+        os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+        'habitat_quality')
+INPUT_DATA = os.path.join(
+        os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+        'habitat_quality', 'input')
+
 
 def make_simple_poly(origin):
     """Make a 50x100 ogr rectangular geometry clockwisely from origin.
@@ -221,6 +228,63 @@ class HabitatQualityTests(unittest.TestCase):
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
+
+    def test_habitat_quality_sample_data_regression(self):
+        """Habitat Quality: test sample data regression."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(
+                INPUT_DATA, 'accessibility_willamette.shp')
+        args['lulc_cur_path'] = os.path.join(
+                INPUT_DATA, 'lulc_current_willamette.tif')
+        args['lulc_cur_path'] = os.path.join(
+                INPUT_DATA, 'lulc_future_willamette.tif')
+        args['lulc_cur_path'] = os.path.join(
+                INPUT_DATA, 'lulc_baseline_willamette.tif')
+        args['threats_table_path'] = os.path.join(
+                INPUT_DATA, 'threats_willamette.csv']
+        args['sensitivity_table_path'] = os.path.join(
+                INPUT_DATA, 'sensitivity_willamette.csv']
+
+        habitat_quality.execute(args)
+
+        # Assert outputs exist.
+        for output_filename, assert_value in [
+                'deg_sum_c_regression.tif', 'deg_sum_f_regression.tif',
+                'quality_c_regression.tif', 'quality_f_regression.tif',
+                'rarity_c_regression.tif', 'rarity_f_regression.tif']:
+            model_out = os.path.join(args['workspace_dir'], output_filename) 
+            self.assertTrue(
+                    os.path.isfile(model_out), 
+                    "Expected a valid output file, did not get one for "
+                    f"{output_filename}")
+            
+            test_path = os.path.join(REGRESSION_DATA, output_filename) 
+
+            model_raster = gdal.OpenEx(model_out, gdal.OF_RASTER)
+            model_band = model_raster.GetRasterBand(1)
+            model_array = model_band.ReadAsArray()
+
+            test_raster = gdal.OpenEx(test_path, gdal.OF_RASTER)
+            test_band = test_raster.GetRasterBand(1)
+            test_array = test_band.ReadAsArray()
+
+            numpy.testing.assert_almost_equal(model_array, test_array)
+
+            model_array = None
+            model_band = None
+            model_raster = None
+            test_array = None
+            test_band = None
+            test_raster = None
+
 
     def test_habitat_quality_regression(self):
         """Habitat Quality: base regression test with simplified data."""
