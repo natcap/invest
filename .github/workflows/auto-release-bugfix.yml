@@ -1,6 +1,6 @@
 name: Automated Bugfix Release
-#on:
-    #schedule:
+on:
+    schedule:
         # Noon PST on Tuesday of each week
         #- cron: '0 20 * * 2'
         #
