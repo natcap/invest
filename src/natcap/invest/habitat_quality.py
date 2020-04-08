@@ -447,7 +447,7 @@ def execute(args):
                 aligned_updated_threat_path = os.path.join(
                     intermediate_output_dir,
                     os.path.basename(aligned_threat_path).replace(
-                        '.tif', '_updated.tif'))
+                        f'aligned{file_suffix}', f'aligned_updated_{file_suffix}'))
                 # Use these updated threat raster paths in future calculations
                 threat_path_dict['threat' + lulc_key][threat] = (
                     aligned_updated_threat_path)
@@ -817,7 +817,7 @@ def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path,
     lulc_code_count_b = _raster_pixel_count(lulc_base_path)
 
     # get the area of a cur/fut pixel
-    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_path)
+    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_path[0])
     lulc_pixel_size = lulc_raster_info['pixel_size']
     lulc_area = float(abs(lulc_pixel_size[0]) * abs(lulc_pixel_size[1]))
     lulc_nodata = lulc_raster_info['nodata'][0]
@@ -842,7 +842,7 @@ def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path,
                 % os.path.basename(lulc_path[0]))
 
     pygeoprocessing.raster_calculator(
-        [lulc_base_path, lulc_path], trim_op, new_cover_path,
+        [lulc_base_path, lulc_path], trim_op, new_cover_path[0],
         gdal.GDT_Float32, _OUT_NODATA)
 
     LOGGER.info('Finished masking %s land cover to base land cover.'
@@ -1034,7 +1034,7 @@ def _raster_pixel_count(raster_path_band):
     nodata = pygeoprocessing.get_raster_info(
                 raster_path_band[0])['nodata'][0]
     counts = collections.defaultdict(int)
-    for _, raster_block in pygeoprocessing.iterblocks(raster_path_band)):
+    for _, raster_block in pygeoprocessing.iterblocks(raster_path_band):
         for value, count in zip(
                 *numpy.unique(raster_block, return_counts=True)):
             if value == nodata:
