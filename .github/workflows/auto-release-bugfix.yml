@@ -5,7 +5,7 @@ name: Automated Bugfix Release
         #- cron: '0 20 * * 2'
         #
         # For debugging, run this once every 5 minutes
-        #- cron: '*/5 * * * *'
+        - cron: '*/5 * * * *'
 
 jobs:
     create-bugfix-release:
