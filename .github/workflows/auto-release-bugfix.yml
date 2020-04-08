@@ -72,9 +72,8 @@ jobs:
                         # NOTE: If changes were pushed to $TARGET_BRANCH before
                         # we try to push this release, the push will fail and
                         # we'll avoid the race condition.
-                        git push \
-                            https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git\
-                            $TARGET_BRANCH
+                        GIT_REPO=https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git
+                        git push --tags $GIT_REPO $TARGET_BRANCH
 
                         RELEASE_MESSAGE_FILE=release_message.md
                         VERSION=$BUGFIX_VERSION ./ci/release/build-release-text-from-history.sh > $RELEASE_MESSAGE_FILE
