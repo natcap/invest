@@ -244,19 +244,19 @@ class HabitatQualityTests(unittest.TestCase):
                 INPUT_DATA, 'accessibility_willamette.shp')
         args['lulc_cur_path'] = os.path.join(
                 INPUT_DATA, 'lulc_current_willamette.tif')
-        args['lulc_cur_path'] = os.path.join(
+        args['lulc_fut_path'] = os.path.join(
                 INPUT_DATA, 'lulc_future_willamette.tif')
-        args['lulc_cur_path'] = os.path.join(
+        args['lulc_bas_path'] = os.path.join(
                 INPUT_DATA, 'lulc_baseline_willamette.tif')
         args['threats_table_path'] = os.path.join(
-                INPUT_DATA, 'threats_willamette.csv']
+                INPUT_DATA, 'threats_willamette.csv')
         args['sensitivity_table_path'] = os.path.join(
-                INPUT_DATA, 'sensitivity_willamette.csv']
+                INPUT_DATA, 'sensitivity_willamette.csv')
 
         habitat_quality.execute(args)
 
         # Assert outputs exist.
-        for output_filename, assert_value in [
+        for output_filename in [
                 'deg_sum_c_regression.tif', 'deg_sum_f_regression.tif',
                 'quality_c_regression.tif', 'quality_f_regression.tif',
                 'rarity_c_regression.tif', 'rarity_f_regression.tif']:
@@ -276,7 +276,9 @@ class HabitatQualityTests(unittest.TestCase):
             test_band = test_raster.GetRasterBand(1)
             test_array = test_band.ReadAsArray()
 
-            numpy.testing.assert_almost_equal(model_array, test_array)
+            numpy.testing.assert_allclose(
+                    model_array, test_array, 
+                    err_msg=f'Failed comparison for file: {output_filename}')
 
             model_array = None
             model_band = None
