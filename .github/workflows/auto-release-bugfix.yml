@@ -78,10 +78,8 @@ jobs:
                         git config user.name "James Douglass"
 
                         # Commit changes and make an annotated tag.
-                        git commit -m \
-                            "Auto-committing updates for the $BUGFIX_VERSION release" \
-                            Makefile HISTORY.rst
-
+                        git add Makefile HISTORY.rst
+                        git commit -m "Auto-committing updates for the $BUGFIX_VERSION release"
                         git tag -a $BUGFIX_VERSION -m "$BUGFIX_VERSION release."
 
                         # Only push revisions needed to push the tag created.
