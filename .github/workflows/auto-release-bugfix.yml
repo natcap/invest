@@ -106,8 +106,14 @@ jobs:
                             $BUGFIX_VERSION
                     fi
 
-            - if: failure()
-              env:
-                  SLACK_API_TOKEN: ${{ secrets.SLACK_API_TOKEN }}
-              run: |
-                  echo "Do a slack message."
+            - name: Notify build status on slack
+              uses: homoluctus/slatify@master
+              if: always()
+              with:
+                  type: ${{ job.status }}
+                  job_name: '*InVEST Bugfix Auto-Release*'
+                  mention: 'here'
+                  mention_if: 'always'
+                  url: ${{ secrets.SLACK_WEBHOOK }}
+                  commit: true
+                  token: ${{ secrets.GITHUB_TOKEN }}
