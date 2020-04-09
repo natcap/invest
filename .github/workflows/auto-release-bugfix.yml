@@ -109,9 +109,13 @@ jobs:
                           $BUGFIX_VERSION
                   fi
 
+            # Notify us on slack only on failure.
+            # When a release is created, we'll be notified on slack about that
+            # anyways.  The build does not fail if there are no commits to
+            # release from master.
             - name: Notify build status on slack
               uses: homoluctus/slatify@master
-              if: always()
+              if: failure()
               with:
                   type: ${{ job.status }}
                   job_name: '*InVEST Bugfix Auto-Release*'
