@@ -79,19 +79,15 @@ jobs:
                       git config user.name "James Douglass"
 
                       # Commit changes and make an annotated tag.
-                      echo 'adding files'
                       git add Makefile HISTORY.rst
-                      git status | cat
-                      echo 'committing'
+                      git status | cat  # for debugging.
                       git commit -m "Auto-committing updates for the $BUGFIX_VERSION release"
-                      echo 'tagging'
                       git tag -a $BUGFIX_VERSION -m "$BUGFIX_VERSION release."
 
                       # Only push revisions needed to push the tag created.
                       # NOTE: If changes were pushed to $TARGET_BRANCH before
                       # we try to push this release, the push will fail and
                       # we'll avoid the race condition.
-                      echo 'pushing'
                       GIT_REPO=https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git
                       git push --tags $GIT_REPO $TARGET_BRANCH
 
