@@ -1,9 +1,10 @@
 # encoding=UTF-8
-import sys
+"""Update the HISTORY file for the current release."""
 import argparse
-import shutil
-import os
 import datetime
+import os
+import shutil
+import sys
 
 
 def note_release_section(version, date_string):
@@ -28,10 +29,12 @@ def note_release_section(version, date_string):
     if not os.path.exists('build'):
         os.makedirs('build')
 
+    unreleased_changes_section_found = False
     with open(new_history_path, 'w', newline='\n') as new_history:
         with open(history_path) as history:
             for line in history:
                 if line.rstrip() == 'Unreleased Changes':
+                    unreleased_changes_section_found = True
                     # Include the Unreleased Changes section, but commented
                     # out and above the new section title.
                     new_history.write('..\n')
@@ -50,12 +53,19 @@ def note_release_section(version, date_string):
 
     shutil.copyfile(new_history_path, history_path)
 
+    # If we can't find the Unreleased Changes section and this script is
+    # running within a GitHub Actions run, that means that some commits were
+    # merged into Master since the last release but HISTORY.rst was not
+    # updated.  This is an error state.
+    if not unreleased_changes_section_found:
+        raise ValueError('Could not find the Unreleased Changes section.')
+
     print('HISTORY has been updated to release version %s on %s' % (
         version, date_string))
 
 
 def main(args=None):
-    """Main function with an argparse interface.
+    """Interpret command-line arguments.
 
     Parameters:
         args (list or None): A list of command-line args to parse, such as from
