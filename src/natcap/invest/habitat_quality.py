@@ -601,7 +601,7 @@ def execute(args):
                     },
                 target_path_list=[filtered_threat_raster_path],
                 dependent_task_list=[*updated_threat_tasks, decay_threat_task],
-                task_name=f'convolve_{decay_type}_{lulc_key}_{threat}')
+                task_name=f'convolve_{decay_type}{lulc_key}_{threat}')
             threat_convolve_lookup.append(convolve_task)
 
             # create sensitivity raster based on threat
@@ -618,7 +618,7 @@ def execute(args):
                     },
                 target_path_list=[sens_raster_path],
                 dependent_task_list=[align_task],
-                task_name=f'sens_raster_{decay_type}_{lulc_key}_{threat}')
+                task_name=f'sens_raster_{decay_type}{lulc_key}_{threat}')
             sensitivity_lookup.append(sens_threat_task)
 
             # get the normalized weight for each threat
