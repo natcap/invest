@@ -81,6 +81,7 @@ jobs:
                       # Commit changes and make an annotated tag.
                       echo 'adding files'
                       git add Makefile HISTORY.rst
+                      git status | cat
                       echo 'committing'
                       git commit -m "Auto-committing updates for the $BUGFIX_VERSION release"
                       echo 'tagging'
