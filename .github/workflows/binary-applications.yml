@@ -1,6 +1,6 @@
 name: Build InVEST App Binaries
 
-on: [push, pull_request]
+on: [push, pull_request, release]
 
 jobs:
     check-syntax-errors:
