@@ -29,7 +29,8 @@ jobs:
             - run: pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
             - run: sudo apt-get update --fix-missing && sudo apt-get install pandoc
 
-            - env:
+            - name: Testing for and preparing the release
+              env:
                   TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
