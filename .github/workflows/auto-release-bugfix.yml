@@ -29,87 +29,87 @@ jobs:
             - run: pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
             - run: sudo apt-get update --fix-missing && sudo apt-get install pandoc
 
-            -   env:
-                    TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
-                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                run: |
-                    # Redirecting stderr to /dev/null to keep actions logs
-                    # reflecting the expected state of the program.
-                    if hub ci-status $TARGET_BRANCH 2> /dev/null
-                    then
-                        echo "There are test failures on $TARGET_BRANCH; aborting release."
-                        exit 1
-                    fi
+            - env:
+                  TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  # Redirecting stderr to /dev/null to keep actions logs
+                  # reflecting the expected state of the program.
+                  if hub ci-status $TARGET_BRANCH 2> /dev/null
+                  then
+                      echo "There are test failures on $TARGET_BRANCH; aborting release."
+                      exit 1
+                  fi
 
-                    # Don't do a bugfix release if target branch's HEAD already has a tag
-                    # git-describe exits 0 if a tag is found, 128 if not.
-                    # Redirecting stderr to /dev/null to keep the expected
-                    # 'fatal' error message out of the actions logs.
-                    if git describe --exact-match --tags $TARGET_BRANCH 2> /dev/null
-                    then
-                        echo "The latest commit on $TARGET_BRANCH already has a tag"
-                    else
-                        LATEST_TAG=$(git describe --tags | awk -F '-' '{print $1}')
-                        echo "Latest tag on $TARGET_BRANCH is $LATEST_TAG"
-                        if [[ $LATEST_TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
-                        then
-                            echo "$LATEST_TAG identified as a full release."
-                            echo "Proceeding with automated bugfix release."
-                        else
-                            echo "$LATEST_TAG does not conform to bugfix versioning."
-                            echo "This script does not know how to handle non-bugfix releases."
-                            echo "Aborting."
-                            exit 1
-                        fi
+                  # Don't do a bugfix release if target branch's HEAD already has a tag
+                  # git-describe exits 0 if a tag is found, 128 if not.
+                  # Redirecting stderr to /dev/null to keep the expected
+                  # 'fatal' error message out of the actions logs.
+                  if git describe --exact-match --tags $TARGET_BRANCH 2> /dev/null
+                  then
+                      echo "The latest commit on $TARGET_BRANCH already has a tag"
+                  else
+                      LATEST_TAG=$(git describe --tags | awk -F '-' '{print $1}')
+                      echo "Latest tag on $TARGET_BRANCH is $LATEST_TAG"
+                      if [[ $LATEST_TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+                      then
+                          echo "$LATEST_TAG identified as a full release."
+                          echo "Proceeding with automated bugfix release."
+                      else
+                          echo "$LATEST_TAG does not conform to bugfix versioning."
+                          echo "This script does not know how to handle non-bugfix releases."
+                          echo "Aborting."
+                          exit 1
+                      fi
 
-                        export BUGFIX_VERSION=$(python setup.py --version | awk -F '.' '{print $1"."$2"."$3+1}')
+                      export BUGFIX_VERSION=$(python setup.py --version | awk -F '.' '{print $1"."$2"."$3+1}')
 
-                        # Update the UG hash in the Makefile
-                        # This could be done with curl and sed, but it'll be easier
-                        # to read this way.
-                        python ci/release/increment-userguide-revision.py
+                      # Update the UG hash in the Makefile
+                      # This could be done with curl and sed, but it'll be easier
+                      # to read this way.
+                      python ci/release/increment-userguide-revision.py
 
-                        # Update HISTORY with the tag and today's date.
-                        python ci/release/update-history.py $BUGFIX_VERSION $(date "+%Y-%m-%d")
+                      # Update HISTORY with the tag and today's date.
+                      python ci/release/update-history.py $BUGFIX_VERSION $(date "+%Y-%m-%d")
 
-                        # Need to set up these committer details before
-                        # anything can be committed.
-                        git config user.email "jdouglass@stanford.edu"
-                        git config user.name "James Douglass"
+                      # Need to set up these committer details before
+                      # anything can be committed.
+                      git config user.email "jdouglass@stanford.edu"
+                      git config user.name "James Douglass"
 
-                        # Commit changes and make an annotated tag.
-                        echo 'adding files'
-                        git add Makefile HISTORY.rst
-                        echo 'committing'
-                        git commit -m "Auto-committing updates for the $BUGFIX_VERSION release"
-                        echo 'tagging'
-                        git tag -a $BUGFIX_VERSION -m "$BUGFIX_VERSION release."
+                      # Commit changes and make an annotated tag.
+                      echo 'adding files'
+                      git add Makefile HISTORY.rst
+                      echo 'committing'
+                      git commit -m "Auto-committing updates for the $BUGFIX_VERSION release"
+                      echo 'tagging'
+                      git tag -a $BUGFIX_VERSION -m "$BUGFIX_VERSION release."
 
-                        # Only push revisions needed to push the tag created.
-                        # NOTE: If changes were pushed to $TARGET_BRANCH before
-                        # we try to push this release, the push will fail and
-                        # we'll avoid the race condition.
-                        echo 'pushing'
-                        GIT_REPO=https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git
-                        git push --tags $GIT_REPO $TARGET_BRANCH
+                      # Only push revisions needed to push the tag created.
+                      # NOTE: If changes were pushed to $TARGET_BRANCH before
+                      # we try to push this release, the push will fail and
+                      # we'll avoid the race condition.
+                      echo 'pushing'
+                      GIT_REPO=https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git
+                      git push --tags $GIT_REPO $TARGET_BRANCH
 
-                        RELEASE_MESSAGE_FILE=release_message.md
-                        VERSION=$BUGFIX_VERSION ./ci/release/build-release-text-from-history.sh > $RELEASE_MESSAGE_FILE
-                        cat $RELEASE_MESSAGE_FILE  # for debugging, just in case.
+                      RELEASE_MESSAGE_FILE=release_message.md
+                      VERSION=$BUGFIX_VERSION ./ci/release/build-release-text-from-history.sh > $RELEASE_MESSAGE_FILE
+                      cat $RELEASE_MESSAGE_FILE  # for debugging, just in case.
 
-                        # Create a release object based on the text from HISTORY.
-                        # This requires that the tag already exists in the
-                        # repository on github.
-                        # NOTE: creating a GitHub release creates the tag.
-                        #       The InVEST binaries are created in response to
-                        #       this release object being created.  See the
-                        #       upload-binaries-to-release build job in
-                        #       .github/workflows/binary-applications.yml.
-                        hub release create \
-                            --file $RELEASE_MESSAGE_FILE \
-                            --commitish $TARGET_BRANCH \
-                            $BUGFIX_VERSION
-                    fi
+                      # Create a release object based on the text from HISTORY.
+                      # This requires that the tag already exists in the
+                      # repository on github.
+                      # NOTE: creating a GitHub release creates the tag.
+                      #       The InVEST binaries are created in response to
+                      #       this release object being created.  See the
+                      #       upload-binaries-to-release build job in
+                      #       .github/workflows/binary-applications.yml.
+                      hub release create \
+                          --file $RELEASE_MESSAGE_FILE \
+                          --commitish $TARGET_BRANCH \
+                          $BUGFIX_VERSION
+                  fi
 
             - name: Notify build status on slack
               uses: homoluctus/slatify@master
