@@ -58,7 +58,14 @@ def note_release_section(version, date_string):
     # merged into Master since the last release but HISTORY.rst was not
     # updated.  This is an error state.
     if not unreleased_changes_section_found:
-        raise ValueError('Could not find the Unreleased Changes section.')
+        raise ValueError(
+            'Could not find the Unreleased Changes section of HISTORY. '
+            'This happens when there are commits on master since the '
+            'latest tag but there are no changes recorded in HISTORY. '
+            'To fix this, uncomment the "Unreleased Changes" section, '
+            'add in whatever notes should have been added before, '
+            'and PR these changes back into master.'
+        )
 
     print('HISTORY has been updated to release version %s on %s' % (
         version, date_string))
