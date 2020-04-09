@@ -33,7 +33,9 @@ jobs:
                     TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
                     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                 run: |
-                    if hub ci-status $TARGET_BRANCH
+                    # Redirecting stderr to /dev/null to keep actions logs
+                    # reflecting the expected state of the program.
+                    if hub ci-status $TARGET_BRANCH 2> /dev/null
                     then
                         echo "There are test failures on $TARGET_BRANCH; aborting release."
                         exit 1
@@ -41,7 +43,9 @@ jobs:
 
                     # Don't do a bugfix release if target branch's HEAD already has a tag
                     # git-describe exits 0 if a tag is found, 128 if not.
-                    if git describe --exact-match --tags $TARGET_BRANCH
+                    # Redirecting stderr to /dev/null to keep the expected
+                    # 'fatal' error message out of the actions logs.
+                    if git describe --exact-match --tags $TARGET_BRANCH 2> /dev/null
                     then
                         echo "The latest commit on $TARGET_BRANCH already has a tag"
                     else
