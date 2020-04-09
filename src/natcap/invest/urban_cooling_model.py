@@ -1,5 +1,4 @@
 """Urban Cooling Model."""
-from __future__ import absolute_import
 import shutil
 import tempfile
 import math

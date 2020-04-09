@@ -13,6 +13,7 @@ SAMPLE_DATA = os.path.join(
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower')
 
+
 class HydropowerTests(unittest.TestCase):
     """Regression Tests for Annual Water Yield Hydropower Model."""
 

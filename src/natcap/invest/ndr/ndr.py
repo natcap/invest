@@ -1,5 +1,4 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
-from __future__ import absolute_import
 import pickle
 import itertools
 import logging

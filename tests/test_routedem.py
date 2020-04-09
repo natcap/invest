@@ -212,7 +212,6 @@ class RouteDEMTests(unittest.TestCase):
             gdal.OpenEx(os.path.join(
                 args['workspace_dir'], 'stream_mask_foo.tif')).ReadAsArray())
 
-
         expected_flow_accum = numpy.empty((10, 9), dtype=numpy.float64)
         expected_flow_accum[:, 0:4] = numpy.arange(1, 5)
         expected_flow_accum[:, 5:9] = numpy.flipud(numpy.arange(1, 5))

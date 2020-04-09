@@ -1,12 +1,12 @@
 import tempfile
 import unittest
+from unittest.mock import Mock
 import os
 import shutil
 import string
 
 from osgeo import gdal, osr, ogr
 import pandas
-import mock
 
 
 class SpatialOverlapTest(unittest.TestCase):
@@ -198,6 +198,7 @@ class ValidatorTest(unittest.TestCase):
         self.assertTrue('could not be interpreted as a number'
                         in validation_errors[0][1])
 
+
 class DirectoryValidation(unittest.TestCase):
     def setUp(self):
         """Create a new workspace to use for each test."""
@@ -247,7 +248,7 @@ class DirectoryValidation(unittest.TestCase):
 
         dirpath = 'foo'
         new_dir = os.path.join(self.workspace_dir, dirpath)
-        
+
         self.assertEqual(None, validation.check_directory(
             new_dir, exists=False, permissions='rwx'))
 
@@ -465,7 +466,7 @@ class FreestyleStringValidation(unittest.TestCase):
 
         error_msg = validation.check_freestyle_string(
             'foobar12', regexp={'pattern': '^[a-zA-Z]+$',
-                                'case_sensitive':True})
+                                'case_sensitive': True})
         self.assertTrue('did not match expected pattern' in error_msg)
 
 
@@ -517,7 +518,6 @@ class NumberValidation(unittest.TestCase):
         error_msg = validation.check_number(
             "35", 'int(value) < 0')
         self.assertTrue('does not meet condition' in error_msg)
-
 
 
 class BooleanValidation(unittest.TestCase):
@@ -879,7 +879,7 @@ class TestValidationFromSpec(unittest.TestCase):
         try:
             # Patch in a new function that raises an exception into the
             # validation functions dictionary.
-            patched_function = mock.Mock(side_effect=ValueError('foo'))
+            patched_function = Mock(side_effect=ValueError('foo'))
             validation._VALIDATION_FUNCS['number'] = patched_function
 
             validation_warnings = validation.validate(args, spec)
@@ -999,3 +999,67 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEqual(set(args.keys()), set(validation_warnings[0][0]))
         self.assertTrue('Bounding boxes do not intersect' in
                         validation_warnings[0][1])
+
+    def test_spatial_overlap_error_optional_args(self):
+        """Validation: check for spatial mismatch with insufficient args."""
+        from natcap.invest import validation
+
+        spec = {
+            'raster_a': {
+                'type': 'raster',
+                'name': 'raster 1',
+                'about': 'raster 1',
+                'required': True,
+            },
+            'raster_b': {
+                'type': 'raster',
+                'name': 'raster 2',
+                'about': 'raster 2',
+                'required': False,
+            },
+            'vector_a': {
+                'type': 'vector',
+                'name': 'vector 1',
+                'about': 'vector 1',
+                'required': False,
+            }
+        }
+
+        driver = gdal.GetDriverByName('GTiff')
+        filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
+        filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
+
+        # Filepaths 1 and 2 do not overlap
+        for filepath, geotransform, epsg_code in (
+                (filepath_1, [1, 1, 0, 1, 0, 1], 4326),
+                (filepath_2, [100, 1, 0, 100, 0, 1], 4326)):
+            raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
+            wgs84_srs = osr.SpatialReference()
+            wgs84_srs.ImportFromEPSG(epsg_code)
+            raster.SetProjection(wgs84_srs.ExportToWkt())
+            raster.SetGeoTransform(geotransform)
+            raster = None
+
+        args = {
+            'raster_a': filepath_1,
+        }
+        # There should not be a spatial overlap check at all
+        # when less than 2 of the spatial keys are sufficient.
+        validation_warnings = validation.validate(
+            args, spec, {'spatial_keys': list(spec.keys()),
+                         'different_projections_ok': True})
+        self.assertEqual(len(validation_warnings), 0)
+
+        # And even though there are three spatial keys in the spec,
+        # Only the ones checked should appear in the validation output
+        args = {
+            'raster_a': filepath_1,
+            'raster_b': filepath_2,
+        }
+        validation_warnings = validation.validate(
+            args, spec, {'spatial_keys': list(spec.keys()),
+                         'different_projections_ok': True})
+        self.assertEqual(len(validation_warnings), 1)
+        self.assertTrue('Bounding boxes do not intersect' in
+                        validation_warnings[0][1])
+        self.assertEqual(set(args.keys()), set(validation_warnings[0][0]))

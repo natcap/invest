@@ -1,12 +1,6 @@
 """A helper module for generating html tables that are represented as Strings"""
 import logging
 
-try:
-    from builtins import basestring
-except ImportError:
-    # Python3 doesn't have a basestring.
-    basestring = str
-
 LOGGER = logging.getLogger('natcap.invest.reporting.table_generator')
 
 def generate_table(table_dict, attributes=None):
@@ -60,22 +54,13 @@ def generate_table(table_dict, attributes=None):
 
     LOGGER.info('Generating HTML Table String')
 
-    def u(string):
-        if type(string) is basestring:
-            try:
-                return unicode(string, 'utf-8')
-            except NameError:
-                # Python 3 has no unicode function
-                return string
-        return string
-
     # Initialize the string that will store the html representation of the table
-    table_string = u('')
+    table_string = ''
 
     if 'attributes' in table_dict:
         table_string += '<table'
         for attr_key, attr_value in table_dict['attributes'].items():
-            table_string += ' %s="%s"' % (u(attr_key), u(attr_value))
+            table_string += ' %s="%s"' % (attr_key, attr_value)
 
         table_string += '>'
     else:
@@ -166,9 +151,9 @@ def generate_table(table_dict, attributes=None):
         # Add each column header to the html string
         try:
             col_attr = attr_to_string(col_dict['attr'])
-            table_string += '<th%s>%s</th>' % (u(col_attr), u(col_dict['name']))
+            table_string += '<th%s>%s</th>' % (col_attr, col_dict['name'])
         except KeyError:
-            table_string += '<th>%s</th>' % u(col_dict['name'])
+            table_string += '<th>%s</th>' % col_dict['name']
 
     # Add the closing tag for the table header
     table_string += '</tr></thead>'
@@ -188,7 +173,7 @@ def generate_table(table_dict, attributes=None):
                 col_headers, total_cols, 'Total', False, tdata_tuples)
 
     if not footer_string == '':
-        table_string += '<tfoot>%s</tfoot>' % u(footer_string)
+        table_string += '<tfoot>%s</tfoot>' % footer_string
 
     # Add the start tag for the table body
     table_string += '<tbody>'
@@ -203,7 +188,7 @@ def generate_table(table_dict, attributes=None):
             if total_cols[row_index]:
                 class_str = 'rowDataSd '
                 if tdata_tuples[row_index][0]:
-                    class_str += u(tdata_tuples[row_index][1])
+                    class_str += tdata_tuples[row_index][1]
                 # Add row data
                 table_string += ('<td class="%s">%s</td>' %
                                     (class_str, row[row_index]))
@@ -211,9 +196,9 @@ def generate_table(table_dict, attributes=None):
                 if tdata_tuples[row_index][0]:
                     class_str = tdata_tuples[row_index][1]
                     table_string += ('<td class="%s">%s</td>' %
-                                        (u(class_str), u(row[row_index])))
+                                        (class_str, row[row_index]))
                 else:
-                    table_string += '<td>%s</td>' % u(row[row_index])
+                    table_string += '<td>%s</td>' % row[row_index]
 
         table_string += '</tr>'
 

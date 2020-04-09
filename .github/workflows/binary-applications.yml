@@ -7,7 +7,7 @@ jobs:
         name: "Check for syntax errors"
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v1
+            - uses: actions/checkout@v2
 
             - name: Set up python 3.7
               uses: actions/setup-python@v1
@@ -15,7 +15,7 @@ jobs:
                   python-version: 3.7
 
             - name: Set up environment
-              run: python -m pip install --upgrade pip setuptools setuptools_scm flake8
+              run: python -m pip install --upgrade pip flake8
 
             - name: Lint with flake8
               run: |
@@ -32,7 +32,11 @@ jobs:
             PYTHON_VERSION: 3.7
             PYTHON_ARCH: x86
         steps:
-            - uses: actions/checkout@v1
+            - uses: actions/checkout@v2
+            - run: git fetch --prune --unshallow
+
+            - name: Fetch git tags
+              run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Restore pip cache
               uses: actions/cache@v1
@@ -121,6 +125,7 @@ jobs:
                   make GSUTIL=$env:GSUTIL_PATH deploy
 
             - name: Save build artifacts
+              if: always()
               uses: actions/upload-artifact@v1
               with:
                   name: InVEST Windows build artifacts
@@ -134,7 +139,11 @@ jobs:
             PYTHON_VERSION: 3.7
             PYTHON_ARCH: x86
         steps:
-            - uses: actions/checkout@v1
+            - uses: actions/checkout@v2
+            - run: git fetch --prune --unshallow
+
+            - name: Fetch git tags
+              run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Install homebrew dependencies
               run: |
@@ -165,6 +174,9 @@ jobs:
                   conda env create -p ./env --file requirements-all.yml
                   conda init bash
 
+                  # Libtiff from conda defaults channel gets around issue with missing libwebp
+                  conda install -p ./env --yes libtiff
+
             - name: Build binaries
               shell: bash
               run: |
@@ -185,6 +197,7 @@ jobs:
               run: make deploy
 
             - name: Save build artifacts
+              if: always()
               uses: actions/upload-artifact@v1
               with:
                   name: InVEST Mac build artifacts

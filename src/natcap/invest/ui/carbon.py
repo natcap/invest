@@ -7,109 +7,109 @@ import natcap.invest.carbon
 class Carbon(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(self,
-                                   label=u'InVEST Carbon Model',
+                                   label='InVEST Carbon Model',
                                    target=natcap.invest.carbon.execute,
                                    validator=natcap.invest.carbon.validate,
-                                   localdoc=u'carbonstorage.html')
+                                   localdoc='carbonstorage.html')
 
         self.cur_lulc_raster = inputs.File(
-            args_key=u'lulc_cur_path',
+            args_key='lulc_cur_path',
             helptext=(
-                u"A GDAL-supported raster representing the land-cover "
-                u"of the current scenario."),
-            label=u'Current Land Use/Land Cover (Raster)',
+                "A GDAL-supported raster representing the land-cover "
+                "of the current scenario."),
+            label='Current Land Use/Land Cover (Raster)',
             validator=self.validator)
         self.add_input(self.cur_lulc_raster)
         self.carbon_pools_path = inputs.File(
-            args_key=u'carbon_pools_path',
+            args_key='carbon_pools_path',
             helptext=(
-                u"A table that maps the land-cover IDs to carbon "
-                u"pools.  The table must contain columns of 'LULC', "
-                u"'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described "
-                u"in the User's Guide.  The values in LULC must at "
-                u"least include the LULC IDs in the land cover maps."),
-            label=u'Carbon Pools',
+                "A table that maps the land-cover IDs to carbon "
+                "pools.  The table must contain columns of 'LULC', "
+                "'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described "
+                "in the User's Guide.  The values in LULC must at "
+                "least include the LULC IDs in the land cover maps."),
+            label='Carbon Pools',
             validator=self.validator)
         self.add_input(self.carbon_pools_path)
         self.cur_lulc_year = inputs.Text(
-            args_key=u'lulc_cur_year',
-            helptext=u'The calendar year of the current scenario.',
+            args_key='lulc_cur_year',
+            helptext='The calendar year of the current scenario.',
             interactive=False,
-            label=u'Current Landcover Calendar Year',
+            label='Current Landcover Calendar Year',
             validator=self.validator)
         self.add_input(self.cur_lulc_year)
         self.calc_sequestration = inputs.Checkbox(
             helptext=(
-                u"Check to enable sequestration analysis.  This "
-                u"requires inputs of Land Use/Land Cover maps for both "
-                u"current and future scenarios."),
+                "Check to enable sequestration analysis.  This "
+                "requires inputs of Land Use/Land Cover maps for both "
+                "current and future scenarios."),
             args_key='calc_sequestration',
-            label=u'Calculate Sequestration')
+            label='Calculate Sequestration')
         self.add_input(self.calc_sequestration)
         self.fut_lulc_raster = inputs.File(
-            args_key=u'lulc_fut_path',
+            args_key='lulc_fut_path',
             helptext=(
-                u"A GDAL-supported raster representing the land-cover "
-                u"of the future scenario.  <br><br>If REDD scenario "
-                u"analysis is enabled, this should be the reference, or "
-                u"baseline, future scenario against which to compare "
-                u"the REDD policy scenario."),
+                "A GDAL-supported raster representing the land-cover "
+                "of the future scenario.  <br><br>If REDD scenario "
+                "analysis is enabled, this should be the reference, or "
+                "baseline, future scenario against which to compare "
+                "the REDD policy scenario."),
             interactive=False,
-            label=u'Future Landcover (Raster)',
+            label='Future Landcover (Raster)',
             validator=self.validator)
         self.add_input(self.fut_lulc_raster)
         self.fut_lulc_year = inputs.Text(
-            args_key=u'lulc_fut_year',
-            helptext=u'The calendar year of the future scenario.',
+            args_key='lulc_fut_year',
+            helptext='The calendar year of the future scenario.',
             interactive=False,
-            label=u'Future Landcover Calendar Year',
+            label='Future Landcover Calendar Year',
             validator=self.validator)
         self.add_input(self.fut_lulc_year)
         self.redd = inputs.Checkbox(
             helptext=(
-                u"Check to enable REDD scenario analysis.  This "
-                u"requires three Land Use/Land Cover maps: one for the "
-                u"current scenario, one for the future baseline "
-                u"scenario, and one for the future REDD policy "
-                u"scenario."),
+                "Check to enable REDD scenario analysis.  This "
+                "requires three Land Use/Land Cover maps: one for the "
+                "current scenario, one for the future baseline "
+                "scenario, and one for the future REDD policy "
+                "scenario."),
             interactive=False,
             args_key='do_redd',
-            label=u'REDD Scenario Analysis')
+            label='REDD Scenario Analysis')
         self.add_input(self.redd)
         self.redd_lulc_raster = inputs.File(
-            args_key=u'lulc_redd_path',
+            args_key='lulc_redd_path',
             helptext=(
-                u"A GDAL-supported raster representing the land-cover "
-                u"of the REDD policy future scenario.  This scenario "
-                u"will be compared to the baseline future scenario."),
+                "A GDAL-supported raster representing the land-cover "
+                "of the REDD policy future scenario.  This scenario "
+                "will be compared to the baseline future scenario."),
             interactive=False,
-            label=u'REDD Policy (Raster)',
+            label='REDD Policy (Raster)',
             validator=self.validator)
         self.add_input(self.redd_lulc_raster)
         self.valuation_container = inputs.Container(
-            args_key=u'do_valuation',
+            args_key='do_valuation',
             expandable=True,
             expanded=False,
             interactive=False,
-            label=u'Run Valuation Model')
+            label='Run Valuation Model')
         self.add_input(self.valuation_container)
         self.price_per_metric_ton_of_c = inputs.Text(
-            args_key=u'price_per_metric_ton_of_c',
-            label=u'Price/Metric ton of carbon',
+            args_key='price_per_metric_ton_of_c',
+            label='Price/Metric ton of carbon',
             validator=self.validator)
         self.valuation_container.add_input(self.price_per_metric_ton_of_c)
         self.discount_rate = inputs.Text(
-            args_key=u'discount_rate',
-            helptext=u'The discount rate as a floating point percent.',
-            label=u'Market Discount in Price of Carbon (%)',
+            args_key='discount_rate',
+            helptext='The discount rate as a floating point percent.',
+            label='Market Discount in Price of Carbon (%)',
             validator=self.validator)
         self.valuation_container.add_input(self.discount_rate)
         self.rate_change = inputs.Text(
-            args_key=u'rate_change',
+            args_key='rate_change',
             helptext=(
-                u"The floating point percent increase of the price of "
-                u"carbon per year."),
-            label=u'Annual Rate of Change in Price of Carbon (%)',
+                "The floating point percent increase of the price of "
+                "carbon per year."),
+            label='Annual Rate of Change in Price of Carbon (%)',
             validator=self.validator)
         self.valuation_container.add_input(self.rate_change)
 
