@@ -45,6 +45,19 @@ jobs:
                     then
                         echo "The latest commit on $TARGET_BRANCH already has a tag"
                     else
+                        LATEST_TAG=$(git describe --tags | awk -F '-' '{print $1}')
+                        echo "Latest tag on $TARGET_BRANCH is $LATEST_TAG"
+                        if [[ $LATEST_TAG =~ '^[0-9]+\.[0-9]+\.[0-9]+$' ]]
+                        then
+                            echo "$LATEST_TAG identified as a full release."
+                            echo "Proceeding with automated bugfix release."
+                        else
+                            echo "$LATEST_TAG does not conform to bugfix versioning."
+                            echo "This script does not know how to handle non-bugfix releases."
+                            echo "Aborting"
+                            exit 1
+                        fi
+
                         export BUGFIX_VERSION=$(python setup.py --version | awk -F '.' '{print $1"."$2"."$3+1}')
 
                         # Update the UG hash in the Makefile
