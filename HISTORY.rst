@@ -1,7 +1,11 @@
 .. :changelog:
 
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.4 (2020-04-09)
 ------------------
 * This is another test.
 
