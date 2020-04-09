@@ -107,6 +107,14 @@ jobs:
                           --file $RELEASE_MESSAGE_FILE \
                           --commitish $TARGET_BRANCH \
                           $BUGFIX_VERSION
+
+                      # Python wheels are created in response to the release.
+                      # Create an issue for uploading the wheels to PyPI here
+                      # so that we remember to take care of this.
+                      hub issue create \
+                          --message "Release natcap.invest $BUGFIX_VERSION on PyPI" \
+                          --message "When built, remember to upload wheels for $BUGFIX_VERSION to PyPI." \
+                          --labels task
                   fi
 
             # Notify us on slack only on failure.
