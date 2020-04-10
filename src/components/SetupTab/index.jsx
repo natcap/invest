@@ -65,9 +65,13 @@ class ArgsForm extends React.Component {
 
   constructor(props) {
     super(props);
+    this.state = {
+      inputs: {}
+    }
     this.handleChange = this.handleChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
     this.onDragDrop = this.onDragDrop.bind(this);
+    this.setInputDisplay = this.setInputDisplay.bind(this);
   }
 
   componentDidMount() {
@@ -82,13 +86,49 @@ class ArgsForm extends React.Component {
     // to avoid passing investValidate to this component at all.
     // this.props.batchUpdateArgs(JSON.parse(args_dict_string));
     this.props.investValidate(argsValuesFromSpec(this.props.args));
+
+    for (const argkey in this.props.args) {
+      if (this.props.args[argkey].ui_control) {
+        console.log(argkey)
+        this.setInputDisplay(this.props.args[argkey], this.props.args[argkey].value);
+      }
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.props.args !== prevProps.args) {
+      for (const argkey in this.props.args) {
+        if (this.props.args[argkey].ui_control) {
+          this.setInputDisplay(this.props.args[argkey], this.props.args[argkey].value);
+        }
+      }
+    }
+  }
+
+  setInputDisplay(argController, value) {
+    let inputState = this.state.inputs;
+    console.log(argController);
+    console.log(value);
+    argController.ui_control.forEach(dependentKey => {
+      if (!value) {
+        // hide the dependent args
+        inputState[dependentKey] = this.props.args[dependentKey].ui_option
+      } else {
+        inputState[dependentKey] = undefined
+      }
+
+    })
+    this.setState({inputs: inputState}, () => {console.log(this.state)})
   }
 
   handleChange(event) {
     /** Handle keystroke changes in text inputs */
     const value = event.target.value;
-    const name = event.target.name;
-    this.props.updateArg(name, value);
+    const argkey = event.target.name;
+    // if (this.props.args.argkey.ui_control) {
+    //   setInputDisplay(this.props.args.argkey, value)
+    // }
+    this.props.updateArg(argkey, value);
   }
 
   async selectFile(event) {
@@ -135,6 +175,22 @@ class ArgsForm extends React.Component {
       const argument = current_args[argname];
       let ArgInput;
 
+      // It's kinda nice if conditionally required inputs are disabled until
+      // their condition is satisfied and they become required. The tricky part though
+      // is enabling/disabling based only on the internal state of the argument without
+      // relying on the state of other args that are part of the condition. If that's not
+      // possible then we need to either reproduce some validation.py functionality on
+      // the JS side, or add more UI-relevant responses to the validation.py API.
+      // This solution mostly works, but will not disable an input that is no longer required,
+      // if it has a value present. 
+      // if (typeof argument.required === 'string') {
+      //   if (argument.validationMessage && argument.validationMessage.includes('is required but has no value')) {
+      //     argument['isDisabled'] = false
+      //   } else if (!argument.value && !argument.validationMessage){
+      //     argument['isDisabled'] = true
+      //   }
+      // }
+
       // These types need a text input and a file browser button
       if (['csv', 'vector', 'raster', 'directory'].includes(argument.type)) {
         ArgInput = 
@@ -171,8 +227,9 @@ class ArgsForm extends React.Component {
       
       // These types need a text input
       } else if (['freestyle_string', 'number'].includes(argument.type)) {
+        // let argClass = argument.isDisabled ? 'arg-' + argument.ui_option : ''
         ArgInput = 
-          <Form.Group as={Row} key={argname}>
+          <Form.Group as={Row} key={argname} className={'arg-' + this.state.inputs[argname]}>
             <Form.Label column sm="3"  htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="4">
               <InputGroup>
@@ -185,6 +242,7 @@ class ArgsForm extends React.Component {
                   onChange={this.handleChange}
                   isValid={argument.touched && argument.valid}
                   isInvalid={argument.touched && argument.validationMessage}
+                  disabled={this.state.inputs[argname] === 'disable' || false}
                 />
                 <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
                   {argument.type + ' : ' + (argument.validationMessage || '')}
@@ -259,7 +317,8 @@ class ArgsForm extends React.Component {
       // Nevertheless, feels better to fill in a float here.
       if (!argument.order) { argument.order = 100.0 }
 
-      // Fill in a tree-like object where each node is a group of input components
+      // Fill in a tree-like object where each item is an array of objects
+      // like { orderNumber: InputComponent }
       // that share a Math.floor argument.order number.
       const group = Math.floor(argument.order)
       let subArg = {}
@@ -273,25 +332,23 @@ class ArgsForm extends React.Component {
     }
 
     const sortedArgs = Object.entries(argTree).sort((a, b) => a[0] - b[0])
-    console.log(sortedArgs);
     formItems = []
     for (const orderkey in sortedArgs) {
       const group = sortedArgs[orderkey][1] // an array of objects
       if (group.length === 1) {
-        formItems.push(Object.values(group[0])[0])
+        formItems.push(
+          <div className="arg-group" id={orderkey}>
+            {Object.values(group[0])[0]}
+          </div>)
       } else {
-        console.log(group);
         // a and b are objects keyed by the args order value (float)
         const sortedGroup = group.sort((a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0]))
-        console.log(sortedGroup);
         const groupItems = [];
         for (const item in sortedGroup) {
-          console.log(item)
           groupItems.push(Object.values(sortedGroup[item])[0])
         }
-        formItems.push(<div
-            className="my-2" 
-            id={orderkey}>
+        formItems.push(
+          <div className="arg-group" id={orderkey}>
             {groupItems}
           </div>)
       }
