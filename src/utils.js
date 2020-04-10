@@ -128,8 +128,10 @@ export function argsValuesFromSpec(args) {
   */
   let args_dict = {};
   for (const argname in args) {
+    // args_dict[argname] = args[argname]['value'] || ''
     if (args[argname]['type'] === 'boolean') {
-      args_dict[argname] = boolStringToBoolean(args[argname]['value']) || ''
+      // args_dict[argname] = boolStringToBoolean(args[argname]['value']) || ''
+      args_dict[argname] = args[argname]['value'] !== undefined ? args[argname]['value'] : false
     } else {
       args_dict[argname] = args[argname]['value'] || ''
     }

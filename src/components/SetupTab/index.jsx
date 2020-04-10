@@ -10,7 +10,7 @@ import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 
 import { fetchDatastackFromFile } from '../../server_requests';
-import { argsValuesFromSpec } from '../../utils';
+import { argsValuesFromSpec, boolStringToBoolean } from '../../utils';
 
 export class SetupTab extends React.Component {
   /** Renders an Arguments form and an Execute button
@@ -69,6 +69,7 @@ class ArgsForm extends React.Component {
       inputs: {}
     }
     this.handleChange = this.handleChange.bind(this);
+    this.handleBoolChange = this.handleBoolChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
     this.onDragDrop = this.onDragDrop.bind(this);
     this.setInputDisplay = this.setInputDisplay.bind(this);
@@ -89,7 +90,6 @@ class ArgsForm extends React.Component {
 
     for (const argkey in this.props.args) {
       if (this.props.args[argkey].ui_control) {
-        console.log(argkey)
         this.setInputDisplay(this.props.args[argkey], this.props.args[argkey].value);
       }
     }
@@ -107,8 +107,6 @@ class ArgsForm extends React.Component {
 
   setInputDisplay(argController, value) {
     let inputState = this.state.inputs;
-    console.log(argController);
-    console.log(value);
     argController.ui_control.forEach(dependentKey => {
       if (!value) {
         // hide the dependent args
@@ -118,17 +116,22 @@ class ArgsForm extends React.Component {
       }
 
     })
-    this.setState({inputs: inputState}, () => {console.log(this.state)})
+    this.setState({inputs: inputState})
   }
 
   handleChange(event) {
     /** Handle keystroke changes in text inputs */
     const value = event.target.value;
     const argkey = event.target.name;
-    // if (this.props.args.argkey.ui_control) {
-    //   setInputDisplay(this.props.args.argkey, value)
-    // }
     this.props.updateArg(argkey, value);
+  }
+
+  handleBoolChange(event) {
+    /** Handle boolean changes that emitted strings */
+    const value = event.target.value;
+    const argkey = event.target.name;
+    const boolVal = boolStringToBoolean(value);
+    this.props.updateArg(argkey, boolVal)
   }
 
   async selectFile(event) {
@@ -268,8 +271,8 @@ class ArgsForm extends React.Component {
                 type="radio"
                 label="Yes"
                 value={"true"}
-                checked={argument.value || argument.value === "true"}
-                onChange={this.handleChange}
+                checked={argument.value}
+                onChange={this.handleBoolChange}
                 name={argname}
               />
               <Form.Check
@@ -278,8 +281,8 @@ class ArgsForm extends React.Component {
                 type="radio"
                 label="No"
                 value={"false"}
-                checked={!argument.value || argument.value === "false"}
-                onChange={this.handleChange}
+                checked={!argument.value}
+                onChange={this.handleBoolChange}
                 name={argname}
               />
             </Col>

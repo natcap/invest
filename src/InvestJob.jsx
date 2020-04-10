@@ -431,7 +431,17 @@ export class InvestJob extends React.Component {
         // 1) clear values for args that are absent from the input
         // 2) skip over items from the input that have incorrect keys, otherwise
         //    investValidate will crash on them.
-      argsMeta[argkey]['value'] = args_dict[argkey] || '';
+
+      // TODO: undefined args are often better handled as empty strings, except in the case of boolean args
+      // This santizing also happens in utils.argsToJSON.... so could be abstracted.
+      // Or maybe it's better to leave args as undefined and just handle that better as-needed downstream.
+      // if (argsMeta[argkey]['type'] === 'boolean') {
+      //   argsMeta[argkey]['value'] = args_dict[argkey] !== undefined ? args_dict[argkey] : false
+      // } else {
+      //   argsMeta[argkey]['value'] = args_dict[argkey] || '';
+      // }
+      argsMeta[argkey]['value'] = args_dict[argkey]
+      
       // label as touched even if the argkey was absent, since it's a batch load
       argsMeta[argkey]['touched'] = true;
     });
