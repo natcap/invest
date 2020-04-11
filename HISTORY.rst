@@ -1,11 +1,7 @@
 .. :changelog:
 
 
-..
-  Unreleased Changes
-  ------------------
-
-3.8.1 (2020-04-10)
+Unreleased Changes
 ------------------
 * Bumping the ``psutil`` dependency requirement to ``psutil>=5.6.6`` to address
   a double-free vulnerability documented in CVE-2019-18874.
@@ -1521,5 +1517,3 @@ InVEST 1.005 is a minor release with the following modification:
 10. Pollination
 
     In this version, the pollination model accepts an additional parameter which indicated the proportion of a crops yield that is attributed to wild pollinators.
-
-
