@@ -72,51 +72,21 @@ class ArgsForm extends React.Component {
     this.handleBoolChange = this.handleBoolChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
     this.onDragDrop = this.onDragDrop.bind(this);
-    this.setInputDisplay = this.setInputDisplay.bind(this);
+    // this.setInputDisplay = this.setInputDisplay.bind(this);
   }
 
   componentDidMount() {
-    // Validate args immediately on mount. Values will be `undefined`
-    // but converted to empty strings by `argsValuesFromSpec` 
-    // Validation will handle updating the `valid` property
-    // of the optional and conditionally required args so that they 
-    // can validate without any user-interaction. Validation messages
-    // won't appear to the user until an argument has been touched.
-
-    // TODO: could call batchUpdateArgs here instead
-    // to avoid passing investValidate to this component at all.
-    // this.props.batchUpdateArgs(JSON.parse(args_dict_string));
-    this.props.investValidate(argsValuesFromSpec(this.props.args));
-
-    for (const argkey in this.props.args) {
-      if (this.props.args[argkey].ui_control) {
-        this.setInputDisplay(this.props.args[argkey], this.props.args[argkey].value);
-      }
-    }
-  }
-
-  componentDidUpdate(prevProps) {
-    if (this.props.args !== prevProps.args) {
-      for (const argkey in this.props.args) {
-        if (this.props.args[argkey].ui_control) {
-          this.setInputDisplay(this.props.args[argkey], this.props.args[argkey].value);
-        }
-      }
-    }
-  }
-
-  setInputDisplay(argController, value) {
-    let inputState = this.state.inputs;
-    argController.ui_control.forEach(dependentKey => {
-      if (!value) {
-        // hide the dependent args
-        inputState[dependentKey] = this.props.args[dependentKey].ui_option
-      } else {
-        inputState[dependentKey] = undefined
-      }
-
-    })
-    this.setState({inputs: inputState})
+    /** Initializes some state for the inputs. 
+    *
+    * Values are yet `undefined` but will be converted to either 
+    *   empty strings or `false` by `argsValuesFromSpec`.
+    * Validation will update the `valid` property for each arg
+    *   allowing optional args to validate without any user-interaction.
+    */
+    
+    // `false` argument prevents 'touching' these inputs so that we don't 
+    //see scary validation warnings yet.
+    this.props.batchUpdateArgs(argsValuesFromSpec(this.props.args), false);
   }
 
   handleChange(event) {
@@ -178,22 +148,6 @@ class ArgsForm extends React.Component {
       const argument = current_args[argname];
       let ArgInput;
 
-      // It's kinda nice if conditionally required inputs are disabled until
-      // their condition is satisfied and they become required. The tricky part though
-      // is enabling/disabling based only on the internal state of the argument without
-      // relying on the state of other args that are part of the condition. If that's not
-      // possible then we need to either reproduce some validation.py functionality on
-      // the JS side, or add more UI-relevant responses to the validation.py API.
-      // This solution mostly works, but will not disable an input that is no longer required,
-      // if it has a value present. 
-      // if (typeof argument.required === 'string') {
-      //   if (argument.validationMessage && argument.validationMessage.includes('is required but has no value')) {
-      //     argument['isDisabled'] = false
-      //   } else if (!argument.value && !argument.validationMessage){
-      //     argument['isDisabled'] = true
-      //   }
-      // }
-
       // These types need a text input and a file browser button
       if (['csv', 'vector', 'raster', 'directory'].includes(argument.type)) {
         ArgInput = 
@@ -230,9 +184,8 @@ class ArgsForm extends React.Component {
       
       // These types need a text input
       } else if (['freestyle_string', 'number'].includes(argument.type)) {
-        // let argClass = argument.isDisabled ? 'arg-' + argument.ui_option : ''
         ArgInput = 
-          <Form.Group as={Row} key={argname} className={'arg-' + this.state.inputs[argname]}>
+          <Form.Group as={Row} key={argname} className={'arg-' + argument.active_ui_option}>
             <Form.Label column sm="3"  htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="4">
               <InputGroup>
@@ -245,7 +198,7 @@ class ArgsForm extends React.Component {
                   onChange={this.handleChange}
                   isValid={argument.touched && argument.valid}
                   isInvalid={argument.touched && argument.validationMessage}
-                  disabled={this.state.inputs[argname] === 'disable' || false}
+                  disabled={argument.active_ui_option === 'disable' || false}
                 />
                 <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
                   {argument.type + ' : ' + (argument.validationMessage || '')}

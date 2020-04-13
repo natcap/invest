@@ -417,12 +417,16 @@ export class InvestJob extends React.Component {
     return new Promise((resolve) => resolve(true))
   }
 
-  batchUpdateArgs(args_dict) {
+  batchUpdateArgs(args_dict, touch=true) {
     /** Update this.state.args in response to batch argument loading events,
     * and then validate the loaded args.
     *
-    * @param {object} - the args dictionay object that comes from datastack.py
+    * @param {object} args_dict - the args dictionay object that comes from datastack.py
     * after parsing args from logfile or datastack file.
+    * @param {boolean} touch - whether this function should mark arguments as 'touched'.
+    * 'touched' controls whether validation messages display. Usually this is 
+    * desireable, except when this function is used for initial render of the input form,
+    * when it's better to not display the arguments as 'touched'.
     */
 
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
@@ -432,18 +436,19 @@ export class InvestJob extends React.Component {
         // 2) skip over items from the input that have incorrect keys, otherwise
         //    investValidate will crash on them.
 
-      // TODO: undefined args are often better handled as empty strings, except in the case of boolean args
-      // This santizing also happens in utils.argsToJSON.... so could be abstracted.
-      // Or maybe it's better to leave args as undefined and just handle that better as-needed downstream.
-      // if (argsMeta[argkey]['type'] === 'boolean') {
-      //   argsMeta[argkey]['value'] = args_dict[argkey] !== undefined ? args_dict[argkey] : false
-      // } else {
-      //   argsMeta[argkey]['value'] = args_dict[argkey] || '';
-      // }
       argsMeta[argkey]['value'] = args_dict[argkey]
-      
-      // label as touched even if the argkey was absent, since it's a batch load
-      argsMeta[argkey]['touched'] = true;
+      argsMeta[argkey]['touched'] = touch;
+
+      if (argsMeta[argkey].ui_control) {
+        argsMeta[argkey].ui_control.forEach(dependentKey => {
+          if (!args_dict[argkey]) {
+            // hide/disable the dependent args
+            argsMeta[dependentKey]['active_ui_option'] = argsMeta[dependentKey].ui_option
+          } else {
+            argsMeta[dependentKey]['active_ui_option'] = undefined
+          }
+        });
+      }
     });
     
     this.setState({args: argsMeta},
@@ -462,6 +467,17 @@ export class InvestJob extends React.Component {
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
     argsMeta[key]['value'] = value;
     argsMeta[key]['touched'] = true;
+
+    if (argsMeta[key].ui_control) {
+      argsMeta[key].ui_control.forEach(dependentKey => {
+        if (!value) {
+          // hide/disable the dependent args
+          argsMeta[dependentKey]['active_ui_option'] = argsMeta[dependentKey].ui_option
+        } else {
+          argsMeta[dependentKey]['active_ui_option'] = undefined
+        }
+      });
+    }
 
     this.setState({args: argsMeta}, 
       () => {
