@@ -1,6 +1,7 @@
 const spawn = require('child_process').spawn;
 const app = require('electron').app
 const BrowserWindow = require('electron').BrowserWindow
+const fetch = require('node-fetch')
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
