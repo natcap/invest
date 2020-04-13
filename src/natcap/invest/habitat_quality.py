@@ -439,7 +439,6 @@ def execute(args):
     LOGGER.info('Finished aligning and resizing land cover and threat rasters')
     # list of tracking updated threat pixel rasters
     updated_threat_tasks = []
-    threat_pixels_update_lookup = []
     LOGGER.debug("Updating dict raster paths to reflect aligned paths")
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
     for lulc_key, lulc_path in lulc_path_dict.items():
@@ -482,23 +481,24 @@ def execute(args):
     # else set to the value according to the ACCESS attribute
     cur_lulc_path = lulc_path_dict['_c']
     fill_value = 1.0
-    try:
-        LOGGER.info('Handling Access Shape')
-        access_raster_path = os.path.join(
-            intermediate_output_dir, 'access_layer%s.tif' % file_suffix)
 
-        # create a new raster based on the raster info of current land cover
-        access_base_task = graph.add_task(
-            pygeoprocessing.new_raster_from_base,
-            args=(cur_lulc_path, access_raster_path, gdal.GDT_Float32,
-                  [_OUT_NODATA]),
-            kwargs={
-                'fill_value_list': [fill_value]
-                },
-            target_path_list=[access_raster_path],
-            dependent_task_list=[align_task],
-            task_name=f'access_raster')
+    LOGGER.info('Handling Access Shape')
+   access_raster_path = os.path.join(
+           intermediate_output_dir, 'access_layer%s.tif' % file_suffix)
+    # create a new raster based on the raster info of current land cover
+    access_base_task = graph.add_task(
+        pygeoprocessing.new_raster_from_base,
+        args=(cur_lulc_path, access_raster_path, gdal.GDT_Float32,
+              [_OUT_NODATA]),
+        kwargs={
+            'fill_value_list': [fill_value]
+            },
+        target_path_list=[access_raster_path],
+        dependent_task_list=[align_task],
+        task_name=f'access_raster')
+    access_task_list = [access_base_task]
 
+    if 'access_vector_path' in args:
         rasterize_access_task = graph.add_task(
             pygeoprocessing.rasterize,
             args=(args['access_vector_path'], access_raster_path),
@@ -509,9 +509,7 @@ def execute(args):
             target_path_list=[access_raster_path],
             dependent_task_list=[access_base_task],
             task_name=f'rasterize_access')
-    except KeyError:
-        LOGGER.info(
-            'No Access Shape Provided, access raster filled with 1s.')
+        access_task_list.append(rasterize_access_task)
 
     # calculate the weight sum which is the sum of all the threats' weights
     weight_sum = 0.0
@@ -655,7 +653,7 @@ def execute(args):
             target_path_list=[deg_sum_raster_path],
             dependent_task_list=[
                 *threat_convolve_lookup, *sensitivity_lookup,
-                access_base_task],
+                *access_task_list],
             task_name=f'tot_degradation_{decay_type}{lulc_key}_{threat}')
 
         LOGGER.info('Finished raster calculation on total_degradation')
@@ -671,7 +669,7 @@ def execute(args):
 
         deg_hab_raster_list = [deg_sum_raster_path, habitat_raster_path]
 
-        hq_task = graph.add_task(
+        _ = graph.add_task(
             _calculate_habitat_quality,
             args=(deg_hab_raster_list, quality_path, ksq),
             target_path_list=[quality_path],
@@ -701,7 +699,7 @@ def execute(args):
             rarity_path = os.path.join(
                 output_dir, f'rarity{lulc_key}{file_suffix}.tif')
 
-            rarity_task = graph.add_task(
+            _ = graph.add_task(
                 _compute_rarity_operation,
                 args=((lulc_base_path, 1), (lulc_path, 1), (new_cover_path, 1),
                       rarity_path),
