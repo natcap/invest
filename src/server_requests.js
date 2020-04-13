@@ -4,7 +4,11 @@ import fetch from 'node-fetch';
 // .then chaining of callbacks. Consider refactoring
 // everything here with async/await.
 
-export function getFlaskIsReady() {
+export function getFlaskIsReady(retries=0) {
+  /* Recursive function to find out if the Flask server is online.
+  * Sometimes the app will make a server request before it's ready,
+  * so awaiting this response is one way to avoid that. 
+  */
   return(
     fetch('http://localhost:5000/ready', {
       method: 'get',
@@ -14,10 +18,13 @@ export function getFlaskIsReady() {
     .catch(async (error) => {
       console.log(error)
       if (error.code === 'ECONNREFUSED') {
-        // try again after a short pause
-        await new Promise(resolve => setTimeout(resolve, 50));
-        console.log('recursive call coming')
-        return await getFlaskIsReady()
+        while (retries < 21) {
+          retries++;
+          // try again after a short pause
+          await new Promise(resolve => setTimeout(resolve, 50));
+          console.log('retry # ' + retries);
+          return await getFlaskIsReady(retries)
+        }
       } else {
         console.log(error)
         return error 
