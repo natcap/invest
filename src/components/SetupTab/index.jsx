@@ -232,7 +232,8 @@ class ArgsForm extends React.Component {
                   as='select'
                   name={argname}
                   value={argument.value}
-                  onChange={this.handleChange}>
+                  onChange={this.handleChange}
+                  disabled={argument.active_ui_option === 'disable' || false}>
                   {argument.validation_options.options.map(opt =>
                     <option value={opt} key={opt}>{opt}</option>
                   )}

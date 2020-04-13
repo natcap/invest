@@ -40,3 +40,7 @@
 .arg-hide {
 	display: none;
 }
+
+.arg-disable .form-label {
+	color: lightgray;
+}
