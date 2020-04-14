@@ -291,7 +291,7 @@ def execute(args):
         h for h in required_sens_header_list if h not in sens_header_list]
     if missing_sens_header_list:
         raise ValueError(
-            'Column(s) %s are missing in the sensitivity table' %
+            'Column(s) %s are missing in the sensitivity table', 
             (', '.join(missing_sens_header_list)))
 
     # check that the threat names in the threats table match with the threats
@@ -303,9 +303,9 @@ def execute(args):
 
     if missing_threat_header_list:
         raise ValueError(
-            'Threats "%s" does not match any column in the sensitivity '
-            'table. Sensitivity columns: %s' %
-            (missing_threat_header_list, sens_header_list))
+            f'Threats "{missing_threat_header_list}" does not match any column'
+            ' in the sensitivity table. Sensitivity columns:'
+            f' {sens_header_list}')
 
     # Get the directory path for the Threats CSV, used for locating threat
     # rasters, which are relative to this path
@@ -315,8 +315,8 @@ def execute(args):
     try:
         half_saturation_constant = float(args['half_saturation_constant'])
     except ValueError:
-        raise ValueError('Half-saturation constant is not a numeric number.'
-                         'It is: %s' % args['half_saturation_constant'])
+        raise ValueError("Half-saturation constant is not a numeric number."
+                         f"It is: {args['half_saturation_constant']}"
 
     # declare dictionaries to store the land cover and the threat rasters
     # pertaining to the different threats
@@ -484,7 +484,7 @@ def execute(args):
 
     LOGGER.info('Handling Access Shape')
     access_raster_path = os.path.join(
-        intermediate_output_dir, 'access_layer%s.tif' % file_suffix)
+        intermediate_output_dir, f'access_layer{file_suffix}.tif')
     # create a new raster based on the raster info of current land cover
     access_base_task = graph.add_task(
         pygeoprocessing.new_raster_from_base,
@@ -530,7 +530,7 @@ def execute(args):
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
             intermediate_output_dir,
-            'habitat%s%s.tif' % (lulc_key, file_suffix))
+            f'habitat{lulc_key}{file_suffix}.tif')
 
         habitat_raster_task = graph.add_task(
             _map_raster_to_dict_values,
@@ -566,15 +566,15 @@ def execute(args):
             # threats are not required.
             if threat_raster_path is None:
                 LOGGER.warning(
-                    'The threat raster for %s could not be found for the land '
-                    'cover %s. Skipping Habitat Quality calculation for this '
-                    'land cover.' % (threat, lulc_key))
+                    f'The threat raster for {threat} could not be found for'
+                    f' the land cover {lulc_key}. Skipping Habitat Quality'
+                    ' calculation for this land cover.')
                 exit_landcover = True
                 break
 
             kernel_path = os.path.join(
                 kernel_dir,
-                'kernel_%s%s%s.tif' % (threat, lulc_key, file_suffix))
+                f'kernel_{threat}{lulc_key}{file_suffix}.tif')
 
             decay_type = threat_data['DECAY']
 
@@ -588,7 +588,7 @@ def execute(args):
 
             filtered_threat_raster_path = os.path.join(
                 intermediate_output_dir,
-                'filtered_%s%s%s.tif' % (threat, lulc_key, file_suffix))
+                f'filtered_{threat}{lulc_key}{file_suffix}.tif')
 
             convolve_task = graph.add_task(
                 pygeoprocessing.convolve_2d,
@@ -605,7 +605,7 @@ def execute(args):
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
                 intermediate_output_dir,
-                'sens_%s%s%s.tif' % (threat, lulc_key, file_suffix))
+                f'sens_{threat}{lulc_key}{file_suffix}.tif')
 
             sens_threat_task = graph.add_task(
                 _map_raster_to_dict_values,
@@ -847,18 +847,18 @@ def _compute_rarity_operation(
             (base == base_nodata) | (cover_x == lulc_nodata),
             base_nodata, cover_x)
 
-    LOGGER.info('Starting masking %s land cover to base land cover.'
-                % os.path.basename(lulc_path[0]))
+    LOGGER.info('Starting masking %s land cover to base land cover.',
+                os.path.basename(lulc_path[0]))
 
     pygeoprocessing.raster_calculator(
         [lulc_base_path, lulc_path], trim_op, new_cover_path[0],
         gdal.GDT_Float32, _OUT_NODATA)
 
-    LOGGER.info('Finished masking %s land cover to base land cover.'
-                % os.path.basename(lulc_path[0]))
+    LOGGER.info('Finished masking %s land cover to base land cover.',
+                os.path.basename(lulc_path[0]))
 
-    LOGGER.info('Starting rarity computation on %s land cover.'
-                % os.path.basename(lulc_path[0]))
+    LOGGER.info('Starting rarity computation on %s land cover.',
+                os.path.basename(lulc_path[0]))
 
     lulc_code_count_x = _raster_pixel_count(new_cover_path)
 
@@ -882,8 +882,8 @@ def _compute_rarity_operation(
         new_cover_path, code_index, rarity_path, gdal.GDT_Float32,
         _RARITY_NODATA)
 
-    LOGGER.info('Finished rarity computation on %s land cover.'
-                % os.path.basename(lulc_path[0]))
+    LOGGER.info('Finished rarity computation on %s land cover.',
+                os.path.basename(lulc_path[0]))
 
 
 def _decay_threat(raster_band_path, kernel_path, decay_type, max_dist):
