@@ -80,13 +80,6 @@ class _QtTest(unittest.TestCase):
         if self.qt_app is None:
             self.qt_app = QApplication(sys.argv)
 
-    def tearDown(self):
-        """Clear the QApplication's event queue."""
-        # After each test, empty the event queue.
-        # This should help to make sure that there aren't any event-based race
-        # conditions where a C/C++ object is deleted before a slot is called.
-        self.qt_app.sendPostedEvents()
-
 class _SettingsSandbox(_QtTest):
     def setUp(self):
         _QtTest.setUp(self)
