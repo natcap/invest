@@ -11,19 +11,18 @@ import numpy
 import pygeoprocessing
 
 
-def make_simple_poly(origin):
+def make_simple_poly(origin_xy):
     """Make a 50x100 ogr rectangular geometry clockwisely from origin.
 
-    Parameters:
-        origin (tuple): the longitude and latitude of the origin of the
-                        rectangle.
+    Args:
+        origin_xy (tuple): the longitude and latitude of the origin of the
+            rectangle.
 
     Returns:
         None.
-
     """
     # Create a rectangular ring
-    lon, lat = origin[0], origin[1]
+    lon, lat = origin_xy[0], origin_xy[1]
     width = 100
     ring = ogr.Geometry(ogr.wkbLinearRing)
     ring.AddPoint(lon, lat)
@@ -42,7 +41,7 @@ def make_raster_from_array(
         base_array, base_raster_path, nodata_val=-1, gdal_type=gdal.GDT_Int32):
     """Make a raster from an array on a designated path.
 
-    Parameters:
+    Args:
         base_array (numpy.ndarray): the 2D array for making the raster.
         nodata_val (int; float): nodata value for the raster.
         gdal_type (gdal datatype; int): gdal datatype for the raster.
@@ -77,7 +76,7 @@ def make_raster_from_array(
 def make_access_shp(access_shp_path):
     """Create a 100x100 accessibility polygon shapefile with two access values.
 
-    Parameters:
+    Args:
         access_shp_path (str): the path for the shapefile.
 
     Returns:
@@ -125,7 +124,7 @@ def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
                         threat_values=None, nodata_val=-1):
     """Create a side_lengthXside_length raster on designated path.
 
-    Parameters:
+    Args:
         folder_path (str): the folder path for saving the threat rasters.
         make_empty_raster=False (bool): Whether to write a raster file
             that has no values at all.
@@ -162,7 +161,7 @@ def make_sensitivity_samp_csv(
         csv_path, include_threat=True, missing_lines=False):
     """Create a simplified sensitivity csv file with five land cover types.
 
-    Parameters:
+    Args:
         csv_path (str): the path of sensitivity csv.
         include_threat (bool): whether the "threat" column is included in csv.
         missing_lines (bool): whether to intentionally leave out lulc rows.
@@ -190,7 +189,7 @@ def make_sensitivity_samp_csv(
 def assert_array_sum(base_raster_path, desired_sum, include_nodata=True):
     """Assert that the sum of a raster is equal to the specified value.
 
-    Parameters:
+    Args:
         base_raster_path (str): the filepath of the raster to be asserted.
         desired_sum (float): the value to be compared with the raster sum.
         include_nodata (bool): whether to inlude nodata in the sum.
