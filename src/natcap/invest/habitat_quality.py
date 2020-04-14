@@ -206,7 +206,8 @@ def execute(args):
     habitat degradation and quality for a future LULC and habitat rarity for
     current and future LULC.
 
-    Parameters:
+    Args:
+        args (dict): a key, value mapping for the habitat quality inputs.
         args['workspace_dir'] (string): a path to the directory that will
             write output and other temporary files (required)
         args['lulc_cur_path'] (string): a path to an input land use/land
@@ -239,7 +240,6 @@ def execute(args):
     Returns:
         None
     """
-
     # Append a _ to the suffix if it's not empty and doesn't already have one
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
@@ -393,10 +393,10 @@ def execute(args):
 
     LOGGER.info("Checking LULC codes against Sensitivity table")
     compare_lucodes_sens_task = graph.add_task(
-            _compare_lucodes_sensitivity,
-            args=(sensitivity_dict, unique_lucode_pickle_lookup),
-            dependent_task_list=[*unique_lucode_lookup],
-            task_name='lucode_sens_comparison')
+        _compare_lucodes_sensitivity,
+        args=(sensitivity_dict, unique_lucode_pickle_lookup),
+        dependent_task_list=[*unique_lucode_lookup],
+        task_name='lucode_sens_comparison')
 
     # don't continue if the compare_lucodes_sens_task throws error
     compare_lucodes_sens_task.join()
@@ -464,8 +464,8 @@ def execute(args):
                     aligned_updated_threat_path)
 
                 # Update threat raster pixel values as needed so that:
-                #  * Nodata values are replaced with 0
-                #  * Anything other than 0 or nodata is replaced with 1
+                #   * Nodata values are replaced with 0
+                #   * Anything other than 0 or nodata is replaced with 1
                 update_threat_task = graph.add_task(
                     _update_threat_pixels,
                     args=(
@@ -483,7 +483,7 @@ def execute(args):
     fill_value = 1.0
 
     LOGGER.info('Handling Access Shape')
-   access_raster_path = os.path.join(
+    access_raster_path = os.path.join(
            intermediate_output_dir, 'access_layer%s.tif' % file_suffix)
     # create a new raster based on the raster info of current land cover
     access_base_task = graph.add_task(
@@ -716,26 +716,17 @@ def execute(args):
 def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
     """Calculate habitat quality from degradation inputs.
 
-    Parameters:
+    Args:
         deg_hab_raster_list (list): list of string paths for the degraded
             habitat rasters.
         quality_out_path (string): path to output the habitat quality raster.
         ksq (float): a number representing half-saturation**_SCALING_PARAM
+
     Returns:
         None
     """
     def quality_op(degradation, habitat):
-        """Vectorized function that computes habitat quality given
-            a degradation and habitat value.
-
-            degradation - a float from the created degradation
-                raster above.
-            habitat - a float indicating habitat suitability from
-                from the habitat raster created above.
-
-            returns - a float representing the habitat quality
-                score for a pixel
-        """
+        """Computes habitat quality given degradation and habitat values."""
         degredataion_clamped = numpy.where(degradation < 0, 0, degradation)
 
         return numpy.where(
@@ -756,32 +747,34 @@ def _calculate_total_degradation(
         deg_raster_list, deg_sum_raster_path, weight_list):
     """Calculate habitat degradation.
 
-    Parameters:
+    Args:
         deg_raster_list (list): list of string paths for the degraded
             threat rasters.
         deg_sum_raster_path (string): path to output the habitat quality
             degradation raster.
         weight_list (list): normalized weight for each threat corresponding
             to threats in ``deg_raster_list``.
+
     Returns:
         None
     """
     def total_degradation(*raster):
-        """A vectorized function that computes the degradation value for
-            each pixel based on each threat and then sums them together
+        """Computes the totale degradation value.
 
-            *rasters - a list of floats depicting the adjusted threat
-                value per pixel based on distance and sensitivity.
-                The values are in pairs so that the values for each threat
-                can be tracked:
+        Args:
+            *rasters (list): a list of numpy arrays of float type depicting
+                the adjusted threat value per pixel based on distance and
+                sensitivity. The values are in pairs so that the values for
+                each threat can be tracked:
                 [filtered_val_threat1, sens_val_threat1,
                  filtered_val_threat2, sens_val_threat2, ...]
                 There is an optional last value in the list which is the
                 access_raster value, but it is only present if
                 access_raster is not None.
 
-            returns - the total degradation score for the pixel"""
-
+        Returns:
+            The total degradation score for the pixel.
+        """
         # we can not be certain how many threats the user will enter,
         # so we handle each filtered threat and sensitivity raster
         # in pairs
@@ -811,7 +804,7 @@ def _compute_rarity_operation(
         lulc_base_path, lulc_path, new_cover_path, rarity_path):
     """Calculate habitat rarity.
 
-    Parameters:
+    Args:
         lulc_base_path (tuple): a 2 tuple for the path to input base
             LULC raster of the form (path, band index).
         lulc_path (tuple):  a 2 tuple for the path to LULC for current
@@ -820,6 +813,7 @@ def _compute_rarity_operation(
             raster file for trimming ``lulc_path`` to ``lulc_base_path``
             of the form (path, band index).
         rarity_path (string): path to output rarity raster.
+
     Returns:
         None
     """
@@ -841,14 +835,13 @@ def _compute_rarity_operation(
     def trim_op(base, cover_x):
         """Trim cover_x to the mask of base.
 
-        Parameters:
+        Args:
             base (numpy.ndarray): base raster from 'lulc_base'
             cover_x (numpy.ndarray): either future or current land
                 cover raster from 'lulc_path' above
 
         Returns:
-            _OUT_NODATA where either array has nodata, otherwise
-            cover_x.
+            _OUT_NODATA where either array has nodata, otherwise cover_x.
         """
         return numpy.where(
             (base == base_nodata) | (cover_x == lulc_nodata),
@@ -896,13 +889,14 @@ def _compute_rarity_operation(
 def _decay_threat(raster_band_path, kernel_path, decay_type, max_dist):
     """Create a decay kernel as a raster.
 
-    Parameters:
+    Args:
         raster_path_band (tuple): a 2 tuple of the form
             (filepath to raster, band index) for threat raster to decay.
         kernel_path (string): path to output kernel raster.
         decay_type (string): type of decay kernel to create, either
             'linear' | 'exponentional'.
         max_dist (float): max distance of threat in KM.
+
     Returns:
         None
     """
@@ -943,12 +937,13 @@ def _compare_lucodes_sensitivity(
         sensitivity_dict, unique_lucode_pickle_lookup):
     """Compare LULC unique codes to codes listed in dictionary.
 
-    Parameters:
+    Args:
         sensitivity_dict (dict): dictionary representing sensitivity for LULC
             values with a column of 'codes'.
         unique_lucode_pickle_lookup (list): list of paths to pickle files that
             represent a python set of unique LULC values for the LULC rasters
             provided in the model.
+
     Returns:
         None
     """
@@ -973,10 +968,11 @@ def _compare_lucodes_sensitivity(
 def _collect_unique_lucodes(raster_path_band, pickle_path):
     """Get unique pixel values from raster and pickle as a Python set.
 
-    Parameters:
+    Args:
         raster_path_band (tuple): a 2 tuple of the form
             (filepath to raster, band index).
         pickle_path (string): a path to output of a pickled Python set.
+
     Returns:
         None
     """
@@ -1005,7 +1001,7 @@ def _collect_unique_lucodes(raster_path_band, pickle_path):
 def _resolve_threat_raster_path(path):
     """Determine if path is a valid gdal raster file.
 
-    Parameters:
+    Args:
         path (string): file path.
 
     Return:
@@ -1043,7 +1039,7 @@ def _resolve_threat_raster_path(path):
 def _raster_pixel_count(raster_path_band):
     """Count unique pixel values in raster.
 
-    Parameters:
+    Args:
         raster_path_band (tuple): a 2 tuple of the form
             (filepath to raster, band index).
 
@@ -1073,7 +1069,7 @@ def _map_raster_to_dict_values(
     value from ``key_raster_path`` does not appear as a key in ``attr_dict``
     then raise an Exception if ``values_required`` is True
 
-    Parameters:
+    Args:
         key_raster_path (tuple): a 2 tuple of the form (filepath, band index)
             for a GDAL raster whose pixel values relate to the keys in
             ``attr_dict``.
@@ -1106,7 +1102,7 @@ def _make_linear_decay_kernel_path(max_distance, kernel_path):
     Pixels in raster are equal to d / max_distance where d is the distance to
     the center of the raster in number of pixels.
 
-    Parameters:
+    Args:
         max_distance (int): number of pixels out until the decay is 0.
         kernel_path (string): path to output raster whose values are in (0,1)
             representing distance to edge.
@@ -1159,11 +1155,12 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
       * Nodata values are replaced with 0
       * Anything other than 0 or nodata is replaced with 1
 
-    Parameters:
+    Args:
         aligned_threat_path (tuple): a 2 tuple for a GDAL raster path with
             the form (filepath, band index) to the threat raster on disk.
         updated_pixel_threat_path (string): an output path for the updated
             raster.
+
     Returns:
         None
     """
@@ -1181,7 +1178,7 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
     threat_datatype = raster_info['datatype']
 
     def _update_op(block):
-        """ """
+        """Replace nodata values with 0 and block>1 with 1."""
         # First check if we actually need to set anything.
         # No need to perform unnecessary writes!
         if set(numpy.unique(block)) == set([0, 1]):
@@ -1202,7 +1199,7 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to ``execute``'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation
