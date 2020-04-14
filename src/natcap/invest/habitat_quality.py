@@ -248,12 +248,12 @@ def execute(args):
     LOGGER.info("Creating workspace")
     output_dir = args['workspace_dir']
     intermediate_output_dir = os.path.join(
-            args['workspace_dir'], 'intermediate')
+        args['workspace_dir'], 'intermediate')
     kernel_dir = os.path.join(intermediate_output_dir, 'kernels')
     utils.make_directories([intermediate_output_dir, output_dir, kernel_dir])
 
     work_token_dir = os.path.join(
-            intermediate_output_dir, '_taskgraph_working_dir')
+        intermediate_output_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -342,10 +342,10 @@ def execute(args):
                 intermediate_output_dir, f'unique_lulc{lulc_key}.pickle')
             # save unique codes to check if it's missing in sensitivity table
             unique_lucode_task = graph.add_task(
-                    _collect_unique_lucodes,
-                    args=((lulc_path, 1), unique_lucode_pickle_path),
-                    target_path_list=[unique_lucode_pickle_path],
-                    task_name=f'unique_lucodes{lulc_key}')
+                _collect_unique_lucodes,
+                args=((lulc_path, 1), unique_lucode_pickle_path),
+                target_path_list=[unique_lucode_pickle_path],
+                task_name=f'unique_lucodes{lulc_key}')
             unique_lucode_lookup.append(unique_lucode_task)
             unique_lucode_pickle_lookup.append(unique_lucode_pickle_path)
 
@@ -358,12 +358,12 @@ def execute(args):
             for threat in threat_dict:
                 # Threat path from threat CSV is relative to CSV
                 threat_path = os.path.join(
-                        threat_csv_basepath,
-                        threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
+                    threat_csv_basepath,
+                    threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
 
                 # it's okay to have no threat raster for baseline scenario
                 validated_threat_path = _resolve_threat_raster_path(
-                        threat_path)
+                    threat_path)
 
                 if validated_threat_path is None:
                     if lulc_key != '_b':
@@ -375,7 +375,7 @@ def execute(args):
                             'relative to the threat CSV table.')
 
                 threat_path_dict['threat' + lulc_key][threat] = (
-                        validated_threat_path)
+                    validated_threat_path)
                 # save threat paths in a list for alignment and resize
                 if validated_threat_path:
                     # check for duplicate absolute threat path names that
@@ -383,7 +383,7 @@ def execute(args):
                     if (validated_threat_path not in
                             lulc_and_threat_raster_list):
                         lulc_and_threat_raster_list.append(
-                                validated_threat_path)
+                            validated_threat_path)
                     else:
                         raise ValueError(
                             'Threat paths cannot be the same and must have '
@@ -484,7 +484,7 @@ def execute(args):
 
     LOGGER.info('Handling Access Shape')
     access_raster_path = os.path.join(
-           intermediate_output_dir, 'access_layer%s.tif' % file_suffix)
+        intermediate_output_dir, 'access_layer%s.tif' % file_suffix)
     # create a new raster based on the raster info of current land cover
     access_base_task = graph.add_task(
         pygeoprocessing.new_raster_from_base,
@@ -533,14 +533,14 @@ def execute(args):
             'habitat%s%s.tif' % (lulc_key, file_suffix))
 
         habitat_raster_task = graph.add_task(
-                _map_raster_to_dict_values,
-                args=((lulc_path, 1), habitat_raster_path, sensitivity_dict,
-                      'HABITAT', _OUT_NODATA),
-                kwargs={
-                    'values_required': False
-                    },
-                dependent_task_list=[align_task],
-                task_name=f'habitat_raster{lulc_key}')
+            _map_raster_to_dict_values,
+            args=((lulc_path, 1), habitat_raster_path, sensitivity_dict,
+                  'HABITAT', _OUT_NODATA),
+            kwargs={
+                'values_required': False
+                },
+            dependent_task_list=[align_task],
+            task_name=f'habitat_raster{lulc_key}')
         habitat_raster_lookup.append(habitat_raster_task)
 
         # initialize a list that will store all the threat/threat rasters
@@ -730,17 +730,17 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
         degredataion_clamped = numpy.where(degradation < 0, 0, degradation)
 
         return numpy.where(
-                (degradation == _OUT_NODATA) | (habitat == _OUT_NODATA),
-                _OUT_NODATA,
-                (habitat * (1.0 - ((degredataion_clamped**_SCALING_PARAM) /
-                 (degredataion_clamped**_SCALING_PARAM + ksq)))))
+            (degradation == _OUT_NODATA) | (habitat == _OUT_NODATA),
+            _OUT_NODATA,
+            (habitat * (1.0 - ((degredataion_clamped**_SCALING_PARAM) /
+             (degredataion_clamped**_SCALING_PARAM + ksq)))))
 
     deg_hab_raster_band_list = [
         (path, 1) for path in deg_hab_raster_list]
 
     pygeoprocessing.raster_calculator(
-            deg_hab_raster_band_list, quality_op, quality_out_path,
-            gdal.GDT_Float32, _OUT_NODATA)
+        deg_hab_raster_band_list, quality_op, quality_out_path,
+        gdal.GDT_Float32, _OUT_NODATA)
 
 
 def _calculate_total_degradation(
@@ -791,7 +791,7 @@ def _calculate_total_degradation(
 
         # the last element in raster is access
         return numpy.where(
-                nodata_mask, _OUT_NODATA, sum_degradation * raster[-1])
+            nodata_mask, _OUT_NODATA, sum_degradation * raster[-1])
 
     deg_raster_band_list = [(path, 1) for path in deg_raster_list]
 
