@@ -801,17 +801,17 @@ def _calculate_total_degradation(
 
 
 def _compute_rarity_operation(
-        lulc_base_path, lulc_path, new_cover_path, rarity_path):
+        base_lulc_path_band, lulc_path_band, new_cover_path, rarity_path):
     """Calculate habitat rarity.
 
     Args:
-        lulc_base_path (tuple): a 2 tuple for the path to input base
+        base_lulc_path_band (tuple): a 2 tuple for the path to input base
             LULC raster of the form (path, band index).
-        lulc_path (tuple):  a 2 tuple for the path to LULC for current
+        lulc_path_band (tuple):  a 2 tuple for the path to LULC for current
             or future scenario of the form (path, band index).
         new_cover_path (tuple): a 2 tuple for the path to intermediate
-            raster file for trimming ``lulc_path`` to ``lulc_base_path``
-            of the form (path, band index).
+            raster file for trimming ``lulc_path_band`` to 
+            ``base_lulc_path_band`` of the form (path, band index).
         rarity_path (string): path to output rarity raster.
 
     Returns:
@@ -819,15 +819,16 @@ def _compute_rarity_operation(
     """
     # get the area of a base pixel to use for computing rarity where the
     # pixel sizes are different between base and cur/fut rasters
-    base_raster_info = pygeoprocessing.get_raster_info(lulc_base_path[0])
+    base_raster_info = pygeoprocessing.get_raster_info(
+        base_lulc_path_band[0])
     base_pixel_size = base_raster_info['pixel_size']
     base_area = float(abs(base_pixel_size[0]) * abs(base_pixel_size[1]))
     base_nodata = base_raster_info['nodata'][0]
 
-    lulc_code_count_b = _raster_pixel_count(lulc_base_path)
+    lulc_code_count_b = _raster_pixel_count(base_lulc_path_band)
 
     # get the area of a cur/fut pixel
-    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_path[0])
+    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_path_band[0])
     lulc_pixel_size = lulc_raster_info['pixel_size']
     lulc_area = float(abs(lulc_pixel_size[0]) * abs(lulc_pixel_size[1]))
     lulc_nodata = lulc_raster_info['nodata'][0]
@@ -838,7 +839,7 @@ def _compute_rarity_operation(
         Args:
             base (numpy.ndarray): base raster from 'lulc_base'
             cover_x (numpy.ndarray): either future or current land
-                cover raster from 'lulc_path' above
+                cover raster from 'lulc_path_band' above
 
         Returns:
             _OUT_NODATA where either array has nodata, otherwise cover_x.
@@ -848,17 +849,17 @@ def _compute_rarity_operation(
             base_nodata, cover_x)
 
     LOGGER.info('Starting masking %s land cover to base land cover.',
-                os.path.basename(lulc_path[0]))
+                os.path.basename(lulc_path_band[0]))
 
     pygeoprocessing.raster_calculator(
-        [lulc_base_path, lulc_path], trim_op, new_cover_path[0],
+        [base_lulc_path_band, lulc_path_band], trim_op, new_cover_path[0],
         gdal.GDT_Float32, _OUT_NODATA)
 
     LOGGER.info('Finished masking %s land cover to base land cover.',
-                os.path.basename(lulc_path[0]))
+                os.path.basename(lulc_path_band[0]))
 
     LOGGER.info('Starting rarity computation on %s land cover.',
-                os.path.basename(lulc_path[0]))
+                os.path.basename(lulc_path_band[0]))
 
     lulc_code_count_x = _raster_pixel_count(new_cover_path)
 
@@ -883,10 +884,10 @@ def _compute_rarity_operation(
         _RARITY_NODATA)
 
     LOGGER.info('Finished rarity computation on %s land cover.',
-                os.path.basename(lulc_path[0]))
+                os.path.basename(lulc_path_band[0]))
 
 
-def _decay_threat(raster_band_path, kernel_path, decay_type, max_dist):
+def _decay_threat(raster_path_band, kernel_path, decay_type, max_dist):
     """Create a decay kernel as a raster.
 
     Args:
@@ -903,7 +904,7 @@ def _decay_threat(raster_band_path, kernel_path, decay_type, max_dist):
     # need the pixel size for the threat raster so we can create
     # an appropriate kernel for convolution
     threat_pixel_size = pygeoprocessing.get_raster_info(
-        raster_band_path[0])['pixel_size']
+        raster_path_band[0])['pixel_size']
     # pixel size tuple could have negative value
     mean_threat_pixel_size = (
         abs(threat_pixel_size[0]) + abs(threat_pixel_size[1]))/2.0
@@ -928,7 +929,7 @@ def _decay_threat(raster_band_path, kernel_path, decay_type, max_dist):
             "either 'linear' or 'exponential'. Input was %s for threat"
             " %s." %
             (decay_type,
-             os.path.splitext(os.path.basename(raster_band_path[0]))[0]))
+             os.path.splitext(os.path.basename(raster_path_band[0]))[0]))
 
     decay_func(max_dist_pixel, kernel_path)
 
