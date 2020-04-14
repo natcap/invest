@@ -324,9 +324,9 @@ def execute(args):
     threat_path_dict = {}
     # store land cover and threat rasters in a list for convenient access
     lulc_and_threat_raster_list = []
-    # lookup for the unique lucode tasks
-    unique_lucode_lookup = []
-    unique_lucode_pickle_lookup = []
+    # lookup lists for the unique lucode tasks
+    unique_lucode_task_list = []
+    unique_lucode_pickle_path_list = []
     LOGGER.info("Find threat rasters and collect unique LULC codes")
     # compile all the threat rasters associated with the land cover
     for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
@@ -346,8 +346,8 @@ def execute(args):
                 args=((lulc_path, 1), unique_lucode_pickle_path),
                 target_path_list=[unique_lucode_pickle_path],
                 task_name=f'unique_lucodes{lulc_key}')
-            unique_lucode_lookup.append(unique_lucode_task)
-            unique_lucode_pickle_lookup.append(unique_lucode_pickle_path)
+            unique_lucode_task_list.append(unique_lucode_task)
+            unique_lucode_pickle_path_list.append(unique_lucode_pickle_path)
 
             # add a key to the threat dictionary that associates all threat
             # rasters with this land cover
@@ -394,8 +394,8 @@ def execute(args):
     LOGGER.info("Checking LULC codes against Sensitivity table")
     compare_lucodes_sens_task = graph.add_task(
         _compare_lucodes_sensitivity,
-        args=(sensitivity_dict, unique_lucode_pickle_lookup),
-        dependent_task_list=[*unique_lucode_lookup],
+        args=(sensitivity_dict, unique_lucode_pickle_path_list),
+        dependent_task_list=[*unique_lucode_task_list],
         task_name='lucode_sens_comparison')
 
     # don't continue if the compare_lucodes_sens_task throws error
@@ -523,9 +523,9 @@ def execute(args):
     for lulc_key, lulc_path in lulc_path_dict.items():
         LOGGER.info('Calculating habitat quality for landuse: %s', lulc_path)
 
-        habitat_raster_lookup = []
-        threat_convolve_lookup = []
-        sensitivity_lookup = []
+        habitat_raster_task_list = []
+        threat_convolve_task_list = []
+        sensitivity_task_list = []
 
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
@@ -541,7 +541,7 @@ def execute(args):
                 },
             dependent_task_list=[align_task],
             task_name=f'habitat_raster{lulc_key}')
-        habitat_raster_lookup.append(habitat_raster_task)
+        habitat_raster_task_list.append(habitat_raster_task)
 
         # initialize a list that will store all the threat/threat rasters
         # after they have been adjusted for distance, weight, and access
@@ -600,7 +600,7 @@ def execute(args):
                 target_path_list=[filtered_threat_raster_path],
                 dependent_task_list=[*updated_threat_tasks, decay_threat_task],
                 task_name=f'convolve_{decay_type}{lulc_key}_{threat}')
-            threat_convolve_lookup.append(convolve_task)
+            threat_convolve_task_list.append(convolve_task)
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
@@ -617,7 +617,7 @@ def execute(args):
                 target_path_list=[sens_raster_path],
                 dependent_task_list=[align_task],
                 task_name=f'sens_raster_{decay_type}{lulc_key}_{threat}')
-            sensitivity_lookup.append(sens_threat_task)
+            sensitivity_task_list.append(sens_threat_task)
 
             # get the normalized weight for each threat
             weight_avg = threat_data['WEIGHT'] / weight_sum
@@ -652,7 +652,7 @@ def execute(args):
             args=(deg_raster_list, deg_sum_raster_path, weight_list),
             target_path_list=[deg_sum_raster_path],
             dependent_task_list=[
-                *threat_convolve_lookup, *sensitivity_lookup,
+                *threat_convolve_task_list, *sensitivity_task_list,
                 *access_task_list],
             task_name=f'tot_degradation_{decay_type}{lulc_key}_{threat}')
 
@@ -674,7 +674,7 @@ def execute(args):
             args=(deg_hab_raster_list, quality_path, ksq),
             target_path_list=[quality_path],
             dependent_task_list=[
-                *habitat_raster_lookup, total_degradation_task],
+                *habitat_raster_task_list, total_degradation_task],
             task_name=f'habitat_quality')
 
         LOGGER.info('Finished raster calculation on quality_op')
@@ -935,13 +935,13 @@ def _decay_threat(raster_path_band, kernel_path, decay_type, max_dist):
 
 
 def _compare_lucodes_sensitivity(
-        sensitivity_dict, unique_lucode_pickle_lookup):
+        sensitivity_dict, unique_lucode_pickle_list):
     """Compare LULC unique codes to codes listed in dictionary.
 
     Args:
         sensitivity_dict (dict): dictionary representing sensitivity for LULC
             values with a column of 'codes'.
-        unique_lucode_pickle_lookup (list): list of paths to pickle files that
+        unique_lucode_pickle_list (list): list of paths to pickle files that
             represent a python set of unique LULC values for the LULC rasters
             provided in the model.
 
@@ -949,7 +949,7 @@ def _compare_lucodes_sensitivity(
         None
     """
     raster_unique_lucodes = set()
-    for lucode_path in unique_lucode_pickle_lookup:
+    for lucode_path in unique_lucode_pickle_list:
         with open(lucode_path, 'rb') as fh:
             lucode_dict = pickle.load(fh)
         raster_unique_lucodes.update(lucode_dict['codes'])
