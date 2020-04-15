@@ -291,7 +291,7 @@ def execute(args):
         h for h in required_sens_header_list if h not in sens_header_list]
     if missing_sens_header_list:
         raise ValueError(
-            'Column(s) %s are missing in the sensitivity table', 
+            'Column(s) %s are missing in the sensitivity table',
             (', '.join(missing_sens_header_list)))
 
     # check that the threat names in the threats table match with the threats
@@ -316,7 +316,12 @@ def execute(args):
         half_saturation_constant = float(args['half_saturation_constant'])
     except ValueError:
         raise ValueError("Half-saturation constant is not a numeric number."
-                         f"It is: {args['half_saturation_constant']}"
+                         f"It is: {args['half_saturation_constant']}")
+
+    # Dictionary for reclassing habitat values
+    sensitivity_reclassify_habitat_dict = {
+        int(key): float(val['HABITAT']) for key, val in
+        sensitivity_dict.items()}
 
     # declare dictionaries to store the land cover and the threat rasters
     # pertaining to the different threats
@@ -533,9 +538,9 @@ def execute(args):
             f'habitat{lulc_key}{file_suffix}.tif')
 
         habitat_raster_task = graph.add_task(
-            _map_raster_to_dict_values,
-            args=((lulc_path, 1), habitat_raster_path, sensitivity_dict,
-                  'HABITAT', _OUT_NODATA),
+            pygeoprocessing.reclassify_raster,
+            args=((lulc_path, 1), sensitivity_reclassify_habitat_dict,
+                  habitat_raster_path, gdal.GDT_Float32, _OUT_NODATA),
             kwargs={
                 'values_required': False
                 },
@@ -607,10 +612,15 @@ def execute(args):
                 intermediate_output_dir,
                 f'sens_{threat}{lulc_key}{file_suffix}.tif')
 
+            # Dictionary for reclassing threat sensitivity values
+            sensitivity_reclassify_threat_dict = {
+                int(key): float(val['L_'+threat]) for key, val in
+                sensitivity_dict.items()}
+
             sens_threat_task = graph.add_task(
-                _map_raster_to_dict_values,
-                args=((lulc_path, 1), sens_raster_path, sensitivity_dict,
-                      'L_' + threat, _OUT_NODATA),
+                pygeoprocessing.reclassify,
+                args=((lulc_path, 1), sensitivity_reclassify_threat_dict,
+                      sens_raster_path, gdal.GDT_Float32, _OUT_NODATA),
                 kwargs={
                     'values_required': True
                     },
@@ -810,7 +820,7 @@ def _compute_rarity_operation(
         lulc_path_band (tuple):  a 2 tuple for the path to LULC for current
             or future scenario of the form (path, band index).
         new_cover_path (tuple): a 2 tuple for the path to intermediate
-            raster file for trimming ``lulc_path_band`` to 
+            raster file for trimming ``lulc_path_band`` to
             ``base_lulc_path_band`` of the form (path, band index).
         rarity_path (string): path to output rarity raster.
 
@@ -1057,44 +1067,6 @@ def _raster_pixel_count(raster_path_band):
                 continue
             counts[value] += count
     return counts
-
-
-def _map_raster_to_dict_values(
-        key_raster_path, out_path, attr_dict, field, out_nodata,
-        values_required):
-    """Creates a new raster from ``key_raster_path`` using dictionary map.
-
-    The new raster is created where the pixel values from
-    ``key_raster_path`` are the keys to a dictionary ``attr_dict``. The values
-    corresponding to those keys is what is written to the new raster. If a
-    value from ``key_raster_path`` does not appear as a key in ``attr_dict``
-    then raise an Exception if ``values_required`` is True
-
-    Args:
-        key_raster_path (tuple): a 2 tuple of the form (filepath, band index)
-            for a GDAL raster whose pixel values relate to the keys in
-            ``attr_dict``.
-        out_path (string): a string for the output path of the created raster.
-        attr_dict (dict): a dictionary representing a table of values we are
-            interested in making into a raster.
-        field (string): a string of which field in the table or key in the
-            dictionary to use as the new raster pixel values.
-        out_nodata (number): a value that is the nodata value.
-        values_required (bool): decides how to handle the case where the
-            value from ``key_raster_path`` is not found in ``attr_dict``.
-            If True raise ValueError
-
-    Returns:
-        None
-    """
-    LOGGER.info('Starting map_raster_to_dict_values')
-    int_attr_dict = {}
-    for key in attr_dict:
-        int_attr_dict[int(key)] = float(attr_dict[key][field])
-
-    pygeoprocessing.reclassify_raster(
-        key_raster_path, int_attr_dict, out_path, gdal.GDT_Float32,
-        out_nodata, values_required)
 
 
 def _make_linear_decay_kernel_path(max_distance, kernel_path):
