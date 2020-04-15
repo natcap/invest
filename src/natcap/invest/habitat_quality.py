@@ -587,7 +587,7 @@ def execute(args):
             decay_type = threat_data['DECAY']
 
             decay_threat_task = graph.add_task(
-                _decay_threat,
+                _create_decay_kernel,
                 args=((threat_raster_path, 1), kernel_path, decay_type,
                       threat_data['MAX_DIST']),
                 target_path_list=[kernel_path],
@@ -900,12 +900,12 @@ def _compute_rarity_operation(
                 os.path.basename(lulc_path_band[0]))
 
 
-def _decay_threat(raster_path_band, kernel_path, decay_type, max_dist):
+def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
     """Create a decay kernel as a raster.
 
     Args:
         raster_path_band (tuple): a 2 tuple of the form
-            (filepath to raster, band index) for threat raster to decay.
+            (filepath to raster, band index) for raster to decay.
         kernel_path (string): path to output kernel raster.
         decay_type (string): type of decay kernel to create, either
             'linear' | 'exponentional'.
@@ -914,8 +914,8 @@ def _decay_threat(raster_path_band, kernel_path, decay_type, max_dist):
     Returns:
         None
     """
-    # need the pixel size for the threat raster so we can create
-    # an appropriate kernel for convolution
+    # need the pixel size for the raster so we can create an appropriate 
+    # kernel for convolution
     threat_pixel_size = pygeoprocessing.get_raster_info(
         raster_path_band[0])['pixel_size']
     
@@ -927,8 +927,7 @@ def _decay_threat(raster_path_band, kernel_path, decay_type, max_dist):
     max_dist_pixel = max_dist_m / abs(threat_pixel_size[0])
     LOGGER.debug('Max distance in pixels: %f', max_dist_pixel)
 
-    # blur the threat raster based on the effect of the threat over
-    # distance
+    # blur the raster based on the decay type 
     if decay_type == 'linear':
         decay_func = _make_linear_decay_kernel_path
     elif decay_type == 'exponential':
