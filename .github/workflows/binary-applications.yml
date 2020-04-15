@@ -319,6 +319,7 @@ jobs:
                         --attach $(make jprint-MAC_BINARIES_ZIP_FILE) \
                         --attach $(make PYTHON_ARCH=x86 jprint-WINDOWS_INSTALLER_FILE) \
                         --attach $(make jprint-SAMPLEDATA_SINGLE_ARCHIVE) \
+                        --message "" \  # Don't change the body of the release
                         ${GITHUB_REF:10}
                 else:
                     echo "Release for ${GITHUB_REF:10} not found; skipping binary upload"
