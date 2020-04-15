@@ -97,15 +97,18 @@ jobs:
             - name: Upload distribution to release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  HUB_VERBOSE: 1
               shell: bash
               run: |
-                if hub release show ${GITHUB_REF:10}
+                TAG=${GITHUB_REF:10}
+                echo $TAG
+                if hub release show ${TAG}
                 then
                     hub release edit \
                         --attach $(find dist -name "*.tar.gz") \
                         # Don't change the body of the release
                         --message "" \
-                         ${GITHUB_REF:10}
+                        ${TAG}
                 else
                     echo "Release for ${GITHUB_REF:10} not found; skipping sdist upload."
                 fi
