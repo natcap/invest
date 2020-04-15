@@ -59,10 +59,9 @@ jobs:
               run: |
                 if hub release show ${GITHUB_REF:10}
                 then
-                    hub release edit \
-                        --attach $(find dist -name "*.whl") \
-                        # Don't change the body of the release
-                        -m "" ${GITHUB_REF:10}
+                    set -x
+                    hub release edit -a $(find dist -name "*.whl") -m "" ${GITHUB_REF:10}
+                    set +x
                 else
                     echo "Release for ${GITHUB_REF:10} not found; skipping wheel upload."
                 fi
