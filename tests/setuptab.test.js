@@ -215,6 +215,60 @@ test('SetupTab: expect an input form for an option_string', async () => {
   })
 })
 
+test('SetupTab: expect correct disable/hide of optional inputs', async () => {
+  const spec = { args: { 
+    controller: { 
+      name: 'A', 
+      type: 'boolean', 
+      ui_control: ['arg2', 'arg3', 'arg4'], },
+    arg2: { 
+      name: 'B', 
+      type: 'number', 
+      ui_option: 'disable', },
+    arg3: { 
+      name: 'C', 
+      type: 'number', 
+      ui_option: 'hide', },
+    arg4: { 
+      name: 'D', 
+      type: 'number', 
+      ui_option: 'foo', } } }  // an invalid option should be ignored
+  
+  fetchValidation.mockResolvedValue([])
+  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
+  fireEvent.click(getByText('Carbon'));
+
+  const controller = await utils.findByLabelText(spec.args.controller.name)
+  const arg2 = await utils.findByLabelText(spec.args.arg2.name)
+  const arg3 = await utils.findByLabelText(spec.args.arg3.name)
+  const arg4 = await utils.findByLabelText(spec.args.arg4.name)
+
+  // Boolean Radios should default to "false" when a spec is loaded
+  await wait(() => {
+    expect(arg2).toBeDisabled();
+    // The 'hide' style is applied to the whole Form.Group which 
+    // includes the Label and Input. Right now, the only good way
+    // to query the Form.Group node is using a data-testid property.
+    expect(utils.getByTestId('group-arg3')).toHaveClass('arg-hide')
+    expect(arg4).toBeVisible();
+    expect(arg4).toBeEnabled();
+  })
+  // fireEvent.change doesn't trigger the change handler but .click does
+  // even though React demands an onChange handler for controlled checkbox inputs.
+  // https://github.com/testing-library/react-testing-library/issues/156
+  fireEvent.click(controller, { target: { value: "true" } })
+
+  // Now everything should be visible/enabled.
+  await wait(() => {
+    expect(arg2).toBeEnabled();
+    expect(arg2).toBeVisible();
+    expect(arg3).toBeEnabled();
+    expect(arg3).toBeVisible();
+    expect(arg4).toBeEnabled();
+    expect(arg4).toBeVisible();
+  })
+})
+
 test('SetupTab: populating inputs to enable & disable Execute', async () => {
   /*
   This tests that changes to input values trigger validation. 

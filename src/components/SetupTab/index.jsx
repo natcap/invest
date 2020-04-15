@@ -151,7 +151,7 @@ class ArgsForm extends React.Component {
       // These types need a text input, and some also need a file browse button
       if (['csv', 'vector', 'raster', 'directory', 'freestyle_string', 'number'].includes(argument.type)) {
         ArgInput = 
-          <Form.Group as={Row} key={argname} className={'arg-' + argument.active_ui_option}>
+          <Form.Group as={Row} key={argname} className={'arg-' + argument.active_ui_option} data-testid={'group-' + argname}>
             <Form.Label column sm="3"  htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="8">
               <InputGroup>
@@ -191,8 +191,11 @@ class ArgsForm extends React.Component {
         // argument.value will be type boolean if it's coming from this.props.args. 
         // But html forms must emit strings, so there's a special change handler
         // for boolean inputs that coverts to a real boolean.
+        // Also, the `checked` property does not treat 'undefined' the same as false,
+        // instead React avoids setting the property altogether. Hence, double !! to
+        // cast undefined to false.
         ArgInput = 
-          <Form.Group as={Row} key={argname}>
+          <Form.Group as={Row} key={argname} data-testid={'group-' + argname}>
             <Form.Label column sm="3" htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="8">
               <AboutModal argument={argument}/>
@@ -202,7 +205,7 @@ class ArgsForm extends React.Component {
                 type="radio"
                 label="Yes"
                 value={"true"}
-                checked={argument.value}
+                checked={!!argument.value}  // double bang casts undefined to false
                 onChange={this.handleBoolChange}
                 name={argname}
               />
@@ -212,7 +215,7 @@ class ArgsForm extends React.Component {
                 type="radio"
                 label="No"
                 value={"false"}
-                checked={!argument.value}
+                checked={!argument.value}  // undefined becomes true, that's okay
                 onChange={this.handleBoolChange}
                 name={argname}
               />
@@ -222,12 +225,12 @@ class ArgsForm extends React.Component {
       // Dropdown menus for args with options
       } else if (argument.type === 'option_string') {
         ArgInput = 
-          <Form.Group as={Row} key={argname} className={'arg-' + argument.active_ui_option}>
+          <Form.Group as={Row} key={argname} className={'arg-' + argument.active_ui_option} data-testid={'group-' + argname}>
             <Form.Label column sm="3" htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="4">
               <InputGroup>
                 <AboutModal argument={argument}/>
-                <Form.Control
+                <Form.Control 
                   id={argname}
                   as='select'
                   name={argname}
@@ -272,7 +275,7 @@ class ArgsForm extends React.Component {
       const group = sortedArgs[orderkey][1] // an array of objects
       if (group.length === 1) {
         formItems.push(
-          <div className="arg-group" id={orderkey}>
+          <div className="arg-group" key={orderkey}>
             {Object.values(group[0])[0]}
           </div>)
       } else {
