@@ -128,12 +128,14 @@ jobs:
 
                       # Create a new pull request from the new autorelease
                       # branch back into the source branch.
+                      PRMSG=prmsg.txt
+                      envsubst ci/release/bugfix-autorelease-branch-pr-body.md > $PRMSG
                       hub pull-request \
                           --base $GITHUB_REPOSITORY:$SOURCE_BRANCH \
                           --head $GITHUB_REPOSITORY:$TARGET_BRANCH \
                           --reviewer "natcap/software-team" \
                           --assign "natcap/software-team" \
-                          --message $(envsubst ci/release/bugfix-autorelease-branch-pr-body.md)
+                          --file $PRMSG
                   fi
 
             # Notify us on slack only on failure.
