@@ -307,6 +307,8 @@ jobs:
                 pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Upload distributions to release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               shell: bash
               run: |
                 if hub release show ${GITHUB_REF:10}

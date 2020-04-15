@@ -54,6 +54,8 @@ jobs:
 
             - name: Upload distribution to release
               shell: bash
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                 if hub release show ${GITHUB_REF:10}
                 then
@@ -92,6 +94,8 @@ jobs:
                   path: dist
 
             - name: Upload distribution to release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               shell: bash
               run: |
                 if hub release show ${GITHUB_REF:10}
