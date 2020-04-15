@@ -215,7 +215,7 @@ test('SetupTab: expect an input form for an option_string', async () => {
   })
 })
 
-test('SetupTab: expect correct disable/hide of optional inputs', async () => {
+test('SetupTab: expect boolean input can disable/hide optional inputs', async () => {
   const spec = { args: { 
     controller: { 
       name: 'A', 
@@ -266,6 +266,38 @@ test('SetupTab: expect correct disable/hide of optional inputs', async () => {
     expect(arg3).toBeVisible();
     expect(arg4).toBeEnabled();
     expect(arg4).toBeVisible();
+  })
+})
+
+test.only('SetupTab: expect non-boolean input can disable/hide optional inputs', async () => {
+  const spec = { args: { 
+    controller: { 
+      name: 'A', 
+      type: 'csv', 
+      ui_control: ['arg2'], },
+    arg2: { 
+      name: 'B', 
+      type: 'number', 
+      ui_option: 'disable', } } }
+  
+  fetchValidation.mockResolvedValue([])
+  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
+  fireEvent.click(getByText('Carbon'));
+
+  const controller = await utils.findByLabelText(spec.args.controller.name)
+  const arg2 = await utils.findByLabelText(spec.args.arg2.name)
+
+  // The optional input should be disabled while the controlling input
+  // has a falsy value (undefined or '')
+  await wait(() => {
+    expect(arg2).toBeDisabled();
+  })
+
+  fireEvent.change(controller, { target: { value: "foo.csv" } })
+
+  // Now everything should be enabled.
+  await wait(() => {
+    expect(arg2).toBeEnabled();
   })
 })
 
