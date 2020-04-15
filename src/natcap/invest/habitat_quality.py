@@ -408,7 +408,10 @@ def execute(args):
 
     LOGGER.info('Starting to align and resize land cover and threat rasters')
     lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_cur_path'])
+    # ensure that the pixel size used is square
     lulc_pixel_size = lulc_raster_info['pixel_size']
+    min_pixel_size = min([abs(x) for x in lulc_pixel_size])
+    pixel_size = (min_pixel_size, -min_pixel_size)
     lulc_bbox = lulc_raster_info['bounding_box']
 
     # create paths for aligned rasters checking for the case the raster path
@@ -436,7 +439,7 @@ def execute(args):
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
             lulc_and_threat_raster_list, aligned_raster_list,
-            ['near']*len(lulc_and_threat_raster_list), lulc_pixel_size,
+            ['near']*len(lulc_and_threat_raster_list), pixel_size,
             lulc_bbox),
         target_path_list=aligned_raster_list,
         task_name='align_input_rasters')
@@ -915,16 +918,13 @@ def _decay_threat(raster_path_band, kernel_path, decay_type, max_dist):
     # an appropriate kernel for convolution
     threat_pixel_size = pygeoprocessing.get_raster_info(
         raster_path_band[0])['pixel_size']
-    # pixel size tuple could have negative value
-    mean_threat_pixel_size = (
-        abs(threat_pixel_size[0]) + abs(threat_pixel_size[1]))/2.0
-
+    
     # convert max distance (given in KM) to meters
     max_dist_m = max_dist * 1000.0
 
     # convert max distance from meters to the number of pixels that
     # represents on the raster
-    max_dist_pixel = max_dist_m / mean_threat_pixel_size
+    max_dist_pixel = max_dist_m / abs(threat_pixel_size[0])
     LOGGER.debug('Max distance in pixels: %f', max_dist_pixel)
 
     # blur the threat raster based on the effect of the threat over
