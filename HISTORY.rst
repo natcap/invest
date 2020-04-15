@@ -1,11 +1,7 @@
 .. :changelog:
 
 
-..
-  Unreleased Changes
-  ------------------
-
-3.8.13 (2020-04-15)
+Unreleased Changes
 -------------------
 * Fixing an issue with SDR's ``LS`` calculations.  The ``x`` term is now
   the weighted mean of proportional flow from the current pixel into its
