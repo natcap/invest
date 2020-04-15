@@ -10,11 +10,11 @@ jobs:
         name: Create a bugfix release
         runs-on: ubuntu-latest
         env:
-            TARGET_BRANCH: feature/automated-releases
+            SOURCE_BRANCH: feature/automated-releases
         steps:
             - uses: actions/checkout@v2
               with:
-                  ref: ${{ env.TARGET_BRANCH }}
+                  ref: ${{ env.SOURCE_BRANCH }}
                   fetch-depth: 0  # fetch complete history
 
             - run: git fetch origin +refs/tags/*:refs/tags/*
@@ -29,14 +29,14 @@ jobs:
 
             - name: Testing for and preparing the release
               env:
-                  TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
+                  SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   # Redirecting stderr to /dev/null to keep actions logs
                   # reflecting the expected state of the program.
-                  if hub ci-status $TARGET_BRANCH 2> /dev/null
+                  if hub ci-status $SOURCE_BRANCH 2> /dev/null
                   then
-                      echo "There are test failures on $TARGET_BRANCH; aborting release."
+                      echo "There are test failures on $SOURCE_BRANCH; aborting release."
                       exit 1
                   fi
 
@@ -44,12 +44,12 @@ jobs:
                   # git-describe exits 0 if a tag is found, 128 if not.
                   # Redirecting stderr to /dev/null to keep the expected
                   # 'fatal' error message out of the actions logs.
-                  if git describe --exact-match --tags $TARGET_BRANCH 2> /dev/null
+                  if git describe --exact-match --tags $SOURCE_BRANCH 2> /dev/null
                   then
-                      echo "The latest commit on $TARGET_BRANCH already has a tag"
+                      echo "The latest commit on $SOURCE_BRANCH already has a tag"
                   else
                       LATEST_TAG=$(git describe --tags | awk -F '-' '{print $1}')
-                      echo "Latest tag on $TARGET_BRANCH is $LATEST_TAG"
+                      echo "Latest tag on $SOURCE_BRANCH is $LATEST_TAG"
                       if [[ $LATEST_TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
                       then
                           echo "$LATEST_TAG identified as a full release."
@@ -79,6 +79,8 @@ jobs:
                       # Commit changes and make an annotated tag.
                       git add Makefile HISTORY.rst
                       git status | cat  # for debugging.
+                      TARGET_BRANCH=autorelease/$BUGFIX_VERSION
+                      git checkout -b $TARGET_BRANCH
                       git commit -m "Auto-committing updates for the $BUGFIX_VERSION release"
                       git tag -a $BUGFIX_VERSION -m "$BUGFIX_VERSION release."
 
@@ -111,6 +113,7 @@ jobs:
                       #       See the list/descriptions of available scopes at:
                       #       https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/#available-scopes
                       GITHUB_TOKEN=${{ secrets.USER_ACCESS_TOKEN }} hub release create \
+                          --draft \
                           --file $RELEASE_MESSAGE_FILE \
                           --commitish $TARGET_BRANCH \
                           $BUGFIX_VERSION
@@ -122,6 +125,15 @@ jobs:
                           --message "Release natcap.invest $BUGFIX_VERSION on PyPI" \
                           --message "When built, remember to upload wheels for $BUGFIX_VERSION to PyPI." \
                           --labels task
+
+                      # Create a new pull request from the new autorelease
+                      # branch back into the source branch.
+                      hub pull-request \
+                          --base $GITHUB_REPOSITORY:$SOURCE_BRANCH \
+                          --head $GITHUB_REPOSITORY:$TARGET_BRANCH \
+                          --reviewer "natcap/software-team" \
+                          --assign "natcap/software-team" \
+                          --message $(envsubst ci/release/bugfix-autorelease-branch-pr-body.md)
                   fi
 
             # Notify us on slack only on failure.
