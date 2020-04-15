@@ -86,7 +86,13 @@ jobs:
                       # NOTE: If changes were pushed to $TARGET_BRANCH before
                       # we try to push this release, the push will fail and
                       # we'll avoid the race condition.
-                      GIT_REPO=https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git
+                      #
+                      # NOTE: ${{ secrets.USER_AND_ACCESS_TOKEN }} must be set to <username>:<token>
+                      # NOTE: The User Access Token used must have repository push permissions.
+                      # NOTE: If the target repo is public, then only the ``public_repo`` permission is needed.
+                      # NOTE: See the list/descriptions of available scopes at:
+                      # https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/#available-scopes
+                      GIT_REPO=https://${{ secrets.USER_AND_ACCESS_TOKEN }}@github.com/$GITHUB_REPOSITORY.git
                       git push --tags $GIT_REPO $TARGET_BRANCH
 
                       RELEASE_MESSAGE_FILE=release_message.md
