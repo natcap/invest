@@ -3,8 +3,10 @@
 # This script prepares the body of text for a github release object to be
 # created through the `hub` command-line utility.
 #
-# This requires the GITHUB_REF environment variable to be declared,
-# which must be in the git refs format of a tag (examples: refs/tags/3.8.0)
+# This requires the $VERSION environment variable to be declared,
+# which must be in the format of an InVEST release version.
+#
+# This script also requires the pandoc executable to be on the PATH.
 
 : "${VERSION:?Need to set VERSION.  Example: VERSION=3.8.0}"
 
@@ -19,7 +21,8 @@ echo "This bugfix release includes the following fixes and features:" >> $RELEAS
 echo "" >> $RELEASE_MESSAGE_RST_FILE  # extra line to clarify we're starting a bulleted list.
 
 # Read HISTORY from the released tag up until the first
-# blank line
+# blank line.
+# The tail +3 cuts off the version string and underline of the title.
 sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3 >> $RELEASE_MESSAGE_RST_FILE
 
 pandoc \
