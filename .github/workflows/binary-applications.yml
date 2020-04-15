@@ -314,13 +314,21 @@ jobs:
                 if hub release show ${GITHUB_REF:10}
                 then
                     ls -la dist
-                    hub release edit \
-                        --attach $(make jprint-USERGUIDE_ZIP_FILE) \
-                        --attach $(make jprint-MAC_BINARIES_ZIP_FILE) \
-                        --attach $(make PYTHON_ARCH=x86 jprint-WINDOWS_INSTALLER_FILE) \
-                        --attach $(make jprint-SAMPLEDATA_SINGLE_ARCHIVE) \
-                        # Don't change the body of the release
-                        -m "" ${GITHUB_REF:10}
+                    FILELIST=release_file_list.txt
+                    $(make jprint-USERGUIDE_ZIP_FILE) >> $FILELIST
+                    $(make jprint-MAC_BINARIES_ZIP_FILE) >> $FILELIST
+                    $(make PYTHON_ARCH=x86 jprint-WINDOWS_INSTALLER_FILE) >> $FILELIST
+                    $(make jprint-SAMPLEDATA_SINGLE_ARCHIVE) >> $FILELIST
+
+                    # Make sure the file contains what it should
+                    cat $FILELIST
+
+                    set -x  # for debugging
+                    for FILE in `cat $FILELIST`
+                    do
+                        hub release edit -a $FILE -m "" ${GITHUB_REF:10}
+                    done
+                    set +x
                 else:
                     echo "Release for ${GITHUB_REF:10} not found; skipping binary upload"
                 fi

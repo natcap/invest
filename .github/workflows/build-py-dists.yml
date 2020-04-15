@@ -59,7 +59,7 @@ jobs:
               run: |
                 if hub release show ${GITHUB_REF:10}
                 then
-                    set -x
+                    set -x  # for debugging
                     hub release edit -a $(find dist -name "*.whl") -m "" ${GITHUB_REF:10}
                     set +x
                 else
@@ -98,14 +98,11 @@ jobs:
                   HUB_VERBOSE: 1
               shell: bash
               run: |
-                TAG=${GITHUB_REF:10}
-                echo $TAG
-                if hub release show ${TAG}
+                if hub release show ${GITHUB_REF:10}
                 then
-                    hub release edit \
-                        --attach $(find dist -name "*.tar.gz") \
-                        # Don't change the body of the release
-                        -m "" ${TAG}
+                    set -x  # for debugging
+                    hub release edit -a $(find dist -name "*.tar.gz") -m "" ${GITHUB_REF:10}
+                    set +x
                 else
                     echo "Release for ${GITHUB_REF:10} not found; skipping sdist upload."
                 fi
