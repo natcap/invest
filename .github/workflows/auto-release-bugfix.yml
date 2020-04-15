@@ -84,15 +84,13 @@ jobs:
 
                       # Only push revisions needed to push the tag created.
                       # NOTE: If changes were pushed to $TARGET_BRANCH before
-                      # we try to push this release, the push will fail and
-                      # we'll avoid the race condition.
-                      #
-                      # NOTE: ${{ secrets.USER_AND_ACCESS_TOKEN }} must be set to <username>:<token>
-                      # NOTE: The User Access Token used must have repository push permissions.
-                      # NOTE: If the target repo is public, then only the ``public_repo`` permission is needed.
-                      # NOTE: See the list/descriptions of available scopes at:
-                      # https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/#available-scopes
-                      GIT_REPO=https://${{ secrets.USER_AND_ACCESS_TOKEN }}@github.com/$GITHUB_REPOSITORY.git
+                      #       we try to push this release, the push will fail and
+                      #       we'll avoid the race condition.
+                      # NOTE: This push will NOT trigger other workflows because it's
+                      #       authenticated with $GITHUB_TOKEN.  By design, events
+                      #       authenticated with this token will not cause
+                      #       recursive workflow calls.
+                      GIT_REPO=https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git
                       git push --tags $GIT_REPO $TARGET_BRANCH
 
                       RELEASE_MESSAGE_FILE=release_message.md
@@ -107,6 +105,11 @@ jobs:
                       #       this release object being created.  See the
                       #       upload-binaries-to-release build job in
                       #       .github/workflows/binary-applications.yml.
+                      # NOTE: The User Access Token used must have repository
+                      #       push permissions.  If the target repo is public, then
+                      #       only the ``public_repo`` permission is needed.
+                      #       See the list/descriptions of available scopes at:
+                      #       https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/#available-scopes
                       GITHUB_TOKEN=${{ secrets.USER_ACCESS_TOKEN }} hub release create \
                           --file $RELEASE_MESSAGE_FILE \
                           --commitish $TARGET_BRANCH \
