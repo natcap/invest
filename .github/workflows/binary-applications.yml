@@ -320,8 +320,7 @@ jobs:
                         --attach $(make PYTHON_ARCH=x86 jprint-WINDOWS_INSTALLER_FILE) \
                         --attach $(make jprint-SAMPLEDATA_SINGLE_ARCHIVE) \
                         # Don't change the body of the release
-                        --message "" \
-                        ${GITHUB_REF:10}
+                        -m "" ${GITHUB_REF:10}
                 else:
                     echo "Release for ${GITHUB_REF:10} not found; skipping binary upload"
                 fi

@@ -62,8 +62,7 @@ jobs:
                     hub release edit \
                         --attach $(find dist -name "*.whl") \
                         # Don't change the body of the release
-                        --message "" \
-                         ${GITHUB_REF:10}
+                        -m "" ${GITHUB_REF:10}
                 else
                     echo "Release for ${GITHUB_REF:10} not found; skipping wheel upload."
                 fi
@@ -107,8 +106,7 @@ jobs:
                     hub release edit \
                         --attach $(find dist -name "*.tar.gz") \
                         # Don't change the body of the release
-                        --message "" \
-                        ${TAG}
+                        -m "" ${TAG}
                 else
                     echo "Release for ${GITHUB_REF:10} not found; skipping sdist upload."
                 fi
