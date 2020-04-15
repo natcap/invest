@@ -25,7 +25,10 @@ jobs:
 
             - run: pip install --upgrade requests toml
             - run: pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-            - run: sudo apt-get update --fix-missing && sudo apt-get install pandoc
+
+            # Pandoc needed for pandoc-based text conversion.
+            # gettext-base needed for the envsubst program.
+            - run: sudo apt-get update --fix-missing && sudo apt-get install pandoc gettext-base
 
             - name: Testing for and preparing the release
               env:
