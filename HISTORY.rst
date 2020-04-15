@@ -1,8 +1,12 @@
 .. :changelog:
 
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.8.10 (2020-04-15)
+-------------------
 * Bumping the ``psutil`` dependency requirement to ``psutil>=5.6.6`` to address
   a double-free vulnerability documented in CVE-2019-18874.
 * Adding a GitHub Actions workflow for building python wheels for Mac and Windows
