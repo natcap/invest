@@ -16,6 +16,7 @@ from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
 from libcpp.list cimport list as clist
 from libcpp.stack cimport stack
+cimport libc.math as cmath
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -28,6 +29,14 @@ cdef double PI = 3.141592653589793238462643383279502884
 cdef int BLOCK_BITS = 8
 # Number of raster blocks to hold in memory at once per Managed Raster
 cdef int MANAGED_RASTER_N_BLOCKS = 2**6
+
+# These offsets are for the neighbor rows and columns according to the
+# ordering: 3 2 1
+#           4 x 0
+#           5 6 7
+cdef int *ROW_OFFSETS = [0, -1, -1, -1,  0,  1, 1, 1]
+cdef int *COL_OFFSETS = [1,  1,  0, -1, -1, -1, 0, 1]
+
 
 cdef int is_close(double x, double y):
     return abs(x-y) <= (1e-8+1e-05*abs(y))
@@ -378,8 +387,6 @@ def calculate_sediment_deposition(
     cdef _ManagedRaster sediment_deposition_raster = _ManagedRaster(
         target_sediment_deposition_path, 1, True)
 
-    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
-    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     cdef int n_cols, n_rows
@@ -392,13 +399,14 @@ def calculate_sediment_deposition(
         e_prime_path)['nodata'][0]
     cdef int col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef int global_col, global_row, flat_index, j, k
-    cdef int seed_col, seed_row
+    cdef int seed_col = 0
+    cdef int seed_row = 0
     cdef int neighbor_row, neighbor_col
     cdef int flow_val, neighbor_flow_val, ds_neighbor_flow_val
     cdef int flow_weight, neighbor_flow_weight
     cdef float flow_sum, neighbor_flow_sum
     cdef float downstream_sdr_weighted_sum, sdr_i, sdr_j
-    cdef float r_j, r_j_weighted_sum, p_j, p_val
+    cdef float p_j, p_val
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
@@ -406,8 +414,10 @@ def calculate_sediment_deposition(
         win_ysize = offset_dict['win_ysize']
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
+
         LOGGER.info('%.2f%% complete', 100.0 * (
-            (yoff*n_cols+xoff) / float(n_cols*n_rows)))
+            (seed_row * seed_col) / float(n_cols*n_rows)))
+
         for row_index in range(win_ysize):
             seed_row = yoff + row_index
             for col_index in range(win_xsize):
@@ -417,10 +427,10 @@ def calculate_sediment_deposition(
                     continue
                 seed_pixel = 1
                 for j in range(8):
-                    neighbor_row = seed_row + row_offsets[j]
+                    neighbor_row = seed_row + ROW_OFFSETS[j]
                     if neighbor_row < 0 or neighbor_row >= n_rows:
                         continue
-                    neighbor_col = seed_col + col_offsets[j]
+                    neighbor_col = seed_col + COL_OFFSETS[j]
                     if neighbor_col < 0 or neighbor_col >= n_cols:
                         continue
                     neighbor_flow_val = <int>mfd_flow_direction_raster.get(
@@ -450,10 +460,10 @@ def calculate_sediment_deposition(
                     # calculate the upstream Fj contribution to this pixel
                     f_j_weighted_sum = 0
                     for j in range(8):
-                        neighbor_row = global_row + row_offsets[j]
+                        neighbor_row = global_row + ROW_OFFSETS[j]
                         if neighbor_row < 0 or neighbor_row >= n_rows:
                             continue
-                        neighbor_col = global_col + col_offsets[j]
+                        neighbor_col = global_col + COL_OFFSETS[j]
                         if neighbor_col < 0 or neighbor_col >= n_cols:
                             continue
 
@@ -482,10 +492,10 @@ def calculate_sediment_deposition(
                         flow_sum += (flow_val >> (k*4)) & 0xF
 
                     for j in range(8):
-                        neighbor_row = global_row + row_offsets[j]
+                        neighbor_row = global_row + ROW_OFFSETS[j]
                         if neighbor_row < 0 or neighbor_row >= n_rows:
                             continue
-                        neighbor_col = global_col + col_offsets[j]
+                        neighbor_col = global_col + COL_OFFSETS[j]
                         if neighbor_col < 0 or neighbor_col >= n_cols:
                             continue
                         # if this direction flows out, add to weighted sum
@@ -514,11 +524,11 @@ def calculate_sediment_deposition(
                                     continue
                                 # see if there's an inflow
                                 ds_neighbor_row = (
-                                    neighbor_row + row_offsets[k])
+                                    neighbor_row + ROW_OFFSETS[k])
                                 if ds_neighbor_row < 0 or ds_neighbor_row >= n_rows:
                                     continue
                                 ds_neighbor_col = (
-                                    neighbor_col + col_offsets[k])
+                                    neighbor_col + COL_OFFSETS[k])
                                 if ds_neighbor_col < 0 or ds_neighbor_col >= n_cols:
                                     continue
                                 ds_neighbor_flow_val = (
@@ -557,4 +567,129 @@ def calculate_sediment_deposition(
                         global_col, global_row, r_i)
                     f_raster.set(global_col, global_row, f_i)
 
+    LOGGER.info('100% complete')
     sediment_deposition_raster.close()
+
+
+def calculate_average_aspect(
+    mfd_flow_direction_path, target_average_aspect_path):
+    """Calculate the Weighted Average Aspect Ratio from MFD.
+
+    Calculates the average aspect ratio weighted by proportional flow
+    direction.
+
+    Parameters:
+        mfd_flow_direction_path (string): The path to an MFD flow direction
+            raster.
+        target_average_aspect_path (string): The path to where the calculated
+            weighted average aspect raster should be written.
+
+    Returns:
+        ``None``.
+
+    """
+    LOGGER.info('Calculating average aspect')
+
+    cdef float average_aspect_nodata = -1.0
+    pygeoprocessing.new_raster_from_base(
+        mfd_flow_direction_path, target_average_aspect_path,
+        gdal.GDT_Float32, [average_aspect_nodata], [average_aspect_nodata])
+
+    flow_direction_info = pygeoprocessing.get_raster_info(
+        mfd_flow_direction_path)
+    cdef int mfd_flow_direction_nodata = flow_direction_info['nodata'][0]
+    cdef int n_cols, n_rows
+    n_cols, n_rows = flow_direction_info['raster_size']
+
+    cdef _ManagedRaster mfd_flow_direction_raster = _ManagedRaster(
+        mfd_flow_direction_path, 1, False)
+
+    cdef _ManagedRaster average_aspect_raster = _ManagedRaster(
+        target_average_aspect_path, 1, True)
+
+    cdef int seed_row = 0
+    cdef int seed_col = 0
+    cdef int n_pixels_visited = 0
+    cdef int win_xsize, win_ysize, xoff, yoff
+    cdef int row_index, col_index, neighbor_index
+    cdef int flow_weight_in_direction
+    cdef int weight_sum
+    cdef int seed_flow_value
+    cdef float aspect_weighted_average, aspect_weighted_sum
+
+    # the flow_lengths array is the functional equivalent
+    # of calculating |sin(alpha)| + |cos(alpha)|.
+    cdef float* flow_lengths = [
+        1.0, <float>cmath.M_SQRT2,
+        1.0, <float>cmath.M_SQRT2,
+        1.0, <float>cmath.M_SQRT2,
+        1.0, <float>cmath.M_SQRT2
+    ]
+
+    # Loop over iterblocks to maintain cache locality
+    # Find each non-nodata pixel and calculate proportional flow
+    # Multiply proportional flow times the flow length x_d
+    # write the final value to the raster.
+    for offset_dict in pygeoprocessing.iterblocks(
+            (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
+        win_xsize = offset_dict['win_xsize']
+        win_ysize = offset_dict['win_ysize']
+        xoff = offset_dict['xoff']
+        yoff = offset_dict['yoff']
+
+        LOGGER.info('Average aspect %.2f%% complete', 100.0 * (
+            n_pixels_visited / float(n_cols * n_rows)))
+
+        for row_index in range(win_ysize):
+            seed_row = yoff + row_index
+            for col_index in range(win_xsize):
+                seed_col = xoff + col_index
+                seed_flow_value = <int>mfd_flow_direction_raster.get(
+                    seed_col, seed_row)
+
+                # Skip this seed if it's nodata (Currently expected to be 0).
+                # No need to set the nodata value here since we have already
+                # filled the raster with nodata values at creation time.
+                if seed_flow_value == mfd_flow_direction_nodata:
+                    continue
+
+                weight_sum = 0
+                aspect_weighted_sum = 0
+                for neighbor_index in range(8):
+                    neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
+                    if neighbor_row == -1 or neighbor_row == n_rows:
+                        continue
+
+                    neighbor_col = seed_col + COL_OFFSETS[neighbor_index]
+                    if neighbor_col == -1 or neighbor_col == n_cols:
+                        continue
+
+                    flow_weight_in_direction = (seed_flow_value >> (
+                        neighbor_index * 4) & 0xF)
+                    weight_sum += flow_weight_in_direction
+
+                    aspect_weighted_sum += (
+                        flow_lengths[neighbor_index] *
+                        flow_weight_in_direction)
+
+                # Weight sum should never be less than 0.
+                # Since it's an int, we can compare it directly against the
+                # value of 0.
+                if weight_sum == 0:
+                    aspect_weighted_average = average_aspect_nodata
+                else:
+                    # We already know that weight_sum will be > 0 because we
+                    # check for it in the condition above.
+                    with cython.cdivision(True):
+                        aspect_weighted_average = (
+                            aspect_weighted_sum / <float>weight_sum)
+
+                average_aspect_raster.set(
+                    seed_col, seed_row, aspect_weighted_average)
+
+        n_pixels_visited += win_xsize * win_ysize
+
+    LOGGER.info('Average aspect 100.00% complete')
+
+    mfd_flow_direction_raster.close()
+    average_aspect_raster.close()

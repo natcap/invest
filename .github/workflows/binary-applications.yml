@@ -41,6 +41,9 @@ jobs:
                   fetch-depth: 0  # fetch complete history
             - run: git fetch origin +refs/tags/*:refs/tags/*
 
+            - name: Fetch git tags
+              run: git fetch origin +refs/tags/*:refs/tags/*
+
             - name: Restore pip cache
               uses: actions/cache@v1
               with:
@@ -138,6 +141,7 @@ jobs:
                   make GSUTIL=$env:GSUTIL_PATH deploy
 
             - name: Upload installer artifact
+              if: always()
               uses: actions/upload-artifact@v2-preview
               with:
                   name: InVEST-windows-installer
@@ -161,6 +165,9 @@ jobs:
               with:
                   fetch-depth: 0  # fetch complete history
             - run: git fetch origin +refs/tags/*:refs/tags/*
+
+            - name: Fetch git tags
+              run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Install homebrew dependencies
               run: |

@@ -32,6 +32,9 @@ jobs:
             - uses: actions/checkout@v2
             - run: git fetch origin +refs/tags/*:refs/tags/*
 
+            - name: Fetch git tags
+              run: git fetch origin +refs/tags/*:refs/tags/*
+
             - name: Set up python ${{ matrix.python-version }} ${{ matrix.python-arch }}
               uses: actions/setup-python@v1
               with:
@@ -72,6 +75,9 @@ jobs:
         steps:
             - uses: actions/checkout@v2
             - run: git fetch origin +refs/tags/*:refs/tags/*
+
+            - name: Fetch git tags
+              run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Set up python
               uses: actions/setup-python@v1

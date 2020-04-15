@@ -2,7 +2,14 @@
 
 
 Unreleased Changes
--------------------
+------------------
+* Fixing an issue with SDR's ``LS`` calculations.  The ``x`` term is now
+  the weighted mean of proportional flow from the current pixel into its
+  neighbors.  Note that for ease of debugging, this has been implemented as a
+  separate raster and is now included in ``RKLS`` calculations instead of in
+  the ``LS`` calculations.
+* Fixed a bug in validation where checking for spatial overlap would be skipped
+  entirely in cases where optional model arguments were not used.
 * Bumping the ``psutil`` dependency requirement to ``psutil>=5.6.6`` to address
   a double-free vulnerability documented in CVE-2019-18874.
 * Adding a GitHub Actions workflow for building python wheels for Mac and Windows
