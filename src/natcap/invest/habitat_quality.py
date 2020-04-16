@@ -329,7 +329,7 @@ def execute(args):
     threat_path_dict = {}
     # store land cover and threat rasters in a list for convenient access
     lulc_and_threat_raster_list = []
-    # lookup lists for the unique lucode tasks
+    # lists for the unique lucode tasks
     unique_lucode_task_list = []
     unique_lucode_pickle_path_list = []
     LOGGER.info("Find threat rasters and collect unique LULC codes")
@@ -401,7 +401,7 @@ def execute(args):
 
     LOGGER.info("Checking LULC codes against Sensitivity table")
     compare_lucodes_sens_task = task_graph.add_task(
-        _compare_lucodes_sensitivity,
+        _assert_codes_match,
         args=(sensitivity_dict, unique_lucode_pickle_path_list),
         dependent_task_list=[*unique_lucode_task_list],
         task_name='lucode_sens_comparison')
@@ -946,19 +946,25 @@ def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
     decay_func(max_dist_pixel, kernel_path)
 
 
-def _compare_lucodes_sensitivity(
-        sensitivity_dict, unique_lucode_pickle_list):
-    """Compare LULC unique codes to codes listed in dictionary.
+def _assert_codes_match(input_dict, unique_codes_pickle_list):
+    """Assert dictionary keys and unique numbers are equal sets.
+
+    Compare the aggregate set of numbers stored in pickled dictionaries 
+    with the keys ``input_dict`` and assert they are equal.
 
     Args:
-        sensitivity_dict (dict): dictionary representing sensitivity for LULC
-            values with a column of 'codes'.
-        unique_lucode_pickle_list (list): list of paths to pickle files that
-            represent a python set of unique LULC values for the LULC rasters
-            provided in the model.
+        input_dict (dict): dictionary with numbered keys to match against
+            those found in ``unique_codes_pickle_list``.
+        unique_codes_pickle_list (list): list of paths to pickled dictionaries.
+            The pickled dictionary structure should be set up 
+            with key : 'codes' and value : number 
 
     Returns:
         None
+
+    Raises:
+        ValueError: if the set difference of input dictionary keys and
+            aggregate of codes from pickled lists is not None.
     """
     raster_unique_lucodes = set()
     for lucode_path in unique_lucode_pickle_list:
