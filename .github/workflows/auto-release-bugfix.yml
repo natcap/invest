@@ -99,9 +99,9 @@ jobs:
                       git status | cat  # for debugging.
                       git checkout -b $TARGET_BRANCH
                       git commit -m "Auto-committing updates for the $BUGFIX_VERSION release"
-                      git tag -a $BUGFIX_VERSION -m "$BUGFIX_VERSION release."
 
-                      # Only push revisions needed to push the tag created.
+                      # Only push the target branch.  The tag will be created
+                      # as part of the github release.
                       # NOTE: If changes were pushed to $TARGET_BRANCH before
                       #       we try to push this release, the push will fail and
                       #       we'll avoid the race condition.
@@ -110,7 +110,7 @@ jobs:
                       #       authenticated with this token will not cause
                       #       recursive workflow calls.
                       GIT_REPO=https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git
-                      git push --tags $GIT_REPO $TARGET_BRANCH
+                      git push $GIT_REPO $TARGET_BRANCH
 
                       RELEASE_MESSAGE_FILE=release_message.md
                       VERSION=$BUGFIX_VERSION ./ci/release/build-release-text-from-history.sh > $RELEASE_MESSAGE_FILE
