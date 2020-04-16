@@ -366,11 +366,15 @@ def execute(args):
                     threat_csv_basepath,
                     threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
 
-                # it's okay to have no threat raster for baseline scenario
-                validated_threat_path = _resolve_threat_raster_path(
-                    threat_path)
-
-                if validated_threat_path is None:
+                # check gis type of threat path and catch thrown ValueError 
+                # from get_gis_type if path does not exist
+                try:
+                    threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
+                    # if threat path not of type RASTER then raise value error
+                    if threat_gis_type != pygeoprocessing.RASTER_TYPE:
+                        raise ValueError
+                except ValueError:
+                    # it's okay to have no threat raster for baseline scenario
                     if lulc_key != '_b':
                         raise ValueError(
                             'There was an Error locating a threat raster from '
@@ -378,22 +382,21 @@ def execute(args):
                             f'{_THREAT_SCENARIO_MAP[lulc_key]} and threat: '
                             f'{threat}. The path in the CSV column should be '
                             'relative to the threat CSV table.')
-
-                threat_path_dict['threat' + lulc_key][threat] = (
-                    validated_threat_path)
+                    else:
+                        threat_path = None
+            
+                threat_path_dict['threat' + lulc_key][threat] = threat_path
                 # save threat paths in a list for alignment and resize
-                if validated_threat_path:
+                if threat_path:
                     # check for duplicate absolute threat path names that
                     # cause errors when trying to write aligned versions
-                    if (validated_threat_path not in
-                            lulc_and_threat_raster_list):
-                        lulc_and_threat_raster_list.append(
-                            validated_threat_path)
+                    if (threat_path not in lulc_and_threat_raster_list):
+                        lulc_and_threat_raster_list.append(threat_path)
                     else:
                         raise ValueError(
                             'Threat paths cannot be the same and must have '
                             'unique absolute filepaths. The threat path: '
-                            f'{os.path.basename(validated_threat_path)} is a '
+                            f'{os.path.basename(threat_path)} is a '
                             'duplicate.')
 
     LOGGER.info("Checking LULC codes against Sensitivity table")
@@ -621,7 +624,7 @@ def execute(args):
                 sensitivity_dict.items()}
 
             sens_threat_task = graph.add_task(
-                pygeoprocessing.reclassify,
+                pygeoprocessing.reclassify_raster,
                 args=((lulc_path, 1), sensitivity_reclassify_threat_dict,
                       sens_raster_path, gdal.GDT_Float32, _OUT_NODATA),
                 kwargs={
@@ -1008,44 +1011,6 @@ def _collect_unique_lucodes(raster_path_band, pickle_path):
         pickle.dump(data, fh, pickle.HIGHEST_PROTOCOL)
 
 
-def _resolve_threat_raster_path(path):
-    """Determine if path is a valid gdal raster file.
-
-    Args:
-        path (string): file path.
-
-    Return:
-        ``path`` if valid raster, otherwise ``None``.
-    """
-    # Turning on exceptions so that if an error occurs when trying to open a
-    # file path we can catch it and handle it properly
-
-    def _error_handler(*_):
-        """A dummy error handler that raises a ValueError."""
-        raise ValueError()
-    gdal.PushErrorHandler(_error_handler)
-
-    # initialize dataset to None in the case that path does not exist
-    dataset = None
-    if os.path.exists(path):
-        try:
-            dataset = gdal.OpenEx(path, gdal.OF_RASTER | gdal.GA_ReadOnly)
-        except ValueError:
-            # If GDAL can't open the raster, our GDAL error handler will be
-            # executed and ValueError raised.
-            pass
-
-    gdal.PopErrorHandler()
-
-    # If a dataset comes back None, then it could not be found, set path
-    # to None and return
-    if dataset is None:
-        path = None
-
-    dataset = None
-    return path
-
-
 def _raster_pixel_count(raster_path_band):
     """Count unique pixel values in raster.
 
@@ -1226,7 +1191,7 @@ def validate(args, limit_to=None):
         bad_threat_paths = []
         bad_threat_nodatas = []
         duplicate_paths = []
-        threat_paths = []
+        threat_path_list = []
         for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
                                     ('_f', 'lulc_fut_path'),
                                     ('_b', 'lulc_bas_path')):
@@ -1240,26 +1205,34 @@ def validate(args, limit_to=None):
                         threat_csv_basepath,
                         threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
 
-                    validated_threat_path = _resolve_threat_raster_path(
-                            threat_path)
-                    # it's okay to have no threat raster for baseline scenario
-                    if lulc_key != '_b' and validated_threat_path is None:
-                        bad_threat_paths.append(
-                                (threat, _THREAT_SCENARIO_MAP[lulc_key]))
-                        continue
-
-                    if validated_threat_path:
+                    # check gis type of threat path and catch thrown ValueError 
+                    # from get_gis_type if path does not exist
+                    try:
+                        threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
+                        # if threat path not of type RASTER then raise value error
+                        if threat_gis_type != pygeoprocessing.RASTER_TYPE:
+                            raise ValueError
+                    except ValueError:
+                        # it's okay to have no threat raster for baseline scenario
+                        if lulc_key != '_b':
+                            bad_threat_paths.append(
+                                    (threat, _THREAT_SCENARIO_MAP[lulc_key]))
+                            continue
+                        else:
+                            threat_path = None
+                    
+                    if threat_path:
                         # check for duplicate absolute threat path names that
                         # cause errors when trying to write aligned versions
-                        if validated_threat_path not in threat_paths:
-                            threat_paths.append(validated_threat_path)
+                        if threat_path not in threat_path_list:
+                            threat_path_list.append(threat_path)
                         else:
                             duplicate_paths.append(
-                                os.path.basename(validated_threat_path))
+                                os.path.basename(threat_path))
 
                         # Check NODATA value of the valid threat raster
                         threat_raster_info = pygeoprocessing.get_raster_info(
-                                                validated_threat_path)
+                                                threat_path)
                         if threat_raster_info['nodata'][0] is None:
                             bad_threat_nodatas.append(threat)
 
