@@ -9,17 +9,34 @@ https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
 
 ## If something doesn't look right
 
-1. PR whatever changes are needed into this branch (`$SOURCE_BRANCH`)
-2. Continue until things look right.
+1. Decline this PR.  Do not delete the `$TARGET_BRANCH` branch.
+2. Go to the created release object and delete the binaries that have been
+   automatically uploaded there.
+3. PR whatever changes are needed into `$TARGET_BRANCH`.
+   ```shell
+   $ git checkout master
+   $ git pull upstream master
+   $ git checkout $TARGET_BRANCH
+   < make and commit any needed changes >
+   $ git push origin $TARGET_BRANCH
+   ```
+4. Once things look right, tag `$TARGET_BRANCH` with `$BUGFIX_VERSION` and
+   push to `$TARGET_BRANCH`.
+   ```shell
+   $ git checkout $TARGET_BRANCH
+   $ git tag --force $BUGFIX_VERSION
+   $ git push git@github.com:natcap/invest.git $TARGET_BRANCH $BUGFIX_VERSION
+   ```
+   Re-tagging and pushing the files to `$TARGET_BRANCH` will cause the release
+   binaries to be rebuilt and re-uploaded to the release object.
+5. Submit a PR from `natcap/invest:$TARGET_BRANCH` into `natcap/invest:$SOURCE_BRANCH`.
+
 
 ## If everything looks OK
 
-Approve and merge this branch.  You can delete this PR branch if you like.  It
-will be automatically deleted once the PR is merged if it still exists.
-
-## What happens once the PR is merged
-
-When this PR is merged, a workflow will:
-
-1. Remove the branch `$SOURCE_BRANCH` if it still exists.
-2. Publish the draft release.
+1. Approve and merge this PR.
+2. Delete the branch `$TARGET_BRANCH` once the PR is merged.
+3. Publish the draft release object at
+   https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
+4. Upload python wheels to PyPI.  An issue was created for this,
+   so remember to mark progress there as well.
