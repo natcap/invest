@@ -31,6 +31,7 @@ jobs:
             - run: sudo apt-get update --fix-missing && sudo apt-get install pandoc gettext-base
 
             - name: Testing for and preparing the release
+              shell: bash -x {0}
               env:
                   SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
