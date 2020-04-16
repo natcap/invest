@@ -3,8 +3,6 @@ name: Build InVEST App Binaries
 on:
     push:
     pull_request:
-    release:
-        types: [published]
 
 jobs:
     check-syntax-errors:
