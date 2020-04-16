@@ -13,7 +13,13 @@ https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
 
 1. Decline this PR.  Do not delete the `$TARGET_BRANCH` branch.
 2. Go to the created release object and delete the binaries that have been
-   automatically uploaded there.
+   automatically uploaded there:
+     1. Go to https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
+     2. Click "Edit"
+     3. For each binary file, click the "X" button on the right-hand side.
+     4. Click the green "Update Release" button at the bottom of the
+        release page.
+     5. Click the red "Delete" button to delete the release.
 3. PR whatever changes are needed into `$TARGET_BRANCH`.
    ```shell
    $ git checkout master
