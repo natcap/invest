@@ -4,7 +4,7 @@ on:
     push:
     pull_request:
     release:
-        types: [published]
+        types: [created]
 
 jobs:
     check-syntax-errors:
