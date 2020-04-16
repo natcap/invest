@@ -132,7 +132,8 @@ jobs:
                       # Create a new pull request from the new autorelease
                       # branch back into the source branch.
                       PRMSG=prmsg.txt
-                      envsubst ci/release/bugfix-autorelease-branch-pr-body.md > $PRMSG
+                      cat ci/release/bugfix-autorelease-branch-pr-body.md | envsubst > $PRMSG
+                      cat $PRMSG  # For debugging
                       hub pull-request \
                           --base $GITHUB_REPOSITORY:$SOURCE_BRANCH \
                           --head $GITHUB_REPOSITORY:$TARGET_BRANCH \
