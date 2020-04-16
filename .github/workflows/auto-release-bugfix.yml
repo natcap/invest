@@ -64,7 +64,21 @@ jobs:
                           exit 1
                       fi
 
+                      # Exporting these variables is necessary for envsubst.
                       export BUGFIX_VERSION=$(python setup.py --version | awk -F '.' '{print $1"."$2"."$3+1}')
+                      export TARGET_BRANCH=autorelease/$BUGFIX_VERSION
+
+                      # If $TARGET_BRANCH already exists, that means there's already
+                      # a PR open for it and we shouldn't do another release.
+                      if git rev-parse --verify $TARGET_BRANCH
+                      then
+                          echo "The branch $TARGET_BRANCH already exists."
+                          echo "This is most likely because there's an "
+                          echo "outstanding PR for it."
+                          echo ""
+                          echo "Exiting the release process."
+                          exit 0
+                      fi
 
                       # Update the UG hash in the Makefile
                       # This could be done with curl and sed, but it'll be easier
@@ -82,7 +96,6 @@ jobs:
                       # Commit changes and make an annotated tag.
                       git add Makefile HISTORY.rst
                       git status | cat  # for debugging.
-                      export TARGET_BRANCH=autorelease/$BUGFIX_VERSION
                       git checkout -b $TARGET_BRANCH
                       git commit -m "Auto-committing updates for the $BUGFIX_VERSION release"
                       git tag -a $BUGFIX_VERSION -m "$BUGFIX_VERSION release."
