@@ -31,7 +31,7 @@ jobs:
             - run: sudo apt-get update --fix-missing && sudo apt-get install pandoc gettext-base
 
             - name: Testing for and preparing the release
-              shell: bash -x {0}
+              shell: bash -ex {0}
               env:
                   SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -132,8 +132,8 @@ jobs:
                       RELEASE_URL_FILE=release_url.txt
                       GITHUB_TOKEN=${{ secrets.USER_ACCESS_TOKEN }} hub release create \
                           --file $RELEASE_MESSAGE_FILE \
-                          --commitish $TARGET_BRANCH \
-                          $BUGFIX_VERSION > $RELEASE_URL_FILE
+                          --commitish "$TARGET_BRANCH" \
+                          "$BUGFIX_VERSION" > $RELEASE_URL_FILE
 
                       # Python wheels are created in response to the release.
                       # Create an issue for uploading the wheels to PyPI here
