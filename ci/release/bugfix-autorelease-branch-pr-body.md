@@ -4,7 +4,7 @@ This PR includes changes needed to perform the $BUGFIX_VERSION release.
 When the PR was created, the bugfix release tag $BUGFIX_VERSION should have
 been created on `$TARGET_BRANCH`, which should also have triggered builds
 for python wheels as well as Windows and Mac binaries.  These binaries
-will be automatically uploaded to the draft release object at
+will be automatically uploaded to the release object at
 https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
 
 ## If something doesn't look right
@@ -36,7 +36,7 @@ https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
 
 1. Approve and merge this PR.
 2. Delete the branch `$TARGET_BRANCH` once the PR is merged.
-3. Publish the draft release object at
+3. Take a look at the release object and make sure everything is there:
    https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
 4. Upload python wheels to PyPI.  An issue was created for this,
    so remember to mark progress there as well.

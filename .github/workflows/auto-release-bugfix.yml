@@ -116,7 +116,6 @@ jobs:
                       #       See the list/descriptions of available scopes at:
                       #       https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/#available-scopes
                       GITHUB_TOKEN=${{ secrets.USER_ACCESS_TOKEN }} hub release create \
-                          --draft \
                           --file $RELEASE_MESSAGE_FILE \
                           --commitish $TARGET_BRANCH \
                           $BUGFIX_VERSION
