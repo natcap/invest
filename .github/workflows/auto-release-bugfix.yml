@@ -115,10 +115,11 @@ jobs:
                       #       only the ``public_repo`` permission is needed.
                       #       See the list/descriptions of available scopes at:
                       #       https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/#available-scopes
+                      RELEASE_URL_FILE=release_url.txt
                       GITHUB_TOKEN=${{ secrets.USER_ACCESS_TOKEN }} hub release create \
                           --file $RELEASE_MESSAGE_FILE \
                           --commitish $TARGET_BRANCH \
-                          $BUGFIX_VERSION
+                          $BUGFIX_VERSION > $RELEASE_URL_FILE
 
                       # Python wheels are created in response to the release.
                       # Create an issue for uploading the wheels to PyPI here
@@ -126,6 +127,7 @@ jobs:
                       hub issue create \
                           --message "Release natcap.invest $BUGFIX_VERSION on PyPI" \
                           --message "When built, remember to upload wheels for $BUGFIX_VERSION to PyPI." \
+                          --message "Wheels will be uploaded to $(cat $RELEASE_URL_FILE)"
                           --labels task
 
                       # Create a new pull request from the new autorelease
