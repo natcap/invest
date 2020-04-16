@@ -82,7 +82,7 @@ jobs:
                       # Commit changes and make an annotated tag.
                       git add Makefile HISTORY.rst
                       git status | cat  # for debugging.
-                      TARGET_BRANCH=autorelease/$BUGFIX_VERSION
+                      export TARGET_BRANCH=autorelease/$BUGFIX_VERSION
                       git checkout -b $TARGET_BRANCH
                       git commit -m "Auto-committing updates for the $BUGFIX_VERSION release"
                       git tag -a $BUGFIX_VERSION -m "$BUGFIX_VERSION release."
@@ -136,8 +136,8 @@ jobs:
                       hub pull-request \
                           --base $GITHUB_REPOSITORY:$SOURCE_BRANCH \
                           --head $GITHUB_REPOSITORY:$TARGET_BRANCH \
-                          --reviewer "natcap/software-team" \
-                          --assign "natcap/software-team" \
+                          --reviewer "$GITHUB_ACTOR" \
+                          --assign "$GITHUB_ACTOR" \
                           --file $PRMSG
                   fi
 
