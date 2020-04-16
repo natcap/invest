@@ -25,11 +25,11 @@ https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
    ```shell
    $ git checkout $TARGET_BRANCH
    $ git tag --force $BUGFIX_VERSION
-   $ git push git@github.com:natcap/invest.git $TARGET_BRANCH $BUGFIX_VERSION
+   $ git push git@github.com:$GITHUB_REPOSITORY.git $TARGET_BRANCH $BUGFIX_VERSION
    ```
    Re-tagging and pushing the files to `$TARGET_BRANCH` will cause the release
    binaries to be rebuilt and re-uploaded to the release object.
-5. Submit a PR from `natcap/invest:$TARGET_BRANCH` into `natcap/invest:$SOURCE_BRANCH`.
+5. Submit a PR from `$GITHUB_REPOSITORY:$TARGET_BRANCH` into `$GITHUB_REPOSITORY:$SOURCE_BRANCH`.
 
 
 ## If everything looks OK
