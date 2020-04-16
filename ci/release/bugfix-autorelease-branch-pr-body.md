@@ -1,5 +1,7 @@
 Auto: Release $BUGFIX_VERSION and merge into $SOURCE_BRANCH
 
+# Release $BUGFIX_VERSION
+
 This PR includes changes needed to perform the $BUGFIX_VERSION release.
 When the PR was created, the bugfix release tag $BUGFIX_VERSION should have
 been created on `$TARGET_BRANCH`, which should also have triggered builds
