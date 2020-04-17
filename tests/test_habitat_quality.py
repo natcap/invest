@@ -342,6 +342,67 @@ class HabitatQualityTests(unittest.TestCase):
             # so we should exclude those new nodata pixel values.
             assert_array_sum(raster_path, assert_value, include_nodata=False)
 
+    def test_habtitat_quality_undefined_threat_nodata(self):
+        """Habitat Quality: test for undefined threat nodata."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                    lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'],
+                            threat_values=[0.5, 6.6], nodata_val=None)
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+
+        # create the threat CSV table
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+        
+        habitat_quality.execute(args)
+
+        # Assert values were obtained by summing each output raster.
+        for output_filename, assert_value in {
+                'deg_sum_c_regression.tif': 1792.8088,
+                'deg_sum_f_regression.tif': 2308.9636,
+                'quality_c_regression.tif': 6928.5293,
+                'quality_f_regression.tif': 4916.338,
+                'rarity_c_regression.tif': 2500.0000000,
+                'rarity_f_regression.tif': 2500.0000000}.items():
+            raster_path = os.path.join(args['workspace_dir'], output_filename)
+            # Check that the raster's computed values are what we expect.
+            # In this case, the LULC and threat rasters should have been
+            # expanded to be beyond the bounds of the original threat values,
+            # so we should exclude those new nodata pixel values.
+            assert_array_sum(raster_path, assert_value, include_nodata=False)
+
     def test_habitat_quality_lulc_bbox(self):
         """Habitat Quality: regression test for bbox sizes."""
         from natcap.invest import habitat_quality
@@ -648,7 +709,7 @@ class HabitatQualityTests(unittest.TestCase):
             'the path in CSV for column: CUR_PATH and threat: threat_1' in
             actual_message, actual_message)
 
-    def test_habitat_quality_nodata(self):
+    def test_habitat_quality_lulc_current_only(self):
         """Habitat Quality: on missing base and future LULC rasters."""
         from natcap.invest import habitat_quality
 
@@ -691,7 +752,7 @@ class HabitatQualityTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'quality_c.tif'),
             5951.2827)
 
-    def test_habitat_quality_nodata_fut(self):
+    def test_habitat_quality_lulc_baseline_current(self):
         """Habitat Quality: on missing future LULC raster."""
         from natcap.invest import habitat_quality
 
@@ -1030,57 +1091,6 @@ class HabitatQualityTests(unittest.TestCase):
             "('threat_2', 'FUT_PATH')] "
             "was not found or it could not be opened by GDAL." in
             validate_result[0][1], validate_result[0][1])
-
-    def test_habtitat_quality_validation_bad_threat_nodata(self):
-        """Habitat Quality: test validation for bad threat nodata."""
-        from natcap.invest import habitat_quality
-
-        args = {
-            'half_saturation_constant': '0.5',
-            'results_suffix': 'regression',
-            'workspace_dir': self.workspace_dir,
-            'n_workers': -1,
-        }
-
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
-        make_access_shp(args['access_vector_path'])
-
-        scenarios = ['_bas_', '_cur_', '_fut_']
-        for lulc_val, scenario in enumerate(scenarios, start=1):
-            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
-            lulc_array[50:, :] = lulc_val
-            args['lulc' + scenario + 'path'] = os.path.join(
-                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
-            make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
-
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
-        make_sensitivity_samp_csv(args['sensitivity_table_path'])
-
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6], nodata_val=None)
-
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
-
-        # create the threat CSV table
-        with open(args['threats_table_path'], 'w') as open_table:
-            open_table.write(
-                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
-            open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
-            open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
-                'threat_2_f.tif\n')
-
-        validate_result = habitat_quality.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            'has an undefined NODATA value' in validate_result[0][1])
 
     def test_habitat_quality_missing_cur_threat_path(self):
         """Habitat Quality: test for missing threat paths in current."""
