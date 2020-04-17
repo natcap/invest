@@ -2,15 +2,14 @@ name: Automated Bugfix Release
 on:
     schedule:
         # Noon PST on Friday of each week
-        #- cron: '0 20 * * 5'
-        - cron: '*/5 * * * *'
+        - cron: '0 20 * * 5'
 
 jobs:
     create-bugfix-release:
         name: Create a bugfix release
         runs-on: ubuntu-latest
         env:
-            SOURCE_BRANCH: feature/automated-releases
+            SOURCE_BRANCH: master
         steps:
             - uses: actions/checkout@v2
               with:
@@ -31,7 +30,7 @@ jobs:
             - run: sudo apt-get update --fix-missing && sudo apt-get install pandoc gettext-base
 
             - name: Testing for and preparing the release
-              shell: bash -ex {0}
+              shell: bash
               env:
                   SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
