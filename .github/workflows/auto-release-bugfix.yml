@@ -71,7 +71,7 @@ jobs:
 
                       # If $TARGET_BRANCH already exists, that means there's already
                       # a PR open for it and we shouldn't do another release.
-                      if git ls-remote --exit-code --heads git@github.com:$GITHUB_REPOSITORY.git $TARGET_BRANCH
+                      if git ls-remote --exit-code --heads https://github.com/$GITHUB_REPOSITORY.git $TARGET_BRANCH
                       then
                           echo "The branch $TARGET_BRANCH already exists."
                           echo "This is most likely because there's an "
