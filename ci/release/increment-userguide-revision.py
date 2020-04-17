@@ -1,17 +1,35 @@
 # encoding=UTF-8
+"""Increment the User's Guide revision in Makefile.
+
+This script fetches the latest user's guide revision on the master branch from
+the github repository and updates it in the Makefile.
+
+To invoke:
+    $ pip install requests
+    $ python ci/release/increment-userguide-revision.py
+"""
 
 import shutil
 import os
-import pprint
 import requests
 
-
-def get_latest_rev_on_userguide():
-    r = requests.get('https://api.github.com/repos/natcap/invest.users-guide/commits/master')
-    return r.json()['sha']
+API_TARGET = (
+    'https://api.github.com/repos/natcap/invest.users-guide/commits/master')
 
 
-def update_userguide_rev_in_makefile(new_rev):
+def update_userguide_rev_in_makefile():
+    """Update the userguide revision in the Makefile.
+
+    Fetches the latest user's guide revision from the master branch and updates
+    it in the Makefile.
+
+    Returns:
+        ``None``
+
+    """
+    req = requests.get(API_TARGET)
+    new_rev = req.json()['sha']
+
     if not os.path.exists('build'):
         os.makedirs('build')
     new_makefile_path = os.path.join('build', 'Makefile')
@@ -35,5 +53,4 @@ def update_userguide_rev_in_makefile(new_rev):
 
 
 if __name__ == '__main__':
-    sha = get_latest_rev_on_userguide()
-    update_userguide_rev_in_makefile(sha)
+    update_userguide_rev_in_makefile()
