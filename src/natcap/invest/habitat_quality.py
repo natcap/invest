@@ -990,27 +990,21 @@ def _collect_unique_lucodes(raster_path_band, pickle_path):
     Args:
         raster_path_band (tuple): a 2 tuple of the form
             (filepath to raster, band index).
-        pickle_path (string): a path to output of a pickled Python set.
+        pickle_path (string): a path to output a pickled Python set.
 
     Returns:
         None
     """
-    lulc_path = raster_path_band[0]
-    # declare a set to store unique codes from lulc rasters
+    raster_path = raster_path_band[0]
+    # declare a set to store unique codes from raster
     raster_unique_lucodes = set()
 
-    for _, lulc_block in pygeoprocessing.iterblocks(raster_path_band):
-        raster_unique_lucodes.update(numpy.unique(lulc_block))
+    for _, raster_block in pygeoprocessing.iterblocks(raster_path_band):
+        raster_unique_lucodes.update(numpy.unique(raster_block))
 
     # Remove the nodata value from the set of landuser codes.
-    nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
-    try:
-        raster_unique_lucodes.remove(nodata)
-    except KeyError:
-        # KeyError when the nodata value was not encountered in the
-        # raster's pixel values.  Same result when nodata value is
-        # None.
-        pass
+    nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
+    raster_unique_lucodes.remove(nodata)
 
     data = {'codes': raster_unique_lucodes}
     with open(pickle_path, 'wb') as fh:
