@@ -11,6 +11,12 @@ import { InvestJob } from '../src/InvestJob';
 import { getSpec, fetchDatastackFromFile, fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
 
+const DIRECTORY_CONSTANTS = {
+  CACHE_DIR: 'tests/data/testing-cache', //  for storing state snapshot files
+  TEMP_DIR: 'tests/data/testing-tmp',  // for saving datastack json files prior to investExecute
+  INVEST_UI_DATA: 'tests/data/testing-ui_data'
+}
+
 // generated this file from `invest getspec carbon --json`
 // import ARGS_SPEC from './data/carbon_args_spec.json';
 // const ARG_TYPE_INPUT_MAP = {
@@ -23,6 +29,25 @@ jest.mock('../src/server_requests');
 //   boolean: "radio",
 //   option_string: "select"
 // }
+
+function cleanupDir(dir) {
+  fs.readdirSync(dir).forEach(file => {
+    fs.unlinkSync(path.join(dir, file))
+  })
+  fs.rmdirSync(dir)
+}
+
+beforeAll(() => {
+  for (const dir in DIRECTORY_CONSTANTS) {
+    fs.mkdirSync(dir)
+  }
+})
+
+afterAll(() => {
+  for (const dir in DIRECTORY_CONSTANTS) {
+    cleanupDir(dir)
+  }
+})
 
 beforeEach(() => {
   jest.resetAllMocks()
@@ -37,6 +62,7 @@ function renderSetupFromSpec(spec) {
       recentSessions={[]}
       updateRecentSessions={() => {}}
       saveSettings={() => {}}
+      directoryConstants={DIRECTORY_CONSTANTS}
     />);
   // fireEvent.click(getByText('Carbon'));
   return { getByText, getByLabelText, utils }
@@ -216,23 +242,36 @@ test('SetupTab: expect an input form for an option_string', async () => {
 })
 
 test('SetupTab: expect boolean input can disable/hide optional inputs', async () => {
-  const spec = { args: { 
+  // Normally the UI options are loaded from a seperate spec on disk
+  // that is merged with ARGS_SPEC. But for testing, it's convenient
+  // to just use one spec. And it works just the same.
+  const spec = { module: 'natcap.invest.dummy', args: { 
     controller: { 
       name: 'A', 
-      type: 'boolean', 
-      ui_control: ['arg2', 'arg3', 'arg4'], },
+      type: 'boolean'}, 
     arg2: { 
       name: 'B', 
-      type: 'number', 
-      ui_option: 'disable', },
+      type: 'number'}, 
     arg3: { 
       name: 'C', 
-      type: 'number', 
-      ui_option: 'hide', },
+      type: 'number'}, 
     arg4: { 
       name: 'D', 
-      type: 'number', 
-      ui_option: 'foo', } } }  // an invalid option should be ignored
+      type: 'number'} } }  // an invalid option should be ignored
+
+  const ui_spec = {
+    controller: { 
+      ui_control: ['arg2', 'arg3', 'arg4'], },
+    arg2: { 
+      ui_option: 'disable', },
+    arg3: { 
+      ui_option: 'hide', },
+    arg4: { 
+      ui_option: 'foo', } }  // an invalid option should be ignored
+
+  fs.writeFileSync(path.join(
+    DIRECTORY_CONSTANTS.INVEST_UI_DATA, spec.module + '.json'),
+      JSON.stringify(ui_spec))
   
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)

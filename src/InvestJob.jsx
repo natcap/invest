@@ -40,8 +40,9 @@ if (process.env.GDAL_DATA) {
 }
 
 // TODO: some of these 'global' vars are defined in multiple files
-const CACHE_DIR = 'cache' //  for storing state snapshot files
-const TEMP_DIR = 'tmp'  // for saving datastack json files prior to investExecute
+// const CACHE_DIR = 'cache' //  for storing state snapshot files
+// const TEMP_DIR = 'tmp'  // for saving datastack json files prior to investExecute
+// const INVEST_UI_DATA = 'ui_data'
 
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {
@@ -99,7 +100,7 @@ export class InvestJob extends React.Component {
     */
     const jobName = this.state.sessionID;
     const jsonContent = JSON.stringify(this.state, null, 2);
-    const filepath = path.join(CACHE_DIR, jobName + '.json');
+    const filepath = path.join(this.props.directoryConstants.CACHE_DIR, jobName + '.json');
     fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
       if (err) {
         console.log("An error occured while writing JSON Object to File.");
@@ -149,7 +150,7 @@ export class InvestJob extends React.Component {
     * @params {string} sessionFilename - path to a JSON file.
     */
 
-    // const filename = path.join(CACHE_DIR, sessionFilename);
+    // const filename = path.join(this.props.directoryConstants.CACHE_DIR, sessionFilename);
     if (fs.existsSync(sessionFilename)) {
       const loadedState = JSON.parse(fs.readFileSync(sessionFilename, 'utf8'));
       this.setState(loadedState,
@@ -218,7 +219,7 @@ export class InvestJob extends React.Component {
       this.state.modelName, workspace.directory, workspace.suffix].join('-')
 
     // Write a temporary datastack json for passing as a command-line arg
-    const temp_dir = fs.mkdtempSync(path.join(process.cwd(), TEMP_DIR, 'data-'))
+    const temp_dir = fs.mkdtempSync(path.join(process.cwd(), this.props.directoryConstants.TEMP_DIR, 'data-'))
     const datastackPath = path.join(temp_dir, 'datastack.json')
     const _ = await this.argsToJsonFile(datastackPath);
 
@@ -392,6 +393,24 @@ export class InvestJob extends React.Component {
       // This "destructuring" captures spec.args into args and leaves 
       // the rest of spec in modelSpec.
       const {args, ...modelSpec} = spec;
+      
+      // Even if UI spec doesn't exist for a model, a minimum viable input
+      // form can still be generated from ARGS_SPEC alone, so don't crash here.
+      let ui_spec = {};
+      try {
+        ui_spec = JSON.parse(fs.readFileSync(
+          path.join(this.props.directoryConstants.INVEST_UI_DATA, spec.module + '.json')))
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          throw err
+        }
+      }
+      // TODO: write a test where the key is missing from ui_spec
+      for (const key in args) {
+        Object.assign(args[key], ui_spec[key])
+      }
+      console.log(args)
+
 
       // This event represents a user selecting a model,
       // and so some existing state should be reset.

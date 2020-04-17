@@ -5,6 +5,12 @@ import { InvestJob } from './InvestJob';
 import { getInvestList, getFlaskIsReady } from './server_requests';
 import { updateRecentSessions, loadRecentSessions } from './utils';
 
+const DIRECTORY_CONSTANTS = {
+  CACHE_DIR: 'cache', //  for storing state snapshot files
+  TEMP_DIR: 'tmp',  // for saving datastack json files prior to investExecute
+  INVEST_UI_DATA: 'ui_data'
+}
+
 export default class App extends React.Component {
   /** This component manages any application state that should persist
   * and be independent from properties of a single invest job.
@@ -70,6 +76,7 @@ export default class App extends React.Component {
         investSettings={this.state.investSettings}
         recentSessions={this.state.recentSessions}
         appdata={this.props.appdata}
+        directoryConstants={DIRECTORY_CONSTANTS}
         updateRecentSessions={this.updateRecentSessions}
         saveSettings={this.saveSettings}
       />
