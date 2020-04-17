@@ -39,13 +39,13 @@ function cleanupDir(dir) {
 
 beforeAll(() => {
   for (const dir in DIRECTORY_CONSTANTS) {
-    fs.mkdirSync(dir)
+    fs.mkdirSync(DIRECTORY_CONSTANTS[dir])
   }
 })
 
 afterAll(() => {
   for (const dir in DIRECTORY_CONSTANTS) {
-    cleanupDir(dir)
+    cleanupDir(DIRECTORY_CONSTANTS[dir])
   }
 })
 
@@ -241,10 +241,8 @@ test('SetupTab: expect an input form for an option_string', async () => {
   })
 })
 
-test('SetupTab: expect boolean input can disable/hide optional inputs', async () => {
-  // Normally the UI options are loaded from a seperate spec on disk
-  // that is merged with ARGS_SPEC. But for testing, it's convenient
-  // to just use one spec. And it works just the same.
+test('SetupTab: test a UI spec with a boolean controller arg', async () => {
+  
   const spec = { module: 'natcap.invest.dummy', args: { 
     controller: { 
       name: 'A', 
@@ -257,7 +255,11 @@ test('SetupTab: expect boolean input can disable/hide optional inputs', async ()
       type: 'number'}, 
     arg4: { 
       name: 'D', 
-      type: 'number'} } }  // an invalid option should be ignored
+      type: 'number'},
+    arg5: {
+      name: 'E',
+      type: 'number'
+    } } }
 
   const ui_spec = {
     controller: { 
@@ -268,6 +270,7 @@ test('SetupTab: expect boolean input can disable/hide optional inputs', async ()
       ui_option: 'hide', },
     arg4: { 
       ui_option: 'foo', } }  // an invalid option should be ignored
+    // arg5 is deliberately missing from ui_spec to demonstrate that that is okay. 
 
   fs.writeFileSync(path.join(
     DIRECTORY_CONSTANTS.INVEST_UI_DATA, spec.module + '.json'),
@@ -281,6 +284,7 @@ test('SetupTab: expect boolean input can disable/hide optional inputs', async ()
   const arg2 = await utils.findByLabelText(spec.args.arg2.name)
   const arg3 = await utils.findByLabelText(spec.args.arg3.name)
   const arg4 = await utils.findByLabelText(spec.args.arg4.name)
+  const arg5 = await utils.findByLabelText(spec.args.arg5.name)
 
   // Boolean Radios should default to "false" when a spec is loaded
   await wait(() => {
@@ -289,8 +293,12 @@ test('SetupTab: expect boolean input can disable/hide optional inputs', async ()
     // includes the Label and Input. Right now, the only good way
     // to query the Form.Group node is using a data-testid property.
     expect(utils.getByTestId('group-arg3')).toHaveClass('arg-hide')
+
+    // These inputs are not being controlled, but should exist:
     expect(arg4).toBeVisible();
     expect(arg4).toBeEnabled();
+    expect(arg5).toBeVisible();
+    expect(arg5).toBeEnabled();
   })
   // fireEvent.change doesn't trigger the change handler but .click does
   // even though React demands an onChange handler for controlled checkbox inputs.
@@ -305,10 +313,15 @@ test('SetupTab: expect boolean input can disable/hide optional inputs', async ()
     expect(arg3).toBeVisible();
     expect(arg4).toBeEnabled();
     expect(arg4).toBeVisible();
+    expect(arg5).toBeEnabled();
+    expect(arg5).toBeVisible();
   })
 })
 
-test.only('SetupTab: expect non-boolean input can disable/hide optional inputs', async () => {
+test('SetupTab: expect non-boolean input can disable/hide optional inputs', async () => {
+  // Normally the UI options are loaded from a seperate spec on disk
+  // that is merged with ARGS_SPEC. But for testing, it's convenient
+  // to just use one spec. And it works just the same.
   const spec = { args: { 
     controller: { 
       name: 'A', 

@@ -14,9 +14,9 @@ import { getSpec, saveToPython, writeParametersToFile,
 jest.mock('../src/server_requests');
 
 const DIRECTORY_CONSTANTS = {
-  CACHE_DIR: 'data/testing-cache',
-  TEMP_DIR: 'data/testing-tmp',
-  INVEST_UI_DATA: 'data/testing-ui_data'
+  CACHE_DIR: 'tests/data/testing-cache',
+  TEMP_DIR: 'tests/data/testing-tmp',
+  INVEST_UI_DATA: 'tests/data/testing-ui_data'
 }
 
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
