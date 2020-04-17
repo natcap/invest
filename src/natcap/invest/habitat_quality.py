@@ -474,17 +474,15 @@ def execute(args):
                 threat_path_dict['threat' + lulc_key][threat] = (
                     aligned_updated_threat_path)
 
-                # Update threat raster pixel values as needed so that:
-                #   * Nodata values are replaced with 0
-                #   * Anything other than 0 or nodata is replaced with 1
-                update_threat_task = task_graph.add_task(
-                    _update_threat_pixels,
+                # Bound threat raster values to 0 <= x <= 1
+                bound_threat_values_task = task_graph.add_task(
+                    _bound_raster_values,
                     args=(
                         (aligned_threat_path, 1), aligned_updated_threat_path),
                     target_path_list=[aligned_updated_threat_path],
                     dependent_task_list=[align_task],
                     task_name=f'update_threat{lulc_key}_{threat}')
-                updated_threat_tasks.append(update_threat_task)
+                updated_threat_tasks.append(bound_threat_values_task)
 
     LOGGER.info('Starting habitat_quality biophysical calculations')
 
@@ -606,7 +604,8 @@ def execute(args):
                 args=((threat_raster_path, 1), (kernel_path, 1),
                       filtered_threat_raster_path),
                 kwargs={
-                    'ignore_nodata': True
+                    'ignore_nodata': True,
+                    'mask_nodata': False
                     },
                 target_path_list=[filtered_threat_raster_path],
                 dependent_task_list=[*updated_threat_tasks, decay_threat_task],
@@ -967,14 +966,14 @@ def _assert_codes_match(input_dict, unique_codes_pickle_list):
             aggregate of codes from pickled lists is not None.
     """
     raster_unique_lucodes = set()
-    for lucode_path in unique_lucode_pickle_list:
+    for lucode_path in unique_codes_pickle_list:
         with open(lucode_path, 'rb') as fh:
             lucode_dict = pickle.load(fh)
         raster_unique_lucodes.update(lucode_dict['codes'])
 
     # check if there's any lucode from the LULC rasters missing in the
     # sensitivity table
-    table_unique_lucodes = set(sensitivity_dict.keys())
+    table_unique_lucodes = set(input_dict.keys())
     missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
     if missing_lucodes:
         raise ValueError(
@@ -1004,7 +1003,7 @@ def _collect_unique_lucodes(raster_path_band, pickle_path):
 
     # Remove the nodata value from the set of landuser codes.
     nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
-    raster_unique_lucodes.remove(nodata)
+    raster_unique_lucodes.discard(nodata)
 
     data = {'codes': raster_unique_lucodes}
     with open(pickle_path, 'wb') as fh:
@@ -1085,50 +1084,43 @@ def _make_linear_decay_kernel_path(max_distance, kernel_path):
         kernel_band.WriteArray(kernel_row, 0, row_index)
 
 
-def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
-    """Update raster's nodata values.
+def _bound_raster_values(aligned_threat_path, output_raster_path):
+    """Bound raster values between 0 and 1.
 
-    Iterate though the threat raster and update pixel values as needed so that:
-      * Nodata values are replaced with 0
-      * Anything other than 0 or nodata is replaced with 1
+    Iterate though the threat raster and update pixel values as needed so that
+    values below zero are set to 0 and values above 1 are set to 1. 
 
     Args:
         aligned_threat_path (tuple): a 2 tuple for a GDAL raster path with
             the form (filepath, band index) to the threat raster on disk.
-        updated_pixel_threat_path (string): an output path for the updated
+        output_raster_path (string): an output path for the updated
             raster.
 
     Returns:
         None
     """
-    LOGGER.info('Preprocessing threat values for %s',
-                aligned_threat_path)
+    LOGGER.info(f'Preprocessing threat values for {aligned_threat_path}')
     raster_info = pygeoprocessing.get_raster_info(aligned_threat_path[0])
     threat_nodata = raster_info['nodata'][0]
 
     if threat_nodata is None:
-        raise TypeError(
-            'Raster NODATA value for Threat path'
-            f' [ {os.path.basename(aligned_threat_path[0])} ] is UNDEFINED.'
-            ' Please make sure each threat raster has a defined NODATA value.')
+        LOGGER.warning(
+            f"Raster has undefined NODATA value, setting to {_OUT_NODATA}.")
+        threat_nodata = _OUT_NODATA
 
     threat_datatype = raster_info['datatype']
 
-    def _update_op(block):
-        """Replace nodata values with 0 and block>1 with 1."""
-        # First check if we actually need to set anything.
-        # No need to perform unnecessary writes!
-        if set(numpy.unique(block)) == set([0, 1]):
-            return block
-
-        zero_threat = numpy.isclose(block, threat_nodata)
-        block[zero_threat] = 0
-        block[~numpy.isclose(block, 0)] = 1
+    def _bound_op(block):
+        """Replace values < 0 w/ 0 and > 1 w/ 1."""
+        nodata_mask = numpy.isclose(block, threat_nodata)
+        block[block < 0] = 0
+        block[block > 1] = 1
+        block[nodata_mask] = threat_nodata
 
         return block
 
     pygeoprocessing.raster_calculator(
-        [aligned_threat_path], _update_op, updated_pixel_threat_path,
+        [aligned_threat_path], _bound_op, output_raster_path,
         threat_datatype, threat_nodata)
 
 
@@ -1189,7 +1181,6 @@ def validate(args, limit_to=None):
 
         # Validate threat raster paths and their nodata values
         bad_threat_paths = []
-        bad_threat_nodatas = []
         duplicate_paths = []
         threat_path_list = []
         for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
@@ -1230,12 +1221,6 @@ def validate(args, limit_to=None):
                             duplicate_paths.append(
                                 os.path.basename(threat_path))
 
-                        # Check NODATA value of the valid threat raster
-                        threat_raster_info = pygeoprocessing.get_raster_info(
-                                                threat_path)
-                        if threat_raster_info['nodata'][0] is None:
-                            bad_threat_nodatas.append(threat)
-
         if bad_threat_paths:
             validation_warnings.append(
                 (['threats_table_path'],
@@ -1250,16 +1235,6 @@ def validate(args, limit_to=None):
                 ('Threat paths cannot be the same and must have unique '
                  f'absolute filepaths. The threat paths: {duplicate_paths} '
                  'were duplicates.')))
-
-            if 'threats_table_path' not in invalid_keys:
-                invalid_keys.add('threats_table_path')
-
-        if bad_threat_nodatas:
-            validation_warnings.append((
-                ['threats_table_path'],
-                (f'A threat raster for threats: {bad_threat_nodatas}'
-                 ' has an undefined NODATA value. Please define'
-                 ' the NODATA value for all threat rasters.')))
 
             if 'threats_table_path' not in invalid_keys:
                 invalid_keys.add('threats_table_path')
