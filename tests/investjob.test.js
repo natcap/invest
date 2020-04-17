@@ -13,8 +13,12 @@ import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation, fetchDatastackFromFile } from '../src/server_requests';
 jest.mock('../src/server_requests');
 
+const DIRECTORY_CONSTANTS = {
+  CACHE_DIR: 'data/testing-cache',
+  TEMP_DIR: 'data/testing-tmp',
+  INVEST_UI_DATA: 'data/testing-ui_data'
+}
 
-const APP_DATA = './data/jobdb.json';
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
 const MOCK_RECENT_SESSIONS_VALUE = 
   [ [ "job1",
@@ -35,18 +39,28 @@ beforeEach(() => {
   // purpose should be 'restored' not 'reset'. Do that inside the test as-needed.
 })
 
+function renderInvestJob() {
+  /* Render an InvestJob component with the minimal props 
+  * needed for these tests.
+  */
+  const { getByText, getByLabelText, ...utils } = render(
+    <InvestJob 
+      investList={{Carbon: {internal_name: 'carbon'}}}
+      investSettings={{nWorkers: '-1'}}
+      recentSessions={MOCK_RECENT_SESSIONS_VALUE}
+      updateRecentSessions={() => {}}
+      saveSettings={() => {}}
+      directoryConstants={DIRECTORY_CONSTANTS}
+    />);
+  return { getByText, getByLabelText, utils }
+}
+
 test('Clicking an invest button renders SetupTab', async () => {
   getSpec.mockResolvedValue(SAMPLE_SPEC);
   fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
 
-  const { getByText, debug } = render(
-    <InvestJob 
-      investList={{Carbon: {internal_name: 'carbon'}}}
-      investSettings={null}
-      recentSessions={[]}
-      updateRecentSessions={() => {}}
-      saveSettings={() => {}}
-    />);
+  const { getByText, getByLabelText, utils } = renderInvestJob()
+
   const carbon = getByText('Carbon');
   fireEvent.click(carbon);  // Choosing a model from the list
   await wait(() => {
@@ -63,14 +77,7 @@ test('Clicking an invest button renders SetupTab', async () => {
 test('Clicking a recent session renders SetupTab', async () => {
   fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
 
-  const { getByText, debug } = render(
-    <InvestJob 
-      investList={{}}
-      investSettings={null}
-      recentSessions={MOCK_RECENT_SESSIONS_VALUE}
-      updateRecentSessions={() => {}}
-      saveSettings={() => {}}
-    />);
+  const { getByText, getByLabelText, utils } = renderInvestJob()
 
   const recent = getByText('carbon_setup');
   fireEvent.click(recent);  // a recent session button
@@ -101,14 +108,8 @@ test('LoadParameters: Dialog callback renders SetupTab', async () => {
   getSpec.mockResolvedValue(SAMPLE_SPEC);
   fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
 
-  const { getByText, getByLabelText, debug } = render(
-    <InvestJob 
-      investList={{Carbon: {internal_name: 'carbon'}}}
-      investSettings={null}
-      recentSessions={[]}
-      updateRecentSessions={() => {}}
-      saveSettings={() => {}}
-    />);
+  const { getByText, getByLabelText, utils } = renderInvestJob()
+
   const loadButton = getByText('Load Parameters');
   fireEvent.click(loadButton);
   await wait(() => {
@@ -131,14 +132,8 @@ test('LoadParameters: Dialog callback does nothing when canceled', async () => {
   }
   remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
 
-  const { getByText, getByLabelText, debug } = render(
-    <InvestJob 
-      investList={{Carbon: {internal_name: 'carbon'}}}
-      investSettings={null}
-      recentSessions={[]}
-      updateRecentSessions={() => {}}
-      saveSettings={() => {}}
-    />);
+  const { getByText, getByLabelText, utils } = renderInvestJob()
+
   const loadButton = getByText('Load Parameters');
   fireEvent.click(loadButton);
   await wait(() => {
@@ -155,14 +150,7 @@ test('LoadParameters: Dialog callback does nothing when canceled', async () => {
 test('SaveParameters/Python enable after model select ', async () => {
   getSpec.mockResolvedValue(SAMPLE_SPEC);
   fetchValidation.mockResolvedValue([]);
-  const { getByText, debug } = render(
-    <InvestJob 
-      investList={{}}
-      investSettings={null}
-      recentSessions={MOCK_RECENT_SESSIONS_VALUE}
-      updateRecentSessions={() => {}}
-      saveSettings={() => {}}
-    />);
+  const { getByText, getByLabelText, utils } = renderInvestJob()
 
   // Check the dropdown before any model setup
   fireEvent.click(getByText('Save'));
@@ -179,7 +167,7 @@ test('SaveParameters/Python enable after model select ', async () => {
   });
 })
 
-test('SaveParametersButton produces a datastack.py compliant json ', async () => {
+test.only('SaveParametersButton produces a datastack.py compliant json ', async () => {
   const tmpdir = fs.mkdtempSync('tests/data/');
   const datastackPath = path.join(tmpdir, 'foo.json')
   const mockDialogData = {
@@ -188,18 +176,11 @@ test('SaveParametersButton produces a datastack.py compliant json ', async () =>
   remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData)
   fetchValidation.mockResolvedValue([]);
 
-  const { getByText, findByText, debug } = render(
-    <InvestJob 
-      investList={{}}
-      investSettings={{nWorkers: '-1'}}
-      recentSessions={MOCK_RECENT_SESSIONS_VALUE}
-      updateRecentSessions={() => {}}
-      saveSettings={() => {}}
-    />);
+  const { getByText, getByLabelText, utils } = renderInvestJob()
 
   fireEvent.click(getByText('carbon_setup'));
   fireEvent.click(getByText('Save')); // click the dropdown to mount the next button
-  const saveButton = await findByText('Save parameters to JSON')
+  const saveButton = await utils.findByText('Save parameters to JSON')
   fireEvent.click(saveButton);
 
   await wait(() => {
@@ -223,18 +204,11 @@ test('SavePythonButton produces a python script ', async () => {
   remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData)
   fetchValidation.mockResolvedValue([]);
 
-  const { getByText, findByText, debug } = render(
-    <InvestJob 
-      investList={{}}
-      investSettings={{nWorkers: '-1'}}
-      recentSessions={MOCK_RECENT_SESSIONS_VALUE}
-      updateRecentSessions={() => {}}
-      saveSettings={() => {}}
-    />);
+  const { getByText, getByLabelText, utils } = renderInvestJob()
 
   fireEvent.click(getByText('carbon_setup'));
   fireEvent.click(getByText('Save')); // click the dropdown to mount the next button
-  const saveButton = await findByText('Save to Python script')
+  const saveButton = await utils.findByText('Save to Python script')
   fireEvent.click(saveButton);
 
   await wait(() => {
@@ -258,18 +232,11 @@ test('SaveParametersButton: Dialog callback does nothing when canceled', async (
   // will silently turn this spy into a function that returns nothing.
   const spy = jest.spyOn(InvestJob.prototype, 'argsToJsonFile')
 
-  const { getByText, findByText, debug } = render(
-    <InvestJob 
-      investList={{Carbon: {internal_name: 'carbon'}}}
-      investSettings={null}
-      recentSessions={[]}
-      updateRecentSessions={() => {}}
-      saveSettings={() => {}}
-    />);
+  const { getByText, getByLabelText, utils } = renderInvestJob()
   
   fireEvent.click(getByText('Carbon'));
   fireEvent.click(getByText('Save')); // click the dropdown to mount the next button
-  const saveButton = await findByText('Save parameters to JSON')
+  const saveButton = await utils.findByText('Save parameters to JSON')
   fireEvent.click(saveButton);
 
   // These are the calls that would have triggered if a file was selected
@@ -291,18 +258,11 @@ test('SavePythonButton: Dialog callback does nothing when canceled', async () =>
   // will silently turn this spy into a function that returns nothing.
   const spy = jest.spyOn(InvestJob.prototype, 'savePythonScript')
 
-  const { getByText, findByText, debug } = render(
-    <InvestJob 
-      investList={{Carbon: {internal_name: 'carbon'}}}
-      investSettings={null}
-      recentSessions={[]}
-      updateRecentSessions={() => {}}
-      saveSettings={() => {}}
-    />);
+  const { getByText, getByLabelText, utils } = renderInvestJob()
   
   fireEvent.click(getByText('Carbon'));
   fireEvent.click(getByText('Save')); // click the dropdown to mount the next button
-  const saveButton = await findByText('Save to Python script')
+  const saveButton = await utils.findByText('Save to Python script')
   fireEvent.click(saveButton);
 
   // These are the calls that would have triggered if a file was selected
