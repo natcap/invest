@@ -42,7 +42,7 @@ jobs:
             matrix:
                 python-version: [3.6, 3.7]
                 python-architecture: [x86, x64]
-                os: [windows-latest]
+                os: [windows-latest, macos-latest]
 
         steps:
             - uses: actions/checkout@v2
@@ -73,7 +73,8 @@ jobs:
                 python-version: ${{ matrix.python-version }}
                 architecture: ${{ matrix.python-architecture }}
 
-            - name: Install dependencies
+            - name: Install dependencies Windows
+              if: matrix.os == 'windows-latest'
               env:
                   PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
                   PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
@@ -83,8 +84,13 @@ jobs:
                   python -m pip install -r requirements.txt -r requirements-dev.txt
                   python setup.py install
 
+            - name: Install dependencies MacOS
+              if: matrix.os != 'windows-latest'
+              run: make env
+
             - name: Run model tests
               run: make test
+
 
     validate-sampledata:
         name: "Validate sample datastacks"
