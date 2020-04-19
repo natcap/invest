@@ -87,6 +87,7 @@ jobs:
                   python -m pip install --upgrade pip nose setuptools
                   python -m pip install -r requirements.txt -r requirements-dev.txt
                   python setup.py install
+                  make test
 
             - name: Set up MacOS python
               if: matrix.os != 'windows-latest'
@@ -108,9 +109,10 @@ jobs:
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
                   python setup.py install
+                  make test
 
-            - name: Run model tests
-              run: make test
+            # - name: Run model tests
+            #   run: make test
 
 
     validate-sampledata:
