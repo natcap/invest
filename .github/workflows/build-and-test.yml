@@ -90,14 +90,14 @@ jobs:
             - name: Install dependencies MacOS
               if: matrix.os != 'windows-latest'
               uses: goanpeca/setup-miniconda@v1.1.2
-                  with:
-                      update-conda: false
-                      activate-environment: pyenv
-                      auto-update-conda: true 
-                      python-version: ${{ matrix.python-version }}
-                      python-version: ${{ matrix.python-version }}
-                      conda-channels: defaults
-                      channels: conda-forge, anaconda
+              with:
+                  update-conda: false
+                  activate-environment: pyenv
+                  auto-update-conda: true 
+                  python-version: ${{ matrix.python-version }}
+                  python-version: ${{ matrix.python-version }}
+                  conda-channels: defaults
+                  channels: conda-forge, anaconda
               shell: bash -l {0}
               run: |
                   conda upgrade -y pip setuptools
