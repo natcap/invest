@@ -96,7 +96,6 @@ jobs:
                   activate-environment: pyenv
                   auto-update-conda: true 
                   python-version: ${{ matrix.python-version }}
-                  python-version: ${{ matrix.python-version }}
                   conda-channels: defaults
                   channels: conda-forge, anaconda
             
