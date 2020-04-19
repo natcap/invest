@@ -43,6 +43,9 @@ jobs:
                 python-version: [3.6, 3.7]
                 python-architecture: [x86, x64]
                 os: [windows-latest, macos-latest]
+                exclude:
+                    - os: macos-latest
+                      python-arch: x86
 
         steps:
             - uses: actions/checkout@v2
@@ -86,7 +89,20 @@ jobs:
 
             - name: Install dependencies MacOS
               if: matrix.os != 'windows-latest'
-              run: make env
+              uses: goanpeca/setup-miniconda@v1.1.2
+                  with:
+                      update-conda: false
+                      activate-environment: pyenv
+                      auto-update-conda: true 
+                      python-version: ${{ matrix.python-version }}
+                      python-version: ${{ matrix.python-version }}
+                      conda-channels: defaults
+                      channels: conda-forge, anaconda
+              shell: bash -l {0}
+              run: |
+                  conda upgrade -y pip setuptools
+                  conda install Cython requests
+                  make env
 
             - name: Run model tests
               run: make test
