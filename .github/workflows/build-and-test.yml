@@ -104,8 +104,10 @@ jobs:
               shell: bash -l {0}
               run: |
                   conda upgrade -y pip setuptools
-                  conda install Cython requests
-                  make env
+                  conda install Cython requests numpy
+                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
+                  python setup.py install
 
             - name: Run model tests
               run: make test
