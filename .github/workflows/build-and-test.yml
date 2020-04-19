@@ -45,7 +45,7 @@ jobs:
                 os: [windows-latest, macos-latest]
                 exclude:
                     - os: macos-latest
-                      python-arch: x86
+                      python-architecture: x86
 
         steps:
             - uses: actions/checkout@v2
