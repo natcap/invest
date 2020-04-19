@@ -93,7 +93,7 @@ jobs:
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   update-conda: false
-                  activate-environment: pyenv
+                  activate-environment: env
                   auto-update-conda: true 
                   python-version: ${{ matrix.python-version }}
                   conda-channels: defaults
