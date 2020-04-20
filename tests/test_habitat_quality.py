@@ -862,7 +862,7 @@ class HabitatQualityTests(unittest.TestCase):
             actual_message, actual_message)
         # 2, 3 are the missing landcover codes.
         # Raster nodata is 255 and should NOT appear in this list.
-        self.assertTrue(': 2, 3.' in actual_message, actual_message)
+        self.assertTrue('{2, 3}' in actual_message, actual_message)
 
     def test_habitat_quality_validate(self):
         """Habitat Quality: validate raise exception as expected."""

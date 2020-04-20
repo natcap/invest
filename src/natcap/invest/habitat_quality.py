@@ -425,8 +425,8 @@ def execute(args):
         raise ValueError(
             'The following land cover codes were found in your landcover '
             'rasters but not in your sensitivity table. Check your '
-            'sensitivity table to see if they are missing: %s. \n\n', 
-            ', '.join([str(x) for x in sorted(missing_lucodes)]))
+            'sensitivity table to see if they are missing: '
+            f'{missing_lucodes}.')
     
     LOGGER.info('Aligning and resizing land cover and threat rasters')
     lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_cur_path'])
@@ -779,7 +779,7 @@ def _calculate_total_degradation(
         None
     """
     def total_degradation(*raster):
-        """Computes the totale degradation value.
+        """Computes the total degradation value.
 
         Args:
             *rasters (list): a list of numpy arrays of float type depicting
@@ -868,18 +868,13 @@ def _compute_rarity_operation(
             (base == base_nodata) | (cover_x == lulc_nodata),
             base_nodata, cover_x)
 
-    LOGGER.info('Starting masking %s land cover to base land cover.',
-                os.path.basename(lulc_path_band[0]))
-
     pygeoprocessing.raster_calculator(
         [base_lulc_path_band, lulc_path_band], trim_op, new_cover_path[0],
         gdal.GDT_Float32, _OUT_NODATA)
 
-    LOGGER.info('Finished masking %s land cover to base land cover.',
-                os.path.basename(lulc_path_band[0]))
-
-    LOGGER.info('Starting rarity computation on %s land cover.',
-                os.path.basename(lulc_path_band[0]))
+    LOGGER.info(
+        'Starting rarity computation on %s land cover.', 
+        os.path.basename(lulc_path_band[0]))
 
     lulc_code_count_x = _raster_pixel_count(new_cover_path)
 
@@ -903,8 +898,9 @@ def _compute_rarity_operation(
         new_cover_path, code_index, rarity_path, gdal.GDT_Float32,
         _RARITY_NODATA)
 
-    LOGGER.info('Finished rarity computation on %s land cover.',
-                os.path.basename(lulc_path_band[0]))
+    LOGGER.info(
+        'Finished rarity computation on %s land cover.',
+        os.path.basename(lulc_path_band[0]))
 
 
 def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
@@ -941,11 +937,11 @@ def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
         decay_func = utils.exponential_decay_kernel_raster
     else:
         raise ValueError(
-            "Unknown type of decay in biophysical table, should be "
-            "either 'linear' or 'exponential'. Input was %s for threat"
-            " %s." %
-            (decay_type,
-             os.path.splitext(os.path.basename(raster_path_band[0]))[0]))
+            "Unknown type of decay in biophysical table, should be"
+            f" either 'linear' or 'exponential'. Input was {decay_type}"
+            " for threat"
+            f" os.path.splitext(os.path.basename(raster_path_band[0]))[0]))"
+            )
 
     decay_func(max_dist_pixel, kernel_path)
 
