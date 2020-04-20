@@ -21,7 +21,9 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "habitat_quality.html",
     "args_with_spatial_overlap": {
-        "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_bas_path"],
+        "spatial_keys": [
+            "lulc_cur_path", "lulc_fut_path", "lulc_bas_path", 
+            "access_vector_path"],
     },
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
@@ -202,7 +204,7 @@ def execute(args):
     """Habitat Quality.
 
     This model calculates habitat degradation and quality for the current LULC
-    as described in the InVEST user's guide. Optionally execute calculates
+    as described in the InVEST user's guide. Optionally ``execute`` calculates
     habitat degradation and quality for a future LULC and habitat rarity for
     current and future LULC.
 
@@ -220,7 +222,8 @@ def execute(args):
             containing data of all the considered threats. Each row is a
             degradation source and each column a different attribute of the
             source with the following names:
-            'THREAT','MAX_DIST','WEIGHT', 'BASE_PATH', 'CUR_PATH', 'FUT_PATH'
+            'THREAT','MAX_DIST','WEIGHT', 'DECAY', 'BASE_PATH', 'CUR_PATH', 
+            'FUT_PATH'
             (required).
         args['access_vector_path'] (string): a path to an input polygon
             shapefile containing data on the relative protection against
@@ -240,10 +243,11 @@ def execute(args):
     Returns:
         None
     """
+    LOGGER.info("Starting execute of Habitat Quality model.")
     # Append a _ to the suffix if it's not empty and doesn't already have one
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
-    # Check to see if each of the workspace folders exists.  If not, create the
+    # Check to see if each of the workspace folders exists. If not, create the
     # folder in the filesystem.
     LOGGER.info("Creating workspace")
     output_dir = args['workspace_dir']
@@ -280,7 +284,7 @@ def execute(args):
         h for h in required_threat_header_list if h not in threat_header_list]
     if missing_threat_header_list:
         raise ValueError(
-            'Column(s) %s are missing in the threat table' %
+            'Column(s) %s are missing in the threat table', 
             (', '.join(missing_threat_header_list)))
 
     # check that the required headers exist in the sensitivity table.
@@ -309,14 +313,15 @@ def execute(args):
 
     # Get the directory path for the Threats CSV, used for locating threat
     # rasters, which are relative to this path
-    threat_csv_basepath = os.path.dirname(args['threats_table_path'])
+    threat_csv_dirpath = os.path.dirname(args['threats_table_path'])
 
     # get the half saturation constant
     try:
         half_saturation_constant = float(args['half_saturation_constant'])
     except ValueError:
-        raise ValueError("Half-saturation constant is not a numeric number."
-                         f"It is: {args['half_saturation_constant']}")
+        raise ValueError(
+            "Half-saturation constant is not a numeric number."
+            f"It is: {args['half_saturation_constant']}")
 
     # Dictionary for reclassing habitat values
     sensitivity_reclassify_habitat_dict = {
@@ -332,12 +337,13 @@ def execute(args):
     # lists for the unique lucode tasks
     unique_lucode_task_list = []
     unique_lucode_pickle_path_list = []
-    LOGGER.info("Find threat rasters and collect unique LULC codes")
+    LOGGER.info("Validate threat rasters and collect unique LULC codes")
     # compile all the threat rasters associated with the land cover
     for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
                                 ('_f', 'lulc_fut_path'),
                                 ('_b', 'lulc_bas_path')):
         if lulc_args in args:
+            LOGGER.debug(f"Checking unique codes for {lulc_args}")
             lulc_path = args[lulc_args]
             lulc_path_dict[lulc_key] = lulc_path
             # save land cover paths in a list for alignment and resize
@@ -361,9 +367,10 @@ def execute(args):
             # for each threat given in the CSV file try opening the associated
             # raster which should be found relative to the Threat CSV
             for threat in threat_dict:
+                LOGGER.debug(f"Validating path for threat: {threat}")
                 # Threat path from threat CSV is relative to CSV
                 threat_path = os.path.join(
-                    threat_csv_basepath,
+                    threat_csv_dirpath,
                     threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
 
                 # check gis type of threat path and catch thrown ValueError 
@@ -400,15 +407,27 @@ def execute(args):
                             'duplicate.')
 
     LOGGER.info("Checking LULC codes against Sensitivity table")
-    compare_lucodes_sens_task = task_graph.add_task(
-        _assert_codes_match,
-        args=(sensitivity_dict, unique_lucode_pickle_path_list),
-        dependent_task_list=[*unique_lucode_task_list],
-        task_name='lucode_sens_comparison')
+    # Assert sensitivity keys and unique lulc codes are equal sets.
+    raster_unique_lucodes = set()
+    for lucode_path, lucode_task in zip(
+        unique_lucode_pickle_path_list, unique_lucode_task_list):
+        # ensure the task for writing the pickle file has been completed
+        _ = lucode_task.get()
+        with open(lucode_path, 'rb') as fh:
+            lucode_dict = pickle.load(fh)
+        raster_unique_lucodes.update(lucode_dict['codes'])
 
-    # don't continue if the compare_lucodes_sens_task throws error
-    compare_lucodes_sens_task.join()
-
+    # check if there's any lucode from the LULC rasters missing in the
+    # sensitivity table
+    table_unique_lucodes = set(sensitivity_dict.keys())
+    missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
+    if missing_lucodes:
+        raise ValueError(
+            'The following land cover codes were found in your landcover '
+            'rasters but not in your sensitivity table. Check your '
+            'sensitivity table to see if they are missing: %s. \n\n' %
+            ', '.join([str(x) for x in sorted(missing_lucodes)]))
+    
     LOGGER.info('Starting to align and resize land cover and threat rasters')
     lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_cur_path'])
     # ensure that the pixel size used is square
@@ -945,44 +964,6 @@ def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
     decay_func(max_dist_pixel, kernel_path)
 
 
-def _assert_codes_match(input_dict, unique_codes_pickle_list):
-    """Assert dictionary keys and unique numbers are equal sets.
-
-    Compare the aggregate set of numbers stored in pickled dictionaries 
-    with the keys ``input_dict`` and assert they are equal.
-
-    Args:
-        input_dict (dict): dictionary with numbered keys to match against
-            those found in ``unique_codes_pickle_list``.
-        unique_codes_pickle_list (list): list of paths to pickled dictionaries.
-            The pickled dictionary structure should be set up 
-            with key : 'codes' and value : number 
-
-    Returns:
-        None
-
-    Raises:
-        ValueError: if the set difference of input dictionary keys and
-            aggregate of codes from pickled lists is not None.
-    """
-    raster_unique_lucodes = set()
-    for lucode_path in unique_codes_pickle_list:
-        with open(lucode_path, 'rb') as fh:
-            lucode_dict = pickle.load(fh)
-        raster_unique_lucodes.update(lucode_dict['codes'])
-
-    # check if there's any lucode from the LULC rasters missing in the
-    # sensitivity table
-    table_unique_lucodes = set(input_dict.keys())
-    missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
-    if missing_lucodes:
-        raise ValueError(
-            'The following land cover codes were found in your landcover '
-            'rasters but not in your sensitivity table. Check your '
-            'sensitivity table to see if they are missing: %s. \n\n' %
-            ', '.join([str(x) for x in sorted(missing_lucodes)]))
-
-
 def _collect_unique_lucodes(raster_path_band, pickle_path):
     """Get unique pixel values from raster and pickle as a Python set.
 
@@ -1177,7 +1158,7 @@ def validate(args, limit_to=None):
 
         # Get the directory path for the Threats CSV, used for locating threat
         # rasters, which are relative to this path
-        threat_csv_basepath = os.path.dirname(args['threats_table_path'])
+        threat_csv_dirpath = os.path.dirname(args['threats_table_path'])
 
         # Validate threat raster paths and their nodata values
         bad_threat_paths = []
@@ -1193,7 +1174,7 @@ def validate(args, limit_to=None):
                 for threat in threat_dict:
                     # Threat path from threat CSV is relative to CSV
                     threat_path = os.path.join(
-                        threat_csv_basepath,
+                        threat_csv_dirpath,
                         threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
 
                     # check gis type of threat path and catch thrown ValueError 
