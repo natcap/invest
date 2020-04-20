@@ -22,7 +22,7 @@ ARGS_SPEC = {
     "userguide_html": "habitat_quality.html",
     "args_with_spatial_overlap": {
         "spatial_keys": [
-            "lulc_cur_path", "lulc_fut_path", "lulc_bas_path", 
+            "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",
             "access_vector_path"],
     },
     "args": {
@@ -222,7 +222,7 @@ def execute(args):
             containing data of all the considered threats. Each row is a
             degradation source and each column a different attribute of the
             source with the following names:
-            'THREAT','MAX_DIST','WEIGHT', 'DECAY', 'BASE_PATH', 'CUR_PATH', 
+            'THREAT','MAX_DIST','WEIGHT', 'DECAY', 'BASE_PATH', 'CUR_PATH',
             'FUT_PATH'
             (required).
         args['access_vector_path'] (string): a path to an input polygon
@@ -284,7 +284,7 @@ def execute(args):
         h for h in required_threat_header_list if h not in threat_header_list]
     if missing_threat_header_list:
         raise ValueError(
-            'Column(s) %s are missing in the threat table', 
+            'Column(s) %s are missing in the threat table',
             (', '.join(missing_threat_header_list)))
 
     # check that the required headers exist in the sensitivity table.
@@ -373,7 +373,7 @@ def execute(args):
                     threat_csv_dirpath,
                     threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
 
-                # check gis type of threat path and catch thrown ValueError 
+                # check gis type of threat path and catch thrown ValueError
                 # from get_gis_type if path does not exist
                 try:
                     threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
@@ -391,7 +391,7 @@ def execute(args):
                             'relative to the threat CSV table.')
                     else:
                         threat_path = None
-            
+
                 threat_path_dict['threat' + lulc_key][threat] = threat_path
                 # save threat paths in a list for alignment and resize
                 if threat_path:
@@ -409,8 +409,8 @@ def execute(args):
     LOGGER.info("Checking LULC codes against Sensitivity table")
     # Assert sensitivity keys and unique lulc codes are equal sets.
     raster_unique_lucodes = set()
-    for lucode_path, lucode_task in zip(
-        unique_lucode_pickle_path_list, unique_lucode_task_list):
+    for lucode_path, lucode_task in zip(unique_lucode_pickle_path_list,
+                                        unique_lucode_task_list):
         # ensure the task for writing the pickle file has been completed
         _ = lucode_task.get()
         with open(lucode_path, 'rb') as fh:
@@ -427,7 +427,7 @@ def execute(args):
             'rasters but not in your sensitivity table. Check your '
             'sensitivity table to see if they are missing: '
             f'{missing_lucodes}.')
-    
+
     LOGGER.info('Aligning and resizing land cover and threat rasters')
     lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_cur_path'])
     # ensure that the pixel size used is square
@@ -620,7 +620,8 @@ def execute(args):
                     'mask_nodata': False
                     },
                 target_path_list=[filtered_threat_raster_path],
-                dependent_task_list=[*bound_threat_values_tasks, create_kernel_task],
+                dependent_task_list=[
+                    *bound_threat_values_tasks, create_kernel_task],
                 task_name=f'convolve_{decay_type}{lulc_key}_{threat}')
             threat_convolve_task_list.append(convolve_task)
 
@@ -873,7 +874,7 @@ def _compute_rarity_operation(
         gdal.GDT_Float32, _OUT_NODATA)
 
     LOGGER.info(
-        'Starting rarity computation on %s land cover.', 
+        'Starting rarity computation on %s land cover.',
         os.path.basename(lulc_path_band[0]))
 
     lulc_code_count_x = _raster_pixel_count(new_cover_path)
@@ -917,11 +918,11 @@ def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
     Returns:
         None
     """
-    # need the pixel size for the raster so we can create an appropriate 
+    # need the pixel size for the raster so we can create an appropriate
     # kernel for convolution
     threat_pixel_size = pygeoprocessing.get_raster_info(
         raster_path_band[0])['pixel_size']
-    
+
     # convert max distance (given in KM) to meters
     max_dist_m = max_dist * 1000.0
 
@@ -930,7 +931,7 @@ def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
     max_dist_pixel = max_dist_m / abs(threat_pixel_size[0])
     LOGGER.debug('Max distance in pixels: %f', max_dist_pixel)
 
-    # blur the raster based on the decay type 
+    # blur the raster based on the decay type
     if decay_type == 'linear':
         decay_func = _make_linear_decay_kernel_path
     elif decay_type == 'exponential':
@@ -1051,7 +1052,7 @@ def _bound_raster_values(aligned_threat_path, output_raster_path):
     """Bound raster values between 0 and 1.
 
     Iterate though the threat raster and update pixel values as needed so that
-    values below zero are set to 0 and values above 1 are set to 1. 
+    values below zero are set to 0 and values above 1 are set to 1.
 
     Args:
         aligned_threat_path (tuple): a 2 tuple for a GDAL raster path with
@@ -1159,22 +1160,25 @@ def validate(args, limit_to=None):
                         threat_csv_dirpath,
                         threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
 
-                    # check gis type of threat path and catch thrown ValueError 
+                    # check gis type of threat path and catch thrown ValueError
                     # from get_gis_type if path does not exist
                     try:
-                        threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
-                        # if threat path not of type RASTER then raise value error
+                        threat_gis_type = pygeoprocessing.get_gis_type(
+                            threat_path)
+                        # if threat path not of type RASTER then raise
+                        # valueerror
                         if threat_gis_type != pygeoprocessing.RASTER_TYPE:
                             raise ValueError
                     except ValueError:
-                        # it's okay to have no threat raster for baseline scenario
+                        # it's okay to have no threat raster for baseline
+                        # scenario
                         if lulc_key != '_b':
                             bad_threat_paths.append(
                                     (threat, _THREAT_SCENARIO_MAP[lulc_key]))
                             continue
                         else:
                             threat_path = None
-                    
+
                     if threat_path:
                         # check for duplicate absolute threat path names that
                         # cause errors when trying to write aligned versions
