@@ -14,6 +14,13 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'aquaculture')
 
+EXPECTED_FILE_LIST = [
+    'output/Finfish_Harvest.dbf',
+    'output/Finfish_Harvest.prj',
+    'output/Finfish_Harvest.shp',
+    'output/Finfish_Harvest.shx',
+    'output/Harvest_Results.html']
+
 
 def _make_harvest_shp(workspace_dir):
     """Within workspace, make an output folder with dummy Finfish_Harvest.shp.
@@ -74,10 +81,8 @@ class FinfishTests(unittest.TestCase):
         _make_harvest_shp(self.workspace_dir)  # to test if it's recreated
 
         natcap.invest.finfish_aquaculture.finfish_aquaculture.execute(args)
-
         FinfishTests._test_same_files(
-            os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
-            args['workspace_dir'])
+            EXPECTED_FILE_LIST, args['workspace_dir'])
         pygeoprocessing.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest.shp'),
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'), 1E-6)
@@ -93,20 +98,18 @@ class FinfishTests(unittest.TestCase):
         natcap.invest.finfish_aquaculture.finfish_aquaculture.execute(args)
 
         FinfishTests._test_same_files(
-            os.path.join(
-                REGRESSION_DATA, 'expected_file_list_no_valuation.txt'),
-            args['workspace_dir'])
+            EXPECTED_FILE_LIST, args['workspace_dir'])
         pygeoprocessing.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest_no_valuation.shp'),
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'), 1E-6)
 
     @staticmethod
-    def _test_same_files(base_list_path, directory_path):
-        """Assert files in `base_list_path` are in `directory_path`.
+    def _test_same_files(base_path_list, directory_path):
+        """Assert files in `base_path_list` are in `directory_path`.
 
         Parameters:
-            base_list_path (string): a path to a file that has one relative
-                file path per line.
+            base_path_list (list): list of strings which are relative
+                file paths.
             directory_path (string): a path to a directory whose contents will
                 be checked against the files listed in `base_list_file`
 
@@ -118,19 +121,18 @@ class FinfishTests(unittest.TestCase):
                 that don't exist in the directory indicated by `path`
         """
         missing_files = []
-        with open(base_list_path, 'r') as file_list:
-            for file_path in file_list:
-                full_path = os.path.join(
-                    directory_path,
-                    file_path.rstrip().replace('\\', os.path.sep))
-                if full_path == '':
-                    continue
-                if not os.path.isfile(full_path):
-                    missing_files.append(full_path)
+        for file_path in base_path_list:
+            full_path = os.path.join(
+                directory_path,
+                file_path.rstrip().replace('//', os.path.sep))
+            if full_path == '':
+                continue
+            if not os.path.isfile(full_path):
+                missing_files.append(full_path)
         if len(missing_files) > 0:
             raise AssertionError(
                 "The following files were expected but not found: " +
-                '\n'.join(missing_files))
+                '/n'.join(missing_files))
 
 
 class FinfishValidationTests(unittest.TestCase):
