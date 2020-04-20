@@ -425,10 +425,10 @@ def execute(args):
         raise ValueError(
             'The following land cover codes were found in your landcover '
             'rasters but not in your sensitivity table. Check your '
-            'sensitivity table to see if they are missing: %s. \n\n' %
+            'sensitivity table to see if they are missing: %s. \n\n', 
             ', '.join([str(x) for x in sorted(missing_lucodes)]))
     
-    LOGGER.info('Starting to align and resize land cover and threat rasters')
+    LOGGER.info('Aligning and resizing land cover and threat rasters')
     lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_cur_path'])
     # ensure that the pixel size used is square
     lulc_pixel_size = lulc_raster_info['pixel_size']
@@ -454,7 +454,7 @@ def execute(args):
                     os.path.basename(path).replace(
                         ext, f'_aligned{file_suffix}.tif')))
 
-    LOGGER.debug(f"aligned raster list: {aligned_raster_list}")
+    LOGGER.debug(f"Raster paths for aligning: {aligned_raster_list}")
     # Align and resize all the land cover and threat rasters,
     # and store them in the intermediate folder
     align_task = task_graph.add_task(
@@ -466,9 +466,8 @@ def execute(args):
         target_path_list=aligned_raster_list,
         task_name='align_input_rasters')
 
-    LOGGER.info('Finished aligning and resizing land cover and threat rasters')
     # list of tracking updated threat pixel rasters
-    updated_threat_tasks = []
+    bound_threat_values_tasks = []
     LOGGER.debug("Updating dict raster paths to reflect aligned paths")
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
     for lulc_key, lulc_path in lulc_path_dict.items():
@@ -484,27 +483,26 @@ def execute(args):
                     os.path.basename(threat_path).replace(
                         os.path.splitext(threat_path)[1],
                         f'_aligned{file_suffix}.tif'))
-                aligned_updated_threat_path = os.path.join(
+                aligned_bound_threat_path = os.path.join(
                     intermediate_output_dir,
                     os.path.basename(aligned_threat_path).replace(
                         f'aligned{file_suffix}',
-                        f'aligned_updated_{file_suffix}'))
+                        f'aligned_bound{file_suffix}'))
                 # Use these updated threat raster paths in future calculations
                 threat_path_dict['threat' + lulc_key][threat] = (
-                    aligned_updated_threat_path)
+                    aligned_bound_threat_path)
 
                 # Bound threat raster values to 0 <= x <= 1
                 bound_threat_values_task = task_graph.add_task(
                     _bound_raster_values,
                     args=(
-                        (aligned_threat_path, 1), aligned_updated_threat_path),
-                    target_path_list=[aligned_updated_threat_path],
+                        (aligned_threat_path, 1), aligned_bound_threat_path),
+                    target_path_list=[aligned_bound_threat_path],
                     dependent_task_list=[align_task],
-                    task_name=f'update_threat{lulc_key}_{threat}')
-                updated_threat_tasks.append(bound_threat_values_task)
+                    task_name=f'bound_threat{lulc_key}_{threat}')
+                bound_threat_values_tasks.append(bound_threat_values_task)
 
     LOGGER.info('Starting habitat_quality biophysical calculations')
-
     # Rasterize access vector, if value is null set to 1 (fully accessible),
     # else set to the value according to the ACCESS attribute
     cur_lulc_path = lulc_path_dict['_c']
@@ -527,6 +525,7 @@ def execute(args):
     access_task_list = [create_access_raster_task]
 
     if 'access_vector_path' in args:
+        LOGGER.debug("Rasterize Access vector")
         rasterize_access_task = task_graph.add_task(
             pygeoprocessing.rasterize,
             args=(args['access_vector_path'], access_raster_path),
@@ -545,13 +544,10 @@ def execute(args):
         # Sum weight of threats
         weight_sum = weight_sum + threat_data['WEIGHT']
 
-    LOGGER.debug('lulc_path_dict : %s', lulc_path_dict)
-
     # for each land cover raster provided compute habitat quality
     for lulc_key, lulc_path in lulc_path_dict.items():
-        LOGGER.info('Calculating habitat quality for landuse: %s', lulc_path)
+        LOGGER.info(f'Calculating habitat quality for landuse: {lulc_path}')
 
-        habitat_raster_task_list = []
         threat_convolve_task_list = []
         sensitivity_task_list = []
 
@@ -569,7 +565,6 @@ def execute(args):
                 },
             dependent_task_list=[align_task],
             task_name=f'habitat_raster{lulc_key}')
-        habitat_raster_task_list.append(habitat_raster_task)
 
         # initialize a list that will store all the threat/threat rasters
         # after they have been adjusted for distance, weight, and access
@@ -584,12 +579,11 @@ def execute(args):
 
         # adjust each threat/threat raster for distance, weight, and access
         for threat, threat_data in threat_dict.items():
-            LOGGER.debug('Calculating threat: %s.\nThreat data: %s' %
-                         (threat, threat_data))
+            LOGGER.debug(
+                f'Calculating threat: {threat}.\nThreat data: {threat_data}')
 
             # get the threat raster for the specific threat
             threat_raster_path = threat_path_dict['threat' + lulc_key][threat]
-            LOGGER.debug('threat_raster_path %s', threat_raster_path)
             # if threat path is None then must be in Base scenario where
             # threats are not required.
             if threat_raster_path is None:
@@ -601,17 +595,16 @@ def execute(args):
                 break
 
             kernel_path = os.path.join(
-                kernel_dir,
-                f'kernel_{threat}{lulc_key}{file_suffix}.tif')
+                kernel_dir, f'kernel_{threat}{lulc_key}{file_suffix}.tif')
 
             decay_type = threat_data['DECAY']
 
-            decay_threat_task = task_graph.add_task(
+            create_kernel_task = task_graph.add_task(
                 _create_decay_kernel,
                 args=((threat_raster_path, 1), kernel_path, decay_type,
                       threat_data['MAX_DIST']),
                 target_path_list=[kernel_path],
-                dependent_task_list=[*updated_threat_tasks],
+                dependent_task_list=[*bound_threat_values_tasks],
                 task_name=f'decay_kernel_{decay_type}{lulc_key}_{threat}')
 
             filtered_threat_raster_path = os.path.join(
@@ -627,7 +620,7 @@ def execute(args):
                     'mask_nodata': False
                     },
                 target_path_list=[filtered_threat_raster_path],
-                dependent_task_list=[*updated_threat_tasks, decay_threat_task],
+                dependent_task_list=[*bound_threat_values_tasks, create_kernel_task],
                 task_name=f'convolve_{decay_type}{lulc_key}_{threat}')
             threat_convolve_task_list.append(convolve_task)
 
@@ -667,7 +660,7 @@ def execute(args):
             weight_list = numpy.append(weight_list, weight_avg)
 
         # check to see if we got here because a threat raster was missing
-        # and if so then we want to skip to the next landcover
+        # for baseline lulc, if so then we want to skip to the next landcover
         if exit_landcover:
             continue
 
@@ -679,7 +672,7 @@ def execute(args):
         deg_sum_raster_path = os.path.join(
             output_dir, f'deg_sum{lulc_key}{file_suffix}.tif')
 
-        LOGGER.info('Starting raster calculation on total_degradation')
+        LOGGER.info('Starting raster calculation on total degradation')
 
         total_degradation_task = task_graph.add_task(
             _calculate_total_degradation,
@@ -690,8 +683,6 @@ def execute(args):
                 *access_task_list],
             task_name=f'tot_degradation_{decay_type}{lulc_key}_{threat}')
 
-        LOGGER.info('Finished raster calculation on total_degradation')
-
         # Compute habitat quality
         # ksq: a term used below to compute habitat quality
         ksq = half_saturation_constant**_SCALING_PARAM
@@ -699,7 +690,7 @@ def execute(args):
         quality_path = os.path.join(
             output_dir, f'quality{lulc_key}{file_suffix}.tif')
 
-        LOGGER.info('Starting raster calculation on quality_op')
+        LOGGER.info('Starting raster calculation on quality')
 
         deg_hab_raster_list = [deg_sum_raster_path, habitat_raster_path]
 
@@ -707,11 +698,8 @@ def execute(args):
             _calculate_habitat_quality,
             args=(deg_hab_raster_list, quality_path, ksq),
             target_path_list=[quality_path],
-            dependent_task_list=[
-                *habitat_raster_task_list, total_degradation_task],
+            dependent_task_list=[habitat_raster_task, total_degradation_task],
             task_name=f'habitat_quality')
-
-        LOGGER.info('Finished raster calculation on quality_op')
 
     # Compute Rarity if user supplied baseline raster
     if '_b' not in lulc_path_dict:
@@ -739,8 +727,6 @@ def execute(args):
                       rarity_path),
                 dependent_task_list=[align_task],
                 task_name=f'rarity{lulc_time}')
-
-        LOGGER.info('Finished habitat_quality biophysical calculations')
 
     task_graph.close()
     task_graph.join()
@@ -1154,7 +1140,7 @@ def validate(args, limit_to=None):
                   ' column in the sensitivity table. Sensitivity columns:'
                   f' {sens_header_list}')))
 
-            invalid_keys.add('sensitivity_table_path')
+            invalid_keys.add('snsitivity_table_path')
 
         # Get the directory path for the Threats CSV, used for locating threat
         # rasters, which are relative to this path
