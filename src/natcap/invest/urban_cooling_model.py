@@ -241,7 +241,7 @@ ARGS_SPEC = {
 def execute(args):
     """Urban Cooling Model.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (str): path to target output directory.
         args['results_suffix'] (string): (optional) string to append to any
             output file names
@@ -467,7 +467,8 @@ def execute(args):
                   gdal.GDT_Float32, TARGET_NODATA),
             target_path_list=[cc_raster_path],
             dependent_task_list=[
-                task_path_prop_map['shade'][0], task_path_prop_map['albedo'][0],
+                task_path_prop_map['shade'][0],
+                task_path_prop_map['albedo'][0],
                 eti_task],
             task_name='calculate cc index (weighted factors)')
     else:
@@ -720,7 +721,7 @@ def calculate_uhi_result_vector(
         * average temperature anomaly
         * avoided energy consumption
 
-    Parameters:
+    Args:
         base_aoi_path (str): path to AOI vector.
         t_ref_val (float): reference temperature.
         wbgt_stats_pickle_path (str): path to pickled zonal stats for wbgt.
@@ -894,7 +895,7 @@ def calculate_energy_savings(
     (depending on whether a cost has been provided in the energy consumption
     table).
 
-    Parameters:
+    Args:
         t_air_stats_pickle_path (str): path to t_air zonal stats indexed by
             FID.
         t_ref_raw (float): single value for Tref.
@@ -993,7 +994,8 @@ def calculate_energy_savings(
         # NOTE: if the user has an empty column value but the 'cost' column
         # exists, this will raise an error.
         try:
-            building_cost = float(energy_consumption_table[target_type]['cost'])
+            building_cost = float(
+                energy_consumption_table[target_type]['cost'])
         except KeyError:
             # KeyError when cost column not present.
             building_cost = 1.0
@@ -1016,7 +1018,7 @@ def pickle_zonal_stats(
         base_vector_path, base_raster_path, target_pickle_path):
     """Calculate Zonal Stats for a vector/raster pair and pickle result.
 
-    Parameters:
+    Args:
         base_vector_path (str): path to vector file
         base_raster_path (str): path to raster file to aggregate over.
         target_pickle_path (str): path to desired target pickle file that will
@@ -1038,7 +1040,7 @@ def pickle_zonal_stats(
 def calc_t_air_nomix_op(t_ref_val, hm_array, uhi_max):
     """Calculate air temperature T_(air,i)=T_ref+(1-HM_i)*UHI_max.
 
-    Parameters:
+    Args:
         t_ref_val (float): The user-defined reference air temperature in
             degrees Celsius.
         hm_array (numpy.ndarray): The calculated Heat Mitigation index from
@@ -1062,7 +1064,7 @@ def calc_cc_op_factors(
         cc_weight_albedo, cc_weight_eti):
     """Calculate the cooling capacity index using weighted factors.
 
-    Parameters:
+    Args:
         shade_array (numpy.ndarray): array of shade index values 0..1
         albedo_array (numpy.ndarray): array of albedo index values 0..1
         eti_array (numpy.ndarray): array of evapotransipration index values
@@ -1093,7 +1095,7 @@ def calc_cc_op_factors(
 def calc_cc_op_intensity(intensity_array):
     """Calculate the cooling capacity index using building intensity.
 
-    Parameters:
+    Args:
         intensity_array (numpy.ndarray): array of intensity values.
 
     Returns:
@@ -1124,7 +1126,7 @@ def calculate_wbgt(
         avg_rel_humidity, t_air_raster_path, target_vapor_pressure_path):
     """Raster calculator op to calculate wet bulb globe temperature.
 
-    Parameters:
+    Args:
         avg_rel_humidity (float): number between 0-100.
         t_air_raster_path (string): path to T air raster.
         target_vapor_pressure_path (string): path to target vapor pressure
@@ -1163,7 +1165,7 @@ def flat_disk_kernel(max_distance, kernel_filepath):
 
     The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
 
-    Parameters:
+    Args:
         max_distance (int): The distance (in pixels) of the
             kernel's radius.
         kernel_filepath (string): The path to the file on disk where this
@@ -1270,7 +1272,7 @@ def map_work_loss(
         work_loss_raster_path):
     """Map work loss due to temperature.
 
-    Parameters:
+    Args:
         work_temp_threshold_array (list): list of 3 sorted floats indicating
             the thresholds for 25, 50, and 75% work loss.
         temperature_raster_path (string): path to temperature raster in the
@@ -1319,7 +1321,7 @@ def _invoke_timed_callback(
     This is a convenience function to standardize update callbacks from the
     module.
 
-    Parameters:
+    Args:
         reference_time (float): time to base `callback_period` length from.
         callback_lambda (lambda): function to invoke if difference between
             current time and `reference_time` has exceeded `callback_period`.
@@ -1343,7 +1345,7 @@ def convolve_2d_by_exponential(
         target_convolve_raster_path):
     """Convolve signal by an exponential decay of a given radius.
 
-    Parameters:
+    Args:
         decay_kernel_distance (float): radius of 1/e cutoff of decay kernel
             raster in pixels.
         signal_rater_path (str): path to single band signal raster.
@@ -1372,7 +1374,7 @@ def convolve_2d_by_exponential(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation
