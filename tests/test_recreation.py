@@ -13,6 +13,8 @@ import logging
 import json
 import queue
 
+import psutil
+
 import Pyro4
 import pygeoprocessing
 import pygeoprocessing.testing
@@ -269,6 +271,8 @@ class TestRecServer(unittest.TestCase):
         """Recreation test a client call to simple server."""
         from natcap.invest.recreation import recmodel_server
         from natcap.invest.recreation import recmodel_client
+        print('After Imports')
+        print(psutil.Process().open_files())
 
         empty_point_data_path = os.path.join(
             self.workspace_dir, 'empty_table.csv')
@@ -296,6 +300,8 @@ class TestRecServer(unittest.TestCase):
             target=recmodel_server.execute, args=(server_args,))
         server_thread.daemon = True
         server_thread.start()
+        print('After Thread Start')
+        print(psutil.Process().open_files())
 
         client_args = {
             'aoi_path': os.path.join(
@@ -311,6 +317,8 @@ class TestRecServer(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
         recmodel_client.execute(client_args)
+        print('After Execute')
+        print(psutil.Process().open_files())
 
         # testing for file existence seems reasonable since mostly we are
         # testing that a local server starts and a client connects to it
