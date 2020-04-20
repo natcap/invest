@@ -114,7 +114,7 @@ jobs:
             - name: Run model tests
               run: |
                 echo $PYTHON
-                make test
+                make PYTHON=$PYTHON test
 
 
     validate-sampledata:
