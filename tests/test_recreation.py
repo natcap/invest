@@ -318,6 +318,7 @@ class TestRecServer(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'file_list_empty_local_server.txt'),
             self.workspace_dir)
 
+    @_timeout(30.0)
     def test_local_aggregate_points(self):
         """Recreation test single threaded local AOI aggregate calculation."""
         from natcap.invest.recreation import recmodel_server
