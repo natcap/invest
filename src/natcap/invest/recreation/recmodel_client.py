@@ -10,15 +10,15 @@ import urllib.request
 import tempfile
 import shutil
 
+import shapely
+import shapely.geometry
+import shapely.wkt
+import shapely.prepared
 import rtree
 import Pyro4
 from osgeo import ogr
 from osgeo import gdal
 from osgeo import osr
-import shapely
-import shapely.geometry
-import shapely.wkt
-import shapely.prepared
 import pygeoprocessing
 import numpy
 import numpy.linalg
