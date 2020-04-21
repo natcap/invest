@@ -108,10 +108,12 @@ jobs:
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
                   python setup.py install
+                  which python
 
             - name: Run model tests
               run: |
-                make PYTHON=python test
+                  which python
+                  make PYTHON=python test
 
 
     validate-sampledata:
