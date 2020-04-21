@@ -48,7 +48,8 @@ def wait_on_signal(qt_app, signal, timeout=250):
 
     try:
         yield
-        qt_app.processEvents()
+        if qt_app.hasPendingEvents():
+            qt_app.processEvents()
     except Exception as error:
         LOGGER.exception('Error encountered while witing for signal %s',
                          signal)
@@ -78,6 +79,13 @@ class _QtTest(unittest.TestCase):
 
         if self.qt_app is None:
             self.qt_app = QApplication(sys.argv)
+
+    def tearDown(self):
+        """Clear the QApplication's event queue."""
+        # After each test, empty the event queue.
+        # This should help to make sure that there aren't any event-based race
+        # conditions where a C/C++ object is deleted before a slot is called.
+        self.qt_app.sendPostedEvents()
 
 class _SettingsSandbox(_QtTest):
     def setUp(self):
@@ -1633,19 +1641,23 @@ class FormTest(_QtTest):
         target_mod = _SampleTarget().execute
         try:
             form.run(target=target_mod, kwargs={'args': {'a': 1}})
-            self.qt_app.processEvents()
+            if self.qt_app.hasPendingEvents():
+                self.qt_app.processEvents()
             self.assertTrue(form.run_dialog.isVisible())
             form.run_dialog.close()
-            self.qt_app.processEvents()
+            if self.qt_app.hasPendingEvents():
+                self.qt_app.processEvents()
             self.assertTrue(form.run_dialog.isVisible())
 
             # when the execute function finishes, pressing escape should
             # close the window.
             thread_event.set()
             form._thread.join()
-            self.qt_app.processEvents()
+            if self.qt_app.hasPendingEvents():
+                self.qt_app.processEvents()
             form.run_dialog.close()
-            self.qt_app.processEvents()
+            if self.qt_app.hasPendingEvents():
+                self.qt_app.processEvents()
             self.assertFalse(form.run_dialog.isVisible())
         except Exception as error:
             LOGGER.exception('Something failed')
@@ -1669,7 +1681,8 @@ class FormTest(_QtTest):
         form = FormTest.make_ui()
         form.run(target=target_mod, kwargs={'args': {}})
         form._thread.join()
-        self.qt_app.processEvents()
+        if self.qt_app.hasPendingEvents():
+            self.qt_app.processEvents()
 
         self.assertTrue('encountered' in form.run_dialog.messageArea.text())
 
@@ -1753,9 +1766,9 @@ class ExecutionTest(_QtTest):
 
         executor.start()
         thread_event.set()
-        self.qt_app.processEvents()
         executor.join()
-        self.qt_app.processEvents()
+        if self.qt_app.hasPendingEvents():
+            self.qt_app.processEvents()
         callback.assert_called_once()
         target.assert_called_once()
         target.assert_called_with(*args, **kwargs)
@@ -1788,9 +1801,9 @@ class ExecutionTest(_QtTest):
 
         executor.start()
         thread_event.set()
-        self.qt_app.processEvents()
         executor.join()
-        self.qt_app.processEvents()
+        if self.qt_app.hasPendingEvents():
+            self.qt_app.processEvents()
         callback.assert_called_once()
         target.assert_called_once()
         target.assert_called_with(*args, **kwargs)
@@ -1835,6 +1848,8 @@ class IntegrationTests(_QtTest):
         # When the checkbox is enabled, the container should become enabled,
         # but the container's contained widgets should still be noninteractive
         checkbox.set_value(True)
+        if self.qt_app.hasPendingEvents():
+            self.qt_app.processEvents()
 
         self.assertTrue(container.interactive)
         self.assertFalse(container.expanded)
@@ -1844,6 +1859,8 @@ class IntegrationTests(_QtTest):
         # When the container is expanded, the contained input should become
         # interactive and visible
         container.set_value(True)
+        if self.qt_app.hasPendingEvents():
+            self.qt_app.processEvents()
 
         self.assertTrue(container.interactive)
         self.assertTrue(container.expanded)
@@ -2096,8 +2113,7 @@ class DatastackOptionsDialogTests(_QtTest):
 
         self.assertEqual(return_options, None)
 
-@unittest.skip('These tests are segfaulting. '
-               'See github.com/natcap/invest/issues/72')
+
 class ModelTests(_QtTest):
     def setUp(self):
         _QtTest.setUp(self)
@@ -2419,7 +2435,6 @@ class ModelTests(_QtTest):
             model_ui.close(prompt=False)
             model_ui.destroy()
 
-    @unittest.skip('Not worth debugging segfault')
     def test_execute_with_n_workers(self):
         """UI Model: Check that model runs with n_workers parameter."""
 

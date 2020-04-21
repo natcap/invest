@@ -1772,6 +1772,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         Returns:
             ``None``
         """
+        inputs.QT_APP.processEvents()
         LOGGER.info('Whole-model validation returned: %s',
                     validation_warnings)
         if validation_warnings:
