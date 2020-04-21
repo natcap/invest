@@ -1753,6 +1753,7 @@ class ExecutionTest(_QtTest):
 
         executor.start()
         thread_event.set()
+        self.qt_app.processEvents()
         executor.join()
         callback.assert_called_once()
         target.assert_called_once()
@@ -1786,6 +1787,7 @@ class ExecutionTest(_QtTest):
 
         executor.start()
         thread_event.set()
+        self.qt_app.processEvents()
         executor.join()
         callback.assert_called_once()
         target.assert_called_once()
