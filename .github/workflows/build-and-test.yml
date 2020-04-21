@@ -113,7 +113,7 @@ jobs:
 
             - name: Run model tests
               run: |
-                make PYTHON=$PYTHON test
+                make test
 
 
     validate-sampledata:
