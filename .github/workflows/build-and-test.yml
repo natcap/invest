@@ -83,7 +83,7 @@ jobs:
                   PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
                   PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
                   PIP_PREFER_BINARY: 1
-                  PYTHON: $(where python)
+                  PYTHON: ${{(where python)}}
               run: |
                   python -m pip install --upgrade pip nose setuptools
                   python -m pip install -r requirements.txt -r requirements-dev.txt
@@ -104,7 +104,7 @@ jobs:
               if: matrix.os != 'windows-latest'
               shell: bash -l {0}
               env:
-                  PYTHON: $(which python)
+                  PYTHON: ${{(which python)}}
               run: |
                   conda upgrade -y pip setuptools
                   conda install Cython requests numpy
@@ -114,7 +114,10 @@ jobs:
 
             - name: Run model tests
               run: |
-                make PYTHON=$PYTHON test
+                echo $PYTHON
+                echo "$PYTHON"
+                echo ${{ PYTHON }}
+                make PYTHON="$PYTHON" test
 
 
     validate-sampledata:
