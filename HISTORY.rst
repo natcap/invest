@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixed minor bug in Coastal Vulnerability shore point creation. Also added a
+  check to fail fast when zero shore points are found within the AOI.
 * Fixing an issue with SDR's ``LS`` calculations.  The ``x`` term is now
   the weighted mean of proportional flow from the current pixel into its
   neighbors.  Note that for ease of debugging, this has been implemented as a
