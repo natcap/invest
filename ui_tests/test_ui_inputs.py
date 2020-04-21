@@ -1597,11 +1597,10 @@ class FormTest(_QtTest):
             # close the window by pressing the back button.
             QTest.mouseClick(form.run_dialog.backButton,
                              QtCore.Qt.LeftButton)
-        QtCore.QTimer.singleShot(25, _close_modal_dialog)
+
+        QtCore.QTimer.singleShot(0, _close_modal_dialog)
         self.qt_app.processEvents()
-        time.sleep(.100)  # 100ms
-        self.qt_app.processEvents()
-        open_workspace.assert_called_once()
+        open_workspace.assert_called()
 
     def test_run_prevent_dialog_close_esc(self):
         thread_event = threading.Event()
