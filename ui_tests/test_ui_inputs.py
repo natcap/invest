@@ -2113,7 +2113,8 @@ class DatastackOptionsDialogTests(_QtTest):
 
         self.assertEqual(return_options, None)
 
-
+@unittest.skip('These tests are segfaulting. '
+               'See github.com/natcap/invest/issues/72')
 class ModelTests(_QtTest):
     def setUp(self):
         _QtTest.setUp(self)
