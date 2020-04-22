@@ -174,8 +174,16 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
 
     Returns:
         ``None``"""
-    if os.path.exists(logfile):
-        LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
+    try:
+        if os.path.exists(logfile):
+            LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
+    except SystemError:
+        # This started happening in Windows tests:
+        #  SystemError: <built-in function stat> returned NULL without
+        #  setting an error
+        # Looking at https://bugs.python.org/issue28040#msg276223, this might
+        # be a low-level python error.
+        pass
 
     handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
     formatter = logging.Formatter(log_fmt, date_fmt)
@@ -459,7 +467,7 @@ def build_lookup_from_csv(
     table = pandas.read_csv(
         table_path, sep=None, engine='python', encoding=encoding)
     header_row = list(table)
-    
+
     if to_lower:
         key_field = key_field.lower()
         header_row = [
