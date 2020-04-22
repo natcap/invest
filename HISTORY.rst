@@ -2,8 +2,8 @@
 
 Unreleased Changes
 ------------------
-* The Finfish Aquaculture model know longer generates histograms for
-  uncertainity analysis due to issues with matplotlib that make invest
+* The Finfish Aquaculture model no longer generates histograms for
+  uncertainity analysis due to issues with matplotlib that make InVEST
   unstable. See https://github.com/natcap/invest/issues/87 for more.
 * Fixing an issue with SDR's ``LS`` calculations.  The ``x`` term is now
   the weighted mean of proportional flow from the current pixel into its
