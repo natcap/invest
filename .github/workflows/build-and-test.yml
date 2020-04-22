@@ -92,11 +92,9 @@ jobs:
               if: matrix.os != 'windows-latest'
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  update-conda: false
                   activate-environment: env
                   auto-update-conda: true 
                   python-version: ${{ matrix.python-version }}
-                  conda-channels: defaults
                   channels: conda-forge, anaconda
             
             - name: Install dependencies MacOS
@@ -110,12 +108,13 @@ jobs:
                   python setup.py install
                   which python
 
-            - name: Run model tests
+            - name: Run model tests on MacOS
               if: matrix.os != 'windows-latest'
               run: |
+                  which python
                   make PYTHON="/usr/local/miniconda/envs/env/bin/python" test
 
-            - name: Run model tests
+            - name: Run model tests on Windows
               if: matrix.os == 'windows-latest'
               run: |
                   make test
