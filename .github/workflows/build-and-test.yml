@@ -111,9 +111,14 @@ jobs:
                   which python
 
             - name: Run model tests
+              if: matrix.os != 'windows-latest'
               run: |
-                  which python
-                  make PYTHON=python test
+                  make PYTHON="/usr/local/miniconda/envs/env/bin/python" test
+
+            - name: Run model tests
+              if: matrix.os == 'windows-latest'
+              run: |
+                  make test
 
 
     validate-sampledata:
