@@ -18,7 +18,7 @@ class Executor(QtCore.QObject, threading.Thread):
     def __init__(self, target, args=None, kwargs=None):
         """Initialize the Executor object.
 
-        Parameters:
+        Args:
             target (callable): A function or unbound method that should be
                 called within the separate thread of control.
             args (iterable): An iterable of positional arguments that will
