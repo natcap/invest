@@ -544,7 +544,6 @@ class AboutDialog(QtWidgets.QDialog):
         for lib_name, lib_license, lib_homepage in [
                 ('PyInstaller', 'GPL', 'http://pyinstaller.org'),
                 ('GDAL', 'MIT and others', 'http://gdal.org'),
-                ('matplotlib', 'BSD', 'http://matplotlib.org'),
                 ('numpy', 'BSD', 'http://numpy.org'),
                 ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
                 ('pygeoprocessing', 'BSD',

@@ -40,7 +40,7 @@ Ubuntu & Debian
 
 ::
 
-    $ sudo apt-get install python3-dev python3-setuptools python3-gdal python3-rtree python3-shapely python3-matplotlib
+    $ sudo apt-get install python3-dev python3-setuptools python3-gdal python3-rtree python3-shapely
 
 
 Fedora
@@ -48,7 +48,7 @@ Fedora
 
 ::
 
-    $ sudo yum install python3-devel python3-setuptools python3-gdal python3-rtree python3-shapely python3-matplotlib
+    $ sudo yum install python3-devel python3-setuptools python3-gdal python3-rtree python3-shapely
 
 .. _InstallingOnMac:
 
@@ -58,9 +58,9 @@ Mac OS X
 The easiest way to install binary packages on Mac OS X is through a package
 manager such as `Homebrew <http://brew.sh>`_::
 
-    $ brew install gdal spatialindex pyqt matplotlib
+    $ brew install gdal spatialindex pyqt
 
-The GDAL, PyQt and matplotlib packages include their respective python packages.
+The GDAL and PyQt packages include their respective python packages.
 The others will allow their corresponding python packages to be compiled
 against these binaries via ``pip``.
 
