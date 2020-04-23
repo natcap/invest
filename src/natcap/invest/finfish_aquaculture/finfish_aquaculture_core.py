@@ -10,17 +10,12 @@ import logging
 
 from osgeo import ogr
 from osgeo import gdal
-import matplotlib
-matplotlib.use('AGG')  # Use the Anti-Grain Geometry back-end (for PNG files)
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import norm
 
 from natcap.invest.reporting import html
 
 LOGGER = logging.getLogger('natcap.invest.finfish_aquaculture.core')
-
-NUM_HISTOGRAM_BINS = 30
 
 
 def execute(args):
@@ -161,15 +156,15 @@ def execute(args):
     else:
         value_history, farms_npv = None, None
 
-    histogram_paths, uncertainty_stats = None, None
+    uncertainty_stats = None
     # Do uncertainty analysis if it's enabled.
     if 'g_param_a_sd' in args and 'g_param_b_sd' in args:
-        histogram_paths, uncertainty_stats = compute_uncertainty_data(
+        uncertainty_stats = compute_uncertainty_data(
             args, output_dir)
 
     create_HTML_table(
         output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, farms_npv,
-        value_history, histogram_paths, uncertainty_stats)
+        value_history, uncertainty_stats)
 
 
 def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict,
@@ -399,10 +394,9 @@ def valuation(price_per_kg, frac_mrkt_price, discount, hrv_weight,
 def compute_uncertainty_data(args, output_dir):
     """Does uncertainty analysis via a Monte Carlo simulation.
 
-    Returns a tuple with two 2D dicts.
-    -a dict containing relative file paths to produced histograms
+    Returns:
     -a dict containining statistical results (mean and std deviation)
-    Each dict has farm IDs as outer keys, and result types (e.g. 'value',
+    The dict has farm IDs as outer keys, and result types (e.g. 'value',
     'weight', and 'cycles') as inner keys.
     """
     results = do_monte_carlo_simulation(args)
@@ -418,14 +412,8 @@ def compute_uncertainty_data(args, output_dir):
                 '(no valuation)', '(no valuation)')
     uncertainty_stats['total']['cycles'] = ('n/a', 'n/a')
 
-    LOGGER.info('Creating histograms.')
-    histogram_paths = collections.OrderedDict()
-    for farm, farm_results in results.items():
-        histogram_paths[farm] = make_histograms(
-            farm, farm_results, output_dir, args['num_monte_carlo_runs'])
-
     LOGGER.info('Done with uncertainty analysis.')
-    return histogram_paths, uncertainty_stats
+    return uncertainty_stats
 
 
 def do_monte_carlo_simulation(args):
@@ -501,60 +489,8 @@ def do_monte_carlo_simulation(args):
     return results
 
 
-def make_histograms(farm, results, output_dir, total_num_runs):
-    """
-    Makes a histogram for the given farm and data.
-
-    Returns a dict mapping type (e.g. 'value', 'weight') to the relative
-    file path for the respective histogram.
-    """
-    plot_dir = os.path.join(output_dir, 'images')
-    if not os.path.exists(plot_dir):
-        os.makedirs(plot_dir)
-
-    def make_plot_relpath(result_type):
-        """Return a relative path to a histogram."""
-        if farm == 'total':
-            filename = 'total_%s.png' % result_type
-        else:
-            filename = 'farm_%s_%s.png' % (farm, result_type)
-        return os.path.join('images', filename)
-
-    def make_plot_title(result_type):
-        titles = {'weight': 'Total harvested weight',
-                  'value': 'Total net present value',
-                  'cycles': 'Number of completed cycles'}
-        title = titles[result_type]
-        if farm == 'total':
-            return '%s for all farms' % title
-        else:
-            return '%s for farm %s' % (title, farm)
-
-    def make_xlabel(result_type):
-        xlabels = {'weight': 'Total harvested weight after processing (kg)',
-                   'value': 'Total net present value (in thousands of USD)',
-                   'cycles': 'Number of cycles'}
-        return xlabels[result_type]
-
-    def make_histogram(result_type, data):
-        relpath = make_plot_relpath(result_type)
-        plt.hist(data, bins=NUM_HISTOGRAM_BINS)
-        plt.ylabel('Number of runs (out of %d total runs)' % total_num_runs)
-        plt.xlabel(make_xlabel(result_type))
-        plt.title(make_plot_title(result_type))
-        plt.savefig(os.path.join(output_dir, relpath))
-        plt.close()
-        return relpath
-
-    histogram_paths = {}
-    for result_type in results:
-        histogram_paths[result_type] = make_histogram(result_type,
-                                                      results[result_type])
-    return histogram_paths
-
-
 def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
-                      hrv_weight, farms_npv, value_history, histogram_paths,
+                      hrv_weight, farms_npv, value_history,
                       uncertainty_stats):
     """
     Inputs:
@@ -693,7 +629,7 @@ def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
         cells = [farm_id, npv, num_cy_complete, total_harvested]
         totals_table.add_row(cells)
 
-    if histogram_paths:
+    if uncertainty_stats:
         doc.write_header('Uncertainty Analysis Results')
 
         doc.write_paragraph(
@@ -737,29 +673,5 @@ def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
                 # Append the mean and the standard deviation to the row.
                 row += uncertainty_stats[farm][result_type]
             uncertainty_table.add_row(row)
-
-        # Add histograms.
-        doc.write_header('Histograms', level=3)
-        doc.write_paragraph(
-            'The following histograms display the probability of different '
-            'outcomes. The height of each vertical bar in the histograms '
-            'represents the probability of the outcome marked by the position'
-            'of the bar on the horizontal axis of the histogram.')
-        doc.write_paragraph(
-            'Included are histograms for total results across all farms, as '
-            'well as results for each individual farm.')
-        for farm, paths in histogram_paths.items():
-            if farm == 'total':
-                title = 'Histograms for total results (all farms)'
-            else:
-                title = 'Histograms for farm %s' % farm
-            doc.write_header(title, level=4)
-
-            # Put the histograms in a collapsible element that defaults to
-            # open.
-            collapsible_elem = doc.add(html.Element('details', open=''))
-            for path in paths.values():
-                collapsible_elem.add(
-                    html.Element('img', src=path, end_tag=False))
 
     doc.flush()

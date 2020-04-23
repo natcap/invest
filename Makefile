@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 0dfeed7f216f6c1f9af815aabb3e7e04f8cf662b
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 19f4e740cd8a44c7565d19ad68c069c53866aaf8
+GIT_UG_REPO_REV              := 62f9fb6c14459d501f21acc5342cf2fa70ac8b80
 
 
 ENV = env
@@ -367,11 +367,6 @@ deploy:
     endif
 	@echo "Binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
-    ifeq ($(BUCKET),gs://releases.naturalcapitalproject.org)  # ifeq cannot follow TABs, only spaces
-		$(GSUTIL) cp "$(BUCKET)/fragment_id_redirections.json" "$(BUILD_DIR)/fragment_id_redirections.json"
-		$(PYTHON) scripts/update_installer_urls.py "$(BUILD_DIR)/fragment_id_redirections.json" $(BUCKET) $(notdir $(WINDOWS_INSTALLER_FILE)) $(notdir $(patsubst "%",%,$(MAC_BINARIES_ZIP_FILE)))
-		$(GSUTIL) cp "$(BUILD_DIR)/fragment_id_redirections.json" "$(BUCKET)/fragment_id_redirections.json"
-    endif
 
 
 # Notes on Makefile development

@@ -211,7 +211,7 @@ def main(json_file, dist_url_base, outgoing_filenames):
                             lookup[frag_id] = '/'.join(
                                 (public_url_base, outgoing_filename))
 
-    with open(json_file, 'wb') as file:
+    with open(json_file, 'w', encoding='utf-8') as file:
         json.dump(lookup, file)
     print('deployed artifacts with static redirect identifiers will include:')
     pprint(lookup)
