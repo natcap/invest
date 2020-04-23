@@ -14,10 +14,8 @@ if (isDevMode) {
   dotenv.config();  
 }
 
-let PYTHON = 'python';
-if (process.env.PYTHON) {  // if it was set, override
-  PYTHON = process.env.PYTHON.trim();
-}
+let PYTHON = (process.env.PYTHON || 'python').trim();
+let PORT = (process.env.PORT || '5000').trim();
 
 const createWindow = async () => {
   /** Much of this is electron app boilerplate, but here is also
@@ -84,7 +82,7 @@ function createPythonFlaskProcess() {
 
 function shutdownPythonProcess() {
   return(
-    fetch('http://localhost:5000/shutdown', {
+    fetch(`http://localhost:${PORT}/shutdown`, {
       method: 'get',
     })
     .then((response) => { return response.text() })

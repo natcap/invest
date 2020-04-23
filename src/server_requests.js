@@ -4,13 +4,16 @@ import fetch from 'node-fetch';
 // .then chaining of callbacks. Consider refactoring
 // everything here with async/await.
 
+const PORT = process.env.PORT || '5000';
+const HOSTNAME = 'http://localhost';
+
 export function getFlaskIsReady(retries=0) {
   /* Recursive function to find out if the Flask server is online.
   * Sometimes the app will make a server request before it's ready,
   * so awaiting this response is one way to avoid that. 
   */
   return(
-    fetch('http://localhost:5000/ready', {
+    fetch(`${HOSTNAME}:${PORT}/ready`, {
       method: 'get',
     })
     .then((response) => { return response.text() })
@@ -38,7 +41,7 @@ export function getFlaskIsReady(retries=0) {
 export function getInvestList() {
   console.log('pre-fetch models')
   return(
-    fetch('http://localhost:5000/models', {
+    fetch(`${HOSTNAME}:${PORT}/models`, {
       method: 'get',
     })
     .then((response) => { 
@@ -52,7 +55,7 @@ export function getInvestList() {
 
 export function getSpec(payload) {
   return (
-    fetch('http://localhost:5000/getspec', {
+    fetch(`${HOSTNAME}:${PORT}/getspec`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -64,7 +67,7 @@ export function getSpec(payload) {
 
 export function fetchValidation(payload) {
   return (
-    fetch('http://localhost:5000/validate', {
+    fetch(`${HOSTNAME}:${PORT}/validate`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -76,7 +79,7 @@ export function fetchValidation(payload) {
 
 export function fetchLogfilename(payload) {
   return (
-    fetch('http://localhost:5000/get_invest_logfilename', {
+    fetch(`${HOSTNAME}:${PORT}/get_invest_logfilename`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -88,7 +91,7 @@ export function fetchLogfilename(payload) {
 
 export function fetchDatastackFromFile(payload) {
   return (
-    fetch('http://localhost:5000/post_datastack_file', {
+    fetch(`${HOSTNAME}:${PORT}/post_datastack_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -99,7 +102,7 @@ export function fetchDatastackFromFile(payload) {
 }
 
 export function saveToPython(payload) {
-  fetch('http://localhost:5000/save_to_python', {
+  fetch(`${HOSTNAME}:${PORT}/save_to_python`, {
     method: 'post',
     body: JSON.stringify(payload),
     headers: { 'Content-Type': 'application/json' },
@@ -114,7 +117,7 @@ export function writeParametersToFile(payload) {
   // from this fetch, we must ``return`` a Promise 
   // in order to ``await writeParametersToFile``.
   return (
-    fetch('http://localhost:5000/write_parameter_set_file', {
+    fetch(`${HOSTNAME}:${PORT}/write_parameter_set_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
