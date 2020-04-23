@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixed minor bug in Coastal Vulnerability shore point creation. Also added a
+  check to fail fast when zero shore points are found within the AOI.
 * The Finfish Aquaculture model no longer generates histograms for
   uncertainty analysis due to issues with matplotlib that make InVEST
   unstable. See https://github.com/natcap/invest/issues/87 for more.
