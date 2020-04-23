@@ -2,9 +2,6 @@
 
 Unreleased Changes
 ------------------
-* Fixed an issue with NDR's raster normalization routine, where normalizing
-  an input Float64 raster with a nodata value outside of the range of possible
-  Float32 values would not properly cast the nodata value.
 * Fixed an issue with NDR's raster normalization function so that Float64
   nodata values are now correctly cast to Float32.  This issue was affecting
   the summary vector, where the ``surf_n``, ``sub_n`` and ``n_export_tot``
