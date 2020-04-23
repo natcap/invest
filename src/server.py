@@ -16,38 +16,9 @@ LOGGER = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Maps the names returned by invest list to the module with ARGS_SPEC
-MODEL_MODULE_MAP = {
-    "carbon": "carbon",
-    "coastal_blue_carbon": "coastal_blue_carbon.coastal_blue_carbon",
-    "coastal_blue_carbon_preprocessor": "coastal_blue_carbon.preprocessor",
-    "coastal_vulnerability": "coastal_vulnerability",
-    "crop_production_percentile": "crop_production_percentile",
-    "crop_production_regression": "crop_production_regression",
-    "delineateit": "delineateit",
-    "finfish_aquaculture": "finfish_aquaculture.finfish_aquaculture",
-    "fisheries": "fisheries.fisheries",
-    "fisheries_hst": "fisheries.fisheries_hst",
-    "forest_carbon_edge_effect": "forest_carbon_edge_effect",
-    "globio": "globio",
-    "habitat_quality": "habitat_quality",
-    "habitat_risk_assessment": "hra",
-    "hydropower_water_yield": "hydropower.hydropower_water_yield",
-    "ndr": "ndr.ndr",
-    "pollination": "pollination",
-    "recreation": "recreation.recmodel_client",
-    "routedem": "routedem",
-    "scenario_generator_proximity": "scenario_gen_proximity",
-    "scenic_quality": "scenic_quality.scenic_quality",
-    "sdr": "sdr.sdr",
-    "seasonal_water_yield": "seasonal_water_yield.seasonal_water_yield",
-    "urban_flood_risk_mitigation": "urban_flood_risk_mitigation",
-    "urban_cooling_model": "urban_cooling_model",
-    "wave_energy": "wave_energy",
-    "wind_energy": "wind_energy"
-}
-
-INVERTED_MODULE_MODEL_MAP = {v: k for k, v in MODEL_MODULE_MAP.items()}
+# Lookup names to pass to `invest run` based on python module names
+MODULE_MODELRUN_MAP = {
+    v.pyname: k for k, v in natcap.invest.cli._MODEL_UIS.items()}
 
 
 def shutdown_server():
@@ -55,6 +26,7 @@ def shutdown_server():
     if func is None:
         raise RuntimeError('Not running with the Werkzeug Server')
     func()
+
 
 @app.route('/ready', methods=['GET'])
 def get_is_ready():
@@ -76,7 +48,7 @@ def get_invest_models():
 @app.route('/getspec', methods=['POST'])
 def get_invest_getspec():
     target_model = request.get_json()['model']
-    target_module = 'natcap.invest.' + MODEL_MODULE_MAP[target_model]
+    target_module = natcap.invest.cli._MODEL_UIS[target_model].pyname
     model_module = importlib.import_module(name=target_module)
     spec = model_module.ARGS_SPEC
     return json.dumps(spec)
@@ -104,7 +76,7 @@ def post_datastack_file():
     filepath = request.get_json()['datastack_path']
     stack_type, stack_info = natcap.invest.datastack.get_datastack_info(
         filepath)
-    model_run_name = INVERTED_MODULE_MODEL_MAP[stack_info.model_name.replace('natcap.invest.', '')]
+    model_run_name = MODULE_MODELRUN_MAP[stack_info.model_name]
     LOGGER.debug(model_run_name)
     result_dict = {
         'type': stack_type,
