@@ -22,6 +22,7 @@ MODULE_MODELRUN_MAP = {
 
 
 def shutdown_server():
+    """Shutdown the flask server."""
     func = request.environ.get('werkzeug.server.shutdown')
     if func is None:
         raise RuntimeError('Not running with the Werkzeug Server')
@@ -30,23 +31,38 @@ def shutdown_server():
 
 @app.route('/ready', methods=['GET'])
 def get_is_ready():
+    """Returns something simple to confirm the server is open."""
     return 'Flask ready'
 
 
 @app.route('/shutdown', methods=['GET'])
 def shutdown():
+    """A request to this endpoint shuts down the server."""
     shutdown_server()
     return 'Flask server shutting down...'
 
 
 @app.route('/models', methods=['GET'])
 def get_invest_models():
+    """Gets a list of available InVEST models.
+    
+    Returns:
+        A JSON string
+    """
     LOGGER.debug('get model list')
     return natcap.invest.cli.build_model_list_json()
 
 
 @app.route('/getspec', methods=['POST'])
 def get_invest_getspec():
+    """Gets the ARGS_SPEC dict from an InVEST model.
+
+    Body (JSON string):
+        model: carbon
+    
+    Returns:
+        A JSON string.
+    """
     target_model = request.get_json()['model']
     target_module = natcap.invest.cli._MODEL_UIS[target_model].pyname
     model_module = importlib.import_module(name=target_module)
@@ -56,6 +72,15 @@ def get_invest_getspec():
 
 @app.route('/validate', methods=['POST'])
 def get_invest_validate():
+    """Gets the return value of an InVEST model's validate function.
+
+    Body (JSON string):
+        model_module: string (e.g. natcap.invest.carbon)
+        args: JSON string of InVEST model args keys and values
+    
+    Returns:
+        A JSON string.
+    """
     payload = request.get_json()
     LOGGER.debug(payload)
     target_module = payload['model_module']
@@ -73,6 +98,14 @@ def get_invest_validate():
 
 @app.route('/post_datastack_file', methods=['POST'])
 def post_datastack_file():
+    """Extracts InVEST model args from json, logfiles, or datastacks.
+
+    Body (JSON string):
+        datastack_path: string
+    
+    Returns:
+        A JSON string.
+    """
     filepath = request.get_json()['datastack_path']
     stack_type, stack_info = natcap.invest.datastack.get_datastack_info(
         filepath)
@@ -90,6 +123,17 @@ def post_datastack_file():
 
 @app.route('/write_parameter_set_file', methods=['POST'])
 def write_parameter_set_file():
+    """Writes InVEST model args keys and values to a datastack JSON file.
+
+    Body (JSON string):
+        parameterSetPath: string
+        moduleName: string(e.g. natcap.invest.carbon)
+        args: JSON string of InVEST model args keys and values
+        relativePaths: boolean
+
+    Returns:
+        A string.
+    """
     payload = request.get_json()
     filepath = payload['parameterSetPath']
     modulename = payload['moduleName']
@@ -98,7 +142,7 @@ def write_parameter_set_file():
 
     natcap.invest.datastack.build_parameter_set(
         args, modulename, filepath, relative=relative_paths)
-    return ('parameter set saved')
+    return 'parameter set saved'
 
 
 # Borrowed this function from natcap.invest.model because I assume
@@ -107,6 +151,17 @@ def write_parameter_set_file():
 # there is one call here to `natcap.invest.cli.__version__`
 @app.route('/save_to_python', methods=['POST'])
 def save_to_python():
+    """Writes a python script with a call to an InVEST model execute function.
+
+    Body (JSON string):
+        filepath: string
+        modelname: string (e.g. carbon)
+        pyname: string (e.g. natcap.invest.carbon)
+        args_dict: JSON string of InVEST model args keys and values
+
+    Returns:
+        A string.
+    """
     payload = request.get_json()
     save_filepath = payload['filepath']
     modelname = payload['modelname']
@@ -145,4 +200,4 @@ def save_to_python():
             py_model=pyname,
             model_args=args))
 
-    return ('python script saved')
+    return 'python script saved'
