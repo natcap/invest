@@ -1,8 +1,0 @@
-build/
-coverage/
-node_modules/
-tmp/data-*
-src/__pycache__/
-cache/
-.env
-jobdb.json
