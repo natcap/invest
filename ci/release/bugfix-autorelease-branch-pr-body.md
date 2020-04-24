@@ -48,3 +48,8 @@ https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
    https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
 4. Upload python wheels to PyPI.  An issue was created for this,
    so remember to mark progress there as well.
+5. Double-check that the NatCap website's automation has picked up the updated
+   release links, or update them by hand if needed.
+6. Take a look at the Release Checklist
+   (https://github.com/natcap/invest/wiki/Release-Checklist) and take care of
+   anything else that needs to be taken care of.
