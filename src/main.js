@@ -52,7 +52,6 @@ const createWindow = async () => {
   });
 };
 
-let pythonServerProcess;
 function createPythonFlaskProcess() {
   /** Spawn a child process running the Python Flask server.*/
   pythonServerProcess = spawn(
@@ -104,8 +103,8 @@ app.on('window-all-closed', async () => {
     // It's crucial to await here, otherwise the parent
     // process dies before flask has time to kill its server.
     await shutdownPythonProcess();
+    app.quit()
   }
-  // TODO: handle flask shutdown on darwin
 });
 
 app.on('activate', () => {
@@ -116,6 +115,9 @@ app.on('activate', () => {
   }
 });
 
-// Couldn't get this callback to fire, moved to 'window-all-closed',
-// but that doesn't cover OSX
-// app.on('will-quit', shutdownPythonProcess);
+// TODO: I haven't actually tested this yet on MacOS
+app.on('will-quit', async () => {
+  if (process.platform === 'darwin') {
+    await shutdownPythonProcess();
+  }
+});
