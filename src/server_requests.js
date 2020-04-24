@@ -36,16 +36,12 @@ export function getFlaskIsReady(retries=0) {
   )
 }
 
-// TODO: sometimes this fetch doesn't complete or error,
-// hence the logging
 export function getInvestList() {
-  console.log('pre-fetch models')
   return(
     fetch(`${HOSTNAME}:${PORT}/models`, {
       method: 'get',
     })
     .then((response) => { 
-      console.log(response)
       return response
     })
     .then((response) => { return response.json() })
