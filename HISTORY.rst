@@ -2,7 +2,14 @@
 
 
 Unreleased Changes
--------------------
+------------------
+* Fixed minor bug in Coastal Vulnerability shore point creation. Also added a
+  check to fail fast when zero shore points are found within the AOI.
+* The Finfish Aquaculture model no longer generates histograms for
+  uncertainty analysis due to issues with matplotlib that make InVEST
+  unstable. See https://github.com/natcap/invest/issues/87 for more.
+* Corrected the Urban Cooling Model's help text for the "Cooling Capacity
+  Calculation Method" in the User Interface.
 * Fixing an issue with SDR's ``LS`` calculations.  The ``x`` term is now
   the weighted mean of proportional flow from the current pixel into its
   neighbors.  Note that for ease of debugging, this has been implemented as a
