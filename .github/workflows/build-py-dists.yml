@@ -29,7 +29,6 @@ jobs:
 
         steps:
             - uses: actions/checkout@v2
-            - run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
@@ -73,7 +72,6 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
-            - run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
