@@ -585,7 +585,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace, 'csv.csv')
-        with open(csv_file, 'w') as file_obj:
+        with open(csv_file, 'w', encoding='utf-8') as file_obj:
             file_obj.write(textwrap.dedent(
                 f'{codecs.BOM_UTF8.decode()}header1,HEADER2,header3{os.linesep}'
                 f'1,2,bar{os.linesep}'
