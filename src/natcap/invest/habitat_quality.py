@@ -103,13 +103,10 @@ ARGS_SPEC = {
                 "of each degradation source. The columns "
                 "(BASE_PATH, CUR_PATH, FUT_PATH) specify the filepath name "
                 "for the degradation source where the path is relative to "
-                "the THREAT CSV. THREAT: "
+                "the THREAT CSV. Column names are case-insensitive. THREAT: "
                 "The name of the threat source and this name must match "
                 "exactly to the name of it's corresponding column in the "
                 "sensitivity table. "
-                "NOTE: The sensitivity column should have a "
-                "prefix indicator (L_). The THREAT name in the threat table "
-                "should not include 'L_' prefix. "
                 "MAX_DIST: A number in kilometres (km) for the maximum "
                 "distance a threat has an affect. WEIGHT: A "
                 "floating point value between 0 and 1 for the threats "
@@ -159,14 +156,15 @@ ARGS_SPEC = {
                 "habitat, and, for LULC types that are habitat, their "
                 "specific sensitivity to each threat. Each row is a LULC "
                 "type with the following columns: LULC, HABITAT, "
-                "L_THREAT1, L_THREAT2, ... LULC: Integer "
+                "THREAT1, THREAT2, ... , THREATN. Column names are "
+                "case-insensitive. LULC: Integer "
                 "values that reflect each LULC code found in current, "
                 "future, and baseline rasters. HABITAT: "
                 "A value of 0 or 1 (presence / absence) or a value between 0 "
                 "and 1 (continuum) depicting the suitability of "
-                "habitat. L_THREATN: Each L_THREATN should "
+                "habitat. THREATX: Each THREATX should "
                 "match exactly with the threat names given in the threat "
-                "CSV file, where the THREATN is the name that matches.  This "
+                "CSV file, where the THREATX is the name that matches. This "
                 "is a floating point value between 0 and 1 that represents "
                 "the sensitivity of a habitat to a threat."
                 "Please see the users guide for more detailed information on "
@@ -197,7 +195,7 @@ ARGS_SPEC = {
 _OUT_NODATA = -1.0
 _RARITY_NODATA = -64329.0
 _SCALING_PARAM = 2.5
-_THREAT_SCENARIO_MAP = {'_c': 'CUR_PATH', '_f': 'FUT_PATH', '_b': 'BASE_PATH'}
+_THREAT_SCENARIO_MAP = {'_c': 'cur_path', '_f': 'fut_path', '_b': 'base_path'}
 
 
 def execute(args):
@@ -221,7 +219,7 @@ def execute(args):
         args['threats_table_path'] (string): a path to an input CSV
             containing data of all the considered threats. Each row is a
             degradation source and each column a different attribute of the
-            source with the following names:
+            source with the following names (case-insensitive):
             'THREAT','MAX_DIST','WEIGHT', 'DECAY', 'BASE_PATH', 'CUR_PATH',
             'FUT_PATH'
             (required).
@@ -271,15 +269,15 @@ def execute(args):
     # Get CSVs as dictionaries and ensure the key is a string for threats.
     threat_dict = {
         str(key): value for key, value in utils.build_lookup_from_csv(
-            args['threats_table_path'], 'THREAT', to_lower=False).items()}
+            args['threats_table_path'], 'THREAT', to_lower=True).items()}
     sensitivity_dict = utils.build_lookup_from_csv(
-        args['sensitivity_table_path'], 'LULC', to_lower=False)
+        args['sensitivity_table_path'], 'LULC', to_lower=True)
 
     # check that the required headers exist in the threat table.
     # Raise exception if they don't.
     threat_header_set = set(list(threat_dict.values())[0].keys())
     required_threat_header_set = {
-        'WEIGHT', 'MAX_DIST', 'DECAY', 'BASE_PATH', 'CUR_PATH', 'FUT_PATH'}
+        'weight', 'max_dist', 'decay', 'base_path', 'cur_path', 'fut_path'}
     missing_threat_header_set = required_threat_header_set.difference(
         threat_header_set)
     if missing_threat_header_set:
@@ -290,7 +288,7 @@ def execute(args):
     # check that the required headers exist in the sensitivity table.
     # Raise exception if they don't.
     sens_header_set = set(list(sensitivity_dict.values())[0])
-    required_sens_header_set = {'LULC', 'NAME', 'HABITAT'}
+    required_sens_header_set = {'lulc', 'name', 'habitat'}
     missing_sens_header_set = required_sens_header_set.difference(
         sens_header_set)
     if missing_sens_header_set:
@@ -302,7 +300,7 @@ def execute(args):
     # columns in the sensitivity table.
     missing_threat_header_set = set()
     for threat in threat_dict:
-        if 'L_' + threat not in sens_header_set:
+        if threat not in sens_header_set:
             missing_threat_header_set.add(threat)
 
     if missing_threat_header_set:
@@ -325,7 +323,7 @@ def execute(args):
 
     # Dictionary for reclassing habitat values
     sensitivity_reclassify_habitat_dict = {
-        int(key): float(val['HABITAT']) for key, val in
+        int(key): float(val['habitat']) for key, val in
         sensitivity_dict.items()}
 
     # declare dictionaries to store the land cover and the threat rasters
@@ -542,7 +540,7 @@ def execute(args):
     weight_sum = 0.0
     for threat_data in threat_dict.values():
         # Sum weight of threats
-        weight_sum = weight_sum + threat_data['WEIGHT']
+        weight_sum = weight_sum + threat_data['weight']
 
     # for each land cover raster provided compute habitat quality
     for lulc_key, lulc_path in lulc_path_dict.items():
@@ -597,12 +595,12 @@ def execute(args):
             kernel_path = os.path.join(
                 kernel_dir, f'kernel_{threat}{lulc_key}{file_suffix}.tif')
 
-            decay_type = threat_data['DECAY']
+            decay_type = threat_data['decay']
 
             create_kernel_task = task_graph.add_task(
                 _create_decay_kernel,
                 args=((threat_raster_path, 1), kernel_path, decay_type,
-                      threat_data['MAX_DIST']),
+                      threat_data['max_dist']),
                 target_path_list=[kernel_path],
                 dependent_task_list=[*bound_threat_values_tasks],
                 task_name=f'decay_kernel_{decay_type}{lulc_key}_{threat}')
@@ -632,7 +630,7 @@ def execute(args):
 
             # Dictionary for reclassing threat sensitivity values
             sensitivity_reclassify_threat_dict = {
-                int(key): float(val['L_'+threat]) for key, val in
+                int(key): float(val[threat]) for key, val in
                 sensitivity_dict.items()}
 
             sens_threat_task = task_graph.add_task(
@@ -648,7 +646,7 @@ def execute(args):
             sensitivity_task_list.append(sens_threat_task)
 
             # get the normalized weight for each threat
-            weight_avg = threat_data['WEIGHT'] / weight_sum
+            weight_avg = threat_data['weight'] / weight_sum
 
             # add the threat raster adjusted by distance and the raster
             # representing sensitivity to the list to be past to
@@ -1118,17 +1116,15 @@ def validate(args, limit_to=None):
         # Get CSVs as dictionaries and ensure the key is a string for threats.
         threat_dict = {
             str(key): value for key, value in utils.build_lookup_from_csv(
-                args['threats_table_path'], 'THREAT', to_lower=False).items()}
+                args['threats_table_path'], 'THREAT', to_lower=True).items()}
         sensitivity_dict = utils.build_lookup_from_csv(
-            args['sensitivity_table_path'], 'LULC', to_lower=False)
+            args['sensitivity_table_path'], 'LULC', to_lower=True)
 
         # check that the threat names in the threats table match with the
         # threats columns in the sensitivity table.
         sens_header_set = set(list(sensitivity_dict.values())[0])
-        missing_sens_header_set = set()
-        for threat in threat_dict:
-            if 'L_' + threat not in sens_header_set:
-                missing_sens_header_set.add(threat)
+        threat_set = {threat for threat in threat_dict}
+        missing_sens_header_set = threat_set.difference(sens_header_set)
 
         if missing_sens_header_set:
             validation_warnings.append(

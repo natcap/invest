@@ -172,7 +172,7 @@ def make_sensitivity_samp_csv(
     """
     if include_threat:
         with open(csv_path, 'w') as open_table:
-            open_table.write('LULC,NAME,HABITAT,L_threat_1,L_threat_2\n')
+            open_table.write('LULC,NAME,HABITAT,threat_1,threat_2\n')
             open_table.write('1,"lulc 1",1,1,1\n')
             if not missing_lines:
                 open_table.write('2,"lulc 2",0.5,0.5,1\n')
@@ -515,7 +515,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         with open(args['sensitivity_table_path'], 'w') as open_table:
             open_table.write(
-                    'LULC,NAME,HABITAT,L_%s,L_%s\n' % tuple(threatnames))
+                    'LULC,NAME,HABITAT,%s,%s\n' % tuple(threatnames))
             open_table.write('1,"lulc 1",1,1,1\n')
             open_table.write('2,"lulc 2",0.5,0.5,1\n')
             open_table.write('3,"lulc 3",0,0.3,1\n')
@@ -706,7 +706,7 @@ class HabitatQualityTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(
             'There was an Error locating a threat raster from '
-            'the path in CSV for column: CUR_PATH and threat: threat_1' in
+            'the path in CSV for column: cur_path and threat: threat_1' in
             actual_message, actual_message)
 
     def test_habitat_quality_lulc_current_only(self):
@@ -739,6 +739,54 @@ class HabitatQualityTests(unittest.TestCase):
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+
+        habitat_quality.execute(args)
+
+        # Reasonable to just check quality out in this case
+        assert_array_sum(
+            os.path.join(args['workspace_dir'], 'quality_c.tif'),
+            5951.2827)
+
+    def test_habitat_quality_case_insensitivty(self):
+        """Habitat Quality: with table columns that have camel case."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+
+        with open(args['sensitivity_table_path', 'w') as open_table:
+            open_table.write('Lulc,Name,habitat,Threat_1,THREAT_2\n')
+            open_table.write('1,"lulc 1",1,1,1\n')
+            open_table.write('2,"lulc 2",0.5,0.5,1\n')
+            open_table.write('3,"lulc 3",0,0.3,1\n')
+
+        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
+                                             'lc_samp_cur_b.tif')
+
+        lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+        lulc_array[50:, :] = 2
+        make_raster_from_array(lulc_array, args['lulc_cur_path'])
+
+        make_threats_raster(args['workspace_dir'])
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+
+        # create the threat CSV table
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'Max_Dist,Weight,threat,Decay,BASE_PATH,cur_PATH,fut_path\n')
             open_table.write(
                 '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
@@ -1086,9 +1134,9 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertTrue(
-            "A threat raster for threats: [('threat_1', 'CUR_PATH'), "
-            "('threat_2', 'CUR_PATH'), ('threat_1', 'FUT_PATH'), "
-            "('threat_2', 'FUT_PATH')] "
+            "A threat raster for threats: [('threat_1', 'cur_path'), "
+            "('threat_2', 'cur_path'), ('threat_1', 'fut_path'), "
+            "('threat_2', 'fut_path')] "
             "was not found or it could not be opened by GDAL." in
             validate_result[0][1], validate_result[0][1])
 
@@ -1141,7 +1189,7 @@ class HabitatQualityTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(
             'There was an Error locating a threat raster from '
-            'the path in CSV for column: CUR_PATH and threat: threat_1' in
+            'the path in CSV for column: cur_path and threat: threat_1' in
             actual_message, actual_message)
 
     def test_habitat_quality_missing_fut_threat_path(self):
@@ -1193,7 +1241,7 @@ class HabitatQualityTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(
             'There was an Error locating a threat raster from '
-            'the path in CSV for column: FUT_PATH and threat: threat_1' in
+            'the path in CSV for column: fut_path and threat: threat_1' in
             actual_message, actual_message)
 
     def test_habitat_quality_misspelled_cur_threat_path(self):
@@ -1245,7 +1293,7 @@ class HabitatQualityTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(
             'There was an Error locating a threat raster from '
-            'the path in CSV for column: CUR_PATH and threat: threat_1' in
+            'the path in CSV for column: cur_path and threat: threat_1' in
             actual_message, actual_message)
 
     def test_habitat_quality_validate_missing_cur_threat_path(self):
@@ -1296,7 +1344,7 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertTrue(
-            "A threat raster for threats: [('threat_1', 'CUR_PATH')] was not "
+            "A threat raster for threats: [('threat_1', 'cur_path')] was not "
             "found or it could not be opened by GDAL." in
             validate_result[0][1])
 
@@ -1348,7 +1396,7 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertTrue(
-            "A threat raster for threats: [('threat_1', 'FUT_PATH')] was not "
+            "A threat raster for threats: [('threat_1', 'fut_path')] was not "
             "found or it could not be opened by GDAL." in
             validate_result[0][1])
 
@@ -1400,7 +1448,7 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertTrue(
-            "A threat raster for threats: [('threat_1', 'CUR_PATH')] was not "
+            "A threat raster for threats: [('threat_1', 'cur_path')] was not "
             "found or it could not be opened by GDAL." in
             validate_result[0][1], validate_result[0][1])
 

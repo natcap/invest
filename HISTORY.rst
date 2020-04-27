@@ -5,6 +5,9 @@ Unreleased Changes
 * Refactor of Habitat Quality that implements TaskGraph and the following:
   * Threat files are now indicated in the Threat Table csv input under 
     required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``. 
+  * Threat and Sensitivity column names are now case-insensitive.
+  * Sensitivity threat columns now match threat names from Threat Table 
+    exactly, without the need for "L_". "L_" prefix is depracated.
   * Threat raster input folder has been removed.
   * Validation enhancements that look for undefined nodata values in threat
     rasters and whether threat raster paths are valid.
