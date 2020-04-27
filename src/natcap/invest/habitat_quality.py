@@ -3,7 +3,6 @@
 import collections
 import os
 import logging
-import pickle
 
 import numpy
 from osgeo import gdal
@@ -334,7 +333,6 @@ def execute(args):
     lulc_and_threat_raster_list = []
     # lists for the unique lucode tasks
     unique_lucode_task_list = []
-    unique_lucode_pickle_path_list = []
     LOGGER.info("Validate threat rasters and collect unique LULC codes")
     # compile all the threat rasters associated with the land cover
     for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
@@ -347,16 +345,12 @@ def execute(args):
             # save land cover paths in a list for alignment and resize
             lulc_and_threat_raster_list.append(lulc_path)
 
-            unique_lucode_pickle_path = os.path.join(
-                intermediate_output_dir, f'unique_lulc{lulc_key}.pickle')
             # save unique codes to check if it's missing in sensitivity table
             unique_lucode_task = task_graph.add_task(
                 _collect_unique_lucodes,
-                args=((lulc_path, 1), unique_lucode_pickle_path),
-                target_path_list=[unique_lucode_pickle_path],
+                args=((lulc_path, 1), ),
                 task_name=f'unique_lucodes{lulc_key}')
             unique_lucode_task_list.append(unique_lucode_task)
-            unique_lucode_pickle_path_list.append(unique_lucode_pickle_path)
 
             # add a key to the threat dictionary that associates all threat
             # rasters with this land cover
@@ -407,13 +401,9 @@ def execute(args):
     LOGGER.info("Checking LULC codes against Sensitivity table")
     # Assert sensitivity keys and unique lulc codes are equal sets.
     raster_unique_lucodes = set()
-    for lucode_path, lucode_task in zip(unique_lucode_pickle_path_list,
-                                        unique_lucode_task_list):
-        # ensure the task for writing the pickle file has been completed
-        _ = lucode_task.get()
-        with open(lucode_path, 'rb') as fh:
-            lucode_dict = pickle.load(fh)
-        raster_unique_lucodes.update(lucode_dict['codes'])
+    for lucode_task in unique_lucode_task_list:
+        # get unique LULC codes by blocking on those tasks for returned results
+        raster_unique_lucodes.update(lucode_task.get())
 
     # check if there's any lucode from the LULC rasters missing in the
     # sensitivity table
@@ -945,13 +935,12 @@ def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
     decay_func(max_dist_pixel, kernel_path)
 
 
-def _collect_unique_lucodes(raster_path_band, pickle_path):
-    """Get unique pixel values from raster and pickle as a Python set.
+def _collect_unique_lucodes(raster_path_band):
+    """Get unique pixel values from raster and return Python set.
 
     Args:
         raster_path_band (tuple): a 2 tuple of the form
             (filepath to raster, band index).
-        pickle_path (string): a path to output a pickled Python set.
 
     Returns:
         None
@@ -967,9 +956,7 @@ def _collect_unique_lucodes(raster_path_band, pickle_path):
     nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
     raster_unique_lucodes.discard(nodata)
 
-    data = {'codes': raster_unique_lucodes}
-    with open(pickle_path, 'wb') as fh:
-        pickle.dump(data, fh, pickle.HIGHEST_PROTOCOL)
+    return raster_unique_lucodes
 
 
 def _raster_pixel_count(raster_path_band):

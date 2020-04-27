@@ -765,7 +765,7 @@ class HabitatQualityTests(unittest.TestCase):
         args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
                                                       'sensitivity_samp.csv')
 
-        with open(args['sensitivity_table_path', 'w') as open_table:
+        with open(args['sensitivity_table_path'], 'w') as open_table:
             open_table.write('Lulc,Name,habitat,Threat_1,THREAT_2\n')
             open_table.write('1,"lulc 1",1,1,1\n')
             open_table.write('2,"lulc 2",0.5,0.5,1\n')
