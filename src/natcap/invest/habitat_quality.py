@@ -277,39 +277,39 @@ def execute(args):
 
     # check that the required headers exist in the threat table.
     # Raise exception if they don't.
-    threat_header_list = list(list(threat_dict.values())[0].keys())
-    required_threat_header_list = [
-        'WEIGHT', 'MAX_DIST', 'DECAY', 'BASE_PATH', 'CUR_PATH', 'FUT_PATH']
-    missing_threat_header_list = [
-        h for h in required_threat_header_list if h not in threat_header_list]
-    if missing_threat_header_list:
+    threat_header_set = set(list(threat_dict.values())[0].keys())
+    required_threat_header_set = {
+        'WEIGHT', 'MAX_DIST', 'DECAY', 'BASE_PATH', 'CUR_PATH', 'FUT_PATH'}
+    missing_threat_header_set = required_threat_header_set.difference(
+        threat_header_set)
+    if missing_threat_header_set:
         raise ValueError(
-            'Column(s) %s are missing in the threat table' %
-            (', '.join(missing_threat_header_list)))
+            f'Column(s) {missing_threat_header_set} are missing in the threat'
+            ' table.')
 
     # check that the required headers exist in the sensitivity table.
     # Raise exception if they don't.
-    sens_header_list = list(sensitivity_dict.values())[0]
-    required_sens_header_list = ['LULC', 'NAME', 'HABITAT']
-    missing_sens_header_list = [
-        h for h in required_sens_header_list if h not in sens_header_list]
-    if missing_sens_header_list:
+    sens_header_set = set(list(sensitivity_dict.values())[0])
+    required_sens_header_set = {'LULC', 'NAME', 'HABITAT'}
+    missing_sens_header_set = required_sens_header_set.difference(
+        sens_header_set)
+    if missing_sens_header_set:
         raise ValueError(
-            'Column(s) %s are missing in the sensitivity table' %
-            (', '.join(missing_sens_header_list)))
+            f'Column(s) {missing_sens_header_set} are missing in the'
+            ' sensitivity table')
 
     # check that the threat names in the threats table match with the threats
     # columns in the sensitivity table.
-    missing_threat_header_list = []
+    missing_threat_header_set = set()
     for threat in threat_dict:
-        if 'L_' + threat not in sens_header_list:
-            missing_threat_header_list.append(threat)
+        if 'L_' + threat not in sens_header_set:
+            missing_threat_header_set.add(threat)
 
-    if missing_threat_header_list:
+    if missing_threat_header_set:
         raise ValueError(
-            f'Threats "{missing_threat_header_list}" does not match any column'
+            f'Threats "{missing_threat_header_set}" does not match any column'
             ' in the sensitivity table. Sensitivity columns:'
-            f' {sens_header_list}')
+            f' {sens_header_set}')
 
     # Get the directory path for the Threats CSV, used for locating threat
     # rasters, which are relative to this path
@@ -1124,18 +1124,18 @@ def validate(args, limit_to=None):
 
         # check that the threat names in the threats table match with the
         # threats columns in the sensitivity table.
-        sens_header_list = list(sensitivity_dict.values())[0]
-        missing_sens_header_list = []
+        sens_header_set = set(list(sensitivity_dict.values())[0])
+        missing_sens_header_set = set()
         for threat in threat_dict:
-            if 'L_' + threat not in sens_header_list:
-                missing_sens_header_list.append(threat)
+            if 'L_' + threat not in sens_header_set:
+                missing_sens_header_set.add(threat)
 
-        if missing_sens_header_list:
+        if missing_sens_header_set:
             validation_warnings.append(
                 (['sensitivity_table_path'],
-                 (f'Threats "{missing_sens_header_list}" does not match any'
+                 (f'Threats "{missing_sens_header_set}" does not match any'
                   ' column in the sensitivity table. Sensitivity columns:'
-                  f' {sens_header_list}')))
+                  f' {sens_header_set}')))
 
             invalid_keys.add('snsitivity_table_path')
 
