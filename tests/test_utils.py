@@ -587,11 +587,9 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         csv_file = os.path.join(self.workspace, 'csv.csv')
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
-                \xef\xbb\xbfheader1,HEADER2,header3
-                1,2,bar
-                4,5,FOO
-                """
+                f'{codecs.BOM_UTF8.decode()}header1,HEADER2,header3{os.linesep}'
+                f'1,2,bar{os.linesep}'
+                f'4,5,FOO{os.linesep}'
             ).strip())
 
         lookup_dict = utils.build_lookup_from_csv(
