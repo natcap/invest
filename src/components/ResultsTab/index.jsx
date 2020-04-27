@@ -1,14 +1,8 @@
 import React, { Suspense } from 'react';
+import PropTypes from 'prop-types';
+
 import VizErrorBoundary from './VizErrorBoundary';
 
-// The tab where this component renders is only enabled
-// for sessionProgress === 'viz' (run completed w/o error).
-// So here we need only pass a workspace, not check
-// for the status of the related job.
-
-// this.state.workspace is set on invest run subprocess exit,
-// until then workspace is null
-// this.props.model is set on invest getspec response
 
 export class ResultsTab extends React.Component {
 
@@ -17,6 +11,8 @@ export class ResultsTab extends React.Component {
       const model_viz_space = './Visualization/' + this.props.model;
       const Visualization = React.lazy(() => import(model_viz_space));
 
+      // If Visualization component does not exist, the ErrorBoundary
+      // should render instead.
       return (
         <div>
           <VizErrorBoundary>
@@ -34,4 +30,14 @@ export class ResultsTab extends React.Component {
       );
     }
   }
+}
+
+ResultsTab.propTypes = {
+  model: PropTypes.string,
+  workspace: PropTypes.shape({
+      directory: PropTypes.string,
+      suffix: PropTypes.string
+    }),
+  sessionID: PropTypes.string,
+  activeTab: PropTypes.string 
 }

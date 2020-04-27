@@ -1,15 +1,15 @@
-name: Node.js CI
+name: Run jest tests in NodeJS
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
-  build:
-
+  run-tests:
+    name: "run jest tests"
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [8.x, 10.x, 12.x]
+        node-version: [12.x]
 
     steps:
     - uses: actions/checkout@v2
@@ -17,7 +17,9 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - run: npm install
-    - run: npm test
+    - name: install environment
+      run: npm install
+    - name: run tests
+      run: npm test
       env:
         CI: true

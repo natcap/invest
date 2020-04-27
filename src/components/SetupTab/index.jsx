@@ -1,17 +1,22 @@
 import React from 'react';
-import Electron from 'electron';
-import request from 'request';
+import { remote } from 'electron';
+import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
+import Modal from 'react-bootstrap/Modal';
+
+import { fetchDatastackFromFile } from '../../server_requests';
+import { argsValuesFromSpec } from '../../utils';
 
 export class SetupTab extends React.Component {
+  /** Renders an Arguments form and an Execute button
+  */
 
   render () {
-
     // Only mount the ArgsForm when there are actually args
     // This lets us have an ArgsForm.componentDidMount() that
     // does useful initialization of args state.
@@ -24,7 +29,6 @@ export class SetupTab extends React.Component {
             updateArg={this.props.updateArg}
             batchUpdateArgs={this.props.batchUpdateArgs}
             investValidate={this.props.investValidate}
-            argsValuesFromSpec={this.props.argsValuesFromSpec}
           />
           <Button 
             variant="primary" 
@@ -41,7 +45,23 @@ export class SetupTab extends React.Component {
   }
 }
 
+SetupTab.propTypes = {
+  args: PropTypes.object,
+  argsValid: PropTypes.bool,
+  modulename: PropTypes.string,
+  updateArg: PropTypes.func,
+  batchUpdateArgs: PropTypes.func,
+  investValidate: PropTypes.func,
+  investExecute: PropTypes.func
+}
+
 class ArgsForm extends React.Component {
+  /** Renders an HTML input for each invest argument passed in props.args.
+  *
+  * Values of input fields inherit from parent components state.args, and so 
+  * change handlers for the inputs in this component update their values
+  * by calling parent component methods that call parent's setState.
+  */
 
   constructor(props) {
     super(props);
@@ -55,62 +75,55 @@ class ArgsForm extends React.Component {
     // but converted to empty strings by `argsValuesFromSpec` 
     // Validation will handle updating the `valid` property
     // of the optional and conditionally required args so that they 
-    // can validate without any user-interaction.
+    // can validate without any user-interaction. Validation messages
+    // won't appear to the user until an argument has been touched.
 
     // TODO: could call batchUpdateArgs here instead
     // to avoid passing investValidate to this component at all.
     // this.props.batchUpdateArgs(JSON.parse(args_dict_string));
-    this.props.investValidate(this.props.argsValuesFromSpec(this.props.args));
+    this.props.investValidate(argsValuesFromSpec(this.props.args));
   }
 
   handleChange(event) {
-    // Handle changes in form text inputs
+    /** Handle keystroke changes in text inputs */
     const value = event.target.value;
     const name = event.target.name;
     this.props.updateArg(name, value);
   }
 
-  selectFile(event) {
-    // Handle clicks on form browse-button inputs
-    const dialog = Electron.remote.dialog;
+  async selectFile(event) {
+    /** Handle clicks on browse-button inputs */
     const argtype = event.target.value;
     const argname = event.target.name;
     const prop = (argtype === 'directory') ? 'openDirectory' : 'openFile'
     // TODO: could add more filters based on argType (e.g. only show .csv)
-    dialog.showOpenDialog({
-      properties: [prop]
-    }, (filepath) => {
-      this.props.updateArg(argname, filepath[0]); // 0 is safe since we only allow 1 selection
-    })
+    const data = await remote.dialog.showOpenDialog({ properties: [prop] })
+    if (data.filePaths.length) {
+      this.props.updateArg(argname, data.filePaths[0]); // dialog defaults allow only 1 selection
+    } else {
+      console.log('browse dialog was cancelled')
+    }
   }
 
-  onDragDrop(event) {
-    // Handle drag-drop of datastack JSON files and InVEST logfiles
+  async onDragDrop(event) {
+    /** Handle drag-drop of datastack JSON files and InVEST logfiles */
     event.preventDefault();
     
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
       throw alert('only drop one file at a time.')
     }
-    const filepath = fileList[0].path;
-    request.post(
-      'http://localhost:5000/post_datastack_file',
-      { json: { 
-        datastack_path: filepath} 
-      },
-      (error, response, body) => {
-        if (!error) {
-          const datastack = body;
-          if (datastack['module_name'] === this.props.modulename) {
-            this.props.batchUpdateArgs(datastack['args']);
-          } else {
-            throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
-          }
-        } else {
-          console.log('Error: ' + error.message)
-        }
-      }
-    );
+    const payload = { 
+      datastack_path: fileList[0].path
+    }
+    const datastack = await fetchDatastackFromFile(payload)
+
+    if (datastack['module_name'] === this.props.modulename) {
+      this.props.batchUpdateArgs(datastack['args']);
+    } else {
+      console.log('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
+      throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
+    }
   }
 
   render() {
@@ -124,10 +137,12 @@ class ArgsForm extends React.Component {
       if (['csv', 'vector', 'raster', 'directory'].includes(argument.type)) {
         formItems.push(
           <Form.Group as={Row} key={argname}>
-            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Form.Label column sm="3"  htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="8">
               <InputGroup>
+                <AboutModal argument={argument}/>
                 <Form.Control
+                  id={argname}
                   name={argname}
                   type="text" 
                   value={argument.value || ''} // empty string is handled better than `undefined`
@@ -136,7 +151,8 @@ class ArgsForm extends React.Component {
                   isInvalid={argument.touched && argument.validationMessage}
                 />
                 <InputGroup.Append>
-                  <Button 
+                  <Button
+                    id={argname}
                     variant="outline-secondary"
                     value={argument.type}  // dialog will limit options to files or dirs accordingly
                     name={argname}
@@ -144,7 +160,7 @@ class ArgsForm extends React.Component {
                     Browse
                   </Button>
                 </InputGroup.Append>
-                <Form.Control.Feedback type='invalid'>
+                <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
                   {argument.type + ' : ' + (argument.validationMessage || '')}
                 </Form.Control.Feedback>
               </InputGroup>
@@ -155,19 +171,23 @@ class ArgsForm extends React.Component {
       } else if (['freestyle_string', 'number'].includes(argument.type)) {
         formItems.push(
           <Form.Group as={Row} key={argname}>
-            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Form.Label column sm="3"  htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="4">
-              <Form.Control
-                name={argname}
-                type="text" 
-                value={argument.value || ''} // empty string is handled better than `undefined`
-                onChange={this.handleChange}
-                isValid={argument.touched && argument.valid}
-                isInvalid={argument.touched && argument.validationMessage}
-              />
-              <Form.Control.Feedback type='invalid'>
-                {argument.type + ' : ' + (argument.validationMessage || '')}
-              </Form.Control.Feedback>
+              <InputGroup>
+                <AboutModal argument={argument}/>
+                <Form.Control
+                  id={argname}
+                  name={argname}
+                  type="text" 
+                  value={argument.value || ''} // empty string is handled better than `undefined`
+                  onChange={this.handleChange}
+                  isValid={argument.touched && argument.valid}
+                  isInvalid={argument.touched && argument.validationMessage}
+                />
+                <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
+                  {argument.type + ' : ' + (argument.validationMessage || '')}
+                </Form.Control.Feedback>
+              </InputGroup>
             </Col>
           </Form.Group>)
       
@@ -179,9 +199,11 @@ class ArgsForm extends React.Component {
         // So, `checked` property must accomodate both types to determine state.
         formItems.push(
           <Form.Group as={Row} key={argname}>
-            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Form.Label column sm="3" htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="8">
+              <AboutModal argument={argument}/>
               <Form.Check
+                id={argname}
                 inline
                 type="radio"
                 label="Yes"
@@ -191,6 +213,7 @@ class ArgsForm extends React.Component {
                 name={argname}
               />
               <Form.Check
+                id={argname}
                 inline
                 type="radio"
                 label="No"
@@ -206,27 +229,31 @@ class ArgsForm extends React.Component {
       } else if (argument.type === 'option_string') {
         formItems.push(
           <Form.Group as={Row} key={argname}>
-            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Form.Label column sm="3" htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="4">
-              <Form.Control
-                as='select'
-                name={argname}
-                value={argument.value}
-                onChange={this.handleChange}>
-                {argument.validation_options.options.map(opt =>
-                  <option value={opt} key={opt}>{opt}</option>
-                )}
-              </Form.Control>
-              <Form.Control.Feedback type='invalid'>
-                {argument.type + ' : ' + (argument.validationMessage || '')}
-              </Form.Control.Feedback>
+              <InputGroup>
+                <AboutModal argument={argument}/>
+                <Form.Control
+                  id={argname}
+                  as='select'
+                  name={argname}
+                  value={argument.value}
+                  onChange={this.handleChange}>
+                  {argument.validation_options.options.map(opt =>
+                    <option value={opt} key={opt}>{opt}</option>
+                  )}
+                </Form.Control>
+                <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
+                  {argument.type + ' : ' + (argument.validationMessage || '')}
+                </Form.Control.Feedback>
+              </InputGroup>
             </Col>
           </Form.Group>)
       }
     }
 
     return (
-      <Form 
+      <Form data-testid='setup-form'
         validated={false}
         onDrop={this.onDragDrop}
         onDragOver={dragover_handler}>
@@ -234,6 +261,60 @@ class ArgsForm extends React.Component {
       </Form>
     );
   }
+}
+
+// These props all get passed through SetupTab's props,
+// so they are defined dynamically as such
+ArgsForm.propTypes = {
+  args: SetupTab.propTypes.args,
+  modulename: SetupTab.propTypes.modulename,
+  updateArg: SetupTab.propTypes.updateArg,
+  batchUpdateArgs: SetupTab.propTypes.batchUpdateArgs,
+  investValidate: SetupTab.propTypes.investValidate,
+}
+
+class AboutModal extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      aboutShow: false
+    }
+    this.handleAboutOpen = this.handleAboutOpen.bind(this);
+    this.handleAboutClose = this.handleAboutClose.bind(this);
+  }
+
+  handleAboutClose() {
+    this.setState({aboutShow: false});
+  }
+
+  handleAboutOpen() {
+    this.setState({aboutShow: true});
+  }
+
+  render() {
+    return(
+      <React.Fragment>
+        <Button  className="mr-3"
+          onClick={this.handleAboutOpen}
+          variant="outline-info">
+          i
+        </Button>
+        <Modal show={this.state.aboutShow} onHide={this.handleAboutClose}>
+          <Modal.Header>
+            <Modal.Title>{this.props.argument.name}</Modal.Title>
+            </Modal.Header>
+          <Modal.Body>{this.props.argument.about}</Modal.Body>
+        </Modal>
+      </React.Fragment>
+    );
+  }
+}
+
+AboutModal.propTypes = {
+  argument: PropTypes.shape({
+    name: PropTypes.string,
+    about: PropTypes.string
+  })
 }
 
 function dragover_handler(event) {

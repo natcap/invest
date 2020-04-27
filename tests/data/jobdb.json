@@ -1,0 +1,26 @@
+{
+  "carbon_setup": {
+    "model": "carbon",
+    "workspace": {
+      "directory": "carbs",
+      "suffix": null
+    },
+    "statefile": "carbon_setup.json",
+    "status": null,
+    "humanTime": "3/5/2020, 10:43:14 AM",
+    "systemTime": 1583259376573.759,
+    "description": "loaded model sample data but haven't run yet"
+  },
+  "duck": {
+    "model": "carbon",
+    "workspace": {
+      "directory": "duck",
+      "suffix": "goose"
+    },
+    "statefile": "duck.json",
+    "status": "success",
+    "humanTime": "3/5/2020, 10:43:14 AM",
+    "systemTime": 1243259376573.759,
+    "description": "ducks are natural capital...or are they ecosystem services?"
+  }
+}

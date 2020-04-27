@@ -1,124 +1,84 @@
 import React from 'react';
-import Electron from 'electron'
+import { remote } from 'electron'
+import PropTypes from 'prop-types';
 
-import Row from 'react-bootstrap/Row';
-import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
-import Modal from 'react-bootstrap/Modal';
-import Dropdown from 'react-bootstrap/Dropdown';
 
-class DropdownItemModal extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { show: false }
 
-    this.handleClose = this.handleClose.bind(this);
-    this.handleShow = this.handleShow.bind(this);
-  }
-
-  handleClose() {
-    this.setState({ show: false });
-  }
-
-  handleShow() {
-    this.setState({show: true});
-  }; 
-}
-
-export class SaveSessionDropdownItem extends DropdownItemModal {
+export class SaveParametersButton extends React.Component {
+  /** Render a button that saves current args to a datastack json.
+  * Opens an native OS filesystem dialog to browse to a save location.
+  * Creates the JSON using datastack.py.
+  */
 
   constructor(props) {
     super(props);
-    this.handleSubmit = this.handleSubmit.bind(this);
+    this.browseSaveFile = this.browseSaveFile.bind(this);
   }
 
-  handleSubmit(event) {
-    event.preventDefault();
-    this.props.saveState();
-    this.setState({show: false});
+  async browseSaveFile(event) {
+    const data = await remote.dialog.showSaveDialog(
+      { defaultPath: 'invest_args.json' })
+    if (data.filePath) {   
+      this.props.argsToJsonFile(data.filePath);
+    } else {
+      console.log('save parameters was cancelled')
+    }
   }
 
   render() {
-    
-    return (
-      <React.Fragment>
-        
-        <Dropdown.Item onClick={this.handleShow}>Save session</Dropdown.Item>
-
-        <Modal show={this.state.show} onHide={this.handleClose}>
-          <Form onSubmit={this.handleSubmit}>
-            <Modal.Header>
-              <Modal.Title>Save Session</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <Form.Group as={Row} key="1">
-                <Form.Label className="mx-3">Title</Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder={this.props.sessionID}
-                  value={this.props.sessionID}
-                  onChange={this.props.setSessionID}
-                />
-              </Form.Group>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={this.handleClose}>
-                Cancel
-              </Button>
-              <Button 
-                variant="primary"
-                onClick={this.handleSubmit}
-                type="submit"
-                disabled={false}>
-                Save Session
-              </Button>
-            </Modal.Footer>
-          </Form>
-        </Modal>
-      </React.Fragment>
-    )
-  }
-}
-
-
-export class SaveParametersDropdownItem extends React.Component {
-
-  constructor(props) {
-    super(props);
-    this.browseFile = this.browseFile.bind(this);
-  }
-
-  browseFile(event) {
-    Electron.remote.dialog.showSaveDialog(
-      { defaultPath: 'invest_args.json' }, (filepath) => {
-      this.props.argsToJsonFile(filepath);
-    });
-  }
-
-  render() {
+    // disabled when there's no modelSpec, i.e. before a model is selected
     return(
-      <Dropdown.Item onClick={this.browseFile}>Save parameters to JSON</Dropdown.Item>
+      <Button 
+        onClick={this.browseSaveFile}
+        disabled={this.props.disabled}
+        variant="link">
+        Save parameters to JSON
+      </Button>
     );
   }
 }
 
-export class SavePythonDropdownItem extends React.Component {
+SaveParametersButton.propTypes = {
+  argsToJsonFile: PropTypes.func,
+  disabled: PropTypes.bool
+}
+
+export class SavePythonButton extends React.Component {
+  /** Render a button that saves current model and args to a python file.
+  * Opens an native OS filesystem dialog to browse to a save location.
+  * Creates a python script that call's the model's execute function.
+  */
   
   constructor(props) {
     super(props);
     this.browseFile = this.browseFile.bind(this);
   }
 
-  browseFile(event) {
-    Electron.remote.dialog.showSaveDialog(
-      { defaultPath: 'execute_invest.py' }, (filepath) => {
-      this.props.savePythonScript(filepath)
-    });
+  async browseFile(event) {
+    const data = await remote.dialog.showSaveDialog(
+      { defaultPath: 'execute_invest.py' })
+    if (data.filePath) {
+      this.props.savePythonScript(data.filePath)
+    } else {
+      console.log('save to python was cancelled')
+    }
   }
 
   render() {
+    // disabled when there's no modelSpec, i.e. before a model is selected
     return(
-      <Dropdown.Item onClick={this.browseFile}>Save to Python script</Dropdown.Item>
+      <Button 
+        onClick={this.browseFile}
+        disabled={this.props.disabled}
+        variant="link">
+        Save to Python script
+      </Button>
     );
   }
+}
+
+SavePythonButton.propTypes = {
+  savePythonScript: PropTypes.func,
+  disabled: PropTypes.bool
 }

@@ -1,7 +1,12 @@
 import React from 'react';
+import PropTypes from 'prop-types';
+import { Tail } from 'tail';
+import os from 'os';
+import { shell } from 'electron';
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Container from 'react-bootstrap/Container';
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 
@@ -11,7 +16,7 @@ const logStyle = {
   overflowY: 'scroll',
 };
 
-export class LogTab extends React.Component {
+class LogDisplay extends React.Component {
 
   constructor(props) {
     super(props);
@@ -23,39 +28,109 @@ export class LogTab extends React.Component {
   }
 
   render() {
-    const current_err = this.props.logStdErr;
-    // Include the stderr in the main log even though it also gets an Alert
-    const current_out = this.props.logStdOut + current_err;
-    let renderedLog;
-    let renderedAlert;
-    let killButton;
+    return (
+      <Col ref={this.content} style={logStyle}>
+        {this.props.logdata}
+      </Col>
+      );
+  }
+}
 
-    renderedLog =
-        <Col ref={this.content} style={logStyle}>
-          {current_out}
-        </Col>
+LogDisplay.propTypes = {
+  logdata: PropTypes.string
+}
 
-    if (current_err) {
-      renderedAlert = <Alert variant={'danger'}>{current_err}</Alert>
-    } else {
-      if (this.props.sessionProgress === 'results') { // this was set if python exited w/o error
-        renderedAlert = <Alert variant={'success'}>{'Model Completed'}</Alert>
+export class LogTab extends React.Component {
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      logdata: ''
+    }
+    this.tail = null;
+    this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
+  }
+
+  componentDidUpdate(prevProps) {
+    // if there is a logfile and it's new, start tailing the file.
+    if (this.props.logfile && prevProps.logfile !== this.props.logfile) {
+      try {
+        this.tail = new Tail(this.props.logfile, {
+          fromBeginning: true
+        });
+        let logdata = Object.assign('', this.state.logdata);
+        this.tail.on('line', (data) => {
+          logdata += `${data}` + os.EOL
+          this.setState({ logdata: logdata })
+        })
+      } catch(error) {
+        // in case a recent session was loaded but the logfile
+        // no longer exists 
+        this.setState({logdata: `Logfile is missing: ${os.EOL}${this.props.logfile}`})
+        console.log(error)
+        console.log(`Not able to read ${this.props.logfile}`)
+      }
+
+    // No new logfile. No existing logdata.
+    } else if (this.state.logdata === '') {
+      this.setState({logdata: 'Starting...'})
+
+    // No new logfile. Existing logdata. Invest process exited. 
+    } else if (['success', 'error'].includes(this.props.jobStatus)) {
+      try {
+        this.tail.unwatch()
+      }
+      catch(error) {
+        console.log(error)
       }
     }
+  }
 
-    killButton = 
-      <Button
-        variant="primary" 
-        size="lg"
-        onClick={this.props.investKill}>
-        Kill Subprocess
-      </Button>
+  handleOpenWorkspace() {
+    shell.showItemInFolder(this.props.logfile)
+  }
+
+  render() {    
+    let RenderedAlert;
+    const WorkspaceButton = <Button className='float-right float-bottom'
+      variant='outline-dark'
+      onClick={this.handleOpenWorkspace}
+      disabled={this.props.jobStatus === 'running'}>
+      Open Workspace
+    </Button>
+
+    if (this.props.jobStatus === 'error') {
+      RenderedAlert = <Alert className='py-4 mt-3'
+        variant={'danger'}>
+        {this.props.logStdErr}
+        {WorkspaceButton}
+      </Alert>
+    } else if (this.props.jobStatus === 'success') {
+      RenderedAlert = <Alert className='py-4 mt-3'
+        variant={'success'}>
+        <span>Model Completed</span>
+        {WorkspaceButton}
+      </Alert>
+    }
+
 
     return (
-      <React.Fragment>
-        <Row>{renderedLog}</Row>
-        <Row>{renderedAlert}</Row>
-      </React.Fragment>
+      <Container>
+        <Row>
+          <LogDisplay logdata={this.state.logdata}/>
+        </Row>
+        <Row>
+          <Col>
+            {RenderedAlert}
+          </Col>
+        </Row>
+      </Container>
     );
   }
+}
+
+LogTab.propTypes = {
+  jobStatus: PropTypes.string,
+  logfile: PropTypes.string,
+  logStdErr: PropTypes.string
 }

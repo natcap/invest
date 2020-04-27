@@ -1,13 +1,14 @@
-import fs from 'fs';
-import path from 'path';
-import request from 'request';
 import React from 'react';
+import PropTypes from 'prop-types';
 
 import { InvestJob } from './InvestJob';
-
-const CACHE_DIR = 'cache' //  for storing state snapshot files
+import { getInvestList, getFlaskIsReady } from './server_requests';
+import { updateRecentSessions, loadRecentSessions } from './utils';
 
 export default class App extends React.Component {
+  /** This component manages any application state that should persist
+  * and be independent from properties of a single invest job.
+  */
 
   constructor(props) {
     super(props);
@@ -21,9 +22,19 @@ export default class App extends React.Component {
   }
 
   async componentDidMount() {
-    // TODO: also load and set investSettings from a cached state
+    /** Initialize the list of available invest models and recent invest jobs.*/
+
+    // Inexplicably, when getFlaskIsReady is immediately followed by getInvestList,
+    // ~50% of the time getInvestList is called but never returns, or even calls fetch.
+    // Adding even a 1ms pause between calls avoids that problem, as does not
+    // calling getFlaskIsReady. Unless we observe the app trying getInvestList
+    // before flask is ready, we don't need getFlaskIsReady anyway.
+    // const readydata = await getFlaskIsReady(); 
+    // await new Promise(resolve => setTimeout(resolve, 1));
     const investList = await getInvestList();
-    const recentSessions = await findRecentSessions(CACHE_DIR);
+    const recentSessions = await loadRecentSessions(this.props.appdata)
+    // TODO: also load and set investSettings from a cached state, instead 
+    // of always re-setting to these hardcoded values on first launch?
     this.setState(
       {
         investList: investList,
@@ -35,11 +46,16 @@ export default class App extends React.Component {
       });
   }
 
-  updateRecentSessions(sessionID) {
-    // This triggers on saveState clicks
-    let recentSessions = Object.assign([], this.state.recentSessions);
-    recentSessions.unshift(sessionID);
-    this.setState({recentSessions: recentSessions});
+  async updateRecentSessions(jobdata) {
+    /** Update the recent sessions list when a new invest job was saved.
+    * This triggers on InvestJob.saveState().
+    * 
+    * @param {object} jobdata - the metadata describing an invest job.
+    */
+    const recentSessions = await updateRecentSessions(jobdata, this.props.appdata);
+    this.setState({
+      recentSessions: recentSessions
+    })
   }
 
   saveSettings(settings) {
@@ -54,6 +70,7 @@ export default class App extends React.Component {
         investList={this.state.investList}
         investSettings={this.state.investSettings}
         recentSessions={this.state.recentSessions}
+        appdata={this.props.appdata}
         updateRecentSessions={this.updateRecentSessions}
         saveSettings={this.saveSettings}
       />
@@ -61,50 +78,6 @@ export default class App extends React.Component {
   }
 }
 
-function findRecentSessions(cache_dir) {
-  // Populate recentSessions from list of files in cache dir
-  // sorted by modified time.
-
-  // TODO: check that files are actually state config files
-  // before putting them on the array
-  return new Promise(function(resolve, reject) {
-    const files = fs.readdirSync(cache_dir);
-
-    // reverse sort (b - a) based on last-modified time
-    const sortedFiles = files.sort(function(a, b) {
-      return fs.statSync(path.join(cache_dir, b)).mtimeMs -
-           fs.statSync(path.join(cache_dir, a)).mtimeMs
-    });
-    // trim off extension, since that is how sessions
-    // were named orginally
-    resolve(sortedFiles
-      .map(f => path.parse(f).name)
-      .slice(0, 15) // max 15 items returned
-    );
-  });
-}
-
-function getInvestList() {
-  return new Promise(function(resolve, reject) {
-    setTimeout(() => {
-      request.get(
-        'http://localhost:5000/models',
-        (error, response, body) => {
-          if (!error && response.statusCode == 200) {
-            const models = JSON.parse(body);
-            resolve(models);
-          } else if (error) {
-            console.error(error);
-          } else {
-            try {
-              console.log('Status: ' + response.statusCode);
-            }
-            catch (e) {
-              console.error(e);
-            }
-          }
-        }
-      );
-    }, 500)  // wait, the server only just launced in a subprocess.
-  });
+App.propTypes = {
+  appdata: PropTypes.string
 }

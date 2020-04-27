@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
@@ -7,6 +8,10 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
 export class SettingsModal extends React.Component {
+  /** Renders a model dialog with a form where global invest settings
+  * can be adjusted. Values displayed in this form always inherit from
+  * those global settings, which are stored in the parent component's state.
+  */
 
   constructor(props) {
     super(props);
@@ -22,6 +27,9 @@ export class SettingsModal extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
+    /** Any time the parent's state of investSettings changes, 
+    * this component should reflect that.
+    */
     if (this.props.investSettings !== prevProps.investSettings) {
       const globalSettings = Object.assign({}, this.props.investSettings)
       this.setState({localSettings: globalSettings})
@@ -29,7 +37,7 @@ export class SettingsModal extends React.Component {
   }
 
   handleClose() {
-    // reset the local settings from the app's state because we closed w/o save
+    /** reset the local settings from the app's state because we closed w/o save */
     const appSettings = Object.assign({}, this.props.investSettings)
     this.setState({
       show: false,
@@ -42,15 +50,19 @@ export class SettingsModal extends React.Component {
   }
 
   handleSubmit(event) {
+    /** Handle a click on the "Save" button, which updates the parent's state */
     event.preventDefault();
     this.props.saveSettings(this.state.localSettings);
     this.setState({show: false});
   }
 
   handleChange(event) {
+    /** Handle changes to inputs by reflecting them back immediately 
+    * via localSettings object. But do not update the values stored 
+    * in the parent's state.
+    */
     let newSettings = Object.assign({}, this.state.localSettings);
     newSettings[event.target.name] = event.target.value
-
     this.setState({
       localSettings: newSettings
     });
@@ -64,7 +76,7 @@ export class SettingsModal extends React.Component {
 
     return (
       <React.Fragment>
-        <Button variant="primary" onClick={this.handleShow}>
+        <Button className="mx-3" variant="primary" onClick={this.handleShow}>
           Settings
         </Button>
 
@@ -75,11 +87,12 @@ export class SettingsModal extends React.Component {
             </Modal.Header>
             <Modal.Body>
               <Form.Group as={Row}>
-                <Form.Label column sm="8">Logging threshold</Form.Label>
+                <Form.Label column sm="8" htmlFor="logging-select">Logging threshold</Form.Label>
                 <Col sm="3">
                   <Form.Control
-                    as='select'
-                    name='loggingLevel'
+                    id="logging-select"
+                    as="select"
+                    name="loggingLevel"
                     value={this.state.localSettings.loggingLevel}
                     onChange={this.handleChange}>
                     {logLevelOptions.map(opt =>
@@ -89,11 +102,12 @@ export class SettingsModal extends React.Component {
                 </Col>
               </Form.Group>
               <Form.Group as={Row}>
-                <Form.Label column sm="8">
+                <Form.Label column sm="8" htmlFor="nworkers-text">
                   Taskgraph n_workers parameter (must be an integer &gt;= -1)
                 </Form.Label>
                 <Col sm="3">
                   <Form.Control
+                    id="nworkers-text"
                     name="nWorkers"
                     type="text" 
                     value={this.state.localSettings.nWorkers}
@@ -122,7 +136,16 @@ export class SettingsModal extends React.Component {
   }
 }
 
+SettingsModal.propTypes = {
+  saveSettings: PropTypes.func,
+  investSettings: PropTypes.shape({
+    nWorkers: PropTypes.string,
+    loggingLevel: PropTypes.string,
+  })
+}
+
 function validateNWorkers(value) {
+  /** Validate that n_wokers is an acceptable value for Taskgraph. */
   const nInt = parseInt(value)
   return Number.isInteger(nInt) && nInt >= -1
 }

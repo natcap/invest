@@ -1,31 +1,27 @@
-import { spawn } from 'child_process';
-import { app, BrowserWindow } from 'electron';
-import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
-import request from 'request';
-// import { enableLiveReload } from 'electron-compile';
+const spawn = require('child_process').spawn;
+const app = require('electron').app
+const BrowserWindow = require('electron').BrowserWindow
+const fetch = require('node-fetch')
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 
 const isDevMode = process.execPath.match(/[\\/]electron/);
-
-// if (isDevMode) enableLiveReload({ strategy: 'react-hmr' });
-
-let PYTHON = 'python';
-if (process.env.INVEST) {  // if it was set, override
-  PYTHON = process.env.INVEST.trim();
+if (isDevMode) {
+  // load the '.env' file from the project root
+  const dotenv = require('dotenv');
+  dotenv.config();  
 }
 
+let PYTHON = (process.env.PYTHON || 'python').trim();
+let PORT = (process.env.PORT || '5000').trim();
+
 const createWindow = async () => {
-  
-  // Creating the process here with await because sometimes,
-  // but not always, the window loads and the first request
-  // is made before the server is ready. Unfortunately, it's
-  // an intermittent problem, and I'm not certain that await
-  // works here, because createPythonProcess is not a Promise.
-  // UPDATE: await does not deal with the problem.
-  await createPythonProcess();
+  /** Much of this is electron app boilerplate, but here is also
+  * where we fire up the python flask server.
+  */
+  createPythonFlaskProcess();
 
   // Create the browser window.
   mainWindow = new BrowserWindow({
@@ -41,7 +37,9 @@ const createWindow = async () => {
 
   // Open the DevTools.
   if (isDevMode) {
+    const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
     await installExtension(REACT_DEVELOPER_TOOLS);
+    // enableLiveReload({ strategy: 'react-hmr' });
     mainWindow.webContents.openDevTools();
   }
 
@@ -54,8 +52,8 @@ const createWindow = async () => {
   });
 };
 
-let pythonServerProcess;
-function createPythonProcess() {
+function createPythonFlaskProcess() {
+  /** Spawn a child process running the Python Flask server.*/
   pythonServerProcess = spawn(
     PYTHON, ['-m', 'flask', 'run'], {
       shell: true,
@@ -81,17 +79,15 @@ function createPythonProcess() {
   });
 }
 
-function exitPythonProcess() {
-  request.post(
-    'http://localhost:5000/shutdown',
-    (error, response, body) => {
-      if (!error) {
-        console.log('python killed')
-      } else {
-        console.log('Error: ' + error.message)
-      }
-    }
-  );
+function shutdownPythonProcess() {
+  return(
+    fetch(`http://localhost:${PORT}/shutdown`, {
+      method: 'get',
+    })
+    .then((response) => { return response.text() })
+    .then((text) => { console.log(text) })
+    .catch((error) => { console.log(error) })
+  )
 }
 
 // This method will be called when Electron has finished
@@ -104,10 +100,10 @@ app.on('window-all-closed', async () => {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
-    exitPythonProcess();
-    // It's crucial to wait before the app.quit here, otherwise
-    // the parent process dies before flask has time to kill its server.
-    setTimeout(app.quit, 10);
+    // It's crucial to await here, otherwise the parent
+    // process dies before flask has time to kill its server.
+    await shutdownPythonProcess();
+    app.quit()
   }
 });
 
@@ -119,6 +115,9 @@ app.on('activate', () => {
   }
 });
 
-// Couldn't get this callback to fire, moved to 'window-all-closed',
-// but that doesn't cover OSX
-// app.on('will-quit', exitPythonProcess);
+// TODO: I haven't actually tested this yet on MacOS
+app.on('will-quit', async () => {
+  if (process.platform === 'darwin') {
+    await shutdownPythonProcess();
+  }
+});

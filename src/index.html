@@ -33,6 +33,9 @@
 <body style="background-color: rgba(0,0,0,0); margin: 0; padding: 20px" >
   <div id="App"></div>
 </body>
-<script  type="text/javascript" src="./index.js"></script>
+<script>
+  require = require("esm")(module)
+  require("file://".concat(__dirname, "/index.js"))
+</script>
 
 </html>
