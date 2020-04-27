@@ -736,13 +736,13 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
     """
     def quality_op(degradation, habitat):
         """Computes habitat quality given degradation and habitat values."""
-        degredataion_clamped = numpy.where(degradation < 0, 0, degradation)
+        degradation_clamped = numpy.where(degradation < 0, 0, degradation)
 
         return numpy.where(
             (degradation == _OUT_NODATA) | (habitat == _OUT_NODATA),
             _OUT_NODATA,
-            (habitat * (1.0 - ((degredataion_clamped**_SCALING_PARAM) /
-             (degredataion_clamped**_SCALING_PARAM + ksq)))))
+            (habitat * (1.0 - ((degradation_clamped**_SCALING_PARAM) /
+             (degradation_clamped**_SCALING_PARAM + ksq)))))
 
     deg_hab_raster_band_list = [
         (path, 1) for path in deg_hab_raster_list]
