@@ -284,7 +284,7 @@ def execute(args):
         h for h in required_threat_header_list if h not in threat_header_list]
     if missing_threat_header_list:
         raise ValueError(
-            'Column(s) %s are missing in the threat table',
+            'Column(s) %s are missing in the threat table' %
             (', '.join(missing_threat_header_list)))
 
     # check that the required headers exist in the sensitivity table.
@@ -295,7 +295,7 @@ def execute(args):
         h for h in required_sens_header_list if h not in sens_header_list]
     if missing_sens_header_list:
         raise ValueError(
-            'Column(s) %s are missing in the sensitivity table',
+            'Column(s) %s are missing in the sensitivity table' %
             (', '.join(missing_sens_header_list)))
 
     # check that the threat names in the threats table match with the threats
