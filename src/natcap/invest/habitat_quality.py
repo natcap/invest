@@ -694,14 +694,21 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
     """
     def quality_op(degradation, habitat):
         """Computes habitat quality given degradation and habitat values."""
+        out_array = numpy.empty_like(degradation)
+        out_array[:] = _OUT_NODATA
+        # Both these rasters are Float32, so the actual pixel values written
+        # might be *slightly* off of _OUT_NODATA but should still be 
+        # interpreted as nodata.
+        valid_pixels = ~(
+            numpy.isclose(degradation, _OUT_NODATA) | 
+            numpy.isclose(habitat, _OUT_NODATA))
         degradation_clamped = numpy.where(degradation < 0, 0, degradation)
-
-        return numpy.where(
-            (degradation == _OUT_NODATA) | (habitat == _OUT_NODATA),
-            _OUT_NODATA,
-            (habitat * (1.0 - ((degradation_clamped**_SCALING_PARAM) /
-             (degradation_clamped**_SCALING_PARAM + ksq)))))
-
+        out_array[valid_pixels] = (
+            habitat[valid_pixels] * 
+            (1.0 - (degradation_clamped[valid_pixels]**_SCALING_PARAM) /
+                (degradation_clamped[valid_pixels]**_SCALING_PARAM + ksq)))
+        return out_array
+    
     deg_hab_raster_band_list = [
         (path, 1) for path in deg_hab_raster_list]
 
@@ -729,7 +736,7 @@ def _calculate_total_degradation(
         """Computes the total degradation value.
 
         Args:
-            *rasters (list): a list of numpy arrays of float type depicting
+            *raster (list): a list of numpy arrays of float type depicting
                 the adjusted threat value per pixel based on distance and
                 sensitivity. The values are in pairs so that the values for
                 each threat can be tracked:
@@ -754,7 +761,7 @@ def _calculate_total_degradation(
         nodata_mask = numpy.empty(raster[0].shape, dtype=numpy.int8)
         nodata_mask[:] = 0
         for array in raster:
-            nodata_mask = nodata_mask | (array == _OUT_NODATA)
+            nodata_mask = nodata_mask | numpy.isclose(array, _OUT_NODATA)
 
         # the last element in raster is access
         return numpy.where(
