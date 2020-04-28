@@ -576,7 +576,7 @@ class HabitatQualityTests(unittest.TestCase):
                 '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(KeyError):
             habitat_quality.execute(args)
 
     def test_habitat_quality_missing_threat(self):

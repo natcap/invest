@@ -272,53 +272,11 @@ def execute(args):
     sensitivity_dict = utils.build_lookup_from_csv(
         args['sensitivity_table_path'], 'LULC', to_lower=True)
 
-    # check that the required headers exist in the threat table.
-    # Raise exception if they don't.
-    threat_header_set = set(list(threat_dict.values())[0].keys())
-    required_threat_header_set = {
-        'weight', 'max_dist', 'decay', 'base_path', 'cur_path', 'fut_path'}
-    missing_threat_header_set = required_threat_header_set.difference(
-        threat_header_set)
-    if missing_threat_header_set:
-        raise ValueError(
-            f'Column(s) {missing_threat_header_set} are missing in the threat'
-            ' table.')
-
-    # check that the required headers exist in the sensitivity table.
-    # Raise exception if they don't.
-    sens_header_set = set(list(sensitivity_dict.values())[0])
-    required_sens_header_set = {'lulc', 'name', 'habitat'}
-    missing_sens_header_set = required_sens_header_set.difference(
-        sens_header_set)
-    if missing_sens_header_set:
-        raise ValueError(
-            f'Column(s) {missing_sens_header_set} are missing in the'
-            ' sensitivity table')
-
-    # check that the threat names in the threats table match with the threats
-    # columns in the sensitivity table.
-    missing_threat_header_set = set()
-    for threat in threat_dict:
-        if threat not in sens_header_set:
-            missing_threat_header_set.add(threat)
-
-    if missing_threat_header_set:
-        raise ValueError(
-            f'Threats "{missing_threat_header_set}" does not match any column'
-            ' in the sensitivity table. Sensitivity columns:'
-            f' {sens_header_set}')
-
     # Get the directory path for the Threats CSV, used for locating threat
     # rasters, which are relative to this path
     threat_csv_dirpath = os.path.dirname(args['threats_table_path'])
 
-    # get the half saturation constant
-    try:
-        half_saturation_constant = float(args['half_saturation_constant'])
-    except ValueError:
-        raise ValueError(
-            "Half-saturation constant is not a numeric number."
-            f"It is: {args['half_saturation_constant']}")
+    half_saturation_constant = float(args['half_saturation_constant'])
 
     # Dictionary for reclassing habitat values
     sensitivity_reclassify_habitat_dict = {
