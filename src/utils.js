@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import glob from 'glob';
 
-const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z\._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g
+const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g
 
 export function loadRecentSessions(jobDatabase) {
   /** Load job data from a persistent file and return the jobs

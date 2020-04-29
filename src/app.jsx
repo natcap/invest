@@ -30,14 +30,15 @@ export default class App extends React.Component {
   async componentDidMount() {
     /** Initialize the list of available invest models and recent invest jobs.*/
 
-    // TODO: intermittently (10 - 20% of times) we don't get to getInvestList.
-    // Hence all the logging here.
-    const readydata = await getFlaskIsReady();  // The app's first server calls follow this
-    console.log(readydata)
+    // Inexplicably, when getFlaskIsReady is immediately followed by getInvestList,
+    // ~50% of the time getInvestList is called but never returns, or even calls fetch.
+    // Adding even a 1ms pause between calls avoids that problem, as does not
+    // calling getFlaskIsReady. Unless we observe the app trying getInvestList
+    // before flask is ready, we don't need getFlaskIsReady anyway.
+    // const readydata = await getFlaskIsReady(); 
+    // await new Promise(resolve => setTimeout(resolve, 1));
     const investList = await getInvestList();
-    console.log('app invest list')
     const recentSessions = await loadRecentSessions(this.props.appdata)
-    console.log('app load recents')
     // TODO: also load and set investSettings from a cached state, instead 
     // of always re-setting to these hardcoded values on first launch?
     this.setState(
@@ -48,7 +49,7 @@ export default class App extends React.Component {
           nWorkers: '-1',
           loggingLevel: 'INFO',
         }
-      }, () => {console.log('app first setstate')});
+      });
   }
 
   async updateRecentSessions(jobdata) {

@@ -1,3 +1,10 @@
+This project is a user-interface layer for InVEST (Integrated Valuation of Ecosystem Services and Tradeoffs).
+InVEST can be found at https://github.com/natcap/invest.
+
+The purpose of this project is to provide a single entry-point for all
+InVEST models, and to be extensible to future models or common auxilary
+workflows of an InVEST user.
+
 ## To develop and launch this Application
 
 `npm install` from repo directory  

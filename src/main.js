@@ -14,10 +14,8 @@ if (isDevMode) {
   dotenv.config();  
 }
 
-let PYTHON = 'python';
-if (process.env.PYTHON) {  // if it was set, override
-  PYTHON = process.env.PYTHON.trim();
-}
+let PYTHON = (process.env.PYTHON || 'python').trim();
+let PORT = (process.env.PORT || '5000').trim();
 
 const createWindow = async () => {
   /** Much of this is electron app boilerplate, but here is also
@@ -54,7 +52,6 @@ const createWindow = async () => {
   });
 };
 
-let pythonServerProcess;
 function createPythonFlaskProcess() {
   /** Spawn a child process running the Python Flask server.*/
   pythonServerProcess = spawn(
@@ -84,7 +81,7 @@ function createPythonFlaskProcess() {
 
 function shutdownPythonProcess() {
   return(
-    fetch('http://localhost:5000/shutdown', {
+    fetch(`http://localhost:${PORT}/shutdown`, {
       method: 'get',
     })
     .then((response) => { return response.text() })
@@ -106,8 +103,8 @@ app.on('window-all-closed', async () => {
     // It's crucial to await here, otherwise the parent
     // process dies before flask has time to kill its server.
     await shutdownPythonProcess();
+    app.quit()
   }
-  // TODO: handle flask shutdown on darwin
 });
 
 app.on('activate', () => {
@@ -118,6 +115,9 @@ app.on('activate', () => {
   }
 });
 
-// Couldn't get this callback to fire, moved to 'window-all-closed',
-// but that doesn't cover OSX
-// app.on('will-quit', shutdownPythonProcess);
+// TODO: I haven't actually tested this yet on MacOS
+app.on('will-quit', async () => {
+  if (process.platform === 'darwin') {
+    await shutdownPythonProcess();
+  }
+});

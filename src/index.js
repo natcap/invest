@@ -16,7 +16,6 @@ var _app = _interopRequireDefault(require("./app"));
 
 const { remote } = require('electron');
 const { Menu, MenuItem } = remote;
-const path = require('path');
 const JOBS_DATABASE = 'jobdb.json'
 
 let rightClickPosition = null

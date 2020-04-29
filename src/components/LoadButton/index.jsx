@@ -2,11 +2,7 @@ import React from 'react';
 import { remote } from 'electron';
 import PropTypes from 'prop-types';
 
-import Row from 'react-bootstrap/Row';
-import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
-import Modal from 'react-bootstrap/Modal';
-import Dropdown from 'react-bootstrap/Dropdown';
 
 import { fetchDatastackFromFile } from '../../server_requests';
 
@@ -48,6 +44,8 @@ export class LoadButton extends React.Component {
 
 LoadButton.propTypes = {
   argsToJsonFile: PropTypes.func,
-  disabled: PropTypes.bool
+  disabled: PropTypes.bool,
+  investGetSpec: PropTypes.func,
+  batchUpdateArgs: PropTypes.func
 }
 

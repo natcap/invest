@@ -167,11 +167,16 @@ test('SaveParameters/Python enable after model select ', async () => {
   });
 })
 
-test.only('SaveParametersButton produces a datastack.py compliant json ', async () => {
-  const tmpdir = fs.mkdtempSync('tests/data/');
-  const datastackPath = path.join(tmpdir, 'foo.json')
+test('SaveParametersButton: requests endpoint with correct payload ', async () => {
+  // mock the server call, instead just returning
+  // the payload. At least we can assert the payload is what 
+  // the flask endpoint needs to build the json file.
+  writeParametersToFile.mockImplementation((payload) => {
+    return payload
+  })
+
   const mockDialogData = {
-    filePath: datastackPath
+    filePath: 'foo.json'
   }
   remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData)
   fetchValidation.mockResolvedValue([]);
@@ -184,16 +189,13 @@ test.only('SaveParametersButton produces a datastack.py compliant json ', async 
   fireEvent.click(saveButton);
 
   await wait(() => {
-    const datastack = JSON.parse(fs.readFileSync(datastackPath))
-    expect(Object.keys(datastack).includes(['args', 'model_name', 'invest_version']))
+    expect(Object.keys(writeParametersToFile.mock.results[0].value).includes(
+      ['parameterSetPath', 'moduleName', 'args', 'relativePaths']))
+    expect(writeParametersToFile).toHaveBeenCalledTimes(1)
   })
-  fs.readdirSync(tmpdir).forEach(file => {
-    fs.unlinkSync(path.join(tmpdir, file))
-    })
-  fs.rmdirSync(tmpdir)
 })
 
-test('SavePythonButton produces a python script ', async () => {
+test('SavePythonButton: requests endpoint with correct payload', async () => {
   // mock the server call, instead just returning
   // the payload. At least we can assert the payload is what 
   // the flask endpoint needs to build the python script.
