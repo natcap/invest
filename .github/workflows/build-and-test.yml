@@ -93,16 +93,16 @@ jobs:
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   activate-environment: env
-                  auto-update-conda: true 
+                  auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge, anaconda
-            
+
             - name: Install dependencies MacOS
               if: matrix.os != 'windows-latest'
               shell: bash -l {0}
               run: |
                   conda upgrade -y pip setuptools
-                  conda install Cython requests numpy
+                  conda install Cython requests numpy zlib
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
                   python setup.py install
