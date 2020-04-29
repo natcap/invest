@@ -86,7 +86,7 @@ class ArgsForm extends React.Component {
     
     // `false` argument prevents 'touching' these inputs so that we don't 
     //see scary validation warnings yet.
-    this.props.batchUpdateArgs(argsValuesFromSpec(this.props.args), false);
+    // this.props.batchUpdateArgs(argsValuesFromSpec(this.props.args), false);
   }
 
   handleChange(event) {

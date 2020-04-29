@@ -368,12 +368,16 @@ export class InvestJob extends React.Component {
 
   async investGetSpec(modelName) {
     /** Get an invest model's ARGS_SPEC when a model button is clicked.
-    * A side-effect is that much of this component's state is reset.
+    *  
+    * Also get the model's ui_spec if it exists.
+    * Then reset much of this component's state in case a prior job's 
+    * state exists. 
+    * Finally, call batchUpdateArgs to properly initialize enabled/disabled
+    * state of optional inputs, and trigger invest validate.
     *
     * @param {string} - 
     */
 
-    // const modelName = event.target.value;
     const payload = { 
         model: modelName
     };
@@ -415,8 +419,15 @@ export class InvestJob extends React.Component {
         sessionID: null,
         workspace: null,
       }, () => {
+        // arg values are yet `undefined` but will be converted to either 
+        // empty strings or `false` by `argsValuesFromSpec`.
+        // batchUpdateArgs sets the initial ui_active_options for each arg,
+        // and triggers validation, allowing optional args to validate 
+        // without any user-interaction.
+        // `false` argument prevents 'touching' these inputs so that we don't 
+        //see scary validation warnings yet.
+        this.batchUpdateArgs(argsValuesFromSpec(args), false)
         this.switchTabs('setup')
-        // return new Promise((resolve) => resolve(true))
       });
     } else {
       console.log('no spec found')
@@ -437,6 +448,7 @@ export class InvestJob extends React.Component {
     * when it's better to not display the arguments as 'touched'.
     */
 
+    // TODO: could this now just call through to updateArg? Maybe by adding a touch param there.
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
     Object.keys(argsMeta).forEach(argkey => {
       // Loop over argsMeta in order to:
@@ -464,17 +476,25 @@ export class InvestJob extends React.Component {
     );
   }
 
-  updateArg(key, value) {
-    /** Update this.state.args and validate the args. This is triggered
-    * by the event handler on the Arguments Form.
+  updateArg(key, value, touch=true) {
+    /** Update this.state.args and validate the args. 
+    *
+    * Updating means 
+    * 1) setting the value
+    * 2) 'touching' the arg - implications for display of validation warnings
+    * 3) updating the enabled/disabled/hidden state of any dependent args
     *
     * @param {string} key - the invest argument key
     * @param {string} value - the invest argument value
+    * @param {boolean} touch - whether this function should mark arguments as
+    * 'touched', which controls whether validation messages display. Usually
+    * desireable, except when this function is used for initial render of an
+    * input form, when it's better to not display the arguments as 'touched'.
     */
 
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
     argsMeta[key]['value'] = value;
-    argsMeta[key]['touched'] = true;
+    argsMeta[key]['touched'] = touch;
 
     if (argsMeta[key].ui_control) {
       argsMeta[key].ui_control.forEach(dependentKey => {
