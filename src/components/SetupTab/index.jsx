@@ -66,8 +66,10 @@ class ArgsForm extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      inputs: {}
+      inputs: argsValuesFromSpec(this.props.args)
     }
+    this.updateLocalArg = this.updateLocalArg.bind(this);
+    this.handleKeystrokes = this.handleKeystrokes.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.handleBoolChange = this.handleBoolChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
@@ -75,25 +77,26 @@ class ArgsForm extends React.Component {
     // this.setInputDisplay = this.setInputDisplay.bind(this);
   }
 
-  componentDidMount() {
-    /** Initializes some state for the inputs. 
-    *
-    * Values are yet `undefined` but will be converted to either 
-    *   empty strings or `false` by `argsValuesFromSpec`.
-    * Validation will update the `valid` property for each arg
-    *   allowing optional args to validate without any user-interaction.
-    */
-    
-    // `false` argument prevents 'touching' these inputs so that we don't 
-    //see scary validation warnings yet.
-    // this.props.batchUpdateArgs(argsValuesFromSpec(this.props.args), false);
+  // TODO: now we have some form values set by the local state
+  // and some set by props from the parent, that could be confusing.
+  updateLocalArg(key, value) {
+    let inputs = Object.assign({}, this.state.inputs)
+    inputs[key] = value
+    this.setState({inputs: inputs});
   }
 
   handleChange(event) {
-    /** Handle keystroke changes in text inputs */
+    /**Pass values up to parent for validation */
     const value = event.target.value;
     const argkey = event.target.name;
     this.props.updateArg(argkey, value);
+  }
+
+  handleKeystrokes(event) {
+    /** Handle keystroke changes in text inputs */
+    const value = event.target.value;
+    const argkey = event.target.name;
+    this.updateLocalArg(argkey, value)
   }
 
   handleBoolChange(event) {
@@ -113,6 +116,7 @@ class ArgsForm extends React.Component {
     const data = await remote.dialog.showOpenDialog({ properties: [prop] })
     if (data.filePaths.length) {
       this.props.updateArg(argname, data.filePaths[0]); // dialog defaults allow only 1 selection
+      this.updateLocalArg(argname, data.filePaths[0])
     } else {
       console.log('browse dialog was cancelled')
     }
@@ -160,8 +164,9 @@ class ArgsForm extends React.Component {
                   id={argname}
                   name={argname}
                   type="text" 
-                  value={argument.value || ''} // empty string is handled better than `undefined`
-                  onChange={this.handleChange}
+                  value={this.state.inputs[argname] || ''} // empty string is handled better than `undefined`
+                  onChange={this.handleKeystrokes}
+                  onKeyUp={this.handleChange}
                   isValid={argument.touched && argument.valid}
                   isInvalid={argument.touched && argument.validationMessage}
                   disabled={argument.active_ui_option === 'disable' || false}
@@ -188,7 +193,7 @@ class ArgsForm extends React.Component {
       
       // Radio select for boolean args
       } else if (argument.type === 'boolean') {
-        // argument.value will be type boolean if it's coming from this.props.args. 
+        // this.state.inputs[argname] will be type boolean if it's coming from this.props.args. 
         // But html forms must emit strings, so there's a special change handler
         // for boolean inputs that coverts to a real boolean.
         // Also, the `checked` property does not treat 'undefined' the same as false,

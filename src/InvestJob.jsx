@@ -449,6 +449,10 @@ export class InvestJob extends React.Component {
     */
 
     // TODO: could this now just call through to updateArg? Maybe by adding a touch param there.
+    // But that would add a bunch more calls to validate, which here waits until after
+    // all the arg values are set, which is better.
+    // TODO: this is all wrapped up in the issue with sluggish response-time on keystroke changes
+    // which is due to the validate call triggering on every updateArg call.
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
     Object.keys(argsMeta).forEach(argkey => {
       // Loop over argsMeta in order to:
