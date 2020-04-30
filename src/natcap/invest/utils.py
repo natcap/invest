@@ -463,15 +463,11 @@ def build_lookup_from_csv(
     encoding = None
     with open(table_path, 'rb') as file_obj:
         first_line = file_obj.readline()
-        # Windows doesn't find the BOM_UTF8 constant, but finds the string.
-        # Vice versa on POSIX systems, so check for either.
         if first_line.startswith(codecs.BOM_UTF8):
             encoding = 'utf-8-sig'
-    print(encoding)
     table = pandas.read_csv(
         table_path, sep=None, engine='python', encoding=encoding)
     header_row = list(table)
-    print(header_row)
 
     if to_lower:
         key_field = key_field.lower()
