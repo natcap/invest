@@ -80,20 +80,30 @@ class ArgsForm extends React.Component {
   // TODO: now we have some form values set by the local state
   // and some set by props from the parent, that could be confusing.
   updateLocalArg(key, value) {
+    /** Store a text input value in local state. */
     let inputs = Object.assign({}, this.state.inputs)
     inputs[key] = value
     this.setState({inputs: inputs});
   }
 
   handleChange(event) {
-    /**Pass values up to parent for validation */
+    /** Pass input value up to InvestJob for storage & validation.
+    *
+    * For text fields, this is on the onKeyUp handler, specifically 
+    * so that we don't call investValidate over and over while 
+    * laying on the backspace key (or any key).
+    */
     const value = event.target.value;
     const argkey = event.target.name;
     this.props.updateArg(argkey, value);
   }
 
   handleKeystrokes(event) {
-    /** Handle keystroke changes in text inputs */
+    /** Handle all keystroke changes in text inputs.
+    * 
+    * This updates the value of the input in response to any/all
+    * keypresses, but does not trigger validation.
+    */
     const value = event.target.value;
     const argkey = event.target.name;
     this.updateLocalArg(argkey, value)
