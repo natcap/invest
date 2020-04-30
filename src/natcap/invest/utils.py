@@ -461,9 +461,11 @@ def build_lookup_from_csv(
     """
     # Check if the file encoding is UTF-8 BOM first
     encoding = None
-    with open(table_path) as file_obj:
+    with open(table_path, 'rb') as file_obj:
         first_line = file_obj.readline()
-        if first_line.startswith((codecs.BOM_UTF8.decode(), '\xef\xbb\xbf')):
+        # Windows doesn't find the BOM_UTF8 constant, but finds the string.
+        # Vice versa on POSIX systems, so check for either.
+        if first_line.startswith(codecs.BOM_UTF8):
             encoding = 'utf-8-sig'
     print(encoding)
     table = pandas.read_csv(
