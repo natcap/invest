@@ -1,3 +1,4 @@
+# encoding=UTF-8
 """setup.py module for natcap.invest
 
 InVEST - Integrated Valuation of Ecosystem Services and Tradeoffs
@@ -7,6 +8,8 @@ Common functionality provided by setup.py:
 
 For other commands, try `python setup.py --help-commands`
 """
+import platform
+
 from setuptools.extension import Extension
 from setuptools import setup
 import Cython.Build
@@ -24,6 +27,13 @@ _GUI_REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
 README = open('README_PYTHON.rst').read().format(
     requirements='\n'.join(['    ' + r for r in _REQUIREMENTS]))
 
+# Since OSX Mavericks, the stdlib has been renamed.  So if we're on OSX, we
+# need to be sure to define which standard c++ library to use.  I don't have
+# access to a pre-Mavericks mac, so hopefully this won't break on someone's
+# older system.  Tested and it works on Mac OSX Catalina.
+compiler_and_linker_args = []
+if platform.system() == 'Darwin':
+    compiler_and_linker_args = ['-stdlib=libc++']
 
 setup(
     name='natcap.invest',
