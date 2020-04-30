@@ -463,11 +463,13 @@ def build_lookup_from_csv(
     encoding = None
     with open(table_path) as file_obj:
         first_line = file_obj.readline()
-        if first_line.startswith(codecs.BOM_UTF8.decode()):
+        if first_line.startswith((codecs.BOM_UTF8.decode(), '\xef\xbb\xbf')):
             encoding = 'utf-8-sig'
+    print(encoding)
     table = pandas.read_csv(
         table_path, sep=None, engine='python', encoding=encoding)
     header_row = list(table)
+    print(header_row)
 
     if to_lower:
         key_field = key_field.lower()
