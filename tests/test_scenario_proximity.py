@@ -34,7 +34,7 @@ class ScenarioProximityTests(unittest.TestCase):
                 TEST_DATA_DIR, 'input', 'scenario_proximity_aoi.gpkg'),
             'area_to_convert': '3218.0',
             'base_lulc_path': os.path.join(
-                TEST_DATA_DIR, 'input', 'clipped_lulc.tif'),
+                TEST_DATA_DIR, 'input', 'reclassed_clipped_lulc.tif'),
             'workspace_dir': workspace_dir,
             'convertible_landcover_codes': '1 2 3 4 5',
             'focal_landcover_codes': '1 2 3 4 5',
@@ -47,8 +47,8 @@ class ScenarioProximityTests(unittest.TestCase):
     def test_scenario_gen_regression(self):
         """Scenario Gen Proximity: regression testing all functionality."""
         from natcap.invest import scenario_gen_proximity
-
-        args = ScenarioProximityTests.generate_base_args(self.workspace_dir)
+        workspace_dir = 'scen-prox-all'
+        args = ScenarioProximityTests.generate_base_args(workspace_dir)
         args['convert_farthest_from_edge'] = True
         args['convert_nearest_to_edge'] = True
 
@@ -59,24 +59,24 @@ class ScenarioProximityTests(unittest.TestCase):
             args['workspace_dir'])
 
         base_table = pandas.read_csv(
-            os.path.join(self.workspace_dir, 'farthest_from_edge.csv'))
+            os.path.join(workspace_dir, 'farthest_from_edge.csv'))
         expected_table = pandas.read_csv(
             os.path.join(
                 TEST_DATA_DIR, 'farthest_from_edge_regression.csv'))
         pandas.testing.assert_frame_equal(base_table, expected_table)
 
         base_table = pandas.read_csv(
-            os.path.join(self.workspace_dir, 'nearest_to_edge.csv'))
+            os.path.join(workspace_dir, 'nearest_to_edge.csv'))
         expected_table = pandas.read_csv(
             os.path.join(
-                TEST_DATA_DIR, 'nearest_to_edge_regression.csv'))
+                TEST_DATA_DIR, 'farthest_from_edge_regression.csv'))
         pandas.testing.assert_frame_equal(base_table, expected_table)
 
     def test_scenario_gen_farthest(self):
         """Scenario Gen Proximity: testing small far functionality."""
         from natcap.invest import scenario_gen_proximity
-
-        args = ScenarioProximityTests.generate_base_args(self.workspace_dir)
+        workspace_dir = 'scen-prox'
+        args = ScenarioProximityTests.generate_base_args(workspace_dir)
         args['convert_farthest_from_edge'] = True
         args['convert_nearest_to_edge'] = False
         # running without an AOI
@@ -88,7 +88,7 @@ class ScenarioProximityTests(unittest.TestCase):
             args['workspace_dir'])
 
         pygeoprocessing.testing.assertions.assert_csv_equal(
-            os.path.join(self.workspace_dir, 'farthest_from_edge.csv'),
+            os.path.join(workspace_dir, 'farthest_from_edge.csv'),
             os.path.join(
                 TEST_DATA_DIR, 'farthest_from_edge_farthest.csv'),
             rel_tol=1e-6)
