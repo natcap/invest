@@ -34,7 +34,7 @@ class ScenarioProximityTests(unittest.TestCase):
                 TEST_DATA_DIR, 'input', 'scenario_proximity_aoi.gpkg'),
             'area_to_convert': '3218.0',
             'base_lulc_path': os.path.join(
-                TEST_DATA_DIR, 'input', 'reclassed_clipped_lulc.tif'),
+                TEST_DATA_DIR, 'input', 'clipped_lulc.tif'),
             'workspace_dir': workspace_dir,
             'convertible_landcover_codes': '1 2 3 4 5',
             'focal_landcover_codes': '1 2 3 4 5',
