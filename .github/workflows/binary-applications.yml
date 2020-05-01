@@ -157,31 +157,32 @@ jobs:
                   key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Set up conda
-              uses: s-weigand/setup-conda@v1
+              uses: goanpeca/setup-miniconda@v1.1.2
               with:
+                  activate-environment: mac-env
+                  auto-update-conda: true
                   python-version: 3.7
+                  channels: conda-forge
 
-            - name: Install python dependencies
-              run: pip install --upgrade pip setuptools requests setuptools_scm cython numpy
-
-            - name: Build conda env
-              shell: bash
+            - name: Build conda env with python dependencies
+              shell: bash -l {0}
               run: |
+                  conda upgrade -y pip setuptools
+                  conda install Cython requests numpy setuptools_scm
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
                         requirements-dev.txt \
                         requirements-gui.txt > requirements-all.yml
-                  conda env create -p ./env --file requirements-all.yml
-                  conda init bash
+                  conda env update --file requirements-all.yml
 
                   # Libtiff from conda defaults channel gets around issue with missing libwebp
-                  conda install -p ./env --yes libtiff
+                  conda install --yes libtiff
 
             - name: Build binaries
-              shell: bash
+              shell: bash -l {0}
               run: |
-                  make PYTHON=$(pwd)/env/bin/python install
-                  make PYTHON=$(pwd)/env/bin/python mac_zipfile userguide
+                  make install
+                  make mac_zipfile userguide
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
