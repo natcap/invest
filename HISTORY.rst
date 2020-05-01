@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Fixed a compilation issue on Mac OS X Catalina.
 * Fixed minor bug in Coastal Vulnerability shore point creation. Also added a
   check to fail fast when zero shore points are found within the AOI.
 * The Finfish Aquaculture model no longer generates histograms for
