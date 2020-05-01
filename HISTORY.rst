@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Fixed a compilation issue on Mac OS X Catalina.
 * Fixed an issue with NDR's raster normalization function so that Float64
   nodata values are now correctly cast to Float32.  This issue was affecting
   the summary vector, where the ``surf_n``, ``sub_n`` and ``n_export_tot``
