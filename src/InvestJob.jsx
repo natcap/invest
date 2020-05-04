@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
@@ -63,6 +64,7 @@ export class InvestJob extends React.Component {
     super(props);
 
     this.state = {
+      setupHash: crypto.randomBytes(10).toString('hex'),
       sessionID: null,                 // modelName + workspace.directory + workspace.suffix
       modelName: '',                   // as appearing in `invest list`
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
@@ -75,7 +77,7 @@ export class InvestJob extends React.Component {
       logStdErr: null,                 // stderr data from the invest subprocess
       sessionProgress: 'home',         // 'home', 'setup', 'log' - used on loadState to decide which tab to activate
       jobStatus: null,                 // 'running', 'error', 'success'
-      activeTab: 'home'                // controls which tab is currently visible
+      activeTab: 'home',               // controls which tab is currently visible
     };
     
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
@@ -475,7 +477,9 @@ export class InvestJob extends React.Component {
       }
     });
     
-    this.setState({args: argsMeta},
+    this.setState({
+      args: argsMeta,
+      setupHash: crypto.randomBytes(10).toString('hex')},
       () => { this.investValidate(argsValuesFromSpec(argsMeta)) }
     );
   }
@@ -589,6 +593,7 @@ export class InvestJob extends React.Component {
           </TabPane>
           <TabPane eventKey="setup" title="Setup">
             <SetupTab
+              setupHash={this.state.setupHash}
               args={this.state.args}
               argsValid={this.state.argsValid}
               modulename={this.state.modelSpec.module}

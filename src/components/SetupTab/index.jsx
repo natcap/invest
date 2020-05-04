@@ -17,13 +17,18 @@ export class SetupTab extends React.Component {
   */
 
   render () {
-    // Only mount the ArgsForm when there are actually args
-    // This lets us have an ArgsForm.componentDidMount() that
-    // does useful initialization of args state.
+    // Only mount the ArgsForm when there are actually args.
+    // Including the `key` property on ArgsForm tells React to 
+    // re-initialize (rather than update) this component if the key changes.
+    // We use that here as a signal for ArgsForm to sync it's local state 
+    // of form values with data from this.props.args.
+    // Normally the local state responds directly user-interactions so that
+    // form fields stay very responsive to keystrokes. But there are situations
+    // when the field values need to update programmatically via props data.
     if (this.props.args) {
       return (
         <div>
-          <ArgsForm 
+          <ArgsForm key={this.props.setupHash}
             args={this.props.args}
             modulename={this.props.modulename}
             updateArg={this.props.updateArg}
@@ -65,9 +70,7 @@ class ArgsForm extends React.Component {
 
   constructor(props) {
     super(props);
-    this.state = {
-      inputs: argsValuesFromSpec(this.props.args)
-    }
+    this.state = JSON.parse(argsValuesFromSpec(this.props.args))
     this.updateLocalArg = this.updateLocalArg.bind(this);
     this.handleKeystrokes = this.handleKeystrokes.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -76,15 +79,9 @@ class ArgsForm extends React.Component {
     this.onDragDrop = this.onDragDrop.bind(this);
   }
 
-  // TODO: now we have some form values set by the local state
-  // and some set by props from the parent, that could be confusing.
-  // TODO: This is also a fail because it requires a new method for
-  // clearing out this component's state whenever investGetSpec is called.
   updateLocalArg(key, value) {
     /** Store a text input value in local state. */
-    let inputs = Object.assign({}, this.state.inputs)
-    inputs[key] = value
-    this.setState({inputs: inputs});
+    this.setState({[key]: value});
   }
 
   handleChange(event) {
@@ -150,10 +147,6 @@ class ArgsForm extends React.Component {
 
     if (datastack['module_name'] === this.props.modulename) {
       this.props.batchUpdateArgs(datastack['args']);
-      // batch update the local state of args as well:
-      let inputs = Object.assign({}, this.state.inputs)
-      Object.assign(args, datastack['args'])
-      this.setState({inputs: inputs})
     } else {
       console.log('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
       throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
@@ -181,7 +174,7 @@ class ArgsForm extends React.Component {
                   id={argname}
                   name={argname}
                   type="text" 
-                  value={this.state.inputs[argname] || ''} // empty string is handled better than `undefined`
+                  value={this.state[argname] || ''} // empty string is handled better than `undefined`
                   onChange={this.handleChange}
                   // onKeyUp={this.handleChange}
                   isValid={argument.touched && argument.valid}
@@ -210,7 +203,7 @@ class ArgsForm extends React.Component {
       
       // Radio select for boolean args
       } else if (argument.type === 'boolean') {
-        // this.state.inputs[argname] will be type boolean if it's coming from this.props.args. 
+        // this.state[argname] will be type boolean if it's coming from this.props.args. 
         // But html forms must emit strings, so there's a special change handler
         // for boolean inputs that coverts to a real boolean.
         // Also, the `checked` property does not treat 'undefined' the same as false,
@@ -227,7 +220,7 @@ class ArgsForm extends React.Component {
                 type="radio"
                 label="Yes"
                 value={"true"}
-                checked={!!this.state.inputs[argname]}  // double bang casts undefined to false
+                checked={!!this.state[argname]}  // double bang casts undefined to false
                 onChange={this.handleBoolChange}
                 name={argname}
               />
@@ -237,7 +230,7 @@ class ArgsForm extends React.Component {
                 type="radio"
                 label="No"
                 value={"false"}
-                checked={!this.state.inputs[argname]}  // undefined becomes true, that's okay
+                checked={!this.state[argname]}  // undefined becomes true, that's okay
                 onChange={this.handleBoolChange}
                 name={argname}
               />
@@ -256,7 +249,7 @@ class ArgsForm extends React.Component {
                   id={argname}
                   as='select'
                   name={argname}
-                  value={this.state.inputs[argname]}
+                  value={this.state[argname]}
                   onChange={this.handleChange}
                   disabled={argument.active_ui_option === 'disable' || false}>
                   {argument.validation_options.options.map(opt =>

@@ -465,12 +465,10 @@ test('SetupTab: test dragover of a datastack/logfile', async () => {
   })
   fireEvent(setupForm, fileDropEvent)
 
-  // using `findBy...`, which returns a promise, is much better
-  // than wrapping `getBy...` and the `expect` calls inside `await wait()`
-  // because the latter will timeout instead of failing if the expect fails.
-  // TODO: look for places to replace getBy...
-  const arg1 = await utils.findByLabelText(spec.args.arg1.name)
-  const arg2 = await utils.findByLabelText(spec.args.arg2.name)
-  expect(arg1).toHaveValue(mock_datastack.args.arg1)
-  expect(arg2).toHaveValue(mock_datastack.args.arg2)
+  await wait(() => {
+    expect(getByLabelText(spec.args.arg1.name))
+      .toHaveValue(mock_datastack.args.arg1)
+    expect(getByLabelText(spec.args.arg2.name))
+      .toHaveValue(mock_datastack.args.arg2)
+  })
 })

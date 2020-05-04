@@ -87,10 +87,9 @@ test('Clicking a recent session renders SetupTab', async () => {
     expect(execute).toBeTruthy();
     expect(execute).toBeDisabled(); // depends on the mocked fetchValidation
     expect(getByText('Setup').classList.contains('active')).toBeTruthy();
-    // TODO: toBeVisible doesn't work w/ the attributes on these nodes
-    // expect(getByText('Setup')).toBeVisible();
-    // expect(getByText('Resources')).not.toBeVisible();
-  }); 
+    // Expect some values that were loaded from the saved state:
+    expect(getByLabelText('Workspace')).toHaveValue('carbon-sample')
+  });
 })
 
 test('LoadParameters: Dialog callback renders SetupTab', async () => {
@@ -117,8 +116,8 @@ test('LoadParameters: Dialog callback renders SetupTab', async () => {
     const execute = getByText('Execute');
     expect(execute).toBeDisabled();  // depends on the mocked fetchValidation
     expect(getByText('Setup').classList.contains('active')).toBeTruthy();
-    expect(getByLabelText('Carbon Pools')).toHaveValue(
-        mockDatastack.args.carbon_pools_path)
+    expect(getByLabelText('Carbon Pools'))
+      .toHaveValue(mockDatastack.args.carbon_pools_path)
   });
   // And now that we know setup has loaded, expect the values from the datastack
   // TODO: expect some global validation errors
@@ -270,6 +269,53 @@ test('SavePythonButton: Dialog callback does nothing when canceled', async () =>
   // These are the calls that would have triggered if a file was selected
   expect(spy).toHaveBeenCalledTimes(0)
   spy.mockRestore() // restores to unmocked implementation
+})
+
+test('Test various ways for repeated re-renders of SetupTab', async () => {
+  /** Test the response of the Setup Tab from the various 
+  * ways in which a user can trigger clearing and re-initializing the setup.
+  */
+  getSpec.mockResolvedValue(SAMPLE_SPEC);
+  fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+  const { getByText, getByLabelText, utils } = renderInvestJob()
+
+  // 1. Loading from a recent session
+  fireEvent.click(getByText('carbon_setup'));  // a recent session button
+  await wait(() => {
+    const execute = getByText('Execute');
+    // Expect a disabled Execute button and a visible SetupTab
+    expect(execute).toBeTruthy();
+    expect(execute).toBeDisabled(); // depends on the mocked fetchValidation
+    expect(getByText('Setup').classList.contains('active')).toBeTruthy();
+    // Expect some values that were loaded from the saved state:
+    expect(getByLabelText('Workspace')).toHaveValue('carbon-sample')
+  });
+
+  // 2. Choosing a model from the list
+  fireEvent.click(getByText('Carbon'));  
+  await wait(() => {
+    // Expect the values that were previously loaded were cleared
+    expect(getByLabelText('Workspace')).toHaveValue('')
+  });
+
+  // 3. Using the Load Parameters Button
+  const mockDialogData = {
+    filePaths: ['foo.json']
+  }
+  const mockDatastack = {
+    module_name: 'natcap.invest.foo',
+    args: {
+      carbon_pools_path: "Carbon/carbon_pools_willamette.csv", 
+    }
+  }
+  remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
+  fetchDatastackFromFile.mockResolvedValue(mockDatastack)
+
+  fireEvent.click(getByText('Load Parameters'));
+  await wait(() => {
+    expect(getByLabelText('Carbon Pools'))
+      .toHaveValue(mockDatastack.args.carbon_pools_path)
+  });
 })
 // test('Execute launches a python subprocess', async () => {
 //   /*
