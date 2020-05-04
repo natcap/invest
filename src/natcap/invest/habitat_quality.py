@@ -190,10 +190,11 @@ ARGS_SPEC = {
         },
     }
 }
-
-_OUT_NODATA = -1.0
-_RARITY_NODATA = -64329.0
+# All out rasters besides rarity should be gte to 0. Set nodata accordingly.
+_OUT_NODATA = float(numpy.finfo(numpy.float32).min)
+# Scaling parameter from User's Guide eq. 4 for quality of habitat
 _SCALING_PARAM = 2.5
+# To help track and name threat rasters from paths in threat table columns
 _THREAT_SCENARIO_MAP = {'_c': 'cur_path', '_f': 'fut_path', '_b': 'base_path'}
 
 
@@ -289,8 +290,10 @@ def execute(args):
     threat_path_dict = {}
     # store land cover and threat rasters in a list for convenient access
     lulc_and_threat_raster_list = []
-    # lists for the unique lucode tasks
+    # list for the unique lucode tasks
     unique_lucode_task_list = []
+    # list for checking threat values tasks
+    threat_values_task_lookup = {}
     LOGGER.info("Validate threat rasters and collect unique LULC codes")
     # compile all the threat rasters associated with the land cover
     for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
@@ -318,10 +321,12 @@ def execute(args):
             # raster which should be found relative to the Threat CSV
             for threat in threat_dict:
                 LOGGER.debug(f"Validating path for threat: {threat}")
-                # Threat path from threat CSV is relative to CSV
+                # Build absolute threat path from threat table
+                threat_table_path_col = _THREAT_SCENARIO_MAP[lulc_key]
+                threat_path_relative = (
+                    threat_dict[threat][threat_table_path_col])
                 threat_path = os.path.join(
-                    threat_csv_dirpath,
-                    threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
+                    threat_csv_dirpath, threat_path_relative)
 
                 # check gis type of threat path and catch thrown ValueError
                 # from get_gis_type if path does not exist
@@ -355,6 +360,15 @@ def execute(args):
                             'unique absolute filepaths. The threat path: '
                             f'{os.path.basename(threat_path)} is a '
                             'duplicate.')
+                    # Check threat raster values are 0 <= x <= 1
+                    threat_values_task = task_graph.add_task(
+                         func=_raster_values_in_bounds,
+                         args=((threat_path, 1), 0.0, 1.0),
+                         task_name=f'check_threat_values{lulc_key}_{threat}')
+                    threat_values_task_lookup[threat_values_task.task_name] = {
+                        'task': threat_values_task,
+                        'path': threat_path_relative,
+                        'table_col': threat_table_path_col}
 
     LOGGER.info("Checking LULC codes against Sensitivity table")
     # Assert sensitivity keys and unique lulc codes are equal sets.
@@ -373,6 +387,17 @@ def execute(args):
             'rasters but not in your sensitivity table. Check your '
             'sensitivity table to see if they are missing: '
             f'{missing_lucodes}.')
+
+    LOGGER.info("Checking threat raster values are valid ( 0 <= x <= 1 ).")
+    # Assert that threat rasters have valid values.
+    for _, values in threat_values_task_lookup.items():
+        # get returned boolean to see if values were valid
+        valid_threat_values = values['task'].get()
+        if not valid_threat_values:
+            raise ValueError(
+                "Threat rasters should have values between 0 and 1, however,"
+                f"Threat: {values['path']} for column: {values['table_col']}",
+                " had values outside of this range.")
 
     LOGGER.info('Aligning and resizing land cover and threat rasters')
     lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_cur_path'])
@@ -412,8 +437,6 @@ def execute(args):
         target_path_list=aligned_raster_list,
         task_name='align_input_rasters')
 
-    # list of tracking updated threat pixel rasters
-    bound_threat_values_tasks = []
     LOGGER.debug("Updating dict raster paths to reflect aligned paths")
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
     for lulc_key, lulc_path in lulc_path_dict.items():
@@ -429,24 +452,9 @@ def execute(args):
                     os.path.basename(threat_path).replace(
                         os.path.splitext(threat_path)[1],
                         f'_aligned{file_suffix}.tif'))
-                aligned_bound_threat_path = os.path.join(
-                    intermediate_output_dir,
-                    os.path.basename(aligned_threat_path).replace(
-                        f'aligned{file_suffix}',
-                        f'aligned_bound{file_suffix}'))
                 # Use these updated threat raster paths in future calculations
                 threat_path_dict['threat' + lulc_key][threat] = (
-                    aligned_bound_threat_path)
-
-                # Bound threat raster values to 0 <= x <= 1
-                bound_threat_values_task = task_graph.add_task(
-                    _bound_raster_values,
-                    args=(
-                        (aligned_threat_path, 1), aligned_bound_threat_path),
-                    target_path_list=[aligned_bound_threat_path],
-                    dependent_task_list=[align_task],
-                    task_name=f'bound_threat{lulc_key}_{threat}')
-                bound_threat_values_tasks.append(bound_threat_values_task)
+                    aligned_threat_path)
 
     LOGGER.info('Starting habitat_quality biophysical calculations')
     # Rasterize access vector, if value is null set to 1 (fully accessible),
@@ -550,7 +558,7 @@ def execute(args):
                 args=((threat_raster_path, 1), kernel_path, decay_type,
                       threat_data['max_dist']),
                 target_path_list=[kernel_path],
-                dependent_task_list=[*bound_threat_values_tasks],
+                dependent_task_list=[align_task],
                 task_name=f'decay_kernel_{decay_type}{lulc_key}_{threat}')
 
             filtered_threat_raster_path = os.path.join(
@@ -566,8 +574,7 @@ def execute(args):
                     'mask_nodata': False
                     },
                 target_path_list=[filtered_threat_raster_path],
-                dependent_task_list=[
-                    *bound_threat_values_tasks, create_kernel_task],
+                dependent_task_list=[create_kernel_task],
                 task_name=f'convolve_{decay_type}{lulc_key}_{threat}')
             threat_convolve_task_list.append(convolve_task)
 
@@ -697,18 +704,18 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
         out_array = numpy.empty_like(degradation)
         out_array[:] = _OUT_NODATA
         # Both these rasters are Float32, so the actual pixel values written
-        # might be *slightly* off of _OUT_NODATA but should still be 
+        # might be *slightly* off of _OUT_NODATA but should still be
         # interpreted as nodata.
         valid_pixels = ~(
-            numpy.isclose(degradation, _OUT_NODATA) | 
+            numpy.isclose(degradation, _OUT_NODATA) |
             numpy.isclose(habitat, _OUT_NODATA))
         degradation_clamped = numpy.where(degradation < 0, 0, degradation)
         out_array[valid_pixels] = (
-            habitat[valid_pixels] * 
+            habitat[valid_pixels] *
             (1.0 - (degradation_clamped[valid_pixels]**_SCALING_PARAM) /
                 (degradation_clamped[valid_pixels]**_SCALING_PARAM + ksq)))
         return out_array
-    
+
     deg_hab_raster_band_list = [
         (path, 1) for path in deg_hab_raster_list]
 
@@ -850,7 +857,7 @@ def _compute_rarity_operation(
 
     pygeoprocessing.reclassify_raster(
         new_cover_path, code_index, rarity_path, gdal.GDT_Float32,
-        _RARITY_NODATA)
+        _OUT_NODATA)
 
     LOGGER.info(
         'Finished rarity computation on %s land cover.',
@@ -956,7 +963,7 @@ def _make_linear_decay_kernel_path(max_distance, kernel_path):
         max_distance (int): number of pixels out until the decay is 0.
         kernel_path (string): path to output raster whose values are in (0,1)
             representing distance to edge.
-            Size is (``max_distance`` * 2 + 1)^2
+            Size is (``max_distance`` * 2 + 1)
 
     Returns:
         None
@@ -998,44 +1005,43 @@ def _make_linear_decay_kernel_path(max_distance, kernel_path):
         kernel_band.WriteArray(kernel_row, 0, row_index)
 
 
-def _bound_raster_values(aligned_threat_path, output_raster_path):
-    """Bound raster values between 0 and 1.
+def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
+    """Check raster values are between ``lower_bound`` and ``upper_bound``.
 
-    Iterate though the threat raster and update pixel values as needed so that
-    values below zero are set to 0 and values above 1 are set to 1.
+    Check that the raster has values ``lower_bound`` <= x <= ``upper_bound``.
+    Nodata values are ignored.
 
     Args:
-        aligned_threat_path (tuple): a 2 tuple for a GDAL raster path with
-            the form (filepath, band index) to the threat raster on disk.
-        output_raster_path (string): an output path for the updated
-            raster.
+        raster_path_band (tuple): a 2 tuple for a GDAL raster path with
+            the form (filepath, band index) to the raster on disk.
+        lower_bound (int): integer for the lower bound of raster values,
+            inclusive.
+        upper_bound (int): integer for the upper bound of raster values,
+            inclusive.
 
     Returns:
-        None
+        True if values are within range and False otherwise.
     """
-    LOGGER.info(f'Preprocessing threat values for {aligned_threat_path}')
-    raster_info = pygeoprocessing.get_raster_info(aligned_threat_path[0])
-    threat_nodata = raster_info['nodata'][0]
+    raster_info = pygeoprocessing.get_raster_info(raster_path_band[0])
+    raster_nodata = raster_info['nodata'][0]
 
-    if threat_nodata is None:
+    if raster_nodata is None:
         LOGGER.warning(
-            f"Raster has undefined NODATA value, setting to {_OUT_NODATA}.")
-        threat_nodata = _OUT_NODATA
+            f"Raster has undefined NODATA value for {raster_path_band[0]}.")
+        # If raster nodata is None then set to _OUT_NODATA to use for masking
+        # where in this case nodata_mask will be all False.
+        raster_nodata = _OUT_NODATA
 
-    threat_datatype = raster_info['datatype']
+    values_valid = True
 
-    def _bound_op(block):
-        """Replace values < 0 w/ 0 and > 1 w/ 1."""
-        nodata_mask = numpy.isclose(block, threat_nodata)
-        block[block < 0] = 0
-        block[block > 1] = 1
-        block[nodata_mask] = threat_nodata
+    for _, raster_block in pygeoprocessing.iterblocks(raster_path_band):
+        nodata_mask = ~numpy.isclose(raster_block, raster_nodata)
+        if ((raster_block[nodata_mask] < lower_bound) |
+                (raster_block[nodata_mask] > upper_bound)).any():
+            values_valid = False
+            break
 
-        return block
-
-    pygeoprocessing.raster_calculator(
-        [aligned_threat_path], _bound_op, output_raster_path,
-        threat_datatype, threat_nodata)
+    return values_valid
 
 
 @validation.invest_validator

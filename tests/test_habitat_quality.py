@@ -10,16 +10,19 @@ from osgeo import ogr
 import numpy
 import pygeoprocessing
 
+# Projection to user for generated sample data UTM Zone 10N
+EPSG = 26910
+
 
 def make_simple_poly(origin_xy):
-    """Make a 50x100 ogr rectangular geometry clockwisely from origin.
+    """Make a 50x100 ogr rectangular geometry clockwisely from ``origin_xy``.
 
     Args:
         origin_xy (tuple): the longitude and latitude of the origin of the
             rectangle.
 
     Returns:
-        None.
+        An OGR wkbPolygon with rectangle geometry.
     """
     # Create a rectangular ring
     lon, lat = origin_xy[0], origin_xy[1]
@@ -49,10 +52,9 @@ def make_raster_from_array(
 
     Returns:
         None.
-
     """
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(26910)  # UTM Zone 10N
+    srs.ImportFromEPSG(EPSG)
     project_wkt = srs.ExportToWkt()
 
     gtiff_driver = gdal.GetDriverByName('GTiff')
@@ -81,7 +83,6 @@ def make_access_shp(access_shp_path):
 
     Returns:
         None.
-
     """
     # Set up parameters. Fid and access values are based on the sample data
     fid_list = [0.0, 1.0]
@@ -93,7 +94,7 @@ def make_access_shp(access_shp_path):
     driver = ogr.GetDriverByName('ESRI Shapefile')
     data_source = driver.CreateDataSource(access_shp_path)
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(26910)  # Spatial reference UTM Zone 10N
+    srs.ImportFromEPSG(EPSG)
     layer = data_source.CreateLayer('access_samp', srs, ogr.wkbPolygon)
 
     # Add FID and ACCESS fields and make their format same to sample data
@@ -120,8 +121,10 @@ def make_access_shp(access_shp_path):
     data_source = None
 
 
-def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
-                        threat_values=None, nodata_val=-1):
+def make_threats_raster(
+        folder_path, make_empty_raster=False, side_length=100,
+        threat_values=None, nodata_val=-1, dtype=numpy.int8,
+        gdal_type=gdal.GDT_Int32):
     """Create a side_lengthXside_length raster on designated path.
 
     Args:
@@ -134,27 +137,30 @@ def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
             list should include numeric threat values for the two threat
             rasters.
         nodata_val (number): a number for the output nodata value
+        dtype (numpy datatype): numpy datatype for the array.
+        gdal_type (gdal datatype; int): gdal datatype for the raster.
 
     Returns:
         None.
-
     """
     threat_names = ['threat_1', 'threat_2']
-    if not threat_values:
-        threat_values = [1, 1]  # Nonzero should mean threat presence.
+    if threat_values is None:
+        threat_values = [1, 1]
 
-    threat_array = numpy.zeros((side_length, side_length), dtype=numpy.int8)
-
-    for suffix in ['_c', '_f']:
+    for time_index, suffix in enumerate(['_c', '_f']):
         for (i, threat), value in zip(enumerate(threat_names), threat_values):
+            threat_array = numpy.zeros((side_length, side_length), dtype=dtype)
             raster_path = os.path.join(folder_path, threat + suffix + '.tif')
-            # making variations among threats
-            threat_array[100//(i+1):, :] = value
+            # making variations among threats and current vs future
+            col_start = 5 * (i + 1)
+            col_end = col_start + (3 * (time_index + 1))
+            threat_array[20:side_length-20, col_start:col_end] = value
             if make_empty_raster:
                 open(raster_path, 'a').close()  # writes an empty raster.
             else:
                 make_raster_from_array(
-                    threat_array, raster_path, nodata_val=nodata_val)
+                    threat_array, raster_path, nodata_val=nodata_val,
+                    gdal_type=gdal_type)
 
 
 def make_sensitivity_samp_csv(
@@ -233,8 +239,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -244,35 +250,100 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6])
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[0.5, 1.0],
+            dtype=numpy.float32, gdal_type=gdal.GDT_Float32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 1792.8088,
-                'deg_sum_f_regression.tif': 2308.9636,
-                'quality_c_regression.tif': 6928.5293,
-                'quality_f_regression.tif': 4916.338,
+                'deg_sum_c_regression.tif': 74.37604,
+                'deg_sum_f_regression.tif': 143.99506,
+                'quality_c_regression.tif': 7499.6436,
+                'quality_f_regression.tif': 4999.8823,
+                'rarity_c_regression.tif': 2500.0000000,
+                'rarity_f_regression.tif': 2500.0000000}.items():
+            raster_path = os.path.join(args['workspace_dir'], output_filename)
+            # Check that the raster's computed values are what we expect.
+            # In this case, the LULC and threat rasters should have been
+            # expanded to be beyond the bounds of the original threat values,
+            # so we should exclude those new nodata pixel values.
+            assert_array_sum(raster_path, assert_value, include_nodata=False)
+
+    def test_habitat_quality_presence_absence_regression(self):
+        """Habitat Quality: base regression test with simplified data.
+
+        Threat rasters are set to 0 or 1.
+        """
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1], dtype=numpy.int8,
+            gdal_type=gdal.GDT_Int32)
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+
+        habitat_quality.execute(args)
+
+        # Assert values were obtained by summing each output raster.
+        for output_filename, assert_value in {
+                'deg_sum_c_regression.tif': 86.17549,
+                'deg_sum_f_regression.tif': 161.4637,
+                'quality_c_regression.tif': 7499.381,
+                'quality_f_regression.tif': 4999.723,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
@@ -293,8 +364,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': 2,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -306,33 +377,34 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6])
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 1792.8088,
-                'deg_sum_f_regression.tif': 2308.9636,
-                'quality_c_regression.tif': 6928.5293,
-                'quality_f_regression.tif': 4916.338,
+                'deg_sum_c_regression.tif': 86.17549,
+                'deg_sum_f_regression.tif': 161.4637,
+                'quality_c_regression.tif': 7499.381,
+                'quality_f_regression.tif': 4999.723,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
@@ -351,10 +423,10 @@ class HabitatQualityTests(unittest.TestCase):
             'results_suffix': 'regression',
             'workspace_dir': self.workspace_dir,
             'n_workers': -1,
-        }
+            }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -364,36 +436,37 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6], nodata_val=None)
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32, nodata_val=None)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
-        
+
         habitat_quality.execute(args)
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 1792.8088,
-                'deg_sum_f_regression.tif': 2308.9636,
-                'quality_c_regression.tif': 6928.5293,
-                'quality_f_regression.tif': 4916.338,
+                'deg_sum_c_regression.tif': 86.17549,
+                'deg_sum_f_regression.tif': 161.4637,
+                'quality_c_regression.tif': 7496.7466,
+                'quality_f_regression.tif': 4999.723,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
@@ -414,8 +487,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -427,23 +500,23 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'], side_length=50,
-                            threat_values=[1, 1])
+        make_threats_raster(
+            args['workspace_dir'], side_length=50, threat_values=[1, 1])
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -473,22 +546,31 @@ class HabitatQualityTests(unittest.TestCase):
         threat_array = numpy.zeros((100, 100), dtype=numpy.int8)
 
         threatnames = ['1111', '2222']
-        for suffix in ['_c', '_f']:
-            for i, threat in enumerate(threatnames):
-                raster_path = os.path.join(self.workspace_dir,
-                                           threat + suffix + '.tif')
-                # making variations among threats
-                threat_array[100//(i+1):, :] = 1
-                make_raster_from_array(threat_array, raster_path)
+        threat_values = [1, 1]
+        side_length = 100
+        for time_index, suffix in enumerate(['_c', '_f']):
+            for (i, threat), value in zip(
+                    enumerate(threatnames), threat_values):
+                threat_array = numpy.zeros(
+                    (side_length, side_length), dtype=numpy.int8)
+                raster_path = os.path.join(
+                    self.workspace_dir, threat + suffix + '.tif')
+                # making variations among threats and current vs future
+                col_start = 5 * (i + 1)
+                col_end = col_start + (3 * (time_index + 1))
+                threat_array[20:side_length-20, col_start:col_end] = value
+                make_raster_from_array(
+                    threat_array, raster_path, nodata_val=-1,
+                    gdal_type=gdal.GDT_Int32)
 
         threat_csv_path = os.path.join(self.workspace_dir, 'threats.csv')
         with open(threat_csv_path, 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,%s,linear,,1111_c.tif,1111_f.tif\n' % threatnames[0])
+                '0.04,0.7,%s,linear,,1111_c.tif,1111_f.tif\n' % threatnames[0])
             open_table.write(
-                '0.5,1.0,%s,exponential,,2222_c.tif,2222_f.tif\n'
+                '0.07,1.0,%s,exponential,,2222_c.tif,2222_f.tif\n'
                 % threatnames[1])
 
         args = {
@@ -496,10 +578,10 @@ class HabitatQualityTests(unittest.TestCase):
             'results_suffix': 'regression',
             'threats_table_path': threat_csv_path,
             'workspace_dir': self.workspace_dir,
-            'sensitivity_table_path': os.path.join(self.workspace_dir,
-                                                   'sensitivity_samp.csv'),
-            'access_vector_path': os.path.join(self.workspace_dir,
-                                               'access_samp.shp'),
+            'sensitivity_table_path': os.path.join(
+                self.workspace_dir, 'sensitivity_samp.csv'),
+            'access_vector_path': os.path.join(
+                self.workspace_dir, 'access_samp.shp'),
             'n_workers': -1,
         }
         make_access_shp(args['access_vector_path'])
@@ -524,16 +606,15 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 1792.8088,
-                'deg_sum_f_regression.tif': 2308.9636,
-                'quality_c_regression.tif': 6928.5293,
-                'quality_f_regression.tif': 4916.338,
+                'deg_sum_c_regression.tif': 86.17549,
+                'deg_sum_f_regression.tif': 161.4637,
+                'quality_c_regression.tif': 7499.381,
+                'quality_f_regression.tif': 4999.723,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000
         }.items():
-            assert_array_sum(
-                os.path.join(args['workspace_dir'], output_filename),
-                assert_value)
+            assert_array_sum(os.path.join(
+                args['workspace_dir'], output_filename), assert_value)
 
     def test_habitat_quality_missing_sensitivity_threat(self):
         """Habitat Quality: ValueError w/ missing threat in sensitivity."""
@@ -545,18 +626,18 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         # Include a missing threat to the sensitivity csv table
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(
             args['sensitivity_table_path'], include_threat=False)
 
-        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
-                                             'lc_samp_cur_b.tif')
+        args['lulc_cur_path'] = os.path.join(
+            args['workspace_dir'], 'lc_samp_cur_b.tif')
 
         lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
         lulc_array[50:, :] = 2
@@ -564,16 +645,16 @@ class HabitatQualityTests(unittest.TestCase):
 
         make_threats_raster(args['workspace_dir'])
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(KeyError):
@@ -589,16 +670,16 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
-                                             'lc_samp_cur_b.tif')
+        args['lulc_cur_path'] = os.path.join(
+            args['workspace_dir'], 'lc_samp_cur_b.tif')
 
         lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
         lulc_array[50:, :] = 2
@@ -607,16 +688,64 @@ class HabitatQualityTests(unittest.TestCase):
         make_threats_raster(args['workspace_dir'])
 
         # Include a missing threat to the threats csv table
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.5,0.8,missing_threat,linear,,missing_threat_c.tif,'
+                '0.07,0.8,missing_threat,linear,,missing_threat_c.tif,'
                 'missing_threat_f.tif\n')
+
+        with self.assertRaises(ValueError):
+            habitat_quality.execute(args)
+
+    def test_habitat_quality_threat_values_outside_range(self):
+        """Habitat Quality: expected ValueError on threat values 0<=x<=1."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+            }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[0.1, 1.2],
+            dtype=numpy.float32, gdal_type=gdal.GDT_Float32)
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        # create the threat CSV table
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError):
             habitat_quality.execute(args)
@@ -631,16 +760,16 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
-                                             'lc_samp_cur_b.tif')
+        args['lulc_cur_path'] = os.path.join(
+            args['workspace_dir'], 'lc_samp_cur_b.tif')
 
         lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
         lulc_array[50:, :] = 2
@@ -649,15 +778,15 @@ class HabitatQualityTests(unittest.TestCase):
         make_threats_raster(args['workspace_dir'])
 
         # Include an invalid decay function name to the threats csv table.
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,invalid,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,invalid,,threat_1_c.tif,threat_1_f.tif\n')
 
         with self.assertRaises(ValueError):
             habitat_quality.execute(args)
@@ -672,32 +801,32 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
-                                             'lc_samp_cur_b.tif')
+        args['lulc_cur_path'] = os.path.join(
+            args['workspace_dir'], 'lc_samp_cur_b.tif')
 
         lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
         lulc_array[50:, :] = 2
         make_raster_from_array(lulc_array, args['lulc_cur_path'])
 
         # Make an empty threat raster in the workspace folder.
-        make_threats_raster(args['workspace_dir'],
-                            make_empty_raster=True)
+        make_threats_raster(
+            args['workspace_dir'], make_empty_raster=True)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -719,12 +848,12 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
-                                             'lc_samp_cur_b.tif')
+        args['lulc_cur_path'] = os.path.join(
+            args['workspace_dir'], 'lc_samp_cur_b.tif')
 
         lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
         lulc_array[50:, :] = 2
@@ -732,17 +861,17 @@ class HabitatQualityTests(unittest.TestCase):
 
         make_threats_raster(args['workspace_dir'])
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -750,7 +879,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'quality_c.tif'),
-            5951.2827)
+            7496.7466)
 
     def test_habitat_quality_case_insensitivty(self):
         """Habitat Quality: with table columns that have camel case."""
@@ -762,8 +891,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
 
         with open(args['sensitivity_table_path'], 'w') as open_table:
             open_table.write('Lulc,Name,habitat,Threat_1,THREAT_2\n')
@@ -771,8 +900,8 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write('2,"lulc 2",0.5,0.5,1\n')
             open_table.write('3,"lulc 3",0,0.3,1\n')
 
-        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
-                                             'lc_samp_cur_b.tif')
+        args['lulc_cur_path'] = os.path.join(
+            args['workspace_dir'], 'lc_samp_cur_b.tif')
 
         lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
         lulc_array[50:, :] = 2
@@ -780,17 +909,17 @@ class HabitatQualityTests(unittest.TestCase):
 
         make_threats_raster(args['workspace_dir'])
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'Max_Dist,Weight,threat,Decay,BASE_PATH,cur_PATH,fut_path\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -798,7 +927,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'quality_c.tif'),
-            5951.2827)
+            7496.7466)
 
     def test_habitat_quality_lulc_baseline_current(self):
         """Habitat Quality: on missing future LULC raster."""
@@ -810,8 +939,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         scenarios = ['_bas_', '_cur_']  # Missing '_fut_'
@@ -825,17 +954,17 @@ class HabitatQualityTests(unittest.TestCase):
 
         make_threats_raster(args['workspace_dir'])
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -843,7 +972,10 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'quality_c.tif'),
-            5951.2827)
+            7496.7466)
+        assert_array_sum(
+            os.path.join(args['workspace_dir'], 'rarity_c.tif'),
+            2500.000000)
 
     def test_habitat_quality_missing_lucodes_in_table(self):
         """Habitat Quality: on missing lucodes in the sensitivity table."""
@@ -855,8 +987,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -881,24 +1013,24 @@ class HabitatQualityTests(unittest.TestCase):
             band = None
             raster = None
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
-        make_sensitivity_samp_csv(args['sensitivity_table_path'],
-                                  missing_lines=True)
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(
+            args['sensitivity_table_path'], missing_lines=True)
 
         make_threats_raster(args['workspace_dir'])
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -941,8 +1073,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -954,24 +1086,25 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6])
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -990,8 +1123,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1003,24 +1136,25 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6])
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         args['lulc_cur_path'], args['access_vector_path'] = (
@@ -1045,8 +1179,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1058,25 +1192,26 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(
             args['sensitivity_table_path'], include_threat=False)
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6])
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1097,8 +1232,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1110,23 +1245,23 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         # intentialy do not make the threat rasters
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         # create the threat CSV table
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1151,8 +1286,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1164,23 +1299,24 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6], nodata_val=None)
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1203,8 +1339,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1216,23 +1352,24 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6], nodata_val=None)
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1255,8 +1392,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1268,23 +1405,24 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6], nodata_val=None)
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1307,8 +1445,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1320,23 +1458,24 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6], nodata_val=None)
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1359,8 +1498,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1372,23 +1511,24 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6], nodata_val=None)
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1411,8 +1551,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1424,23 +1564,24 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6], nodata_val=None)
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1463,8 +1604,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1476,8 +1617,8 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         # create threat rasters for the test
@@ -1497,16 +1638,16 @@ class HabitatQualityTests(unittest.TestCase):
                         threat_array, raster_path, nodata_val=-1)
 
         # create threats table for the test
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1530,8 +1671,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1543,8 +1684,8 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         # create threat rasters for the test
@@ -1564,16 +1705,16 @@ class HabitatQualityTests(unittest.TestCase):
                         threat_array, raster_path, nodata_val=-1)
 
         # create threats table for the test
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1600,8 +1741,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_']
@@ -1637,8 +1778,8 @@ class HabitatQualityTests(unittest.TestCase):
         new_band = None
         new_raster = None
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         # create threat rasters for the test
@@ -1658,16 +1799,16 @@ class HabitatQualityTests(unittest.TestCase):
                         threat_array, raster_path, nodata_val=-1)
 
         # create threats table for the test
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args)
@@ -1689,8 +1830,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         # make lulc cur without projection
@@ -1717,8 +1858,8 @@ class HabitatQualityTests(unittest.TestCase):
         new_band = None
         new_raster = None
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         # create threat rasters for the test
@@ -1738,16 +1879,16 @@ class HabitatQualityTests(unittest.TestCase):
                         threat_array, raster_path, nodata_val=-1)
 
         # create threats table for the test
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args)
@@ -1769,8 +1910,8 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(args['workspace_dir'],
-                                                  'access_samp.shp')
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
@@ -1782,23 +1923,24 @@ class HabitatQualityTests(unittest.TestCase):
             make_raster_from_array(
                     lulc_array, args['lulc' + scenario + 'path'])
 
-        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
-                                                      'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        make_threats_raster(args['workspace_dir'],
-                            threat_values=[0.5, 6.6], nodata_val=None)
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
 
-        args['threats_table_path'] = os.path.join(args['workspace_dir'],
-                                                  'threats_samp.csv')
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.9,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
+                '0.04,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.5,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
