@@ -515,7 +515,7 @@ def execute(args):
             args=((lulc_path, 1), sensitivity_reclassify_habitat_dict,
                   habitat_raster_path, gdal.GDT_Float32, _OUT_NODATA),
             kwargs={
-                'values_required': False
+                'values_required': True
                 },
             dependent_task_list=[align_task],
             task_name=f'habitat_raster{lulc_key}')
