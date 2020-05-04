@@ -460,18 +460,18 @@ def execute(args):
     # Rasterize access vector, if value is null set to 1 (fully accessible),
     # else set to the value according to the ACCESS attribute
     cur_lulc_path = lulc_path_dict['_c']
-    fill_value = 1.0
 
-    LOGGER.info('Handling Access Shape')
     access_raster_path = os.path.join(
         intermediate_output_dir, f'access_layer{file_suffix}.tif')
-    # create a new raster based on the raster info of current land cover
+    # create a new raster based on the raster info of current land cover.
+    # fill with 1.0 for case where no access shapefile provided,
+    # which indicates we don't want to mask anything out later
     create_access_raster_task = task_graph.add_task(
         func=pygeoprocessing.new_raster_from_base,
         args=(cur_lulc_path, access_raster_path, gdal.GDT_Float32,
               [_OUT_NODATA]),
         kwargs={
-            'fill_value_list': [fill_value]
+            'fill_value_list': [1.0]
             },
         target_path_list=[access_raster_path],
         dependent_task_list=[align_task],
