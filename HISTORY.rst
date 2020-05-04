@@ -7,14 +7,18 @@ Unreleased Changes
     required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``. 
   * Threat and Sensitivity column names are now case-insensitive.
   * Sensitivity threat columns now match threat names from Threat Table 
-    exactly, without the need for "L_". "L_" prefix is depracated.
+    exactly, without the need for "L_". "L_" prefix is deprecated.
   * Threat raster input folder has been removed.
-  * Validation enhancements that look for undefined nodata values in threat
-    rasters and whether threat raster paths are valid.
+  * Validation enhancements that check whether threat raster paths are valid.
   * HQ update to User's Guide.
   * Changing sample data to reflect Threat Table csv input changes and 
     bumping revision.
   * More comprehensive testing for Habitat Quality and validation.
+  * Checking if Threat raster values are between 0 and 1 range, raising 
+    ValueError if not. No longer snapping values less than 0 to 0 and greater
+    than 1 to 1.
+  * Fixing bug that was setting Threat raster values to 1 even if they were 
+    floats between 0 and 1.
 * Fixing an issue with SDR's ``LS`` calculations.  The ``x`` term is now
   the weighted mean of proportional flow from the current pixel into its
   neighbors.  Note that for ease of debugging, this has been implemented as a
