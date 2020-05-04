@@ -308,7 +308,7 @@ def execute(args):
 
             # save unique codes to check if it's missing in sensitivity table
             unique_lucode_task = task_graph.add_task(
-                _collect_unique_lucodes,
+                func=_collect_unique_lucodes,
                 args=((lulc_path, 1), ),
                 task_name=f'unique_lucodes{lulc_key}')
             unique_lucode_task_list.append(unique_lucode_task)
@@ -467,7 +467,7 @@ def execute(args):
         intermediate_output_dir, f'access_layer{file_suffix}.tif')
     # create a new raster based on the raster info of current land cover
     create_access_raster_task = task_graph.add_task(
-        pygeoprocessing.new_raster_from_base,
+        func=pygeoprocessing.new_raster_from_base,
         args=(cur_lulc_path, access_raster_path, gdal.GDT_Float32,
               [_OUT_NODATA]),
         kwargs={
@@ -481,7 +481,7 @@ def execute(args):
     if 'access_vector_path' in args:
         LOGGER.debug("Rasterize Access vector")
         rasterize_access_task = task_graph.add_task(
-            pygeoprocessing.rasterize,
+            func=pygeoprocessing.rasterize,
             args=(args['access_vector_path'], access_raster_path),
             kwargs={
                 'option_list': ['ATTRIBUTE=ACCESS'],
@@ -511,7 +511,7 @@ def execute(args):
             f'habitat{lulc_key}{file_suffix}.tif')
 
         habitat_raster_task = task_graph.add_task(
-            pygeoprocessing.reclassify_raster,
+            func=pygeoprocessing.reclassify_raster,
             args=((lulc_path, 1), sensitivity_reclassify_habitat_dict,
                   habitat_raster_path, gdal.GDT_Float32, _OUT_NODATA),
             kwargs={
@@ -554,7 +554,7 @@ def execute(args):
             decay_type = threat_data['decay']
 
             create_kernel_task = task_graph.add_task(
-                _create_decay_kernel,
+                func=_create_decay_kernel,
                 args=((threat_raster_path, 1), kernel_path, decay_type,
                       threat_data['max_dist']),
                 target_path_list=[kernel_path],
@@ -566,7 +566,7 @@ def execute(args):
                 f'filtered_{threat}{lulc_key}{file_suffix}.tif')
 
             convolve_task = task_graph.add_task(
-                pygeoprocessing.convolve_2d,
+                func=pygeoprocessing.convolve_2d,
                 args=((threat_raster_path, 1), (kernel_path, 1),
                       filtered_threat_raster_path),
                 kwargs={
@@ -589,7 +589,7 @@ def execute(args):
                 sensitivity_dict.items()}
 
             sens_threat_task = task_graph.add_task(
-                pygeoprocessing.reclassify_raster,
+                func=pygeoprocessing.reclassify_raster,
                 args=((lulc_path, 1), sensitivity_reclassify_threat_dict,
                       sens_raster_path, gdal.GDT_Float32, _OUT_NODATA),
                 kwargs={
@@ -629,7 +629,7 @@ def execute(args):
         LOGGER.info('Starting raster calculation on total degradation')
 
         total_degradation_task = task_graph.add_task(
-            _calculate_total_degradation,
+            func=_calculate_total_degradation,
             args=(deg_raster_list, deg_sum_raster_path, weight_list),
             target_path_list=[deg_sum_raster_path],
             dependent_task_list=[
@@ -649,7 +649,7 @@ def execute(args):
         deg_hab_raster_list = [deg_sum_raster_path, habitat_raster_path]
 
         _ = task_graph.add_task(
-            _calculate_habitat_quality,
+            func=_calculate_habitat_quality,
             args=(deg_hab_raster_list, quality_path, ksq),
             target_path_list=[quality_path],
             dependent_task_list=[habitat_raster_task, total_degradation_task],
@@ -676,7 +676,7 @@ def execute(args):
                 output_dir, f'rarity{lulc_key}{file_suffix}.tif')
 
             _ = task_graph.add_task(
-                _compute_rarity_operation,
+                func=_compute_rarity_operation,
                 args=((lulc_base_path, 1), (lulc_path, 1), (new_cover_path, 1),
                       rarity_path),
                 dependent_task_list=[align_task],
