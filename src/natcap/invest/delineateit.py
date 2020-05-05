@@ -1,5 +1,4 @@
 """DelineateIt wrapper for pygeoprocessing's watershed delineation routine."""
-from __future__ import absolute_import
 import os
 import logging
 import time

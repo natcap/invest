@@ -30,14 +30,8 @@ import re
 import ast
 import warnings
 
-try:
-    basestring
-except NameError:
-    basestring = str
-
 from osgeo import gdal
 from osgeo import ogr
-import six
 
 from . import utils
 try:
@@ -236,10 +230,10 @@ def format_args_dict(args_dict, model_name):
     if len(sorted_args) > 0:
         max_key_width = max(len(x[0]) for x in sorted_args)
 
-    format_str = u"%-" + six.text_type(str(max_key_width)) + u"s %s"
+    format_str = "%-" + str(max_key_width) + "s %s"
 
-    args_string = u'\n'.join([format_str % (arg) for arg in sorted_args])
-    args_string = u"Arguments for InVEST %s %s:\n%s\n" % (model_name,
+    args_string = '\n'.join([format_str % (arg) for arg in sorted_args])
+    args_string = "Arguments for InVEST %s %s:\n%s\n" % (model_name,
                                                           __version__,
                                                           args_string)
     return args_string
@@ -332,7 +326,7 @@ def build_datastack_archive(args, model_name, datastack_path):
             return new_dict
         elif isinstance(args_param, list):
             return [_recurse(list_item, handler) for list_item in args_param]
-        elif isinstance(args_param, basestring):
+        elif isinstance(args_param, str):
             # If the parameter string is blank, return an empty string.
             if args_param.strip() == '':
                 return ''
@@ -420,7 +414,7 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
             return _args
         elif isinstance(args_param, list):
             return [_rewrite_paths(param) for param in args_param]
-        elif isinstance(args_param, basestring):
+        elif isinstance(args_param, str):
             # Special case: if the value is blank, return an empty string
             # rather than assuming it's the CWD.
             if args_param.strip() == '':
@@ -461,7 +455,7 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
                         for (key, value) in args_param.items())
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
-        elif isinstance(args_param, basestring):
+        elif isinstance(args_param, str):
             possible_path = args_param.replace('\\', '/')
             if os.path.exists(possible_path):
                 # Always save unix paths.
@@ -518,7 +512,7 @@ def extract_parameter_set(paramset_path):
                         args_param.items())
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
-        elif isinstance(args_param, basestring) and len(args_param) > 0:
+        elif isinstance(args_param, str) and len(args_param) > 0:
             # Attempt to parse true/false strings.
             try:
                 return {'true': True, 'false': False}[args_param.lower()]

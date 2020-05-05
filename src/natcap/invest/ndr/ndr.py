@@ -1,19 +1,16 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
-from __future__ import absolute_import
-import pickle
 import itertools
 import logging
 import os
+import pickle
 
-from osgeo import gdal
-from osgeo import ogr
 import numpy
-import taskgraph
 import pygeoprocessing
 import pygeoprocessing.routing
+from osgeo import gdal, ogr
+import taskgraph
 
-from .. import validation
-from .. import utils
+from .. import utils, validation
 from . import ndr_core
 
 LOGGER = logging.getLogger(__name__)
@@ -374,11 +371,7 @@ def execute(args):
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
     cache_dir = os.path.join(intermediate_output_dir, 'cache_dir')
-    for dir_path in [output_dir, intermediate_output_dir, cache_dir]:
-        try:
-            os.makedirs(dir_path)
-        except OSError:
-            pass
+    utils.make_directories([output_dir, intermediate_output_dir, cache_dir])
 
     try:
         n_workers = int(args['n_workers'])
@@ -881,17 +874,23 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
 
     def _normalize_raster_op(array):
         """Divide values by mean."""
+        result = numpy.empty(array.shape, dtype=numpy.float32)
+        result[:] = numpy.float32(base_nodata)
         valid_mask = ~numpy.isclose(array, base_nodata)
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = base_nodata
         result[valid_mask] = array[valid_mask]
         if value_mean != 0:
             result[valid_mask] /= value_mean
         return result
 
+    # It's possible for base_nodata to extend outside what can be represented
+    # in a float32, yet GDAL expects a python float.  Casting to numpy.float32
+    # and back to a python float allows for the nodata value to reflect the
+    # actual nodata pixel values.
+    target_nodata = float(numpy.float32(base_nodata))
     pygeoprocessing.raster_calculator(
         [base_raster_path_band], _normalize_raster_op,
-        target_normalized_raster_path, gdal.GDT_Float32, base_nodata)
+        target_normalized_raster_path, gdal.GDT_Float32,
+        target_nodata)
 
 
 def _calculate_load(

@@ -8,10 +8,10 @@ class UrbanCoolingModel(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=u'Urban Cooling Model',
+            label='Urban Cooling Model',
             target=natcap.invest.urban_cooling_model.execute,
             validator=natcap.invest.urban_cooling_model.validate,
-            localdoc=u'urban_cooling_model.html')
+            localdoc='urban_cooling_model.html')
 
         self.lulc_raster_path = inputs.File(
             args_key='lulc_raster_path',
@@ -85,14 +85,14 @@ class UrbanCoolingModel(model.InVESTModel):
         self.green_area_cooling_distance.set_value("1000")
 
         self.cc_method = inputs.Dropdown(
-            label=u'Cooling Capacity Calculation Method',
-            args_key=u'cc_method',
+            label='Cooling Capacity Calculation Method',
+            args_key='cc_method',
             helptext=(
                 'The method selected here determines the predictor used for '
-                'night time temperature.  If <b>"Weighted Factors"</b> is '
+                'air temperature.  If <b>"Weighted Factors"</b> is '
                 'selected, the Cooling Capacity calculations will use the '
                 'weighted factors for shade, albedo and ETI as a predictor '
-                'for nighttime temperatures. <br/>'
+                'for daytime temperatures. <br/>'
                 'Alternatively, if <b>"Building Intensity"</b> is selected, '
                 'building intensity will be used as a predictor for nighttime '
                 'temperature instead of shade, albedo and ETI.'
@@ -107,11 +107,11 @@ class UrbanCoolingModel(model.InVESTModel):
         self.add_input(self.cc_method)
 
         self.valuation_container = inputs.Container(
-            args_key=u'do_valuation',
+            args_key='do_valuation',
             expandable=True,
             expanded=True,
             interactive=True,
-            label=u'Run Valuation Model')
+            label='Run Valuation Model')
         self.add_input(self.valuation_container)
 
         self.building_vector_path = inputs.File(
@@ -146,7 +146,7 @@ class UrbanCoolingModel(model.InVESTModel):
             expandable=True,
             expanded=True,
             interactive=True,
-            label=u'Manually Adjust Cooling Capacity Index Weights'
+            label='Manually Adjust Cooling Capacity Index Weights'
         )
         self.add_input(self.cooling_capacity_container)
 

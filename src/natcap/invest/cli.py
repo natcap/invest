@@ -1,7 +1,5 @@
 # coding=UTF-8
 """Single entry point for all InVEST applications."""
-from __future__ import absolute_import
-
 import argparse
 import os
 import importlib
@@ -255,7 +253,7 @@ class SelectModelAction(argparse.Action):
         If no single model can be identified based on these rules, an error
         message is printed and the parser exits with a nonzero exit code.
 
-        See https://docs.python.org/2.7/library/argparse.html#action-classes
+        See https://docs.python.org/3.7/library/argparse.html#action-classes
         for the full documentation for argparse classes and this __call__
         method.
 

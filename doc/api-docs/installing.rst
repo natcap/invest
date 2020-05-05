@@ -40,7 +40,7 @@ Ubuntu & Debian
 
 ::
 
-    $ sudo apt-get install python3-dev python3-setuptools python3-gdal python3-rtree python3-shapely python3-matplotlib
+    $ sudo apt-get install python3-dev python3-setuptools python3-gdal python3-rtree python3-shapely
 
 
 Fedora
@@ -48,7 +48,7 @@ Fedora
 
 ::
 
-    $ sudo yum install python3-devel python3-setuptools python3-gdal python3-rtree python3-shapely python3-matplotlib
+    $ sudo yum install python3-devel python3-setuptools python3-gdal python3-rtree python3-shapely
 
 .. _InstallingOnMac:
 
@@ -58,9 +58,9 @@ Mac OS X
 The easiest way to install binary packages on Mac OS X is through a package
 manager such as `Homebrew <http://brew.sh>`_::
 
-    $ brew install gdal spatialindex pyqt matplotlib
+    $ brew install gdal spatialindex pyqt
 
-The GDAL, PyQt and matplotlib packages include their respective python packages.
+The GDAL and PyQt packages include their respective python packages.
 The others will allow their corresponding python packages to be compiled
 against these binaries via ``pip``.
 
@@ -133,14 +133,6 @@ is::
 
     $ pip install natcap.invest
 
-If you are working within virtual environments, there is a `documented issue
-with namespaces
-<https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version>`_
-in setuptools that may cause problems when importing packages within the
-``natcap`` namespace.  The current workaround is to use these extra pip flags::
-
-    $ pip install natcap.invest --egg --no-binary :all:
-
 
 Installing the latest development version
 -----------------------------------------
@@ -151,7 +143,7 @@ Pre-built binaries for Windows
 
 Pre-built installers and wheels of development versions of ``natcap.invest``
 for 32-bit Windows python installations are available from
-http://data.naturalcapitalproject.org/invest-releases/#dev, along with other
+http://releases.naturalcapitalproject.org/?prefix=invest/, along with other
 distributions of InVEST.  Once downloaded, wheels can be installed locally via
 pip::
 
@@ -162,7 +154,7 @@ Installing from our source tree
 *******************************
 
 The latest development version of InVEST can be installed from our
-Mercurial source tree::
+git source tree if you have a compiler installed::
 
-    $ pip install hg+https://bitbucket.org/natcap/invest@develop
+    $ pip install "git+https://github.com/natcap/invest@master#egg=natcap.invest"
 

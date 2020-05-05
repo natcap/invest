@@ -295,6 +295,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 gdal.Dataset.__swig_destroy__(result_vector)
             result_vector = None
 
+
 class ForestCarbonEdgeValidationTests(unittest.TestCase):
     """Tests for the Forest Carbon Model ARGS_SPEC and validation."""
 

@@ -15,19 +15,6 @@ import xlwt
 from osgeo import gdal, osr
 import numpy
 
-try:
-    from builtins import basestring
-except ImportError:
-    # Python3 doesn't have a basestring.
-    basestring = str
-
-
-# Python3 doesn't know about basestring, only str.
-try:
-    basestring
-except NameError:
-    basestring = str
-
 
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
@@ -520,8 +507,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         return file_warning
 
     try:
-        # Check if the file encoding is UTF-8 BOM first, related to issue
-        # https://bitbucket.org/natcap/invest/issues/3832/invest-table-parsing-does-not-support-utf
+        # Check if the file encoding is UTF-8 BOM first
         encoding = None
         with open(filepath) as file_obj:
             first_line = file_obj.readline()
@@ -569,6 +555,7 @@ def check_spatial_overlap(spatial_filepaths_list,
     wgs84_wkt = wgs84_srs.ExportToWkt()
 
     bounding_boxes = []
+    checked_file_list = []
     for filepath in spatial_filepaths_list:
         try:
             info = pygeoprocessing.get_raster_info(filepath)
@@ -586,11 +573,17 @@ def check_spatial_overlap(spatial_filepaths_list,
             continue
 
         bounding_boxes.append(bounding_box)
+        checked_file_list.append(filepath)
 
     try:
         pygeoprocessing.merge_bounding_box_list(bounding_boxes, 'intersection')
     except ValueError as error:
-        return str(error)
+        LOGGER.debug(error)
+        formatted_lists = ' | '.join(
+            [a + ': ' + str(b) for a, b in zip(
+                checked_file_list, bounding_boxes)])
+        message = f"Bounding boxes do not intersect: {formatted_lists}"
+        return message
     return None
 
 
@@ -764,14 +757,18 @@ def validate(args, spec, spatial_overlap_opts=None):
     if spatial_overlap_opts:
         spatial_keys = set(spatial_overlap_opts['spatial_keys'])
 
-        # Only test for spatial overlap if all other validation passes and all
-        # all the keys are sufficient.
-        if spatial_keys.difference(
-                invalid_keys.union(insufficient_keys)) == spatial_keys:
+        # Only test for spatial overlap once all the sufficient spatial keys
+        # are otherwise valid. And then only when there are at least 2.
+        valid_spatial_keys = spatial_keys.difference(
+            invalid_keys.union(insufficient_keys))
+
+        if len(valid_spatial_keys) >= 2:
             spatial_files = []
-            for key in spatial_keys:
+            checked_keys = []
+            for key in valid_spatial_keys:
                 if key in args and args[key] not in ('', None):
                     spatial_files.append(args[key])
+                    checked_keys.append(key)
 
             try:
                 different_projections_ok = (
@@ -783,7 +780,7 @@ def validate(args, spec, spatial_overlap_opts=None):
                 spatial_files, different_projections_ok)
             if spatial_overlap_error:
                 validation_warnings.append(
-                    (sorted(spatial_keys), spatial_overlap_error))
+                    (checked_keys, spatial_overlap_error))
 
     return validation_warnings
 
@@ -823,14 +820,14 @@ def invest_validator(validate_func):
 
         assert isinstance(args, dict), 'args parameter must be a dictionary.'
         assert (isinstance(limit_to, type(None)) or
-                isinstance(limit_to, basestring)), (
+                isinstance(limit_to, str)), (
                     'limit_to parameter must be either a string key or None.')
         if limit_to is not None:
             assert limit_to in args, ('limit_to key "%s" must exist in args.'
                                       % limit_to)
 
         for key, value in args.items():
-            assert isinstance(key, basestring), (
+            assert isinstance(key, str), (
                 'All args keys must be strings.')
 
         # If the module has an ARGS_SPEC defined, validate against that.

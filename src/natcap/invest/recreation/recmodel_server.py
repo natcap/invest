@@ -12,6 +12,8 @@ import time
 import threading
 import collections
 import logging
+import queue
+from io import StringIO
 
 import Pyro4
 import numpy
@@ -27,24 +29,6 @@ from ... import invest
 from .. import utils
 from natcap.invest.recreation import out_of_core_quadtree
 from . import recmodel_client
-
-try:
-    import queue
-except ImportError:
-    # python 2 uses capital Q
-    import Queue as queue
-
-try:
-    from io import StringIO
-except ImportError:
-    # python 2 packaging:
-    from StringIO import StringIO
-
-try:
-    from builtins import basestring
-except ImportError:
-    # Python3 doesn't have a basestring.
-    basestring = str
 
 
 BLOCKSIZE = 2 ** 21
@@ -488,11 +472,6 @@ def _parse_input_csv(
         # this pattern matches the above style of line and only parses valid
         # dates to handle some cases where there are weird dates in the input
         pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  # pylint: disable=line-too-long
-        try:
-            chunk_string = unicode(chunk_string)
-        except NameError:
-            # Python 3, it's already unicode
-            pass
         result = numpy.fromregex(
             StringIO(chunk_string), pattern,
             [('user', 'S40'), ('date', 'datetime64[D]'), ('lat', 'f4'),
@@ -611,7 +590,7 @@ def construct_userday_quadtree(
 
         while True:
             point_array = numpy_array_queue.get()
-            if (isinstance(point_array, basestring) and
+            if (isinstance(point_array, str) and
                     point_array == 'STOP'):  # count 'n cpu' STOPs
                 n_parse_processes -= 1
                 if n_parse_processes == 0:

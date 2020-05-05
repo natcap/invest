@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Model."""
-from __future__ import absolute_import
-
 import os
 import logging
 import math
@@ -616,7 +614,7 @@ def get_num_blocks(raster_uri):
 
 
 def reclass(array, d, out_dtype=None, nodata_mask=None):
-    u"""Reclassify values in array.
+    """Reclassify values in array.
 
     If a nodata value is not provided, the function will return an array with
     NaN values in its place to mark cells that could not be reclassed.​

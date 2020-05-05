@@ -3,15 +3,15 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 import contextlib
 import json
-
-import mock
 
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+
 
 @contextlib.contextmanager
 def redirect_stdout():
@@ -47,9 +47,9 @@ class CLIHeadlessTests(unittest.TestCase):
             parameter_set_file.write(
                 json.dumps(datastack_dict, indent=4, sort_keys=True))
 
-        with mock.patch(
-            'natcap.invest.fisheries.fisheries.execute',
-            return_value=None) as patched_model:
+        with unittest.mock.patch(
+                'natcap.invest.fisheries.fisheries.execute',
+                return_value=None) as patched_model:
             cli.main([
                 'run',
                 'fisheries',  # uses an exact modelname
@@ -58,7 +58,6 @@ class CLIHeadlessTests(unittest.TestCase):
             ])
         patched_model.assert_called_once()
 
-
     def test_run_fisheries(self):
         """CLI: Run the fisheries model through the cli."""
         from natcap.invest import cli
@@ -66,9 +65,9 @@ class CLIHeadlessTests(unittest.TestCase):
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
             'fisheries', 'spiny_lobster_belize.invs.json')
 
-        with mock.patch(
-            'natcap.invest.fisheries.fisheries.execute',
-            return_value=None) as patched_model:
+        with unittest.mock.patch(
+                'natcap.invest.fisheries.fisheries.execute',
+                return_value=None) as patched_model:
             cli.main([
                 'run',
                 'fisheries',  # uses an exact modelname
@@ -150,7 +149,7 @@ class CLIHeadlessTests(unittest.TestCase):
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
             'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
-        with mock.patch(
+        with unittest.mock.patch(
                 'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute',
                 return_value=None) as patched_model:
             cli.main([

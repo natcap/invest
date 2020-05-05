@@ -730,8 +730,8 @@ class ScenicQualityValidationTests(unittest.TestCase):
                  'refraction',
                  'structure_path',
                  'workspace_dir',
-                 'valuation_function',
-            ]))
+                 'valuation_function', ])
+        )
 
     def test_novaluation_required_keys(self):
         """SQ Validate: assert required keys without valuation."""
@@ -1012,11 +1012,12 @@ class ViewshedTests(unittest.TestCase):
         visibility_filepath = os.path.join(self.workspace_dir,
                                            'visibility.tif')
         pygeoprocessing.testing.create_raster_on_disk(
-            [numpy.ones((10, 10))],
-            (0, 0), projection_wkt=srs.ExportToWkt(), nodata=-1,
-            pixel_size=(1, -1), raster_driver_creation_tuple=(
+            [numpy.ones((10, 10))], (0, 0), projection_wkt=srs.ExportToWkt(),
+            nodata=-1, pixel_size=(1, -1),
+            raster_driver_creation_tuple=(
                 'GTIFF', ('TILED=NO', 'BIGTIFF=YES', 'COMPRESS=LZW',
-                'BLOCKXSIZE=20', 'BLOCKYSIZE=40')), filename=dem_filepath)
+                          'BLOCKXSIZE=20', 'BLOCKYSIZE=40')),
+            filename=dem_filepath)
 
         with self.assertRaises(ValueError):
             viewshed(

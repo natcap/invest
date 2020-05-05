@@ -217,8 +217,8 @@ def _log_exit_status(session_id, status):
         log_finish_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['FINISH']
 
-        # The data must be a python string of bytes.  This will be ``str``
-        # in python2, ``bytes`` in python3.
+        # The data must be a python string of bytes. This will be ``bytes`` 
+        # in python3.
         urlopen(Request(log_finish_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.
@@ -270,8 +270,8 @@ def _log_model(model_name, model_args, session_id=None):
         log_start_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['START']
 
-        # The data must be a python string of bytes.  This will be ``str``
-        # in python2, ``bytes`` in python3.
+        # The data must be a python string of bytes. This will be ``bytes`` 
+        # in python3.
         urlopen(Request(log_start_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.

@@ -1,11 +1,13 @@
 """InVEST NDR model tests."""
 import collections
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
 
 import numpy
+import pygeoprocessing
+from osgeo import gdal
 from osgeo import ogr
 
 REGRESSION_DATA = os.path.join(
@@ -47,6 +49,60 @@ class NDRTests(unittest.TestCase):
             'workspace_dir': workspace_dir,
         }
         return args.copy()
+
+    def test_normalize_raster_float64(self):
+        """NDR _normalize_raster handle float64.
+
+        Regression test for an issue raised on the forums when normalizing a
+        Float64 raster that has a nodata value that exceeds Float32 space.  The
+        output raster, in the buggy version, would have pixel values of -inf
+        where they should have been nodata.
+
+        https://community.naturalcapitalproject.org/t/ndr-null-values-in-watershed-results/914
+        """
+        from natcap.invest.ndr import ndr
+
+        float64_raster_path = os.path.join(self.workspace_dir,
+                                           'float64_raster.tif')
+        driver = gdal.GetDriverByName('GTiff')
+        raster = driver.Create(float64_raster_path,
+                               4,  # xsize
+                               4,  # ysize
+                               1,  # n_bands
+                               gdal.GDT_Float64)
+        source_nodata = -1.797693e+308  # taken from user's data
+        band = raster.GetRasterBand(1)
+        band.SetNoDataValue(source_nodata)
+        source_array = numpy.empty((4, 4), dtype=numpy.float64)
+        source_array[0:2][:] = 5.5  # Something, anything.
+        source_array[2:][:] = source_nodata
+        band.WriteArray(source_array)
+        band = None
+        raster = None
+        driver = None
+
+        normalized_raster_path = os.path.join(self.workspace_dir,
+                                              'normalized.tif')
+        ndr._normalize_raster((float64_raster_path, 1), normalized_raster_path)
+
+        normalized_raster_nodata = pygeoprocessing.get_raster_info(
+            normalized_raster_path)['nodata'][0]
+
+        normalized_array = gdal.OpenEx(normalized_raster_path).ReadAsArray()
+        expected_array = numpy.array(
+            [[1., 1., 1., 1.],
+             [1., 1., 1., 1.],
+             [normalized_raster_nodata]*4,
+             [normalized_raster_nodata]*4], dtype=numpy.float32)
+
+        # Assert that the output values match the target nodata value
+        self.assertEqual(
+            8,  # Nodata pixels
+            numpy.count_nonzero(numpy.isclose(normalized_array,
+                                              normalized_raster_nodata)))
+
+        numpy.testing.assert_array_almost_equal(
+            normalized_array, expected_array)
 
     def test_missing_headers(self):
         """NDR biphysical headers missing should raise a ValueError."""
@@ -258,7 +314,6 @@ class NDRTests(unittest.TestCase):
             'subsurface_eff_n',
         ]
         self.assertEqual(set(invalid_args), set(expected_missing_args))
-
 
     @staticmethod
     def _assert_regression_results_equal(

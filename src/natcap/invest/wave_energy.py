@@ -1,6 +1,4 @@
 """InVEST Wave Energy Model Core Code"""
-from __future__ import absolute_import
-
 import math
 import os
 import logging

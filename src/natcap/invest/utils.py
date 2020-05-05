@@ -14,11 +14,6 @@ from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
 
-# Python3 doesn't know about basestring, only str.
-try:
-    basestring
-except NameError:
-    basestring = str
 
 LOGGER = logging.getLogger(__name__)
 LOG_FMT = (
@@ -181,8 +176,16 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
 
     Returns:
         ``None``"""
-    if os.path.exists(logfile):
-        LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
+    try:
+        if os.path.exists(logfile):
+            LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
+    except SystemError:
+        # This started happening in Windows tests:
+        #  SystemError: <built-in function stat> returned NULL without
+        #  setting an error
+        # Looking at https://bugs.python.org/issue28040#msg276223, this might
+        # be a low-level python error.
+        pass
 
     handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
     formatter = logging.Formatter(log_fmt, date_fmt)
@@ -406,7 +409,7 @@ def build_file_registry(base_file_path_list, file_suffix):
                 duplicate_keys.add(file_key)
             else:
                 # handle the case whether it's a filename or a list of strings
-                if isinstance(file_payload, basestring):
+                if isinstance(file_payload, str):
                     full_path = _build_path(file_payload, path)
                     f_reg[file_key] = full_path
                 elif isinstance(file_payload, list):
@@ -457,8 +460,7 @@ def build_lookup_from_csv(
         if `to_lower` all strings including key_fields and values are
         converted to lowercase unicode.
     """
-    # Check if the file encoding is UTF-8 BOM first, related to issue
-    # https://bitbucket.org/natcap/invest/issues/3832/invest-table-parsing-does-not-support-utf
+    # Check if the file encoding is UTF-8 BOM first
     encoding = None
     with open(table_path) as file_obj:
         first_line = file_obj.readline()
@@ -467,14 +469,11 @@ def build_lookup_from_csv(
     table = pandas.read_csv(
         table_path, sep=None, engine='python', encoding=encoding)
     header_row = list(table)
-    try:  # no unicode() in python 3
-        key_field = unicode(key_field)
-    except NameError:
-        pass
+
     if to_lower:
         key_field = key_field.lower()
         header_row = [
-            x if not isinstance(x, basestring) else x.lower()
+            x if not isinstance(x, str) else x.lower()
             for x in header_row]
 
     if key_field not in header_row:
@@ -490,7 +489,7 @@ def build_lookup_from_csv(
     for index, row in table.iterrows():
         if to_lower:
             row = pandas.Series([
-                x if not isinstance(x, basestring) else x.lower()
+                x if not isinstance(x, str) else x.lower()
                 for x in row])
         # check if every single element in the row is null
         if row.isnull().values.all():
