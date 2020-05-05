@@ -696,8 +696,8 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
         expected_x = -124.52500000000002
         expected_y = 44.525 
 
-        self.assertEqual(expected_x, x)
-        self.assertEqual(expected_y, y)
+        self.assertAlmostEqual(expected_x, x, places=3)
+        self.assertAlmostEqual(expected_y, y, places=3)
 
     def test_projected_to_projected_transformer(self):
         """Utils: test transformer for projected to projected."""
