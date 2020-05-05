@@ -7,10 +7,10 @@ import os
 if is_darwin:
     # Assume we're using a local conda env to install gdal.
     # glob for gcs.csv instead of passing the env name.
-    import glob
-    print(os.getcwd())
-    datas = collect_system_data_files(
-    	path=os.path.dirname(glob.glob('**/gcs.csv', recursive=True)[0]),
-        destdir='gdal-data')
+    # import glob
+    # datas = collect_system_data_files(
+    # 	path=os.path.dirname(glob.glob('**/gcs.csv', recursive=True)[0]),
+    #     destdir='gdal-data')
+    pass
 else:
     datas = collect_data_files('osgeo')
