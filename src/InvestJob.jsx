@@ -22,7 +22,7 @@ import { SaveParametersButton, SavePythonButton } from './components/SaveDropdow
 import { LoadButton } from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, saveToPython, writeParametersToFile, fetchValidation } from './server_requests';
-import { argsValuesFromSpec, findMostRecentLogfile } from './utils';
+import { argsValuesFromSpec, argsDictFromObject, findMostRecentLogfile } from './utils';
 
 // TODO see issue #12
 import { createStore } from 'redux';
@@ -68,8 +68,10 @@ export class InvestJob extends React.Component {
       sessionID: null,                 // modelName + workspace.directory + workspace.suffix
       modelName: '',                   // as appearing in `invest list`
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
-      args: null,                      // ARGS_SPEC.args, to hold values on user-interaction
-      argsValid: false,                // set on investValidate exit
+      argsSpec: null,                  // ARGS_SPEC.args, the immutable args stuff
+      argsValues: null,                // to hold args keys and values, ui_options, i.e. the mutable args stuff
+      argsValidation: null,            // to hold validation state for each arg, set by investValidate.
+      argsValid: false,                // are all the args valid? set on investValidate exit
       workspace: { 
         directory: null, suffix: null
       },                               // only set values when execute starts the subprocess
@@ -127,7 +129,8 @@ export class InvestJob extends React.Component {
     *
     * @params {string} filepath - desired path to the python script
     */
-    const args_dict_string = argsValuesFromSpec(this.state.args)
+    // const args_dict_string = argsValuesFromSpec(this.state.args)
+    const args_dict_string = JSON.stringify(this.state.argsValues)
     const payload = { 
       filepath: filepath,
       modelname: this.state.modelName,
@@ -160,7 +163,8 @@ export class InvestJob extends React.Component {
           this.switchTabs(loadedState.sessionProgress);
           // Validate args on load because referenced files may have moved
           // this.investValidate(argsValuesFromSpec(this.state.args));
-          this.batchUpdateArgs(JSON.parse(argsValuesFromSpec(this.state.args)));
+          // this.batchUpdateArgs(JSON.parse(argsValuesFromSpec(this.state.args)));
+          this.batchUpdateArgs(this.state.argsValues);
           // batchUpdateArgs does validation and also sets inputs to 'touched'
           // which controls whether the validation messages appear or not.
         });
@@ -179,7 +183,8 @@ export class InvestJob extends React.Component {
     */
 
     // The n_workers value always needs to be inserted into args
-    let args_dict = JSON.parse(argsValuesFromSpec(this.state.args));
+    // let args_dict = JSON.parse(argsValuesFromSpec(this.state.args));
+    let args_dict = Object.assign({}, this.state.args);
     args_dict['n_workers'] = this.props.investSettings.nWorkers;
     
     const payload = {
@@ -202,8 +207,8 @@ export class InvestJob extends React.Component {
     * with the final status of the invest run.
     */
     const workspace = {
-      directory: this.state.args.workspace_dir.value,
-      suffix: this.state.args.results_suffix.value
+      directory: this.state.argsValues.workspace_dir.value,
+      suffix: this.state.argsValues.results_suffix.value
     }
     // model name, workspace, and suffix are suitable for a unique job identifier
     const sessionName = [
@@ -279,7 +284,7 @@ export class InvestJob extends React.Component {
     });
   }
 
-  async investValidate(args_dict_string, limit_to) {
+  async investValidate(argsValues, limit_to) {
     /** Validate an arguments dictionary using the InVEST model's validate function.
     *
     * @param {object} args_dict_string - a JSON.stringify'ed object of model argument
@@ -287,11 +292,12 @@ export class InvestJob extends React.Component {
     * @param {string} limit_to - an argument key if validation should be limited only
     *    to that argument.
     */
-    let argsMeta = JSON.parse(JSON.stringify(this.state.args));
-    let keyset = new Set(Object.keys(JSON.parse(args_dict_string)));
+    let argsSpec = JSON.parse(JSON.stringify(this.state.argsSpec));
+    let argsValidation = Object.assign({}, this.state.argsValidation);
+    let keyset = new Set(Object.keys(argsSpec));
     let payload = { 
       model_module: this.state.modelSpec.module,
-      args: args_dict_string
+      args: argsDictFromObject(argsValues)
     };
 
     // TODO: is there a use-case for `limit_to`? 
@@ -313,19 +319,19 @@ export class InvestJob extends React.Component {
         const argkeys = result[0];
         const message = result[1];
         argkeys.forEach(key => {
-          argsMeta[key]['validationMessage'] = message
-          argsMeta[key]['valid'] = false
+          argsValidation[key]['validationMessage'] = message
+          argsValidation[key]['valid'] = false
           keyset.delete(key);
         })
       });
       if (!limit_to) {  // validated all, so ones left in keyset are valid
         keyset.forEach(k => {
-          argsMeta[k]['valid'] = true
-          argsMeta[k]['validationMessage'] = ''
+          argsValidation[k]['valid'] = true
+          argsValidation[k]['validationMessage'] = ''
         })
       }
       this.setState({
-        args: argsMeta,
+        argsValidation: argsValidation,
         argsValid: false
       });
 
@@ -333,8 +339,8 @@ export class InvestJob extends React.Component {
     } else if (!limit_to) {
       
       keyset.forEach(k => {
-        argsMeta[k]['valid'] = true
-        argsMeta[k]['validationMessage'] = ''
+        argsValidation[k]['valid'] = true
+        argsValidation[k]['validationMessage'] = ''
       })
       // It's possible all args were already valid, in which case
       // it's nice to avoid the re-render that this setState call
@@ -342,7 +348,7 @@ export class InvestJob extends React.Component {
       // in a noticeable way. Due to use of redux there?
       if (!this.state.argsValid) {
         this.setState({
-          args: argsMeta,
+          args: argsValidation,
           argsValid: true
         })
       }
@@ -350,18 +356,19 @@ export class InvestJob extends React.Component {
     // C) Limited args were validated and none were invalid
     } else if (limit_to) {
 
-      argsMeta[limit_to]['valid'] = true
-      // this could be the last arg that needed to go valid,
-      // in which case we should trigger a full args_dict validation
-      // in order to properly set state.argsValid
-      this.setState({ args: argsMeta },
+      argsValidation[limit_to]['valid'] = true
+      // TODO: this defeats the purpose of using limit_to in the first place:
+      // This could be the last arg that needed to go valid,
+      // in which case we can trigger a full args_dict validation
+      // without any `limit_to`, in order to properly set state.argsValid
+      this.setState({ argsValidation: argsValidation },
         () => {
           let argIsValidArray = [];
-          for (const key in argsMeta) {
-            argIsValidArray.push(argsMeta[key]['valid'])
+          for (const key in argsValidation) {
+            argIsValidArray.push(argsValidation[key]['valid'])
           }
           if (argIsValidArray.every(Boolean)) {
-            this.investValidate(argsValuesFromSpec(argsMeta));
+            this.investValidate(argsValues);
           }
         }
       );
@@ -391,18 +398,22 @@ export class InvestJob extends React.Component {
       
       // Even if UI spec doesn't exist for a model, a minimum viable input
       // form can still be generated from ARGS_SPEC alone, so don't crash here.
-      let ui_spec = {};
+      let uiSpec = {};
       try {
-        ui_spec = JSON.parse(fs.readFileSync(
+        uiSpec = JSON.parse(fs.readFileSync(
           path.join(this.props.directoryConstants.INVEST_UI_DATA, spec.module + '.json')))
       } catch (err) {
         if (err.code !== 'ENOENT') {
           throw err
         }
       }
-      // TODO: write a test where the key is missing from ui_spec
+
+      let argsValues = {};  // the object that will store all the mutable values
+      let argsValidation = {};
       for (const key in args) {
-        Object.assign(args[key], ui_spec[key])
+        Object.assign(args[key], uiSpec[key])
+        argsValues[key] = {}
+        argsValidation[key] = {}
       }
       console.log(args)
 
@@ -412,7 +423,9 @@ export class InvestJob extends React.Component {
       this.setState({
         modelName: modelName,
         modelSpec: modelSpec,
-        args: args,
+        argsSpec: args,
+        argsValues: argsValues,
+        argsValidation: argsValidation,
         argsValid: false,
         sessionProgress: 'setup',
         jobStatus: null,
@@ -428,7 +441,8 @@ export class InvestJob extends React.Component {
         // without any user-interaction.
         // `false` argument prevents 'touching' these inputs so that we don't 
         //see scary validation warnings yet.
-        this.batchUpdateArgs(argsValuesFromSpec(args), false)
+        // this.batchUpdateArgs(argsValuesFromSpec(args), false)
+        this.batchUpdateArgs(argsDictFromObject(argsValues), false)
         this.switchTabs('setup')
       });
     } else {
@@ -455,32 +469,33 @@ export class InvestJob extends React.Component {
     // all the arg values are set, which is better.
     // TODO: this is all wrapped up in the issue with sluggish response-time on keystroke changes
     // which is due to the validate call triggering on every updateArg call.
-    const argsMeta = JSON.parse(JSON.stringify(this.state.args));
-    Object.keys(argsMeta).forEach(argkey => {
+    const argsSpec = JSON.parse(JSON.stringify(this.state.argsSpec));
+    const argsValues = Object.assign({}, this.state.argsValues);
+    Object.keys(argsSpec).forEach(argkey => {
       // Loop over argsMeta in order to:
         // 1) clear values for args that are absent from the input
         // 2) skip over items from the input that have incorrect keys, otherwise
         //    investValidate will crash on them.
 
-      argsMeta[argkey]['value'] = args_dict[argkey]
-      argsMeta[argkey]['touched'] = touch;
+      argsValues[argkey]['value'] = args_dict[argkey]
+      argsValues[argkey]['touched'] = touch;
 
-      if (argsMeta[argkey].ui_control) {
-        argsMeta[argkey].ui_control.forEach(dependentKey => {
+      if (argsSpec[argkey].ui_control) {
+        argsSpec[argkey].ui_control.forEach(dependentKey => {
           if (!args_dict[argkey]) {
             // hide/disable the dependent args
-            argsMeta[dependentKey]['active_ui_option'] = argsMeta[dependentKey].ui_option
+            argsValues[dependentKey]['active_ui_option'] = argsSpec[dependentKey].ui_option
           } else {
-            argsMeta[dependentKey]['active_ui_option'] = undefined
+            argsValues[dependentKey]['active_ui_option'] = undefined
           }
         });
       }
     });
     
     this.setState({
-      args: argsMeta,
+      // args: argsMeta,
       setupHash: crypto.randomBytes(10).toString('hex')},
-      () => { this.investValidate(argsValuesFromSpec(argsMeta)) }
+      () => { this.investValidate(argsValues) }
     );
   }
 
@@ -500,25 +515,28 @@ export class InvestJob extends React.Component {
     * input form, when it's better to not display the arguments as 'touched'.
     */
 
-    const argsMeta = JSON.parse(JSON.stringify(this.state.args));
-    argsMeta[key]['value'] = value;
-    argsMeta[key]['touched'] = touch;
+    const argsSpec = JSON.parse(JSON.stringify(this.state.argsSpec));
+    const argsValues = Object.assign({}, this.state.argsValues);
+    argsValues[key]['value'] = value;
+    argsValues[key]['touched'] = touch;
 
-    if (argsMeta[key].ui_control) {
-      argsMeta[key].ui_control.forEach(dependentKey => {
+    if (argsSpec[key].ui_control) {
+      argsSpec[key].ui_control.forEach(dependentKey => {
         if (!value) {
           // hide/disable the dependent args
-          argsMeta[dependentKey]['active_ui_option'] = argsMeta[dependentKey].ui_option
+          argsValues[dependentKey]['active_ui_option'] = argsSpec[dependentKey].ui_option
         } else {
-          argsMeta[dependentKey]['active_ui_option'] = undefined
+          argsValues[dependentKey]['active_ui_option'] = undefined
         }
       });
     }
 
-    this.setState({args: argsMeta}, 
-      () => {
-        this.investValidate(argsValuesFromSpec(argsMeta));
-      });
+    this.investValidate(argsValues)
+    // this.setState({args: argsMeta}, 
+    //   () => {
+    //     // TODO: consolodistae the state setting - maybe just let validate set it.
+    //     // this.investValidate(argsValuesFromSpec(argsMeta));
+    //   });
   }
 
   switchTabs(key) {
@@ -531,11 +549,12 @@ export class InvestJob extends React.Component {
   }
 
   render () {
+    // console.log('InvestJob Render')
     const activeTab = this.state.activeTab;
-    const setupDisabled = !(this.state.args); // enable once modelSpec has loaded
+    const setupDisabled = !(this.state.argsSpec); // enable once modelSpec has loaded
     const logDisabled = (this.state.jobStatus == null);  // enable during and after execution
     const resultsDisabled = (this.state.jobStatus !== 'success');  // enable only on complete execute with no errors
-    const dropdownsDisabled = (this.state.args == null);
+    const dropdownsDisabled = (this.state.argsSpec == null);
     
     return(
       <TabContainer activeKey={activeTab}>
@@ -594,7 +613,9 @@ export class InvestJob extends React.Component {
           <TabPane eventKey="setup" title="Setup">
             <SetupTab
               setupHash={this.state.setupHash}
-              args={this.state.args}
+              argsSpec={this.state.argsSpec}
+              argsValues={this.state.argsValues}
+              argsValidation={this.state.argsValidation}
               argsValid={this.state.argsValid}
               modulename={this.state.modelSpec.module}
               updateArg={this.updateArg}

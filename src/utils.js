@@ -138,3 +138,26 @@ export function argsValuesFromSpec(args) {
   }
   return(JSON.stringify(args_dict));
 }
+
+export function argsDictFromObject(args) {
+  /** Given a complete InVEST ARGS_SPEC.args, return just the key:value pairs
+  * This is often used to prepare the InvestJob.state.args object for passing
+  * to investValidate or other parts of the invest API.
+  *
+  * @param {object} args - object like an ARGS_SPEC.args dictionary,
+  *   but with values too
+  *
+  * @returns {object} - JSON.stringify'd arguments key: value pairs.
+  */
+  let args_dict = {};
+  for (const argname in args) {
+    args_dict[argname] = args[argname]['value']
+    // if (args[argname]['type'] === 'boolean') {
+    //   // args_dict[argname] = boolStringToBoolean(args[argname]['value']) || ''
+    //   args_dict[argname] = args[argname]['value'] !== undefined ? args[argname]['value'] : false
+    // } else {
+    //   args_dict[argname] = args[argname]['value'] || ''
+    // }
+  }
+  return(JSON.stringify(args_dict));
+}

@@ -23,7 +23,7 @@ const STATUS_COLOR_MAP = {
   success: 'rgba(40, 167, 69, 0.7)'
 }
 
-export class HomeTab extends React.Component {
+export class HomeTab extends React.PureComponent {
   /** Renders a button for each invest model and for each cached invest job.
   */
 
@@ -38,6 +38,7 @@ export class HomeTab extends React.Component {
   }
 
   render () {
+    console.log('HomeTab Render')
     // A button for each model
     const investJSON = this.props.investList;
     let investButtons = [];
@@ -78,7 +79,7 @@ HomeTab.propTypes = {
 }
 
 
-class RecentInvestJobs extends React.Component {
+class RecentInvestJobs extends React.PureComponent {
   /** Renders a button for each recent invest job. Also displays job metadata.
   *
   * Recent job metadata is passed here via props, originally loaded from
