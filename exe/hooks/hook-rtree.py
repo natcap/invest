@@ -3,7 +3,8 @@ from PyInstaller.utils.hooks import collect_data_files
 
 if is_darwin:
 	import glob
-	binaries = [(glob.glob('**/lib/libspatialindex*'), 'dylib')]
+	binaries = [
+		(binary, 'dylib') for binary in glob.glob('**/lib/libspatialindex*')]
 
 else:
 	datas = collect_data_files('rtree')
