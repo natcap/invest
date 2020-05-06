@@ -159,7 +159,7 @@ jobs:
             - name: Set up conda
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  activate-environment: mac-env
+                  activate-environment: mac-env  # This is also hardcoded in Pyinstaller's invest.spec
                   auto-update-conda: true
                   python-version: 3.7
                   channels: conda-forge
