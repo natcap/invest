@@ -11,14 +11,12 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Spinner from 'react-bootstrap/Spinner';
-import DropdownButton from 'react-bootstrap/DropdownButton';
 
 import { HomeTab } from './components/HomeTab';
 import { SetupTab } from './components/SetupTab';
 import { LogTab } from './components/LogTab';
 import { ResultsTab } from './components/ResultsTab'
 import { ResourcesTab } from './components/ResourcesTab';
-import { SaveParametersButton, SavePythonButton } from './components/SaveDropdown'
 import { LoadButton } from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, saveToPython, writeParametersToFile, fetchValidation } from './server_requests';
@@ -84,13 +82,10 @@ export class InvestJob extends React.Component {
     
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
     this.investGetSpec = this.investGetSpec.bind(this);
-    this.investValidate = this.investValidate.bind(this);
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
-    this.updateArg = this.updateArg.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.saveState = this.saveState.bind(this);
-    this.savePythonScript = this.savePythonScript.bind(this);
     this.loadState = this.loadState.bind(this);
     this.setSessionID = this.setSessionID.bind(this);
   }
@@ -122,22 +117,6 @@ export class InvestJob extends React.Component {
       systemTime: new Date().getTime(),
     }
     this.props.updateRecentSessions(job, this.props.appdata);
-  }
-
-  savePythonScript(filepath) {
-    /** Save the current invest arguments to a python script via datastack.py API.
-    *
-    * @params {string} filepath - desired path to the python script
-    */
-    // const args_dict_string = argsValuesFromSpec(this.state.args)
-    const args_dict_string = JSON.stringify(this.state.argsValues)
-    const payload = { 
-      filepath: filepath,
-      modelname: this.state.modelName,
-      pyname: this.state.modelSpec.module,
-      args: args_dict_string
-    }
-    saveToPython(payload);
   }
   
   setSessionID(event) {
@@ -173,7 +152,7 @@ export class InvestJob extends React.Component {
     }
   }
 
-  async argsToJsonFile(datastackPath) {
+  async argsToJsonFile(datastackPath, argsValues) {
     /** Write an invest args JSON file for passing to invest cli.
     *
     * Outsourcing this to natcap.invest.datastack via flask ensures
@@ -184,19 +163,20 @@ export class InvestJob extends React.Component {
 
     // The n_workers value always needs to be inserted into args
     // let args_dict = JSON.parse(argsValuesFromSpec(this.state.args));
-    let args_dict = Object.assign({}, this.state.args);
-    args_dict['n_workers'] = this.props.investSettings.nWorkers;
+    // let args_dict = Object.assign({}, this.state.args);
+    // args_dict['n_workers'] = this.props.investSettings.nWorkers;
+    argsValues['n_workers'] = this.props.investSettings.nWorkers;
     
     const payload = {
       parameterSetPath: datastackPath, 
       moduleName: this.state.modelSpec.module,
       relativePaths: false,
-      args: JSON.stringify(args_dict)
+      args: argsDictFromObject(argsValues)
     }
     await writeParametersToFile(payload);
   }
 
-  async investExecute() {
+  async investExecute(argsValues) {
     /** Spawn a child process to run an invest model via the invest CLI:
     * `invest -vvv run <model> --headless -d <datastack path>`
     *
@@ -207,8 +187,8 @@ export class InvestJob extends React.Component {
     * with the final status of the invest run.
     */
     const workspace = {
-      directory: this.state.argsValues.workspace_dir.value,
-      suffix: this.state.argsValues.results_suffix.value
+      directory: argsValues.workspace_dir.value,
+      suffix: argsValues.results_suffix.value
     }
     // model name, workspace, and suffix are suitable for a unique job identifier
     const sessionName = [
@@ -217,7 +197,7 @@ export class InvestJob extends React.Component {
     // Write a temporary datastack json for passing as a command-line arg
     const temp_dir = fs.mkdtempSync(path.join(process.cwd(), this.props.directoryConstants.TEMP_DIR, 'data-'))
     const datastackPath = path.join(temp_dir, 'datastack.json')
-    const _ = await this.argsToJsonFile(datastackPath);
+    const _ = await this.argsToJsonFile(datastackPath, argsValues);
 
     // Get verbosity level from the app's settings
     const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
@@ -284,97 +264,6 @@ export class InvestJob extends React.Component {
     });
   }
 
-  async investValidate(argsValues, limit_to) {
-    /** Validate an arguments dictionary using the InVEST model's validate function.
-    *
-    * @param {object} args_dict_string - a JSON.stringify'ed object of model argument
-    *    keys and values.
-    * @param {string} limit_to - an argument key if validation should be limited only
-    *    to that argument.
-    */
-    let argsSpec = JSON.parse(JSON.stringify(this.state.argsSpec));
-    let argsValidation = Object.assign({}, this.state.argsValidation);
-    let keyset = new Set(Object.keys(argsSpec));
-    let payload = { 
-      model_module: this.state.modelSpec.module,
-      args: argsDictFromObject(argsValues)
-    };
-
-    // TODO: is there a use-case for `limit_to`? 
-    // Right now we're never calling validate with a limit_to,
-    // but we have an awful lot of logic here to cover it.
-    if (limit_to) {
-      payload['limit_to'] = limit_to
-    }
-
-    const results = await fetchValidation(payload);
-
-    // A) At least one arg was invalid:
-    if (results.length) { 
-
-      results.forEach(result => {
-        // Each result is an array of two elements
-        // 0: array of arg keys
-        // 1: string message that pertains to those args
-        const argkeys = result[0];
-        const message = result[1];
-        argkeys.forEach(key => {
-          argsValidation[key]['validationMessage'] = message
-          argsValidation[key]['valid'] = false
-          keyset.delete(key);
-        })
-      });
-      if (!limit_to) {  // validated all, so ones left in keyset are valid
-        keyset.forEach(k => {
-          argsValidation[k]['valid'] = true
-          argsValidation[k]['validationMessage'] = ''
-        })
-      }
-      this.setState({
-        argsValidation: argsValidation,
-        argsValid: false
-      });
-
-    // B) All args were validated and none were invalid:
-    } else if (!limit_to) {
-      
-      keyset.forEach(k => {
-        argsValidation[k]['valid'] = true
-        argsValidation[k]['validationMessage'] = ''
-      })
-      // It's possible all args were already valid, in which case
-      // it's nice to avoid the re-render that this setState call
-      // triggers. Although only the Viz app components re-render 
-      // in a noticeable way. Due to use of redux there?
-      if (!this.state.argsValid) {
-        this.setState({
-          args: argsValidation,
-          argsValid: true
-        })
-      }
-
-    // C) Limited args were validated and none were invalid
-    } else if (limit_to) {
-
-      argsValidation[limit_to]['valid'] = true
-      // TODO: this defeats the purpose of using limit_to in the first place:
-      // This could be the last arg that needed to go valid,
-      // in which case we can trigger a full args_dict validation
-      // without any `limit_to`, in order to properly set state.argsValid
-      this.setState({ argsValidation: argsValidation },
-        () => {
-          let argIsValidArray = [];
-          for (const key in argsValidation) {
-            argIsValidArray.push(argsValidation[key]['valid'])
-          }
-          if (argIsValidArray.every(Boolean)) {
-            this.investValidate(argsValues);
-          }
-        }
-      );
-    }
-  }
-
   async investGetSpec(modelName) {
     /** Get an invest model's ARGS_SPEC when a model button is clicked.
     *  
@@ -409,11 +298,9 @@ export class InvestJob extends React.Component {
       }
 
       let argsValues = {};  // the object that will store all the mutable values
-      let argsValidation = {};
       for (const key in args) {
         Object.assign(args[key], uiSpec[key])
         argsValues[key] = {}
-        argsValidation[key] = {}
       }
       console.log(args)
 
@@ -425,8 +312,6 @@ export class InvestJob extends React.Component {
         modelSpec: modelSpec,
         argsSpec: args,
         argsValues: argsValues,
-        argsValidation: argsValidation,
-        argsValid: false,
         sessionProgress: 'setup',
         jobStatus: null,
         logStdErr: '',
@@ -464,11 +349,6 @@ export class InvestJob extends React.Component {
     * when it's better to not display the arguments as 'touched'.
     */
 
-    // TODO: could this now just call through to updateArg? Maybe by adding a touch param there.
-    // But that would add a bunch more calls to validate, which here waits until after
-    // all the arg values are set, which is better.
-    // TODO: this is all wrapped up in the issue with sluggish response-time on keystroke changes
-    // which is due to the validate call triggering on every updateArg call.
     const argsSpec = JSON.parse(JSON.stringify(this.state.argsSpec));
     const argsValues = Object.assign({}, this.state.argsValues);
     Object.keys(argsSpec).forEach(argkey => {
@@ -491,52 +371,12 @@ export class InvestJob extends React.Component {
         });
       }
     });
-    
+    console.log(argsValues)
     this.setState({
-      // args: argsMeta,
-      setupHash: crypto.randomBytes(10).toString('hex')},
-      () => { this.investValidate(argsValues) }
+      argsValues: argsValues,
+      setupHash: crypto.randomBytes(10).toString('hex')}
+      // () => { this.investValidate(argsValues) }
     );
-  }
-
-  updateArg(key, value, touch=true) {
-    /** Update this.state.args and validate the args. 
-    *
-    * Updating means 
-    * 1) setting the value
-    * 2) 'touching' the arg - implications for display of validation warnings
-    * 3) updating the enabled/disabled/hidden state of any dependent args
-    *
-    * @param {string} key - the invest argument key
-    * @param {string} value - the invest argument value
-    * @param {boolean} touch - whether this function should mark arguments as
-    * 'touched', which controls whether validation messages display. Usually
-    * desireable, except when this function is used for initial render of an
-    * input form, when it's better to not display the arguments as 'touched'.
-    */
-
-    const argsSpec = JSON.parse(JSON.stringify(this.state.argsSpec));
-    const argsValues = Object.assign({}, this.state.argsValues);
-    argsValues[key]['value'] = value;
-    argsValues[key]['touched'] = touch;
-
-    if (argsSpec[key].ui_control) {
-      argsSpec[key].ui_control.forEach(dependentKey => {
-        if (!value) {
-          // hide/disable the dependent args
-          argsValues[dependentKey]['active_ui_option'] = argsSpec[dependentKey].ui_option
-        } else {
-          argsValues[dependentKey]['active_ui_option'] = undefined
-        }
-      });
-    }
-
-    this.investValidate(argsValues)
-    // this.setState({args: argsMeta}, 
-    //   () => {
-    //     // TODO: consolodistae the state setting - maybe just let validate set it.
-    //     // this.investValidate(argsValuesFromSpec(argsMeta));
-    //   });
   }
 
   switchTabs(key) {
@@ -549,7 +389,8 @@ export class InvestJob extends React.Component {
   }
 
   render () {
-    // console.log('InvestJob Render')
+    console.log('InvestJob Render')
+    console.log(this.state.argsValues)
     const activeTab = this.state.activeTab;
     const setupDisabled = !(this.state.argsSpec); // enable once modelSpec has loaded
     const logDisabled = (this.state.jobStatus == null);  // enable during and after execution
@@ -583,14 +424,6 @@ export class InvestJob extends React.Component {
             </Nav.Item>
           </Nav>
           <Navbar.Brand>{this.state.modelSpec.model_name}</Navbar.Brand>
-          <DropdownButton id="dropdown-basic-button" title="Save " className="mx-3">
-            <SaveParametersButton
-              argsToJsonFile={this.argsToJsonFile}
-              disabled={dropdownsDisabled}/>
-            <SavePythonButton
-              savePythonScript={this.savePythonScript}
-              disabled={dropdownsDisabled}/>
-          </DropdownButton>
           <LoadButton
             investGetSpec={this.investGetSpec}
             batchUpdateArgs={this.batchUpdateArgs}
@@ -611,17 +444,14 @@ export class InvestJob extends React.Component {
             />
           </TabPane>
           <TabPane eventKey="setup" title="Setup">
-            <SetupTab
-              setupHash={this.state.setupHash}
+            <SetupTab key={this.state.setupHash}
+              modelSpec={this.state.modelSpec}
+              modelName={this.state.modelName}
               argsSpec={this.state.argsSpec}
-              argsValues={this.state.argsValues}
-              argsValidation={this.state.argsValidation}
-              argsValid={this.state.argsValid}
-              modulename={this.state.modelSpec.module}
-              updateArg={this.updateArg}
+              argsInitValues={this.state.argsValues}
               batchUpdateArgs={this.batchUpdateArgs}
-              investValidate={this.investValidate}
               investExecute={this.investExecute}
+              argsToJsonFile={this.argsToJsonFile}
             />
           </TabPane>
           <TabPane eventKey="log" title="Log">

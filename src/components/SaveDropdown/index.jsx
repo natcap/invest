@@ -20,7 +20,7 @@ export class SaveParametersButton extends React.Component {
     const data = await remote.dialog.showSaveDialog(
       { defaultPath: 'invest_args.json' })
     if (data.filePath) {   
-      this.props.argsToJsonFile(data.filePath);
+      this.props.wrapArgsToJsonFile(data.filePath);
     } else {
       console.log('save parameters was cancelled')
     }
@@ -31,7 +31,6 @@ export class SaveParametersButton extends React.Component {
     return(
       <Button 
         onClick={this.browseSaveFile}
-        disabled={this.props.disabled}
         variant="link">
         Save parameters to JSON
       </Button>
@@ -70,7 +69,6 @@ export class SavePythonButton extends React.Component {
     return(
       <Button 
         onClick={this.browseFile}
-        disabled={this.props.disabled}
         variant="link">
         Save to Python script
       </Button>
@@ -80,5 +78,4 @@ export class SavePythonButton extends React.Component {
 
 SavePythonButton.propTypes = {
   savePythonScript: PropTypes.func,
-  disabled: PropTypes.bool
 }

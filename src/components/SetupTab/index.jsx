@@ -8,13 +8,162 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
+import DropdownButton from 'react-bootstrap/DropdownButton';
 
-import { fetchDatastackFromFile } from '../../server_requests';
-import { argsValuesFromSpec, boolStringToBoolean } from '../../utils';
+import { SaveParametersButton, SavePythonButton } from '../SaveDropdown'
+import { fetchDatastackFromFile, fetchValidation } from '../../server_requests';
+import { argsValuesFromSpec, argsDictFromObject, boolStringToBoolean } from '../../utils';
 
 export class SetupTab extends React.Component {
   /** Renders an Arguments form and an Execute button
   */
+  constructor(props) {
+    super(props);
+    this.state = {
+      argsValues: {},
+      argsValidation: {},
+      argsValid: false
+    }
+
+    this.savePythonScript = this.savePythonScript.bind(this);
+    this.wrapArgsToJsonFile = this.wrapArgsToJsonFile.bind(this);
+    this.wrapInvestExecute = this.wrapInvestExecute.bind(this);
+    this.investValidate = this.investValidate.bind(this);
+    this.updateArgValues = this.updateArgValues.bind(this);
+  }
+
+  componentDidMount(props) {
+    console.log(this.props.argsInitValues);
+    if (this.props.argsInitValues) {
+      let argsValidation = {};
+      Object.keys(this.props.argsInitValues).forEach((argkey) => {
+        argsValidation[argkey] = {}
+      })
+      this.setState({
+        argsValues: this.props.argsInitValues,
+        argsValidation: argsValidation
+        },
+        () => this.investValidate(this.state.argsValues))
+    }
+  }
+
+  savePythonScript(filepath) {
+    /** Save the current invest arguments to a python script via datastack.py API.
+    *
+    * @params {string} filepath - desired path to the python script
+    */
+    const args_dict_string = argsDictFromObject(this.state.argsValues)
+    const payload = { 
+      filepath: filepath,
+      modelname: this.props.modelName,
+      pyname: this.props.modelSpec.module,
+      args: args_dict_string
+    }
+    saveToPython(payload);
+  }
+
+  wrapArgsToJsonFile(datastackPath) {
+    this.props.argsToJsonFile(datastackPath, this.state.argsValues)
+  }
+
+  wrapInvestExecute(argsValues) {
+    this.props.investExecute(this.state.argsValues)
+  }
+
+  updateArgValues(argsValues) {
+    this.setState({argsValues: argsValues})
+  }
+
+  async investValidate(argsValues, limit_to) {
+    /** Validate an arguments dictionary using the InVEST model's validate function.
+    *
+    * @param {object} args_dict_string - a JSON.stringify'ed object of model argument
+    *    keys and values.
+    * @param {string} limit_to - an argument key if validation should be limited only
+    *    to that argument.
+    */
+    let argsSpec = JSON.parse(JSON.stringify(this.props.argsSpec));
+    let argsValidation = Object.assign({}, this.state.argsValidation);
+    let keyset = new Set(Object.keys(argsSpec));
+    let payload = { 
+      model_module: this.props.modelSpec.module,
+      args: argsDictFromObject(argsValues)
+    };
+
+    // TODO: is there a use-case for `limit_to`? 
+    // Right now we're never calling validate with a limit_to,
+    // but we have an awful lot of logic here to cover it.
+    if (limit_to) {
+      payload['limit_to'] = limit_to
+    }
+
+    const results = await fetchValidation(payload);
+
+    // A) At least one arg was invalid:
+    if (results.length) { 
+
+      results.forEach(result => {
+        // Each result is an array of two elements
+        // 0: array of arg keys
+        // 1: string message that pertains to those args
+        const argkeys = result[0];
+        const message = result[1];
+        argkeys.forEach(key => {
+          argsValidation[key]['validationMessage'] = message
+          argsValidation[key]['valid'] = false
+          keyset.delete(key);
+        })
+      });
+      if (!limit_to) {  // validated all, so ones left in keyset are valid
+        keyset.forEach(k => {
+          argsValidation[k]['valid'] = true
+          argsValidation[k]['validationMessage'] = ''
+        })
+      }
+      this.setState({
+        argsValidation: argsValidation,
+        argsValid: false
+      });
+
+    // B) All args were validated and none were invalid:
+    } else if (!limit_to) {
+      
+      keyset.forEach(k => {
+        argsValidation[k]['valid'] = true
+        argsValidation[k]['validationMessage'] = ''
+      })
+      // It's possible all args were already valid, in which case
+      // it's nice to avoid the re-render that this setState call
+      // triggers. Although only the Viz app components re-render 
+      // in a noticeable way. Due to use of redux there?
+      if (!this.state.argsValid) {
+        this.setState({
+          argsValidation: argsValidation,
+          argsValid: true
+        })
+      }
+
+    // C) Limited args were validated and none were invalid
+    } else if (limit_to) {
+
+      argsValidation[limit_to]['valid'] = true
+      // TODO: this defeats the purpose of using limit_to in the first place:
+      // This could be the last arg that needed to go valid,
+      // in which case we can trigger a full args_dict validation
+      // without any `limit_to`, in order to properly set state.argsValid
+      this.setState({ argsValidation: argsValidation },
+        () => {
+          let argIsValidArray = [];
+          for (const key in argsValidation) {
+            argIsValidArray.push(argsValidation[key]['valid'])
+          }
+          if (argIsValidArray.every(Boolean)) {
+            this.investValidate(argsValues);
+          }
+        }
+      );
+    }
+  }
 
   render () {
     // Only mount the ArgsForm when there are actually args.
@@ -25,25 +174,31 @@ export class SetupTab extends React.Component {
     // Normally the local state responds directly user-interactions so that
     // form fields stay very responsive to keystrokes. But there are situations
     // when the field values need to update programmatically via props data.
-    if (this.props.argsSpec) {
+    if (this.state.argsValues) {
       return (
         <div>
-          <ArgsForm key={this.props.setupHash}
+          <ArgsForm
             argsSpec={this.props.argsSpec}
-            argsValues={this.props.argsValues}
-            argsValidation={this.props.argsValidation}
+            argsValues={this.state.argsValues}
+            argsValidation={this.state.argsValidation}
             modulename={this.props.modulename}
-            updateArg={this.props.updateArg}
+            updateArgValues={this.updateArgValues}
             batchUpdateArgs={this.props.batchUpdateArgs}
-            investValidate={this.props.investValidate}
+            investValidate={this.investValidate}
           />
           <Button 
             variant="primary" 
             size="lg"
-            onClick={this.props.investExecute}
-            disabled={!this.props.argsValid}>
+            onClick={this.wrapInvestExecute}
+            disabled={!this.state.argsValid}>
                 Execute
           </Button>
+          <DropdownButton id="dropdown-basic-button" title="Save " className="mx-3">
+            <SaveParametersButton
+              wrapArgsToJsonFile={this.wrapArgsToJsonFile}/>
+            <SavePythonButton
+              savePythonScript={this.savePythonScript}/>
+          </DropdownButton>
         </div>);
     }
     // The SetupTab remains disabled in this route, so no need
@@ -72,21 +227,21 @@ class ArgsForm extends React.PureComponent {
 
   constructor(props) {
     super(props);
-    this.state = {
-      argsValues: Object.assign({}, this.props.argsValues)}
+    // this.state = {
+    //   argsValidation: {},
+    // }
 
+    // this.investValidate = this.investValidate.bind(this);
     this.updateLocalArg = this.updateLocalArg.bind(this);
-    this.handleKeystrokes = this.handleKeystrokes.bind(this);
+    // this.handleKeystrokes = this.handleKeystrokes.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.handleBoolChange = this.handleBoolChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
     this.onDragDrop = this.onDragDrop.bind(this);
   }
 
-  // updateLocalArg(key, value) {
-  //   * Store a text input value in local state. 
-  //   this.setState({ [key]: {value: value} });
-  // }
+  
+
   updateLocalArg(key, value) {
     /** Update this.state.args and validate the args. 
     *
@@ -104,7 +259,7 @@ class ArgsForm extends React.PureComponent {
     */
 
     const argsSpec = JSON.parse(JSON.stringify(this.props.argsSpec));
-    const argsValues = Object.assign({}, this.state.argsValues);
+    const argsValues = Object.assign({}, this.props.argsValues);
     argsValues[key]['value'] = value;
     argsValues[key]['touched'] = true;
 
@@ -119,8 +274,8 @@ class ArgsForm extends React.PureComponent {
       });
     }
 
+    this.props.updateArgValues(argsValues)
     this.props.investValidate(argsValues)
-    this.setState({argsValues: argsValues})
   }
 
   handleChange(event) {
@@ -133,19 +288,18 @@ class ArgsForm extends React.PureComponent {
     const value = event.target.value;
     const argkey = event.target.name;
     this.updateLocalArg(argkey, value)
-    this.props.updateArg(argkey, value);
   }
 
-  handleKeystrokes(event) {
-    /** Handle all keystroke changes in text inputs.
-    * 
-    * This updates the value of the input in response to any/all
-    * keypresses, but does not trigger validation.
-    */
-    const value = event.target.value;
-    const argkey = event.target.name;
-    this.updateLocalArg(argkey, value)
-  }
+  // handleKeystrokes(event) {
+  //   * Handle all keystroke changes in text inputs.
+  //   * 
+  //   * This updates the value of the input in response to any/all
+  //   * keypresses, but does not trigger validation.
+    
+  //   const value = event.target.value;
+  //   const argkey = event.target.name;
+  //   this.updateLocalArg(argkey, value)
+  // }
 
   handleBoolChange(event) {
     /** Handle boolean changes that emitted strings */
@@ -153,7 +307,6 @@ class ArgsForm extends React.PureComponent {
     const argkey = event.target.name;
     const boolVal = boolStringToBoolean(value);
     this.updateLocalArg(argkey, boolVal)
-    this.props.updateArg(argkey, boolVal)
   }
 
   async selectFile(event) {
@@ -164,8 +317,7 @@ class ArgsForm extends React.PureComponent {
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const data = await remote.dialog.showOpenDialog({ properties: [prop] })
     if (data.filePaths.length) {
-      this.props.updateArg(argname, data.filePaths[0]); // dialog defaults allow only 1 selection
-      this.updateLocalArg(argname, data.filePaths[0])
+      this.updateLocalArg(argname, data.filePaths[0]);  // dialog defaults allow only 1 selection
     } else {
       console.log('browse dialog was cancelled')
     }
@@ -193,7 +345,6 @@ class ArgsForm extends React.PureComponent {
   }
 
   render() {
-    // console.log('ArgsForm Render')
     const argsSpec = Object.assign({}, this.props.argsSpec)
     // const current_args = Object.assign({}, this.props.args)
     let formItems = [];
@@ -201,7 +352,7 @@ class ArgsForm extends React.PureComponent {
     for (const argkey in argsSpec) {
       if (argkey === 'n_workers') { continue }
       const argSpec = argsSpec[argkey];
-      const argState = Object.assign({}, this.state.argsValues[argkey]);
+      const argState = Object.assign({}, this.props.argsValues[argkey]);
       const argValidationState = Object.assign({}, this.props.argsValidation[argkey]);
       let ArgInput;
 
@@ -281,7 +432,7 @@ class ArgsForm extends React.PureComponent {
           </Form.Group>
 
       // Dropdown menus for args with options
-      } else if (argument.type === 'option_string') {
+      } else if (argSpec.type === 'option_string') {
         ArgInput = 
           <Form.Group as={Row} key={argkey} className={'arg-' + argState.active_ui_option} data-testid={'group-' + argkey}>
             <Form.Label column sm="3" htmlFor={argkey}>{argSpec.name}</Form.Label>
@@ -311,6 +462,7 @@ class ArgsForm extends React.PureComponent {
       // This grouping and sorting does not fail if argument.order is undefined 
       // (i.e. it was missing in ARGS_SPEC) for one or more args. 
       // Nevertheless, feels better to fill in a float here.
+      console.time('arg group tree')
       if (!argSpec.order) { argSpec.order = 100.0 }
 
       // Fill in a tree-like object where each item is an array of objects
@@ -325,8 +477,9 @@ class ArgsForm extends React.PureComponent {
         subArg[argSpec.order] = ArgInput
         argTree[group] = [subArg]
       }
+      console.timeEnd('arg group tree')
     }
-
+    console.time('sort args')
     const sortedArgs = Object.entries(argTree).sort((a, b) => a[0] - b[0])
     formItems = []
     for (const orderkey in sortedArgs) {
@@ -349,6 +502,7 @@ class ArgsForm extends React.PureComponent {
           </div>)
       }
     }
+    console.timeEnd('sort args')
 
     return (
       <Form data-testid='setup-form'
@@ -371,7 +525,7 @@ ArgsForm.propTypes = {
   investValidate: SetupTab.propTypes.investValidate,
 }
 
-class AboutModal extends React.Component {
+class AboutModal extends React.PureComponent {
   constructor(props) {
     super(props)
     this.state = {
