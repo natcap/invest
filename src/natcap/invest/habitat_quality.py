@@ -570,7 +570,7 @@ def execute(args):
                 args=((threat_raster_path, 1), (kernel_path, 1),
                       filtered_threat_raster_path),
                 kwargs={
-                    'ignore_nodata': True,
+                    'ignore_nodata_and_edges': True,
                     'mask_nodata': False
                     },
                 target_path_list=[filtered_threat_raster_path],
