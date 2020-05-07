@@ -2,6 +2,18 @@
 
 Unreleased Changes
 ------------------
+* Fixed a compilation issue on Mac OS X Catalina.
+* Fixed an issue with NDR's raster normalization function so that Float64
+  nodata values are now correctly cast to Float32.  This issue was affecting
+  the summary vector, where the ``surf_n``, ``sub_n`` and ``n_export_tot``
+  columns would contain values of ``-inf``.
+* Fixed minor bug in Coastal Vulnerability shore point creation. Also added a
+  check to fail fast when zero shore points are found within the AOI.
+* The Finfish Aquaculture model no longer generates histograms for
+  uncertainty analysis due to issues with matplotlib that make InVEST
+  unstable. See https://github.com/natcap/invest/issues/87 for more.
+* Corrected the Urban Cooling Model's help text for the "Cooling Capacity
+  Calculation Method" in the User Interface.
 * Fixing an issue with SDR's ``LS`` calculations.  The ``x`` term is now
   the weighted mean of proportional flow from the current pixel into its
   neighbors.  Note that for ease of debugging, this has been implemented as a
@@ -35,7 +47,7 @@ Unreleased Changes
 * Makefile has been updated to fetch the version string from ``git`` rather
   than ``hg``.  A mercurial client is still needed in order to clone the
   InVEST User's Guide.
-* Removing Python 2 compatibility code such as ``future``, ``pyqt4``, 
+* Removing Python 2 compatibility code such as ``future``, ``pyqt4``,
   ``basestring``, ``unicode``, ``six``, unicode casting, etc...
 * Update api-docs conf file to mock sdr.sdr_core and to use updated unittest
   mock
