@@ -465,7 +465,7 @@ class HabitatQualityTests(unittest.TestCase):
         for output_filename, assert_value in {
                 'deg_sum_c_regression.tif': 86.17549,
                 'deg_sum_f_regression.tif': 161.4637,
-                'quality_c_regression.tif': 7496.7466,
+                'quality_c_regression.tif': 7499.381,
                 'quality_f_regression.tif': 4999.723,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000}.items():
