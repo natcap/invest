@@ -1,7 +1,11 @@
 .. :changelog:
 
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.1 (2020-05-08)
 ------------------
 * Fixed a compilation issue on Mac OS X Catalina.
 * Fixed an issue with NDR's raster normalization function so that Float64
