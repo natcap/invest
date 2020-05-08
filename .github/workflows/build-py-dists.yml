@@ -1,5 +1,8 @@
 name: Python distributions
-on: [push, pull_request]
+on:
+    push:
+    pull_request:
+
 jobs:
     build-wheels:
         name: Wheel
@@ -26,9 +29,6 @@ jobs:
 
         steps:
             - uses: actions/checkout@v2
-              with:
-                  # Fetch complete history for accurate versioning
-                  fetch-depth: 0
 
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
@@ -40,7 +40,10 @@ jobs:
                   architecture: ${{ matrix.python-arch }}
 
             - name: Install dependencies
-              run: python -m pip install ${{ matrix.numpy }} setuptools_scm cython wheel
+              shell: bash
+              run: |
+                  pip install ${{ matrix.numpy }} toml
+                  pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build wheel
               run: python setup.py bdist_wheel
@@ -50,14 +53,25 @@ jobs:
                   name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-arch }}
                   path: dist
 
+            - name: Upload distribution to release
+              shell: bash
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                if hub release show ${GITHUB_REF:10}
+                then
+                    set -x  # for debugging
+                    hub release edit -a $(find dist -name "*.whl") -m "" ${GITHUB_REF:10}
+                    set +x
+                else
+                    echo "Release for ${GITHUB_REF:10} not found; skipping wheel upload."
+                fi
+
     build-sdist:
         name: Source Dist
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
-              with:
-                  # Fetch complete history for accurate versioning
-                  fetch-depth: 0
 
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
@@ -68,7 +82,10 @@ jobs:
                   python-version: 3.7
 
             - name: Install python dependencies
-              run: python -m pip install --upgrade pip numpy setuptools_scm cython
+              shell: bash
+              run: |
+                pip install toml
+                pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build source distribution
               run: python setup.py build_ext sdist
@@ -77,3 +94,18 @@ jobs:
               with:
                   name: Source distribution
                   path: dist
+
+            - name: Upload distribution to release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  HUB_VERBOSE: 1
+              shell: bash
+              run: |
+                if hub release show ${GITHUB_REF:10}
+                then
+                    set -x  # for debugging
+                    hub release edit -a $(find dist -name "*.tar.gz") -m "" ${GITHUB_REF:10}
+                    set +x
+                else
+                    echo "Release for ${GITHUB_REF:10} not found; skipping sdist upload."
+                fi

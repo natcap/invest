@@ -1,5 +1,6 @@
 .. :changelog:
 
+
 Unreleased Changes
 ------------------
 * Fixed a compilation issue on Mac OS X Catalina.
@@ -1535,5 +1536,3 @@ InVEST 1.005 is a minor release with the following modification:
 10. Pollination
 
     In this version, the pollination model accepts an additional parameter which indicated the proportion of a crops yield that is attributed to wild pollinators.
-
-
