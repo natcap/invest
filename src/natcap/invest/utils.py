@@ -1,4 +1,5 @@
 """InVEST specific code utils."""
+import codecs
 import math
 import os
 import contextlib
@@ -7,8 +8,8 @@ import tempfile
 import shutil
 from datetime import datetime
 import time
-import pandas
 
+import pandas
 import numpy
 from osgeo import gdal
 from osgeo import osr
@@ -460,9 +461,9 @@ def build_lookup_from_csv(
     """
     # Check if the file encoding is UTF-8 BOM first
     encoding = None
-    with open(table_path) as file_obj:
+    with open(table_path, 'rb') as file_obj:
         first_line = file_obj.readline()
-        if first_line.startswith('\xef\xbb\xbf'):
+        if first_line.startswith(codecs.BOM_UTF8):
             encoding = 'utf-8-sig'
     table = pandas.read_csv(
         table_path, sep=None, engine='python', encoding=encoding)
