@@ -1,6 +1,11 @@
 .. :changelog:
 
-Unreleased Changes
+
+..
+  Unreleased Changes
+  ------------------
+
+3.8.1 (2020-05-08)
 ------------------
 * Fixed a compilation issue on Mac OS X Catalina.
 * Fixed an issue with NDR's raster normalization function so that Float64
@@ -1535,5 +1540,3 @@ InVEST 1.005 is a minor release with the following modification:
 10. Pollination
 
     In this version, the pollination model accepts an additional parameter which indicated the proportion of a crops yield that is attributed to wild pollinators.
-
-

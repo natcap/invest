@@ -10,7 +10,7 @@ from PyInstaller.compat import is_win, is_darwin
 current_dir = os.getcwd()  # assume we're building from the project root
 block_cipher = None
 exename = 'invest'
-conda_env = 'env'
+conda_env = '/usr/local/miniconda/envs/mac-env'
 
 
 kwargs = {

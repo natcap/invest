@@ -6,11 +6,11 @@ GIT_SAMPLE_DATA_REPO_REV    := a280ef2cf79b7a794ebb3e8678ca27cbe37d1f5b
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 0dfeed7f216f6c1f9af815aabb3e7e04f8cf662b
+GIT_TEST_DATA_REPO_REV      := 92206b9a9fff0aa975adf5bcddfaa3347b20f857
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 62f9fb6c14459d501f21acc5342cf2fa70ac8b80
+GIT_UG_REPO_REV              := 7e6ed574cbdcc24199e57fa48bd36fb46e460635
 
 
 ENV = env
@@ -80,14 +80,16 @@ BUILD_DIR := build
 # The fork name will need to be set manually (e.g. make FORKNAME=natcap/invest)
 # if someone wants to build from source outside of git (like if they grabbed
 # a zipfile of the source code).
-FORKNAME := $(word 2, $(subst github.com/, ,$(shell git remote get-url origin)))
+FORKNAME := $(word 2, $(subst :,,$(subst github.com, ,$(shell git remote get-url origin))))
 FORKUSER := $(word 1, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
 	BUCKET := gs://releases.naturalcapitalproject.org
 	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
+	INSTALLER_NAME_FORKUSER :=
 else
 	BUCKET := gs://natcap-dev-build-artifacts
 	DIST_URL_BASE := $(BUCKET)/invest/$(FORKUSER)/$(VERSION)
+	INSTALLER_NAME_FORKUSER := $(FORKUSER)
 endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
@@ -115,6 +117,12 @@ MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
 print-%:
 	@echo "$* = $($*)"
+
+# Very useful for printing variables within scripts!
+# Like `make print-<variable>, only without also printing the variable name.
+# the 'j' prefix stands for just.  We're just printing the variable name.
+jprint-%:
+	@echo "$($*)"
 
 help:
 	@echo "Please use make <target> where <target> is one of"
@@ -304,11 +312,6 @@ $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
 # Installers for each platform.
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
-ifeq ($(FORKUSER), natcap)
-	INSTALLER_NAME_FORKUSER :=
-else
-	INSTALLER_NAME_FORKUSER := $(FORKUSER)
-endif
 WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(INSTALLER_NAME_FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 windows_installer: $(WINDOWS_INSTALLER_FILE)
 $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) build/vcredist_x86.exe | $(GIT_SAMPLE_DATA_REPO_PATH)
@@ -359,13 +362,10 @@ signcode_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
-	$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
-
-    ifeq ($(OS),Windows_NT)
-		$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
-		$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
-    endif
-	@echo "Binaries (if they were created) can be downloaded from:"
+	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
+	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	@echo "Applicaiton binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 
 

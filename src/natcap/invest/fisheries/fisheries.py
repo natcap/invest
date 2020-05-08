@@ -108,7 +108,7 @@ ARGS_SPEC = {
         },
         "population_csv_path": {
             "type": "csv",
-            "required": "~do_batch",
+            "required": "not do_batch",
             "about": (
                 "The provided CSV file should contain all necessary "
                 "attributes for the sub-populations based on lifecycle "
