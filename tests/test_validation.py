@@ -611,15 +611,15 @@ class CSVValidation(unittest.TestCase):
         from natcap.invest import validation
 
         df = pandas.DataFrame([
-            {'fØØ': 1, 'bar': 2, 'baz': 3},  # special character here.
+            {'fЮЮ': 1, 'bar': 2, 'baz': 3},  # special characters here.
             {'foo': 2, 'bar': 3, 'baz': 4},
             {'foo': 3, 'bar': 4, 'baz': 5}])
 
         target_file = os.path.join(self.workspace_dir, 'test.csv')
 
-        # This saves the CSV with the Windows Vietnamese codepage.
-        # https://en.wikipedia.org/wiki/Windows-1258
-        df.to_csv(target_file, encoding='Windows-1258')
+        # Save the CSV with the Windows Cyrillic codepage.
+        # https://en.wikipedia.org/wiki/ISO/IEC_8859-5
+        df.to_csv(target_file, encoding='iso8859_5')
 
         error_msg = validation.check_csv(target_file)
         self.assertTrue(
