@@ -20,9 +20,10 @@ export class SetupTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      argsValues: {},
+      argsValues: null,
       argsValidation: {},
-      argsValid: false
+      argsValid: false,
+      sortedArgTree: null
     }
 
     this.savePythonScript = this.savePythonScript.bind(this);
@@ -30,20 +31,69 @@ export class SetupTab extends React.Component {
     this.wrapInvestExecute = this.wrapInvestExecute.bind(this);
     this.investValidate = this.investValidate.bind(this);
     this.updateArgValues = this.updateArgValues.bind(this);
+    this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
   }
 
   componentDidMount(props) {
-    console.log(this.props.argsInitValues);
+    /* 
+    * Including the `key` property on SetupTab tells React to 
+    * re-mount (rather than update & re-render) this component when
+    * the key changes. This function does some useful initialization
+    * that only needs to compute when this.props.argsSpec changes,
+    * not on every re-render.
+    */
+    console.log('setup did mount');
     if (this.props.argsInitValues) {
+      let argTree = {}
       let argsValidation = {};
-      Object.keys(this.props.argsInitValues).forEach((argkey) => {
+      const argsValues = {};
+      Object.keys(this.props.argsSpec).forEach((argkey) => {
         argsValidation[argkey] = {}
-      })
+        if (argkey === 'n_workers') { return }
+        argsValues[argkey] = {
+          value: this.props.argsInitValues[argkey],
+          touched: false
+        }
+      });
+      Object.keys(this.props.argsSpec).forEach((argkey) => {
+        if (argkey === 'n_workers') { return }
+        const argSpec = Object.assign({}, this.props.argsSpec[argkey])
+        if (argSpec.ui_control) {
+          argSpec.ui_control.forEach(dependentKey => {
+            if (!argsValues[argkey].value) {
+              // hide/disable the dependent args
+              argsValues[dependentKey]['active_ui_option'] = this.props.argsSpec[dependentKey].ui_option
+            } else {
+              argsValues[dependentKey]['active_ui_option'] = undefined
+            }
+          });
+        }
+
+        // This grouping and sorting does not fail if argument.order is undefined 
+        // (i.e. it was missing in ARGS_SPEC) for one or more args. 
+        // Nevertheless, feels better to fill in a float here.
+        if (!argSpec.order) { argSpec.order = 100.0 }
+
+        // Fill in a tree-like object where each item is an array of objects
+        // like [ { orderNumber: InputComponent }, ... ]
+        // that share a Math.floor argument.order number.
+        const group = Math.floor(argSpec.order)
+        let subArg = {}
+        if (argTree[group]) {
+          subArg[argSpec.order] = argkey
+          argTree[group].push(subArg)
+        } else {
+          subArg[argSpec.order] = argkey
+          argTree[group] = [subArg]
+        }
+      });
+      const sortedArgs = Object.entries(argTree).sort((a, b) => a[0] - b[0])
       this.setState({
-        argsValues: this.props.argsInitValues,
-        argsValidation: argsValidation
-        },
-        () => this.investValidate(this.state.argsValues))
+        argsValues: argsValues,
+        argsValidation: argsValidation,
+        sortedArgTree: sortedArgs },
+        () => this.investValidate(this.state.argsValues)
+      )
     }
   }
 
@@ -72,6 +122,36 @@ export class SetupTab extends React.Component {
 
   updateArgValues(argsValues) {
     this.setState({argsValues: argsValues})
+  }
+
+  batchUpdateArgs(argsDict) {
+    // TODO: some of this code is repeated in componentDidMount 
+    Object.keys(this.props.argsSpec).forEach((argkey) => {
+      argsValidation[argkey] = {}
+      if (argkey === 'n_workers') { return }      
+      argsValues[argkey] = {
+        value: argsDict[argkey],
+        touched: true
+      }
+    });
+    Object.keys(this.props.argsSpec).forEach((argkey) => {
+      let argSpec = this.props.argsSpec[argkey]
+      if (argSpec.ui_control) {
+        argSpec.ui_control.forEach(dependentKey => {
+          if (!argsValues[argkey].value) {
+            // hide/disable the dependent args
+            argsValues[dependentKey]['active_ui_option'] = argsSpec[dependentKey].ui_option
+          } else {
+            argsValues[dependentKey]['active_ui_option'] = undefined
+          }
+        });
+      }
+    })
+    this.setState({
+      argsValues: argsValues,
+      argsValidation: argsValidation},
+      () => this.investValidate(this.state.argsValues)
+    )
   }
 
   async investValidate(argsValues, limit_to) {
@@ -166,14 +246,10 @@ export class SetupTab extends React.Component {
   }
 
   render () {
-    // Only mount the ArgsForm when there are actually args.
-    // Including the `key` property on ArgsForm tells React to 
-    // re-initialize (rather than update) this component if the key changes.
-    // We use that here as a signal for ArgsForm to sync it's local state 
-    // of form values with data from this.props.args.
-    // Normally the local state responds directly user-interactions so that
-    // form fields stay very responsive to keystrokes. But there are situations
-    // when the field values need to update programmatically via props data.
+    console.log('setup did render')
+    console.log(this.props.argsSpec)
+    console.log(this.state.argsValues)
+    console.log(this.state.sortedArgTree)
     if (this.state.argsValues) {
       return (
         <div>
@@ -181,9 +257,10 @@ export class SetupTab extends React.Component {
             argsSpec={this.props.argsSpec}
             argsValues={this.state.argsValues}
             argsValidation={this.state.argsValidation}
+            sortedArgTree={this.state.sortedArgTree}
             modulename={this.props.modulename}
             updateArgValues={this.updateArgValues}
-            batchUpdateArgs={this.props.batchUpdateArgs}
+            batchUpdateArgs={this.batchUpdateArgs}
             investValidate={this.investValidate}
           />
           <Button 
@@ -227,11 +304,7 @@ class ArgsForm extends React.PureComponent {
 
   constructor(props) {
     super(props);
-    // this.state = {
-    //   argsValidation: {},
-    // }
 
-    // this.investValidate = this.investValidate.bind(this);
     this.updateLocalArg = this.updateLocalArg.bind(this);
     // this.handleKeystrokes = this.handleKeystrokes.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -345,156 +418,41 @@ class ArgsForm extends React.PureComponent {
   }
 
   render() {
-    const argsSpec = Object.assign({}, this.props.argsSpec)
-    // const current_args = Object.assign({}, this.props.args)
     let formItems = [];
-    let argTree = {}
-    for (const argkey in argsSpec) {
-      if (argkey === 'n_workers') { continue }
-      const argSpec = argsSpec[argkey];
-      const argState = Object.assign({}, this.props.argsValues[argkey]);
-      const argValidationState = Object.assign({}, this.props.argsValidation[argkey]);
-      let ArgInput;
-
-      // These types need a text input, and some also need a file browse button
-      if (['csv', 'vector', 'raster', 'directory', 'freestyle_string', 'number'].includes(argSpec.type)) {
-        ArgInput = 
-          <Form.Group as={Row} key={argkey} className={'arg-' + argState.active_ui_option} data-testid={'group-' + argkey}>
-            <Form.Label column sm="3"  htmlFor={argkey}>{argSpec.name}</Form.Label>
-            <Col sm="8">
-              <InputGroup>
-                <AboutModal argument={argSpec}/>
-                <Form.Control
-                  id={argkey}
-                  name={argkey}
-                  type="text" 
-                  value={argState.value || ''} // empty string is handled better than `undefined`
-                  onChange={this.handleChange}
-                  // onKeyUp={this.handleChange}
-                  isValid={argState.touched && argValidationState.valid}
-                  isInvalid={argState.touched && argValidationState.validationMessage}
-                  disabled={argState.active_ui_option === 'disable' || false}
-                />
-                {
-                  ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type) ?
-                  <InputGroup.Append>
-                    <Button
-                      id={argkey}
-                      variant="outline-secondary"
-                      value={argSpec.type}  // dialog will limit options to files or dirs accordingly
-                      name={argkey}
-                      onClick={this.selectFile}>
-                      Browse
-                    </Button>
-                  </InputGroup.Append> : <React.Fragment/>
-                }
-                <Form.Control.Feedback type='invalid' id={argkey + '-feedback'}>
-                  {argSpec.type + ' : ' + (argValidationState.validationMessage || '')}
-                </Form.Control.Feedback>
-              </InputGroup>
-            </Col>
-          </Form.Group>
-      
-      // Radio select for boolean args
-      } else if (argSpec.type === 'boolean') {
-        // this.state[argname] will be type boolean if it's coming from this.props.args. 
-        // But html forms must emit strings, so there's a special change handler
-        // for boolean inputs that coverts to a real boolean.
-        // Also, the `checked` property does not treat 'undefined' the same as false,
-        // instead React avoids setting the property altogether. Hence, double !! to
-        // cast undefined to false.
-        ArgInput = 
-          <Form.Group as={Row} key={argkey} data-testid={'group-' + argkey}>
-            <Form.Label column sm="3" htmlFor={argkey}>{argSpec.name}</Form.Label>
-            <Col sm="8">
-              <AboutModal argument={argSpec}/>
-              <Form.Check
-                id={argkey}
-                inline
-                type="radio"
-                label="Yes"
-                value={"true"}
-                checked={!!argState.value}  // double bang casts undefined to false
-                onChange={this.handleBoolChange}
-                name={argkey}
-              />
-              <Form.Check
-                id={argkey}
-                inline
-                type="radio"
-                label="No"
-                value={"false"}
-                checked={!argState.value}  // undefined becomes true, that's okay
-                onChange={this.handleBoolChange}
-                name={argkey}
-              />
-            </Col>
-          </Form.Group>
-
-      // Dropdown menus for args with options
-      } else if (argSpec.type === 'option_string') {
-        ArgInput = 
-          <Form.Group as={Row} key={argkey} className={'arg-' + argState.active_ui_option} data-testid={'group-' + argkey}>
-            <Form.Label column sm="3" htmlFor={argkey}>{argSpec.name}</Form.Label>
-            <Col sm="4">
-              <InputGroup>
-                <AboutModal argument={argSpec}/>
-                <Form.Control 
-                  id={argkey}
-                  as='select'
-                  name={argkey}
-                  value={argState.value}
-                  onChange={this.handleChange}
-                  disabled={argState.active_ui_option === 'disable' || false}>
-                  {argSpec.validation_options.options.map(opt =>
-                    <option value={opt} key={opt}>{opt}</option>
-                  )}
-                </Form.Control>
-                <Form.Control.Feedback type='invalid' id={argkey + '-feedback'}>
-                  {argSpec.type + ' : ' + (argValidationState.validationMessage || '')}
-                </Form.Control.Feedback>
-              </InputGroup>
-            </Col>
-          </Form.Group>
-      }
-
-      // TODO: memoize the grouping and sorting results
-      // This grouping and sorting does not fail if argument.order is undefined 
-      // (i.e. it was missing in ARGS_SPEC) for one or more args. 
-      // Nevertheless, feels better to fill in a float here.
-      console.time('arg group tree')
-      if (!argSpec.order) { argSpec.order = 100.0 }
-
-      // Fill in a tree-like object where each item is an array of objects
-      // like [ { orderNumber: InputComponent }, ... ]
-      // that share a Math.floor argument.order number.
-      const group = Math.floor(argSpec.order)
-      let subArg = {}
-      if (argTree[group]) {
-        subArg[argSpec.order] = ArgInput
-        argTree[group].push(subArg)
-      } else {
-        subArg[argSpec.order] = ArgInput
-        argTree[group] = [subArg]
-      }
-      console.timeEnd('arg group tree')
-    }
-    console.time('sort args')
-    const sortedArgs = Object.entries(argTree).sort((a, b) => a[0] - b[0])
-    formItems = []
-    for (const orderkey in sortedArgs) {
-      const group = sortedArgs[orderkey][1] // an array of objects
+    for (const orderkey in this.props.sortedArgTree) {
+      const group = this.props.sortedArgTree[orderkey][1] // an array of objects
       if (group.length === 1) {
+        const argkey = Object.values(group[0])[0]
         formItems.push(
           <div className="arg-group" key={orderkey}>
-            {Object.values(group[0])[0]}
+            <ArgInput
+              argkey={argkey}
+              argSpec={this.props.argsSpec[argkey]}
+              argState={this.props.argsValues[argkey]}
+              argValidationState={this.props.argsValidation[argkey]}
+              handleChange={this.handleChange}
+              handleBoolChange={this.handleBoolChange}
+              selectFile={this.selectFile}
+            />
           </div>)
       } else {
         // a and b are objects keyed by the args order value (float)
         const sortedGroup = group.sort((a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0]))
         const groupItems = [];
         for (const item in sortedGroup) {
-          groupItems.push(Object.values(sortedGroup[item])[0])
+          const argkey = Object.values(sortedGroup[item])[0]
+          groupItems.push(
+            <ArgInput
+              argkey={argkey}
+              argSpec={this.props.argsSpec[argkey]}
+              value={this.props.argsValues[argkey]['value']}
+              touched={this.props.argsValues[argkey]['touched']}
+              active_ui_option={this.props.argsValues[argkey]['active_ui_option']}
+              isValid={this.props.argsValidation[argkey]['valid']}
+              validationMessage={this.props.argsValidation[argkey]['validationMessage']}
+              handleChange={this.handleChange}
+              handleBoolChange={this.handleBoolChange}
+              selectFile={this.selectFile}/>)
         }
         formItems.push(
           <div className="arg-group" key={orderkey}>
@@ -502,7 +460,6 @@ class ArgsForm extends React.PureComponent {
           </div>)
       }
     }
-    console.timeEnd('sort args')
 
     return (
       <Form data-testid='setup-form'
@@ -512,6 +469,121 @@ class ArgsForm extends React.PureComponent {
         {formItems}
       </Form>
     );
+  }
+}
+
+class ArgInput extends React.PureComponent {
+  constructor(props) {
+    super(props)
+  }
+
+  render() {
+    const argkey = this.props.argkey
+    const argSpec = this.props.argSpec
+    let ArgInput;
+
+    // These types need a text input, and some also need a file browse button
+    if (['csv', 'vector', 'raster', 'directory', 'freestyle_string', 'number'].includes(argSpec.type)) {
+      ArgInput = 
+        <Form.Group as={Row} key={argkey} className={'arg-' + this.props.active_ui_option} data-testid={'group-' + argkey}>
+          <Form.Label column sm="3"  htmlFor={argkey}>{argSpec.name}</Form.Label>
+          <Col sm="8">
+            <InputGroup>
+              <AboutModal argument={argSpec}/>
+              <Form.Control
+                id={argkey}
+                name={argkey}
+                type="text" 
+                value={this.props.value || ''} // empty string is handled better than `undefined`
+                onChange={this.props.handleChange}
+                // onKeyUp={this.handleChange}
+                isValid={this.props.touched && this.props.isValid}
+                isInvalid={this.props.touched && this.props.validationMessage}
+                disabled={this.props.active_ui_option === 'disable' || false}
+              />
+              {
+                ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type) ?
+                <InputGroup.Append>
+                  <Button
+                    id={argkey}
+                    variant="outline-secondary"
+                    value={argSpec.type}  // dialog will limit options to files or dirs accordingly
+                    name={argkey}
+                    onClick={this.props.selectFile}>
+                    Browse
+                  </Button>
+                </InputGroup.Append> : <React.Fragment/>
+              }
+              <Form.Control.Feedback type='invalid' id={argkey + '-feedback'}>
+                {argSpec.type + ' : ' + (this.props.validationMessage || '')}
+              </Form.Control.Feedback>
+            </InputGroup>
+          </Col>
+        </Form.Group>
+    
+    // Radio select for boolean args
+    } else if (argSpec.type === 'boolean') {
+      // this.state[argname] will be type boolean if it's coming from this.props.args. 
+      // But html forms must emit strings, so there's a special change handler
+      // for boolean inputs that coverts to a real boolean.
+      // Also, the `checked` property does not treat 'undefined' the same as false,
+      // instead React avoids setting the property altogether. Hence, double !! to
+      // cast undefined to false.
+      ArgInput = 
+        <Form.Group as={Row} key={argkey} data-testid={'group-' + argkey}>
+          <Form.Label column sm="3" htmlFor={argkey}>{argSpec.name}</Form.Label>
+          <Col sm="8">
+            <AboutModal argument={argSpec}/>
+            <Form.Check
+              id={argkey}
+              inline
+              type="radio"
+              label="Yes"
+              value={"true"}
+              checked={!!this.props.value}  // double bang casts undefined to false
+              onChange={this.props.handleBoolChange}
+              name={argkey}
+            />
+            <Form.Check
+              id={argkey}
+              inline
+              type="radio"
+              label="No"
+              value={"false"}
+              checked={!this.props.value}  // undefined becomes true, that's okay
+              onChange={this.props.handleBoolChange}
+              name={argkey}
+            />
+          </Col>
+        </Form.Group>
+
+    // Dropdown menus for args with options
+    } else if (argSpec.type === 'option_string') {
+      ArgInput = 
+        <Form.Group as={Row} key={argkey} className={'arg-' + this.props.active_ui_option} data-testid={'group-' + argkey}>
+          <Form.Label column sm="3" htmlFor={argkey}>{argSpec.name}</Form.Label>
+          <Col sm="4">
+            <InputGroup>
+              <AboutModal argument={argSpec}/>
+              <Form.Control 
+                id={argkey}
+                as='select'
+                name={argkey}
+                value={this.props.value}
+                onChange={this.props.handleChange}
+                disabled={this.props.active_ui_option === 'disable' || false}>
+                {argSpec.validation_options.options.map(opt =>
+                  <option value={opt} key={opt}>{opt}</option>
+                )}
+              </Form.Control>
+              <Form.Control.Feedback type='invalid' id={argkey + '-feedback'}>
+                {argSpec.type + ' : ' + (this.props.validationMessage || '')}
+              </Form.Control.Feedback>
+            </InputGroup>
+          </Col>
+        </Form.Group>
+    }
+    return(ArgInput)
   }
 }
 

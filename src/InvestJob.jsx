@@ -67,7 +67,7 @@ export class InvestJob extends React.Component {
       modelName: '',                   // as appearing in `invest list`
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null,                  // ARGS_SPEC.args, the immutable args stuff
-      argsValues: null,                // to hold args keys and values, ui_options, i.e. the mutable args stuff
+      argsInitDict: null,              // 
       argsValidation: null,            // to hold validation state for each arg, set by investValidate.
       argsValid: false,                // are all the args valid? set on investValidate exit
       workspace: { 
@@ -143,7 +143,8 @@ export class InvestJob extends React.Component {
           // Validate args on load because referenced files may have moved
           // this.investValidate(argsValuesFromSpec(this.state.args));
           // this.batchUpdateArgs(JSON.parse(argsValuesFromSpec(this.state.args)));
-          this.batchUpdateArgs(this.state.argsValues);
+          // TODO: this whole method is broken since te state refactor
+          // this.batchUpdateArgs(this.state.argsValues);
           // batchUpdateArgs does validation and also sets inputs to 'touched'
           // which controls whether the validation messages appear or not.
         });
@@ -264,16 +265,19 @@ export class InvestJob extends React.Component {
     });
   }
 
-  async investGetSpec(modelName) {
+  async investGetSpec(modelName, argsInitDict={}) {
     /** Get an invest model's ARGS_SPEC when a model button is clicked.
     *  
     * Also get the model's ui_spec if it exists.
     * Then reset much of this component's state in case a prior job's 
-    * state exists. 
-    * Finally, call batchUpdateArgs to properly initialize enabled/disabled
-    * state of optional inputs, and trigger invest validate.
+    * state exists. This includes setting a new setupHash, which is passed
+    * as a key to the SetupTab component, triggering it to re-mount
+    * rather than just re-render, allowing one-time initilization of
+    * arg grouping and ordering.
     *
-    * @param {string} - 
+    * @param {string} - as in a model name appearing in `invest list`
+    * @param {object} - empty, or a JSON representation of an invest model's
+    *                   agruments dictionary
     */
 
     const payload = { 
@@ -286,7 +290,7 @@ export class InvestJob extends React.Component {
       const {args, ...modelSpec} = spec;
       
       // Even if UI spec doesn't exist for a model, a minimum viable input
-      // form can still be generated from ARGS_SPEC alone, so don't crash here.
+      // form can still be generated, so don't crash here.
       let uiSpec = {};
       try {
         uiSpec = JSON.parse(fs.readFileSync(
@@ -296,14 +300,11 @@ export class InvestJob extends React.Component {
           throw err
         }
       }
-
-      let argsValues = {};  // the object that will store all the mutable values
+      
+      // extend the args spec with the UI spec
       for (const key in args) {
         Object.assign(args[key], uiSpec[key])
-        argsValues[key] = {}
       }
-      console.log(args)
-
 
       // This event represents a user selecting a model,
       // and so some existing state should be reset.
@@ -311,24 +312,15 @@ export class InvestJob extends React.Component {
         modelName: modelName,
         modelSpec: modelSpec,
         argsSpec: args,
-        argsValues: argsValues,
+        argsInitDict: argsInitDict,
         sessionProgress: 'setup',
         jobStatus: null,
         logStdErr: '',
         logStdOut: '',
         sessionID: null,
         workspace: null,
-      }, () => {
-        // arg values are yet `undefined` but will be converted to either 
-        // empty strings or `false` by `argsValuesFromSpec`.
-        // batchUpdateArgs sets the initial ui_active_options for each arg,
-        // and triggers validation, allowing optional args to validate 
-        // without any user-interaction.
-        // `false` argument prevents 'touching' these inputs so that we don't 
-        //see scary validation warnings yet.
-        // this.batchUpdateArgs(argsValuesFromSpec(args), false)
-        this.batchUpdateArgs(argsDictFromObject(argsValues), false)
-        this.switchTabs('setup')
+        setupHash: crypto.randomBytes(10).toString('hex'),
+        activeTab: 'setup'
       });
     } else {
       console.log('no spec found')
@@ -349,34 +341,34 @@ export class InvestJob extends React.Component {
     * when it's better to not display the arguments as 'touched'.
     */
 
-    const argsSpec = JSON.parse(JSON.stringify(this.state.argsSpec));
-    const argsValues = Object.assign({}, this.state.argsValues);
-    Object.keys(argsSpec).forEach(argkey => {
-      // Loop over argsMeta in order to:
-        // 1) clear values for args that are absent from the input
-        // 2) skip over items from the input that have incorrect keys, otherwise
-        //    investValidate will crash on them.
+    // const argsSpec = JSON.parse(JSON.stringify(this.state.argsSpec));
+    // const argsValues = {};
+    // Object.keys(argsSpec).forEach(argkey => {
+    //   // Loop over argsMeta in order to:
+    //     // 1) clear values for args that are absent from the input
+    //     // 2) skip over items from the input that have incorrect keys, otherwise
+    //     //    investValidate will crash on them.
+    //   argsValues[argkey] = {
+    //     value: args_dict[argkey],
+    //     touched: touch
+    //   }
 
-      argsValues[argkey]['value'] = args_dict[argkey]
-      argsValues[argkey]['touched'] = touch;
-
-      if (argsSpec[argkey].ui_control) {
-        argsSpec[argkey].ui_control.forEach(dependentKey => {
-          if (!args_dict[argkey]) {
-            // hide/disable the dependent args
-            argsValues[dependentKey]['active_ui_option'] = argsSpec[dependentKey].ui_option
-          } else {
-            argsValues[dependentKey]['active_ui_option'] = undefined
-          }
-        });
-      }
-    });
-    console.log(argsValues)
-    this.setState({
-      argsValues: argsValues,
-      setupHash: crypto.randomBytes(10).toString('hex')}
-      // () => { this.investValidate(argsValues) }
-    );
+    //   if (argsSpec[argkey].ui_control) {
+    //     argsSpec[argkey].ui_control.forEach(dependentKey => {
+    //       if (!args_dict[argkey]) {
+    //         // hide/disable the dependent args
+    //         argsValues[dependentKey]['active_ui_option'] = argsSpec[dependentKey].ui_option
+    //       } else {
+    //         argsValues[dependentKey]['active_ui_option'] = undefined
+    //       }
+    //     });
+    //   }
+    // });
+    // this.setState({
+    //   argsValues: argsValues,
+    //   setupHash: crypto.randomBytes(10).toString('hex')}
+    //   // () => { this.investValidate(argsValues) }
+    // );
   }
 
   switchTabs(key) {
@@ -389,8 +381,6 @@ export class InvestJob extends React.Component {
   }
 
   render () {
-    console.log('InvestJob Render')
-    console.log(this.state.argsValues)
     const activeTab = this.state.activeTab;
     const setupDisabled = !(this.state.argsSpec); // enable once modelSpec has loaded
     const logDisabled = (this.state.jobStatus == null);  // enable during and after execution
@@ -448,7 +438,7 @@ export class InvestJob extends React.Component {
               modelSpec={this.state.modelSpec}
               modelName={this.state.modelName}
               argsSpec={this.state.argsSpec}
-              argsInitValues={this.state.argsValues}
+              argsInitValues={this.state.argsInitDict}
               batchUpdateArgs={this.batchUpdateArgs}
               investExecute={this.investExecute}
               argsToJsonFile={this.argsToJsonFile}
