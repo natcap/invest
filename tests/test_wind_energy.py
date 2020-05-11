@@ -732,7 +732,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
             try:
                 numpy.testing.assert_array_almost_equal(
-                    a_geom_list, b_geom_list)
+                    a_geom_list, b_geom_list, decimal=4)
             except AssertionError:
                 a_feature_fid = a_feat.GetFID()
                 b_feature_fid = b_feat.GetFID()

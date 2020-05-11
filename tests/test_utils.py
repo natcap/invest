@@ -586,18 +586,22 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace, 'csv.csv')
-        with open(csv_file, 'w') as file_obj:
+        # writing with utf-8-sig will prepend the BOM
+        with open(csv_file, 'w', encoding='utf-8-sig') as file_obj:
             file_obj.write(textwrap.dedent(
                 """
-                \xef\xbb\xbfheader1,HEADER2,header3
+                header1,HEADER2,header3
                 1,2,bar
                 4,5,FOO
                 """
             ).strip())
+        # confirm that the file has the BOM prefix
+        with open(csv_file, 'rb') as file_obj:
+            self.assertTrue(file_obj.read().startswith(codecs.BOM_UTF8))
 
         lookup_dict = utils.build_lookup_from_csv(
             csv_file, 'header1')
-
+        # assert the BOM prefix was correctly parsed and skipped
         self.assertEqual(lookup_dict[4]['header2'], 5)
         self.assertEqual(lookup_dict[4]['header3'], 'foo')
         self.assertEqual(lookup_dict[1]['header1'], 1)

@@ -1,6 +1,8 @@
 name: Run InVEST Tests
 
-on: [push, pull_request, check_run]
+on:
+    push:
+    pull_request:
 
 jobs:
     # This job will check for obvious syntax errors.
@@ -92,10 +94,10 @@ jobs:
               if: matrix.os != 'windows-latest'
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  activate-environment: env
+                  activate-environment: mac-env
                   auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
-                  channels: conda-forge, anaconda
+                  channels: conda-forge
 
             - name: Install dependencies MacOS
               if: matrix.os != 'windows-latest'
