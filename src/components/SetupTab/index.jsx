@@ -25,7 +25,8 @@ function toggleDependentInputs(argsSpec, argsValues, argkey) {
   return(updatedValues)
 }
 
-function initializeArgValues(argsSpec, argsDict, touch=false) {
+function initializeArgValues(argsSpec, argsDict) {
+  const initIsEmpty = Object.keys(argsDict).length === 0
   let argsValidation = {};
   let argsValues = {};
   Object.keys(argsSpec).forEach((argkey) => {
@@ -33,7 +34,7 @@ function initializeArgValues(argsSpec, argsDict, touch=false) {
     if (argkey === 'n_workers') { return }
     argsValues[argkey] = {
       value: argsDict[argkey],
-      touched: touch
+      touched: !initIsEmpty  // touch them only if initializing with values
     }
   });
   return({ argsValues: argsValues, argsValidation: argsValidation })
@@ -158,7 +159,7 @@ export class SetupTab extends React.Component {
 
   batchUpdateArgs(argsDict) {
     let { argsValues, argsValidation } = initializeArgValues(
-      this.props.argsSpec, argsDict, true)
+      this.props.argsSpec, argsDict)
     Object.keys(this.props.argsSpec).forEach((argkey) => {
       if (argkey === 'n_workers') { return }
       const argSpec = Object.assign({}, this.props.argsSpec[argkey])

@@ -19,7 +19,8 @@ import { ResultsTab } from './components/ResultsTab'
 import { ResourcesTab } from './components/ResourcesTab';
 import { LoadButton } from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
-import { getSpec, writeParametersToFile } from './server_requests';
+import { getSpec, fetchDatastackFromFile,
+         writeParametersToFile } from './server_requests';
 import { argsDictFromObject, findMostRecentLogfile } from './utils';
 
 // TODO see issue #12
@@ -51,6 +52,13 @@ const LOGLEVELMAP = {
   'ERROR':   '-v',
 }
 
+function getSetupHash() {
+  // TODO: are we always calling this to generate a new key for SetupTab
+  // whenever we update argsInitDict state? If so maybe set SetupTab's
+  // key as a hash of that state so we don't have to remember to reset setupHash?
+  return(crypto.randomBytes(10).toString('hex'))
+}
+
 export class InvestJob extends React.Component {
   /** This component and it's children render all the visible parts of the app.
   *
@@ -62,7 +70,7 @@ export class InvestJob extends React.Component {
     super(props);
 
     this.state = {
-      setupHash: crypto.randomBytes(10).toString('hex'),
+      setupHash: getSetupHash(),
       sessionID: null,                 // modelName + workspace.directory + workspace.suffix
       modelName: '',                   // as appearing in `invest list`
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
@@ -88,7 +96,7 @@ export class InvestJob extends React.Component {
   }
 
   saveState() {
-    /** Save the state of the application (1) and the current InVEST job (2).
+    /** Save the state of this component (1) and the current InVEST job (2).
     * 1. Save the state object of this component to a JSON file .
     * 2. Append metadata of the invest job to a persistent database/file.
     * This triggers automatically when the invest subprocess starts and again
@@ -125,25 +133,25 @@ export class InvestJob extends React.Component {
       {sessionID: value});
   }
 
-  loadState(sessionFilename) {
+  async loadState(sessionFilename) {
     /** Set this component's state to the object parsed from a JSON file.
     *
     * @params {string} sessionFilename - path to a JSON file.
     */
 
-    // const filename = path.join(this.props.directoryConstants.CACHE_DIR, sessionFilename);
     if (fs.existsSync(sessionFilename)) {
       const loadedState = JSON.parse(fs.readFileSync(sessionFilename, 'utf8'));
+      
+      // Right now we saveState is only called w/in investExecute and only
+      // after invest has created a logfile, which means an invest logfile
+      // should always exist and can be used to get args values and initialize SetupTab.
+      const datastack = await fetchDatastackFromFile(
+        { datastack_path: loadedState.logfile })
+      loadedState['argsInitDict'] = datastack['args']
+      Object.assign(loadedState, {setupHash: getSetupHash()})
       this.setState(loadedState,
         () => {
           this.switchTabs(loadedState.sessionProgress);
-          // Validate args on load because referenced files may have moved
-          // this.investValidate(argsValuesFromSpec(this.state.args));
-          // this.batchUpdateArgs(JSON.parse(argsValuesFromSpec(this.state.args)));
-          // TODO: this whole method is broken since te state refactor
-          // this.batchUpdateArgs(this.state.argsValues);
-          // batchUpdateArgs does validation and also sets inputs to 'touched'
-          // which controls whether the validation messages appear or not.
         });
     } else {
       console.log('state file not found: ' + sessionFilename);
@@ -160,9 +168,6 @@ export class InvestJob extends React.Component {
     */
 
     // The n_workers value always needs to be inserted into args
-    // let args_dict = JSON.parse(argsValuesFromSpec(this.state.args));
-    // let args_dict = Object.assign({}, this.state.args);
-    // args_dict['n_workers'] = this.props.investSettings.nWorkers;
     argsValues['n_workers'] = this.props.investSettings.nWorkers;
     
     const payload = {
@@ -193,7 +198,8 @@ export class InvestJob extends React.Component {
       this.state.modelName, workspace.directory, workspace.suffix].join('-')
 
     // Write a temporary datastack json for passing as a command-line arg
-    const temp_dir = fs.mkdtempSync(path.join(process.cwd(), this.props.directoryConstants.TEMP_DIR, 'data-'))
+    const temp_dir = fs.mkdtempSync(path.join(
+      process.cwd(), this.props.directoryConstants.TEMP_DIR, 'data-'))
     const datastackPath = path.join(temp_dir, 'datastack.json')
     const _ = await this.argsToJsonFile(datastackPath, argsValues);
 
@@ -265,7 +271,7 @@ export class InvestJob extends React.Component {
   async investGetSpec(modelName, argsInitDict={}) {
     /** Get an invest model's ARGS_SPEC when a model button is clicked.
     *  
-    * Also get the model's ui_spec if it exists.
+    * Also get the model's UI spec if it exists.
     * Then reset much of this component's state in case a prior job's 
     * state exists. This includes setting a new setupHash, which is passed
     * as a key to the SetupTab component, triggering it to re-mount
@@ -305,6 +311,7 @@ export class InvestJob extends React.Component {
 
       // This event represents a user selecting a model,
       // and so some existing state should be reset.
+      console.log(argsInitDict)
       this.setState({
         modelName: modelName,
         modelSpec: modelSpec,
@@ -316,9 +323,9 @@ export class InvestJob extends React.Component {
         logStdOut: '',
         sessionID: null,
         workspace: null,
-        setupHash: crypto.randomBytes(10).toString('hex'),
+        setupHash: getSetupHash(),
         activeTab: 'setup'
-      });
+      }, () => console.log(this.state.setupHash));
     } else {
       console.log('no spec found')
       return new Promise((resolve) => resolve(false))
