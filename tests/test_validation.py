@@ -1,3 +1,4 @@
+# encoding=UTF-8
 import tempfile
 import unittest
 from unittest.mock import Mock
@@ -604,6 +605,24 @@ class CSVValidation(unittest.TestCase):
         error_msg = validation.check_csv(
             target_file, required_fields=['field_a'])
         self.assertTrue('missing from this table' in error_msg)
+
+    def test_csv_not_utf_8(self):
+        """Validation: test that non-UTF8 CSVs can validate."""
+        from natcap.invest import validation
+
+        df = pandas.DataFrame([
+            {'fЮЮ': 1, 'bar': 2, 'baz': 3},  # special characters here.
+            {'foo': 2, 'bar': 3, 'baz': 4},
+            {'foo': 3, 'bar': 4, 'baz': 5}])
+
+        target_file = os.path.join(self.workspace_dir, 'test.csv')
+
+        # Save the CSV with the Windows Cyrillic codepage.
+        # https://en.wikipedia.org/wiki/ISO/IEC_8859-5
+        df.to_csv(target_file, encoding='iso8859_5')
+
+        error_msg = validation.check_csv(target_file)
+        self.assertEquals(error_msg, None)
 
     def test_excel_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in excel."""
