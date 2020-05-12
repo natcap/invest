@@ -4,15 +4,40 @@ import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
-import InputGroup from 'react-bootstrap/InputGroup';
-import Modal from 'react-bootstrap/Modal';
 import DropdownButton from 'react-bootstrap/DropdownButton';
 
+import { ArgInput } from './ArgInput';
 import { SaveParametersButton, SavePythonButton } from '../SaveDropdown'
-import { fetchDatastackFromFile, fetchValidation } from '../../server_requests';
-import { argsValuesFromSpec, argsDictFromObject, boolStringToBoolean } from '../../utils';
+import { fetchDatastackFromFile, fetchValidation, 
+         saveToPython } from '../../server_requests';
+import { argsDictFromObject, boolStringToBoolean } from '../../utils';
+
+function toggleDependentInputs(argsSpec, argsValues, argkey) {
+  let updatedValues = Object.assign({}, argsValues)
+  argsSpec[argkey].ui_control.forEach(dependentKey => {
+    if (!updatedValues[argkey].value) {
+      // hide/disable the dependent args
+      updatedValues[dependentKey]['active_ui_option'] = argsSpec[dependentKey].ui_option
+    } else {
+      updatedValues[dependentKey]['active_ui_option'] = undefined
+    }
+  });
+  return(updatedValues)
+}
+
+function initializeArgValues(argsSpec, argsDict, touch=false) {
+  let argsValidation = {};
+  let argsValues = {};
+  Object.keys(argsSpec).forEach((argkey) => {
+    argsValidation[argkey] = {}
+    if (argkey === 'n_workers') { return }
+    argsValues[argkey] = {
+      value: argsDict[argkey],
+      touched: touch
+    }
+  });
+  return({ argsValues: argsValues, argsValidation: argsValidation })
+}
 
 export class SetupTab extends React.Component {
   /** Renders an Arguments form and an Execute button
@@ -34,7 +59,7 @@ export class SetupTab extends React.Component {
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
   }
 
-  componentDidMount(props) {
+  componentDidMount() {
     /* 
     * Including the `key` property on SetupTab tells React to 
     * re-mount (rather than update & re-render) this component when
@@ -45,28 +70,14 @@ export class SetupTab extends React.Component {
     console.log('setup did mount');
     if (this.props.argsInitValues) {
       let argTree = {}
-      let argsValidation = {};
-      const argsValues = {};
-      Object.keys(this.props.argsSpec).forEach((argkey) => {
-        argsValidation[argkey] = {}
-        if (argkey === 'n_workers') { return }
-        argsValues[argkey] = {
-          value: this.props.argsInitValues[argkey],
-          touched: false
-        }
-      });
+      let { argsValues, argsValidation } = initializeArgValues(
+        this.props.argsSpec, this.props.argsInitValues)
+      
       Object.keys(this.props.argsSpec).forEach((argkey) => {
         if (argkey === 'n_workers') { return }
         const argSpec = Object.assign({}, this.props.argsSpec[argkey])
         if (argSpec.ui_control) {
-          argSpec.ui_control.forEach(dependentKey => {
-            if (!argsValues[argkey].value) {
-              // hide/disable the dependent args
-              argsValues[dependentKey]['active_ui_option'] = this.props.argsSpec[dependentKey].ui_option
-            } else {
-              argsValues[dependentKey]['active_ui_option'] = undefined
-            }
-          });
+          argsValues = toggleDependentInputs(this.props.argsSpec, argsValues, argkey)
         }
 
         // This grouping and sorting does not fail if argument.order is undefined 
@@ -106,7 +117,7 @@ export class SetupTab extends React.Component {
     const payload = { 
       filepath: filepath,
       modelname: this.props.modelName,
-      pyname: this.props.modelSpec.module,
+      pyname: this.props.pyModuleName,
       args: args_dict_string
     }
     saveToPython(payload);
@@ -116,37 +127,46 @@ export class SetupTab extends React.Component {
     this.props.argsToJsonFile(datastackPath, this.state.argsValues)
   }
 
-  wrapInvestExecute(argsValues) {
+  wrapInvestExecute() {
     this.props.investExecute(this.state.argsValues)
   }
 
-  updateArgValues(argsValues) {
+  updateArgValues(key, value) {
+    /** Update state with arg values as they change, and validate the args. 
+    *
+    * Updating means 
+    * 1) setting the value
+    * 2) 'touching' the arg - implications for display of validation warnings
+    * 3) toggling the enabled/disabled/hidden state of any dependent args
+    *
+    * @param {string} key - the invest argument key
+    * @param {string} value - the invest argument value
+    */
+
+    let argsValues = Object.assign({}, this.state.argsValues);
+    argsValues[key]['value'] = value;
+    argsValues[key]['touched'] = true;
+
+    if (this.props.argsSpec[key].ui_control) {
+      const updatedArgsValues = toggleDependentInputs(
+        this.props.argsSpec, argsValues, key)
+      argsValues = updatedArgsValues;
+    }
     this.setState({argsValues: argsValues})
+    this.investValidate(argsValues)
   }
 
   batchUpdateArgs(argsDict) {
-    // TODO: some of this code is repeated in componentDidMount 
+    let { argsValues, argsValidation } = initializeArgValues(
+      this.props.argsSpec, argsDict, true)
     Object.keys(this.props.argsSpec).forEach((argkey) => {
-      argsValidation[argkey] = {}
-      if (argkey === 'n_workers') { return }      
-      argsValues[argkey] = {
-        value: argsDict[argkey],
-        touched: true
-      }
-    });
-    Object.keys(this.props.argsSpec).forEach((argkey) => {
-      let argSpec = this.props.argsSpec[argkey]
+      if (argkey === 'n_workers') { return }
+      const argSpec = Object.assign({}, this.props.argsSpec[argkey])
       if (argSpec.ui_control) {
-        argSpec.ui_control.forEach(dependentKey => {
-          if (!argsValues[argkey].value) {
-            // hide/disable the dependent args
-            argsValues[dependentKey]['active_ui_option'] = argsSpec[dependentKey].ui_option
-          } else {
-            argsValues[dependentKey]['active_ui_option'] = undefined
-          }
-        });
+        argsValues = toggleDependentInputs(this.props.argsSpec, argsValues, argkey)
       }
     })
+    
     this.setState({
       argsValues: argsValues,
       argsValidation: argsValidation},
@@ -166,7 +186,7 @@ export class SetupTab extends React.Component {
     let argsValidation = Object.assign({}, this.state.argsValidation);
     let keyset = new Set(Object.keys(argsSpec));
     let payload = { 
-      model_module: this.props.modelSpec.module,
+      model_module: this.props.pyModuleName,
       args: argsDictFromObject(argsValues)
     };
 
@@ -246,10 +266,6 @@ export class SetupTab extends React.Component {
   }
 
   render () {
-    console.log('setup did render')
-    console.log(this.props.argsSpec)
-    console.log(this.state.argsValues)
-    console.log(this.state.sortedArgTree)
     if (this.state.argsValues) {
       return (
         <div>
@@ -258,7 +274,7 @@ export class SetupTab extends React.Component {
             argsValues={this.state.argsValues}
             argsValidation={this.state.argsValidation}
             sortedArgTree={this.state.sortedArgTree}
-            modulename={this.props.modulename}
+            pyModuleName={this.props.pyModuleName}
             updateArgValues={this.updateArgValues}
             batchUpdateArgs={this.batchUpdateArgs}
             investValidate={this.investValidate}
@@ -285,12 +301,11 @@ export class SetupTab extends React.Component {
 }
 
 SetupTab.propTypes = {
-  args: PropTypes.object,
-  argsValid: PropTypes.bool,
-  modulename: PropTypes.string,
-  updateArg: PropTypes.func,
-  batchUpdateArgs: PropTypes.func,
-  investValidate: PropTypes.func,
+  pymoduleName: PropTypes.string,
+  modelName: PropTypes.string,
+  argsSpec: PropTypes.object,
+  argsInitValues: PropTypes.object,
+  argsToJsonFile: PropTypes.func,
   investExecute: PropTypes.func
 }
 
@@ -305,50 +320,10 @@ class ArgsForm extends React.PureComponent {
   constructor(props) {
     super(props);
 
-    this.updateLocalArg = this.updateLocalArg.bind(this);
-    // this.handleKeystrokes = this.handleKeystrokes.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.handleBoolChange = this.handleBoolChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
     this.onDragDrop = this.onDragDrop.bind(this);
-  }
-
-  
-
-  updateLocalArg(key, value) {
-    /** Update this.state.args and validate the args. 
-    *
-    * Updating means 
-    * 1) setting the value
-    * 2) 'touching' the arg - implications for display of validation warnings
-    * 3) updating the enabled/disabled/hidden state of any dependent args
-    *
-    * @param {string} key - the invest argument key
-    * @param {string} value - the invest argument value
-    * @param {boolean} touch - whether this function should mark arguments as
-    * 'touched', which controls whether validation messages display. Usually
-    * desireable, except when this function is used for initial render of an
-    * input form, when it's better to not display the arguments as 'touched'.
-    */
-
-    const argsSpec = JSON.parse(JSON.stringify(this.props.argsSpec));
-    const argsValues = Object.assign({}, this.props.argsValues);
-    argsValues[key]['value'] = value;
-    argsValues[key]['touched'] = true;
-
-    if (argsSpec[key].ui_control) {
-      argsSpec[key].ui_control.forEach(dependentKey => {
-        if (!value) {
-          // hide/disable the dependent args
-          argsValues[dependentKey]['active_ui_option'] = argsSpec[dependentKey].ui_option
-        } else {
-          argsValues[dependentKey]['active_ui_option'] = undefined
-        }
-      });
-    }
-
-    this.props.updateArgValues(argsValues)
-    this.props.investValidate(argsValues)
   }
 
   handleChange(event) {
@@ -360,26 +335,15 @@ class ArgsForm extends React.PureComponent {
     */
     const value = event.target.value;
     const argkey = event.target.name;
-    this.updateLocalArg(argkey, value)
+    this.props.updateArgValues(argkey, value)
   }
-
-  // handleKeystrokes(event) {
-  //   * Handle all keystroke changes in text inputs.
-  //   * 
-  //   * This updates the value of the input in response to any/all
-  //   * keypresses, but does not trigger validation.
-    
-  //   const value = event.target.value;
-  //   const argkey = event.target.name;
-  //   this.updateLocalArg(argkey, value)
-  // }
 
   handleBoolChange(event) {
     /** Handle boolean changes that emitted strings */
     const value = event.target.value;
     const argkey = event.target.name;
     const boolVal = boolStringToBoolean(value);
-    this.updateLocalArg(argkey, boolVal)
+    this.props.updateArgValues(argkey, boolVal)
   }
 
   async selectFile(event) {
@@ -390,7 +354,7 @@ class ArgsForm extends React.PureComponent {
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const data = await remote.dialog.showOpenDialog({ properties: [prop] })
     if (data.filePaths.length) {
-      this.updateLocalArg(argname, data.filePaths[0]);  // dialog defaults allow only 1 selection
+      this.updateArgValues(argname, data.filePaths[0]);  // dialog defaults allow only 1 selection
     } else {
       console.log('browse dialog was cancelled')
     }
@@ -409,11 +373,11 @@ class ArgsForm extends React.PureComponent {
     }
     const datastack = await fetchDatastackFromFile(payload)
 
-    if (datastack['module_name'] === this.props.modulename) {
+    if (datastack['module_name'] === this.props.pyModuleName) {
       this.props.batchUpdateArgs(datastack['args']);
     } else {
-      console.log('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
-      throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
+      console.log('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.pyModuleName)
+      throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.pyModuleName)
     }
   }
 
@@ -436,6 +400,7 @@ class ArgsForm extends React.PureComponent {
             />
           </div>)
       } else {
+        // TODO: is this sorting really necessary after the DidMount sorting?
         // a and b are objects keyed by the args order value (float)
         const sortedGroup = group.sort((a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0]))
         const groupItems = [];
@@ -472,173 +437,15 @@ class ArgsForm extends React.PureComponent {
   }
 }
 
-class ArgInput extends React.PureComponent {
-  constructor(props) {
-    super(props)
-  }
-
-  render() {
-    const argkey = this.props.argkey
-    const argSpec = this.props.argSpec
-    let ArgInput;
-
-    // These types need a text input, and some also need a file browse button
-    if (['csv', 'vector', 'raster', 'directory', 'freestyle_string', 'number'].includes(argSpec.type)) {
-      ArgInput = 
-        <Form.Group as={Row} key={argkey} className={'arg-' + this.props.active_ui_option} data-testid={'group-' + argkey}>
-          <Form.Label column sm="3"  htmlFor={argkey}>{argSpec.name}</Form.Label>
-          <Col sm="8">
-            <InputGroup>
-              <AboutModal argument={argSpec}/>
-              <Form.Control
-                id={argkey}
-                name={argkey}
-                type="text" 
-                value={this.props.value || ''} // empty string is handled better than `undefined`
-                onChange={this.props.handleChange}
-                // onKeyUp={this.handleChange}
-                isValid={this.props.touched && this.props.isValid}
-                isInvalid={this.props.touched && this.props.validationMessage}
-                disabled={this.props.active_ui_option === 'disable' || false}
-              />
-              {
-                ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type) ?
-                <InputGroup.Append>
-                  <Button
-                    id={argkey}
-                    variant="outline-secondary"
-                    value={argSpec.type}  // dialog will limit options to files or dirs accordingly
-                    name={argkey}
-                    onClick={this.props.selectFile}>
-                    Browse
-                  </Button>
-                </InputGroup.Append> : <React.Fragment/>
-              }
-              <Form.Control.Feedback type='invalid' id={argkey + '-feedback'}>
-                {argSpec.type + ' : ' + (this.props.validationMessage || '')}
-              </Form.Control.Feedback>
-            </InputGroup>
-          </Col>
-        </Form.Group>
-    
-    // Radio select for boolean args
-    } else if (argSpec.type === 'boolean') {
-      // this.state[argname] will be type boolean if it's coming from this.props.args. 
-      // But html forms must emit strings, so there's a special change handler
-      // for boolean inputs that coverts to a real boolean.
-      // Also, the `checked` property does not treat 'undefined' the same as false,
-      // instead React avoids setting the property altogether. Hence, double !! to
-      // cast undefined to false.
-      ArgInput = 
-        <Form.Group as={Row} key={argkey} data-testid={'group-' + argkey}>
-          <Form.Label column sm="3" htmlFor={argkey}>{argSpec.name}</Form.Label>
-          <Col sm="8">
-            <AboutModal argument={argSpec}/>
-            <Form.Check
-              id={argkey}
-              inline
-              type="radio"
-              label="Yes"
-              value={"true"}
-              checked={!!this.props.value}  // double bang casts undefined to false
-              onChange={this.props.handleBoolChange}
-              name={argkey}
-            />
-            <Form.Check
-              id={argkey}
-              inline
-              type="radio"
-              label="No"
-              value={"false"}
-              checked={!this.props.value}  // undefined becomes true, that's okay
-              onChange={this.props.handleBoolChange}
-              name={argkey}
-            />
-          </Col>
-        </Form.Group>
-
-    // Dropdown menus for args with options
-    } else if (argSpec.type === 'option_string') {
-      ArgInput = 
-        <Form.Group as={Row} key={argkey} className={'arg-' + this.props.active_ui_option} data-testid={'group-' + argkey}>
-          <Form.Label column sm="3" htmlFor={argkey}>{argSpec.name}</Form.Label>
-          <Col sm="4">
-            <InputGroup>
-              <AboutModal argument={argSpec}/>
-              <Form.Control 
-                id={argkey}
-                as='select'
-                name={argkey}
-                value={this.props.value}
-                onChange={this.props.handleChange}
-                disabled={this.props.active_ui_option === 'disable' || false}>
-                {argSpec.validation_options.options.map(opt =>
-                  <option value={opt} key={opt}>{opt}</option>
-                )}
-              </Form.Control>
-              <Form.Control.Feedback type='invalid' id={argkey + '-feedback'}>
-                {argSpec.type + ' : ' + (this.props.validationMessage || '')}
-              </Form.Control.Feedback>
-            </InputGroup>
-          </Col>
-        </Form.Group>
-    }
-    return(ArgInput)
-  }
-}
 
 // These props all get passed through SetupTab's props,
 // so they are defined dynamically as such
 ArgsForm.propTypes = {
   args: SetupTab.propTypes.args,
-  modulename: SetupTab.propTypes.modulename,
+  pyModuleName: SetupTab.propTypes.pyModuleName,
   updateArg: SetupTab.propTypes.updateArg,
   batchUpdateArgs: SetupTab.propTypes.batchUpdateArgs,
   investValidate: SetupTab.propTypes.investValidate,
-}
-
-class AboutModal extends React.PureComponent {
-  constructor(props) {
-    super(props)
-    this.state = {
-      aboutShow: false
-    }
-    this.handleAboutOpen = this.handleAboutOpen.bind(this);
-    this.handleAboutClose = this.handleAboutClose.bind(this);
-  }
-
-  handleAboutClose() {
-    this.setState({aboutShow: false});
-  }
-
-  handleAboutOpen() {
-    this.setState({aboutShow: true});
-  }
-
-  render() {
-    return(
-      <React.Fragment>
-        <Button  className="mr-3"
-          onClick={this.handleAboutOpen}
-          variant="outline-info">
-          i
-        </Button>
-        <Modal show={this.state.aboutShow} onHide={this.handleAboutClose}>
-          <Modal.Header>
-            <Modal.Title>{this.props.argument.name}</Modal.Title>
-            </Modal.Header>
-          <Modal.Body>{this.props.argument.about}</Modal.Body>
-        </Modal>
-      </React.Fragment>
-    );
-  }
-}
-
-AboutModal.propTypes = {
-  argument: PropTypes.shape({
-    name: PropTypes.string,
-    about: PropTypes.string
-  })
 }
 
 function dragover_handler(event) {

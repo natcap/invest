@@ -19,8 +19,8 @@ import { ResultsTab } from './components/ResultsTab'
 import { ResourcesTab } from './components/ResourcesTab';
 import { LoadButton } from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
-import { getSpec, saveToPython, writeParametersToFile, fetchValidation } from './server_requests';
-import { argsValuesFromSpec, argsDictFromObject, findMostRecentLogfile } from './utils';
+import { getSpec, writeParametersToFile } from './server_requests';
+import { argsDictFromObject, findMostRecentLogfile } from './utils';
 
 // TODO see issue #12
 import { createStore } from 'redux';
@@ -68,8 +68,6 @@ export class InvestJob extends React.Component {
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null,                  // ARGS_SPEC.args, the immutable args stuff
       argsInitDict: null,              // 
-      argsValidation: null,            // to hold validation state for each arg, set by investValidate.
-      argsValid: false,                // are all the args valid? set on investValidate exit
       workspace: { 
         directory: null, suffix: null
       },                               // only set values when execute starts the subprocess
@@ -84,7 +82,6 @@ export class InvestJob extends React.Component {
     this.investGetSpec = this.investGetSpec.bind(this);
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
-    this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.saveState = this.saveState.bind(this);
     this.loadState = this.loadState.bind(this);
     this.setSessionID = this.setSessionID.bind(this);
@@ -329,48 +326,6 @@ export class InvestJob extends React.Component {
     return new Promise((resolve) => resolve(true))
   }
 
-  batchUpdateArgs(args_dict, touch=true) {
-    /** Update this.state.args in response to batch argument loading events,
-    * and then validate the loaded args.
-    *
-    * @param {object} args_dict - the args dictionay object that comes from datastack.py
-    * after parsing args from logfile or datastack file.
-    * @param {boolean} touch - whether this function should mark arguments as 'touched'.
-    * 'touched' controls whether validation messages display. Usually this is 
-    * desireable, except when this function is used for initial render of the input form,
-    * when it's better to not display the arguments as 'touched'.
-    */
-
-    // const argsSpec = JSON.parse(JSON.stringify(this.state.argsSpec));
-    // const argsValues = {};
-    // Object.keys(argsSpec).forEach(argkey => {
-    //   // Loop over argsMeta in order to:
-    //     // 1) clear values for args that are absent from the input
-    //     // 2) skip over items from the input that have incorrect keys, otherwise
-    //     //    investValidate will crash on them.
-    //   argsValues[argkey] = {
-    //     value: args_dict[argkey],
-    //     touched: touch
-    //   }
-
-    //   if (argsSpec[argkey].ui_control) {
-    //     argsSpec[argkey].ui_control.forEach(dependentKey => {
-    //       if (!args_dict[argkey]) {
-    //         // hide/disable the dependent args
-    //         argsValues[dependentKey]['active_ui_option'] = argsSpec[dependentKey].ui_option
-    //       } else {
-    //         argsValues[dependentKey]['active_ui_option'] = undefined
-    //       }
-    //     });
-    //   }
-    // });
-    // this.setState({
-    //   argsValues: argsValues,
-    //   setupHash: crypto.randomBytes(10).toString('hex')}
-    //   // () => { this.investValidate(argsValues) }
-    // );
-  }
-
   switchTabs(key) {
     /** Change the tab that is currently visible.
     * @param {string} key - the value of one of the Nav.Link eventKey.
@@ -385,7 +340,6 @@ export class InvestJob extends React.Component {
     const setupDisabled = !(this.state.argsSpec); // enable once modelSpec has loaded
     const logDisabled = (this.state.jobStatus == null);  // enable during and after execution
     const resultsDisabled = (this.state.jobStatus !== 'success');  // enable only on complete execute with no errors
-    const dropdownsDisabled = (this.state.argsSpec == null);
     
     return(
       <TabContainer activeKey={activeTab}>
@@ -435,11 +389,10 @@ export class InvestJob extends React.Component {
           </TabPane>
           <TabPane eventKey="setup" title="Setup">
             <SetupTab key={this.state.setupHash}
-              modelSpec={this.state.modelSpec}
+              pyModuleName={this.state.modelSpec.module}
               modelName={this.state.modelName}
               argsSpec={this.state.argsSpec}
               argsInitValues={this.state.argsInitDict}
-              batchUpdateArgs={this.batchUpdateArgs}
               investExecute={this.investExecute}
               argsToJsonFile={this.argsToJsonFile}
             />

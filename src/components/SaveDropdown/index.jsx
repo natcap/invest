@@ -27,7 +27,6 @@ export class SaveParametersButton extends React.Component {
   }
 
   render() {
-    // disabled when there's no modelSpec, i.e. before a model is selected
     return(
       <Button 
         onClick={this.browseSaveFile}
@@ -65,7 +64,6 @@ export class SavePythonButton extends React.Component {
   }
 
   render() {
-    // disabled when there's no modelSpec, i.e. before a model is selected
     return(
       <Button 
         onClick={this.browseFile}
