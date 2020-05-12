@@ -607,7 +607,7 @@ class CSVValidation(unittest.TestCase):
         self.assertTrue('missing from this table' in error_msg)
 
     def test_csv_not_utf_8(self):
-        """Validation: test that we raise an error when CSV is not UTF-8."""
+        """Validation: test that non-UTF8 CSVs can validate."""
         from natcap.invest import validation
 
         df = pandas.DataFrame([
@@ -622,7 +622,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file, encoding='iso8859_5')
 
         error_msg = validation.check_csv(target_file)
-        self.assertTrue('could not be opened as a CSV' in error_msg)
+        self.assertEquals(error_msg, None)
 
     def test_excel_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in excel."""
