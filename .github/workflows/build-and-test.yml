@@ -1,6 +1,8 @@
 name: Run InVEST Tests
 
-on: [push, pull_request, check_run]
+on:
+    push:
+    pull_request:
 
 jobs:
     # This job will check for obvious syntax errors.
