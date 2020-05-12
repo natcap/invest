@@ -622,8 +622,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file, encoding='iso8859_5')
 
         error_msg = validation.check_csv(target_file)
-        self.assertTrue(
-            'must be encoded as ASCII, UTF-8, or UTF-8-sig' in error_msg)
+        self.assertTrue('could not be opened as a CSV' in error_msg)
 
     def test_excel_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in excel."""

@@ -1,6 +1,6 @@
 """Common validation utilities for InVEST models."""
 import ast
-import collections
+import codecs
 import inspect
 import logging
 import pprint
@@ -11,7 +11,6 @@ import importlib
 import pygeoprocessing
 import pandas
 import xlrd
-import xlwt
 from osgeo import gdal, osr
 import numpy
 
@@ -491,7 +490,7 @@ def check_boolean(value):
 def check_csv(filepath, required_fields=None, excel_ok=False):
     """Validate a table.
 
-    Parameters:
+    Args:
         filepath (string): The string filepath to the table.
         required_fields=None (list): A case-insensitive list of fieldnames that
             must exist in the table.  If None, fieldnames will not be checked.
@@ -511,7 +510,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         encoding = None
         with open(filepath) as file_obj:
             first_line = file_obj.readline()
-            if first_line.startswith('\xef\xbb\xbf'):
+            if first_line.startswith(codecs.BOM_UTF8):
                 encoding = 'utf-8-sig'
         dataframe = pandas.read_csv(
             filepath, sep=None, engine='python', encoding=encoding)
@@ -522,8 +521,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
             except xlrd.biffh.XLRDError:
                 return "File could not be opened as a CSV or Excel file."
         else:
-            return ("File could not be opened as a CSV. "
-                    "CSV must be encoded as ASCII, UTF-8, or UTF-8-sig.")
+            return ("File could not be opened as a CSV.")
 
     if required_fields:
         fields_in_table = set([name.upper() for name in dataframe.columns])
