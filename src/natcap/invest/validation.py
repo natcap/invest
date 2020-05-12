@@ -266,11 +266,12 @@ def _check_projection(srs, projected, projection_units):
         layer_units_name = srs.GetLinearUnitsName().lower()
 
         if projection_units in valid_meter_units:
-            if not layer_units_name in valid_meter_units:
+            if layer_units_name not in valid_meter_units:
                 return "Layer must be projected in meters"
         else:
             if layer_units_name.lower() != projection_units.lower():
-                return "Layer must be projected in %s" % projection_units.lower()
+                return ("Layer must be projected in %s"
+                        % projection_units.lower())
 
     return None
 
@@ -312,6 +313,7 @@ def check_raster(filepath, projected=False, projection_units=None):
 
     gdal_dataset = None
     return None
+
 
 def load_fields_from_vector(filepath, layer_id=0):
     """Load fieldnames from a given vector.
@@ -375,7 +377,8 @@ def check_vector(filepath, required_fields=None, projected=False,
 
     if required_fields:
         fieldnames = set([defn.GetName().upper() for defn in layer.schema])
-        missing_fields = set(field.upper() for field in required_fields) - fieldnames
+        missing_fields = (
+            set(field.upper() for field in required_fields) - fieldnames)
         if missing_fields:
             return "Fields are missing from the first layer: %s" % sorted(
                 missing_fields)
@@ -410,7 +413,8 @@ def check_freestyle_string(value, regexp=None):
                 flags = re.IGNORECASE
         matches = re.findall(regexp['pattern'], str(value), flags)
         if not matches:
-            return "Value did not match expected pattern %s" % regexp['pattern']
+            return ("Value did not match expected pattern %s"
+                    % regexp['pattern'])
 
     return None
 
@@ -462,7 +466,7 @@ def check_number(value, expression=None):
         # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
         # be raised if asteval can't evaluate the expression.
         result = _evaluate_expression(expression, {'value': float(value)})
-        if result == False:  # A python bool object is returned.
+        if not result:  # A python bool object is returned.
             return "Value does not meet condition %s" % expression
 
     return None
@@ -708,7 +712,7 @@ def validate(args, spec, spatial_overlap_opts=None):
             if warning_msg:
                 validation_warnings.append(([key], warning_msg))
                 invalid_keys.add(key)
-        except Exception as error:
+        except Exception:
             LOGGER.exception(
                 'Error when validating key %s with value %s',
                 key, args[key])
@@ -733,7 +737,6 @@ def validate(args, spec, spatial_overlap_opts=None):
             else:
                 sufficient_inputs[key] = True
 
-    sorted_args_keys = sorted(list(sufficient_inputs.keys()))
     for key in conditionally_required_keys:
         if key in invalid_keys:
             continue
@@ -865,11 +868,13 @@ def invest_validator(validate_func):
                     validator_func = _VALIDATION_FUNCS[input_type]
 
                     try:
-                        validation_options = args_key_spec['validation_options']
+                        validation_options = (
+                            args_key_spec['validation_options'])
                     except KeyError:
                         validation_options = {}
 
-                    error_msg = validator_func(args_value, **validation_options)
+                    error_msg = (
+                        validator_func(args_value, **validation_options))
 
                 if error_msg is None:
                     warnings_ = []
