@@ -525,7 +525,8 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
             except xlrd.biffh.XLRDError:
                 return "File could not be opened as a CSV or Excel file."
         else:
-            return ("File could not be opened as a CSV.")
+            return ("File could not be opened as a CSV. "
+                    "File must be encoded as a UTF-8 CSV.")
 
     if required_fields:
         fields_in_table = set([name.upper() for name in dataframe.columns])
