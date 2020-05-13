@@ -1,9 +1,10 @@
 .. :changelog:
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* InVEST's CSV encoding requirements are now described in the validation
+  error message displayed when a CSV cannot be opened.
 
 3.8.1 (2020-05-08)
 ------------------
@@ -56,8 +57,6 @@
   ``basestring``, ``unicode``, ``six``, unicode casting, etc...
 * Update api-docs conf file to mock sdr.sdr_core and to use updated unittest
   mock
-* InVEST's CSV encoding requirements are now described in the validation
-  error message displayed when a CSV cannot be opened.
 
 3.8.0 (2020-02-07)
 ------------------
