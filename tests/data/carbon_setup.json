@@ -1,5 +1,6 @@
 {
-  "sessionID": "carbon_setup",
+  "setupHash": "abfd5c3da293693a546c",
+  "sessionID": "carbon-carb-sample-willamette",
   "modelName": "carbon",
   "modelSpec": {
     "model_name": "InVEST Carbon Model",
@@ -13,7 +14,7 @@
       ]
     }
   },
-  "args": {
+  "argsSpec": {
     "workspace_dir": {
       "name": "Workspace",
       "about": "The folder where all intermediate and output files of the model will be written.  If this folder does not exist, it will be created.",
@@ -23,10 +24,7 @@
         "exists": false,
         "permissions": "rwx"
       },
-      "validationMessage": "",
-      "valid": true,
-      "value": "carbon-sample",
-      "touched": true
+      "order": null
     },
     "results_suffix": {
       "name": "File suffix",
@@ -39,10 +37,7 @@
           "case_sensitive": false
         }
       },
-      "valid": true,
-      "validationMessage": "",
-      "value": "willamette",
-      "touched": true
+      "order": null
     },
     "n_workers": {
       "name": "Taskgraph n_workers parameter",
@@ -51,11 +46,7 @@
       "required": false,
       "validation_options": {
         "expression": "value >= -1"
-      },
-      "valid": true,
-      "validationMessage": "",
-      "value": "",
-      "touched": true
+      }
     },
     "lulc_cur_path": {
       "type": "raster",
@@ -65,20 +56,20 @@
       },
       "about": "A GDAL-supported raster representing the land-cover of thecurrent scenario.",
       "name": "Current Land Use/Land Cover",
-      "validationMessage": "",
-      "valid": true,
-      "value": "/home/dmf/projects/invest/data/invest-sample-data/Carbon/lulc_current_willamette.tif",
-      "touched": true
+      "order": null
     },
     "calc_sequestration": {
       "type": "boolean",
       "required": "do_valuation | do_redd",
       "about": "Check to enable sequestration analysis. This requires inputs of Land Use/Land Cover maps for both current and future scenarios.",
       "name": "Calculate Sequestration",
-      "valid": true,
-      "validationMessage": "",
-      "value": true,
-      "touched": true
+      "order": null,
+      "ui_option": "disable",
+      "ui_control": [
+        "lulc_fut_year",
+        "lulc_cur_year",
+        "lulc_fut_path"
+      ]
     },
     "lulc_fut_path": {
       "type": "raster",
@@ -88,20 +79,18 @@
       },
       "about": "A GDAL-supported raster representing the land-cover of the future scenario. If REDD scenario analysis is enabled, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario.",
       "name": "Future Landcover",
-      "valid": true,
-      "validationMessage": "",
-      "value": "/home/dmf/projects/invest/data/invest-sample-data/Carbon/lulc_future_willamette.tif",
-      "touched": true
+      "order": null,
+      "ui_option": "disable"
     },
     "do_redd": {
       "type": "boolean",
       "required": false,
       "about": "Check to enable REDD scenario analysis.  This requires three Land Use/Land Cover maps: one for the current scenario, one for the future baseline scenario, and one for the future REDD policy scenario.",
       "name": "REDD Scenario Analysis",
-      "valid": true,
-      "validationMessage": "",
-      "value": "",
-      "touched": true
+      "order": null,
+      "ui_control": [
+        "lulc_redd_path"
+      ]
     },
     "lulc_redd_path": {
       "type": "raster",
@@ -111,10 +100,8 @@
       },
       "about": "A GDAL-supported raster representing the land-cover of the REDD policy future scenario.  This scenario will be compared to the baseline future scenario.",
       "name": "REDD Policy)",
-      "valid": true,
-      "validationMessage": "",
-      "value": "",
-      "touched": true
+      "order": null,
+      "ui_option": "disable"
     },
     "carbon_pools_path": {
       "validation_options": {
@@ -130,10 +117,7 @@
       "required": true,
       "about": "A table that maps the land-cover IDs to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the User's Guide.  The values in LULC must at least include the LULC IDs in the land cover maps.",
       "name": "Carbon Pools",
-      "validationMessage": "",
-      "valid": true,
-      "value": "/home/dmf/projects/invest/data/invest-sample-data/Carbon/carbon_pools_willamette.csv",
-      "touched": true
+      "order": null
     },
     "lulc_cur_year": {
       "validation_options": {
@@ -143,10 +127,8 @@
       "required": "calc_sequestration",
       "about": "The calendar year of the current scenario.",
       "name": "Current Landcover Calendar Year",
-      "valid": true,
-      "validationMessage": "",
-      "value": "2020",
-      "touched": true
+      "order": null,
+      "ui_option": "disable"
     },
     "lulc_fut_year": {
       "validation_options": {
@@ -156,57 +138,66 @@
       "required": "calc_sequestration",
       "about": "The calendar year of the future scenario.",
       "name": "Future Landcover Calendar Year",
-      "valid": true,
-      "validationMessage": "",
-      "value": "2050",
-      "touched": true
+      "order": null,
+      "ui_option": "disable"
     },
     "do_valuation": {
       "type": "boolean",
       "required": false,
       "about": "if true then run the valuation model on available outputs.  At a minimum will run on carbon stocks, if sequestration with a future scenario is done and/or a REDD scenario calculate NPV for either and report in final HTML document.",
       "name": "Run Valuation Model",
-      "valid": true,
-      "validationMessage": "",
-      "value": "",
-      "touched": true
+      "order": null,
+      "ui_control": [
+        "rate_change",
+        "discount_rate",
+        "price_per_metric_ton_of_c"
+      ]
     },
     "price_per_metric_ton_of_c": {
       "type": "number",
       "required": "do_valuation",
       "about": "Is the present value of carbon per metric ton. Used if ``args['do_valuation']`` is present and True.",
       "name": "Price/Metric ton of carbon",
-      "valid": true,
-      "validationMessage": "",
-      "value": "",
-      "touched": true
+      "order": null,
+      "ui_option": "disable"
     },
     "discount_rate": {
       "type": "number",
       "required": "do_valuation",
       "about": "The discount rate as a floating point percent.",
       "name": "Market Discount in Price of Carbon (%)",
-      "valid": true,
-      "validationMessage": "",
-      "value": "",
-      "touched": true
+      "order": null,
+      "ui_option": "disable"
     },
     "rate_change": {
       "type": "number",
       "required": "do_valuation",
       "about": "The floating point percent increase of the price of carbon per year.",
       "name": "Annual Rate of Change in Price of Carbon (%)",
-      "valid": true,
-      "validationMessage": "",
-      "value": "",
-      "touched": true
+      "order": null,
+      "ui_option": "disable"
     }
   },
-  "argsValid": true,
-  "workspace": null,
+  "argsInitDict": {
+    "calc_sequestration": true,
+    "carbon_pools_path": "/home/dmf/projects/invest/data/invest-sample-data/Carbon/carbon_pools_willamette.csv",
+    "do_redd": false,
+    "do_valuation": false,
+    "lulc_cur_path": "/home/dmf/projects/invest/data/invest-sample-data/Carbon/lulc_current_willamette.tif",
+    "lulc_cur_year": "2020",
+    "lulc_fut_path": "/home/dmf/projects/invest/data/invest-sample-data/Carbon/lulc_future_willamette.tif",
+    "lulc_fut_year": "2050",
+    "lulc_redd_path": "",
+    "results_suffix": "willamette"
+  },
+  "workspace": {
+    "directory": "carb-sample",
+    "suffix": "willamette"
+  },
   "logfile": null,
   "logStdErr": "",
   "sessionProgress": "setup",
+  "jobStatus": null,
   "activeTab": "setup",
   "logStdOut": ""
 }

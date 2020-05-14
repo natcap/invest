@@ -68,7 +68,6 @@ export class SetupTab extends React.Component {
     * that only needs to compute when this.props.argsSpec changes,
     * not on every re-render.
     */
-    console.log('setup did mount');
     if (this.props.argsInitValues) {
       let argTree = {}
       let { argsValues, argsValidation } = initializeArgValues(
@@ -287,7 +286,11 @@ export class SetupTab extends React.Component {
             disabled={!this.state.argsValid}>
                 Execute
           </Button>
-          <DropdownButton id="dropdown-basic-button" title="Save " className="mx-3">
+          <DropdownButton 
+            id="dropdown-basic-button"
+            title="Save Parameters"
+            renderMenuOnMount={true}  // w/o this, items inaccessible in jsdom test env
+            className="mx-3">
             <SaveParametersButton
               wrapArgsToJsonFile={this.wrapArgsToJsonFile}/>
             <SavePythonButton

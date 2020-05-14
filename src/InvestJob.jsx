@@ -311,7 +311,6 @@ export class InvestJob extends React.Component {
 
       // This event represents a user selecting a model,
       // and so some existing state should be reset.
-      console.log(argsInitDict)
       this.setState({
         modelName: modelName,
         modelSpec: modelSpec,
@@ -325,7 +324,7 @@ export class InvestJob extends React.Component {
         workspace: null,
         setupHash: getSetupHash(),
         activeTab: 'setup'
-      }, () => console.log(this.state.setupHash));
+      });
     } else {
       console.log('no spec found')
       return new Promise((resolve) => resolve(false))

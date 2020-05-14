@@ -38,7 +38,6 @@ export class HomeTab extends React.PureComponent {
   }
 
   render () {
-    console.log('HomeTab Render')
     // A button for each model
     const investJSON = this.props.investList;
     let investButtons = [];
