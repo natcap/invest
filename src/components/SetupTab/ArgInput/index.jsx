@@ -127,13 +127,13 @@ ArgInput.propTypes = {
   argkey: PropTypes.string,
   argSpec: PropTypes.object,
   value: PropTypes.string,
-  touched: PropTypes.boolean,
+  touched: PropTypes.bool,
   active_ui_option: PropTypes.string,
-  isValid: PropTypes.boolean,
+  isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
-  handleChange: PropTypes.function,
-  handleBoolChange: PropTypes.function,
-  selectFile: PropTypes.function
+  handleChange: PropTypes.func,
+  handleBoolChange: PropTypes.func,
+  selectFile: PropTypes.func
 }
 
 class AboutModal extends React.PureComponent {

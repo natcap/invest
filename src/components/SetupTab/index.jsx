@@ -305,7 +305,7 @@ export class SetupTab extends React.Component {
 }
 
 SetupTab.propTypes = {
-  pymoduleName: PropTypes.string,
+  pyModuleName: PropTypes.string,
   modelName: PropTypes.string,
   argsSpec: PropTypes.object,
   argsInitValues: PropTypes.object,
@@ -411,7 +411,7 @@ class ArgsForm extends React.PureComponent {
         for (const item in sortedGroup) {
           const argkey = Object.values(sortedGroup[item])[0]
           groupItems.push(
-            <ArgInput
+            <ArgInput key={argkey}
               argkey={argkey}
               argSpec={this.props.argsSpec[argkey]}
               value={this.props.argsValues[argkey]['value']}
@@ -445,11 +445,14 @@ class ArgsForm extends React.PureComponent {
 // These props all get passed through SetupTab's props,
 // so they are defined dynamically as such
 ArgsForm.propTypes = {
-  args: SetupTab.propTypes.args,
+  argsValues:PropTypes.object,
+  argsValidation:PropTypes.object,
+  sortedArgTree:PropTypes.array,
+  updateArgValues:PropTypes.func,
+  batchUpdateArgs:PropTypes.func,
+  investValidate:PropTypes.func,
+  argsSpec: SetupTab.propTypes.argsSpec,
   pyModuleName: SetupTab.propTypes.pyModuleName,
-  updateArg: SetupTab.propTypes.updateArg,
-  batchUpdateArgs: SetupTab.propTypes.batchUpdateArgs,
-  investValidate: SetupTab.propTypes.investValidate,
 }
 
 function dragover_handler(event) {
