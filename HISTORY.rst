@@ -1,7 +1,11 @@
 .. :changelog:
 
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.2 (2020-05-15)
 ------------------
 * InVEST's CSV encoding requirements are now described in the validation
   error message displayed when a CSV cannot be opened.
