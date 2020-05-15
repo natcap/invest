@@ -332,6 +332,6 @@ jobs:
                         hub release edit -a $FILE -m "" ${GITHUB_REF:10}
                     done
                     set +x
-                else:
+                else
                     echo "Release for ${GITHUB_REF:10} not found; skipping binary upload"
                 fi
