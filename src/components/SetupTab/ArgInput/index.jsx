@@ -22,7 +22,7 @@ export class ArgInput extends React.PureComponent {
     // These types need a text input, and some also need a file browse button
     if (['csv', 'vector', 'raster', 'directory', 'freestyle_string', 'number'].includes(argSpec.type)) {
       ArgInput = 
-        <Form.Group as={Row} key={argkey} className={'arg-' + this.props.active_ui_option} data-testid={'group-' + argkey}>
+        <Form.Group as={Row} key={argkey} className={'arg-' + this.props.ui_option} data-testid={'group-' + argkey}>
           <Form.Label column sm="3"  htmlFor={argkey}>{argSpec.name}</Form.Label>
           <Col sm="8">
             <InputGroup>
@@ -35,7 +35,7 @@ export class ArgInput extends React.PureComponent {
                 onChange={this.props.handleChange}
                 isValid={this.props.touched && this.props.isValid}
                 isInvalid={this.props.touched && this.props.validationMessage}
-                disabled={this.props.active_ui_option === 'disable' || false}
+                disabled={this.props.ui_option === 'disable' || false}
               />
               {
                 ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type) ?
@@ -96,7 +96,7 @@ export class ArgInput extends React.PureComponent {
     // Dropdown menus for args with options
     } else if (argSpec.type === 'option_string') {
       ArgInput = 
-        <Form.Group as={Row} key={argkey} className={'arg-' + this.props.active_ui_option} data-testid={'group-' + argkey}>
+        <Form.Group as={Row} key={argkey} className={'arg-' + this.props.ui_option} data-testid={'group-' + argkey}>
           <Form.Label column sm="3" htmlFor={argkey}>{argSpec.name}</Form.Label>
           <Col sm="4">
             <InputGroup>
@@ -107,7 +107,7 @@ export class ArgInput extends React.PureComponent {
                 name={argkey}
                 value={this.props.value}
                 onChange={this.props.handleChange}
-                disabled={this.props.active_ui_option === 'disable' || false}>
+                disabled={this.props.ui_option === 'disable' || false}>
                 {argSpec.validation_options.options.map(opt =>
                   <option value={opt} key={opt}>{opt}</option>
                 )}
@@ -126,9 +126,9 @@ export class ArgInput extends React.PureComponent {
 ArgInput.propTypes = {
   argkey: PropTypes.string,
   argSpec: PropTypes.object,
-  value: PropTypes.string,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
   touched: PropTypes.bool,
-  active_ui_option: PropTypes.string,
+  ui_option: PropTypes.string,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
   handleChange: PropTypes.func,

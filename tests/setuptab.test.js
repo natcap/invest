@@ -3,11 +3,10 @@ import path from 'path';
 import React from 'react';
 import { remote } from 'electron';
 import { createEvent, fireEvent, render,
-         wait, waitForElement } from '@testing-library/react'
+         waitFor, waitForElement } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 import { InvestJob } from '../src/InvestJob';
-// import { SetupTab } from '../src/components/SetupTab';
 import { getSpec, fetchDatastackFromFile, fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
 
@@ -77,11 +76,9 @@ test('SetupTab: expect an input form for a directory', async () => {
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await waitForElement(() => {
-    return getByLabelText(spec.args.arg.name)
-  })
+  const input = await utils.findByLabelText(spec.args.arg.name)
   fireEvent.change(input, { target: { value: 'foo' } })
-  await wait(() => {
+  await waitFor(() => {
     expect(input).toHaveValue('foo')
     expect(input).toHaveAttribute('type', 'text')
     expect(input.classList.contains('is-invalid')).toBeTruthy();
@@ -102,12 +99,10 @@ test('SetupTab: expect an input form for a csv', async () => {
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await waitForElement(() => {
-    return getByLabelText(spec.args.arg.name)
-  })
+  const input = await utils.findByLabelText(spec.args.arg.name)
   // Typing in a value
   fireEvent.change(input, { target: { value: 'foo' } })
-  await wait(() => {
+  await waitFor(() => {
     expect(input).toHaveValue('foo')
     expect(input).toHaveAttribute('type', 'text')
     expect(input.classList.contains('is-invalid')).toBeTruthy();
@@ -120,7 +115,7 @@ test('SetupTab: expect an input form for a csv', async () => {
   let mockDialogData = { filePaths: [filepath] }
   remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
   fireEvent.click(getByText('Browse'))
-  await wait(() => {
+  await waitFor(() => {
     expect(input).toHaveValue(filepath)
     expect(input.classList.contains('is-invalid')).toBeTruthy();
     expect(getByText('invalid because', { exact: false }))
@@ -130,7 +125,7 @@ test('SetupTab: expect an input form for a csv', async () => {
   mockDialogData = { filePaths: [] } // empty array is a mocked 'Cancel'
   remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
   fireEvent.click(getByText('Browse'))
-  await wait(() => {
+  await waitFor(() => {
     expect(input).toHaveValue(filepath)
     expect(input.classList.contains('is-invalid')).toBeTruthy();
     expect(getByText('invalid because', { exact: false }))
@@ -144,11 +139,9 @@ test('SetupTab: expect an input form for a vector', async () => {
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await waitForElement(() => {
-    return getByLabelText(spec.args.arg.name)
-  })
+  const input = await utils.findByLabelText(spec.args.arg.name)
   fireEvent.change(input, { target: { value: 'foo' } })
-  await wait(() => {
+  await waitFor(() => {
     expect(input).toHaveValue('foo')
     expect(input).toHaveAttribute('type', 'text')
     expect(input.classList.contains('is-invalid')).toBeTruthy();
@@ -163,11 +156,9 @@ test('SetupTab: expect an input form for a raster', async () => {
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await waitForElement(() => {
-    return getByLabelText(spec.args.arg.name)
-  })
+  const input = await utils.findByLabelText(spec.args.arg.name)
   fireEvent.change(input, { target: { value: 'foo' } })
-  await wait(() => {
+  await waitFor(() => {
     expect(input).toHaveValue('foo')
     expect(input).toHaveAttribute('type', 'text')
     expect(input.classList.contains('is-invalid')).toBeTruthy();
@@ -181,11 +172,9 @@ test('SetupTab: expect an input form for a freestyle_string', async () => {
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await waitForElement(() => {
-    return getByLabelText(spec.args.arg.name)
-  })
+  const input = await utils.findByLabelText(spec.args.arg.name)
   fireEvent.change(input, { target: { value: 'foo' } })
-  await wait(() => {
+  await waitFor(() => {
     expect(input).toHaveValue('foo')
     expect(input).toHaveAttribute('type', 'text')
     // Not really possible to invalidate a freestyle_string
@@ -199,11 +188,9 @@ test('SetupTab: expect an input form for a number', async () => {
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await waitForElement(() => {
-    return getByLabelText(spec.args.arg.name)
-  })
+  const input = await utils.findByLabelText(spec.args.arg.name)
   fireEvent.change(input, { target: { value: 'foo' } })
-  await wait(() => {
+  await waitFor(() => {
     expect(input).toHaveValue('foo')
     expect(input).toHaveAttribute('type', 'text')
     expect(input.classList.contains('is-invalid')).toBeTruthy();
@@ -216,10 +203,8 @@ test('SetupTab: expect an input form for a boolean', async () => {
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await waitForElement(() => {
-    return getByLabelText(spec.args.arg.name)
-  })
-  await wait(() => {
+  const input = await utils.findByLabelText(spec.args.arg.name)
+  await waitFor(() => {
     expect(input).toHaveAttribute('type', 'radio')
   })
 })
@@ -232,10 +217,8 @@ test('SetupTab: expect an input form for an option_string', async () => {
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await waitForElement(() => {
-    return getByLabelText(spec.args.arg.name)
-  })
-  await wait(() => {
+  const input = await utils.findByLabelText(spec.args.arg.name)
+  await waitFor(() => {
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   })
@@ -287,7 +270,7 @@ test('SetupTab: test a UI spec with a boolean controller arg', async () => {
   const arg5 = await utils.findByLabelText(spec.args.arg5.name)
 
   // Boolean Radios should default to "false" when a spec is loaded
-  await wait(() => {
+  await waitFor(() => {
     expect(arg2).toBeDisabled();
     // The 'hide' style is applied to the whole Form.Group which 
     // includes the Label and Input. Right now, the only good way
@@ -306,7 +289,7 @@ test('SetupTab: test a UI spec with a boolean controller arg', async () => {
   fireEvent.click(controller, { target: { value: "true" } })
 
   // Now everything should be visible/enabled.
-  await wait(() => {
+  await waitFor(() => {
     expect(arg2).toBeEnabled();
     expect(arg2).toBeVisible();
     expect(arg3).toBeEnabled();
@@ -341,14 +324,14 @@ test('SetupTab: expect non-boolean input can disable/hide optional inputs', asyn
 
   // The optional input should be disabled while the controlling input
   // has a falsy value (undefined or '')
-  await wait(() => {
+  await waitFor(() => {
     expect(arg2).toBeDisabled();
   })
 
   fireEvent.change(controller, { target: { value: "foo.csv" } })
 
   // Now everything should be enabled.
-  await wait(() => {
+  await waitFor(() => {
     expect(arg2).toBeEnabled();
   })
 })
@@ -376,7 +359,7 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
   let invalidFeedback = 'is a required key'
   fetchValidation.mockResolvedValue([[['a', 'b'], invalidFeedback]])
   fireEvent.click(getByText('Carbon')); // triggers validation
-  await wait(() => {
+  await waitFor(() => {
     expect(getByText('Execute')).toBeDisabled();
     // The inputs are invalid so the invalid feedback message is present.
     // But, the inputs have not yet been touched, so the message is hidden
@@ -390,7 +373,7 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
     })
   })
   
-  const [a, b, c] = await waitForElement(() => {
+  const [a, b, c] = await waitFor(() => {
     return [
       getByLabelText(spec.args.a.name),
       getByLabelText(spec.args.b.name),
@@ -401,7 +384,7 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
   fetchValidation.mockResolvedValue([])
   fireEvent.change(a, { target: { value: 'foo' } })  // triggers validation
   fireEvent.change(b, { target: { value: 1 } })      // triggers validation
-  await wait(() => {
+  await waitFor(() => {
     expect(getByText('Execute')).toBeEnabled();
   })
   // Now that inputs are valid, feedback message should be cleared:
@@ -416,7 +399,7 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
   invalidFeedback = 'must be a number';
   fetchValidation.mockResolvedValue([[['b'], invalidFeedback]])
   fireEvent.change(b, { target: { value: 'one' } })  // triggers validation
-  await wait(() => {
+  await waitFor(() => {
     expect(getByText('Execute')).toBeDisabled();
     expect(getByText(invalidFeedback, { exact: false })).toBeInTheDocument()
   })
@@ -445,9 +428,7 @@ test('SetupTab: test dragover of a datastack/logfile', async () => {
 
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const setupForm = await waitForElement(() => {
-    return utils.getByTestId('setup-form')
-  })
+  const setupForm = await utils.findByTestId('setup-form')
 
   // This should work but doesn't due to lack of dataTransfer object in jsdom:
   // https://github.com/jsdom/jsdom/issues/1568
@@ -465,7 +446,7 @@ test('SetupTab: test dragover of a datastack/logfile', async () => {
   })
   fireEvent(setupForm, fileDropEvent)
 
-  await wait(() => {
+  await waitFor(() => {
     expect(getByLabelText(spec.args.arg1.name))
       .toHaveValue(mock_datastack.args.arg1)
     expect(getByLabelText(spec.args.arg2.name))

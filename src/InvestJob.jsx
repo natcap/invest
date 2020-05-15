@@ -308,7 +308,6 @@ export class InvestJob extends React.Component {
       for (const key in args) {
         Object.assign(args[key], uiSpec[key])
       }
-
       // This event represents a user selecting a model,
       // and so some existing state should be reset.
       this.setState({

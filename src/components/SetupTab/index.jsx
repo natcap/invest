@@ -2,6 +2,8 @@ import React from 'react';
 import { remote } from 'electron';
 import PropTypes from 'prop-types';
 
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import DropdownButton from 'react-bootstrap/DropdownButton';
@@ -17,9 +19,9 @@ function toggleDependentInputs(argsSpec, argsValues, argkey) {
   argsSpec[argkey].ui_control.forEach(dependentKey => {
     if (!updatedValues[argkey].value) {
       // hide/disable the dependent args
-      updatedValues[dependentKey]['active_ui_option'] = argsSpec[dependentKey].ui_option
+      updatedValues[dependentKey]['ui_option'] = argsSpec[dependentKey].ui_option
     } else {
-      updatedValues[dependentKey]['active_ui_option'] = undefined
+      updatedValues[dependentKey]['ui_option'] = undefined
     }
   });
   return(updatedValues)
@@ -279,6 +281,8 @@ export class SetupTab extends React.Component {
             batchUpdateArgs={this.batchUpdateArgs}
             investValidate={this.investValidate}
           />
+          <Row>
+          <Col sm="3">
           <Button 
             variant="primary" 
             size="lg"
@@ -286,16 +290,20 @@ export class SetupTab extends React.Component {
             disabled={!this.state.argsValid}>
                 Execute
           </Button>
-          <DropdownButton 
+          </Col>
+          <Col cm="8">
+          <DropdownButton
             id="dropdown-basic-button"
             title="Save Parameters"
             renderMenuOnMount={true}  // w/o this, items inaccessible in jsdom test env
-            className="mx-3">
+            className="mx-3 float-right">
             <SaveParametersButton
               wrapArgsToJsonFile={this.wrapArgsToJsonFile}/>
             <SavePythonButton
               savePythonScript={this.savePythonScript}/>
           </DropdownButton>
+          </Col>
+          </Row>
         </div>);
     }
     // The SetupTab remains disabled in this route, so no need
@@ -358,7 +366,7 @@ class ArgsForm extends React.PureComponent {
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const data = await remote.dialog.showOpenDialog({ properties: [prop] })
     if (data.filePaths.length) {
-      this.updateArgValues(argname, data.filePaths[0]);  // dialog defaults allow only 1 selection
+      this.props.updateArgValues(argname, data.filePaths[0]);  // dialog defaults allow only 1 selection
     } else {
       console.log('browse dialog was cancelled')
     }
@@ -396,8 +404,11 @@ class ArgsForm extends React.PureComponent {
             <ArgInput
               argkey={argkey}
               argSpec={this.props.argsSpec[argkey]}
-              argState={this.props.argsValues[argkey]}
-              argValidationState={this.props.argsValidation[argkey]}
+              value={this.props.argsValues[argkey]['value']}
+              touched={this.props.argsValues[argkey]['touched']}
+              ui_option={this.props.argsValues[argkey]['ui_option']}
+              isValid={this.props.argsValidation[argkey]['valid']}
+              validationMessage={this.props.argsValidation[argkey]['validationMessage']}
               handleChange={this.handleChange}
               handleBoolChange={this.handleBoolChange}
               selectFile={this.selectFile}
@@ -416,7 +427,7 @@ class ArgsForm extends React.PureComponent {
               argSpec={this.props.argsSpec[argkey]}
               value={this.props.argsValues[argkey]['value']}
               touched={this.props.argsValues[argkey]['touched']}
-              active_ui_option={this.props.argsValues[argkey]['active_ui_option']}
+              ui_option={this.props.argsValues[argkey]['ui_option']}
               isValid={this.props.argsValidation[argkey]['valid']}
               validationMessage={this.props.argsValidation[argkey]['validationMessage']}
               handleChange={this.handleChange}
