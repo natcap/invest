@@ -570,6 +570,7 @@ def execute(args):
                 args=((threat_raster_path, 1), (kernel_path, 1),
                       filtered_threat_raster_path),
                 kwargs={
+                    'target_nodata': _OUT_NODATA,
                     'ignore_nodata_and_edges': True,
                     'mask_nodata': False
                     },
@@ -709,11 +710,11 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
         valid_pixels = ~(
             numpy.isclose(degradation, _OUT_NODATA) |
             numpy.isclose(habitat, _OUT_NODATA))
-        degradation_clamped = numpy.where(degradation < 0, 0, degradation)
+        
         out_array[valid_pixels] = (
             habitat[valid_pixels] *
-            (1.0 - (degradation_clamped[valid_pixels]**_SCALING_PARAM) /
-                (degradation_clamped[valid_pixels]**_SCALING_PARAM + ksq)))
+            (1.0 - (degradation[valid_pixels]**_SCALING_PARAM) /
+                (degradation[valid_pixels]**_SCALING_PARAM + ksq)))
         return out_array
 
     deg_hab_raster_band_list = [
