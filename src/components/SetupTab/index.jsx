@@ -82,17 +82,18 @@ export class SetupTab extends React.Component {
           argsValues = toggleDependentInputs(this.props.argsSpec, argsValues, argkey)
         }
 
-        // This grouping and sorting does not fail if argument.order is undefined 
-        // (i.e. it was missing in ARGS_SPEC) for one or more args. 
+        // This grouping and sorting does not fail if order is undefined 
+        // (i.e. it is missing from the UI spec) for one or more args. 
         // Nevertheless, feels better to fill in a float here.
         if (!argSpec.order) { argSpec.order = 100.0 }
 
-        // Fill in a tree-like object where each item is an array of objects
-        // like [ { orderNumber: InputComponent }, ... ]
-        // that share a Math.floor argument.order number.
+        // Fill in a tree-like object where each item is an array of the args
+        // that share a major (Math.floor) order number and should be grouped.
+        // Within each array representing a group, items are objects like:
+        //  { <precise order number> : <argkey> }
         const group = Math.floor(argSpec.order)
         let subArg = {}
-        if (argTree[group]) {
+        if (argTree[group]) {  // already have arg(s) in this group
           subArg[argSpec.order] = argkey
           argTree[group].push(subArg)
         } else {
@@ -100,7 +101,18 @@ export class SetupTab extends React.Component {
           argTree[group] = [subArg]
         }
       });
+      // sort the groups by the group number
       const sortedArgs = Object.entries(argTree).sort((a, b) => a[0] - b[0])
+      // sort items within the groups
+      for (const group in sortedArgs) {
+        console.log(group)
+        if (sortedArgs[group].length > 1) {
+          // group array items are objects keyed by their order number
+          sortedArgs[group] = sortedArgs[group].sort(
+            (a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0]))
+        }
+      }
+
       this.setState({
         argsValues: argsValues,
         argsValidation: argsValidation,
@@ -415,12 +427,9 @@ class ArgsForm extends React.PureComponent {
             />
           </div>)
       } else {
-        // TODO: is this sorting really necessary after the DidMount sorting?
-        // a and b are objects keyed by the args order value (float)
-        const sortedGroup = group.sort((a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0]))
         const groupItems = [];
-        for (const item in sortedGroup) {
-          const argkey = Object.values(sortedGroup[item])[0]
+        for (const item in group) {
+          const argkey = Object.values(group[item])[0]
           groupItems.push(
             <ArgInput key={argkey}
               argkey={argkey}
