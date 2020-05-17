@@ -407,47 +407,29 @@ class ArgsForm extends React.PureComponent {
 
   render() {
     let formItems = [];
-    for (const orderkey in this.props.sortedArgTree) {
-      const group = this.props.sortedArgTree[orderkey][1] // an array of objects
-      if (group.length === 1) {
-        const argkey = Object.values(group[0])[0]
-        formItems.push(
-          <div className="arg-group" key={orderkey}>
-            <ArgInput
-              argkey={argkey}
-              argSpec={this.props.argsSpec[argkey]}
-              value={this.props.argsValues[argkey]['value']}
-              touched={this.props.argsValues[argkey]['touched']}
-              ui_option={this.props.argsValues[argkey]['ui_option']}
-              isValid={this.props.argsValidation[argkey]['valid']}
-              validationMessage={this.props.argsValidation[argkey]['validationMessage']}
-              handleChange={this.handleChange}
-              handleBoolChange={this.handleBoolChange}
-              selectFile={this.selectFile}
-            />
-          </div>)
-      } else {
-        const groupItems = [];
-        for (const item in group) {
-          const argkey = Object.values(group[item])[0]
-          groupItems.push(
-            <ArgInput key={argkey}
-              argkey={argkey}
-              argSpec={this.props.argsSpec[argkey]}
-              value={this.props.argsValues[argkey]['value']}
-              touched={this.props.argsValues[argkey]['touched']}
-              ui_option={this.props.argsValues[argkey]['ui_option']}
-              isValid={this.props.argsValidation[argkey]['valid']}
-              validationMessage={this.props.argsValidation[argkey]['validationMessage']}
-              handleChange={this.handleChange}
-              handleBoolChange={this.handleBoolChange}
-              selectFile={this.selectFile}/>)
-        }
-        formItems.push(
-          <div className="arg-group" key={orderkey}>
-            {groupItems}
-          </div>)
+    for (const group of this.props.sortedArgTree) {
+      const groupKey = group[0]
+      const groupArray = group[1] // the array of argkey objects
+      const groupItems = [];
+      for (const item of groupArray) {
+        const argkey = Object.values(item)[0]
+        groupItems.push(
+          <ArgInput key={argkey}
+            argkey={argkey}
+            argSpec={this.props.argsSpec[argkey]}
+            value={this.props.argsValues[argkey]['value']}
+            touched={this.props.argsValues[argkey]['touched']}
+            ui_option={this.props.argsValues[argkey]['ui_option']}
+            isValid={this.props.argsValidation[argkey]['valid']}
+            validationMessage={this.props.argsValidation[argkey]['validationMessage']}
+            handleChange={this.handleChange}
+            handleBoolChange={this.handleBoolChange}
+            selectFile={this.selectFile}/>)
       }
+      formItems.push(
+        <div className="arg-group" key={groupKey}>
+          {groupItems}
+        </div>)
     }
 
     return (
