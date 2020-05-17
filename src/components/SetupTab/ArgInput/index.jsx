@@ -21,9 +21,13 @@ export class ArgInput extends React.PureComponent {
 
     // These types need a text input, and some also need a file browse button
     if (['csv', 'vector', 'raster', 'directory', 'freestyle_string', 'number'].includes(argSpec.type)) {
+      const typeLabel = argSpec.type !== 'freestyle_string' ? argSpec.type : 'string'
+      const labelText = <span>{argSpec.name} <em> ({typeLabel})</em></span>
       ArgInput = 
         <Form.Group as={Row} key={argkey} className={'arg-' + this.props.ui_option} data-testid={'group-' + argkey}>
-          <Form.Label column sm="3"  htmlFor={argkey}>{argSpec.name}</Form.Label>
+          <Form.Label column sm="3"  htmlFor={argkey}>
+            {labelText}
+          </Form.Label>
           <Col sm="8">
             <InputGroup>
               <AboutModal argument={argSpec}/>
