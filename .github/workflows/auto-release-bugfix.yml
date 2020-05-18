@@ -1,8 +1,12 @@
 name: Automated Bugfix Release
 on:
     schedule:
-        # Noon PST on Friday of each week
-        - cron: '0 20 * * 5'
+        # 9am PST on Friday of each week
+        - cron: '0 17 * * 5'
+
+env:
+    # This is to be updated on a roughly monthly schedule and will rotate.
+    RELEASE_MANAGER: "phargogh"
 
 jobs:
     create-bugfix-release:
@@ -34,6 +38,7 @@ jobs:
               env:
                   SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  RELEASE_MANAGER: ${{ env.RELEASE_MANAGER }}
               run: |
                   # Redirecting stderr to /dev/null to keep actions logs
                   # reflecting the expected state of the program.
@@ -141,7 +146,8 @@ jobs:
                           --message "Release natcap.invest $BUGFIX_VERSION on PyPI" \
                           --message "When built, remember to upload wheels for $BUGFIX_VERSION to PyPI." \
                           --message "Wheels will be uploaded to $(cat $RELEASE_URL_FILE)" \
-                          --labels task
+                          --labels task \
+                          --assign $RELEASE_MANAGER
 
                       # Create a new pull request from the new autorelease
                       # branch back into the source branch.
@@ -151,8 +157,8 @@ jobs:
                       hub pull-request \
                           --base $GITHUB_REPOSITORY:$SOURCE_BRANCH \
                           --head $GITHUB_REPOSITORY:$TARGET_BRANCH \
-                          --reviewer "$GITHUB_ACTOR" \
-                          --assign "$GITHUB_ACTOR" \
+                          --reviewer $RELEASE_MANAGER \
+                          --assign $RELEASE_MANAGER \
                           --file $PRMSG
                   fi
 
