@@ -1,8 +1,8 @@
 name: Automated Bugfix Release
 on:
     schedule:
-        # Noon PST on Friday of each week
-        - cron: '0 20 * * 5'
+        # 9am PST on Friday of each week
+        - cron: '0 17 * * 5'
 
 env:
     # This is to be updated on a roughly monthly schedule and will rotate.
