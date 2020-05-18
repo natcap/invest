@@ -146,7 +146,8 @@ jobs:
                           --message "Release natcap.invest $BUGFIX_VERSION on PyPI" \
                           --message "When built, remember to upload wheels for $BUGFIX_VERSION to PyPI." \
                           --message "Wheels will be uploaded to $(cat $RELEASE_URL_FILE)" \
-                          --labels task
+                          --labels task \
+                          --assign $RELEASE_MANAGER
 
                       # Create a new pull request from the new autorelease
                       # branch back into the source branch.
