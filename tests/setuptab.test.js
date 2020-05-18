@@ -335,6 +335,61 @@ test('SetupTab: expect non-boolean input can disable/hide optional inputs', asyn
     expect(arg2).toBeEnabled();
   })
 })
+ 
+test.only('SetupTab: test grouping and sorting of args', async () => {
+  const spec = { module: 'natcap.invest.dummy', args: {
+    arg1: { 
+      name: 'A', 
+      type: 'boolean'}, 
+    arg2: { 
+      name: 'B', 
+      type: 'number'}, 
+    arg3: { 
+      name: 'C', 
+      type: 'number'}, 
+    arg4: { 
+      name: 'D', 
+      type: 'number'},
+    arg5: {
+      name: 'E',
+      type: 'number'
+    } } }
+
+  const ui_spec = {
+    arg1: { order: 2 },
+    arg2: { order: 1.1 },
+    arg3: { order: 1 },
+    arg4: { order: 0 },
+    arg5: {}  // order is deliberately missing, it should end up last. 
+  }
+
+  fs.writeFileSync(path.join(
+    DIRECTORY_CONSTANTS.INVEST_UI_DATA, spec.module + '.json'),
+      JSON.stringify(ui_spec))
+  
+  fetchValidation.mockResolvedValue([])
+  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
+  fireEvent.click(getByText('Carbon'));
+
+  const form = await utils.findByTestId('setup-form')
+
+  await waitFor(() => {
+    // The form should have one child node per arg group
+    expect(form.childNodes.length).toEqual(4) // 2 of the 5 args share a group.
+    // Input nodes should be in the order defined in ui_spec
+    expect(form.childNodes[0])
+      .toHaveTextContent(RegExp(`${spec.args.arg4.name}`))
+    expect(form.childNodes[1].childNodes[0])
+      .toHaveTextContent(RegExp(`${spec.args.arg3.name}`))
+    expect(form.childNodes[1].childNodes[1])
+      .toHaveTextContent(RegExp(`${spec.args.arg2.name}`))
+    expect(form.childNodes[2])
+      .toHaveTextContent(RegExp(`${spec.args.arg1.name}`))
+    expect(form.childNodes[3])
+      .toHaveTextContent(RegExp(`${spec.args.arg5.name}`))
+  })
+
+})
 
 test('SetupTab: populating inputs to enable & disable Execute', async () => {
   /*

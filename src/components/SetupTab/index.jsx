@@ -85,7 +85,7 @@ export class SetupTab extends React.Component {
         // This grouping and sorting does not fail if order is undefined 
         // (i.e. it is missing from the UI spec) for one or more args. 
         // Nevertheless, feels better to fill in a float here.
-        if (!argSpec.order) { argSpec.order = 100.0 }
+        if (typeof argSpec.order !== 'number') { argSpec.order = 100.0 }
 
         // Fill in a tree-like object where each item is an array of the args
         // that share a major (Math.floor) order number and should be grouped.
@@ -105,11 +105,12 @@ export class SetupTab extends React.Component {
       const sortedArgs = Object.entries(argTree).sort((a, b) => a[0] - b[0])
       // sort items within the groups
       for (const group in sortedArgs) {
-        console.log(group)
         if (sortedArgs[group].length > 1) {
-          // group array items are objects keyed by their order number
-          sortedArgs[group] = sortedArgs[group].sort(
+          // In a group array, first element is the group number
+          // Second element is the array of objects keyed by their order number
+          sortedArgs[group][1] = sortedArgs[group][1].sort(
             (a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0]))
+          console.log(sortedArgs[group])
         }
       }
 
@@ -412,6 +413,7 @@ class ArgsForm extends React.PureComponent {
       const groupArray = group[1] // the array of argkey objects
       const groupItems = [];
       for (const item of groupArray) {
+        console.log(item)
         const argkey = Object.values(item)[0]
         groupItems.push(
           <ArgInput key={argkey}
