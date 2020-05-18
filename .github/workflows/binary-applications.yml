@@ -203,7 +203,7 @@ jobs:
               shell: bash -l {0}
               run: |
                   make install
-                  make mac_zipfile userguide
+                  make mac_zipfile
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
