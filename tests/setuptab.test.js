@@ -336,7 +336,7 @@ test('SetupTab: expect non-boolean input can disable/hide optional inputs', asyn
   })
 })
  
-test.only('SetupTab: test grouping and sorting of args', async () => {
+test('SetupTab: test grouping and sorting of args', async () => {
   const spec = { module: 'natcap.invest.dummy', args: {
     arg1: { 
       name: 'A', 

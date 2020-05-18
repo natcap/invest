@@ -432,9 +432,17 @@ export class InvestJob extends React.Component {
 
 InvestJob.propTypes = {
   investList: PropTypes.object,
-  investSettings: PropTypes.object,
+  investSettings: PropTypes.shape({
+    nWorkers: PropTypes.string,
+    loggingLevel: PropTypes.string,
+  }),
   recentSessions: PropTypes.array,
   appdata: PropTypes.string,
+  directoryConstants: PropTypes.shape({
+    CACHE_DIR: PropTypes.string,
+    TEMP_DIR: PropTypes.string,
+    INVEST_UI_DATA: PropTypes.string
+  }),
   updateRecentSessions: PropTypes.func,
   saveSettings: PropTypes.func
 }

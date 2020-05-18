@@ -110,7 +110,6 @@ export class SetupTab extends React.Component {
           // Second element is the array of objects keyed by their order number
           sortedArgs[group][1] = sortedArgs[group][1].sort(
             (a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0]))
-          console.log(sortedArgs[group])
         }
       }
 
@@ -413,7 +412,6 @@ class ArgsForm extends React.PureComponent {
       const groupArray = group[1] // the array of argkey objects
       const groupItems = [];
       for (const item of groupArray) {
-        console.log(item)
         const argkey = Object.values(item)[0]
         groupItems.push(
           <ArgInput key={argkey}

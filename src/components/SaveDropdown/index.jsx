@@ -38,8 +38,8 @@ export class SaveParametersButton extends React.Component {
 }
 
 SaveParametersButton.propTypes = {
-  argsToJsonFile: PropTypes.func,
-  disabled: PropTypes.bool
+  wrapArgsToJsonFile: PropTypes.func,
+  disabled: PropTypes.bool,
 }
 
 export class SavePythonButton extends React.Component {
