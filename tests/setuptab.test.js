@@ -76,7 +76,7 @@ test('SetupTab: expect an input form for a directory', async () => {
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await utils.findByLabelText(spec.args.arg.name)
+  const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
     expect(input).toHaveValue('foo')
@@ -99,7 +99,7 @@ test('SetupTab: expect an input form for a csv', async () => {
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await utils.findByLabelText(spec.args.arg.name)
+  const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   // Typing in a value
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
@@ -139,7 +139,7 @@ test('SetupTab: expect an input form for a vector', async () => {
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await utils.findByLabelText(spec.args.arg.name)
+  const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
     expect(input).toHaveValue('foo')
@@ -156,7 +156,7 @@ test('SetupTab: expect an input form for a raster', async () => {
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await utils.findByLabelText(spec.args.arg.name)
+  const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
     expect(input).toHaveValue('foo')
@@ -172,7 +172,7 @@ test('SetupTab: expect an input form for a freestyle_string', async () => {
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await utils.findByLabelText(spec.args.arg.name)
+  const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
     expect(input).toHaveValue('foo')
@@ -188,7 +188,7 @@ test('SetupTab: expect an input form for a number', async () => {
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await utils.findByLabelText(spec.args.arg.name)
+  const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
     expect(input).toHaveValue('foo')
@@ -203,7 +203,7 @@ test('SetupTab: expect an input form for a boolean', async () => {
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await utils.findByLabelText(spec.args.arg.name)
+  const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   await waitFor(() => {
     expect(input).toHaveAttribute('type', 'radio')
   })
@@ -217,7 +217,7 @@ test('SetupTab: expect an input form for an option_string', async () => {
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
-  const input = await utils.findByLabelText(spec.args.arg.name)
+  const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   await waitFor(() => {
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
@@ -228,19 +228,19 @@ test('SetupTab: test a UI spec with a boolean controller arg', async () => {
   
   const spec = { module: 'natcap.invest.dummy', args: { 
     controller: { 
-      name: 'A', 
+      name: 'Afoo', 
       type: 'boolean'}, 
     arg2: { 
-      name: 'B', 
+      name: 'Bfoo', 
       type: 'number'}, 
     arg3: { 
-      name: 'C', 
+      name: 'Cfoo', 
       type: 'number'}, 
     arg4: { 
-      name: 'D', 
+      name: 'Dfoo', 
       type: 'number'},
     arg5: {
-      name: 'E',
+      name: 'Efoo',
       type: 'number'
     } } }
 
@@ -263,11 +263,11 @@ test('SetupTab: test a UI spec with a boolean controller arg', async () => {
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
 
-  const controller = await utils.findByLabelText(spec.args.controller.name)
-  const arg2 = await utils.findByLabelText(spec.args.arg2.name)
-  const arg3 = await utils.findByLabelText(spec.args.arg3.name)
-  const arg4 = await utils.findByLabelText(spec.args.arg4.name)
-  const arg5 = await utils.findByLabelText(spec.args.arg5.name)
+  const controller = await utils.findByLabelText(RegExp(`${spec.args.controller.name}`))
+  const arg2 = await utils.findByLabelText(RegExp(`${spec.args.arg2.name}`))
+  const arg3 = await utils.findByLabelText(RegExp(`${spec.args.arg3.name}`))
+  const arg4 = await utils.findByLabelText(RegExp(`${spec.args.arg4.name}`))
+  const arg5 = await utils.findByLabelText(RegExp(`${spec.args.arg5.name}`))
 
   // Boolean Radios should default to "false" when a spec is loaded
   await waitFor(() => {
@@ -307,11 +307,11 @@ test('SetupTab: expect non-boolean input can disable/hide optional inputs', asyn
   // to just use one spec. And it works just the same.
   const spec = { args: { 
     controller: { 
-      name: 'A', 
+      name: 'afoo', 
       type: 'csv', 
       ui_control: ['arg2'], },
     arg2: { 
-      name: 'B', 
+      name: 'bfoo', 
       type: 'number', 
       ui_option: 'disable', } } }
   
@@ -319,8 +319,8 @@ test('SetupTab: expect non-boolean input can disable/hide optional inputs', asyn
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   fireEvent.click(getByText('Carbon'));
 
-  const controller = await utils.findByLabelText(spec.args.controller.name)
-  const arg2 = await utils.findByLabelText(spec.args.arg2.name)
+  const controller = await utils.findByLabelText(RegExp(`${spec.args.controller.name}`))
+  const arg2 = await utils.findByLabelText(RegExp(`${spec.args.arg2.name}`))
 
   // The optional input should be disabled while the controlling input
   // has a falsy value (undefined or '')
@@ -345,13 +345,13 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
   */
   const spec = { args: {
     a: { 
-      name: 'a', 
+      name: 'afoo', 
       type: 'freestyle_string'},
     b: {
-      name: 'b', 
+      name: 'bfoo', 
       type: 'number'},
     c: {
-      name: 'c',
+      name: 'cfoo',
       type: 'csv'} } }
 
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
@@ -375,9 +375,9 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
   
   const [a, b, c] = await waitFor(() => {
     return [
-      getByLabelText(spec.args.a.name),
-      getByLabelText(spec.args.b.name),
-      getByLabelText(spec.args.c.name)]
+      getByLabelText(RegExp(`${spec.args.a.name}`)),
+      getByLabelText(RegExp(`${spec.args.b.name}`)),
+      getByLabelText(RegExp(`${spec.args.c.name}`))]
   })
 
   // These new values will be valid - Execute should enable
@@ -447,9 +447,9 @@ test('SetupTab: test dragover of a datastack/logfile', async () => {
   fireEvent(setupForm, fileDropEvent)
 
   await waitFor(() => {
-    expect(getByLabelText(spec.args.arg1.name))
+    expect(getByLabelText(RegExp(`${spec.args.arg1.name}`)))
       .toHaveValue(mock_datastack.args.arg1)
-    expect(getByLabelText(spec.args.arg2.name))
+    expect(getByLabelText(RegExp(`${spec.args.arg2.name}`)))
       .toHaveValue(mock_datastack.args.arg2)
   })
 })

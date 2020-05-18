@@ -96,7 +96,7 @@ test('Clicking a recent session renders SetupTab', async () => {
     expect(execute).toBeDisabled(); // depends on the mocked fetchValidation
     expect(getByText('Setup').classList.contains('active')).toBeTruthy();
     // Expect some values that were loaded from the saved state:
-    expect(getByLabelText('Workspace')).toHaveValue('carbon-sample')
+    expect(getByLabelText(/Workspace/)).toHaveValue('carbon-sample')
   });
 })
 
@@ -124,7 +124,7 @@ test('LoadParameters: Dialog callback renders SetupTab', async () => {
     // Expect a disabled Execute button and a visible SetupTab
     expect(execute).toBeDisabled();  // depends on the mocked fetchValidation
     expect(getByText('Setup').classList.contains('active')).toBeTruthy();
-    expect(getByLabelText('Carbon Pools'))
+    expect(getByLabelText(/Carbon Pools/))
       .toHaveValue(mockDatastack.args.carbon_pools_path)
   });
   // And now that we know setup has loaded, expect the values from the datastack
@@ -289,7 +289,7 @@ test('Test various ways for repeated re-renders of SetupTab', async () => {
     expect(execute).toBeDisabled(); // depends on the mocked fetchValidation
     expect(getByText('Setup').classList.contains('active')).toBeTruthy();
     // Expect some values that were loaded from the saved state:
-    expect(getByLabelText('Workspace'))
+    expect(getByLabelText(/Workspace/))
       .toHaveValue(mockDatastack.args.workspace_dir)
   });
 
@@ -297,7 +297,7 @@ test('Test various ways for repeated re-renders of SetupTab', async () => {
   fireEvent.click(getByText('Carbon'));  
   await waitFor(() => {
     // Expect the values that were previously loaded were cleared
-    expect(getByLabelText('Workspace')).toHaveValue('')
+    expect(getByLabelText(/Workspace/)).toHaveValue('')
   });
 
   // 3. Using the Load Parameters Button
@@ -308,7 +308,7 @@ test('Test various ways for repeated re-renders of SetupTab', async () => {
   
   fireEvent.click(getByText('Load Parameters'));
   await waitFor(() => {
-    expect(getByLabelText('Workspace'))
+    expect(getByLabelText(/Workspace/))
       .toHaveValue(mockDatastack.args.workspace_dir)
   });
 })
