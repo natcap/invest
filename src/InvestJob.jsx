@@ -39,11 +39,6 @@ if (process.env.GDAL_DATA) {
   gdalEnv = { GDAL_DATA: process.env.GDAL_DATA }
 }
 
-// TODO: some of these 'global' vars are defined in multiple files
-// const CACHE_DIR = 'cache' //  for storing state snapshot files
-// const TEMP_DIR = 'tmp'  // for saving datastack json files prior to investExecute
-// const INVEST_UI_DATA = 'ui_data'
-
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {
   'DEBUG':   '--debug',
@@ -52,11 +47,12 @@ const LOGLEVELMAP = {
   'ERROR':   '-v',
 }
 
-function getSetupHash() {
-  // TODO: are we always calling this to generate a new key for SetupTab
-  // whenever we update argsInitDict state? If so maybe set SetupTab's
-  // key as a hash of that state so we don't have to remember to reset setupHash?
-  return(crypto.randomBytes(10).toString('hex'))
+function changeSetupKey(int) {
+  /* Return a value different from the input value.
+  *
+  * Used for generating a new unique `key` for SetupTab component.
+  */
+  return(int + 1)
 }
 
 export class InvestJob extends React.Component {
@@ -70,7 +66,7 @@ export class InvestJob extends React.Component {
     super(props);
 
     this.state = {
-      setupHash: getSetupHash(),
+      setupKey: 0,
       sessionID: null,                 // modelName + workspace.directory + workspace.suffix
       modelName: '',                   // as appearing in `invest list`
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
@@ -148,7 +144,7 @@ export class InvestJob extends React.Component {
       const datastack = await fetchDatastackFromFile(
         { datastack_path: loadedState.logfile })
       loadedState['argsInitDict'] = datastack['args']
-      Object.assign(loadedState, {setupHash: getSetupHash()})
+      Object.assign(loadedState, {setupKey: changeSetupKey(this.state.setupKey)})
       this.setState(loadedState,
         () => {
           this.switchTabs(loadedState.sessionProgress);
@@ -273,7 +269,7 @@ export class InvestJob extends React.Component {
     *  
     * Also get the model's UI spec if it exists.
     * Then reset much of this component's state in case a prior job's 
-    * state exists. This includes setting a new setupHash, which is passed
+    * state exists. This includes setting a new setupKey, which is passed
     * as a key to the SetupTab component, triggering it to re-mount
     * rather than just re-render, allowing one-time initilization of
     * arg grouping and ordering.
@@ -321,7 +317,7 @@ export class InvestJob extends React.Component {
         logStdOut: '',
         sessionID: null,
         workspace: null,
-        setupHash: getSetupHash(),
+        setupKey: changeSetupKey(this.state.setupKey),
         activeTab: 'setup'
       });
     } else {
@@ -393,7 +389,7 @@ export class InvestJob extends React.Component {
             />
           </TabPane>
           <TabPane eventKey="setup" title="Setup">
-            <SetupTab key={this.state.setupHash}
+            <SetupTab key={this.state.setupKey}
               pyModuleName={this.state.modelSpec.module}
               modelName={this.state.modelName}
               argsSpec={this.state.argsSpec}
