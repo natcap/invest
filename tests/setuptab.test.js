@@ -352,15 +352,19 @@ test('SetupTab: test grouping and sorting of args', async () => {
       type: 'number'},
     arg5: {
       name: 'E',
-      type: 'number'
-    } } }
+      type: 'number'},
+    arg6: {
+      name: 'F',
+      type: 'number'}
+    } }
 
   const ui_spec = {
     arg1: { order: 2 },
     arg2: { order: 1.1 },
     arg3: { order: 1 },
     arg4: { order: 0 },
-    arg5: {}  // order is deliberately missing, it should end up last. 
+    arg5: {},  // order is deliberately missing, it should end up last. 
+    arg6: { order: 'hidden' }  // should not be included in the setup form
   }
 
   fs.writeFileSync(path.join(
@@ -375,7 +379,8 @@ test('SetupTab: test grouping and sorting of args', async () => {
 
   await waitFor(() => {
     // The form should have one child node per arg group
-    expect(form.childNodes.length).toEqual(4) // 2 of the 5 args share a group.
+    // 2 of the 5 args share a group and 1 arg is hidden
+    expect(form.childNodes.length).toEqual(4)
     // Input nodes should be in the order defined in ui_spec
     expect(form.childNodes[0])
       .toHaveTextContent(RegExp(`${spec.args.arg4.name}`))

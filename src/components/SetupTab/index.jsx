@@ -76,7 +76,8 @@ export class SetupTab extends React.Component {
         this.props.argsSpec, this.props.argsInitValues)
       
       Object.keys(this.props.argsSpec).forEach((argkey) => {
-        if (argkey === 'n_workers') { return }
+        if (argkey === 'n_workers' || 
+          this.props.argsSpec[argkey].order === 'hidden') { return }
         const argSpec = Object.assign({}, this.props.argsSpec[argkey])
         if (argSpec.ui_control) {
           argsValues = toggleDependentInputs(this.props.argsSpec, argsValues, argkey)
