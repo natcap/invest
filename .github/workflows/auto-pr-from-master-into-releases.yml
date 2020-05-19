@@ -1,0 +1,72 @@
+name: PR changes on master into release branches
+env:
+    SOURCE_BRANCH: master
+on:
+    # This workflow should trigger when changes are pushed to master.
+    # We expect this will happen when PRs into master are merged and also as
+    # part of the automated bugfix release process.
+    push:
+        branches:
+            # The context variable ${{ env.SOURCE_BRANCH }} does not seem to work here.
+            - master
+
+jobs:
+    create-pr:
+        # Only create a PR from master into release branches if we're on the
+        # main invest repository.
+        if: github.repository == 'natcap/invest'
+        name: PR master into release/**
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  fetch-depth: 0
+            - run: git fetch origin +refs/tags/*:refs/tags/*
+
+            # Needed for envsubst
+            - run: sudo apt-get update && sudo apt-get install gettext-base
+
+            - name: Open a PR into each open release branch
+              shell: bash
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
+              run: |
+                  set -x
+
+                  # Get the number of the last PR merged into master.
+                  # This assumes that the default PR message was used and includes
+                  # the pattern #[1-9][0-9]*.
+                  PR_NUM=$(git log -1 --pretty=%B master | head -n1 | egrep -o '#[1-9][0-9]*' | sed 's|#||g')
+
+                  # Get the username of the person who opened up the last PR into `master`.
+                  PR_USERNAME=$(hub pr show -f "%au" $PR_NUM)
+                  echo "Latest PR on master ($PR_NUM) was authored by $PR_USERNAME."
+
+                  # Using grep with pattern ^release filters out any autorelease branches.
+                  BRANCHES=$(git ls-remote --heads origin | cut -d '/' -f 3- | grep ^release)
+                  echo $BRANCHES  # debugging
+                  ERRORSPRESENT=0
+                  for BRANCH in $BRANCHES
+                  do
+                      export RELEASE_BRANCH=$BRANCH  # needed for envsubst
+                      PR_BODY_FILE=pr_body.txt
+                      cat ci/bugfix-release-pr-body.md | envsubst > $PR_BODY_FILE
+                      cat $PR_BODY_FILE  # for debugging
+
+                      # This PR will be assigned to $GITHUB_ACTOR, which should be
+                      # the person who merged the PR that caused this commit to be
+                      # created.  Others could of course be assigned later.
+                      hub pull-request \
+                          --head $GITHUB_REPOSITORY:$SOURCE_BRANCH \
+                          --base $GITHUB_REPOSITORY:$RELEASE_BRANCH \
+                          --reviewer "$PR_USERNAME" \
+                          --assign "$PR_USERNAME" \
+                          --file $PR_BODY_FILE || ERRORSPRESENT=$(($ERRORSPRESENT | $?))
+                  done
+
+                  if [[ $ERRORSPRESENT -gt 0 ]]
+                  then
+                      echo "At least one of the PRs failed and might need to be revisited."
+                      exit 1
+                  fi

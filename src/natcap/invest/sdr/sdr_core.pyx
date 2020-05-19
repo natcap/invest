@@ -24,6 +24,10 @@ cdef extern from "time.h" nogil:
 
 LOGGER = logging.getLogger(__name__)
 
+
+# cmath is supposed to have M_SQRT2, but tests have been failing recently
+# due to a missing symbol.
+cdef double SQRT2 = cmath.sqrt(2)
 cdef double PI = 3.141592653589793238462643383279502884
 # This module creates rasters with a memory xy block size of 2**BLOCK_BITS
 cdef int BLOCK_BITS = 8
@@ -620,10 +624,10 @@ def calculate_average_aspect(
     # the flow_lengths array is the functional equivalent
     # of calculating |sin(alpha)| + |cos(alpha)|.
     cdef float* flow_lengths = [
-        1.0, <float>cmath.M_SQRT2,
-        1.0, <float>cmath.M_SQRT2,
-        1.0, <float>cmath.M_SQRT2,
-        1.0, <float>cmath.M_SQRT2
+        1.0, <float>SQRT2,
+        1.0, <float>SQRT2,
+        1.0, <float>SQRT2,
+        1.0, <float>SQRT2
     ]
 
     # Loop over iterblocks to maintain cache locality
