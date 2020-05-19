@@ -2,6 +2,13 @@
     color: blue;
 }
 
+/* Default sized Radio buttons are too small */
+input[type=radio]{
+  transform:scale(2.0);
+  padding-left: 0.5rem;
+  margin-right: 0.5rem;
+}
+
 /* HomeTab styles */
 .session-card-group {
 	flex-flow: column;

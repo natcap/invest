@@ -29,11 +29,11 @@
     },
     "grid_type": {
         "order": 3.1,
-        "ui_option": "disable"
+        "ui_option": "hide"
     },
     "cell_size": {
         "order": 3.2,
-        "ui_option": "disable"
+        "ui_option": "hide"
     },
     "compute_regression": {
         "order": 4.0,
@@ -44,10 +44,10 @@
     },
     "predictor_table_path": {
         "order": 4.1,
-        "ui_option": "disable"
+        "ui_option": "hide"
     },
     "scenario_predictor_table_path": {
         "order": 4.2,
-        "ui_option": "disable"
+        "ui_option": "hide"
     }
 }
