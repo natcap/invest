@@ -15,10 +15,23 @@ import { fetchDatastackFromFile, fetchValidation,
 import { argsDictFromObject, boolStringToBoolean } from '../../utils';
 
 function toggleDependentInputs(argsSpec, argsValues, argkey) {
+  /** Toggle properties that control the display of argument inputs.
+  *
+  * This function returns a copy of the SetupTab argsValues object
+  * after updating the 'ui_option' property of any arguments listed
+  * in the 'ui_control' array of `argsSpec[argkey]`.
+  *
+  * @params {object} argsSpec - merge of an InVEST model's ARGS_SPEC and UI Spec.
+  * @params {object} argsValues - of the shape returned by `initializeArgValues`.
+  * @params {string} argkey - a key of the argsSpec and argsValues objects
+  *    that contains a 'ui_control' property.
+  * 
+  * @return {object} a copy of `argsValues`
+  */
   let updatedValues = Object.assign({}, argsValues)
   argsSpec[argkey].ui_control.forEach(dependentKey => {
     if (!updatedValues[argkey].value) {
-      // hide/disable the dependent args
+      // apply the display option specified in the UI spec
       updatedValues[dependentKey]['ui_option'] = argsSpec[dependentKey].ui_option
     } else {
       updatedValues[dependentKey]['ui_option'] = undefined
@@ -28,6 +41,22 @@ function toggleDependentInputs(argsSpec, argsValues, argkey) {
 }
 
 function initializeArgValues(argsSpec, argsDict) {
+  /** Setup the objects that store InVEST argument values in SetupTab state.
+  *
+  * One object will store input form values and track if the input has been
+  * touched. The other object stores data returned by invest validation.
+  * 
+  * 
+  * @params {object} argsSpec - merge of an InVEST model's ARGS_SPEC.args and UI Spec.
+  * @params {object} argsDict - key: value pairs of InVEST model arguments, or {}.
+  * 
+  * @return {object} to destructure into two args, 
+  *   each with the same keys as argsSpec:
+  *     {object} argsValues - stores properties that update in response to
+  *       user interaction
+  *     {object} argsValidation - stores properties that update in response to
+  *       validation.
+  */
   const initIsEmpty = Object.keys(argsDict).length === 0
   let argsValidation = {};
   let argsValues = {};
@@ -43,7 +72,7 @@ function initializeArgValues(argsSpec, argsDict) {
 }
 
 export class SetupTab extends React.Component {
-  /** Renders an Arguments form and an Execute button
+  /** Renders an arguments form, execute button, and save button.
   */
   constructor(props) {
     super(props);
@@ -172,6 +201,10 @@ export class SetupTab extends React.Component {
   }
 
   batchUpdateArgs(argsDict) {
+    /** Update state with values and validate a batch of InVEST arguments.
+    *
+    * @params {object} argsDict - key: value pairs of InVEST arguments.
+    */
     let { argsValues, argsValidation } = initializeArgValues(
       this.props.argsSpec, argsDict)
     Object.keys(this.props.argsSpec).forEach((argkey) => {
@@ -364,7 +397,7 @@ class ArgsForm extends React.PureComponent {
   }
 
   handleBoolChange(event) {
-    /** Handle boolean changes that emitted strings */
+    /** Handle changes from boolean inputs that submit strings */
     const value = event.target.value;
     const argkey = event.target.name;
     const boolVal = boolStringToBoolean(value);

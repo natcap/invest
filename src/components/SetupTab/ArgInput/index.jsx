@@ -63,11 +63,8 @@ export class ArgInput extends React.PureComponent {
     
     // Radio select for boolean args
     } else if (argSpec.type === 'boolean') {
-      // this.state[argname] will be type boolean if it's coming from this.props.args. 
-      // But html forms must emit strings, so there's a special change handler
-      // for boolean inputs that coverts to a real boolean.
-      // Also, the `checked` property does not treat 'undefined' the same as false,
-      // instead React avoids setting the property altogether. Hence, double !! to
+      // The `checked` property does not treat 'undefined' the same as false,
+      // instead React avoids setting the property altogether. Hence, !! to
       // cast undefined to false.
       ArgInput = 
         <Form.Group as={Row} key={argkey} data-testid={'group-' + argkey}>
