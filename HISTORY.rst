@@ -2,8 +2,8 @@
 
 
 ..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
   * Refactor of Habitat Quality that implements TaskGraph and the following:
     * Threat files are now indicated in the Threat Table csv input under 
     required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``. 
