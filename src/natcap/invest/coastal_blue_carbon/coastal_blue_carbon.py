@@ -836,7 +836,7 @@ def get_inputs(args):
     lulc_to_code_dict = \
         dict((k.lower(), v['code']) for k, v in lulc_lookup_dict.items() if k)
     initial_dict = utils.build_lookup_from_csv(
-            args['carbon_pool_initial_uri'], 'lulc-class')
+        args['carbon_pool_initial_uri'], 'lulc-class')
 
     code_dict = dict((lulc_to_code_dict[k.lower()], s) for (k, s)
                      in initial_dict.items() if k)
