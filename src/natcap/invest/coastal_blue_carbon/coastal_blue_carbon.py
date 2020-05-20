@@ -430,10 +430,12 @@ def execute(args):
                     # doesn't have a transition LULC associated with it.
                     break
 
-                E_biomass[i] += R_biomass[transition_idx] * \
-                    (0.5**(i-j) - 0.5**(i-j+1))
-                E_soil[i] += R_soil[transition_idx] * \
-                    (0.5**(i-j) - 0.5**(i-j+1))
+                E_biomass[i] += R_biomass[transition_idx] * (
+                    (0.5**((i-(j+1))/H_biomass[transition_idx]) -
+                     0.5**((i-j)/H_biomass[transition_idx])))
+                E_soil[i] += R_soil[transition_idx] * (
+                    (0.5**((i-(j+1))/H_soil[transition_idx]) -
+                     0.5**((i-j)/H_soil[transition_idx])))
 
             # Net Sequestration
             N_biomass[i] = A_biomass[i] - E_biomass[i]
