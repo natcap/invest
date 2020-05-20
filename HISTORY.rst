@@ -1,9 +1,16 @@
 .. :changelog:
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
+  available standard C library definition.  This new definition helps to avoid
+  some compiler issues on Windows.
+
+3.8.2 (2020-05-15)
+------------------
+* InVEST's CSV encoding requirements are now described in the validation
+  error message displayed when a CSV cannot be opened.
 
 3.8.1 (2020-05-08)
 ------------------

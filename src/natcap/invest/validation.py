@@ -1,6 +1,6 @@
 """Common validation utilities for InVEST models."""
 import ast
-import collections
+import codecs
 import inspect
 import logging
 import pprint
@@ -11,7 +11,6 @@ import importlib
 import pygeoprocessing
 import pandas
 import xlrd
-import xlwt
 from osgeo import gdal, osr
 import numpy
 
@@ -73,7 +72,7 @@ def _evaluate_expression(expression, variable_map):
 
     The expression must be able to be evaluated as a python expression.
 
-    Parameters:
+    Args:
         expression (string): A string expression that returns a value.
         variable_map (dict): A dict mapping string variable names to their
             python object values.  This is the variable map that will be used
@@ -114,7 +113,7 @@ def _evaluate_expression(expression, variable_map):
 def get_invalid_keys(validation_warnings):
     """Get the invalid keys from a validation warnings list.
 
-    Parameters:
+    Args:
         validation_warnings (list): A list of two-tuples where the first
             item is an iterable of string args keys affected and the second
             item is a string error message.
@@ -139,7 +138,7 @@ def get_sufficient_keys(args):
         1. Present within ``args``
         2. Does not have a value of ``''`` or ``None``.
 
-    Parameters:
+    Args:
         args (dict): An args dict of string keys to serializeable values.
 
     Returns:
@@ -156,7 +155,7 @@ def get_sufficient_keys(args):
 def check_directory(dirpath, exists=False, permissions='rx'):
     """Validate a directory.
 
-    Parameters:
+    Args:
         dirpath (string): The directory path to validate.
         exists=False (bool): If ``True``, the directory at ``dirpath``
             must already exist on the filesystem.
@@ -196,7 +195,7 @@ def check_directory(dirpath, exists=False, permissions='rx'):
 def check_file(filepath, permissions='r'):
     """Validate a single file.
 
-    Parameters:
+    Args:
         filepath (string): The filepath to validate.
         permissions='r' (string): A string that includes the lowercase
             characters ``r``, ``w`` and/or ``x`` indicating required
@@ -220,7 +219,7 @@ def check_permissions(path, permissions):
 
     This function uses ``os.access`` to determine permissions access.
 
-    Parameters:
+    Args:
         path (string): The path to examine for permissions.
         permissions (string): a string including the characters ``r``, ``w``
             and/or ``x`` (lowercase), indicating read, write, and execute
@@ -242,7 +241,7 @@ def check_permissions(path, permissions):
 def _check_projection(srs, projected, projection_units):
     """Validate a GDAL projection.
 
-    Parameters:
+    Args:
         srs (osr.SpatialReference): A GDAL Spatial Reference object
             representing the spatial reference of a GDAL dataset.
         projected (bool): Whether the spatial reference must be projected in
@@ -267,11 +266,12 @@ def _check_projection(srs, projected, projection_units):
         layer_units_name = srs.GetLinearUnitsName().lower()
 
         if projection_units in valid_meter_units:
-            if not layer_units_name in valid_meter_units:
+            if layer_units_name not in valid_meter_units:
                 return "Layer must be projected in meters"
         else:
             if layer_units_name.lower() != projection_units.lower():
-                return "Layer must be projected in %s" % projection_units.lower()
+                return ("Layer must be projected in %s"
+                        % projection_units.lower())
 
     return None
 
@@ -279,7 +279,7 @@ def _check_projection(srs, projected, projection_units):
 def check_raster(filepath, projected=False, projection_units=None):
     """Validate a GDAL Raster on disk.
 
-    Parameters:
+    Args:
         filepath (string): The path to the raster on disk.  The file must exist
             and be readable.
         projected=False (bool): Whether the spatial reference must be projected
@@ -314,10 +314,11 @@ def check_raster(filepath, projected=False, projection_units=None):
     gdal_dataset = None
     return None
 
+
 def load_fields_from_vector(filepath, layer_id=0):
     """Load fieldnames from a given vector.
 
-    Parameters:
+    Args:
         filepath (string): The path to a GDAL-compatible vector on disk.
         layer_id=0 (string or int): The identifier for the layer to use.
 
@@ -344,7 +345,7 @@ def check_vector(filepath, required_fields=None, projected=False,
         If the provided vector has multiple layers, only the first layer will
         be checked.
 
-    Parameters:
+    Args:
         filepath (string): The path to the vector on disk.  The file must exist
             and be readable.
         required_fields=None (list): The string fieldnames (case-insensitive)
@@ -376,7 +377,8 @@ def check_vector(filepath, required_fields=None, projected=False,
 
     if required_fields:
         fieldnames = set([defn.GetName().upper() for defn in layer.schema])
-        missing_fields = set(field.upper() for field in required_fields) - fieldnames
+        missing_fields = (
+            set(field.upper() for field in required_fields) - fieldnames)
         if missing_fields:
             return "Fields are missing from the first layer: %s" % sorted(
                 missing_fields)
@@ -391,7 +393,7 @@ def check_vector(filepath, required_fields=None, projected=False,
 def check_freestyle_string(value, regexp=None):
     """Validate an arbitrary string.
 
-    Parameters:
+    Args:
         value: The value to check.  Must be able to be cast to a string.
         regexp=None (dict): A dict representing validation parameters for a
             regular expression.  ``regexp['pattern']`` is required, and its
@@ -411,7 +413,8 @@ def check_freestyle_string(value, regexp=None):
                 flags = re.IGNORECASE
         matches = re.findall(regexp['pattern'], str(value), flags)
         if not matches:
-            return "Value did not match expected pattern %s" % regexp['pattern']
+            return ("Value did not match expected pattern %s"
+                    % regexp['pattern'])
 
     return None
 
@@ -419,7 +422,7 @@ def check_freestyle_string(value, regexp=None):
 def check_option_string(value, options):
     """Validate that a string is in a list of options.
 
-    Parameters:
+    Args:
         value (string): The string value to test.
         options (list): A list of strings to test against.
 
@@ -435,7 +438,7 @@ def check_option_string(value, options):
 def check_number(value, expression=None):
     """Validate numbers.
 
-    Parameters:
+    Args:
         value: A python value. This should be able to be cast to a float.
         expression=None (string): A string expression to be evaluated with the
             intent of determining that the value is within a specific range.
@@ -463,7 +466,7 @@ def check_number(value, expression=None):
         # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
         # be raised if asteval can't evaluate the expression.
         result = _evaluate_expression(expression, {'value': float(value)})
-        if result == False:  # A python bool object is returned.
+        if not result:  # A python bool object is returned.
             return "Value does not meet condition %s" % expression
 
     return None
@@ -476,7 +479,7 @@ def check_boolean(value):
     returned.
 
 
-    Parameters:
+    Args:
         value: The value to evaluate.
 
     Returns:
@@ -491,7 +494,7 @@ def check_boolean(value):
 def check_csv(filepath, required_fields=None, excel_ok=False):
     """Validate a table.
 
-    Parameters:
+    Args:
         filepath (string): The string filepath to the table.
         required_fields=None (list): A case-insensitive list of fieldnames that
             must exist in the table.  If None, fieldnames will not be checked.
@@ -509,9 +512,9 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
     try:
         # Check if the file encoding is UTF-8 BOM first
         encoding = None
-        with open(filepath) as file_obj:
+        with open(filepath, 'rb') as file_obj:
             first_line = file_obj.readline()
-            if first_line.startswith('\xef\xbb\xbf'):
+            if first_line.startswith(codecs.BOM_UTF8):
                 encoding = 'utf-8-sig'
         dataframe = pandas.read_csv(
             filepath, sep=None, engine='python', encoding=encoding)
@@ -522,7 +525,8 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
             except xlrd.biffh.XLRDError:
                 return "File could not be opened as a CSV or Excel file."
         else:
-            return "File could not be opened as a CSV"
+            return ("File could not be opened as a CSV. "
+                    "File must be encoded as a UTF-8 CSV.")
 
     if required_fields:
         fields_in_table = set([name.upper() for name in dataframe.columns])
@@ -539,7 +543,7 @@ def check_spatial_overlap(spatial_filepaths_list,
                           different_projections_ok=False):
     """Check that the given spatial files spatially overlap.
 
-    Parameters:
+    Args:
         spatial_filepaths_list (list): A list of files that can be opened with
             GDAL.  Must be on the local filesystem.
         different_projections_ok=False (bool): Whether it's OK for the input
@@ -609,7 +613,7 @@ def validate(args, spec, spatial_overlap_opts=None):
     ``spec``.  If ``spatial_overlap_opts`` is also provided, valid spatial
     inputs will be checked for spatial overlap.
 
-    Parameters:
+    Args:
         args (dict): The InVEST model args dict to validate.
         spec (dict): The InVEST model spec dict to validate against.
         spatial_overlap_opts=None (dict): A dict.  If provided, the key
@@ -709,7 +713,7 @@ def validate(args, spec, spatial_overlap_opts=None):
             if warning_msg:
                 validation_warnings.append(([key], warning_msg))
                 invalid_keys.add(key)
-        except Exception as error:
+        except Exception:
             LOGGER.exception(
                 'Error when validating key %s with value %s',
                 key, args[key])
@@ -734,7 +738,6 @@ def validate(args, spec, spatial_overlap_opts=None):
             else:
                 sufficient_inputs[key] = True
 
-    sorted_args_keys = sorted(list(sufficient_inputs.keys()))
     for key in conditionally_required_keys:
         if key in invalid_keys:
             continue
@@ -866,11 +869,13 @@ def invest_validator(validate_func):
                     validator_func = _VALIDATION_FUNCS[input_type]
 
                     try:
-                        validation_options = args_key_spec['validation_options']
+                        validation_options = (
+                            args_key_spec['validation_options'])
                     except KeyError:
                         validation_options = {}
 
-                    error_msg = validator_func(args_value, **validation_options)
+                    error_msg = (
+                        validator_func(args_value, **validation_options))
 
                 if error_msg is None:
                     warnings_ = []
