@@ -1,4 +1,5 @@
 """InVEST specific code utils."""
+import codecs
 import math
 import os
 import contextlib
@@ -7,8 +8,8 @@ import tempfile
 import shutil
 from datetime import datetime
 import time
-import pandas
 
+import pandas
 import numpy
 from osgeo import gdal
 from osgeo import osr
@@ -174,8 +175,16 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
 
     Returns:
         ``None``"""
-    if os.path.exists(logfile):
-        LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
+    try:
+        if os.path.exists(logfile):
+            LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
+    except SystemError:
+        # This started happening in Windows tests:
+        #  SystemError: <built-in function stat> returned NULL without
+        #  setting an error
+        # Looking at https://bugs.python.org/issue28040#msg276223, this might
+        # be a low-level python error.
+        pass
 
     handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
     formatter = logging.Formatter(log_fmt, date_fmt)
@@ -452,14 +461,14 @@ def build_lookup_from_csv(
     """
     # Check if the file encoding is UTF-8 BOM first
     encoding = None
-    with open(table_path) as file_obj:
+    with open(table_path, 'rb') as file_obj:
         first_line = file_obj.readline()
-        if first_line.startswith('\xef\xbb\xbf'):
+        if first_line.startswith(codecs.BOM_UTF8):
             encoding = 'utf-8-sig'
     table = pandas.read_csv(
         table_path, sep=None, engine='python', encoding=encoding)
     header_row = list(table)
-    
+
     if to_lower:
         key_field = key_field.lower()
         header_row = [

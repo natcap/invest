@@ -13,6 +13,36 @@ import shapely.geometry
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'pollination')
 
+EXPECTED_FILE_LIST = [
+    'farm_pollinators.tif',
+    'farm_results.dbf',
+    'farm_results.prj',
+    'farm_results.shp',
+    'farm_results.shx',
+    'pollinator_abundance_apis_spring.tif',
+    'pollinator_supply_apis.tif',
+    'total_pollinator_abundance_spring.tif',
+    'total_pollinator_yield.tif',
+    'wild_pollinator_yield.tif',
+    'intermediate_outputs/blank_raster.tif',
+    'intermediate_outputs/convolve_ps_apis.tif',
+    'intermediate_outputs/farm_nesting_substrate_index_cavity.tif',
+    'intermediate_outputs/farm_pollinator_spring.tif',
+    'intermediate_outputs/farm_relative_floral_abundance_index_spring.tif',
+    'intermediate_outputs/floral_resources_apis.tif',
+    'intermediate_outputs/foraged_flowers_index_apis_spring.tif',
+    'intermediate_outputs/habitat_nesting_index_apis.tif',
+    'intermediate_outputs/half_saturation_spring.tif',
+    'intermediate_outputs/kernel_10.250312.tif',
+    'intermediate_outputs/local_foraging_effectiveness_apis.tif',
+    'intermediate_outputs/managed_pollinators.tif',
+    'intermediate_outputs/nesting_substrate_index_cavity.tif',
+    'intermediate_outputs/relative_floral_abundance_index_spring.tif',
+    'intermediate_outputs/reprojected_farm_vector.dbf',
+    'intermediate_outputs/reprojected_farm_vector.prj',
+    'intermediate_outputs/reprojected_farm_vector.shp',
+    'intermediate_outputs/reprojected_farm_vector.shx']
+
 
 class PollinationTests(unittest.TestCase):
     """Tests for the Pollination model."""
@@ -76,8 +106,7 @@ class PollinationTests(unittest.TestCase):
             result_vector = None
 
         PollinationTests._test_same_files(
-            os.path.join(REGRESSION_DATA, 'expected_file_list_regression.txt'),
-            self.workspace_dir)
+            EXPECTED_FILE_LIST, self.workspace_dir)
 
     def test_pollination_missing_farm_header(self):
         """Pollination: regression testing missing farm headers."""
@@ -362,12 +391,11 @@ class PollinationTests(unittest.TestCase):
             result_vector = None
 
     @staticmethod
-    def _test_same_files(base_list_path, directory_path):
+    def _test_same_files(base_file_list, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
 
         Parameters:
-            base_list_path (string): a path to a file that has one relative
-                file path per line.
+            base_file_list (list): a list of relative file paths.
             directory_path (string): a path to a directory whose contents will
                 be checked against the files listed in `base_list_file`
 
@@ -375,18 +403,17 @@ class PollinationTests(unittest.TestCase):
             None
 
         Raises:
-            AssertionError when there are files listed in `base_list_file`
+            AssertionError when there are files listed in `base_file_list`
                 that don't exist in the directory indicated by `path`
 
         """
         missing_files = []
-        with open(base_list_path, 'r') as file_list:
-            for file_path in file_list:
-                full_path = os.path.join(directory_path, file_path.rstrip())
-                if full_path == '':
-                    continue
-                if not os.path.isfile(full_path):
-                    missing_files.append(full_path)
+        for file_path in base_file_list:
+            full_path = os.path.join(directory_path, file_path)
+            if full_path == '':
+                continue
+            if not os.path.isfile(full_path):
+                missing_files.append(full_path)
         if len(missing_files) > 0:
             raise AssertionError(
                 "The following files were expected but not found: " +

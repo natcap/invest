@@ -16,7 +16,6 @@ class CLIGUITests(unittest.TestCase):
     def test_run_model(self):
         """CLI-GUI: Run a model GUI through the cli."""
         from natcap.invest import cli
-        from natcap.invest import delineateit
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
             'fisheries', 'spiny_lobster_belize.invs.json')

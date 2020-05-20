@@ -1,6 +1,8 @@
 name: Build InVEST App Binaries
 
-on: [push, pull_request, check_run]
+on:
+    push:
+    pull_request:
 
 jobs:
     check-syntax-errors:
@@ -15,7 +17,7 @@ jobs:
                   python-version: 3.7
 
             - name: Set up environment
-              run: python -m pip install --upgrade pip flake8
+              run: python -m pip install --upgrade flake8
 
             - name: Lint with flake8
               run: |
@@ -33,7 +35,8 @@ jobs:
             PYTHON_ARCH: x86
         steps:
             - uses: actions/checkout@v2
-            - run: git fetch --prune --unshallow
+              with:
+                  fetch-depth: 0  # fetch complete history
 
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
@@ -68,11 +71,21 @@ jobs:
                   $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
                   ./ci/windows-ci-binary-install.ps1
 
-            - name: Clone dependent repositories
-              run: make -j2 doc/users-guide data/invest-sample-data
+            - name: Clone sample data repo (non-lfs)
+              shell: bash
+              run: |
+                  GIT_URL=$(make jprint-GIT_SAMPLE_DATA_REPO)
+                  LOCALPATH=$(make jprint-GIT_SAMPLE_DATA_REPO_PATH)
+                  GIT_REV=$(make jprint-GIT_SAMPLE_DATA_REPO_REV)
 
-            - name: Build sampledata
-              run: make -j3 sampledata
+                  # Only clone the files ... deliberately not cloning LFS data
+                  # Installer needs .invest.json files only, and these are not
+                  # stored in LFS.
+                  GIT_LFS_SKIP_SMUDGE=1 git clone $GIT_URL $LOCALPATH
+                  git -C $LOCALPATH checkout $GIT_REV
+
+            - name: Build user's Guide
+              run: make userguide
 
             - name: Build windows binaries
               run: make binaries
@@ -124,12 +137,18 @@ jobs:
 
                   make GSUTIL=$env:GSUTIL_PATH deploy
 
-            - name: Save build artifacts
+            - name: Upload installer artifact
               if: always()
-              uses: actions/upload-artifact@v1
+              uses: actions/upload-artifact@v2-preview
               with:
-                  name: InVEST Windows build artifacts
-                  path: dist
+                  name: InVEST-windows-installer
+                  path: dist/*.exe
+
+            - name: Upload user's guide artifact
+              uses: actions/upload-artifact@v2-preview
+              with:
+                  name: InVEST-user-guide
+                  path: dist/InVEST_*_userguide.zip
 
     build-mac-binaries:
         name: "Build mac binaries"
@@ -140,7 +159,8 @@ jobs:
             PYTHON_ARCH: x86
         steps:
             - uses: actions/checkout@v2
-            - run: git fetch --prune --unshallow
+              with:
+                  fetch-depth: 0  # fetch complete history
 
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
@@ -157,34 +177,37 @@ jobs:
                   key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Set up conda
-              uses: s-weigand/setup-conda@v1
+              uses: goanpeca/setup-miniconda@v1.1.2
               with:
+                  activate-environment: mac-env  # This is also hardcoded in Pyinstaller's invest.spec
+                  auto-update-conda: true
                   python-version: 3.7
+                  channels: conda-forge
 
-            - name: Install python dependencies
-              run: pip install --upgrade pip setuptools requests setuptools_scm cython numpy
-
-            - name: Build conda env
-              shell: bash
+            - name: Build conda env with python dependencies
+              shell: bash -l {0}
               run: |
+                  conda upgrade -y pip setuptools
+                  conda install toml requests
+                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
                         requirements-dev.txt \
                         requirements-gui.txt > requirements-all.yml
-                  conda env create -p ./env --file requirements-all.yml
-                  conda init bash
+                  conda env update --file requirements-all.yml
 
                   # Libtiff from conda defaults channel gets around issue with missing libwebp
-                  conda install -p ./env --yes libtiff
+                  conda install --yes libtiff
 
             - name: Build binaries
-              shell: bash
+              shell: bash -l {0}
               run: |
-                  make PYTHON=$(pwd)/env/bin/python install
-                  make PYTHON=$(pwd)/env/bin/python mac_zipfile userguide
+                  make install
+                  make mac_zipfile userguide
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
+              # We only want to upload artifacts to a release object in a release.
               if: github.event_name != 'pull_request'
               uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
               with:
@@ -196,9 +219,119 @@ jobs:
               if: github.event_name != 'pull_request'
               run: make deploy
 
-            - name: Save build artifacts
-              if: always()
-              uses: actions/upload-artifact@v1
+            - name: Upload binaries artifact
+              uses: actions/upload-artifact@v2-preview
               with:
-                  name: InVEST Mac build artifacts
+                  name: InVEST-mac-binaries
+                  path: dist/InVEST-*-mac.zip
+
+    build-sampledata:
+        name: Build sampledata archives
+        needs: check-syntax-errors
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  fetch-depth: 0  # Fetch complete history
+            - run: git fetch origin +refs/tags/*:refs/tags/*
+
+            - uses: actions/setup-python@v1
+              with:
+                  python-version: 3.7
+
+            - run: |
+                pip install toml
+                pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+
+            - run: make sampledata sampledata_single
+
+            - name: Set up GCP
+              # Secrets not available in PR so don't use GCP.
+              if: github.event_name != 'pull_request'
+              uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+              with:
+                  version: '281.0.0'
+                  service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+            - name: Deploy artifacts to GCS
+              # Secrets not available in PR so don't use GCP.
+              # We only want to upload artifacts to a release object in a release.
+              if: github.event_name != 'pull_request'
+              run: make deploy
+
+            - name: Upload sample data artifact
+              uses: actions/upload-artifact@v2-preview
+              with:
+                  name: InVEST-sample-data
+                  path: dist/*.zip
+
+    upload-binaries-to-release:
+        name: Upload binaries to a release
+        needs: [build-mac-binaries,
+                build-windows-binaries,
+                build-sampledata]
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  fetch-depth: 0  # fetch complete history
+            - run: git fetch origin +refs/tags/*:refs/tags/*
+
+            - name: Download windows installer artifact
+              uses: actions/download-artifact@v2-preview
+              with:
+                  name: InVEST-windows-installer
                   path: dist
+
+            - name: Download mac binaries artifact
+              uses: actions/download-artifact@v2-preview
+              with:
+                  name: InVEST-mac-binaries
+                  path: dist
+
+            - name: Download sample data artifact
+              uses: actions/download-artifact@v2-preview
+              with:
+                  name: InVEST-sample-data
+                  path: dist
+
+            - name: Download user's guide artifact
+              uses: actions/download-artifact@v2-preview
+              with:
+                  name: InVEST-user-guide
+                  path: dist
+
+            - uses: actions/setup-python@v1
+              with:
+                  python-version: 3.7
+
+            - run: |
+                pip install toml
+                pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+
+            - name: Upload distributions to release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              shell: bash
+              run: |
+                if hub release show ${GITHUB_REF:10}
+                then
+                    ls -la dist
+                    FILELIST=release_file_list.txt
+                    make jprint-USERGUIDE_ZIP_FILE >> $FILELIST
+                    make jprint-MAC_BINARIES_ZIP_FILE >> $FILELIST
+                    make PYTHON_ARCH=x86 jprint-WINDOWS_INSTALLER_FILE >> $FILELIST
+                    make jprint-SAMPLEDATA_SINGLE_ARCHIVE >> $FILELIST
+
+                    # Make sure the file contains what it should
+                    cat $FILELIST
+
+                    set -x  # for debugging
+                    for FILE in `cat $FILELIST`
+                    do
+                        hub release edit -a $FILE -m "" ${GITHUB_REF:10}
+                    done
+                    set +x
+                else:
+                    echo "Release for ${GITHUB_REF:10} not found; skipping binary upload"
+                fi
