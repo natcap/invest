@@ -315,7 +315,7 @@ def execute(args):
 
         # Initialization
         valid_mask = C_prior != C_nodata
-        valid_C_prior = C_prior[valid_mask]
+        valid_C_prior = C_prior[valid_mask].astype(numpy.float32)
 
         timesteps = d['timesteps']
 
@@ -349,16 +349,16 @@ def execute(args):
         # Disturbance Percentage
         D_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)
         D_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
-        H_biomass = numpy.zeros(transition_shape,
-                                dtype=numpy.float32)  # Half-life
-        H_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
+        H_biomass = numpy.ones(transition_shape,
+                               dtype=numpy.float32)  # Half-life
+        H_soil = numpy.ones(transition_shape, dtype=numpy.float32)
         # Total Disturbed Carbon
         R_biomass = numpy.zeros(transition_shape, dtype=numpy.float32)
         R_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
 
         # Set Accumulation and Disturbance Values
-        C_r = [read_from_raster(i, offset_dict)[valid_mask]
-               for i in d['C_r_rasters']]
+        C_r = [read_from_raster(i, offset_dict)[valid_mask].astype(
+            numpy.float32) for i in d['C_r_rasters']]
         if C_r:
             # final transition out to analysis year
             C_list = [valid_C_prior] + C_r + [C_r[-1]]
