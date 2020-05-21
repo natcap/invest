@@ -205,7 +205,7 @@ def execute(args):
             ['mode', 'mode'],
             target_pixel_size, 'intersection'),
         kwargs={
-            'target_sr_wkt': target_sr_wkt,
+            'target_projection_wkt': target_sr_wkt,
             'base_vector_path_list': [args['aoi_watersheds_path']],
             'raster_align_index': 0},
         target_path_list=[aligned_lulc_path, aligned_soils_path],

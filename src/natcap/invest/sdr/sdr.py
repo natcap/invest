@@ -338,7 +338,7 @@ def execute(args):
             base_list, aligned_list, interpolation_list,
             target_pixel_size, 'intersection'),
         kwargs={
-            'target_sr_wkt': target_sr_wkt,
+            'target_projection_wkt': target_sr_wkt,
             'base_vector_path_list': (args['watersheds_path'],),
             'raster_align_index': 0,
             'vector_mask_options': vector_mask_options,

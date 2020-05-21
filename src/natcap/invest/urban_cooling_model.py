@@ -354,7 +354,7 @@ def execute(args):
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
             'raster_align_index': 1,
-            'target_sr_wkt': lulc_raster_info['projection']},
+            'target_projection_wkt': lulc_raster_info['projection']},
         target_path_list=aligned_raster_path_list,
         task_name='align rasters')
 

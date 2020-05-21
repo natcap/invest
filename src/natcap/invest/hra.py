@@ -460,7 +460,7 @@ def execute(args):
         args=(base_raster_list, align_raster_list,
               [_RESAMPLE_METHOD] * len(base_raster_list),
               target_pixel_size, 'union'),
-        kwargs={'target_sr_wkt': target_sr_wkt},
+        kwargs={'target_projection_wkt': target_sr_wkt},
         target_path_list=align_raster_list,
         task_name='align_and_resize_raster_task',
         dependent_task_list=align_and_resize_dependency_list)
