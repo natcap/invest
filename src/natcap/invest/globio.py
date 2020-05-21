@@ -939,22 +939,27 @@ def _collapse_infrastructure_layers(
 
     def _collapse_infrastructure_op(*infrastructure_array_list):
         """For each pixel, create mask 1 if all valid, else set to nodata."""
+        infrastructure_result = numpy.empty_like(
+            infrastructure_array_list[0], dtype=numpy.int32)
+        infrastructure_result[:] = infrastructure_nodata
+
         nodata_mask = (
             numpy.isclose(
                 infrastructure_array_list[0], infrastructure_nodata_list[0]))
-        infrastructure_result = infrastructure_array_list[0] > 0
+        infrastructure_mask = infrastructure_array_list[0] > 0 & ~nodata_mask
         for index in range(1, len(infrastructure_array_list)):
             current_nodata = numpy.isclose(
                 infrastructure_array_list[index],
                 infrastructure_nodata_list[index])
 
-            infrastructure_result = (
-                infrastructure_result |
+            infrastructure_mask = (
+                infrastructure_mask |
                 ((infrastructure_array_list[index] > 0) & ~current_nodata))
 
             nodata_mask = (
                 nodata_mask & current_nodata)
-
+        
+        infrastructure_result[infrastructure_mask] = 1
         infrastructure_result[nodata_mask] = infrastructure_nodata
         return infrastructure_result
 
@@ -975,7 +980,7 @@ def _collapse_infrastructure_layers(
         (x, 1) for x in aligned_infrastructure_target_list]
     pygeoprocessing.raster_calculator(
         infra_filename_band_list, _collapse_infrastructure_op,
-        infrastructure_path, gdal.GDT_Byte, infrastructure_nodata)
+        infrastructure_path, gdal.GDT_Int32, infrastructure_nodata)
 
     # clean up the temporary filenames
     if os.path.isdir(tmp_rasterize_dir):
