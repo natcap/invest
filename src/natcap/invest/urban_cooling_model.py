@@ -417,7 +417,7 @@ def execute(args):
             green_area_sum_raster_path),
         kwargs={
             'working_dir': intermediate_dir,
-            'ignore_nodata': True},
+            'ignore_nodata_and_edges': True},
         target_path_list=[green_area_sum_raster_path],
         dependent_task_list=[
             task_path_prop_map['green_area'][0],  # reclassed green area task
@@ -1366,7 +1366,7 @@ def convolve_2d_by_exponential(
     pygeoprocessing.convolve_2d(
         (signal_raster_path, 1), (exponential_kernel_path, 1),
         target_convolve_raster_path, working_dir=temporary_working_dir,
-        ignore_nodata=True)
+        ignore_nodata_and_edges=True)
     shutil.rmtree(temporary_working_dir)
 
 

@@ -580,7 +580,7 @@ def execute(args):
                 (local_foraging_effectiveness_path, 1), (kernel_path, 1),
                 floral_resources_index_path),
             kwargs={
-                'ignore_nodata': True,
+                'ignore_nodata_and_edges': True,
                 'mask_nodata': True,
                 'normalize_kernel': False,
                 },
@@ -621,7 +621,7 @@ def execute(args):
                 (pollinator_supply_index_path, 1), (kernel_path, 1),
                 convolve_ps_path),
             kwargs={
-                'ignore_nodata': True,
+                'ignore_nodata_and_edges': True,
                 'mask_nodata': True,
                 'normalize_kernel': False,
                 },
