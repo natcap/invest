@@ -2117,7 +2117,7 @@ def _get_suitable_projection_params(
 
 def _clip_to_projection_with_square_pixels(
         base_raster_path, clip_vector_path, target_raster_path,
-        target_sr_wkt, target_pixel_size, target_bounding_box):
+        target_projection_wkt, target_pixel_size, target_bounding_box):
     """Clip raster with vector into target projected coordinate system.
 
     If pixel size of target raster is not square, the minimum absolute value
@@ -2126,8 +2126,8 @@ def _clip_to_projection_with_square_pixels(
     Parameters:
         base_raster_path (str): path to base raster.
         clip_vector_path (str): path to base clip vector.
-        target_sr_wkt (str): a projection string used as the target projection
-            for warping the base raster.
+        target_projection_wkt (str): a projection string used as the target
+            projection for warping the base raster.
         target_pixel_size (tuple): a tuple of equal x, y pixel sizes in minimum
             absolute value.
         target_bounding_box (list): a list of the form [xmin, ymin, xmax, ymax]
@@ -2144,7 +2144,7 @@ def _clip_to_projection_with_square_pixels(
         target_raster_path,
         _TARGET_RESAMPLE_METHOD,
         target_bb=target_bounding_box,
-        target_sr_wkt=target_sr_wkt,
+        target_projection_wkt=target_projection_wkt,
         vector_mask_options={'mask_vector_path': clip_vector_path})
 
 

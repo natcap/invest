@@ -1034,7 +1034,7 @@ def _calc_and_pickle_zonal_stats(
     pygeoprocessing.warp_raster(
         score_raster_path, target_pixel_size, clipped_score_raster_path,
         _RESAMPLE_METHOD, target_bb=target_bounding_box,
-        target_sr_wkt=target_sr_wkt)
+        target_projection_wkt=target_sr_wkt)
 
     # Return a dictionary with values of 0, if the two input rasters do not
     # intersect at all.
