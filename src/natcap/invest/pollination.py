@@ -342,7 +342,7 @@ def execute(args):
             task_name='reproject_farm_task',
             func=pygeoprocessing.reproject_vector,
             args=(
-                args['farm_vector_path'], landcover_raster_info['projection'],
+                args['farm_vector_path'], landcover_raster_info['projection_wkt'],
                 farm_vector_path),
             target_path_list=[farm_vector_path])
 

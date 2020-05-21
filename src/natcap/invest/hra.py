@@ -1030,7 +1030,7 @@ def _calc_and_pickle_zonal_stats(
     zonal_raster_info = pygeoprocessing.get_raster_info(zonal_raster_path)
     target_pixel_size = zonal_raster_info['pixel_size']
     target_bounding_box = zonal_raster_info['bounding_box']
-    target_sr_wkt = zonal_raster_info['projection']
+    target_sr_wkt = zonal_raster_info['projection_wkt']
     pygeoprocessing.warp_raster(
         score_raster_path, target_pixel_size, clipped_score_raster_path,
         _RESAMPLE_METHOD, target_bb=target_bounding_box,

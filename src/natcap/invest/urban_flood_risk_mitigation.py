@@ -192,7 +192,7 @@ def execute(args):
         args['lulc_path'])
     target_pixel_size = lulc_raster_info['pixel_size']
     pixel_area = abs(target_pixel_size[0] * target_pixel_size[1])
-    target_sr_wkt = lulc_raster_info['projection']
+    target_sr_wkt = lulc_raster_info['projection_wkt']
 
     soil_raster_info = pygeoprocessing.get_raster_info(
         args['soils_hydrological_group_raster_path'])

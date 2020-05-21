@@ -354,7 +354,7 @@ def execute(args):
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
             'raster_align_index': 1,
-            'target_projection_wkt': lulc_raster_info['projection']},
+            'target_projection_wkt': lulc_raster_info['projection_wkt']},
         target_path_list=aligned_raster_path_list,
         task_name='align rasters')
 
@@ -536,7 +536,7 @@ def execute(args):
     intermediate_uhi_result_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
-            args['aoi_vector_path'], lulc_raster_info['projection'],
+            args['aoi_vector_path'], lulc_raster_info['projection_wkt'],
             intermediate_aoi_vector_path),
         kwargs={'driver_name': 'ESRI Shapefile'},
         target_path_list=[intermediate_aoi_vector_path],
@@ -609,7 +609,7 @@ def execute(args):
         intermediate_building_vector_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(
-                args['building_vector_path'], lulc_raster_info['projection'],
+                args['building_vector_path'], lulc_raster_info['projection_wkt'],
                 intermediate_building_vector_path),
             kwargs={'driver_name': 'ESRI Shapefile'},
             target_path_list=[intermediate_building_vector_path],

@@ -1675,7 +1675,7 @@ def _index_raster_value_to_point_vector(
     # vector points are in the same projection as raster
     raster_sr = osr.SpatialReference()
     raster_sr.ImportFromWkt(
-        pygeoprocessing.get_raster_info(base_raster_path)['projection'])
+        pygeoprocessing.get_raster_info(base_raster_path)['projection_wkt'])
     vector_sr = osr.SpatialReference()
     vector_sr.ImportFromWkt(
         pygeoprocessing.get_vector_info(target_point_vector_path)[

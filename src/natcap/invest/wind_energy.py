@@ -2052,7 +2052,7 @@ def _get_suitable_projection_params(
     aoi_vector_info = pygeoprocessing.get_vector_info(aoi_vector_path)
 
     base_raster_srs = osr.SpatialReference()
-    base_raster_srs.ImportFromWkt(base_raster_info['projection'])
+    base_raster_srs.ImportFromWkt(base_raster_info['projection_wkt'])
 
     if not base_raster_srs.IsProjected():
         wgs84_sr = osr.SpatialReference()
@@ -2062,7 +2062,7 @@ def _get_suitable_projection_params(
             wgs84_sr.ExportToWkt())
 
         base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
-            base_raster_info['bounding_box'], base_raster_info['projection'],
+            base_raster_info['bounding_box'], base_raster_info['projection_wkt'],
             wgs84_sr.ExportToWkt())
 
         target_bounding_box_wgs84 = pygeoprocessing.merge_bounding_box_list(
@@ -2095,7 +2095,7 @@ def _get_suitable_projection_params(
     else:
         # If the base raster is already projected, transform the bounding
         # box from base raster and aoi vector bounding boxes
-        target_sr_wkt = base_raster_info['projection']
+        target_sr_wkt = base_raster_info['projection_wkt']
 
         aoi_bounding_box = pygeoprocessing.transform_bounding_box(
             aoi_vector_info['bounding_box'], aoi_vector_info['projection'],
