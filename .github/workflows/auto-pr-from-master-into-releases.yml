@@ -51,7 +51,7 @@ jobs:
                   do
                       export RELEASE_BRANCH=$BRANCH  # needed for envsubst
                       PR_BODY_FILE=pr_body.txt
-                      cat ci/bugfix-release-pr-body.md | envsubst > $PR_BODY_FILE
+                      cat ci/master-release-pr-body.md | envsubst > $PR_BODY_FILE
                       cat $PR_BODY_FILE  # for debugging
 
                       # This PR will be assigned to $GITHUB_ACTOR, which should be
