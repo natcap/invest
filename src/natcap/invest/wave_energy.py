@@ -1438,7 +1438,7 @@ def _clip_vector_by_vector(base_vector_path, clip_vector_path,
     def reproject_vector(base_vector_path, target_sr_wkt, temp_work_dir):
         """Reproject the vector to target projection."""
         base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
-            'projection']
+            'projection_wkt']
 
         if base_sr_wkt != target_sr_wkt:
             LOGGER.info(
@@ -1679,7 +1679,7 @@ def _index_raster_value_to_point_vector(
     vector_sr = osr.SpatialReference()
     vector_sr.ImportFromWkt(
         pygeoprocessing.get_vector_info(target_point_vector_path)[
-            'projection'])
+            'projection_wkt'])
     vector_coord_trans = osr.CoordinateTransformation(vector_sr, raster_sr)
 
     # Initialize an R-Tree indexing object with point geom from base_vector

@@ -513,7 +513,7 @@ def _add_zonal_stats(
         flood_vol_stats = pickle.load(flood_vol_pickle_file)
 
     base_sr_wkt = pygeoprocessing.get_vector_info(
-        base_watershed_result_vector_path)['projection']
+        base_watershed_result_vector_path)['projection_wkt']
     base_watershed_vector = gdal.OpenEx(
         base_watershed_result_vector_path, gdal.OF_VECTOR)
     base_watershed_layer = base_watershed_vector.GetLayer()

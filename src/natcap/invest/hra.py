@@ -280,7 +280,7 @@ def execute(args):
     # Get target projection from the AOI vector file
     if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
         target_sr_wkt = pygeoprocessing.get_vector_info(
-            args['aoi_vector_path'])['projection']
+            args['aoi_vector_path'])['projection_wkt']
         target_sr = osr.SpatialReference()
         if target_sr_wkt:
             target_sr.ImportFromWkt(target_sr_wkt)
