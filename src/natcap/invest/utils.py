@@ -32,6 +32,14 @@ GDAL_ERROR_LEVELS = {
     gdal.CE_Fatal: logging.CRITICAL,
 }
 
+# In GDAL 3.0 spatial references no longer ignore Geographic CRS Axis Order
+# and conform to Lat first, Lon Second. Transforms expect (lat, lon) order
+# as opposed to the GIS friendly (lon, lat). See
+# https://trac.osgeo.org/gdal/wiki/rfc73_proj6_wkt2_srsbarn Axis order
+# issues. SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER) swaps the
+# axis order, which will use Lon,Lat order for Geographic CRS, but otherwise
+# leaves Projected CRS alone
+DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
 @contextlib.contextmanager
 def capture_gdal_logging():
@@ -41,7 +49,7 @@ def capture_gdal_logging():
     that corresponds to a log level in ``logging``.  Error messages are logged
     with the ``osgeo.gdal`` logger.
 
-    Parameters:
+    Args:
         ``None``
 
     Returns:
@@ -54,7 +62,7 @@ def capture_gdal_logging():
         All error messages are logged with reasonable ``logging`` levels based
         on the GDAL error level.
 
-        Parameters:
+        Args:
             err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
             err_no (int): The GDAL error number.  For a full listing of error
                 codes, see: http://www.gdal.org/cpl__error_8h.html
@@ -127,7 +135,7 @@ class ThreadFilter(logging.Filter):
     def __init__(self, thread_name):
         """Construct a ThreadFilter.
 
-        Parameters:
+        Args:
             thread_name (string): The thread name to filter on.
 
         """
@@ -137,7 +145,7 @@ class ThreadFilter(logging.Filter):
     def filter(self, record):
         """Filter the given log record.
 
-        Parameters:
+        Args:
             record (log record): The log record to filter.
 
         Returns:
@@ -152,7 +160,7 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
                 log_fmt=LOG_FMT, date_fmt=None):
     """Log all messages within this context to a file.
 
-    Parameters:
+    Args:
         logfile (string): The path to where the logfile will be written.
             If there is already a file at this location, it will be
             overwritten.
@@ -215,7 +223,7 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
     When the context manager exits, the created temporary directory is
     recursively removed.
 
-    Parameters:
+    Args:
         suffix='' (string): a suffix for the name of the directory.
         prefix='tmp' (string): the prefix to use for the directory name.
         dir=None (string or None): If a string, a directory that should be
@@ -246,7 +254,7 @@ def make_suffix_string(args, suffix_key):
     suffix key.  In general, prepends an '_' when necessary and generates an
     empty string when necessary.
 
-    Parameters:
+    Args:
         args (dict): the classic InVEST model parameter dictionary that is
             passed to `execute`.
         suffix_key (string): the key used to index the base suffix.
@@ -272,7 +280,7 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
 
     The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
 
-    Parameters:
+    Args:
         expected_distance (int or float): The distance (in pixels) of the
             kernel's radius, the distance at which the value of the decay
             function is equal to `1/e`.
@@ -366,7 +374,7 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
 def build_file_registry(base_file_path_list, file_suffix):
     """Combine file suffixes with key names, base filenames, and directories.
 
-    Parameters:
+    Args:
         base_file_tuple_list (list): a list of (dict, path) tuples where
             the dictionaries have a 'file_key': 'basefilename' pair, or
             'file_key': list of 'basefilename's.  'path'
@@ -439,7 +447,7 @@ def build_lookup_from_csv(
     indexed by the other columns in `table_path` including `key_field` whose
     values are the values on that row of the CSV table.
 
-    Parameters:
+    Args:
         table_path (string): path to a CSV file containing at
             least the header key_field
         key_field: (string): a column in the CSV file at `table_path` that
@@ -539,3 +547,29 @@ def mean_pixel_size_and_area(pixel_size_tuple):
                 pixel_size_tuple))
 
     return (x_size, x_size*y_size)
+
+
+def create_coordinate_transformer(
+    base_ref, target_ref, 
+    osr_axis_mapping_strategy=DEFAULT_OSR_AXIS_MAPPING_STRATEGY):
+    """Create a spatial reference coordinate transformation function.
+
+    Args:
+        base_ref (osr spatial reference): A defined spatial reference to 
+            transform FROM
+        target_ref (osr spatial reference): A defined spatial reference 
+            to transform TO
+        osr_axis_mapping_strategy (int): OSR axis mapping strategy for 
+            ``SpatialReference`` objects. Defaults to
+            ``utils.DEFAULT_OSR_AXIS_MAPPING_STRATEGY``. This parameter shoulc
+            not be changed unless you know what you are doing.
+
+    Returns:
+        An OSR Coordinate Transformation object
+
+    """
+    base_ref.SetAxisMappingStrategy(osr_axis_mapping_strategy) 
+    target_ref.SetAxisMappingStrategy(osr_axis_mapping_strategy) 
+
+    transformer = osr.CreateCoordinateTransformation(base_ref, target_ref)
+    return transformer

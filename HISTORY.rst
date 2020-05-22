@@ -1,4 +1,12 @@
 .. :changelog:
+Unreleased Changes (3.9)
+------------------------
+* Migrating over to GDAL 3 from GDAL 2.
+* Updating requirements to reflect GDAL version >= 3.
+* Updating crop production tests that varied slightly due to GDAL 3 
+  differences in handling spatial references.
+* Adding function in utils.py to handle InVEST coordindate transformations.
+* Adding tests for new coordinate transformation function in utils.py.
 
 
 Unreleased Changes

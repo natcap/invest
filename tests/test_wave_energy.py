@@ -12,6 +12,7 @@ from osgeo import osr, ogr
 from shapely.geometry import Polygon
 from shapely.geometry import Point
 
+from natcap.invest import utils
 import pygeoprocessing.testing
 from pygeoprocessing.testing import sampledata
 
@@ -112,7 +113,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         # A coordinate transformation to help get the proper pixel size of
         # the reprojected raster
-        coord_trans = osr.CoordinateTransformation(raster_sr, spat_ref)
+        coord_trans = utils.create_coordinate_transformer(raster_sr, spat_ref)
         # Call the function to test
         result = wave_energy._pixel_size_based_on_coordinate_transform(
             raster_path, coord_trans, point)

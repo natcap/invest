@@ -465,8 +465,10 @@ def execute(args):
 
         # Get the size of the pixels in meters, to be used for creating
         # projected wave power and wave energy capacity rasters
-        coord_trans, coord_trans_opposite = _get_coordinate_transformation(
+        coord_trans = utils.create_coordinate_transformer(
             analysis_area_sr, aoi_sr)
+        coord_trans_opposite = utils.create_coordinate_transformer(
+                aoi_sr, analysis_area_sr)
         target_pixel_size = _pixel_size_helper(wave_vector_path, coord_trans,
                                                coord_trans_opposite, dem_path)
 
@@ -1004,7 +1006,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     target_sr.ImportFromWkt(target_sr_wkt)
     # Get coordinate transformation from base spatial reference to target,
     # in order to transform wave points to target_sr
-    coord_trans, _ = _get_coordinate_transformation(base_sr, target_sr)
+    coord_trans = utils.create_coordinate_transformer(base_sr, target_sr)
 
     LOGGER.info('Creating new vector')
     output_driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
@@ -1239,26 +1241,6 @@ def _get_vector_spatial_ref(base_vector_path):
     layer = None
     vector = None
     return spat_ref
-
-
-def _get_coordinate_transformation(source_sr, target_sr):
-    """Create coordinate transformations between two spatial references.
-
-    One transformation is from source to target, and the other from target to
-    source.
-
-    Parameters:
-        source_sr (osr.SpatialReference): A spatial reference
-        target_sr (osr.SpatialReference): A spatial reference
-
-    Returns:
-        A tuple: coord_trans (source to target) and coord_trans_opposite
-            (target to source)
-
-    """
-    coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-    coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
-    return (coord_trans, coord_trans_opposite)
 
 
 def _create_percentile_rasters(base_raster_path, target_raster_path,
@@ -1680,7 +1662,7 @@ def _index_raster_value_to_point_vector(
     vector_sr.ImportFromWkt(
         pygeoprocessing.get_vector_info(target_point_vector_path)[
             'projection_wkt'])
-    vector_coord_trans = osr.CoordinateTransformation(vector_sr, raster_sr)
+    vector_coord_trans = utils.create_coordinate_transformer(vector_sr, raster_sr)
 
     # Initialize an R-Tree indexing object with point geom from base_vector
     def generator_function():
