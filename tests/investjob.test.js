@@ -100,6 +100,21 @@ test('Clicking a recent session renders SetupTab', async () => {
   });
 })
 
+test('Loading a recent session when the invest logfile is missing', async () => {
+  /* We should get an alert saying nothing can be loaded. */
+  const spy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+  fetchDatastackFromFile.mockResolvedValue(undefined)
+
+  const { getByText, getByLabelText, utils } = renderInvestJob()
+
+  const recent = getByText('carbon_setup');
+  fireEvent.click(recent);  // a recent session button
+  await waitFor(() => {
+    expect(spy).toHaveBeenCalledTimes(1)
+  });
+  spy.mockRestore()
+})
+
 test('LoadParameters: Dialog callback renders SetupTab', async () => {
   const mockDialogData = {
     filePaths: ['foo.json']

@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
@@ -138,17 +137,21 @@ export class InvestJob extends React.Component {
     if (fs.existsSync(sessionFilename)) {
       const loadedState = JSON.parse(fs.readFileSync(sessionFilename, 'utf8'));
       
-      // Right now we saveState is only called w/in investExecute and only
+      // Right now saveState is only called w/in investExecute and only
       // after invest has created a logfile, which means an invest logfile
       // should always exist and can be used to get args values and initialize SetupTab.
       const datastack = await fetchDatastackFromFile(
         { datastack_path: loadedState.logfile })
-      loadedState['argsInitDict'] = datastack['args']
-      Object.assign(loadedState, {setupKey: changeSetupKey(this.state.setupKey)})
-      this.setState(loadedState,
-        () => {
-          this.switchTabs(loadedState.sessionProgress);
-        });
+      if (datastack) {
+        loadedState['argsInitDict'] = datastack['args']
+        Object.assign(loadedState, {setupKey: changeSetupKey(this.state.setupKey)})
+        this.setState(loadedState,
+          () => {
+            this.switchTabs(loadedState.sessionProgress);
+          });
+      } else {
+        alert('Cannot load this session because data is missing')
+      }
     } else {
       console.log('state file not found: ' + sessionFilename);
     }
