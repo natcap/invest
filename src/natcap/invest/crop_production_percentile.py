@@ -252,7 +252,7 @@ def execute(args):
     wgs84srs.ImportFromEPSG(4326)  # EPSG4326 is WGS84 lat/lng
     landcover_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
         landcover_raster_info['bounding_box'],
-        landcover_raster_info['projection'], wgs84srs.ExportToWkt(),
+        landcover_raster_info['projection_wkt'], wgs84srs.ExportToWkt(),
         edge_samples=11)
 
     # Initialize a TaskGraph
@@ -340,7 +340,7 @@ def execute(args):
                 args=(coarse_yield_percentile_raster_path,
                       landcover_raster_info['pixel_size'],
                       interpolated_yield_percentile_raster_path, 'cubicspline'),
-                kwargs={'target_sr_wkt': landcover_raster_info['projection'],
+                kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
                         'target_bb': landcover_raster_info['bounding_box']},
                 target_path_list=[interpolated_yield_percentile_raster_path],
                 dependent_task_list=[create_coarse_yield_percentile_task],
@@ -421,7 +421,7 @@ def execute(args):
             args=(zeroed_observed_yield_raster_path,
                   landcover_raster_info['pixel_size'],
                   interpolated_observed_yield_raster_path, 'cubicspline'),
-            kwargs={'target_sr_wkt': landcover_raster_info['projection'],
+            kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
                     'target_bb': landcover_raster_info['bounding_box']},
             target_path_list=[interpolated_observed_yield_raster_path],
             dependent_task_list=[nodata_to_zero_for_observed_yield_task],
@@ -474,7 +474,7 @@ def execute(args):
             func=aggregate_to_polygons,
             args=(args['aggregate_polygon_path'],
                   target_aggregate_vector_path,
-                  landcover_raster_info['projection'],
+                  landcover_raster_info['projection_wkt'],
                   crop_to_landcover_table, nutrient_table,
                   yield_percentile_headers, output_dir, file_suffix,
                   aggregate_results_table_path),
