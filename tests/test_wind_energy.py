@@ -432,9 +432,11 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
 
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', raster_path),
+            model_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'nodistances', raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array)
 
         vector_path = 'wind_energy_points.shp'
 
@@ -479,10 +481,11 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
 
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path),
-                1E-6)
+            model_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array)
 
         vector_path = 'wind_energy_points.shp'
 
@@ -521,10 +524,13 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
 
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path),
-                1E-4)  # loosened tolerance to pass against GDAL 2.2.4 and 2.4.1
+            model_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path))
+            # loosened tolerance to pass against GDAL 2.2.4 and 2.4.1
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=1e-04)
 
         vector_path = 'wind_energy_points.shp'
         WindEnergyRegressionTests._assert_vectors_equal(
@@ -561,10 +567,11 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
 
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'priceval', raster_path),
-                1E-6)
+            model_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, 'priceval', raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array)
 
         vector_path = 'wind_energy_points.shp'
         WindEnergyRegressionTests._assert_vectors_equal(
@@ -599,8 +606,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # creating a stand in turbine parameter csv file that is missing
         # a biophysical field / value. This should raise the exception
-        tmp, file_path = tempfile.mkstemp(suffix='.csv',
-                                          dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(
+            suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
@@ -649,8 +656,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # creating a stand in global wind params table that has a different
         # 'time' value than what is given in the wind schedule table.
         # This should raise the exception
-        tmp, file_path = tempfile.mkstemp(suffix='.csv',
-                                          dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(
+            suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'air_density': 1.225, 'exponent_power_curve': 2,
@@ -704,8 +711,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # creating a stand in turbine parameter csv file that is missing
         # a valuation field / value. This should raise the exception
-        tmp, file_path = tempfile.mkstemp(suffix='.csv',
-                                          dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(
+            suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
