@@ -11,11 +11,11 @@ import re
 import glob
 import textwrap
 
-from pygeoprocessing.testing import scm
-import pygeoprocessing.testing
+import numpy
 from osgeo import gdal
 from osgeo import osr
 
+import pygeoprocessing
 
 class SuffixUtilsTests(unittest.TestCase):
     """Tests for natcap.invest.utils.make_suffix_string."""
@@ -188,7 +188,6 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(_REGRESSION_PATH)
     def test_exp_decay_kernel_raster(self):
         """Utils: test exponential_decay_kernel_raster."""
         from natcap.invest import utils
@@ -197,10 +196,13 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
         utils.exponential_decay_kernel_raster(
             expected_distance, kernel_filepath)
 
-        pygeoprocessing.testing.assert_rasters_equal(
+        model_array = pygeoprocessing.raster_to_numpy_array(
+            kernel_filepath)
+        reg_array = pygeoprocessing.raster_to_numpy_array(
             os.path.join(
                 ExponentialDecayUtilsTests._REGRESSION_PATH,
-                'kernel_100.tif'), kernel_filepath, abs_tol=1e-6)
+                'kernel_100.tif'))
+        numpy.testing.assert_allclose(model_array, reg_array)
 
 
 class SandboxTempdirTests(unittest.TestCase):
