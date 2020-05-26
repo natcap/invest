@@ -5,7 +5,6 @@ import shutil
 import os
 
 import pandas
-import pygeoprocessing.testing
 
 TEST_DATA_DIR = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -87,11 +86,11 @@ class ScenarioProximityTests(unittest.TestCase):
                 TEST_DATA_DIR, 'expected_file_list_farthest.txt'),
             args['workspace_dir'])
 
-        pygeoprocessing.testing.assertions.assert_csv_equal(
-            os.path.join(self.workspace_dir, 'farthest_from_edge.csv'),
-            os.path.join(
-                TEST_DATA_DIR, 'farthest_from_edge_farthest.csv'),
-            rel_tol=1e-6)
+        model_df = pandas.read_csv(     
+            os.path.join(self.workspace_dir, 'farthest_from_edge.csv'))
+        reg_df = pandas.read_csv( 
+            os.path.join(TEST_DATA_DIR, 'farthest_from_edge_farthest.csv'))
+        pandas.testing.assert_frame_equal(model_df, reg_df)
 
     def test_scenario_gen_no_scenario(self):
         """Scenario Gen Proximity: no scenario should raise an exception."""

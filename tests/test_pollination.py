@@ -5,9 +5,9 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import sampledata
+import pygeoprocessing
 from osgeo import ogr
+from osgeo import osr
 import shapely.geometry
 
 REGRESSION_DATA = os.path.join(
@@ -315,17 +315,20 @@ class PollinationTests(unittest.TestCase):
 
         farm_shape_path = os.path.join(self.workspace_dir, 'point_farm.shp')
         # Create the point shapefile
-        srs = sampledata.SRS_WILLAMETTE
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        
         fields = {
-            'crop_type': 'string',
-            'half_sat': 'real',
-            'p_managed': 'real'}
+            'crop_type': ogr.OFTString,
+            'half_sat': ogr.OFTReal,
+            'p_managed': ogr.OFTReal}
         attrs = [
             {'crop_type': 'test', 'half_sat': 0.5, 'p_managed': 0.5}]
 
-        pygeoprocessing.testing.create_vector_on_disk(
-            point_geom, srs.projection, fields, attrs,
-            vector_format='ESRI Shapefile', filename=farm_shape_path)
+        pygeoprocessing.shapely_geometry_to_vector(
+            point_geom, farm_shape_path, projection_wkt, 'ESRI Shapefile', 
+            fields=fields, attribute_list=attrs, ogr_geom_type=ogr.wkbPoint)
 
         args = {
             'results_suffix': '',

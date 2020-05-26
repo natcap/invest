@@ -540,11 +540,11 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             AssertionError when the two point geometries are not equal up to
             desired precision (default is 6).
         """
-        a_shape = ogr.Open(a_path)
+        a_shape = gdal.OpenEx(a_vector_path, gdal.OF_VECTOR)
         a_layer = a_shape.GetLayer(0)
         a_feat = a_layer.GetNextFeature()
 
-        b_shape = ogr.Open(b_path)
+        b_shape = gdal.OpenEx(b_vector_path, gdal.OF_VECTOR)
         b_layer = b_shape.GetLayer(0)
         b_feat = b_layer.GetNextFeature()
 

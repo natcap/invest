@@ -14,8 +14,6 @@ import json
 import queue
 
 import Pyro4
-import pygeoprocessing
-import pygeoprocessing.testing
 import numpy
 import pandas
 from osgeo import gdal
@@ -260,9 +258,9 @@ class TestRecServer(unittest.TestCase):
             self.workspace_dir, workspace_id + '.zip')
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(
             out_workspace_dir)
-        pygeoprocessing.testing.assert_vectors_equal(
+        _assert_vector_attributes_eq(
             aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1E-6)
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
     @_timeout(30.0)
     def test_empty_server(self):
@@ -354,8 +352,7 @@ class TestRecServer(unittest.TestCase):
             self.workspace_dir, out_vector_filename)
         expected_vector_path = os.path.join(
             REGRESSION_DATA, 'test_aoi_for_subset_pud.shp')
-        pygeoprocessing.testing.assert_vectors_equal(
-            expected_vector_path, result_vector_path, 1E-6)
+        _assert_vector_attributes_eq(expected_vector_path, result_vector_path)
 
         # ensure the remote workspace is as expected
         workspace_zip_binary = recreation_server.fetch_workspace_aoi(
@@ -365,9 +362,9 @@ class TestRecServer(unittest.TestCase):
         workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
         open(workspace_zip_path, 'wb').write(workspace_zip_binary)
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
-        pygeoprocessing.testing.assert_vectors_equal(
+        _assert_vector_attributes_eq(
             aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1E-6)
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
     def test_local_calc_poly_pud(self):
         """Recreation test single threaded local PUD calculation."""
@@ -844,8 +841,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'square_grid_vector_path.shp')
 
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 1E-6)
+        _assert_vector_attributes_eq(out_grid_vector_path, expected_grid_vector_path)
 
     def test_hex_grid_regression(self):
         """Recreation hex grid regression test."""
@@ -861,8 +857,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 1E-6)
+        _assert_vector_attributes_eq(out_grid_vector_path, expected_grid_vector_path)
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_no_grid_regression(self):
@@ -927,8 +922,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 1E-6)
+        _assert_vector_attributes_eq(out_grid_vector_path, expected_grid_vector_path)
 
     def test_existing_regression_coef(self):
         """Recreation test regression coefficients handle existing output."""
