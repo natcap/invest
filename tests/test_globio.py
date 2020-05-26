@@ -4,7 +4,7 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
+import pygeoprocessing
 from osgeo import ogr
 from osgeo import gdal
 import numpy
@@ -64,9 +64,11 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'expected_file_list_lulc.txt'),
             args['workspace_dir'])
 
-        pygeoprocessing.testing.assert_rasters_equal(
-            os.path.join(args['workspace_dir'], 'msa.tif'),
-            os.path.join(REGRESSION_DATA, 'msa_lulc_regression.tif'), 1e-6)
+        model_array = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(args['workspace_dir'], 'msa.tif'))
+        reg_array = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(REGRESSION_DATA, 'msa_lulc_regression.tif'))
+        numpy.testing.assert_allclose(model_array, reg_array)
 
     def test_globio_empty_infra(self):
         """GLOBIO: testing that empty infra directory raises exception."""
@@ -111,10 +113,11 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'expected_file_list_lulc.txt'),
             args['workspace_dir'])
 
-        pygeoprocessing.testing.assert_rasters_equal(
-            os.path.join(args['workspace_dir'], 'msa.tif'),
-            os.path.join(REGRESSION_DATA, 'msa_shape_infra_regression.tif'),
-            1e-6)
+        model_array = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(args['workspace_dir'], 'msa.tif'))
+        reg_array = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(REGRESSION_DATA, 'msa_shape_infra_regression.tif'))
+        numpy.testing.assert_allclose(model_array, reg_array)
 
     def test_globio_full(self):
         """GLOBIO: regression testing all functionality (mode a)."""

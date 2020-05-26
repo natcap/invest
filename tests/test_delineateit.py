@@ -11,7 +11,7 @@ import numpy
 from osgeo import osr
 from osgeo import ogr
 from osgeo import gdal
-import pygeoprocessing.testing
+import pygeoprocessing
 
 
 REGRESSION_DATA = os.path.join(
@@ -142,13 +142,9 @@ class DelineateItTests(unittest.TestCase):
              [0, 1, 0, 0, 0, 0],
              [0, 1, 0, 0, 0, 0]], dtype=numpy.int8)
         stream_raster_path = os.path.join(self.workspace_dir, 'streams.tif')
-        pygeoprocessing.testing.create_raster_on_disk(
-            [stream_matrix],
-            origin=(2, -2),
-            pixel_size=(2, -2),
-            projection_wkt=wkt,
-            nodata=255,  # byte datatype
-            filename=stream_raster_path)
+        # byte datatype
+        pygeoprocessing.numpy_array_to_raster(
+            stream_matrix, 255, (2, -2), (2, -2), wkt, stream_raster_path)
 
         source_points_path = os.path.join(self.workspace_dir,
                                           'source_features.geojson')
@@ -159,17 +155,15 @@ class DelineateItTests(unittest.TestCase):
             Point(13, -5),
             box(-2, -2, -1, -1),  # Off the edge
         ]
-        pygeoprocessing.testing.create_vector_on_disk(
-            source_features, wkt,
-            fields={'foo': 'int',
-                    'bar': 'string'},
-            attributes=[
-                {'foo': 0, 'bar': 0.1},
-                {'foo': 1, 'bar': 1.1},
-                {'foo': 2, 'bar': 2.1},
-                {'foo': 3, 'bar': 3.1},
-                {'foo': 4, 'bar': 4.1}],
-            filename=source_points_path)
+        fields={'foo': ogr.OFTInteger, 'bar': ogr.OFTString}
+        attributes=[
+            {'foo': 0, 'bar': 0.1}, {'foo': 1, 'bar': 1.1},
+            {'foo': 2, 'bar': 2.1}, {'foo': 3, 'bar': 3.1},
+            {'foo': 4, 'bar': 4.1}]
+        pygeoprocessing.shapely_geometry_to_vector(
+            source_features, source_points_path, wkt, 'GeoJSON', 
+            fields=fields, attribute_list=attributes, 
+            ogr_geom_type=ogr.wkbUnknown)
 
         snapped_points_path = os.path.join(self.workspace_dir,
                                            'snapped_points.gpkg')
@@ -249,6 +243,7 @@ class DelineateItTests(unittest.TestCase):
         from natcap.invest import delineateit
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
+        projection_wkt = srs.ExportToWkt()
 
         dem_matrix = numpy.array(
             [[0, 1, 0, 0, 0, 0],
@@ -259,13 +254,10 @@ class DelineateItTests(unittest.TestCase):
              [0, 1, 0, 0, 0, 0],
              [0, 1, 0, 0, 0, 0]], dtype=numpy.int8)
         dem_raster_path = os.path.join(self.workspace_dir, 'dem.tif')
-        pygeoprocessing.testing.create_raster_on_disk(
-            [dem_matrix],
-            origin=(2, -2),
-            pixel_size=(2, -2),
-            projection_wkt=srs.ExportToWkt(),
-            nodata=255,  # byte datatype
-            filename=dem_raster_path)
+        # byte datatype
+        pygeoprocessing.numpy_array_to_raster(
+            dem_matrix, 255, (2, -2), (2, -2), projection_wkt, 
+            dem_raster_path)
 
         # empty geometry
         invalid_geometry = ogr.CreateGeometryFromWkt('POLYGON EMPTY')
@@ -318,7 +310,7 @@ class DelineateItTests(unittest.TestCase):
             outflow_layer.CreateFeature(outflow_feature)
         outflow_layer.CommitTransaction()
 
-        self.assertEquals(outflow_layer.GetFeatureCount(), 6)
+        self.assertEqual(outflow_layer.GetFeatureCount(), 6)
         outflow_layer = None
         outflow_vector = None
 

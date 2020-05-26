@@ -5,11 +5,59 @@ import shutil
 import json
 import tarfile
 import textwrap
+import filecmp
 
-import pygeoprocessing.testing
+import numpy
+import pandas
+import pygeoprocessing
 from osgeo import ogr
+from osgeo import gdal
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         '..', 'data', 'invest-test-data', 'data_stack')
+
+
+def _assert_vectors_equal(
+        actual_vector_path, expected_vector_path, tolerance_places=3):
+    """Assert fieldnames and values are equal with no respect to order."""
+    try:
+        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
+        actual_layer = actual_vector.GetLayer()
+        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
+        expected_layer = expected_vector.GetLayer()
+
+        assert(
+            actual_layer.GetFeatureCount() == expected_layer.GetFeatureCount())
+
+        field_names = [field.name for field in expected_layer.schema]
+        for feature in expected_layer:
+            fid = feature.GetFID()
+            expected_values = [
+                feature.GetField(field) for field in field_names]
+
+            actual_feature = actual_layer.GetFeature(fid)
+            actual_values = [
+                actual_feature.GetField(field) for field in field_names]
+
+            for av, ev in zip(actual_values, expected_values):
+                if av is not None:
+                    numpy.testing.assert_almost_equal(
+                        av, ev, decimal=tolerance_places)
+                else:
+                    assert(ev is None)
+            
+            expected_geom = feature.GetGeometryRef()
+            expected_geom_wkt = expected_geom.ExportToWkt()
+            actual_geom = feature.GetGeometryRef()
+            actual_geom_wkt = actual_geom.ExportToWkt()
+            assert(expected_geom_wkt == actual_geom_wkt)
+           
+            feature = None
+            actual_feature = None
+    finally:
+        actual_layer = None
+        actual_vector = None
+        expected_layer = None
+        expected_vector = None
 
 
 class DatastacksTest(unittest.TestCase):
@@ -65,9 +113,10 @@ class DatastacksTest(unittest.TestCase):
                               datastack.DATASTACK_PARAMETER_FILENAME)))['args']
 
         self.assertEqual(len(archived_params), 1)
-        pygeoprocessing.testing.assert_rasters_equal(
-            params['raster'], os.path.join(out_directory,
-                                           archived_params['raster']))
+        model_array = pygeoprocessing.raster_to_numpy_array(params['raster'])
+        reg_array = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(out_directory, archived_params['raster']))
+        numpy.testing.assert_allclose(model_array, reg_array)
 
     def test_collect_geotiff(self):
         # Necessary test, as this is proving to be an issue.
@@ -81,9 +130,10 @@ class DatastacksTest(unittest.TestCase):
         dest_dir = os.path.join(self.workspace, 'extracted_archive')
         archived_params = datastack.extract_datastack_archive(archive_path,
                                                               dest_dir)
-        pygeoprocessing.testing.assert_rasters_equal(
-            params['raster'],
+        model_array = pygeoprocessing.raster_to_numpy_array(params['raster'])
+        reg_array = pygeoprocessing.raster_to_numpy_array(
             os.path.join(dest_dir, 'data', archived_params['raster']))
+        numpy.testing.assert_allclose(model_array, reg_array)
 
     def test_collect_ogr_vector(self):
         from natcap.invest import datastack
@@ -118,11 +168,9 @@ class DatastacksTest(unittest.TestCase):
                 open(os.path.join(
                     out_directory,
                     datastack.DATASTACK_PARAMETER_FILENAME)))['args']
-            pygeoprocessing.testing.assert_vectors_equal(
-                params['vector'], os.path.join(out_directory,
-                                               archived_params['vector']),
-                field_tolerance=1e-6,
-            )
+            _assert_vectors_equal(
+                params['vector'], 
+                os.path.join(out_directory, archived_params['vector']))
 
             self.assertEqual(len(archived_params), 1)  # sanity check
 
@@ -145,10 +193,10 @@ class DatastacksTest(unittest.TestCase):
             open(os.path.join(
                 out_directory,
                 datastack.DATASTACK_PARAMETER_FILENAME)))['args']
-        pygeoprocessing.testing.assert_csv_equal(
-            params['table'], os.path.join(out_directory,
-                                          archived_params['table'])
-        )
+        model_df = pandas.read_csv(params['table']) 
+        reg_df = pandas.read_csv( 
+            os.path.join(out_directory, archived_params['table']))
+        pandas.testing.assert_frame_equal(model_df, reg_df)
 
         self.assertEqual(len(archived_params), 1)  # sanity check
 
@@ -173,10 +221,10 @@ class DatastacksTest(unittest.TestCase):
         archived_params = json.load(
             open(os.path.join(out_directory,
                               datastack.DATASTACK_PARAMETER_FILENAME)))['args']
-        pygeoprocessing.testing.assert_text_equal(
-            params['some_file'], os.path.join(out_directory,
-                                              archived_params['some_file'])
-        )
+        self.assertTrue(filecmp.cmp(
+            params['some_file'], 
+            os.path.join(out_directory, archived_params['some_file']), 
+            shallow=False))
 
         self.assertEqual(len(archived_params), 1)  # sanity check
 
@@ -197,9 +245,6 @@ class DatastacksTest(unittest.TestCase):
         with open(os.path.join(nested_folder, 'nested.txt'), 'w') as textfile:
             textfile.write('hello, world!')
 
-        src_datadir_digest = pygeoprocessing.testing.digest_folder(
-            params['data_dir'])
-
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
         datastack.build_datastack_archive(params, 'sample_model', archive_path)
@@ -212,13 +257,16 @@ class DatastacksTest(unittest.TestCase):
         archived_params = json.load(
             open(os.path.join(out_directory,
                               datastack.DATASTACK_PARAMETER_FILENAME)))['args']
-        dest_datadir_digest = pygeoprocessing.testing.digest_folder(
-            os.path.join(out_directory, archived_params['data_dir']))
 
         self.assertEqual(len(archived_params), 1)  # sanity check
-        if src_datadir_digest != dest_datadir_digest:
-            self.fail('Digest mismatch: src:%s != dest:%s' % (
-                src_datadir_digest, dest_datadir_digest))
+        common_files = ['foo.txt', 'bar.txt', 'baz.txt', 'nested/nested.txt']
+        matched_files, mismatch_files, error_files = filecmp.cmpfiles(
+            params['data_dir'], 
+            os.path.join(out_directory, archived_params['data_dir']),
+            common_files, shallow=False)
+        if mismatch_files or error_files:
+            self.fail('Directory mismatch or error. The mismatches are'
+                      f' {mismatch_files} ; and the errors are {error_files}')
 
     def test_list_of_inputs(self):
         from natcap.invest import datastack
@@ -232,9 +280,6 @@ class DatastacksTest(unittest.TestCase):
             with open(filename, 'w') as textfile:
                 textfile.write(filename)
 
-        src_digest = pygeoprocessing.testing.digest_file_list(
-            params['file_list'])
-
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
         datastack.build_datastack_archive(params, 'sample_model', archive_path)
@@ -247,14 +292,14 @@ class DatastacksTest(unittest.TestCase):
         archived_params = json.load(
             open(os.path.join(out_directory,
                               datastack.DATASTACK_PARAMETER_FILENAME)))['args']
-        dest_digest = pygeoprocessing.testing.digest_file_list(
-            [os.path.join(out_directory, filename)
-             for filename in archived_params['file_list']])
+        archived_file_list =  [
+            os.path.join(out_directory, filename) for filename in archived_params['file_list']]
 
         self.assertEqual(len(archived_params), 1)  # sanity check
-        if src_digest != dest_digest:
-            self.fail('Digest mismatch: src:%s != dest:%s' % (
-                src_digest, dest_digest))
+        for expected_file, archive_file in zip(
+                params['file_list'], archived_file_list):
+            if not filecmp.cmp(expected_file, archive_file, shallow=False):
+                self.fail(f'File mismatch: {expected_file} != {archive_file}')
 
     def test_duplicate_filepaths(self):
         from natcap.invest import datastack
@@ -327,25 +372,28 @@ class DatastacksTest(unittest.TestCase):
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         archive_params = datastack.extract_datastack_archive(
             archive_path, out_directory)
-        pygeoprocessing.testing.assert_rasters_equal(
-            archive_params['raster'], params['raster'])
-        pygeoprocessing.testing.assert_vectors_equal(
-            archive_params['vector'], params['vector'], field_tolerance=1e-6)
-        pygeoprocessing.testing.assert_csv_equal(
-            archive_params['table'], params['table'])
+        model_array = pygeoprocessing.raster_to_numpy_array(
+            archive_params['raster'])
+        reg_array = pygeoprocessing.raster_to_numpy_array(params['raster'])
+        numpy.testing.assert_allclose(model_array, reg_array)
+        _assert_vectors_equal(
+            archive_params['vector'], params['vector'])
+        model_df = pandas.read_csv(archive_params['table']) 
+        reg_df = pandas.read_csv(params['table'])
+        pandas.testing.assert_frame_equal(model_df, reg_df)
         for key in ('blank', 'a', 'b', 'c'):
             self.assertEqual(archive_params[key],
                              params[key],
-                             'Params differ for key %s' % key)
+                             f'Params differ for key {key}')
 
         for key in ('foo', 'bar'):
-            pygeoprocessing.testing.assert_text_equal(
-                archive_params[key], params[key])
+            self.assertTrue(
+                filecmp.cmp(archive_params[key], params[key], shallow=False))
 
-        self.assertEqual(
-            pygeoprocessing.testing.digest_file_list(
-                archive_params['file_list']),
-            pygeoprocessing.testing.digest_file_list(params['file_list']))
+        for expected_file, archive_file in zip(
+                params['file_list'], archive_params['file_list']):
+            self.assertTrue(
+                filecmp.cmp(expected_file, archive_file, shallow=False))
 
     def test_nested_args_keys(self):
         from natcap.invest import datastack

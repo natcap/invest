@@ -4,7 +4,8 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
+import numpy
+from osgeo import gdal
 
 
 SAMPLE_DATA = os.path.join(
@@ -34,6 +35,48 @@ def _make_harvest_shp(workspace_dir):
     with open(os.path.join(output_path, 'Finfish_Harvest.shp'), 'wb') as shp:
         shp.write(b'')
 
+def _assert_vectors_equal(
+        actual_vector_path, expected_vector_path, tolerance_places=3):
+    """Assert fieldnames and values are equal with no respect to order."""
+    try:
+        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
+        actual_layer = actual_vector.GetLayer()
+        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
+        expected_layer = expected_vector.GetLayer()
+
+        assert(
+            actual_layer.GetFeatureCount() == expected_layer.GetFeatureCount())
+
+        field_names = [field.name for field in expected_layer.schema]
+        for feature in expected_layer:
+            fid = feature.GetFID()
+            expected_values = [
+                feature.GetField(field) for field in field_names]
+
+            actual_feature = actual_layer.GetFeature(fid)
+            actual_values = [
+                actual_feature.GetField(field) for field in field_names]
+
+            for av, ev in zip(actual_values, expected_values):
+                if av is not None:
+                    numpy.testing.assert_almost_equal(
+                        av, ev, decimal=tolerance_places)
+                else:
+                    assert(ev is None)
+            
+            expected_geom = feature.GetGeometryRef()
+            expected_geom_wkt = expected_geom.ExportToWkt()
+            actual_geom = feature.GetGeometryRef()
+            actual_geom_wkt = actual_geom.ExportToWkt()
+            assert(expected_geom_wkt == actual_geom_wkt)
+           
+            feature = None
+            actual_feature = None
+    finally:
+        actual_layer = None
+        actual_vector = None
+        expected_layer = None
+        expected_vector = None
 
 class FinfishTests(unittest.TestCase):
     """Tests for Finfish Aquaculture."""
@@ -83,9 +126,9 @@ class FinfishTests(unittest.TestCase):
         natcap.invest.finfish_aquaculture.finfish_aquaculture.execute(args)
         FinfishTests._test_same_files(
             EXPECTED_FILE_LIST, args['workspace_dir'])
-        pygeoprocessing.testing.assert_vectors_equal(
+        _assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest.shp'),
-            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'), 1E-6)
+            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'))
 
     def test_finfish_mc_no_valuation(self):
         """Finfish: run model with MC analysis and no valuation."""
@@ -99,9 +142,9 @@ class FinfishTests(unittest.TestCase):
 
         FinfishTests._test_same_files(
             EXPECTED_FILE_LIST, args['workspace_dir'])
-        pygeoprocessing.testing.assert_vectors_equal(
+        _assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest_no_valuation.shp'),
-            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'), 1E-6)
+            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'))
 
     @staticmethod
     def _test_same_files(base_path_list, directory_path):
