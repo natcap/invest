@@ -6,8 +6,8 @@ import re
 import unittest
 
 import numpy
+import pandas
 from osgeo import gdal, ogr, osr
-import pygeoprocessing.testing
 import pygeoprocessing
 from shapely.geometry import Point, LineString
 
@@ -196,13 +196,8 @@ def _make_raster_from_array(base_array, target_raster_path, projected=True):
         srs.ImportFromEPSG(EPSG_CODE)  # UTM Zone 10N, unit = meter
     project_wkt = srs.ExportToWkt()
 
-    pygeoprocessing.testing.create_raster_on_disk(
-        band_matrices=[base_array],
-        origin=ORIGIN,
-        projection_wkt=project_wkt,
-        nodata=-1,
-        pixel_size=(1, -1),
-        filename=target_raster_path)
+    pygeoprocessing.numpy_array_to_raster(
+        base_array, -1, (1, -1), ORIGIN, project_wkt, target_raster_path)
 
 
 def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
@@ -422,6 +417,50 @@ def _make_criteria_csv(
             table.write('"criteria 6",99999,2,2,3,2,2,E\n')
         else:
             table.write('"criteria 6",3,2,2,3,2,2,E\n')
+
+
+def _assert_vectors_equal(
+        actual_vector_path, expected_vector_path, tolerance_places=3):
+    """Assert fieldnames and values are equal with no respect to order."""
+    try:
+        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
+        actual_layer = actual_vector.GetLayer()
+        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
+        expected_layer = expected_vector.GetLayer()
+
+        assert(
+            actual_layer.GetFeatureCount() == expected_layer.GetFeatureCount())
+
+        field_names = [field.name for field in expected_layer.schema]
+        for feature in expected_layer:
+            fid = feature.GetFID()
+            expected_values = [
+                feature.GetField(field) for field in field_names]
+
+            actual_feature = actual_layer.GetFeature(fid)
+            actual_values = [
+                actual_feature.GetField(field) for field in field_names]
+
+            for av, ev in zip(actual_values, expected_values):
+                if av is not None:
+                    numpy.testing.assert_almost_equal(
+                        av, ev, decimal=tolerance_places)
+                else:
+                    assert(ev is None)
+            
+            expected_geom = feature.GetGeometryRef()
+            expected_geom_wkt = expected_geom.ExportToWkt()
+            actual_geom = feature.GetGeometryRef()
+            actual_geom_wkt = actual_geom.ExportToWkt()
+            assert(expected_geom_wkt == actual_geom_wkt)
+           
+            feature = None
+            actual_feature = None
+    finally:
+        actual_layer = None
+        actual_vector = None
+        expected_layer = None
+        expected_vector = None
 
 
 class HraUnitTests(unittest.TestCase):
@@ -728,7 +767,7 @@ class HraUnitTests(unittest.TestCase):
         _simplify_geometry(
             complicated_vector_path, tolerance, target_simplified_vector_path)
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        _assert_vectors_equal(
             target_simplified_vector_path, expected_simplified_vector_path,
             1E-6)
 
@@ -738,11 +777,12 @@ class HraUnitTests(unittest.TestCase):
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(EPSG_CODE)
+        projection_wkt = srs.ExportToWkt()
         base_points_path = os.path.join(self.workspace_dir, 'base_points.gpkg')
         points = [Point(0.0, 0.0), Point(10.0, 10.0)]
-        pygeoprocessing.testing.sampledata.create_vector_on_disk(
-            points, srs.ExportToWkt(),
-            filename=base_points_path, vector_format='GPKG')
+        pygeoprocessing.shapely_geometry_to_vector(
+            points, base_points_path, projection_wkt, 'GPKG', 
+            ogr_geom_type=ogr.wkbPoint)
 
         target_simplified_vector_path = os.path.join(
             self.workspace_dir, 'simplified_vector.gpkg')
@@ -751,9 +791,8 @@ class HraUnitTests(unittest.TestCase):
         _simplify_geometry(
             base_points_path, tolerance, target_simplified_vector_path)
 
-        pygeoprocessing.testing.assert_vectors_equal(
-            target_simplified_vector_path, base_points_path,
-            1E-6)
+        _assert_vectors_equal(
+            target_simplified_vector_path, base_points_path)
 
     def test_simplify_geometry_lines(self):
         """HRA: test _simplify_geometry does not alter geometry given lines."""
@@ -761,11 +800,12 @@ class HraUnitTests(unittest.TestCase):
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(EPSG_CODE)
+        projection_wkt = srs.ExportToWkt()
         base_lines_path = os.path.join(self.workspace_dir, 'base_lines.gpkg')
         lines = [LineString([(0.0, 0.0), (10.0, 10.0)])]
-        pygeoprocessing.testing.sampledata.create_vector_on_disk(
-            lines, srs.ExportToWkt(),
-            filename=base_lines_path, vector_format='GPKG')
+        pygeoprocessing.shapely_geometry_to_vector(
+            lines, base_lines_path, projection_wkt, 'GPKG', 
+            ogr_geom_type=ogr.wkbLineString)
 
         target_simplified_vector_path = os.path.join(
             self.workspace_dir, 'simplified_vector.gpkg')
@@ -774,9 +814,8 @@ class HraUnitTests(unittest.TestCase):
         _simplify_geometry(
             base_lines_path, tolerance, target_simplified_vector_path)
 
-        pygeoprocessing.testing.assert_vectors_equal(
-            target_simplified_vector_path, base_lines_path,
-            1E-6)
+        _assert_vectors_equal(
+            target_simplified_vector_path, base_lines_path)
 
 
 class HraRegressionTests(unittest.TestCase):
@@ -855,8 +894,9 @@ class HraRegressionTests(unittest.TestCase):
 
         for output_raster, expected_raster in zip(
                 output_raster_paths, expected_raster_paths):
-            pygeoprocessing.testing.assert_rasters_equal(
-                output_raster, expected_raster)
+            model_array = pygeoprocessing.raster_to_numpy_array(output_raster)
+            reg_array = pygeoprocessing.raster_to_numpy_array(expected_raster)
+            numpy.testing.assert_allclose(model_array, reg_array)
 
         # Assert GeoJSON vectors are equal
         output_vector_paths = [os.path.join(
@@ -876,8 +916,9 @@ class HraRegressionTests(unittest.TestCase):
             args['workspace_dir'], 'outputs', 'SUMMARY_STATISTICS.csv')
         expected_csv_path = os.path.join(
             TEST_DATA, 'SUMMARY_STATISTICS_euc_lin.csv')
-        pygeoprocessing.testing.assert_csv_equal(
-            output_csv_path, expected_csv_path, rel_tol=1E-6)
+        model_df = pandas.read_csv(output_csv_path)
+        reg_df = pandas.read_csv(expected_csv_path) 
+        pandas.testing.assert_frame_equal(model_df, reg_df)
 
     def test_hra_no_subregion_multiplicative_exponential(self):
         """HRA: regression testing with exponential, multiplicative eqn."""
@@ -921,16 +962,18 @@ class HraRegressionTests(unittest.TestCase):
 
         for output_raster, expected_raster in zip(
                 output_raster_paths, expected_raster_paths):
-            pygeoprocessing.testing.assert_rasters_equal(
-                output_raster, expected_raster)
+            model_array = pygeoprocessing.raster_to_numpy_array(output_raster)
+            reg_array = pygeoprocessing.raster_to_numpy_array(expected_raster)
+            numpy.testing.assert_allclose(model_array, reg_array)
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
             self.workspace_dir, 'outputs', 'SUMMARY_STATISTICS.csv')
         expected_csv_path = os.path.join(
             TEST_DATA, 'SUMMARY_STATISTICS_mul_exp.csv')
-        pygeoprocessing.testing.assert_csv_equal(
-            output_csv_path, expected_csv_path, rel_tol=1E-6)
+        model_df = pandas.read_csv(output_csv_path) 
+        reg_df = pandas.read_csv(expected_csv_path) 
+        pandas.testing.assert_frame_equal(model_df, reg_df)
 
     def test_aoi_no_projection(self):
         """HRA: testing AOI vector without projection."""
@@ -1052,7 +1095,7 @@ class HraRegressionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
-        self.assertEquals(len(cm.exception.args), 1)
+        self.assertEqual(len(cm.exception.args), 1)
 
     def test_validate(self):
         """HRA: testing validation."""
