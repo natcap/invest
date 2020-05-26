@@ -8,7 +8,7 @@ from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
 import numpy
-import pygeoprocessing.testing
+import pygeoprocessing
 
 
 def make_simple_poly(origin):
@@ -53,13 +53,9 @@ def make_raster_from_array(base_array, base_raster_path):
     srs.ImportFromEPSG(26910)  # UTM Zone 10N
     project_wkt = srs.ExportToWkt()
 
-    pygeoprocessing.testing.create_raster_on_disk(
-        [base_array],
-        (1180000, 690000),
-        project_wkt,
-        -1,
-        (1, -1),  # Each pixel is 1x1 m
-        filename=base_raster_path)
+    pygeoprocessing.numpy_array_to_raster(
+        base_array, -1, (1, -1), (1180000, 690000), project_wkt, 
+        base_raster_path)
 
 
 def make_access_shp(access_shp_path):
