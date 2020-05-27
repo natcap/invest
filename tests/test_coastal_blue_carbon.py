@@ -11,8 +11,8 @@ import copy
 import pprint
 
 import numpy
-from osgeo import gdal
-import pygeoprocessing.testing as pygeotest
+from osgeo import gdal, osr
+import pygeoprocessing
 from natcap.invest import utils
 
 REGRESSION_DATA = os.path.join(
@@ -108,63 +108,55 @@ def _get_args(workspace, num_transitions=2, valuation=True):
     Returns:
         args (dict): main model arguments.
     """
-    band_matrices = [numpy.ones((2, 2))]
-    band_matrices_two = [numpy.ones((2, 2)) * 2]
-    band_matrices_with_nodata = [numpy.ones((2, 2))]
-    band_matrices_with_nodata[0][0][0] = NODATA_INT
-    srs = pygeotest.sampledata.SRS_WILLAMETTE
+    band_matrices = numpy.ones((2, 2))
+    band_matrices_two = numpy.ones((2, 2)) * 2
+    band_matrices_with_nodata = numpy.ones((2, 2))
+    band_matrices_with_nodata[0][0] = NODATA_INT
+    
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(3157)
+    projection_wkt = srs.ExportToWkt()
+    origin = (443723.127327877911739, 4956546.905980412848294)
 
-    lulc_lookup_uri = _create_table(
+    lulc_lookup_path = _create_table(
         os.path.join(workspace, 'lulc_lookup.csv'), lulc_lookup_list)
-    lulc_transition_matrix_uri = _create_table(
+    lulc_transition_matrix_path = _create_table(
         os.path.join(workspace, 'lulc_transition_matrix.csv'),
         lulc_transition_matrix_list)
-    carbon_pool_initial_uri = _create_table(
+    carbon_pool_initial_path = _create_table(
         os.path.join(workspace, 'carbon_pool_initial.csv'),
         carbon_pool_initial_list)
-    carbon_pool_transient_uri = _create_table(
+    carbon_pool_transient_path = _create_table(
         os.path.join(workspace, 'carbon_pool_transient.csv'),
         carbon_pool_transient_list)
-    raster_0_uri = pygeotest.create_raster_on_disk(
-        band_matrices,
-        srs.origin,
-        srs.projection,
-        NODATA_INT,
-        srs.pixel_size(100),
-        datatype=gdal.GDT_Int32,
-        filename=os.path.join(workspace, 'raster_0.tif'))
-    raster_1_uri = pygeotest.create_raster_on_disk(
-        band_matrices_with_nodata,
-        srs.origin,
-        srs.projection,
-        NODATA_INT,
-        srs.pixel_size(100),
-        datatype=gdal.GDT_Int32,
-        filename=os.path.join(workspace, 'raster_1.tif'))
-    raster_2_uri = pygeotest.create_raster_on_disk(
-        band_matrices_two,
-        srs.origin,
-        srs.projection,
-        NODATA_INT,
-        srs.pixel_size(100),
-        datatype=gdal.GDT_Int32,
-        filename=os.path.join(workspace, 'raster_2.tif'))
+    raster_0_path = os.path.join(workspace, 'raster_0.tif')
+    pygeoprocessing.numpy_array_to_raster(
+        band_matrices, NODATA_INT, (100, -100), origin, projection_wkt, 
+        raster_0_path)
+    raster_1_path = os.path.join(workspace, 'raster_1.tif')
+    pygeoprocessing.numpy_array_to_raster(
+        band_matrices_with_nodata, NODATA_INT, (100, -100), origin, 
+        projection_wkt, raster_1_path)
+    raster_2_path = os.path.join(workspace, 'raster_2.tif')
+    pygeoprocessing.numpy_array_to_raster(
+        band_matrices_two, NODATA_INT, (100, -100), origin, 
+        projection_wkt, raster_2_path)
 
-    possible_transitions = [raster_1_uri, raster_2_uri]
+    possible_transitions = [raster_1_path, raster_2_path]
     possible_transition_years = [2000, 2005]
 
     args = {
         'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
-        'lulc_lookup_uri': lulc_lookup_uri,
-        'lulc_transition_matrix_uri': lulc_transition_matrix_uri,
-        'lulc_baseline_map_uri': raster_0_uri,
+        'lulc_lookup_uri': lulc_lookup_path,
+        'lulc_transition_matrix_uri': lulc_transition_matrix_path,
+        'lulc_baseline_map_uri': raster_0_path,
         'lulc_baseline_year': 1995,
         'lulc_transition_maps_list': possible_transitions[:num_transitions+1],
         'lulc_transition_years_list': possible_transition_years[:num_transitions+1],
         'analysis_year': 2010,
-        'carbon_pool_initial_uri': carbon_pool_initial_uri,
-        'carbon_pool_transient_uri': carbon_pool_transient_uri,
+        'carbon_pool_initial_uri': carbon_pool_initial_path,
+        'carbon_pool_transient_uri': carbon_pool_transient_path,
         'do_economic_analysis': False,
     }
 
@@ -193,65 +185,69 @@ def _get_preprocessor_args(args_choice, workspace):
     Returns:
         args (dict): preprocessor arguments
     """
-    band_matrices_zeros = [numpy.zeros((2, 2))]
-    band_matrices_ones = [numpy.ones((2, 3))]  # tests alignment
-    band_matrices_nodata = [numpy.ones((2, 2)) * NODATA_INT]
-    srs = pygeotest.sampledata.SRS_WILLAMETTE
+    band_matrices_zeros = numpy.zeros((2, 2))
+    band_matrices_ones = numpy.ones((2, 3))  # tests alignment
+    band_matrices_nodata = numpy.ones((2, 2)) * NODATA_INT
 
-    lulc_lookup_uri = _create_table(
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(3157)
+    projection_wkt = srs.ExportToWkt()
+    origin = (443723.127327877911739, 4956546.905980412848294)
+
+    lulc_lookup_path = _create_table(
         os.path.join(workspace, 'lulc_lookup.csv'), lulc_lookup_list)
 
-    raster_0_uri = pygeotest.create_raster_on_disk(
-        band_matrices_ones, srs.origin, srs.projection, NODATA_INT,
-        srs.pixel_size(100), datatype=gdal.GDT_Int32,
-        filename=os.path.join(workspace, 'raster_0.tif'))
-    raster_1_uri = pygeotest.create_raster_on_disk(
-        band_matrices_ones, srs.origin, srs.projection, NODATA_INT,
-        srs.pixel_size(100), datatype=gdal.GDT_Int32,
-        filename=os.path.join(workspace, 'raster_1.tif'))
-    raster_2_uri = pygeotest.create_raster_on_disk(
-        band_matrices_ones, srs.origin, srs.projection, NODATA_INT,
-        srs.pixel_size(100), datatype=gdal.GDT_Int32,
-        filename=os.path.join(workspace, 'raster_2.tif'))
-    raster_3_uri = pygeotest.create_raster_on_disk(
-        band_matrices_zeros, srs.origin, srs.projection, NODATA_INT,
-        srs.pixel_size(100), datatype=gdal.GDT_Int32,
-        filename=os.path.join(workspace, 'raster_3.tif'))
-    raster_4_uri = pygeotest.create_raster_on_disk(
-        band_matrices_zeros, srs.origin, srs.projection, -1,
-        srs.pixel_size(100), datatype=gdal.GDT_Int32,
-        filename=os.path.join(workspace, 'raster_4.tif'))
-    raster_nodata_uri = pygeotest.create_raster_on_disk(
-        band_matrices_nodata, srs.origin, srs.projection, NODATA_INT,
-        srs.pixel_size(100), datatype=gdal.GDT_Int32,
-        filename=os.path.join(workspace, 'raster_4.tif'))
+    raster_0_path = os.path.join(workspace, 'raster_0.tif')
+    pygeoprocessing.numpy_array_to_raster(
+        band_matrices_ones, NODATA_INT, (100, -100), origin, projection_wkt, 
+        raster_0_path)
+    raster_1_path = os.path.join(workspace, 'raster_1.tif')
+    pygeoprocessing.numpy_array_to_raster(
+        band_matrices_ones, NODATA_INT, (100, -100), origin, projection_wkt, 
+        raster_1_path)
+    raster_2_path = os.path.join(workspace, 'raster_2.tif')
+    pygeoprocessing.numpy_array_to_raster(
+        band_matrices_ones, NODATA_INT, (100, -100), origin, projection_wkt, 
+        raster_2_path)
+    raster_3_path = os.path.join(workspace, 'raster_3.tif')
+    pygeoprocessing.numpy_array_to_raster(
+        band_matrices_zeros, NODATA_INT, (100, -100), origin, projection_wkt, 
+        raster_3_path)
+    raster_4_path = os.path.join(workspace, 'raster_4.tif')
+    pygeoprocessing.numpy_array_to_raster(
+        band_matrices_zeros, NODATA_INT, (100, -100), origin, projection_wkt, 
+        raster_4_path)
+    raster_nodata_path = os.path.join(workspace, 'raster_4.tif')
+    pygeoprocessing.numpy_array_to_raster(
+        band_matrices_nodata, NODATA_INT, (100, -100), origin, projection_wkt, 
+        raster_nodata_path)
 
     args = {
         'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
-        'lulc_lookup_uri': lulc_lookup_uri,
-        'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
+        'lulc_lookup_uri': lulc_lookup_path,
+        'lulc_snapshot_list': [raster_0_path, raster_1_path, raster_2_path]
     }
 
     args2 = {
         'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
-        'lulc_lookup_uri': lulc_lookup_uri,
-        'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_3_uri]
+        'lulc_lookup_uri': lulc_lookup_path,
+        'lulc_snapshot_list': [raster_0_path, raster_1_path, raster_3_path]
     }
 
     args3 = {
         'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
-        'lulc_lookup_uri': lulc_lookup_uri,
-        'lulc_snapshot_list': [raster_0_uri, raster_nodata_uri, raster_3_uri]
+        'lulc_lookup_uri': lulc_lookup_path,
+        'lulc_snapshot_list': [raster_0_path, raster_nodata_path, raster_3_path]
     }
 
     args4 = {
         'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
-        'lulc_lookup_uri': lulc_lookup_uri,
-        'lulc_snapshot_list': [raster_0_uri, raster_nodata_uri, raster_4_uri]
+        'lulc_lookup_uri': lulc_lookup_path,
+        'lulc_snapshot_list': [raster_0_path, raster_nodata_path, raster_4_path]
     }
 
     if args_choice == 1:
@@ -380,17 +376,19 @@ class TestPreprocessor(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(1, self.workspace_dir)
         OTHER_NODATA = -1
-        srs = pygeotest.sampledata.SRS_WILLAMETTE
-        band_matrices_with_nodata = [numpy.ones((2, 2)) * OTHER_NODATA]
-        raster_wrong_nodata = pygeotest.create_raster_on_disk(
-            band_matrices_with_nodata,
-            srs.origin,
-            srs.projection,
-            OTHER_NODATA,
-            srs.pixel_size(100),
-            datatype=gdal.GDT_Int32,
-            filename=os.path.join(
-                self.workspace_dir, 'raster_wrong_nodata.tif'))
+        
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        
+        band_matrices_with_nodata = numpy.ones((2, 2)) * OTHER_NODATA
+        raster_wrong_nodata = os.path.join(
+            self.workspace_dir, 'raster_wrong_nodata.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            band_matrices_with_nodata, OTHER_NODATA, (100, -100), origin, 
+            projection_wkt, raster_wrong_nodata)
+        
         args['lulc_snapshot_list'][0] = raster_wrong_nodata
         with self.assertRaises(ValueError):
             preprocessor.execute(args)
@@ -408,17 +406,17 @@ class TestPreprocessor(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(1, self.workspace_dir)
 
-        band_matrices_zero = [numpy.zeros((2, 2))]
-        srs = pygeotest.sampledata.SRS_WILLAMETTE
-        raster_zeros = pygeotest.create_raster_on_disk(
-            band_matrices_zero,
-            srs.origin,
-            srs.projection,
-            NODATA_INT,
-            srs.pixel_size(100),
-            datatype=gdal.GDT_Int32,
-            filename=os.path.join(
-                self.workspace_dir, 'raster_1.tif'))
+        band_matrices_zero = numpy.zeros((2, 2))
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+
+        raster_zeros = os.path.join(self.workspace_dir, 'raster_1.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            band_matrices_zero, NODATA_INT, (100, -100), origin, 
+            projection_wkt, raster_zeros)
         args['lulc_snapshot_list'][0] = raster_zeros
 
         preprocessor.execute(args)
@@ -436,17 +434,17 @@ class TestPreprocessor(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(1, self.workspace_dir)
 
-        band_matrices_zero = [numpy.zeros((2, 2))]
-        srs = pygeotest.sampledata.SRS_WILLAMETTE
-        raster_zeros = pygeotest.create_raster_on_disk(
-            band_matrices_zero,
-            srs.origin,
-            srs.projection,
-            NODATA_INT,
-            srs.pixel_size(100),
-            datatype=gdal.GDT_Int32,
-            filename=os.path.join(
-                self.workspace_dir, 'raster_1.tif'))
+        band_matrices_zero = numpy.zeros((2, 2))
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+
+        raster_zeros = os.path.join(self.workspace_dir, 'raster_1.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            band_matrices_zero, NODATA_INT, (100, -100), origin, 
+            projection_wkt, raster_zeros)
         args['lulc_snapshot_list'][0] = raster_zeros
 
         preprocessor.execute(args)
@@ -455,18 +453,18 @@ class TestPreprocessor(unittest.TestCase):
         """Coastal Blue Carbon: Test preprocessor run against InVEST-Data."""
         from natcap.invest.coastal_blue_carbon import preprocessor
 
-        raster_0_uri = os.path.join(
+        raster_0_path = os.path.join(
             REGRESSION_DATA, 'inputs/GBJC_2010_mean_Resample.tif')
-        raster_1_uri = os.path.join(
+        raster_1_path = os.path.join(
             REGRESSION_DATA, 'inputs/GBJC_2030_mean_Resample.tif')
-        raster_2_uri = os.path.join(
+        raster_2_path = os.path.join(
             REGRESSION_DATA, 'inputs/GBJC_2050_mean_Resample.tif')
         args = {
             'workspace_dir': _create_workspace(),
             'results_suffix': '150225',
             'lulc_lookup_uri': os.path.join(
                 REGRESSION_DATA, 'inputs', 'lulc_lookup.csv'),
-            'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
+            'lulc_snapshot_list': [raster_0_path, raster_1_path, raster_2_path]
         }
         preprocessor.execute(args)
 
@@ -559,11 +557,11 @@ class TestIO(unittest.TestCase):
             import coastal_blue_carbon as cbc
         biomass_transient_dict, soil_transient_dict = \
             cbc._create_transient_dict(self.args['carbon_pool_transient_uri'])
-        lulc_transition_uri = self.args['lulc_transition_matrix_uri']
-        lulc_lookup_uri = self.args['lulc_lookup_uri']
+        lulc_transition_path = self.args['lulc_transition_matrix_uri']
+        lulc_lookup_path = self.args['lulc_lookup_uri']
         lulc_trans_to_Db, lulc_trans_to_Ds = cbc._get_lulc_trans_to_D_dicts(
-            lulc_transition_uri,
-            lulc_lookup_uri,
+            lulc_transition_path,
+            lulc_lookup_path,
             biomass_transient_dict,
             soil_transient_dict)
 
@@ -807,7 +805,7 @@ class CBCRefactorTest(unittest.TestCase):
         Returns:
             A dict of the model arguments.
         """
-        from pygeoprocessing.testing import sampledata
+        import pygeoprocessing
 
         args = {
             'workspace_dir': workspace,
@@ -833,13 +831,12 @@ class CBCRefactorTest(unittest.TestCase):
             args['carbon_pool_transient_uri'],
             carbon_pool_transient_list)
 
-        # Only parameters needed are band_matrices and filename
-        make_raster = functools.partial(
-            sampledata.create_raster_on_disk,
-            origin=sampledata.SRS_WILLAMETTE.origin,
-            projection_wkt=sampledata.SRS_WILLAMETTE.projection,
-            nodata=-1, pixel_size=sampledata.SRS_WILLAMETTE.pixel_size(100))
 
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        
         known_matrix_size = None
         if transition_tuples:
             args['lulc_transition_maps_list'] = []
@@ -847,17 +844,20 @@ class CBCRefactorTest(unittest.TestCase):
 
             for band_matrix, transition_year in transition_tuples:
                 known_matrix_size = band_matrix.shape
-                filename = os.path.join(workspace,
-                                        'transition_%s.tif' % transition_year)
-                make_raster(band_matrices=[band_matrix], filename=filename)
+                filename = os.path.join(
+                    workspace, 'transition_%s.tif' % transition_year)
+                pygeoprocessing.numpy_array_to_raster(
+                    band_matrix, -1, (100, -100), origin, projection_wkt, 
+                    filename)
 
                 args['lulc_transition_maps_list'].append(filename)
                 args['lulc_transition_years_list'].append(transition_year)
 
         # Make the lulc
         lulc_shape = (10, 10) if not known_matrix_size else known_matrix_size
-        make_raster(band_matrices=[numpy.ones(lulc_shape)],
-                    filename=args['lulc_baseline_map_uri'])
+        pygeoprocessing.numpy_array_to_raster(
+            numpy.ones(lulc_shape), -1, (100, -100), origin, projection_wkt, 
+            args['lulc_baseline_map_uri'])
 
         if analysis_year:
             args['analysis_year'] = analysis_year
