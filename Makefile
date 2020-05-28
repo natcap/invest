@@ -12,6 +12,9 @@ GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
 GIT_UG_REPO_REV              := 7e6ed574cbdcc24199e57fa48bd36fb46e460635
 
+GIT_GUI_REPO                 := https://github.com/davemfish/invest-gui.git
+GIT_GUI_REPO_PATH            := gui
+GIT_GUI_REPO_REV             := 3325460693258a0df2d4d3e8c1b3c63e0a2bfcce
 
 ENV = env
 ifeq ($(OS),Windows_NT)
@@ -167,6 +170,7 @@ clean:
 purge: clean
 	-$(RM_DATA_DIR)
 	-$(RMDIR) $(GIT_UG_REPO_PATH)
+	-$(RMDIR) $(GIT_GUI_REPO_PATH)
 	-$(RMDIR) $(ENV)
 
 check:
@@ -197,7 +201,12 @@ $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
 
-fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
+$(GIT_GUI_REPO_PATH):
+	-git clone $(GIT_GUI_REPO) $(GIT_GUI_REPO_PATH)
+	git -C $(GIT_GUI_REPO_PATH) fetch
+	git -C $(GIT_GUI_REPO_PATH) checkout $(GIT_GUI_REPO_REV)
+
+fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_GUI_REPO_PATH)
 
 
 # Python environment management
@@ -236,7 +245,7 @@ $(DIST_DIR)/natcap.invest%.zip: | $(DIST_DIR)
 # import, we want to know right away.  No need to provide the `.exe` extension
 # on Windows as the .exe extension is assumed.
 binaries: $(INVEST_BINARIES_DIR)
-$(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
+$(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR) $(GIT_GUI_REPO_PATH)
 	-$(RMDIR) $(BUILD_DIR)/pyi-build
 	-$(RMDIR) $(INVEST_BINARIES_DIR)
 	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
