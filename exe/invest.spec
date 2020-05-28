@@ -9,7 +9,8 @@ from PyInstaller.compat import is_win, is_darwin
 # Global Variables
 current_dir = os.getcwd()  # assume we're building from the project root
 block_cipher = None
-exename = 'invest'
+invest_exename = 'invest'
+server_exename = 'server'
 conda_env = '/usr/local/miniconda/envs/mac-env'
 
 
@@ -33,10 +34,19 @@ kwargs = {
 }
 
 cli_file = os.path.join(current_dir, 'src', 'natcap', 'invest', 'cli.py')
-a = Analysis([cli_file], **kwargs)
+invest_a = Analysis([cli_file], **kwargs)
+
+# This path matches the directory setup in Makefile (make fetch)
+flask_run_file = os.path.join(current_dir, 'gui', 'src', 'server.py')
+# All the same kwargs apply because this app also imports natcap.invest
+server_a = Analysis([flask_run_file], **kwargs)
+
+MERGE((invest_a, invest_exename, invest_exename),
+      (server_a, server_exename, server_exename))
 
 # Compress pyc and pyo Files into ZlibArchive Objects
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+invest_pyz = PYZ(invest_a.pure, invest_a.zipped_data, cipher=block_cipher)
+server_pyz = PYZ(server_a.pure, server_a.zipped_data, cipher=block_cipher)
 
 # Create the executable file.
 if is_darwin:
@@ -56,24 +66,40 @@ elif is_win:
     ]
 
     # .exe extension is required if we're on windows.
-    exename += '.exe'
+    invest_exename += '.exe'
+    server_exename += '.exe'
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    name=exename,
+invest_exe = EXE(
+    invest_pyz,
+    invest_a.scripts,
+    name=invest_exename,
     exclude_binaries=True,
     debug=False,
     strip=False,
     upx=False,
     console=True)
 
+server_exe = EXE(
+    server_pyz,
+    server_a.scripts,
+    name=server_exename,
+    exclude_binaries=True,
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    console=True)
+
 # Collect Files into Distributable Folder/File
-dist = COLLECT(
-        exe,
-        a.binaries,
-        a.zipfiles,
-        a.datas,
+invest_dist = COLLECT(
+        invest_exe,
+        invest_a.binaries,
+        invest_a.zipfiles,
+        invest_a.datas,
+        server_exe,
+        server_a.binaries,
+        server_a.zipfiles,
+        server_a.datas,
         name="invest",  # name of the output folder
         strip=False,
         upx=False)
