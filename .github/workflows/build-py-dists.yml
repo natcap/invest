@@ -42,11 +42,13 @@ jobs:
             - name: Install dependencies
               shell: bash
               run: |
-                  pip install ${{ matrix.numpy }} toml
+                  pip install ${{ matrix.numpy }} toml twine
                   pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build wheel
-              run: python setup.py bdist_wheel
+              run: |
+                  python setup.py bdist_wheel
+                  python -m twine check dist/*
 
             - uses: actions/upload-artifact@v1
               with:
@@ -84,11 +86,13 @@ jobs:
             - name: Install python dependencies
               shell: bash
               run: |
-                pip install toml
+                pip install toml twine
                 pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build source distribution
-              run: python setup.py build_ext sdist
+              run: |
+                  python setup.py build_ext sdist
+                  python -m twine check dist/*
 
             - uses: actions/upload-artifact@v1
               with:
