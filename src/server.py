@@ -201,3 +201,7 @@ def save_to_python():
             model_args=args))
 
     return 'python script saved'
+
+if __name__ == '__main__':
+    print('Running Flask App')
+    app.run()
