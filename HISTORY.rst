@@ -1,19 +1,26 @@
 .. :changelog:
 Unreleased Changes (3.9)
 ------------------------
-* Migrating over to GDAL 3 from GDAL 2.
-* Updating requirements to reflect GDAL version >= 3.
-* Updating crop production tests that varied slightly due to GDAL 3 
-  differences in handling spatial references.
-* Adding function in utils.py to handle InVEST coordindate transformations.
-* Adding tests for new coordinate transformation function in utils.py.
-
+* General
+  * Migrating over to GDAL 3 from GDAL 2.
+  * Updating requirements to reflect GDAL version >= 3.
+  * Updating crop production tests that varied slightly due to GDAL 3 
+    differences in handling spatial references.
+  * Adding function in utils.py to handle InVEST coordindate transformations.
+  * Adding tests for new coordinate transformation function in utils.py.
+  * Making InVEST compatible with Pygeoprocessing 2.0 by updating: 
+    * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
+    * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to 
+      ``projection_wkt``.
+    * Updating InVEST tests that were dependent on the removed ``pgp.testing`` 
+      module.
 
 Unreleased Changes
 ------------------
-* SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
-  available standard C library definition.  This new definition helps to avoid
-  some compiler issues on Windows.
+* sdr
+  * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
+    available standard C library definition. This new definition helps to avoid
+    some compiler issues on Windows.
 
 3.8.2 (2020-05-15)
 ------------------

@@ -6,7 +6,6 @@ import shutil
 import csv
 import logging
 import tempfile
-import functools
 import copy
 import pprint
 
@@ -74,7 +73,7 @@ NODATA_INT = -9999
 
 
 def _read_array(raster_path):
-    """"Read raster as array."""
+    """Read raster as array."""
     ds = gdal.Open(raster_path)
     band = ds.GetRasterBand(1)
     a = band.ReadAsArray()
@@ -98,7 +97,7 @@ def _create_workspace():
 def _get_args(workspace, num_transitions=2, valuation=True):
     """Create and return arguments for CBC main model.
 
-    Parameters:
+    Args:
         workspace(string): A path to a folder on disk.  Generated inputs will
             be saved to this directory.
         num_transitions=2 (int): The number of transitions to synthesize.
@@ -112,7 +111,7 @@ def _get_args(workspace, num_transitions=2, valuation=True):
     band_matrices_two = numpy.ones((2, 2)) * 2
     band_matrices_with_nodata = numpy.ones((2, 2))
     band_matrices_with_nodata[0][0] = NODATA_INT
-    
+
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(3157)
     projection_wkt = srs.ExportToWkt()
@@ -131,15 +130,15 @@ def _get_args(workspace, num_transitions=2, valuation=True):
         carbon_pool_transient_list)
     raster_0_path = os.path.join(workspace, 'raster_0.tif')
     pygeoprocessing.numpy_array_to_raster(
-        band_matrices, NODATA_INT, (100, -100), origin, projection_wkt, 
+        band_matrices, NODATA_INT, (100, -100), origin, projection_wkt,
         raster_0_path)
     raster_1_path = os.path.join(workspace, 'raster_1.tif')
     pygeoprocessing.numpy_array_to_raster(
-        band_matrices_with_nodata, NODATA_INT, (100, -100), origin, 
+        band_matrices_with_nodata, NODATA_INT, (100, -100), origin,
         projection_wkt, raster_1_path)
     raster_2_path = os.path.join(workspace, 'raster_2.tif')
     pygeoprocessing.numpy_array_to_raster(
-        band_matrices_two, NODATA_INT, (100, -100), origin, 
+        band_matrices_two, NODATA_INT, (100, -100), origin,
         projection_wkt, raster_2_path)
 
     possible_transitions = [raster_1_path, raster_2_path]
@@ -153,7 +152,8 @@ def _get_args(workspace, num_transitions=2, valuation=True):
         'lulc_baseline_map_uri': raster_0_path,
         'lulc_baseline_year': 1995,
         'lulc_transition_maps_list': possible_transitions[:num_transitions+1],
-        'lulc_transition_years_list': possible_transition_years[:num_transitions+1],
+        'lulc_transition_years_list': possible_transition_years[
+                                                        :num_transitions+1],
         'analysis_year': 2010,
         'carbon_pool_initial_uri': carbon_pool_initial_path,
         'carbon_pool_transient_uri': carbon_pool_transient_path,
@@ -199,27 +199,27 @@ def _get_preprocessor_args(args_choice, workspace):
 
     raster_0_path = os.path.join(workspace, 'raster_0.tif')
     pygeoprocessing.numpy_array_to_raster(
-        band_matrices_ones, NODATA_INT, (100, -100), origin, projection_wkt, 
+        band_matrices_ones, NODATA_INT, (100, -100), origin, projection_wkt,
         raster_0_path)
     raster_1_path = os.path.join(workspace, 'raster_1.tif')
     pygeoprocessing.numpy_array_to_raster(
-        band_matrices_ones, NODATA_INT, (100, -100), origin, projection_wkt, 
+        band_matrices_ones, NODATA_INT, (100, -100), origin, projection_wkt,
         raster_1_path)
     raster_2_path = os.path.join(workspace, 'raster_2.tif')
     pygeoprocessing.numpy_array_to_raster(
-        band_matrices_ones, NODATA_INT, (100, -100), origin, projection_wkt, 
+        band_matrices_ones, NODATA_INT, (100, -100), origin, projection_wkt,
         raster_2_path)
     raster_3_path = os.path.join(workspace, 'raster_3.tif')
     pygeoprocessing.numpy_array_to_raster(
-        band_matrices_zeros, NODATA_INT, (100, -100), origin, projection_wkt, 
+        band_matrices_zeros, NODATA_INT, (100, -100), origin, projection_wkt,
         raster_3_path)
     raster_4_path = os.path.join(workspace, 'raster_4.tif')
     pygeoprocessing.numpy_array_to_raster(
-        band_matrices_zeros, NODATA_INT, (100, -100), origin, projection_wkt, 
+        band_matrices_zeros, NODATA_INT, (100, -100), origin, projection_wkt,
         raster_4_path)
     raster_nodata_path = os.path.join(workspace, 'raster_4.tif')
     pygeoprocessing.numpy_array_to_raster(
-        band_matrices_nodata, NODATA_INT, (100, -100), origin, projection_wkt, 
+        band_matrices_nodata, NODATA_INT, (100, -100), origin, projection_wkt,
         raster_nodata_path)
 
     args = {
@@ -240,14 +240,16 @@ def _get_preprocessor_args(args_choice, workspace):
         'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_path,
-        'lulc_snapshot_list': [raster_0_path, raster_nodata_path, raster_3_path]
+        'lulc_snapshot_list': [
+            raster_0_path, raster_nodata_path, raster_3_path]
     }
 
     args4 = {
         'workspace_dir': os.path.join(workspace, 'workspace'),
         'results_suffix': 'test',
         'lulc_lookup_uri': lulc_lookup_path,
-        'lulc_snapshot_list': [raster_0_path, raster_nodata_path, raster_4_path]
+        'lulc_snapshot_list': [
+            raster_0_path, raster_nodata_path, raster_4_path]
     }
 
     if args_choice == 1:
@@ -274,9 +276,8 @@ class TestPreprocessor(unittest.TestCase):
     def test_create_carbon_pool_transient_table_template(self):
         """Coastal Blue Carbon: Test creation of transient table template."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace_dir)
-        filepath = os.path.join(self.workspace_dir,
-                                'transient_temp.csv')
+        filepath = os.path.join(
+            self.workspace_dir, 'transient_temp.csv')
         code_to_lulc_dict = {1: 'one', 2: 'two', 3: 'three'}
         preprocessor._create_carbon_pool_transient_table_template(
             filepath, code_to_lulc_dict)
@@ -376,19 +377,19 @@ class TestPreprocessor(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(1, self.workspace_dir)
         OTHER_NODATA = -1
-        
+
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
         projection_wkt = srs.ExportToWkt()
         origin = (443723.127327877911739, 4956546.905980412848294)
-        
+
         band_matrices_with_nodata = numpy.ones((2, 2)) * OTHER_NODATA
         raster_wrong_nodata = os.path.join(
             self.workspace_dir, 'raster_wrong_nodata.tif')
         pygeoprocessing.numpy_array_to_raster(
-            band_matrices_with_nodata, OTHER_NODATA, (100, -100), origin, 
+            band_matrices_with_nodata, OTHER_NODATA, (100, -100), origin,
             projection_wkt, raster_wrong_nodata)
-        
+
         args['lulc_snapshot_list'][0] = raster_wrong_nodata
         with self.assertRaises(ValueError):
             preprocessor.execute(args)
@@ -415,7 +416,7 @@ class TestPreprocessor(unittest.TestCase):
 
         raster_zeros = os.path.join(self.workspace_dir, 'raster_1.tif')
         pygeoprocessing.numpy_array_to_raster(
-            band_matrices_zero, NODATA_INT, (100, -100), origin, 
+            band_matrices_zero, NODATA_INT, (100, -100), origin,
             projection_wkt, raster_zeros)
         args['lulc_snapshot_list'][0] = raster_zeros
 
@@ -443,7 +444,7 @@ class TestPreprocessor(unittest.TestCase):
 
         raster_zeros = os.path.join(self.workspace_dir, 'raster_1.tif')
         pygeoprocessing.numpy_array_to_raster(
-            band_matrices_zero, NODATA_INT, (100, -100), origin, 
+            band_matrices_zero, NODATA_INT, (100, -100), origin,
             projection_wkt, raster_zeros)
         args['lulc_snapshot_list'][0] = raster_zeros
 
@@ -496,6 +497,7 @@ class TestIO(unittest.TestCase):
         self.args = _get_args(self.workspace_dir)
 
     def tearDown(self):
+        """Clean up workspace when finished."""
         shutil.rmtree(self.workspace_dir)
 
     def test_get_inputs(self):
@@ -629,7 +631,8 @@ class TestModel(unittest.TestCase):
 
         self.args['analysis_year'] = None
         self.args['lulc_baseline_year'] = 2000
-        self.args['lulc_transition_maps_list'] = [self.args['lulc_transition_maps_list'][0]]
+        self.args['lulc_transition_maps_list'] = [
+            self.args['lulc_transition_maps_list'][0]]
         self.args['lulc_transition_years_list'] = [2005]
 
         cbc.execute(self.args)
@@ -714,7 +717,8 @@ class TestModel(unittest.TestCase):
             'price_table_uri': os.path.join(
                 REGRESSION_DATA, 'inputs/Price_table_SCC3.csv'),
             'lulc_transition_matrix_uri': os.path.join(
-                REGRESSION_DATA, 'outputs_preprocessor/transitions_sample.csv'),
+                REGRESSION_DATA,
+                'outputs_preprocessor/transitions_sample.csv'),
             'price': 10.0,
             'results_suffix': '150225'
         }
@@ -741,7 +745,8 @@ class TestModel(unittest.TestCase):
         # walk through all files in the workspace and assert that outputs have
         # the file suffix.
         non_suffixed_files = []
-        for root_dir, dirnames, filenames in os.walk(self.args['workspace_dir']):
+        for root_dir, dirnames, filenames in os.walk(
+                self.args['workspace_dir']):
             for filename in filenames:
                 if not filename.lower().endswith('.txt'):  # ignore logfile
                     basename, extension = os.path.splitext(filename)
@@ -778,10 +783,13 @@ class TestModel(unittest.TestCase):
 
 
 class CBCRefactorTest(unittest.TestCase):
+    """CBC Refactor Tests."""
     def setUp(self):
+        """Create a temporary workspace."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Remove temporary workspace when done."""
         shutil.rmtree(self.workspace_dir)
 
     @staticmethod
@@ -792,15 +800,15 @@ class CBCRefactorTest(unittest.TestCase):
             workspace (string): The path to the workspace directory on disk.
                 Files will be saved to this location.
             transition_tuples (list or None): A list of tuples, where the first
-                element of the tuple is a numpy matrix of the transition values,
-                and the second element of the tuple is the year of the transition.
-                Provided years must be in chronological order.
+                element of the tuple is a numpy matrix of the transition
+                values, and the second element of the tuple is the year of the
+                transition. Provided years must be in chronological order.
                 If ``None``, the transition parameters will be ignored.
             analysis_year (int or None): The year of the final analysis.  If
                 provided, it must be greater than the last year within the
-                transition tuples (unless ``transition_tuples`` is None, in which
-                case ``analysis_year`` can be anything greater than 2000, the
-                baseline year).
+                transition tuples (unless ``transition_tuples`` is None, in
+                which case ``analysis_year`` can be anything greater than 2000,
+                the baseline year).
 
         Returns:
             A dict of the model arguments.
@@ -810,12 +818,12 @@ class CBCRefactorTest(unittest.TestCase):
         args = {
             'workspace_dir': workspace,
             'lulc_lookup_uri': os.path.join(workspace, 'lulc_lookup.csv'),
-            'lulc_transition_matrix_uri': os.path.join(workspace,
-                                                       'transition_matrix.csv'),
-            'carbon_pool_initial_uri': os.path.join(workspace,
-                                                    'carbon_pool_initial.csv'),
-            'carbon_pool_transient_uri': os.path.join(workspace,
-                                                      'carbon_pool_transient.csv'),
+            'lulc_transition_matrix_uri': os.path.join(
+                workspace, 'transition_matrix.csv'),
+            'carbon_pool_initial_uri': os.path.join(
+                workspace, 'carbon_pool_initial.csv'),
+            'carbon_pool_transient_uri': os.path.join(
+                workspace, 'carbon_pool_transient.csv'),
             'lulc_baseline_map_uri': os.path.join(workspace, 'lulc.tif'),
             'lulc_baseline_year': 2000,
             'do_economic_analysis': False,
@@ -831,12 +839,11 @@ class CBCRefactorTest(unittest.TestCase):
             args['carbon_pool_transient_uri'],
             carbon_pool_transient_list)
 
-
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
         projection_wkt = srs.ExportToWkt()
         origin = (443723.127327877911739, 4956546.905980412848294)
-        
+
         known_matrix_size = None
         if transition_tuples:
             args['lulc_transition_maps_list'] = []
@@ -847,7 +854,7 @@ class CBCRefactorTest(unittest.TestCase):
                 filename = os.path.join(
                     workspace, 'transition_%s.tif' % transition_year)
                 pygeoprocessing.numpy_array_to_raster(
-                    band_matrix, -1, (100, -100), origin, projection_wkt, 
+                    band_matrix, -1, (100, -100), origin, projection_wkt,
                     filename)
 
                 args['lulc_transition_maps_list'].append(filename)
@@ -856,7 +863,7 @@ class CBCRefactorTest(unittest.TestCase):
         # Make the lulc
         lulc_shape = (10, 10) if not known_matrix_size else known_matrix_size
         pygeoprocessing.numpy_array_to_raster(
-            numpy.ones(lulc_shape), -1, (100, -100), origin, projection_wkt, 
+            numpy.ones(lulc_shape), -1, (100, -100), origin, projection_wkt,
             args['lulc_baseline_map_uri'])
 
         if analysis_year:
@@ -990,7 +997,8 @@ class CBCValidationTests(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         from natcap.invest import validation
 
-        validation_errors = coastal_blue_carbon.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = coastal_blue_carbon.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(self.base_required_keys)
         self.assertEqual(invalid_keys, expected_missing_keys)

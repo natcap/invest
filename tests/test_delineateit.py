@@ -125,7 +125,6 @@ class DelineateItTests(unittest.TestCase):
 
     def test_point_snapping(self):
         """DelineateIt: test point snapping."""
-
         from natcap.invest import delineateit
 
         srs = osr.SpatialReference()
@@ -155,14 +154,14 @@ class DelineateItTests(unittest.TestCase):
             Point(13, -5),
             box(-2, -2, -1, -1),  # Off the edge
         ]
-        fields={'foo': ogr.OFTInteger, 'bar': ogr.OFTString}
-        attributes=[
+        fields = {'foo': ogr.OFTInteger, 'bar': ogr.OFTString}
+        attributes = [
             {'foo': 0, 'bar': 0.1}, {'foo': 1, 'bar': 1.1},
             {'foo': 2, 'bar': 2.1}, {'foo': 3, 'bar': 3.1},
             {'foo': 4, 'bar': 4.1}]
         pygeoprocessing.shapely_geometry_to_vector(
-            source_features, source_points_path, wkt, 'GeoJSON', 
-            fields=fields, attribute_list=attributes, 
+            source_features, source_points_path, wkt, 'GeoJSON',
+            fields=fields, attribute_list=attributes,
             ogr_geom_type=ogr.wkbUnknown)
 
         snapped_points_path = os.path.join(self.workspace_dir,
@@ -256,7 +255,7 @@ class DelineateItTests(unittest.TestCase):
         dem_raster_path = os.path.join(self.workspace_dir, 'dem.tif')
         # byte datatype
         pygeoprocessing.numpy_array_to_raster(
-            dem_matrix, 255, (2, -2), (2, -2), projection_wkt, 
+            dem_matrix, 255, (2, -2), (2, -2), projection_wkt,
             dem_raster_path)
 
         # empty geometry
@@ -314,7 +313,8 @@ class DelineateItTests(unittest.TestCase):
         outflow_layer = None
         outflow_vector = None
 
-        target_vector_path = os.path.join(self.workspace_dir, 'checked_geometries.gpkg')
+        target_vector_path = os.path.join(
+            self.workspace_dir, 'checked_geometries.gpkg')
         with self.assertRaises(ValueError) as cm:
             delineateit.check_geometries(
                 outflow_vector_path, dem_raster_path, target_vector_path,
@@ -335,7 +335,8 @@ class DelineateItTests(unittest.TestCase):
 
         target_vector = gdal.OpenEx(target_vector_path, gdal.OF_VECTOR)
         target_layer = target_vector.GetLayer()
-        self.assertEqual(target_layer.GetFeatureCount(), len(expected_geom_areas))
+        self.assertEqual(
+            target_layer.GetFeatureCount(), len(expected_geom_areas))
 
         for feature in target_layer:
             geom = feature.GetGeometryRef()

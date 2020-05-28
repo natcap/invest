@@ -319,7 +319,8 @@ class CropValidationTests(unittest.TestCase):
         from natcap.invest import crop_production_percentile
         from natcap.invest import validation
 
-        validation_errors = crop_production_percentile.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = crop_production_percentile.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(self.base_required_keys)
         self.assertEqual(invalid_keys, expected_missing_keys)
@@ -329,7 +330,8 @@ class CropValidationTests(unittest.TestCase):
         from natcap.invest import crop_production_regression
         from natcap.invest import validation
 
-        validation_errors = crop_production_regression.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = crop_production_regression.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys +

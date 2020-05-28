@@ -26,7 +26,7 @@ EXPECTED_FILE_LIST = [
 def _make_harvest_shp(workspace_dir):
     """Within workspace, make an output folder with dummy Finfish_Harvest.shp.
 
-    Parameters:
+    Args:
         workspace_dir: path to workspace for creating the output folder.
     """
     output_path = os.path.join(workspace_dir, 'output')
@@ -34,6 +34,7 @@ def _make_harvest_shp(workspace_dir):
         os.makedirs(output_path)
     with open(os.path.join(output_path, 'Finfish_Harvest.shp'), 'wb') as shp:
         shp.write(b'')
+
 
 def _assert_vectors_equal(
         actual_vector_path, expected_vector_path, tolerance_places=3):
@@ -63,13 +64,13 @@ def _assert_vectors_equal(
                         av, ev, decimal=tolerance_places)
                 else:
                     assert(ev is None)
-            
+
             expected_geom = feature.GetGeometryRef()
             expected_geom_wkt = expected_geom.ExportToWkt()
             actual_geom = feature.GetGeometryRef()
             actual_geom_wkt = actual_geom.ExportToWkt()
             assert(expected_geom_wkt == actual_geom_wkt)
-           
+
             feature = None
             actual_feature = None
     finally:
@@ -77,6 +78,7 @@ def _assert_vectors_equal(
         actual_vector = None
         expected_layer = None
         expected_vector = None
+
 
 class FinfishTests(unittest.TestCase):
     """Tests for Finfish Aquaculture."""
@@ -93,7 +95,7 @@ class FinfishTests(unittest.TestCase):
 
     @staticmethod
     def generate_base_args(workspace_dir):
-        """Generate an args list that is consistent for both regression tests"""
+        """Generate args list that is consistent for both regression tests."""
         args = {
             'farm_ID': 'FarmID',
             'farm_op_tbl': os.path.join(SAMPLE_DATA, 'Farm_Operations.csv'),
@@ -150,7 +152,7 @@ class FinfishTests(unittest.TestCase):
     def _test_same_files(base_path_list, directory_path):
         """Assert files in `base_path_list` are in `directory_path`.
 
-        Parameters:
+        Args:
             base_path_list (list): list of strings which are relative
                 file paths.
             directory_path (string): a path to a directory whose contents will
@@ -205,7 +207,8 @@ class FinfishValidationTests(unittest.TestCase):
         from natcap.invest.finfish_aquaculture import finfish_aquaculture
         from natcap.invest import validation
 
-        validation_errors = finfish_aquaculture.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = finfish_aquaculture.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys +
