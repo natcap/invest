@@ -407,7 +407,7 @@ def execute(args):
                       landcover_raster_info['pixel_size'],
                       regression_parameter_raster_path_lookup[yield_regression_id],
                       'cubicspline'),
-                kwargs={'target_sr_wkt': landcover_raster_info['projection_wkt'],
+                kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
                         'target_bb': landcover_raster_info['bounding_box']},
                 target_path_list=[
                     regression_parameter_raster_path_lookup[yield_regression_id]],
@@ -541,7 +541,7 @@ def execute(args):
             args=(zeroed_observed_yield_raster_path,
                   landcover_raster_info['pixel_size'],
                   interpolated_observed_yield_raster_path, 'cubicspline'),
-            kwargs={'target_sr_wkt': landcover_raster_info['projection_wkt'],
+            kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
                     'target_bb': landcover_raster_info['bounding_box']},
             target_path_list=[interpolated_observed_yield_raster_path],
             dependent_task_list=[nodata_to_zero_for_observed_yield_task],
