@@ -108,7 +108,7 @@ class CropProductionTests(unittest.TestCase):
             raster_path, n, n, 1, gdal.GDT_Int32, options=[
                 'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
                 'BLOCKXSIZE=16', 'BLOCKYSIZE=16'])
-        new_raster.SetProjection(base_lulc_info['projection'])
+        new_raster.SetProjection(base_lulc_info['projection_wkt'])
         new_raster.SetGeoTransform([origin_x, 1.0, 0.0, origin_y, 0.0, -1.0])
         new_band = new_raster.GetRasterBand(1)
         array = numpy.array(range(n*n), dtype=numpy.int32).reshape((n, n))
@@ -272,7 +272,7 @@ class CropProductionTests(unittest.TestCase):
             raster_path, n, n, 1, gdal.GDT_Int32, options=[
                 'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
                 'BLOCKXSIZE=16', 'BLOCKYSIZE=16'])
-        new_raster.SetProjection(base_lulc_info['projection'])
+        new_raster.SetProjection(base_lulc_info['projection_wkt'])
         new_raster.SetGeoTransform([origin_x, 1.0, 0.0, origin_y, 0.0, -1.0])
         new_band = new_raster.GetRasterBand(1)
         array = numpy.array(range(n*n), dtype=numpy.int32).reshape((n, n))
