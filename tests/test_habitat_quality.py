@@ -14,7 +14,7 @@ import pygeoprocessing
 def make_simple_poly(origin):
     """Make a 50x100 ogr rectangular geometry clockwisely from origin.
 
-    Parameters:
+    Args:
         origin (tuple): the longitude and latitude of the origin of the
                         rectangle.
 
@@ -41,7 +41,7 @@ def make_simple_poly(origin):
 def make_raster_from_array(base_array, base_raster_path):
     """Make a raster from an array on a designated path.
 
-    Parameters:
+    Args:
         array (numpy.ndarray): the 2D array for making the raster.
         raster_path (str): the path for the raster to be created.
 
@@ -54,14 +54,14 @@ def make_raster_from_array(base_array, base_raster_path):
     project_wkt = srs.ExportToWkt()
 
     pygeoprocessing.numpy_array_to_raster(
-        base_array, -1, (1, -1), (1180000, 690000), project_wkt, 
+        base_array, -1, (1, -1), (1180000, 690000), project_wkt,
         base_raster_path)
 
 
 def make_access_shp(access_shp_path):
     """Create a 100x100 accessibility polygon shapefile with two access values.
 
-    Parameters:
+    Args:
         access_shp_path (str): the path for the shapefile.
 
     Returns:
@@ -108,7 +108,7 @@ def make_access_shp(access_shp_path):
 def make_lulc_raster(raster_path, lulc_val, side_length=100):
     """Create a 100x100 raster on raster path with designated LULC code.
 
-    Parameters:
+    Args:
         raster_path (str): the path for the LULC raster.
         lulc_val (int): the LULC value to be filled in the raster.
 
@@ -123,10 +123,12 @@ def make_lulc_raster(raster_path, lulc_val, side_length=100):
 
 def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
                         threat_values=None):
-    """Create a side_lengthXside_length raster on designated path with 1 as
+    """Create a raster.
+
+    Create a side_lengthXside_length raster on designated path with 1 as
     threat and 0 as none.
 
-    Parameters:
+    Args:
         folder_path (str): the folder path for saving the threat rasters.
         make_empty_raster=False (bool): Whether to write a raster file
             that has no values at all.
@@ -149,7 +151,8 @@ def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
     for suffix in ['_c', '_f']:
         for (i, threat), value in zip(enumerate(threat_names), threat_values):
             raster_path = os.path.join(folder_path, threat + suffix + '.tif')
-            threat_array[100//(i+1):, :] = value  # making variations among threats
+            # making variations among threats
+            threat_array[100//(i+1):, :] = value
             if make_empty_raster:
                 open(raster_path, 'a').close()  # writes an empty raster.
             else:
@@ -160,7 +163,7 @@ def make_sensitivity_samp_csv(csv_path,
                               include_threat=True, missing_lines=False):
     """Create a simplified sensitivity csv file with five land cover types.
 
-    Parameters:
+    Args:
         csv_path (str): the path of sensitivity csv.
         include_threat (bool): whether the "threat" column is included in csv.
 
@@ -189,7 +192,7 @@ def make_threats_csv(csv_path,
                      include_invalid_decay=False):
     """Create a simplified threat csv with two threat types.
 
-    Parameters:
+    Args:
         csv_path (str): the path of threat csv.
         include_missing_threat (bool): whether an extra threat is included in
                                        the csv.
@@ -214,7 +217,7 @@ def make_threats_csv(csv_path,
 def assert_array_sum(base_raster_path, desired_sum, include_nodata=True):
     """Assert that the sum of a raster is equal to the specified value.
 
-    Parameters:
+    Args:
         base_raster_path (str): the filepath of the raster to be asserted.
         desired_sum (float): the value to be compared with the raster sum.
 
@@ -362,7 +365,8 @@ class HabitatQualityTests(unittest.TestCase):
             for i, threat in enumerate(threatnames):
                 raster_path = os.path.join(threats_folder,
                                            threat + suffix + '.tif')
-                threat_array[100//(i+1):, :] = 1  # making variations among threats
+                # making variations among threats
+                threat_array[100//(i+1):, :] = 1
                 make_raster_from_array(threat_array, raster_path)
 
         threat_csv_path = os.path.join(self.workspace_dir, 'threats.csv')
@@ -391,7 +395,8 @@ class HabitatQualityTests(unittest.TestCase):
             make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
 
         with open(args['sensitivity_table_path'], 'w') as open_table:
-            open_table.write('LULC,NAME,HABITAT,L_%s,L_%s\n' % tuple(threatnames))
+            open_table.write(
+                'LULC,NAME,HABITAT,L_%s,L_%s\n' % tuple(threatnames))
             open_table.write('1,"lulc 1",1,1,1\n')
             open_table.write('2,"lulc 2",0.5,0.5,1\n')
             open_table.write('3,"lulc 3",0,0.3,1\n')

@@ -115,13 +115,16 @@ class ReportingRegressionTests(unittest.TestCase):
             # Strip trailing newlines.
             self.assertEqual(source_line.rstrip(), regression_line.rstrip())
 
-    @unittest.skip("skipping due to different number truncation in py36 and py27")
+    @unittest.skip(
+        "skipping due to different number truncation in py36 and py27")
     def test_generate_report_shape_json(self):
         """Reporting: testing full report w/ shape table data and json file."""
         from natcap.invest import reporting
 
         workspace_dir = self.workspace_dir
-        workspace_dir = 'C:/Users/dmf/projects/invest_dev/py36_compatibility/reporting'
+        workspace_dir = os.path.join(
+            'C:', os.sep, 'Users', 'dmf', 'projects', 'invest_dev',
+            'py36_compatibility', 'reporting')
         args = ReportingRegressionTests.generate_base_args()
 
         shape_path = os.path.join(

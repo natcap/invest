@@ -15,6 +15,7 @@ SAMPLE_DATA = os.path.join(
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower')
 
+
 def _assert_vectors_equal(
         actual_vector_path, expected_vector_path, tolerance_places=3):
     """Assert fieldnames and values are equal with no respect to order."""
@@ -43,13 +44,13 @@ def _assert_vectors_equal(
                         av, ev, decimal=tolerance_places)
                 else:
                     assert(ev is None)
-            
+
             expected_geom = feature.GetGeometryRef()
             expected_geom_wkt = expected_geom.ExportToWkt()
             actual_geom = feature.GetGeometryRef()
             actual_geom_wkt = actual_geom.ExportToWkt()
             assert(expected_geom_wkt == actual_geom_wkt)
-           
+
             feature = None
             actual_feature = None
     finally:
@@ -58,11 +59,12 @@ def _assert_vectors_equal(
         expected_layer = None
         expected_vector = None
 
+
 class HydropowerTests(unittest.TestCase):
     """Regression Tests for Annual Water Yield Hydropower Model."""
 
     def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
+        """Overriding setUp func. to create temporary workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()

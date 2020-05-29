@@ -5,7 +5,6 @@ import shutil
 import os
 
 import pygeoprocessing
-from osgeo import ogr
 from osgeo import gdal
 import numpy
 
@@ -21,8 +20,9 @@ REGRESSION_DATA = os.path.join(
 def _make_dummy_file(workspace_dir, file_name):
     """Within workspace, create a dummy output file to be overwritten.
 
-    Parameters:
-        workspace_dir: path to workspace for making the file
+    Args:
+        workspace_dir (string): path to workspace for making the file
+        file_name (string): file path name
     """
     output_path = os.path.join(workspace_dir, file_name)
     output = open(output_path, 'wb')
@@ -164,7 +164,7 @@ class GLOBIOTests(unittest.TestCase):
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
 
-        Parameters:
+        Args:
             base_list_path (string): a path to a file that has one relative
                 file path per line.
             directory_path (string): a path to a directory whose contents will
@@ -194,7 +194,7 @@ class GLOBIOTests(unittest.TestCase):
     def _assert_regression_results_eq(result_vector_path, agg_results_path):
         """Test output vector against expected aggregate results.
 
-        Parameters:
+        Args:
             result_vector_path (string): path to the summary shapefile
                 produced by GLOBIO model
             agg_results_path (string): path to a csv file that has the
@@ -271,7 +271,7 @@ class GlobioValidationTests(unittest.TestCase):
         self.assertEqual(invalid_keys, expected_missing_keys)
 
     def test_missing_keys_predefined_globio(self):
-        """GLOBIO Validate: assert missing required keys with predifined GLOBIO."""
+        """GLOBIO Validate: assert missing req. keys w/ predifined GLOBIO."""
         from natcap.invest import globio
         from natcap.invest import validation
 
@@ -294,7 +294,9 @@ class GlobioValidationTests(unittest.TestCase):
             file.write('1,2\n')
         validation_warnings = globio.validate(
             {'msa_parameters_path': msa_parameters_path})
-        expected_message = "Fields are missing from this table: ['MEASUREMENT', 'MSA_TYPE', 'MSA_X', 'SE', 'VALUE']"
+        expected_message = ("Fields are missing from this table: "
+                            "['MEASUREMENT', 'MSA_TYPE', 'MSA_X', 'SE', "
+                            "'VALUE']")
         actual_messages = set()
         for keys, error_strings in validation_warnings:
             actual_messages.add(error_strings)

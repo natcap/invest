@@ -70,7 +70,7 @@ def _timeout(max_timeout):
 def _make_empty_files(base_file_list):
     """Create a list of empty files.
 
-    Parameters:
+    Args:
         base_file_list: a list of paths to empty files to be created.
 
     Returns:
@@ -85,7 +85,7 @@ def _make_empty_files(base_file_list):
 def _resample_csv(base_csv_path, base_dst_path, resample_factor):
     """Resample (downsize) a csv file by a certain resample factor.
 
-    Parameters:
+    Args:
         base_csv_path (str): path to the source csv file to be resampled.
         base_dst_path (str): path to the destination csv file.
         resample_factor (int): the factor used to determined how many rows
@@ -155,8 +155,8 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
         file_hash = recmodel_server._hashfile(
             self.resampled_data_path, blocksize=2**20, fast_hash=False)
-        # The exact encoded string that is hashed is dependent on python version,
-        # with Python 3 including b prefix and \n suffix.
+        # The exact encoded string that is hashed is dependent on python
+        # version, with Python 3 including b prefix and \n suffix.
         # these hashes are for [py2.7, py3.6]
         self.assertIn(file_hash, ['c052e7a0a4c5e528', 'c8054b109d7a9d2a'])
 
@@ -505,7 +505,8 @@ class TestRecServer(unittest.TestCase):
         Executes Recreation model all the way through scenario prediction.
         With this 'extra_fields_features' AOI, we also cover two edge cases:
         1) the AOI has a pre-existing field that the model wishes to create.
-        2) the AOI has features only covering nodata raster predictor values."""
+        2) the AOI has features only covering nodata raster predictor values.
+        """
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
@@ -841,7 +842,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'square_grid_vector_path.shp')
 
-        _assert_vector_attributes_eq(out_grid_vector_path, expected_grid_vector_path)
+        _assert_vector_attributes_eq(
+            out_grid_vector_path, expected_grid_vector_path)
 
     def test_hex_grid_regression(self):
         """Recreation hex grid regression test."""
@@ -857,7 +859,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        _assert_vector_attributes_eq(out_grid_vector_path, expected_grid_vector_path)
+        _assert_vector_attributes_eq(
+            out_grid_vector_path, expected_grid_vector_path)
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_no_grid_regression(self):
@@ -922,7 +925,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        _assert_vector_attributes_eq(out_grid_vector_path, expected_grid_vector_path)
+        _assert_vector_attributes_eq(
+            out_grid_vector_path, expected_grid_vector_path)
 
     def test_existing_regression_coef(self):
         """Recreation test regression coefficients handle existing output."""
@@ -944,7 +948,8 @@ class RecreationRegressionTests(unittest.TestCase):
         predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
 
         # make outputs to be overwritten
-        predictor_dict = utils.build_lookup_from_csv(predictor_table_path, 'id')
+        predictor_dict = utils.build_lookup_from_csv(
+            predictor_table_path, 'id')
         predictor_list = predictor_dict.keys()
         tmp_working_dir = tempfile.mkdtemp(dir=self.workspace_dir)
         empty_json_list = [
@@ -1009,8 +1014,8 @@ class RecreationRegressionTests(unittest.TestCase):
         # The expected behavior here is that _validate_same_projection does
         # not raise a ValueError.  The try/except block makes that explicit
         # and also explicitly fails the test if it does. Note if a different
-        # exception is raised the test will raise an error, thus differentiating
-        # between a failed test and an error.
+        # exception is raised the test will raise an error, thus
+        # differentiating between a failed test and an error.
         try:
             recmodel_client._validate_same_projection(
                 response_vector_path, predictor_table_path)
@@ -1150,7 +1155,8 @@ class RecreationValidationTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest import validation
 
-        validation_errors = recmodel_client.validate({'compute_regression': True})
+        validation_errors = recmodel_client.validate(
+            {'compute_regression': True})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys + ['predictor_table_path'])
@@ -1165,7 +1171,8 @@ class RecreationValidationTests(unittest.TestCase):
             file.write('foo,bar,baz\n')
             file.write('a,b,c\n')
 
-        expected_message = "Fields are missing from this table: ['ID', 'PATH', 'TYPE']"
+        expected_message = ("Fields are missing from this table: "
+                            "['ID', 'PATH', 'TYPE']")
         validation_warnings = recmodel_client.validate(
             {'predictor_table_path': table_path})
         actual_messages = set()
@@ -1224,7 +1231,7 @@ def _assert_regression_results_eq(
         expected_results_path):
     """Test workspace against the expected list of files and results.
 
-    Parameters:
+    Args:
         workspace_dir (string): path to the completed model workspace
         file_list_path (string): path to a file that has a list of all
             the expected files relative to the workspace base
@@ -1278,7 +1285,7 @@ def _assert_regression_results_eq(
 def _test_same_files(base_list_path, directory_path):
     """Assert expected files are in the `directory_path`.
 
-    Parameters:
+    Args:
         base_list_path (string): a path to a file that has one relative
             file path per line.
         directory_path (string): a path to a directory whose contents will

@@ -7,6 +7,7 @@ import glob
 
 from osgeo import gdal
 from osgeo import osr
+from osgeo import ogr
 import pygeoprocessing
 from shapely.geometry import Polygon, Point
 import numpy
@@ -32,7 +33,7 @@ class ScenicQualityTests(unittest.TestCase):
     def create_dem(dem_path):
         """Create a known DEM at the given path.
 
-        Parameters:
+        Args:
             dem_path (string): Where to store the DEM.
 
         Returns:
@@ -58,7 +59,7 @@ class ScenicQualityTests(unittest.TestCase):
 
         The envelope of the AOI perfectly overlaps the outside edge of the DEM.
 
-        Parameters:
+        Args:
             aoi_path (string): The filepath where the AOI should be written.
 
         Returns:
@@ -67,8 +68,7 @@ class ScenicQualityTests(unittest.TestCase):
         """
         geoms = [Polygon([(2, -2), (2, -12), (12, -12), (12, -2), (2, -2)])]
         pygeoprocessing.shapely_geometry_to_vector(
-            geoms, aoi_path, WKT, 'ESRI Shapefile', fields=fields, 
-            attribute_list=attrs)
+            geoms, aoi_path, WKT, 'GeoJSON')
 
     @staticmethod
     def create_viewpoints(viewpoints_path, fields=None, attributes=None):
@@ -78,7 +78,7 @@ class ScenicQualityTests(unittest.TestCase):
         The second viewpoint is off the edge of the DEM and will therefore not
         be included in the Scenic Quality analysis.
 
-        Parameters:
+        Args:
             viewpoints_path (string): The filepath where the viewpoints vector
                 should be saved.
             fields=None (dict): If provided, this must be a dict mapping
@@ -93,15 +93,15 @@ class ScenicQualityTests(unittest.TestCase):
             ``None``
 
         """
-        geometries = 
-            [Point(7.0, -3.0),
-             Point(1.0, -7.0),  # off the edge of DEM, won't be included.
-             Point(7.0, -11.0),
-             Point(11.0, -7.0)]
+        geometries = [
+            Point(7.0, -3.0),
+            Point(1.0, -7.0),  # off the edge of DEM, won't be included.
+            Point(7.0, -11.0),
+            Point(11.0, -7.0)]
 
         pygeoprocessing.shapely_geometry_to_vector(
-            geometries, viewpoints_path, WKT, 'GeoJSON', 
-            fields=fields, attribute_list=attributes, 
+            geometries, viewpoints_path, WKT, 'GeoJSON',
+            fields=fields, attribute_list=attributes,
             ogr_geom_type=ogr.wkbPoint)
 
     def test_exception_when_no_structures_aoi_overlap(self):
@@ -119,7 +119,7 @@ class ScenicQualityTests(unittest.TestCase):
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         geometries = [Polygon([(2, 2), (2, 12), (12, 12), (12, 2), (2, 2)])]
         pygeoprocessing.shapely_geometry_to_vector(
-            geometries, aoi_path, WKT, 'GeoJSON') 
+            geometries, aoi_path, WKT, 'GeoJSON')
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -256,7 +256,7 @@ class ScenicQualityTests(unittest.TestCase):
                       Point(-1.0, -5.0),  # off the edge of DEM.
                       Point(1.25, -1.5)]  # Within AOI, over nodata.
         pygeoprocessing.shapely_geometry_to_vector(
-            geometries, viewpoints_path, WKT, 'GeoJSON', 
+            geometries, viewpoints_path, WKT, 'GeoJSON',
             ogr_geom_type=ogr.wkbPoint)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
@@ -360,9 +360,10 @@ class ScenicQualityTests(unittest.TestCase):
              [0, 0, 4, 3, 3],
              [0, 3, 3, 4, 3],
              [3, 3, 3, 3, 4]])
-        
+
         quality_matrix = pygeoprocessing.raster_to_numpy_array(
-            visual_quality_raster)
+            os.path.join(
+                args['workspace_dir'], 'output', 'vshed_qual_foo.tif'))
         numpy.testing.assert_almost_equal(
             expected_visual_quality, quality_matrix)
 
@@ -773,9 +774,9 @@ class ScenicQualityValidationTests(unittest.TestCase):
         srs.ImportFromEPSG(4326)  # WGS84 is not projected.
         projection_wkt = srs.ExportToWkt()
         filepath = os.path.join(self.workspace_dir, 'dem.tif')
-        
+
         pygeoprocessing.numpy_array_to_raster(
-            numpy.array([[1]]), -1, (1, -1), (0, 0), projection_wkt, 
+            numpy.array([[1]]), -1, (1, -1), (0, 0), projection_wkt,
             filepath)
 
         args = {'dem_path': filepath}
@@ -801,7 +802,7 @@ class ViewshedTests(unittest.TestCase):
     def create_dem(matrix, filepath, pixel_size=(1, 1), nodata=-1):
         """Create a DEM in WGS84 coordinate system.
 
-        Parameters:
+        Args:
             matrix (numpy.array): A 2D numpy array of pixel values.
             filepath (string): The filepath where the new raster file will be
                 written.
@@ -810,9 +811,7 @@ class ViewshedTests(unittest.TestCase):
 
         Returns:
             ``None``.
-
         """
-
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(4326)  # WGS84
         projection_wkt = srs.ExportToWkt()
@@ -881,7 +880,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_refractivity(self):
-        """SQ Viewshed: refractivity partly compensates for earth's curvature."""
+        """SQ Vshed: refractivity partly compensates for earth's curvature."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.array([[2, 1, 1, 2, 1, 1, 1, 1, 1, 50]])
         viewpoint = (0, 0)
@@ -976,7 +975,7 @@ class ViewshedTests(unittest.TestCase):
         visibility_filepath = os.path.join(self.workspace_dir,
                                            'visibility.tif')
         pygeoprocessing.numpy_array_to_raster(
-            numpy.ones((10, 10)), -1, (1, -1), (0, 0), projection_wkt, 
+            numpy.ones((10, 10)), -1, (1, -1), (0, 0), projection_wkt,
             dem_filepath, raster_driver_creation_tuple=(
                 'GTIFF', ('TILED=NO', 'BIGTIFF=YES', 'COMPRESS=LZW',
                           'BLOCKXSIZE=20', 'BLOCKYSIZE=40')))

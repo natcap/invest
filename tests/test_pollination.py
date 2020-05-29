@@ -256,7 +256,8 @@ class PollinationTests(unittest.TestCase):
             temp_path, 'bad_biophysical_table.csv')
         with open(bad_biophysical_table_path, 'w') as bad_biophysical_table:
             bad_biophysical_table.write(
-                'lucode,nesting_cavity_availability_index,nesting_ground_index\n'
+                'lucode,nesting_cavity_availability_index,'
+                'nesting_ground_index\n'
                 '1,0.3,0.2\n')
         args = {
             'results_suffix': '',
@@ -282,7 +283,8 @@ class PollinationTests(unittest.TestCase):
         # one table has only spring the other has only fall.
         with open(bad_biophysical_table_path, 'w') as bad_biophysical_table:
             bad_biophysical_table.write(
-                'lucode,nesting_cavity_availability_index,nesting_ground_index,floral_resources_spring_index\n'
+                'lucode,nesting_cavity_availability_index,'
+                'nesting_ground_index,floral_resources_spring_index\n'
                 '1,0.3,0.2,0.2\n')
         bad_guild_table_path = os.path.join(temp_path, 'bad_guild_table.csv')
         with open(bad_guild_table_path, 'w') as bad_guild_table:
@@ -318,7 +320,7 @@ class PollinationTests(unittest.TestCase):
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
         projection_wkt = srs.ExportToWkt()
-        
+
         fields = {
             'crop_type': ogr.OFTString,
             'half_sat': ogr.OFTReal,
@@ -327,7 +329,7 @@ class PollinationTests(unittest.TestCase):
             {'crop_type': 'test', 'half_sat': 0.5, 'p_managed': 0.5}]
 
         pygeoprocessing.shapely_geometry_to_vector(
-            point_geom, farm_shape_path, projection_wkt, 'ESRI Shapefile', 
+            point_geom, farm_shape_path, projection_wkt, 'ESRI Shapefile',
             fields=fields, attribute_list=attrs, ogr_geom_type=ogr.wkbPoint)
 
         args = {
@@ -397,7 +399,7 @@ class PollinationTests(unittest.TestCase):
     def _test_same_files(base_file_list, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
 
-        Parameters:
+        Args:
             base_file_list (list): a list of relative file paths.
             directory_path (string): a path to a directory whose contents will
                 be checked against the files listed in `base_list_file`
