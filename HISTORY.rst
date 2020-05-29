@@ -1,7 +1,11 @@
 .. :changelog:
 
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.3 (2020-05-29)
 ------------------
 * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
   available standard C library definition.  This new definition helps to avoid
