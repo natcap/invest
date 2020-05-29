@@ -17,6 +17,7 @@ from osgeo import osr
 
 import pygeoprocessing
 
+
 class SuffixUtilsTests(unittest.TestCase):
     """Tests for natcap.invest.utils.make_suffix_string."""
 
@@ -206,6 +207,7 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
 
 
 class SandboxTempdirTests(unittest.TestCase):
+    """Test Sandbox Tempdir."""
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -215,6 +217,7 @@ class SandboxTempdirTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_sandbox_manager(self):
+        """Test sandbox manager."""
         from natcap.invest import utils
 
         with utils.sandbox_tempdir(suffix='foo',
@@ -230,19 +233,23 @@ class SandboxTempdirTests(unittest.TestCase):
 
 
 class TimeFormattingTests(unittest.TestCase):
+    """Test Time Formatting."""
     def test_format_time_hours(self):
+        """Test format time hours."""
         from natcap.invest.utils import _format_time
 
         seconds = 3667
         self.assertEqual(_format_time(seconds), '1h 1m 7s')
 
     def test_format_time_minutes(self):
+        """Test format time minutes."""
         from natcap.invest.utils import _format_time
 
         seconds = 67
         self.assertEqual(_format_time(seconds), '1m 7s')
 
     def test_format_time_seconds(self):
+        """Test format time seconds."""
         from natcap.invest.utils import _format_time
 
         seconds = 7
@@ -250,10 +257,13 @@ class TimeFormattingTests(unittest.TestCase):
 
 
 class LogToFileTests(unittest.TestCase):
+    """Test Log To File."""
     def setUp(self):
+        """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Remove temporary workspace."""
         shutil.rmtree(self.workspace)
 
     def test_log_to_file_all_threads(self):
@@ -263,6 +273,7 @@ class LogToFileTests(unittest.TestCase):
         logfile = os.path.join(self.workspace, 'logfile.txt')
 
         def _log_from_other_thread():
+            """Log from other thead."""
             thread_logger = logging.getLogger()
             thread_logger.info('this is from a thread')
 
@@ -294,6 +305,7 @@ class LogToFileTests(unittest.TestCase):
         logfile = os.path.join(self.workspace, 'logfile.txt')
 
         def _log_from_other_thread():
+            """Log from other thread."""
             thread_logger = logging.getLogger()
             thread_logger.info('this should not be logged')
             thread_logger.info('neither should this message')
@@ -316,7 +328,9 @@ class LogToFileTests(unittest.TestCase):
 
 
 class ThreadFilterTests(unittest.TestCase):
+    """Test Thread Filter."""
     def test_thread_filter_same_thread(self):
+        """Test threat filter same thread."""
         from natcap.invest.utils import ThreadFilter
 
         # name, level, pathname, lineno, msg, args, exc_info, func=None
@@ -335,6 +349,7 @@ class ThreadFilterTests(unittest.TestCase):
         self.assertEqual(filterer.filter(record), False)
 
     def test_thread_filter_different_thread(self):
+        """Test thread filter different thread."""
         from natcap.invest.utils import ThreadFilter
 
         # name, level, pathname, lineno, msg, args, exc_info, func=None
@@ -433,10 +448,13 @@ class MakeDirectoryTests(unittest.TestCase):
 
 
 class GDALWarningsLoggingTests(unittest.TestCase):
+    """Test GDAL Warnings Logging."""
     def setUp(self):
+        """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Remove temporary workspace."""
         shutil.rmtree(self.workspace)
 
     def test_log_warnings(self):
@@ -465,10 +483,13 @@ class GDALWarningsLoggingTests(unittest.TestCase):
 
 
 class PrepareWorkspaceTests(unittest.TestCase):
+    """Test Prepare Workspace."""
     def setUp(self):
+        """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Remove temporary workspace."""
         shutil.rmtree(self.workspace)
 
     def test_prepare_workspace(self):
@@ -492,17 +513,22 @@ class PrepareWorkspaceTests(unittest.TestCase):
         with open(logfile_glob[0]) as logfile:
             logfile_text = logfile.read()
             # all the following strings should be in the logfile.
-            expected_string = 'file should not exist: No such file or directory'
-            self.assertTrue(expected_string in logfile_text)  # gdal error captured
+            expected_string = (
+                'file should not exist: No such file or directory')
+            self.assertTrue(
+                expected_string in logfile_text)  # gdal error captured
             self.assertEqual(len(re.findall('WARNING', logfile_text)), 1)
             self.assertTrue('Elapsed time:' in logfile_text)
 
 
 class BuildLookupFromCSVTests(unittest.TestCase):
+    """Test build lookup from CSV."""
     def setUp(self):
+        """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Remove temporary workspace."""
         shutil.rmtree(self.workspace)
 
     def test_key_not_in_header(self):
@@ -634,16 +660,15 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
     """Tests for natcap.invest.utils.create_coordinate_transformer."""
 
     def test_latlon_to_latlon_transformer(self):
-        """Utils: test transformer for lat/lon to lat/lon"""
+        """Utils: test transformer for lat/lon to lat/lon."""
         from natcap.invest import utils
 
         # Willamette valley in lat/lon for reference
-        bounding_box = [-123.587984, 44.415778, -123.397976, 44.725814]
         lon = -124.525
         lat = 44.525
 
         base_srs = osr.SpatialReference()
-        base_srs.ImportFromEPSG(4326) # WSG84 EPSG
+        base_srs.ImportFromEPSG(4326)  # WSG84 EPSG
 
         target_srs = osr.SpatialReference()
         target_srs.ImportFromEPSG(4326)
@@ -651,7 +676,7 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
         transformer = utils.create_coordinate_transformer(base_srs, target_srs)
         x, y, _ = transformer.TransformPoint(lon, lat)
 
-        expected_x = -124.525 
+        expected_x = -124.525
         expected_y = 44.525
 
         self.assertEqual(expected_x, x)
@@ -662,21 +687,20 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
         from natcap.invest import utils
 
         # Willamette valley in lat/lon for reference
-        bounding_box = [-123.587984, 44.415778, -123.397976, 44.725814]
         lon = -124.525
         lat = 44.525
 
         base_srs = osr.SpatialReference()
-        base_srs.ImportFromEPSG(4326) # WSG84 EPSG
+        base_srs.ImportFromEPSG(4326)  # WSG84 EPSG
 
         target_srs = osr.SpatialReference()
-        target_srs.ImportFromEPSG(26910) # UTM10N EPSG
+        target_srs.ImportFromEPSG(26910)  # UTM10N EPSG
 
         transformer = utils.create_coordinate_transformer(base_srs, target_srs)
         x, y, _ = transformer.TransformPoint(lon, lat)
 
-        expected_x = 378816.2531852932 
-        expected_y = 4931317.807472325 
+        expected_x = 378816.2531852932
+        expected_y = 4931317.807472325
 
         self.assertEqual(expected_x, x)
         self.assertEqual(expected_y, y)
@@ -686,21 +710,20 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
         from natcap.invest import utils
 
         # Willamette valley in lat/lon for reference
-        bounding_box = [-123.587984, 44.415778, -123.397976, 44.725814]
-        known_x = 378816.2531852932 
-        known_y = 4931317.807472325 
+        known_x = 378816.2531852932
+        known_y = 4931317.807472325
 
         base_srs = osr.SpatialReference()
-        base_srs.ImportFromEPSG(26910) # UTM10N EPSG
+        base_srs.ImportFromEPSG(26910)  # UTM10N EPSG
 
         target_srs = osr.SpatialReference()
-        target_srs.ImportFromEPSG(4326) # WSG84 EPSG
+        target_srs.ImportFromEPSG(4326)  # WSG84 EPSG
 
         transformer = utils.create_coordinate_transformer(base_srs, target_srs)
         x, y, _ = transformer.TransformPoint(known_x, known_y)
 
         expected_x = -124.52500000000002
-        expected_y = 44.525 
+        expected_y = 44.525
 
         self.assertAlmostEqual(expected_x, x, places=3)
         self.assertAlmostEqual(expected_y, y, places=3)
@@ -710,21 +733,20 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
         from natcap.invest import utils
 
         # Willamette valley in lat/lon for reference
-        bounding_box = [-123.587984, 44.415778, -123.397976, 44.725814]
-        known_x = 378816.2531852932 
-        known_y = 4931317.807472325 
+        known_x = 378816.2531852932
+        known_y = 4931317.807472325
 
         base_srs = osr.SpatialReference()
-        base_srs.ImportFromEPSG(26910) # UTM10N EPSG
+        base_srs.ImportFromEPSG(26910)  # UTM10N EPSG
 
         target_srs = osr.SpatialReference()
-        target_srs.ImportFromEPSG(26910) # UTM10N EPSG
+        target_srs.ImportFromEPSG(26910)  # UTM10N EPSG
 
         transformer = utils.create_coordinate_transformer(base_srs, target_srs)
         x, y, _ = transformer.TransformPoint(known_x, known_y)
 
-        expected_x = 378816.2531852932 
-        expected_y = 4931317.807472325 
+        expected_x = 378816.2531852932
+        expected_y = 4931317.807472325
 
         self.assertEqual(expected_x, x)
         self.assertEqual(expected_y, y)

@@ -98,7 +98,8 @@ class UFRMTests(unittest.TestCase):
         from natcap.invest import urban_flood_risk_mitigation
         args = self._make_args()
 
-        bad_soil_raster = os.path.join(self.workspace_dir, 'bad_soilgroups.tif')
+        bad_soil_raster = os.path.join(
+            self.workspace_dir, 'bad_soilgroups.tif')
         value_map = {
             1: 1,
             2: 2,
@@ -113,7 +114,8 @@ class UFRMTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
             actual_message = str(cm.exception)
-            expected_message = 'Check that the Soil Group raster does not contain'
+            expected_message = (
+                'Check that the Soil Group raster does not contain')
             self.assertTrue(expected_message in actual_message)
 
     def test_validate(self):

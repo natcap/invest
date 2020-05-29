@@ -27,7 +27,7 @@ def _make_empty_files(workspace_dir):
     """Within workspace, make intermediate and output folders with dummy files.
 
     Args:
-        workspace_dir: path to workspace for creating intermediate/output 
+        workspace_dir: path to workspace for creating intermediate/output
         folder.
 
     Returns:
@@ -76,7 +76,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
-        projection_wkt = srs.ExportToWkt()
 
         # Define a Lat/Long WGS84 projection
         epsg_id = 4326
@@ -93,7 +92,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         raster_path = os.path.join(self.workspace_dir, 'input_raster.tif')
         # Create raster to use as testing input
         pygeoprocessing.numpy_array_to_raster(
-            matrix, -1.0, (0.033333, -0.033333), latlong_origin, latlong_proj, 
+            matrix, -1.0, (0.033333, -0.033333), latlong_origin, latlong_proj,
             raster_path)
 
         raster_gt = pygeoprocessing.geoprocessing.get_raster_info(raster_path)[
@@ -127,16 +126,14 @@ class WaveEnergyUnitTests(unittest.TestCase):
         srs.ImportFromEPSG(3157)
         projection_wkt = srs.ExportToWkt()
         origin = (443723.127327877911739, 4956546.905980412848294)
-        pos_x = origin[0]
-        pos_y = origin[1]
-        
+
         group_values = [1, 3, 5, 7]
         matrix = numpy.array([[1, 3, 5, 9], [3, 7, 1, 5], [2, 4, 5, 7]])
 
         raster_path = os.path.join(self.workspace_dir, 'pixel_groups.tif')
         # Create raster to use for testing input
         pygeoprocessing.numpy_array_to_raster(
-            matrix, -1, (100, -100), origin, projection_wkt, 
+            matrix, -1, (100, -100), origin, projection_wkt,
             raster_path)
 
         results = wave_energy._count_pixels_groups(raster_path, group_values)
@@ -232,16 +229,16 @@ class WaveEnergyUnitTests(unittest.TestCase):
             self.workspace_dir, 'shape_to_clip.shp')
         # Create the point shapefile
         pygeoprocessing.shapely_geometry_to_vector(
-            geom_one, shape_to_clip_path, projection_wkt, 'ESRI Shapefile', 
-            fields=fields_pt, attribute_list=attrs_one, 
+            geom_one, shape_to_clip_path, projection_wkt, 'ESRI Shapefile',
+            fields=fields_pt, attribute_list=attrs_one,
             ogr_geom_type=ogr.wkbPoint)
 
         binding_shape_path = os.path.join(
             self.workspace_dir, 'binding_shape.shp')
         # Create the polygon shapefile
         pygeoprocessing.shapely_geometry_to_vector(
-            geom_two, binding_shape_path, projection_wkt, 'ESRI Shapefile', 
-            fields=fields_poly, attribute_list=attrs_poly) 
+            geom_two, binding_shape_path, projection_wkt, 'ESRI Shapefile',
+            fields=fields_poly, attribute_list=attrs_poly)
 
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
@@ -265,8 +262,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         expected_path = os.path.join(
             self.workspace_dir, 'exp_vector', 'vector.shp')
         pygeoprocessing.shapely_geometry_to_vector(
-            geom_three, expected_path, projection_wkt, 'ESRI Shapefile', 
-            fields=fields_pt, attribute_list=attrs_one, 
+            geom_three, expected_path, projection_wkt, 'ESRI Shapefile',
+            fields=fields_pt, attribute_list=attrs_one,
             ogr_geom_type=ogr.wkbPoint)
 
         WaveEnergyRegressionTests._assert_point_vectors_equal(
@@ -301,16 +298,16 @@ class WaveEnergyUnitTests(unittest.TestCase):
             self.workspace_dir, 'shape_to_clip.shp')
         # Create the point shapefile
         pygeoprocessing.shapely_geometry_to_vector(
-            geom_one, shape_to_clip_path, projection_wkt, 'ESRI Shapefile', 
-            fields=fields_pt, attribute_list=attrs_one, 
+            geom_one, shape_to_clip_path, projection_wkt, 'ESRI Shapefile',
+            fields=fields_pt, attribute_list=attrs_one,
             ogr_geom_type=ogr.wkbPoint)
 
         binding_shape_path = os.path.join(
             self.workspace_dir, 'binding_shape.shp')
         # Create the polygon shapefile
         pygeoprocessing.shapely_geometry_to_vector(
-            geom_two, binding_shape_path, projection_wkt, 'ESRI Shapefile', 
-            fields=fields_poly, attribute_list=attrs_poly) 
+            geom_two, binding_shape_path, projection_wkt, 'ESRI Shapefile',
+            fields=fields_poly, attribute_list=attrs_poly)
 
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
@@ -421,14 +418,14 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         table_results = ['capwe_rc.csv', 'wp_rc.csv', 'npv_rc.csv']
 
         for table_path in table_results:
-            model_df = pandas.read_csv(     
+            model_df = pandas.read_csv(
                 os.path.join(args['workspace_dir'], 'output', table_path))
-            reg_df = pandas.read_csv( 
+            reg_df = pandas.read_csv(
                 os.path.join(REGRESSION_DATA, 'valuation', table_path))
             pandas.testing.assert_frame_equal(model_df, reg_df)
 
     def test_aoi_no_val(self):
-        """WaveEnergy: testing Biophysical component w AOI but w/o valuation."""
+        """WaveEnergy: test Biophysical component w AOI but w/o valuation."""
         from natcap.invest import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
@@ -450,9 +447,9 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         table_results = ['capwe_rc.csv', 'wp_rc.csv']
 
         for table_path in table_results:
-            model_df = pandas.read_csv(     
+            model_df = pandas.read_csv(
                 os.path.join(args['workspace_dir'], 'output', table_path))
-            reg_df = pandas.read_csv( 
+            reg_df = pandas.read_csv(
                 os.path.join(REGRESSION_DATA, 'aoi', table_path))
             pandas.testing.assert_frame_equal(model_df, reg_df)
 
@@ -477,9 +474,9 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         table_results = ['capwe_rc.csv', 'wp_rc.csv']
 
         for table_path in table_results:
-            model_df = pandas.read_csv(     
+            model_df = pandas.read_csv(
                 os.path.join(args['workspace_dir'], 'output', table_path))
-            reg_df = pandas.read_csv( 
+            reg_df = pandas.read_csv(
                 os.path.join(REGRESSION_DATA, 'noaoi', table_path))
             pandas.testing.assert_frame_equal(model_df, reg_df)
 
@@ -526,12 +523,12 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                     os.path.join(args['workspace_dir'], 'output', table_path)))
 
     @staticmethod
-    def _assert_point_vectors_equal(a_path, b_path):
+    def _assert_point_vectors_equal(a_vector_path, b_vector_path):
         """Assert that two point geometries in the vectors are equal.
 
-        Parameters:
-            a_path (str): a path to an OGR vector.
-            b_path (str): a path to an OGR vector.
+        Args:
+            a_vector_path (str): a path to an OGR vector.
+            b_vector_path (str): a path to an OGR vector.
 
         Returns:
             None.
@@ -580,6 +577,7 @@ class WaveEnergyValidateTests(unittest.TestCase):
     """Wave Energy Validate: tests for ARGS_SPEC and validate."""
 
     def setUp(self):
+        """Set up list of required keys."""
         self.base_required_keys = [
             'workspace_dir',
             'machine_param_path',
