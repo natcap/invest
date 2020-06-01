@@ -203,7 +203,7 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
             os.path.join(
                 ExponentialDecayUtilsTests._REGRESSION_PATH,
                 'kernel_100.tif'))
-        numpy.testing.assert_allclose(model_array, reg_array)
+        numpy.testing.assert_allclose(model_array, reg_array, atol=1e-6)
 
 
 class SandboxTempdirTests(unittest.TestCase):
