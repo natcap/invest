@@ -7,6 +7,7 @@ import os
 
 from osgeo import gdal
 from osgeo import osr
+from osgeo import ogr
 import pygeoprocessing
 import shapely.geometry
 import numpy
@@ -51,7 +52,7 @@ class ModelLoggingTests(unittest.TestCase):
 
         vector_path = os.path.join(self.workspace_dir, 'vector.gpkg')
         pygeoprocessing.shapely_geometry_to_vector(
-            [shapely.geometry.LineString([(4, -4), (10, -10)])], vector_path, 
+            [shapely.geometry.LineString([(4, -4), (10, -10)])], vector_path,
             srs_wkt, "GPKG", ogr_geom_type=ogr.wkbLineString)
 
         model_args = {
