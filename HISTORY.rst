@@ -15,7 +15,11 @@ Unreleased Changes (3.9)
     * Updating InVEST tests that were dependent on the removed ``pgp.testing`` 
       module.
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.3 (2020-05-29)
 ------------------
 * sdr
   * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
