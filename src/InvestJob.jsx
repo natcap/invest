@@ -29,11 +29,6 @@ import { Provider } from 'react-redux';
 import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
 const store = createStore(rootReducer)
 
-let INVEST_EXE = 'invest'
-if (process.env.INVEST) {  // if it was set, override
-  INVEST_EXE = process.env.INVEST
-}
-
 let gdalEnv = null;
 if (process.env.GDAL_DATA) {
   gdalEnv = { GDAL_DATA: process.env.GDAL_DATA }
@@ -215,7 +210,7 @@ export class InvestJob extends React.Component {
     const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
     
     const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
-    const investRun = spawn(INVEST_EXE, cmdArgs, {
+    const investRun = spawn(this.props.investEXE, cmdArgs, {
         cwd: process.cwd(),
         shell: true, // without true, IOError when datastack.py loads json
         env: gdalEnv

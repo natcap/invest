@@ -13,10 +13,15 @@ var _reactDom = _interopRequireDefault(require("react-dom"));
 var _reactHotLoader = require("react-hot-loader");
 
 var _app = _interopRequireDefault(require("./app"));
+var InvestConfigModal = _interopRequireDefault(require("./components/InvestConfigModal"));
 
+const fs = require('fs');
+const path = require('path');
 const { remote } = require('electron');
 const { Menu, MenuItem } = remote;
 const JOBS_DATABASE = 'jobdb.json'
+const INVEST_REGISTRY_PATH = path.join(
+      remote.app.getPath('userData'), 'invest_registry.json')
 
 let rightClickPosition = null
 const menu = new Menu();
@@ -35,10 +40,24 @@ window.addEventListener('contextmenu', (e) => {
 
 
 var render = function render() {
-  _reactDom["default"].render(
-    _react["default"].createElement(
-      _reactHotLoader.AppContainer, null, _react["default"].createElement(
-        _app["default"], { appdata: JOBS_DATABASE })), document.getElementById('App'));
+
+  if (fs.existsSync(INVEST_REGISTRY_PATH)) {
+    const investRegistry = JSON.parse(fs.readFileSync(INVEST_REGISTRY_PATH))
+    _reactDom["default"].render(
+      _react["default"].createElement(
+        _reactHotLoader.AppContainer, null, _react["default"].createElement(
+          _app["default"], { appdata: JOBS_DATABASE, investRegistry: investRegistry })),
+      document.getElementById('App'));
+  } else {
+    _reactDom["default"].render(
+      _react["default"].createElement(
+        InvestConfigModal["default"], {
+          investVersion: undefined,
+          investRegistry: { active: undefined, registry: {} }
+        }),
+      document.getElementById('App'));
+  }
+
 };
 
 render();

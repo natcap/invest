@@ -1,3 +1,5 @@
+const fs = require('fs')
+const path = require('path')
 const spawn = require('child_process').spawn;
 const app = require('electron').app
 const BrowserWindow = require('electron').BrowserWindow
@@ -7,6 +9,17 @@ const fetch = require('node-fetch')
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 
+const investRegistryPath = path.join(
+  app.getPath('userData'), 'invest_registry.json')
+let serverEXE;
+if (fs.existsSync(investRegistryPath)) {
+  const investRegistry = JSON.parse(fs.readFileSync(investRegistryPath))
+  const activeVersion = investRegistry['active']
+  console.log(investRegistry)
+  serverEXE = investRegistry['registry'][activeVersion]['server']
+}
+
+
 const isDevMode = process.execPath.match(/[\\/]electron/);
 if (isDevMode) {
   // load the '.env' file from the project root
@@ -14,7 +27,6 @@ if (isDevMode) {
   dotenv.config();  
 }
 
-let PYTHON = (process.env.PYTHON || 'python').trim();
 let PORT = (process.env.PORT || '5000').trim();
 
 const createWindow = async () => {
@@ -54,29 +66,32 @@ const createWindow = async () => {
 
 function createPythonFlaskProcess() {
   /** Spawn a child process running the Python Flask server.*/
-  pythonServerProcess = spawn(
-    PYTHON, ['-m', 'flask', 'run'], {
-      shell: true,
-      // stdio: 'ignore',
-      detatched: true,
+  if (serverEXE) {
+    pythonServerProcess = spawn(serverEXE, {
+        shell: true,
+        // stdio: 'ignore',
+        detatched: true,
+      });
+
+    console.log('Started python process as PID ' + pythonServerProcess.pid);
+
+    pythonServerProcess.stdout.on('data', (data) => {
+      console.log(`${data}`);
     });
-
-  console.log('Started python process as PID ' + pythonServerProcess.pid);
-
-  pythonServerProcess.stdout.on('data', (data) => {
-    console.log(`${data}`);
-  });
-  pythonServerProcess.stderr.on('data', (data) => {
-    console.log(`${data}`);
-  });
-  pythonServerProcess.on('error', (err) => {
-    console.log('Process failed.');
-    console.log(err);
-  });
-  pythonServerProcess.on('close', (code, signal) => {
-    console.log(code);
-    console.log('Child process terminated due to signal ' + signal);
-  });
+    pythonServerProcess.stderr.on('data', (data) => {
+      console.log(`${data}`);
+    });
+    pythonServerProcess.on('error', (err) => {
+      console.log('Process failed.');
+      console.log(err);
+    });
+    pythonServerProcess.on('close', (code, signal) => {
+      console.log(code);
+      console.log('Child process terminated due to signal ' + signal);
+    });
+  } else {
+    console.log('no existing invest installations found')
+  }
 }
 
 function shutdownPythonProcess() {
