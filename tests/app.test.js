@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import React from 'react';
-import { fireEvent, render, wait } from '@testing-library/react'
+import { fireEvent, render, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 import App from '../src/app';
@@ -17,7 +17,7 @@ test('Recent Sessions: each has a button', async () => {
     <App appdata={TEST_JOB_DATA}/>);
   const db = JSON.parse(fs.readFileSync(TEST_JOB_DATA));
 
-  await wait(() => {
+  await waitFor(() => {
     Object.keys(db).forEach(job => {
       expect(getByText(db[job].workspace.directory)).toBeTruthy();
     })
@@ -33,7 +33,7 @@ test('Settings dialog interactions: logging level', async () => {
 
   // Check the default settings
   fireEvent.click(getByText('Settings'));
-  await wait(() => { 
+  await waitFor(() => { 
     // waiting because the selected value depends on passed props
     expect(getByText(DEFAULT).selected).toBeTruthy();
   })
@@ -66,7 +66,7 @@ test('Settings dialog interactions: n workers', async () => {
   const input = getByLabelText(labelText, { exact: false })
   
   // Check the default settings
-  await wait(() => { 
+  await waitFor(() => { 
     // waiting because the text value depends on passed props
     expect(input).toHaveValue(defaultValue);
   })
@@ -82,7 +82,7 @@ test('Settings dialog interactions: n workers', async () => {
   // The real test: still newValue after saving and re-opening
   fireEvent.click(getByText('Save Changes'));
   fireEvent.click(getByText('Settings'));
-  await wait(() => {  // the value to test is inherited through props
+  await waitFor(() => {  // the value to test is inherited through props
     expect(input).toHaveValue(newValue);
   })
 

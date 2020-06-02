@@ -1,0 +1,59 @@
+{
+    "workspace_dir": {
+        "order": 0.1
+    },
+    "results_suffix": {
+        "order": 0.2
+    },
+    "dem_path": {
+        "order": 1.0
+    },
+    "lulc_path": {
+        "order": 1.1
+    },
+    "runoff_proxy_path": {
+        "order": 1.2
+    },
+    "watersheds_path": {
+        "order": 1.3
+    },
+    "biophysical_table_path": {
+        "order": 1.4
+    },
+    "calc_p": {
+        "order": 2.0,
+        "ui_control": [
+            "subsurface_eff_p",
+            "subsurface_critical_length_p"
+        ]
+    },
+    "calc_n": {
+        "order": 3.0,
+        "ui_control": [
+            "subsurface_eff_n",
+            "subsurface_critical_length_n"
+        ]
+    },
+    "threshold_flow_accumulation": {
+        "order": 4.0
+    },
+    "k_param": {
+        "order": 4.1
+    },
+    "subsurface_critical_length_n": {
+        "order": 3.1,
+        "ui_option": "disable"
+    },
+    "subsurface_critical_length_p": {
+        "order": 2.1,
+        "ui_option": "disable"
+    },
+    "subsurface_eff_n": {
+        "order": 3.2,
+        "ui_option": "disable"
+    },
+    "subsurface_eff_p": {
+        "order": 2.2,
+        "ui_option": "disable"
+    }
+}

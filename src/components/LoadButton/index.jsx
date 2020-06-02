@@ -24,8 +24,7 @@ export class LoadButton extends React.Component {
         datastack_path: data.filePaths[0]
       }
       const datastack = await fetchDatastackFromFile(payload)
-      const specLoaded = await this.props.investGetSpec(datastack.model_run_name)
-      if (specLoaded) { this.props.batchUpdateArgs(datastack['args']) }
+      this.props.investGetSpec(datastack.model_run_name, datastack['args'])
     } else {
       console.log('load parameters canceled, no file selected')
     }

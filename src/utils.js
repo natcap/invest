@@ -94,16 +94,15 @@ export function findMostRecentLogfile(directory) {
   });
 }
 
-// don't need to export this, except for tests
 export function boolStringToBoolean(val) {
   /** Convert a string representing a bool to an actual boolean. 
 
   * HTML inputs in this app must send string values, but for invest args of
   * type boolean, we want to convert that to a real boolean before passing
-  * args to invest validate or execute.
+  * to invest's validate or execute.
   *
-  * @param {string} val - a value such as "true", "True", "false", "False"
-  * @returns {boolean} unless the input was not a string, then returns undefined
+  * @param {string} val - such as "true", "True", "false", "False"
+  * @returns {boolean} unless the input was not a string, then undefined
   */
   let valBoolean;
   try {
@@ -116,23 +115,20 @@ export function boolStringToBoolean(val) {
   return valBoolean
 }
 
-export function argsValuesFromSpec(args) {
-  /** Given a complete InVEST ARGS_SPEC.args, return just the key:value pairs
-  * This is often used to prepare the InvestJob.state.args object for passing
-  * to investValidate or other parts of the invest API.
+export function argsDictFromObject(args) {
+  /** Create a JSON string with invest argument keys and values.
   *
-  * @param {object} args - object like an ARGS_SPEC.args dictionary,
-  *   but with values too
+  * This is a convenience function to create a JSON string datastack
+  * in the form expected by the natcap.invest API
   *
-  * @returns {object} - JSON.stringify'd arguments key: value pairs.
+  * @param {object} args - object keyed by invest argument keys and
+  *   with each item including a `value` property.
+  * @returns {string} - JSON.stringify'd key: value pairs for an
+  *   invest model.
   */
   let args_dict = {};
   for (const argname in args) {
-    if (args[argname]['type'] === 'boolean') {
-      args_dict[argname] = boolStringToBoolean(args[argname]['value']) || ''
-    } else {
-      args_dict[argname] = args[argname]['value'] || ''
-    }
+    args_dict[argname] = args[argname]['value']
   }
   return(JSON.stringify(args_dict));
 }
