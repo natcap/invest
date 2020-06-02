@@ -14,7 +14,7 @@ GIT_UG_REPO_REV              := 7e6ed574cbdcc24199e57fa48bd36fb46e460635
 
 GIT_GUI_REPO                 := https://github.com/davemfish/invest-gui.git
 GIT_GUI_REPO_PATH            := gui
-GIT_GUI_REPO_REV             := 3325460693258a0df2d4d3e8c1b3c63e0a2bfcce
+GIT_GUI_REPO_REV             := 33a5aa54923af5e115f1928b29ff22077115cb6b
 
 ENV = env
 ifeq ($(OS),Windows_NT)
