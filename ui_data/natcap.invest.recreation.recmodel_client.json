@@ -1,0 +1,53 @@
+{
+    "workspace_dir": {
+        "order": 0.1
+    },
+    "results_suffix": {
+        "order": 0.2
+    },
+    "aoi_path": {
+        "order": 1.0
+    },
+    "hostname": {
+        "order": "hidden"
+    },
+    "port": {
+        "order": "hidden"
+    },
+    "start_year": {
+        "order": 2.0
+    },
+    "end_year": {
+        "order": 2.1
+    },
+    "grid_aoi": {
+        "order": 3.0,
+        "ui_control": [
+            "cell_size",
+            "grid_type"
+        ]
+    },
+    "grid_type": {
+        "order": 3.1,
+        "ui_option": "hide"
+    },
+    "cell_size": {
+        "order": 3.2,
+        "ui_option": "hide"
+    },
+    "compute_regression": {
+        "order": 4.0,
+        "ui_control": [
+            "predictor_table_path",
+            "scenario_predictor_table_path"
+        ]
+    },
+    "predictor_table_path": {
+        "order": 4.1,
+        "ui_option": "hide"
+    },
+    "scenario_predictor_table_path": {
+        "order": 4.2,
+        "ui_option": "hide"
+    }
+}

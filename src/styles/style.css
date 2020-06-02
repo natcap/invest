@@ -2,6 +2,14 @@
     color: blue;
 }
 
+/* Default sized Radio buttons are too small */
+input[type=radio]{
+  transform:scale(2.0);
+  padding-left: 0.5rem;
+  margin-right: 0.5rem;
+}
+
+/* HomeTab styles */
 .session-card-group {
 	flex-flow: column;
 	width: 500px; /* explicit width seems key for children to behave*/
@@ -27,4 +35,19 @@
 }
 .card-text {
 	padding-left: 1.25rem;
+}
+
+/* SetupTab styles */
+
+.arg-group {
+	margin-top: 2.0rem;
+	margin-bottom: 2.0rem;
+}
+
+.arg-hide {
+	display: none;
+}
+
+.arg-disable .form-label {
+	color: lightgray;
 }

@@ -20,18 +20,16 @@ export class SaveParametersButton extends React.Component {
     const data = await remote.dialog.showSaveDialog(
       { defaultPath: 'invest_args.json' })
     if (data.filePath) {   
-      this.props.argsToJsonFile(data.filePath);
+      this.props.wrapArgsToJsonFile(data.filePath);
     } else {
       console.log('save parameters was cancelled')
     }
   }
 
   render() {
-    // disabled when there's no modelSpec, i.e. before a model is selected
     return(
       <Button 
         onClick={this.browseSaveFile}
-        disabled={this.props.disabled}
         variant="link">
         Save parameters to JSON
       </Button>
@@ -40,8 +38,8 @@ export class SaveParametersButton extends React.Component {
 }
 
 SaveParametersButton.propTypes = {
-  argsToJsonFile: PropTypes.func,
-  disabled: PropTypes.bool
+  wrapArgsToJsonFile: PropTypes.func,
+  disabled: PropTypes.bool,
 }
 
 export class SavePythonButton extends React.Component {
@@ -66,11 +64,9 @@ export class SavePythonButton extends React.Component {
   }
 
   render() {
-    // disabled when there's no modelSpec, i.e. before a model is selected
     return(
       <Button 
         onClick={this.browseFile}
-        disabled={this.props.disabled}
         variant="link">
         Save to Python script
       </Button>
@@ -80,5 +76,4 @@ export class SavePythonButton extends React.Component {
 
 SavePythonButton.propTypes = {
   savePythonScript: PropTypes.func,
-  disabled: PropTypes.bool
 }

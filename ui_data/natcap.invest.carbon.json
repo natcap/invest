@@ -1,0 +1,65 @@
+{
+    "workspace_dir": {
+        "order": 0.1
+    },
+    "results_suffix": {
+        "order": 0.2
+    },
+    "lulc_cur_path": {
+        "order": 1.0
+    },
+    "calc_sequestration": {
+        "order": 2.0,
+        "ui_option": "disable",
+        "ui_control": [
+            "lulc_fut_year",
+            "lulc_cur_year",
+            "lulc_fut_path"
+        ]
+    },
+    "do_redd": {
+        "order": 3.0,
+        "ui_control": [
+            "lulc_redd_path"
+        ]
+    },
+    "do_valuation": {
+        "order": 4.0,
+        "ui_control": [
+            "rate_change",
+            "discount_rate",
+            "price_per_metric_ton_of_c"
+        ]
+    },
+    "lulc_fut_path": {
+        "order": 2.1,
+        "ui_option": "disable"
+    },
+    "lulc_redd_path": {
+        "order": 3.1,
+        "ui_option": "disable"
+    },
+    "carbon_pools_path": {
+        "order": 1.1
+    },
+    "lulc_cur_year": {
+        "order": 2.2,
+        "ui_option": "disable"
+    },
+    "lulc_fut_year": {
+        "order": 2.3,
+        "ui_option": "disable"
+    },
+    "price_per_metric_ton_of_c": {
+        "order": 4.1,
+        "ui_option": "disable"
+    },
+    "discount_rate": {
+        "order": 4.2,
+        "ui_option": "disable"
+    },
+    "rate_change": {
+        "order": 4.3,
+        "ui_option": "disable"
+    }
+}

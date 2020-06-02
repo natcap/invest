@@ -2,8 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import React from 'react';
-import { fireEvent, render,
-         wait, waitForElement } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 import { LogTab } from '../src/components/LogTab';
@@ -59,7 +58,7 @@ describe('LogTab: integration testing', () => {
         logfile={null}
         logStdErr={null}
       />)
-    await wait(() => {
+    await waitFor(() => {
       expect(getByText('Starting...')).toBeInTheDocument()
     })
 
@@ -71,10 +70,9 @@ describe('LogTab: integration testing', () => {
         logfile={logFile}
         logStdErr={null}
       />)
-    await wait(() => {
-      expect(getByText(
-        logContent,
-        { exact: false })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(getByText(logContent,{ exact: false }))
+        .toBeInTheDocument()
     })
 
     // When the subprocess exits without error:
@@ -84,7 +82,7 @@ describe('LogTab: integration testing', () => {
         logfile={logFile}
         logStdErr={null}
       />)
-    await wait(() => {
+    await waitFor(() => {
       expect(getByText('Model Completed')).toBeInTheDocument()
       expect(getByText('Open Workspace')).toBeEnabled()
     }) 
@@ -96,10 +94,9 @@ describe('LogTab: integration testing', () => {
         logfile={logFile}
         logStdErr={null}
       />)
-    await wait(() => {
-      expect(getByText(
-        logContent,
-        { exact: false })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(getByText(logContent, { exact: false }))
+        .toBeInTheDocument()
     }) 
     expect(queryByText('Model Completed')).toBeNull()
     expect(queryByText('Open Workspace')).toBeNull()
@@ -111,10 +108,9 @@ describe('LogTab: integration testing', () => {
         logfile={logFile}
         logStdErr={'ValueError: bad data'}
       />)
-    await wait(() => {
-      expect(getByText(
-        logContent,
-        { exact: false })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(getByText(logContent, { exact: false }))
+        .toBeInTheDocument()
       expect(getByText('ValueError: bad data')).toHaveClass('alert-danger')
       expect(getByText('Open Workspace')).toBeEnabled()
     }) 
@@ -158,7 +154,7 @@ describe('LogTab: non-fatal stderr does not raise Alert', () => {
         logStdErr={nonFatalStdErr}
       />)
 
-    await wait(() => {
+    await waitFor(() => {
       const content = getByText(nonFatalStdErr)
       expect(content).toBeInTheDocument()
       expect(content).not.toHaveClass('alert-danger')

@@ -10,18 +10,17 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Spinner from 'react-bootstrap/Spinner';
-import DropdownButton from 'react-bootstrap/DropdownButton';
 
 import { HomeTab } from './components/HomeTab';
 import { SetupTab } from './components/SetupTab';
 import { LogTab } from './components/LogTab';
 import { ResultsTab } from './components/ResultsTab'
 import { ResourcesTab } from './components/ResourcesTab';
-import { SaveParametersButton, SavePythonButton } from './components/SaveDropdown'
 import { LoadButton } from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
-import { getSpec, saveToPython, writeParametersToFile, fetchValidation } from './server_requests';
-import { argsValuesFromSpec, findMostRecentLogfile } from './utils';
+import { getSpec, fetchDatastackFromFile,
+         writeParametersToFile } from './server_requests';
+import { argsDictFromObject, findMostRecentLogfile } from './utils';
 
 // TODO see issue #12
 import { createStore } from 'redux';
@@ -39,16 +38,20 @@ if (process.env.GDAL_DATA) {
   gdalEnv = { GDAL_DATA: process.env.GDAL_DATA }
 }
 
-// TODO: some of these 'global' vars are defined in multiple files
-const CACHE_DIR = 'cache' //  for storing state snapshot files
-const TEMP_DIR = 'tmp'  // for saving datastack json files prior to investExecute
-
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {
   'DEBUG':   '--debug',
   'INFO':    '-vvv',
   'WARNING': '-vv',
   'ERROR':   '-v',
+}
+
+function changeSetupKey(int) {
+  /* Return a value different from the input value.
+  *
+  * Used for generating a new unique `key` for SetupTab component.
+  */
+  return(int + 1)
 }
 
 export class InvestJob extends React.Component {
@@ -62,11 +65,12 @@ export class InvestJob extends React.Component {
     super(props);
 
     this.state = {
+      setupKey: 0,
       sessionID: null,                 // modelName + workspace.directory + workspace.suffix
       modelName: '',                   // as appearing in `invest list`
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
-      args: null,                      // ARGS_SPEC.args, to hold values on user-interaction
-      argsValid: false,                // set on investValidate exit
+      argsSpec: null,                  // ARGS_SPEC.args, the immutable args stuff
+      argsInitDict: null,              // 
       workspace: { 
         directory: null, suffix: null
       },                               // only set values when execute starts the subprocess
@@ -74,24 +78,20 @@ export class InvestJob extends React.Component {
       logStdErr: null,                 // stderr data from the invest subprocess
       sessionProgress: 'home',         // 'home', 'setup', 'log' - used on loadState to decide which tab to activate
       jobStatus: null,                 // 'running', 'error', 'success'
-      activeTab: 'home'                // controls which tab is currently visible
+      activeTab: 'home',               // controls which tab is currently visible
     };
     
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
     this.investGetSpec = this.investGetSpec.bind(this);
-    this.investValidate = this.investValidate.bind(this);
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
-    this.updateArg = this.updateArg.bind(this);
-    this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.saveState = this.saveState.bind(this);
-    this.savePythonScript = this.savePythonScript.bind(this);
     this.loadState = this.loadState.bind(this);
     this.setSessionID = this.setSessionID.bind(this);
   }
 
   saveState() {
-    /** Save the state of the application (1) and the current InVEST job (2).
+    /** Save the state of this component (1) and the current InVEST job (2).
     * 1. Save the state object of this component to a JSON file .
     * 2. Append metadata of the invest job to a persistent database/file.
     * This triggers automatically when the invest subprocess starts and again
@@ -99,7 +99,7 @@ export class InvestJob extends React.Component {
     */
     const jobName = this.state.sessionID;
     const jsonContent = JSON.stringify(this.state, null, 2);
-    const filepath = path.join(CACHE_DIR, jobName + '.json');
+    const filepath = path.join(this.props.directoryConstants.CACHE_DIR, jobName + '.json');
     fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
       if (err) {
         console.log("An error occured while writing JSON Object to File.");
@@ -118,21 +118,6 @@ export class InvestJob extends React.Component {
     }
     this.props.updateRecentSessions(job, this.props.appdata);
   }
-
-  savePythonScript(filepath) {
-    /** Save the current invest arguments to a python script via datastack.py API.
-    *
-    * @params {string} filepath - desired path to the python script
-    */
-    const args_dict_string = argsValuesFromSpec(this.state.args)
-    const payload = { 
-      filepath: filepath,
-      modelname: this.state.modelName,
-      pyname: this.state.modelSpec.module,
-      args: args_dict_string
-    }
-    saveToPython(payload);
-  }
   
   setSessionID(event) {
     // TODO: this functionality might be deprecated - probably no need to set custom
@@ -143,30 +128,36 @@ export class InvestJob extends React.Component {
       {sessionID: value});
   }
 
-  loadState(sessionFilename) {
+  async loadState(sessionFilename) {
     /** Set this component's state to the object parsed from a JSON file.
     *
     * @params {string} sessionFilename - path to a JSON file.
     */
 
-    // const filename = path.join(CACHE_DIR, sessionFilename);
     if (fs.existsSync(sessionFilename)) {
       const loadedState = JSON.parse(fs.readFileSync(sessionFilename, 'utf8'));
-      this.setState(loadedState,
-        () => {
-          this.switchTabs(loadedState.sessionProgress);
-          // Validate args on load because referenced files may have moved
-          // this.investValidate(argsValuesFromSpec(this.state.args));
-          this.batchUpdateArgs(JSON.parse(argsValuesFromSpec(this.state.args)));
-          // batchUpdateArgs does validation and also sets inputs to 'touched'
-          // which controls whether the validation messages appear or not.
-        });
+      
+      // Right now saveState is only called w/in investExecute and only
+      // after invest has created a logfile, which means an invest logfile
+      // should always exist and can be used to get args values and initialize SetupTab.
+      const datastack = await fetchDatastackFromFile(
+        { datastack_path: loadedState.logfile })
+      if (datastack) {
+        loadedState['argsInitDict'] = datastack['args']
+        Object.assign(loadedState, {setupKey: changeSetupKey(this.state.setupKey)})
+        this.setState(loadedState,
+          () => {
+            this.switchTabs(loadedState.sessionProgress);
+          });
+      } else {
+        alert('Cannot load this session because data is missing')
+      }
     } else {
       console.log('state file not found: ' + sessionFilename);
     }
   }
 
-  async argsToJsonFile(datastackPath) {
+  async argsToJsonFile(datastackPath, argsValues) {
     /** Write an invest args JSON file for passing to invest cli.
     *
     * Outsourcing this to natcap.invest.datastack via flask ensures
@@ -176,19 +167,18 @@ export class InvestJob extends React.Component {
     */
 
     // The n_workers value always needs to be inserted into args
-    let args_dict = JSON.parse(argsValuesFromSpec(this.state.args));
-    args_dict['n_workers'] = this.props.investSettings.nWorkers;
+    argsValues['n_workers'] = this.props.investSettings.nWorkers;
     
     const payload = {
       parameterSetPath: datastackPath, 
       moduleName: this.state.modelSpec.module,
       relativePaths: false,
-      args: JSON.stringify(args_dict)
+      args: argsDictFromObject(argsValues)
     }
     await writeParametersToFile(payload);
   }
 
-  async investExecute() {
+  async investExecute(argsValues) {
     /** Spawn a child process to run an invest model via the invest CLI:
     * `invest -vvv run <model> --headless -d <datastack path>`
     *
@@ -199,17 +189,18 @@ export class InvestJob extends React.Component {
     * with the final status of the invest run.
     */
     const workspace = {
-      directory: this.state.args.workspace_dir.value,
-      suffix: this.state.args.results_suffix.value
+      directory: argsValues.workspace_dir.value,
+      suffix: argsValues.results_suffix.value
     }
     // model name, workspace, and suffix are suitable for a unique job identifier
     const sessionName = [
       this.state.modelName, workspace.directory, workspace.suffix].join('-')
 
     // Write a temporary datastack json for passing as a command-line arg
-    const temp_dir = fs.mkdtempSync(path.join(process.cwd(), TEMP_DIR, 'data-'))
+    const temp_dir = fs.mkdtempSync(path.join(
+      process.cwd(), this.props.directoryConstants.TEMP_DIR, 'data-'))
     const datastackPath = path.join(temp_dir, 'datastack.json')
-    const _ = await this.argsToJsonFile(datastackPath);
+    const _ = await this.argsToJsonFile(datastackPath, argsValues);
 
     // Get verbosity level from the app's settings
     const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
@@ -276,103 +267,21 @@ export class InvestJob extends React.Component {
     });
   }
 
-  async investValidate(args_dict_string, limit_to) {
-    /** Validate an arguments dictionary using the InVEST model's validate function.
-    *
-    * @param {object} args_dict_string - a JSON.stringify'ed object of model argument
-    *    keys and values.
-    * @param {string} limit_to - an argument key if validation should be limited only
-    *    to that argument.
-    */
-    let argsMeta = JSON.parse(JSON.stringify(this.state.args));
-    let keyset = new Set(Object.keys(JSON.parse(args_dict_string)));
-    let payload = { 
-      model_module: this.state.modelSpec.module,
-      args: args_dict_string
-    };
-
-    // TODO: is there a use-case for `limit_to`? 
-    // Right now we're never calling validate with a limit_to,
-    // but we have an awful lot of logic here to cover it.
-    if (limit_to) {
-      payload['limit_to'] = limit_to
-    }
-
-    const results = await fetchValidation(payload);
-
-    // A) At least one arg was invalid:
-    if (results.length) { 
-
-      results.forEach(result => {
-        // Each result is an array of two elements
-        // 0: array of arg keys
-        // 1: string message that pertains to those args
-        const argkeys = result[0];
-        const message = result[1];
-        argkeys.forEach(key => {
-          argsMeta[key]['validationMessage'] = message
-          argsMeta[key]['valid'] = false
-          keyset.delete(key);
-        })
-      });
-      if (!limit_to) {  // validated all, so ones left in keyset are valid
-        keyset.forEach(k => {
-          argsMeta[k]['valid'] = true
-          argsMeta[k]['validationMessage'] = ''
-        })
-      }
-      this.setState({
-        args: argsMeta,
-        argsValid: false
-      });
-
-    // B) All args were validated and none were invalid:
-    } else if (!limit_to) {
-      
-      keyset.forEach(k => {
-        argsMeta[k]['valid'] = true
-        argsMeta[k]['validationMessage'] = ''
-      })
-      // It's possible all args were already valid, in which case
-      // it's nice to avoid the re-render that this setState call
-      // triggers. Although only the Viz app components re-render 
-      // in a noticeable way. Due to use of redux there?
-      if (!this.state.argsValid) {
-        this.setState({
-          args: argsMeta,
-          argsValid: true
-        })
-      }
-
-    // C) Limited args were validated and none were invalid
-    } else if (limit_to) {
-
-      argsMeta[limit_to]['valid'] = true
-      // this could be the last arg that needed to go valid,
-      // in which case we should trigger a full args_dict validation
-      // in order to properly set state.argsValid
-      this.setState({ args: argsMeta },
-        () => {
-          let argIsValidArray = [];
-          for (const key in argsMeta) {
-            argIsValidArray.push(argsMeta[key]['valid'])
-          }
-          if (argIsValidArray.every(Boolean)) {
-            this.investValidate(argsValuesFromSpec(argsMeta));
-          }
-        }
-      );
-    }
-  }
-
-  async investGetSpec(modelName) {
+  async investGetSpec(modelName, argsInitDict={}) {
     /** Get an invest model's ARGS_SPEC when a model button is clicked.
-    * A side-effect is that much of this component's state is reset.
+    *  
+    * Also get the model's UI spec if it exists.
+    * Then reset much of this component's state in case a prior job's 
+    * state exists. This includes setting a new setupKey, which is passed
+    * as a key to the SetupTab component, triggering it to re-mount
+    * rather than just re-render, allowing one-time initilization of
+    * arg grouping and ordering.
     *
-    * @param {string} - 
+    * @param {string} - as in a model name appearing in `invest list`
+    * @param {object} - empty, or a JSON representation of an invest model's
+    *                   agruments dictionary
     */
 
-    // const modelName = event.target.value;
     const payload = { 
         model: modelName
     };
@@ -381,71 +290,44 @@ export class InvestJob extends React.Component {
       // This "destructuring" captures spec.args into args and leaves 
       // the rest of spec in modelSpec.
       const {args, ...modelSpec} = spec;
-
+      
+      // Even if UI spec doesn't exist for a model, a minimum viable input
+      // form can still be generated, so don't crash here.
+      let uiSpec = {};
+      try {
+        uiSpec = JSON.parse(fs.readFileSync(
+          path.join(this.props.directoryConstants.INVEST_UI_DATA, spec.module + '.json')))
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          throw err
+        }
+      }
+      
+      // extend the args spec with the UI spec
+      for (const key in args) {
+        Object.assign(args[key], uiSpec[key])
+      }
       // This event represents a user selecting a model,
       // and so some existing state should be reset.
       this.setState({
         modelName: modelName,
         modelSpec: modelSpec,
-        args: args,
-        argsValid: false,
+        argsSpec: args,
+        argsInitDict: argsInitDict,
         sessionProgress: 'setup',
         jobStatus: null,
         logStdErr: '',
         logStdOut: '',
         sessionID: null,
         workspace: null,
-      }, () => {
-        this.switchTabs('setup')
-        // return new Promise((resolve) => resolve(true))
+        setupKey: changeSetupKey(this.state.setupKey),
+        activeTab: 'setup'
       });
     } else {
       console.log('no spec found')
       return new Promise((resolve) => resolve(false))
     }
     return new Promise((resolve) => resolve(true))
-  }
-
-  batchUpdateArgs(args_dict) {
-    /** Update this.state.args in response to batch argument loading events,
-    * and then validate the loaded args.
-    *
-    * @param {object} - the args dictionay object that comes from datastack.py
-    * after parsing args from logfile or datastack file.
-    */
-
-    const argsMeta = JSON.parse(JSON.stringify(this.state.args));
-    Object.keys(argsMeta).forEach(argkey => {
-      // Loop over argsMeta in order to:
-        // 1) clear values for args that are absent from the input
-        // 2) skip over items from the input that have incorrect keys, otherwise
-        //    investValidate will crash on them.
-      argsMeta[argkey]['value'] = args_dict[argkey] || '';
-      // label as touched even if the argkey was absent, since it's a batch load
-      argsMeta[argkey]['touched'] = true;
-    });
-    
-    this.setState({args: argsMeta},
-      () => { this.investValidate(argsValuesFromSpec(argsMeta)) }
-    );
-  }
-
-  updateArg(key, value) {
-    /** Update this.state.args and validate the args. This is triggered
-    * by the event handler on the Arguments Form.
-    *
-    * @param {string} key - the invest argument key
-    * @param {string} value - the invest argument value
-    */
-
-    const argsMeta = JSON.parse(JSON.stringify(this.state.args));
-    argsMeta[key]['value'] = value;
-    argsMeta[key]['touched'] = true;
-
-    this.setState({args: argsMeta}, 
-      () => {
-        this.investValidate(argsValuesFromSpec(argsMeta));
-      });
   }
 
   switchTabs(key) {
@@ -459,10 +341,9 @@ export class InvestJob extends React.Component {
 
   render () {
     const activeTab = this.state.activeTab;
-    const setupDisabled = !(this.state.args); // enable once modelSpec has loaded
+    const setupDisabled = !(this.state.argsSpec); // enable once modelSpec has loaded
     const logDisabled = (this.state.jobStatus == null);  // enable during and after execution
     const resultsDisabled = (this.state.jobStatus !== 'success');  // enable only on complete execute with no errors
-    const dropdownsDisabled = (this.state.args == null);
     
     return(
       <TabContainer activeKey={activeTab}>
@@ -491,14 +372,6 @@ export class InvestJob extends React.Component {
             </Nav.Item>
           </Nav>
           <Navbar.Brand>{this.state.modelSpec.model_name}</Navbar.Brand>
-          <DropdownButton id="dropdown-basic-button" title="Save " className="mx-3">
-            <SaveParametersButton
-              argsToJsonFile={this.argsToJsonFile}
-              disabled={dropdownsDisabled}/>
-            <SavePythonButton
-              savePythonScript={this.savePythonScript}
-              disabled={dropdownsDisabled}/>
-          </DropdownButton>
           <LoadButton
             investGetSpec={this.investGetSpec}
             batchUpdateArgs={this.batchUpdateArgs}
@@ -519,14 +392,13 @@ export class InvestJob extends React.Component {
             />
           </TabPane>
           <TabPane eventKey="setup" title="Setup">
-            <SetupTab
-              args={this.state.args}
-              argsValid={this.state.argsValid}
-              modulename={this.state.modelSpec.module}
-              updateArg={this.updateArg}
-              batchUpdateArgs={this.batchUpdateArgs}
-              investValidate={this.investValidate}
+            <SetupTab key={this.state.setupKey}
+              pyModuleName={this.state.modelSpec.module}
+              modelName={this.state.modelName}
+              argsSpec={this.state.argsSpec}
+              argsInitValues={this.state.argsInitDict}
               investExecute={this.investExecute}
+              argsToJsonFile={this.argsToJsonFile}
             />
           </TabPane>
           <TabPane eventKey="log" title="Log">
@@ -559,9 +431,17 @@ export class InvestJob extends React.Component {
 
 InvestJob.propTypes = {
   investList: PropTypes.object,
-  investSettings: PropTypes.object,
+  investSettings: PropTypes.shape({
+    nWorkers: PropTypes.string,
+    loggingLevel: PropTypes.string,
+  }),
   recentSessions: PropTypes.array,
   appdata: PropTypes.string,
+  directoryConstants: PropTypes.shape({
+    CACHE_DIR: PropTypes.string,
+    TEMP_DIR: PropTypes.string,
+    INVEST_UI_DATA: PropTypes.string
+  }),
   updateRecentSessions: PropTypes.func,
   saveSettings: PropTypes.func
 }
