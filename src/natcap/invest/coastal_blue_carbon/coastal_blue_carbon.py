@@ -14,10 +14,8 @@ import pygeoprocessing
 from .. import validation
 from .. import utils
 
-# using largest negative 32-bit floating point number
-# reasons: practical limit for 32 bit floating point and most outputs should
-#          be positive
-NODATA_FLOAT = -16777216
+# Using largest negative 32-bit floating point number
+NODATA_FLOAT = numpy.finfo(numpy.float32).min
 
 LOGGER = logging.getLogger(__name__)
 
@@ -362,38 +360,31 @@ def execute(args):
             H_biomass[i] = reclass(
                 C_list[i],
                 d['lulc_to_Hb'],
-                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
             H_soil[i] = reclass(
                 C_list[i], d['lulc_to_Hs'],
-                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
             Y_biomass[i] = reclass(
                 C_list[i+1], d['lulc_to_Yb'],
-                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
             Y_soil[i] = reclass(
                 C_list[i+1],
                 d['lulc_to_Ys'],
-                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
 
         S_biomass[0] = reclass(
             valid_C_prior,
             d['lulc_to_Sb'],
-            out_dtype=numpy.float32,
             nodata_mask=C_nodata)
         S_soil[0] = reclass(
             valid_C_prior,
             d['lulc_to_Ss'],
-            out_dtype=numpy.float32,
             nodata_mask=C_nodata)
 
         for i in range(0, len(C_list)):
             L[i] = reclass(
                 C_list[i],
                 d['lulc_to_L'],
-                out_dtype=numpy.float32,
                 nodata_mask=C_nodata)
 
         T[0] = S_biomass[0] + S_soil[0]
@@ -600,7 +591,7 @@ def get_num_blocks(raster_uri):
     return n_col_blocks * n_row_blocks
 
 
-def reclass(array, d, out_dtype=None, nodata_mask=None):
+def reclass(array, d, nodata_mask=None):
     """Reclassify values in array.
 
     If a nodata value is not provided, the function will return an array with
@@ -609,7 +600,6 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
     Args:
         array (numpy.array): input data
         d (dict): reclassification map
-        out_dtype (numpy.dtype): a numpy datatype for the reclass_array
         nodata_mask (number): for floats, a nodata value that is set to
             numpy.nan if provided to make reclass_array nodata values
             consistent
@@ -617,18 +607,20 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
     Returns:
         reclass_array (numpy.array): reclassified array
     """
-    if out_dtype:
-        array = array.astype(out_dtype)
+    array = array.astype(numpy.float32)
     u = numpy.unique(array)
     has_map = numpy.isin(u, list(d))  # coerces args to numpy.array
-    ndata = numpy.finfo(out_dtype).min
 
     reclass_array = array.copy()
     for i in u[~has_map]:
-        reclass_array = numpy.where(reclass_array == i, ndata, reclass_array)
+        reclass_array = numpy.where(
+            reclass_array == i, NODATA_FLOAT, reclass_array)
 
     a_ravel = reclass_array.ravel()
-    d[ndata] = ndata  # Side effect! Adds -3.4028...e+38 to the map
+
+    # Side effect! Adds -3.4028...e+38 to the map
+    d[NODATA_FLOAT] = NODATA_FLOAT
+
     k = sorted(d.keys())
     v = numpy.array([d[key] for key in k])
     try:
@@ -640,7 +632,7 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
 
     if nodata_mask and numpy.issubdtype(reclass_array.dtype, numpy.floating):
         reclass_array[numpy.isclose(array, nodata_mask)] = numpy.nan
-        reclass_array[numpy.isclose(array, ndata)] = numpy.nan
+        reclass_array[numpy.isclose(array, NODATA_FLOAT)] = numpy.nan
 
         # If the user's nodata value is incorrectly configured for the datatype
         # of the landcover raster, some pixels will still have the 'ndata'
@@ -648,7 +640,7 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
         # everything left over with that value back to numpy.nan, where it will
         # be converted into the raster's nodata value later in the model's
         # execution.
-        reclass_array[numpy.isclose(reclass_array, ndata)] = numpy.nan
+        reclass_array[numpy.isclose(reclass_array, NODATA_FLOAT)] = numpy.nan
 
     return reclass_array
 
