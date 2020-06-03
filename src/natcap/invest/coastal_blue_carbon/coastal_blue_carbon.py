@@ -337,26 +337,32 @@ def execute(args):
         R_soil = numpy.zeros(transition_shape, dtype=numpy.float32)
 
         # Set Accumulation and Disturbance Values
-        C_r = [read_from_raster(i, offset_dict)[valid_mask].astype(
-            numpy.float32) for i in d['C_r_rasters']]
+        C_r = list(read_from_raster(
+            transition_path, offset_dict)[valid_mask].astype(
+                numpy.float32) for transition_path in d['C_r_rasters'])
         if C_r:
             # final transition out to analysis year
             C_list = [valid_C_prior] + C_r + [C_r[-1]]
         else:
             C_list = [valid_C_prior]*2  # allow for a final analysis
+
         for i in range(0, d['transitions']):
-            D_biomass[i] = reclass_transition(
-                C_list[i],
-                C_list[i+1],
-                d['lulc_trans_to_Db'],
-                out_dtype=numpy.float32,
-                nodata_mask=C_nodata)
-            D_soil[i] = reclass_transition(
-                C_list[i],
-                C_list[i+1],
-                d['lulc_trans_to_Ds'],
-                out_dtype=numpy.float32,
-                nodata_mask=C_nodata)
+            # Soil is only disturbed in transitions.
+            # This is based on JD's reading of the User's Guide's notion of a
+            # 'disturbance' event. The baseline (i==0) raster is undisturbed.
+            if i > 0:
+                D_biomass[i] = reclass_transition(
+                    C_list[i],
+                    C_list[i+1],
+                    d['lulc_trans_to_Db'],
+                    out_dtype=numpy.float32,
+                    nodata_mask=C_nodata)
+                D_soil[i] = reclass_transition(
+                    C_list[i],
+                    C_list[i+1],
+                    d['lulc_trans_to_Ds'],
+                    out_dtype=numpy.float32,
+                    nodata_mask=C_nodata)
             H_biomass[i] = reclass(
                 C_list[i],
                 d['lulc_to_Hb'],
