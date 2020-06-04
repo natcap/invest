@@ -47,7 +47,6 @@
   "author": "dmf",
   "license": "MIT",
   "dependencies": {
-    "@babel/runtime": "^7.8.4",
     "@turf/turf": "^5.1.6",
     "chroma-js": "^2.1.0",
     "cross-env": "^5.2.1",
@@ -73,11 +72,12 @@
     "tail": "^2.0.3"
   },
   "devDependencies": {
-    "@babel/cli": "^7.8.4",
-    "@babel/plugin-transform-runtime": "^7.8.3",
-    "@babel/preset-env": "^7.8.4",
-    "@babel/preset-react": "^7.8.3",
-    "@babel/register": "^7.8.6",
+    "@babel/cli": "^7.10.1",
+    "@babel/plugin-transform-runtime": "^7.10.1",
+    "@babel/preset-env": "^7.10.2",
+    "@babel/preset-react": "^7.10.1",
+    "@babel/register": "^7.10.1",
+    "@babel/runtime": "^7.10.2",
     "@electron-forge/cli": "^6.0.0-beta.50",
     "@electron-forge/maker-deb": "^6.0.0-beta.50",
     "@electron-forge/maker-rpm": "^6.0.0-beta.50",
