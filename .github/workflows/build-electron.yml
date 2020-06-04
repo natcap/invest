@@ -3,9 +3,14 @@ name: Build and package electron application
 on: [push, pull_request]
 
 jobs:
-  run-tests:
+  build-application:
     name: "Build and package electron application"
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+      strategy:
+        fail-fast: false
+        max-parallel: 4
+        matrix:
+          os: [ubuntu-latest, windows-latest, macos-latest]
 
     strategy:
       matrix:
@@ -13,15 +18,25 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+    
     - name: install environment
       run: npm install
+    
     - name: build production code
       run: npm run build
+    
     - name: package application
       run: npm run package
       env:
         CI: true
+
+    - name: Upload application artifact
+        uses: actions/upload-artifact@v2-preview
+        with:
+            name: InVEST-desktop-${{ matrix.os-version }}
+            path: dist/**/invest-electron*
