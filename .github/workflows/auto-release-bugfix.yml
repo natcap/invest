@@ -40,6 +40,19 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   RELEASE_MANAGER: ${{ env.RELEASE_MANAGER }}
               run: |
+                  # Don't do a release if there are no changes on HISTORY since
+                  # the last release.  This is done by checking to see if
+                  # HISTORY has been modified between $LATEST_VERSION and
+                  # the commit this build is running on ($GITHUB_SHA).
+                  LATEST_VERSION=$(python setup.py --version | awk -F '.' '{print $1"."$2"."$3}')
+                  if git diff --name-only $LATEST_VERSION $GITHUB_SHA | grep HISTORY.rst > /dev/null
+                  then
+                      echo "Changes have been made to HISTORY.rst, continuing with release."
+                  else
+                      echo "No changes made to HISTORY since last release. Aborting."
+                      exit 1
+                  fi
+
                   # Redirecting stderr to /dev/null to keep actions logs
                   # reflecting the expected state of the program.
                   if hub ci-status $SOURCE_BRANCH 2> /dev/null
