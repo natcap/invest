@@ -5,17 +5,13 @@ on: [push, pull_request]
 jobs:
   build-application:
     name: "Build and package electron application"
-    runs-on: ${{ matrix.os }}
       strategy:
-        fail-fast: false
         max-parallel: 4
         matrix:
           os: [ubuntu-latest, windows-latest, macos-latest]
+          node-version: [12.x]
 
-    strategy:
-      matrix:
-        node-version: [12.x]
-
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
     
