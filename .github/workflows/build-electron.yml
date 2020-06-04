@@ -28,19 +28,3 @@ jobs:
         # release the app after building
         release: ${{ startsWith(github.ref, 'refs/tags/v') }}
     
-    - name: install environment
-      run: npm install
-    
-    - name: build production code
-      run: npm run build
-    
-    - name: package application
-      run: npm run package
-      env:
-        CI: true
-
-    - name: Upload application artifact
-      uses: actions/upload-artifact@v2-preview
-      with:
-        name: InVEST-desktop-${{ matrix.os-version }}
-        path: dist/**/invest-electron*
