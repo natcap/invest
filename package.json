@@ -3,7 +3,7 @@
   "productName": "invest-electron",
   "version": "0.1.0-alpha",
   "description": "My Electron application description",
-  "main": "src/main.js",
+  "main": "build/main.js",
   "homepage": "./",
   "scripts": {
     "start": "cross-env FLASK_APP=src/server.py npx electron .",
@@ -12,7 +12,7 @@
     "postinstall": "electron-builder install-app-deps",
     "build": "npx ./build.js",
     "dist": "electron-builder",
-    "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js"
+    "pack": "electron-builder --dir"
   },
   "build": {
     "appId": "NaturalCapitalProject.Invest.Desktop",
