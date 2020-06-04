@@ -32,7 +32,7 @@ jobs:
         CI: true
 
     - name: Upload application artifact
-        uses: actions/upload-artifact@v2-preview
-        with:
-            name: InVEST-desktop-${{ matrix.os-version }}
-            path: dist/**/invest-electron*
+      uses: actions/upload-artifact@v2-preview
+      with:
+        name: InVEST-desktop-${{ matrix.os-version }}
+        path: dist/**/invest-electron*
