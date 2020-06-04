@@ -35,8 +35,7 @@
     "files": [
       "build/**/*",
       "node_modules/**/*"
-    ],
-    "output": "dist"
+    ]
   },
   "jest": {
     "collectCoverage": true,
