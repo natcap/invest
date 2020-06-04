@@ -5,17 +5,13 @@ on: [push, pull_request]
 jobs:
   build-application:
     name: "Build and package electron application"
-    runs-on: ${{ matrix.os }}
-      strategy:
-        fail-fast: false
-        max-parallel: 4
-        matrix:
-          os: [ubuntu-latest, windows-latest, macos-latest]
-
     strategy:
+      max-parallel: 4
       matrix:
+        os: [ubuntu-latest]
         node-version: [12.x]
 
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
     
@@ -36,7 +32,7 @@ jobs:
         CI: true
 
     - name: Upload application artifact
-        uses: actions/upload-artifact@v2-preview
-        with:
-            name: InVEST-desktop-${{ matrix.os-version }}
-            path: dist/**/invest-electron*
+      uses: actions/upload-artifact@v2-preview
+      with:
+        name: InVEST-desktop-${{ matrix.os-version }}
+        path: dist/**/invest-electron*
