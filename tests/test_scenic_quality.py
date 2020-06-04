@@ -244,7 +244,7 @@ class ScenicQualityTests(unittest.TestCase):
              [-1, -1, -1, -1, -1],
              [-1, -1, -1, -1, -1],
              [-1, -1, -1, -1, -1],
-             [-1, -1, -1, -1, -1]], dtype=numpy.int)
+             [-1, -1, -1, -1, -1]], dtype=numpy.int32)
 
         dem_path = os.path.join(self.workspace_dir, 'dem.tif')
         pygeoprocessing.numpy_array_to_raster(
@@ -359,7 +359,7 @@ class ScenicQualityTests(unittest.TestCase):
              [0, 3, 3, 4, 3],
              [0, 0, 4, 3, 3],
              [0, 3, 3, 4, 3],
-             [3, 3, 3, 3, 4]])
+             [3, 3, 3, 3, 4]], dtype=numpy.int32)
 
         quality_matrix = pygeoprocessing.raster_to_numpy_array(
             os.path.join(
@@ -414,7 +414,7 @@ class ScenicQualityTests(unittest.TestCase):
              [0., 2.82842712, 2., 9.89949494, 5.],
              [0., 0., 24., 5., 0.],
              [0., 7.07106781, 5., 14.14213562, 5.],
-             [10., 5., 0., 5., 20.]])
+             [10., 5., 0., 5., 20.]], dtype=numpy.int32)
 
         value_matrix = pygeoprocessing.raster_to_numpy_array(
             os.path.join(args['workspace_dir'], 'output', 'vshed_value.tif'))
@@ -441,7 +441,7 @@ class ScenicQualityTests(unittest.TestCase):
              [0, 1, 1, 3, 3],
              [0, 0, 4, 3, 0],
              [0, 3, 3, 4, 3],
-             [3, 3, 0, 3, 4]])
+             [3, 3, 0, 3, 4]], dtype=numpy.int32)
         visual_quality_raster = os.path.join(
             args['workspace_dir'], 'output', 'vshed_qual.tif')
         quality_matrix = pygeoprocessing.raster_to_numpy_array(
@@ -542,7 +542,7 @@ class ScenicQualityTests(unittest.TestCase):
         """SQ: verify visual quality calculations."""
         from natcap.invest.scenic_quality import scenic_quality
         visible_structures = numpy.tile(
-            numpy.array([3, 0, 0, 0, 6, 7, 8]), (5, 1))
+            numpy.array([3, 0, 0, 0, 6, 7, 8], dtype=numpy.int32), (5, 1))
 
         n_visible = os.path.join(self.workspace_dir, 'n_visible.tif')
         visual_quality_raster = os.path.join(self.workspace_dir,
@@ -560,7 +560,7 @@ class ScenicQualityTests(unittest.TestCase):
                                                  visual_quality_raster)
 
         expected_visual_quality = numpy.tile(
-            numpy.array([1, 0, 0, 0, 2, 3, 4]), (5, 1))
+            numpy.array([1, 0, 0, 0, 2, 3, 4], dtype=numpy.int32), (5, 1))
 
         visual_quality_matrix = pygeoprocessing.raster_to_numpy_array(
             visual_quality_raster)
@@ -606,7 +606,8 @@ class ScenicQualityTests(unittest.TestCase):
     def test_visual_quality_low_count(self):
         """SQ: verify visual quality calculations for low pixel counts."""
         from natcap.invest.scenic_quality import scenic_quality
-        visible_structures = numpy.array([[-1, 3, 0, 0, 0, 3, 6, 7]])
+        visible_structures = numpy.array(
+            [[-1, 3, 0, 0, 0, 3, 6, 7]], dtype=numpy.int32)
 
         n_visible = os.path.join(self.workspace_dir, 'n_visible.tif')
         visual_quality_raster = os.path.join(self.workspace_dir,
@@ -623,7 +624,8 @@ class ScenicQualityTests(unittest.TestCase):
                                                  self.workspace_dir,
                                                  visual_quality_raster)
 
-        expected_visual_quality = numpy.array([[255, 2, 0, 0, 0, 2, 3, 4]])
+        expected_visual_quality = numpy.array(
+            [[255, 2, 0, 0, 0, 2, 3, 4]], dtype=numpy.int32)
 
         visual_quality_matrix = pygeoprocessing.raster_to_numpy_array(
             visual_quality_raster)
@@ -651,7 +653,8 @@ class ScenicQualityTests(unittest.TestCase):
                                                  self.workspace_dir,
                                                  visual_quality_raster)
 
-        expected_visual_quality = numpy.array([[255, 1, 0, 0, 0, 2, 3, 4]])
+        expected_visual_quality = numpy.array(
+            [[255, 1, 0, 0, 0, 2, 3, 4]], dtype=numpy.int32)
 
         visual_quality_matrix = pygeoprocessing.raster_to_numpy_array(
             visual_quality_raster)
@@ -776,8 +779,8 @@ class ScenicQualityValidationTests(unittest.TestCase):
         filepath = os.path.join(self.workspace_dir, 'dem.tif')
 
         pygeoprocessing.numpy_array_to_raster(
-            numpy.array([[1]]), -1, (1, -1), (0, 0), projection_wkt,
-            filepath)
+            numpy.array([[1]], dtype=numpy.int32), -1, (1, -1), (0, 0), 
+            projection_wkt, filepath)
 
         args = {'dem_path': filepath}
 
@@ -882,7 +885,8 @@ class ViewshedTests(unittest.TestCase):
     def test_refractivity(self):
         """SQ Vshed: refractivity partly compensates for earth's curvature."""
         from natcap.invest.scenic_quality.viewshed import viewshed
-        matrix = numpy.array([[2, 1, 1, 2, 1, 1, 1, 1, 1, 50]])
+        matrix = numpy.array(
+            [[2, 1, 1, 2, 1, 1, 1, 1, 1, 50]], dtype=numpy.int32)
         viewpoint = (0, 0)
         matrix[viewpoint] = 2
         matrix[0, 3] = 2
@@ -917,7 +921,7 @@ class ViewshedTests(unittest.TestCase):
         """SQ Viewshed: intervening nodata does not affect visibility."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         nodata = 255
-        matrix = numpy.array([[2, 2, nodata, 3]])
+        matrix = numpy.array([[2, 2, nodata, 3]], dtype=numpy.int32)
         viewpoint = (0, 0)
 
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
@@ -942,7 +946,7 @@ class ViewshedTests(unittest.TestCase):
         """SQ Viewshed: assume a reasonable nodata value if none defined."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         nodata = None  # viewshed assumes an unlikely nodata value.
-        matrix = numpy.array([[2, 2, 1, 3]])
+        matrix = numpy.array([[2, 2, 1, 3]], dtype=numpy.int32)
         viewpoint = (0, 0)
 
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
@@ -1202,7 +1206,8 @@ class ViewshedTests(unittest.TestCase):
              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-             [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
+             [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]],
+            dtype=numpy.int32)
 
         visibility_matrix = pygeoprocessing.raster_to_numpy_array(
             visibility_filepath)

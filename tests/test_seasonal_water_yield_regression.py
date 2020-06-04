@@ -106,7 +106,7 @@ def make_soil_raster(soil_ras_path):
     """
     size = 100
     soil_groups = 4
-    soil_array = numpy.zeros((size, size))
+    soil_array = numpy.zeros((size, size), dtype=numpy.int32)
     for i, row in enumerate(soil_array):
         row[:] = i % soil_groups + 1
     make_raster_from_array(soil_array, soil_ras_path)
@@ -126,7 +126,8 @@ def make_gradient_raster(grad_ras_path):
         None.
     """
     size = 100
-    grad_array = numpy.resize(numpy.arange(size), (size, size))
+    grad_array = numpy.resize(
+        numpy.arange(size), (size, size), dtype=numpy.int32)
     make_raster_from_array(grad_array, grad_ras_path)
 
 
@@ -143,7 +144,7 @@ def make_eto_rasters(eto_dir_path):
     for month in range(1, 13):
         eto_raster_path = os.path.join(eto_dir_path,
                                        'eto' + str(month) + '.tif')
-        eto_array = numpy.full((size, size), month)
+        eto_array = numpy.full((size, size), month, dtype=numpy.int32)
         make_raster_from_array(eto_array, eto_raster_path)
 
 
@@ -160,7 +161,7 @@ def make_precip_rasters(precip_dir_path):
     for month in range(1, 13):
         precip_raster_path = os.path.join(precip_dir_path,
                                           'precip_mm_' + str(month) + '.tif')
-        precip_array = numpy.full((size, size), month + 10)
+        precip_array = numpy.full((size, size), month + 10, dtype=numpy.int32)
         make_raster_from_array(precip_array, precip_raster_path)
 
 
@@ -174,7 +175,7 @@ def make_recharge_raster(recharge_ras_path):
         None.
     """
     size = 100
-    recharge_array = numpy.full((size, size), 200)
+    recharge_array = numpy.full((size, size), 200, dtype=numpy.int32)
     make_raster_from_array(recharge_array, recharge_ras_path)
 
 

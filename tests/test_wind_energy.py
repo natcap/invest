@@ -87,7 +87,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             fields=fields, attribute_list=attrs, ogr_geom_type=ogr.wkbPoint)
 
         # Setup parameters for create raster
-        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
+        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]], dtype=numpy.int32)
         harvested_masked_path = os.path.join(
             self.workspace_dir, 'temp_raster.tif')
         # Create raster to use for testing input
@@ -103,7 +103,8 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         # Compare the results
         res_array = pygeoprocessing.raster_to_numpy_array(tmp_dist_final_path)
-        exp_array = numpy.array([[10, 110, 210, 310], [20, 120, 220, 320]])
+        exp_array = numpy.array(
+            [[10, 110, 210, 310], [20, 120, 220, 320]], dtype=numpy.int32)
         numpy.testing.assert_allclose(res_array, exp_array)
 
     def test_calculate_land_to_grid_distance(self):
@@ -212,7 +213,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             'ESRI Shapefile', fields=fields, attribute_list=attrs,
             ogr_geom_type=ogr.wkbPoint)
 
-        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
+        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]], dtype=numpy.int32)
         harvested_masked_path = os.path.join(self.workspace_dir, 'raster.tif')
         # Create raster to use as testing input
         pygeoprocessing.numpy_array_to_raster(
@@ -226,7 +227,8 @@ class WindEnergyUnitTests(unittest.TestCase):
             land_shape_path, harvested_masked_path, tmp_dist_final_path, '')
 
         # Compare
-        exp_array = numpy.array([[0, 100, 200, 300], [0, 100, 200, 300]])
+        exp_array = numpy.array(
+            [[0, 100, 200, 300], [0, 100, 200, 300]], dtype=numpy.int32)
         res_array = pygeoprocessing.raster_to_numpy_array(tmp_dist_final_path)
         numpy.testing.assert_array_equal(res_array, exp_array)
 

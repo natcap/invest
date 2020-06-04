@@ -88,7 +88,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         # Get a point from the clipped data object to use later in helping
         # determine proper pixel size
-        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
+        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]], dtype=numpy.int32)
         raster_path = os.path.join(self.workspace_dir, 'input_raster.tif')
         # Create raster to use as testing input
         pygeoprocessing.numpy_array_to_raster(
@@ -128,7 +128,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         origin = (443723.127327877911739, 4956546.905980412848294)
 
         group_values = [1, 3, 5, 7]
-        matrix = numpy.array([[1, 3, 5, 9], [3, 7, 1, 5], [2, 4, 5, 7]])
+        matrix = numpy.array(
+            [[1, 3, 5, 9], [3, 7, 1, 5], [2, 4, 5, 7]], dtype=numpy.int32)
 
         raster_path = os.path.join(self.workspace_dir, 'pixel_groups.tif')
         # Create raster to use for testing input
