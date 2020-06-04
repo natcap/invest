@@ -1,6 +1,6 @@
 'use strict';
 
-const spawn = require('child_process').spawn;
+const spawnSync = require('child_process').spawnSync;
 const fs = require('fs-extra');
 const path = require('path');
 const glob = require('glob');
@@ -14,7 +14,7 @@ if (!fs.existsSync(BUILD_DIR)) {
 
 // transpile jsx and es6 files to javasciprt
 const cmdArgs = [SRC_DIR, '-d', BUILD_DIR]
-const investRun = spawn('npx babel', cmdArgs, {
+const investRun = spawnSync('npx babel', cmdArgs, {
         shell: true, 
       });
 
@@ -27,3 +27,6 @@ glob(SRC_DIR.concat('/**/*'), (err, files) => {
 		}
 	})
 })
+
+console.log('build directory contains:')
+console.log(fs.readdirSync(BUILD_DIR));
