@@ -1,5 +1,8 @@
 .navbar-light .navbar-nav .nav-link{
     color: blue;
+    font-size: 1.5rem;
+    padding-right: 2rem;
+    padding-left: 2rem;
 }
 
 /* Default sized Radio buttons are too small */
@@ -11,13 +14,20 @@ input[type=radio]{
 
 /* HomeTab styles */
 .session-card-group {
-	flex-flow: column;
-	width: 500px; /* explicit width seems key for children to behave*/
+	display: flex;
+	flex-wrap: wrap;
+	flex-direction: row;
+	flex: 1 0 auto!important;
+	width: 400px;  /*explicit width seems key for children to behave*/
 }
 
 .session-card {
+	flex: 1 0 auto!important;
+	flex-direction: row;
 	width: inherit;
-	margin-bottom: 10px;
+	margin-bottom: 15px!important;
+	border-width: 2px;
+	padding: 0;
 }
 
 .card-body {

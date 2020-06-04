@@ -3,9 +3,11 @@ import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import Table from 'react-bootstrap/Table';
 import CardGroup from 'react-bootstrap/CardGroup';
 import Card from 'react-bootstrap/Card';
 import Spinner from 'react-bootstrap/Spinner';
+import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
@@ -43,23 +45,29 @@ export class HomeTab extends React.PureComponent {
     let investButtons = [];
     for (const model in investJSON) {
       investButtons.push(
-        <Button key={model}
+        <tr>
+        <td>
+        <Button key={model} size="lg" block
           value={investJSON[model]['internal_name']}
           onClick={this.handleClick}
-          variant="outline-success">
+          variant="link">
           {model}
         </Button>
+        </td>
+        </tr>
       );
     }
 
     return (
       <Row>
-        <Col md={6}>
-          <ButtonGroup vertical className="mt-2">
-            {investButtons}
-          </ButtonGroup>
+        <Col md={5}>
+          <Table size="sm">
+            <tbody>
+              {investButtons}
+            </tbody>
+          </Table>
         </Col>
-        <Col md={6}>
+        <Col md={7}>
           <RecentInvestJobs
             loadState={this.props.loadState}
             recentSessions={this.props.recentSessions}/>
@@ -117,7 +125,7 @@ class RecentInvestJobs extends React.PureComponent {
         backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
       }
       recentButtons.push(
-        <Card className="text-left session-card border-0"
+        <Card className="text-left session-card"
           as="button"
           key={name}
           onClick={() => this.props.loadState(session[1]['statefile'])}>
@@ -147,7 +155,11 @@ class RecentInvestJobs extends React.PureComponent {
           Select Recent Session:
         </div>
         {recentButtons.length
-          ? <CardGroup className='session-card-group'>{recentButtons}</CardGroup>
+          ? <Container>
+            <CardGroup className='session-card-group'>
+              {recentButtons}
+            </CardGroup>
+            </Container>
           : <div>
               No recent sessions yet.<br></br> 
               Try the <b>Load</b> button to load a sample data json file
