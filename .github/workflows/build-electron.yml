@@ -22,11 +22,11 @@ jobs:
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
-        with: 
-          github_token: ${{ secrets.github_token }}
-          # If the commit is tagged with a version (e.g. "v1.0.0"),
-          # release the app after building
-          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      with: 
+        github_token: ${{ secrets.github_token }}
+        # If the commit is tagged with a version (e.g. "v1.0.0"),
+        # release the app after building
+        release: ${{ startsWith(github.ref, 'refs/tags/v') }}
     
     - name: install environment
       run: npm install
