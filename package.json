@@ -9,18 +9,34 @@
     "start": "cross-env FLASK_APP=src/server.py npx electron .",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest",
+    "postinstall": "electron-builder install-app-deps",
     "build": "npx ./build.js",
-    "package": "electron-builder build --linux -c.extraMetadata.main=build/main.js --publish never"
+    "dist": "electron-builder",
+    "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js"
   },
   "build": {
-    "appId": "invest",
+    "appId": "NaturalCapitalProject.Invest.Desktop",
+    "productName": "InVEST Desktop",
+    "mac": {
+      "category": "public.app-category.business",
+      "icon": "build/icon.png"
+    },
+    "dmg": {
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Science"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
     "files": [
       "build/**/*",
       "node_modules/**/*"
     ],
-    "directories": {
-      "buildResources": "assets"
-    }
+    "output": "dist"
   },
   "jest": {
     "collectCoverage": true,

@@ -1,24 +1,32 @@
-name: Build and package electron application
+name: Build and Release
 
 on: [push, pull_request]
 
 jobs:
-  build-application:
-    name: "Build and package electron application"
+  build-and-release:
+    runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 4
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         node-version: [12.x]
 
-    runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v2
     
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Install Node.js
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+
+    - name: Build & Release Electron application
+      uses: samuelmeuli/action-electron-builder@v1
+        with: 
+          github_token: ${{ secrets.github_token }}
+          # If the commit is tagged with a version (e.g. "v1.0.0"),
+          # release the app after building
+          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
     
     - name: install environment
       run: npm install
