@@ -4,6 +4,13 @@
 ..
   Unreleased Changes
   ------------------
+  * General
+    * Fix bug in ``utils.build_lookup_from_csv`` that was not allowing 
+      ``key_field`` in anything other than the first column.
+    * Add optional argument ``column_list`` to ``utils.build_lookup_from_csv``
+      that takes a list of column names and only returns those in the 
+      dictionary.
+
 
 3.8.3 (2020-05-29)
 ------------------
