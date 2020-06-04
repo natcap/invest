@@ -28,3 +28,8 @@ jobs:
         # release the app after building
         release: ${{ startsWith(github.ref, 'refs/tags/v') }}
     
+    - name: Upload installer artifacts
+      uses: actions/upload-artifact@v2-preview
+      with:
+        name: invest-desktop
+        path: dist/invest-desktop_*
