@@ -431,24 +431,30 @@ def build_file_registry(base_file_path_list, file_suffix):
 
 
 def build_lookup_from_csv(
-        table_path, key_field, to_lower=True, warn_if_missing=True):
-    """Read a CSV table into a dictionary indexed by `key_field`.
+        table_path, key_field, column_list=None, to_lower=True, 
+        warn_if_missing=True):
+    """Read a CSV table into a dictionary indexed by ``key_field``.
 
     Creates a dictionary from a CSV whose keys are unique entries in the CSV
-    table under the column named by `key_field` and values are dictionaries
-    indexed by the other columns in `table_path` including `key_field` whose
-    values are the values on that row of the CSV table.
+    table under the column named by ``key_field`` and values are dictionaries
+    indexed by the other columns in ``table_path`` including ``key_field``
+    whose values are the values on that row of the CSV table.
 
-    Parameters:
+    If an entire row is NA/NaN then it is dropped from the table and a 
+    warning is given of the dropped rows.
+
+    Args:
         table_path (string): path to a CSV file containing at
             least the header key_field
         key_field: (string): a column in the CSV file at `table_path` that
-            can uniquely identify each row in the table.
+            can uniquely identify each row in the table and sets the row index
+        column_list (list): a list of column names to subset from the CSV 
+            file, default=None
         to_lower (bool): if True, converts all unicode in the CSV,
             including headers and values to lowercase, otherwise uses raw
             string values.
         warn_if_missing (bool): If True, warnings are logged if there are
-            empty headers or value rows.
+            NaN holes.
 
     Returns:
         lookup_dict (dict): a dictionary of the form {
@@ -456,7 +462,7 @@ def build_lookup_from_csv(
                 key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}
             }
 
-        if `to_lower` all strings including key_fields and values are
+        if ``to_lower`` all strings including key_fields and values are
         converted to lowercase unicode.
     """
     # Check if the file encoding is UTF-8 BOM first
@@ -465,40 +471,52 @@ def build_lookup_from_csv(
         first_line = file_obj.readline()
         if first_line.startswith(codecs.BOM_UTF8):
             encoding = 'utf-8-sig'
-    table = pandas.read_csv(
-        table_path, sep=None, engine='python', encoding=encoding)
-    header_row = list(table)
+   
+    # if a list of columns are provided to use and return, make sure 
+    # 'key_field' is one of them. 
+    if column_list and key_field not in column_list:
+        column_list.append(key_field)
+    try: 
+        table = pandas.read_csv(
+            table_path, sep=None, index_col=key_field, usecols=column_list, 
+            engine='python', encoding=encoding)
+    except ValueError:
+        # If 'key_field' is not a column then ValueError is raised for using 
+        # it as the index column
+        LOGGER.error(f"'key_field' : {key_field} could not be found as a"
+                     f" column in the table. Table path: {table_path}.")
+        raise
 
     if to_lower:
         key_field = key_field.lower()
-        header_row = [
-            x if not isinstance(x, str) else x.lower()
-            for x in header_row]
+        # lowercase column names
+        table.columns = table.columns.str.lower()
+        # lowercase values 
+        table = table.applymap(
+            lambda x: x.lower() if isinstance(x, str) else x)
 
-    if key_field not in header_row:
-        raise ValueError(
-            '%s expected in %s for the CSV file at %s' % (
-                key_field, header_row, table_path))
-    if warn_if_missing and '' in header_row:
+    # look for NaN values
+    table_na = table.isna()
+    if warn_if_missing and table_na.values.any():
         LOGGER.warn(
-            "There are empty strings in the header row at %s", table_path)
+            f"Empty or NaN values were found in the table: {table_path}.")
+    # look to see if an entire row is NA values
+    table_na_rows = table_na.all(axis=1)
+    na_rows = table_na_rows.index[table_na_rows].tolist()
+    # if a completely empty row, drop it
+    if na_rows:
+        LOGGER.warn(
+            "Encountered an entirely blank row on line(s)"
+            f" {[x+2 for x in na_rows]}. Dropping rows from table.")
+        table.dropna(how="all", inplace=True)
+    # fill the rest of empty or NaN values with empty string
+    table.fillna(value="", inplace=True)
+    # convert df table to dictionary by index. Copying index to a new column 
+    # will allow for the key_field to be present in the inner dictionary 
+    table[key_field] = table.index
+    lookup_dict = table.to_dict(orient='index')
 
-    key_index = header_row.index(key_field)
-    lookup_dict = {}
-    for index, row in table.iterrows():
-        if to_lower:
-            row = pandas.Series([
-                x if not isinstance(x, str) else x.lower()
-                for x in row])
-        # check if every single element in the row is null
-        if row.isnull().values.all():
-            LOGGER.warn(
-                "Encountered an entirely blank row on line %d", index+2)
-            continue
-        if row.isnull().values.any():
-            row = row.fillna('')
-        lookup_dict[row[key_index]] = dict(zip(header_row, row))
-    return lookup_dict
+    return lookup_dict 
 
 
 def make_directories(directory_list):
