@@ -29,6 +29,7 @@
       "target": [
         "AppImage"
       ],
+      "icon": "build/icon.png",
       "category": "Science"
     },
     "win": {
@@ -37,6 +38,7 @@
     },
     "files": [
       "build/**/*",
+      "ui_data/**/*",
       "node_modules/**/*"
     ]
   },
