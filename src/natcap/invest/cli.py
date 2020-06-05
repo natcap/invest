@@ -102,7 +102,7 @@ _MODEL_UIS = {
         gui='hydropower.HydropowerWaterYield',
         aliases=('hwy',)),
     'ndr': _UIMETA(
-        humanname="Nutrient Delivery Ratio",
+        humanname="NDR: Nutrient Delivery Ratio",
         pyname='natcap.invest.ndr.ndr',
         gui='ndr.Nutrient',
         aliases=()),
@@ -132,7 +132,7 @@ _MODEL_UIS = {
         gui='scenic_quality.ScenicQuality',
         aliases=('sq',)),
     'sdr': _UIMETA(
-        humanname="Sediment Delivery Ratio",
+        humanname="SDR: Sediment Delivery Ratio",
         pyname='natcap.invest.sdr.sdr',
         gui='sdr.SDR',
         aliases=()),
