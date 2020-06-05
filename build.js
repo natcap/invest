@@ -36,7 +36,9 @@ glob(SRC_DIR.concat(path.sep, '**', path.sep, '*'), (err, files) => {
 
 const dataFiles = fs.readdirSync(DATA_DIR)
 dataFiles.forEach(file => {
-	fs.copySync(file, path.join(BUILD_DIR, file))
+	fs.copySync(
+		path.join(DATA_DIR, file),
+		path.join(BUILD_DIR, DATA_DIR, file))
 })
 
 console.log('build directory contains:')
