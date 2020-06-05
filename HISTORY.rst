@@ -1,7 +1,11 @@
 .. :changelog:
 
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.4 (2020-06-05)
 ------------------
 * General:
     * Advanced the ``Taskgraph`` version requirement to fix a bug where workspace
