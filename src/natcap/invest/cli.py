@@ -1,7 +1,6 @@
 # coding=UTF-8
 """Single entry point for all InVEST applications."""
 import argparse
-import os
 import importlib
 import logging
 import sys
@@ -236,6 +235,7 @@ class SelectModelAction(argparse.Action):
     This is a subclass of ``argparse.Action`` and is executed when the argparse
     interface detects that the user has attempted to select a model by name.
     """
+
     def __call__(self, parser, namespace, values, option_string=None):
         """Given the user's input, determine which model they're referring to.
 
@@ -257,7 +257,8 @@ class SelectModelAction(argparse.Action):
         for the full documentation for argparse classes and this __call__
         method.
 
-        Overridden from argparse.Action.__call__"""
+        Overridden from argparse.Action.__call__.
+        """
         known_models = sorted(list(_MODEL_UIS.keys()))
 
         matching_models = [model for model in known_models if
@@ -299,21 +300,21 @@ def main(user_args=None):
     so models may be run in this way without having GUI packages
     installed.
     """
-
     parser = argparse.ArgumentParser(
         description=(
-        'Integrated Valuation of Ecosystem Services and Tradeoffs.  '
-        'InVEST (Integrated Valuation of Ecosystem Services and Tradeoffs) is '
-        'a family of tools for quantifying the values of natural capital in '
-        'clear, credible, and practical ways. In promising a return (of '
-        'societal benefits) on investments in nature, the scientific community '
-        'needs to deliver knowledge and tools to quantify and forecast this '
-        'return. InVEST enables decision-makers to quantify the importance of '
-        'natural capital, to assess the tradeoffs associated with alternative '
-        'choices, and to integrate conservation and human development.  \n\n'
-        'Older versions of InVEST ran as script tools in the ArcGIS ArcToolBox '
-        'environment, but have almost all been ported over to a purely '
-        'open-source python environment.'),
+            'Integrated Valuation of Ecosystem Services and Tradeoffs. '
+            'InVEST (Integrated Valuation of Ecosystem Services and '
+            'Tradeoffs) is a family of tools for quantifying the values of '
+            'natural capital in clear, credible, and practical ways. In '
+            'promising a return (of societal benefits) on investments in '
+            'nature, the scientific community needs to deliver knowledge and '
+            'tools to quantify and forecast this return. InVEST enables '
+            'decision-makers to quantify the importance of natural capital, '
+            'to assess the tradeoffs associated with alternative choices, '
+            'and to integrate conservation and human development.  \n\n'
+            'Older versions of InVEST ran as script tools in the ArcGIS '
+            'ArcToolBox environment, but have almost all been ported over to '
+            'a purely open-source python environment.'),
         prog='invest'
     )
     parser.add_argument('--version', action='version',
@@ -336,7 +337,7 @@ def main(user_args=None):
     listmodels_subparser.add_argument(
         '--json', action='store_true', help='Write output as a JSON object')
 
-    launcher_subparser = subparsers.add_parser(
+    subparsers.add_parser(
         'launch', help='Start the InVEST launcher window')
 
     run_subparser = subparsers.add_parser(
@@ -404,7 +405,7 @@ def main(user_args=None):
     # If --debug is used, the logging threshold is 10.
     # If the user goes lower than logging.DEBUG, default to logging.DEBUG.
     log_level = min(args.log_level, logging.CRITICAL - (args.verbosity*10))
-    handler.setLevel(max(log_level, logging.DEBUG))  # don't go lower than DEBUG
+    handler.setLevel(max(log_level, logging.DEBUG))  # don't go below DEBUG
     root_logger.addHandler(handler)
     LOGGER.info('Setting handler log level to %s', log_level)
 
@@ -433,7 +434,7 @@ def main(user_args=None):
             parsed_datastack = datastack.extract_parameter_set(args.datastack)
         except Exception as error:
             parser.exit(
-                1, "Error when parsing JSON datastack file:\n    " + str(error))
+                1, "Error when parsing JSON datastack:\n    " + str(error))
 
         model_module = importlib.import_module(
             name=parsed_datastack.model_name)
@@ -489,7 +490,7 @@ def main(user_args=None):
             parsed_datastack = datastack.extract_parameter_set(args.datastack)
         except Exception as error:
             parser.exit(
-                1, "Error when parsing JSON datastack file:\n    " + str(error))
+                1, "Error when parsing JSON datastack:\n    " + str(error))
 
         if not args.workspace:
             if ('workspace_dir' not in parsed_datastack.args or
@@ -503,7 +504,7 @@ def main(user_args=None):
         target_model = _MODEL_UIS[args.model].pyname
         model_module = importlib.import_module(name=target_model)
         LOGGER.info('Imported target %s from %s',
-                   model_module.__name__, model_module)
+                    model_module.__name__, model_module)
 
         with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
                                      name=parsed_datastack.model_name,
