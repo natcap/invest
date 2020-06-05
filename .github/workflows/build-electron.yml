@@ -31,5 +31,5 @@ jobs:
     - name: Upload installer artifacts
       uses: actions/upload-artifact@v2-preview
       with:
-        name: invest-desktop
+        name: invest-desktop-${{ matrix.os }}
         path: dist/invest-desktop_*
