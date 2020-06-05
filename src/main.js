@@ -67,7 +67,7 @@ const createWindow = async () => {
 function createPythonFlaskProcess() {
   /** Spawn a child process running the Python Flask server.*/
   if (serverEXE) {
-    pythonServerProcess = spawn(serverEXE, {
+    const pythonServerProcess = spawn(serverEXE, {
         shell: true,
         // stdio: 'ignore',
         detatched: true,
