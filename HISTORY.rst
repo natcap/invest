@@ -1,12 +1,18 @@
 .. :changelog:
 
 
-..
-  Unreleased Changes
-  ------------------
-* Advanced the ``Taskgraph`` version requirement to fix a bug where workspace
-  directories created by InVEST versions <=3.8.0 could not be re-used by more
-  recent InVEST versions.
+Unreleased Changes
+------------------
+* General:
+    * Advanced the ``Taskgraph`` version requirement to fix a bug where workspace
+      directories created by InVEST versions <=3.8.0 could not be re-used by more
+      recent InVEST versions.
+* NDR:
+    * The Start Menu shortcut on Windows and launcher label on Mac now have
+      consistent labels for NDR: "NDR: Nutrient Delivery Ratio".
+* SDR:
+    * The Start Menu shortcut on Windows and launcher label on Mac now have
+      consistent labels for SDR: "SDR: Sediment Delivery Ratio".
 
 3.8.3 (2020-05-29)
 ------------------
