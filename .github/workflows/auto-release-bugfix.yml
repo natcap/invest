@@ -4,10 +4,6 @@ on:
         # 9am PST on Friday of each week
         - cron: '0 17 * * 5'
 
-env:
-    # This is to be updated on a roughly monthly schedule and will rotate.
-    RELEASE_MANAGER: "phargogh"
-
 jobs:
     create-bugfix-release:
         name: Create a bugfix release
@@ -38,8 +34,11 @@ jobs:
               env:
                   SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  RELEASE_MANAGER: ${{ env.RELEASE_MANAGER }}
               run: |
+                  # Get the shared environment variables.
+                  # Adds the RELEASE_MANAGER environment variable.
+                  source ./ci/release/RELEASE_MANAGER.env
+
                   # Don't do a release if there are no changes on HISTORY since
                   # the last release.  This is done by checking to see if
                   # HISTORY has been modified between $LATEST_VERSION and
