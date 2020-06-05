@@ -38,7 +38,6 @@
     },
     "files": [
       "build/**/*",
-      "ui_data/**/*",
       "node_modules/**/*"
     ]
   },

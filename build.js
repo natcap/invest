@@ -6,7 +6,8 @@ const path = require('path');
 const glob = require('glob');
 
 const SRC_DIR = 'src'
-const BUILD_DIR = 'build';
+const BUILD_DIR = 'build'
+const DATA_DIR = 'ui_data'
 
 if (!fs.existsSync(BUILD_DIR)) {
 	fs.mkdirSync(BUILD_DIR)
@@ -31,6 +32,13 @@ glob(SRC_DIR.concat(path.sep, '**', path.sep, '*'), (err, files) => {
 			fs.copySync(file, dest)
 		}
 	})
+})
+
+const dataFiles = fs.readdirSync(DATA_DIR)
+dataFiles.forEach(file => {
+	fs.copySync(
+		path.join(DATA_DIR, file),
+		path.join(BUILD_DIR, DATA_DIR, file))
 })
 
 console.log('build directory contains:')
