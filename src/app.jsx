@@ -6,9 +6,9 @@ import { getInvestList, getFlaskIsReady } from './server_requests';
 import { updateRecentSessions, loadRecentSessions } from './utils';
 
 const DIRECTORY_CONSTANTS = {
-  CACHE_DIR: 'cache', //  for storing state snapshot files
-  TEMP_DIR: 'tmp',  // for saving datastack json files prior to investExecute
-  INVEST_UI_DATA: 'ui_data'
+  CACHE_DIR: path.join(__dirname, 'cache'), //  for storing state snapshot files
+  TEMP_DIR: path.join(__dirname, 'tmp'),  // for saving datastack json files prior to investExecute
+  INVEST_UI_DATA: path.join(__dirname, 'ui_data')
 }
 
 export default class App extends React.Component {

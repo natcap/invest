@@ -94,7 +94,8 @@ export class InvestJob extends React.Component {
     */
     const jobName = this.state.sessionID;
     const jsonContent = JSON.stringify(this.state, null, 2);
-    const filepath = path.join(this.props.directoryConstants.CACHE_DIR, jobName + '.json');
+    const filepath = path.join(
+      this.props.directoryConstants.CACHE_DIR, jobName + '.json');
     fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
       if (err) {
         console.log("An error occured while writing JSON Object to File.");
