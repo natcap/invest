@@ -38,14 +38,7 @@
     },
     "files": [
       "build/**/*",
-      "ui_data/**/*",
       "node_modules/**/*"
-    ],
-    "extraFiles": [
-      {
-        "from": "build/ui_data/*",
-        "to": "ui_data/"
-      }
     ]
   },
   "jest": {
