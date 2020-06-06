@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const { remote } = require('electron');
 const { Menu, MenuItem } = remote;
-const JOBS_DATABASE = 'jobdb.json'
+const JOBS_DATABASE = path.join(__dirname, 'jobdb.json')
 const INVEST_REGISTRY_PATH = path.join(
       remote.app.getPath('userData'), 'invest_registry.json')
 
