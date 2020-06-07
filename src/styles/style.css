@@ -1,6 +1,6 @@
 .navbar-light .navbar-nav .nav-link{
     color: blue;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     padding-right: 2rem;
     padding-left: 2rem;
 }
@@ -17,14 +17,14 @@ input[type=radio]{
 	display: flex;
 	flex-wrap: wrap;
 	flex-direction: row;
-	flex: 1 0 auto!important;
-	width: 400px;  /*explicit width seems key for children to behave*/
 }
 
+/* cards can expand to fill space, via flex,
+   but need an explicit width so they are all uniform.*/
 .session-card {
-	flex: 1 0 auto!important;
+	flex: 1 0 50%!important;
 	flex-direction: row;
-	width: inherit;
+	width: 400px; 
 	margin-bottom: 15px!important;
 	border-width: 2px;
 	padding: 0;

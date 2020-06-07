@@ -150,22 +150,18 @@ class RecentInvestJobs extends React.PureComponent {
     });
 
     return (
-      <React.Fragment>
-        <div>
-          Select Recent Session:
-        </div>
+      <Container>
+        <h4>Recent Sessions:</h4>
         {recentButtons.length
-          ? <Container>
-            <CardGroup className='session-card-group'>
+          ? <CardGroup className='session-card-group'>
               {recentButtons}
             </CardGroup>
-            </Container>
           : <div>
               No recent sessions yet.<br></br> 
               Try the <b>Load</b> button to load a sample data json file
             </div>
         }
-      </React.Fragment>
+      </Container>
     );
   }
 }
