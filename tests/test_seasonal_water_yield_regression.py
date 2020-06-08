@@ -127,7 +127,7 @@ def make_gradient_raster(grad_ras_path):
     """
     size = 100
     grad_array = numpy.resize(
-        numpy.arange(size), (size, size), dtype=numpy.int32)
+        numpy.arange(size, dtype=numpy.int32), (size, size))
     make_raster_from_array(grad_array, grad_ras_path)
 
 
