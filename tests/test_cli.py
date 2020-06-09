@@ -151,8 +151,9 @@ class CLIHeadlessTests(unittest.TestCase):
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
             'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
-        targ = 'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute'
-        with unittest.mock.patch(targ, return_value=None) as patched_model:
+        target = (
+            'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute')
+        with unittest.mock.patch(target, return_value=None) as patched_model:
             cli.main([
                 'run',
                 'cbc',  # uses an alias
