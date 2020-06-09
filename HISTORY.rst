@@ -1,19 +1,13 @@
 .. :changelog:
 Unreleased Changes (3.9)
 ------------------------
-* General
-  * Migrating over to GDAL 3 from GDAL 2.
-  * Updating requirements to reflect GDAL version >= 3.
-  * Updating crop production tests that varied slightly due to GDAL 3 
-    differences in handling spatial references.
+* General:
+  * Deprecating GDAL 2 and adding support for GDAL 3.
   * Adding function in utils.py to handle InVEST coordindate transformations.
-  * Adding tests for new coordinate transformation function in utils.py.
   * Making InVEST compatible with Pygeoprocessing 2.0 by updating: 
     * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
     * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to 
       ``projection_wkt``.
-    * Updating InVEST tests that were dependent on the removed ``pgp.testing`` 
-      module.
 
 ..
   Unreleased Changes
