@@ -22,7 +22,7 @@ input[type=radio]{
 /* cards can expand to fill space, via flex,
    but need an explicit width so they are all uniform.*/
 .session-card {
-	flex: 1 0 50%!important;
+	flex: 1 0 auto!important;
 	flex-direction: row;
 	width: 400px; 
 	margin-bottom: 15px!important;
@@ -37,6 +37,8 @@ input[type=radio]{
 }
 
 .card-header {
+	color: white;
+	font-weight: 700;
 	padding-left: 1.25rem;
 }
 .card-title {

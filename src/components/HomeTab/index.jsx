@@ -22,7 +22,7 @@ import Row from 'react-bootstrap/Row';
 const STATUS_COLOR_MAP = {
   running: 'rgba(23, 162, 184, 0.7)',
   error: 'rgba(220, 53, 69, 0.7)',
-  success: 'rgba(40, 167, 69, 0.7)'
+  success: '#148F68' // invest green
 }
 
 export class HomeTab extends React.PureComponent {
