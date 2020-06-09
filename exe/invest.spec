@@ -51,7 +51,7 @@ server_pyz = PYZ(server_a.pure, server_a.zipped_data, cipher=block_cipher)
 # Create the executable file.
 if is_darwin:
     # add rtree dependency dynamic libraries from conda environment
-    a.binaries += [
+    invest_a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
         glob.glob(os.path.join(conda_env, 'lib/libspatialindex*.dylib'))]
 elif is_win:
@@ -60,7 +60,7 @@ elif is_win:
     # Supposed to gather the mscvr/p DLLs from the local system before
     # packaging.  Skirts the issue of us needing to keep them under version
     # control.
-    a.binaries += [
+    invest_a.binaries += [
         ('msvcp90.dll', 'C:\\Windows\\System32\\msvcp90.dll', 'BINARY'),
         ('msvcr90.dll', 'C:\\Windows\\System32\\msvcr90.dll', 'BINARY')
     ]
