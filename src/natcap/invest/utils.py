@@ -550,26 +550,26 @@ def mean_pixel_size_and_area(pixel_size_tuple):
 
 
 def create_coordinate_transformer(
-    base_ref, target_ref, 
+    base_ref, target_ref,
     osr_axis_mapping_strategy=DEFAULT_OSR_AXIS_MAPPING_STRATEGY):
     """Create a spatial reference coordinate transformation function.
 
     Args:
-        base_ref (osr spatial reference): A defined spatial reference to 
+        base_ref (osr spatial reference): A defined spatial reference to
             transform FROM
-        target_ref (osr spatial reference): A defined spatial reference 
+        target_ref (osr spatial reference): A defined spatial reference
             to transform TO
-        osr_axis_mapping_strategy (int): OSR axis mapping strategy for 
+        osr_axis_mapping_strategy (int): OSR axis mapping strategy for
             ``SpatialReference`` objects. Defaults to
-            ``utils.DEFAULT_OSR_AXIS_MAPPING_STRATEGY``. This parameter shoulc
+            ``utils.DEFAULT_OSR_AXIS_MAPPING_STRATEGY``. This parameter should
             not be changed unless you know what you are doing.
 
     Returns:
         An OSR Coordinate Transformation object
 
     """
-    base_ref.SetAxisMappingStrategy(osr_axis_mapping_strategy) 
-    target_ref.SetAxisMappingStrategy(osr_axis_mapping_strategy) 
+    base_ref.SetAxisMappingStrategy(osr_axis_mapping_strategy)
+    target_ref.SetAxisMappingStrategy(osr_axis_mapping_strategy)
 
     transformer = osr.CreateCoordinateTransformation(base_ref, target_ref)
     return transformer
