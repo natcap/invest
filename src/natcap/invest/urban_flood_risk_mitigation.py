@@ -123,7 +123,7 @@ def execute(args):
     areas benefiting from this service, then calculates the monetary value of
     potential avoided damage to built infrastructure.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): a path to the directory that will
             write output and other temporary files during calculation.
         args['results_suffix'] (string): appended to any output file name.
@@ -409,7 +409,7 @@ def _pickle_zonal_stats(
         base_vector_path, base_raster_path, target_pickle_path):
     """Calculate Zonal Stats for a vector/raster pair and pickle result.
 
-    Parameters:
+    Args:
         base_vector_path (str): path to vector file
         base_raster_path (str): path to raster file to aggregate over.
         target_pickle_path (str): path to desired target pickle file that will
@@ -454,7 +454,7 @@ def _runoff_retention_ret_vol_op(
         cell_area, target_nodata):
     """Calculate peak flow retention as a vol.
 
-    Parameters:
+    Args:
         runoff_retention_array (numpy.ndarray): proportion of pixel retention.
         runoff_retention_nodata (float): nodata value for corresponding array.
         p_value (float): precipitation depth in mm.
@@ -482,7 +482,7 @@ def _add_zonal_stats(
         target_watershed_result_vector_path):
     """Add watershed scale values of the given base_raster.
 
-    Parameters:
+    Args:
         runoff_retention_pickle_path (str): path to runoff retention
             zonal stats pickle file.
         runoff_retention_ret_vol_pickle_path (str): path to runoff
@@ -588,7 +588,7 @@ def _build_affected_vector(
     The ``base_watershed_vector_path`` will be intersected with the
     ``built_infrastructure_vector_path`` to get the affected build area.
 
-    Parameters:
+    Args:
         base_watershed_vector_path (str): path to base watershed vector,
         target_wkt (str): desired target projection.
         damage_table_path (None or str): path to a CSV table containing fields
@@ -706,7 +706,7 @@ def _build_affected_vector(
 def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
     """Calculate peak flow retention.
 
-    Parameters:
+    Args:
         q_pi_array (numpy.ndarray): quick flow array.
         p_value (float): precipition in mm.
         q_pi_nodata (float): nodata for q_pi.
@@ -729,7 +729,7 @@ def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
 def _q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
     """Calculate peak flow Q (mm) with the Curve Number method.
 
-    Parameters:
+    Args:
         p_value (float): precipitation in mm.
         s_max_array (numpy.ndarray): max S value per pixel.
         s_max_nodata (float): nodata value for s_max_array.
@@ -761,7 +761,7 @@ def _q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
 def _s_max_op(cn_array, cn_nodata, result_nodata):
     """Calculate S_max from the curve number.
 
-    Parameters:
+    Args:
         cn_array (numpy.ndarray): curve number array.
         cn_nodata (float): nodata value for cn_array.
         result_nodata (float): output nodata value.
@@ -786,7 +786,7 @@ def _lu_to_cn_op(
         cn_nodata, lucode_to_cn_table):
     """Map combination landcover soil type map to curve number raster.
 
-    Parameters:
+    Args:
         lucode_array (numpy.ndarray): array of landcover codes.
         soil_type_array (numpy.ndarray): array of soil type values.
         lucode_nodata  (float): nodata value for corresponding array.
@@ -838,7 +838,7 @@ def _lu_to_cn_op(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to ``execute``'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation
