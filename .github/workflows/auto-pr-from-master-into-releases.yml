@@ -43,6 +43,13 @@ jobs:
                   PR_USERNAME=$(hub pr show -f "%au" $PR_NUM)
                   echo "Latest PR on master ($PR_NUM) was authored by $PR_USERNAME."
 
+                  if [ "$PR_USERNAME" = "github-actions" ]
+                  then
+                      # Set the PR reviewer/assignee to the release manager.
+                      source ./ci/release/RELEASE_MANAGER.env
+                      PR_USERNAME=$RELEASE_MANAGER
+                  fi
+
                   # Using grep with pattern ^release filters out any autorelease branches.
                   BRANCHES=$(git ls-remote --heads origin | cut -d '/' -f 3- | grep ^release)
                   echo $BRANCHES  # debugging
