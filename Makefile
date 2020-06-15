@@ -105,6 +105,7 @@ TEST_DATAVALIDATOR := $(PYTHON) -m nose -vsP scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
+INVEST_BINARIES_DIR_ZIP := $(DIST_DIR)/invest_binaries_$(OS).zip
 APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
 APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
@@ -370,8 +371,13 @@ signcode_windows:
 	-powershell.exe "Remove-Item $(BUILD_DIR)/$(P12_FILE)"
 	@echo "Installer was signed with signtool"
 
+zip_binaries:
+	$(ZIP) -r $(INVEST_BINARIES_DIR_ZIP) $(INVEST_BINARIES_DIR)
+
 deploy:
-	-$(GSUTIL) -m rsync -r $(DIST_DIR) $(DIST_URL_BASE)
+	$(MAKE) zip_binaries
+	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
+	-$(GSUTIL) -m rsync $(INVEST_BINARIES_DIR_ZIP) $(DIST_URL_BASE)/$(INVEST_BINARIES_DIR_ZIP)
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
 	@echo "Applicaiton binaries (if they were created) can be downloaded from:"
