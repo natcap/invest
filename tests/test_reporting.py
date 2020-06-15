@@ -5,6 +5,7 @@ import shutil
 import os
 import codecs
 import itertools
+import filecmp
 
 
 REGRESSION_DATA = os.path.join(
@@ -73,10 +74,11 @@ class ReportingRegressionTests(unittest.TestCase):
 
         reporting.generate_report(args)
 
-        self.assertEqual(
+        self.assertTrue(filecmp.cmp(
             args['out_uri'],
             os.path.join(
-                REGRESSION_DATA, 'html_reports', 'report_csv_style.html'))
+                REGRESSION_DATA, 'html_reports', 'report_csv_style.html'),
+            shallow=False))
 
     def test_generate_report_dict_script(self):
         """Reporting: test full report w/ dict table data and script file."""
@@ -114,38 +116,6 @@ class ReportingRegressionTests(unittest.TestCase):
 
             # Strip trailing newlines.
             self.assertEqual(source_line.rstrip(), regression_line.rstrip())
-
-    @unittest.skip(
-        "skipping due to different number truncation in py36 and py27")
-    def test_generate_report_shape_json(self):
-        """Reporting: testing full report w/ shape table data and json file."""
-        from natcap.invest import reporting
-
-        workspace_dir = self.workspace_dir
-        workspace_dir = os.path.join(
-            'C:', os.sep, 'Users', 'dmf', 'projects', 'invest_dev',
-            'py36_compatibility', 'reporting')
-        args = ReportingRegressionTests.generate_base_args()
-
-        shape_path = os.path.join(
-            REGRESSION_DATA, 'sample_input', 'sample_shape.shp')
-        json_data = "{'key': 0, 'data': {'door' : 1, 'room': 'kitchen'}}"
-
-        args['out_uri'] = os.path.join(
-            workspace_dir, 'report_shape_json.html')
-        args['elements'][0]['data_type'] = 'shapefile'
-        args['elements'][0]['data'] = shape_path
-        args['elements'][0]['key'] = 'ws_id'
-        args['elements'][1]['format'] = 'json'
-        args['elements'][1]['data_src'] = json_data
-        args['elements'][1]['input_type'] = 'Text'
-
-        reporting.generate_report(args)
-        print(args['out_uri'])
-        self.assertEqual(
-            args['out_uri'],
-            os.path.join(
-                REGRESSION_DATA, 'html_reports', 'report_shape_json.html'))
 
     def test_generate_report_tags_error(self):
         """Reporting: testing module raises excpetion on included tags."""

@@ -68,7 +68,7 @@ def _make_simple_vector(target_vector_path, projected=True):
 
 
 def _make_rating_vector(target_vector_path):
-    """Make a 10x10 ogr rectangular geometry shapefile with `rating` field.
+    """Make a 10x10 ogr rectangular geometry shapefile with ``rating`` field.
 
     Args:
         target_vector_path (str): path to the output shapefile.
@@ -118,7 +118,7 @@ def _make_rating_vector(target_vector_path):
 
 
 def _make_aoi_vector(target_vector_path, projected=True, subregion_field=True):
-    """Make a 20x20 ogr rectangular geometry shapefile with `rating` field.
+    """Make a 20x20 ogr rectangular geometry shapefile with ``rating`` field.
 
     Args:
         target_vector_path (str): path to the output shapefile.
@@ -126,7 +126,7 @@ def _make_aoi_vector(target_vector_path, projected=True, subregion_field=True):
         projected (bool): if true, define projection information for the vector
             based on an ESPG code.
 
-        subregion_field (bool): if true, create a field called `name` in the
+        subregion_field (bool): if true, create a field called ``name`` in the
             layer, which represents subregions.
 
     Returns:
@@ -142,7 +142,7 @@ def _make_aoi_vector(target_vector_path, projected=True, subregion_field=True):
         srs.ImportFromEPSG(EPSG_CODE)  # Spatial reference UTM Zone 10N
     layer = vector.CreateLayer('layer', srs, ogr.wkbPolygon)
 
-    # Use `name` as field name to represent subregion field
+    # Use ``name`` as field name to represent subregion field
     field_name = 'name' if subregion_field else 'random'
 
     field = ogr.FieldDefn(field_name)
@@ -213,7 +213,7 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
         missing_columns (bool): if true, write wrong column headers to the CSV.
 
         wrong_layer_type (bool): if true, write a type different from
-            `habitat` or `stressor`.
+            ``habitat`` or ``stressor``.
 
         wrong_buffer_value (bool): if true, write a string to the buffer column
 
@@ -317,15 +317,15 @@ def _make_criteria_csv(
         missing_criteria (bool): if true, let stressor_1 only have C criteria
             so that E criteria is missing.
 
-        missing_index (bool): if true, remove `HABITAT NAME` and `HABITAT
-            STRESSOR OVERLAP PROPERTIES` from the CSV file.
+        missing_index (bool): if true, remove ``HABITAT NAME`` and ``HABITAT
+            STRESSOR OVERLAP PROPERTIES`` from the CSV file.
 
-        missing_layer_names (bool): if true, rename `habitat_0` to `habitat`
-            and `stressor_1` to `stressor` to cause unmatched names between
-            criteria and info CSVs.
+        missing_layer_names (bool): if true, rename ``habitat_0`` to
+            ``habitat`` and ``stressor_1`` to ``stressor`` to cause unmatched
+            names between criteria and info CSVs.
 
         missing_criteria_header (bool): if true, remove the column header
-            `CRITERIA TYPE` from the CSV file.
+            ``CRITERIA TYPE`` from the CSV file.
 
         unknown_criteria (bool): if true, add a criteria row that belongs to
             no stressors.
@@ -833,7 +833,7 @@ class HraRegressionTests(unittest.TestCase):
             args['info_table_path'], args['workspace_dir'], rel_path=True)
         _make_criteria_csv(args['criteria_table_path'], args['workspace_dir'])
         _make_aoi_vector(args['aoi_vector_path'])
-        args['n_workers'] = ''  # tests empty string for `n_workers`
+        args['n_workers'] = ''  # tests empty string for ``n_workers``
 
         natcap.invest.hra.execute(args)
 
@@ -905,7 +905,7 @@ class HraRegressionTests(unittest.TestCase):
 
         aoi_vector_path = os.path.join(
             self.workspace_dir, 'no_subregion_aoi.shp')
-        # Test if `Total Region` gets written in output stats CSV
+        # Test if ``Total Region`` gets written in output stats CSV
         _make_aoi_vector(aoi_vector_path, subregion_field=False)
         args['aoi_vector_path'] = aoi_vector_path
 
