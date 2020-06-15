@@ -1,3 +1,36 @@
+..
+  Changes should be grouped for readability.
+
+  InVEST model names:
+  - Carbon
+  - Coastal Blue Carbon
+  - Coastal Vulnerability
+  - Crop Production
+  - Delineateit
+  - Finfish
+  - Fisheries
+  - Forest Carbon Edge Effects
+  - Globio
+  - Habitat Quality
+  - HRA
+  - Annual Water Yield 
+  - NDR
+  - Pollination
+  - Recreation
+  - Routedem
+  - Scenario Generator
+  - Scenic Quality
+  - SDR
+  - Seasonal Water Yield
+  - Urban Cooling
+  - Urban Flood Risk
+  - Wave Energy
+  - Wind Energy
+
+  Everything else:
+  - General
+
+
 .. :changelog:
 Unreleased Changes (3.9)
 ------------------------
