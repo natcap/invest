@@ -18,6 +18,7 @@ GIT_GUI_REPO_REV             := 33a5aa54923af5e115f1928b29ff22077115cb6b
 
 ENV = env
 ifeq ($(OS),Windows_NT)
+	OSNAME := windows  # $(OS) is empty if not Windows
 	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_SCRIPTS = $(ENV)\Scripts
@@ -38,6 +39,7 @@ ifeq ($(OS),Windows_NT)
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
 	/ := '\'
 else
+	OSNAME := $(shell uname)  # $(OS) is empty if not Windows
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
 	SHELL := /bin/bash
@@ -105,7 +107,7 @@ TEST_DATAVALIDATOR := $(PYTHON) -m nose -vsP scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
-INVEST_BINARIES_DIR_ZIP := $(DIST_DIR)/invest_binaries_$(OS).zip
+INVEST_BINARIES_DIR_ZIP := $(DIST_DIR)/invest_binaries_$(OSNAME).zip
 APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
 APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
