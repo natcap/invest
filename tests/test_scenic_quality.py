@@ -414,12 +414,13 @@ class ScenicQualityTests(unittest.TestCase):
              [0., 2.82842712, 2., 9.89949494, 5.],
              [0., 0., 24., 5., 0.],
              [0., 7.07106781, 5., 14.14213562, 5.],
-             [10., 5., 0., 5., 20.]], dtype=numpy.int32)
+             [10., 5., 0., 5., 20.]], dtype=numpy.float32)
 
         value_matrix = pygeoprocessing.raster_to_numpy_array(
             os.path.join(args['workspace_dir'], 'output', 'vshed_value.tif'))
 
-        numpy.testing.assert_almost_equal(expected_value, value_matrix)
+        numpy.testing.assert_almost_equal(
+            expected_value, value_matrix, decimal=6)
 
         # Verify that the sum of the viewsheds (which is weighted) is correct.
         expected_weighted_vshed = numpy.array(
