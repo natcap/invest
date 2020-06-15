@@ -375,7 +375,7 @@ zip_binaries:
 	$(ZIP) -r $(INVEST_BINARIES_DIR_ZIP) $(INVEST_BINARIES_DIR)
 
 deploy:
-	$(MAKE) zip_binaries
+	-$(MAKE) zip_binaries
 	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	-$(GSUTIL) -m rsync $(INVEST_BINARIES_DIR_ZIP) $(DIST_URL_BASE)/$(INVEST_BINARIES_DIR_ZIP)
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data

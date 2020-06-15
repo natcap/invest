@@ -226,6 +226,82 @@ jobs:
                   name: InVEST-mac-binaries
                   path: dist/InVEST-*-mac.zip
 
+    build-ubuntu-binaries:
+        name: "Build ubuntu binaries"
+        needs: check-syntax-errors
+        runs-on: ubuntu-latest
+        env:
+            PYTHON_VERSION: 3.7
+            PYTHON_ARCH: x86
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  fetch-depth: 0  # fetch complete history
+
+            - name: Fetch git tags
+              run: git fetch origin +refs/tags/*:refs/tags/*
+
+            # - name: Install homebrew dependencies
+            #   run: |
+            #       brew update
+            #       brew install mercurial pandoc
+
+            # - name: Restore conda cache
+            #   uses: actions/cache@v1
+            #   with:
+            #       path: ~/opt/anaconda3
+            #       key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
+
+            - name: Set up conda
+              uses: goanpeca/setup-miniconda@v1.1.2
+              with:
+                  activate-environment: mac-env  # This is also hardcoded in Pyinstaller's invest.spec
+                  auto-update-conda: true
+                  python-version: 3.7
+                  channels: conda-forge
+
+            - name: Build conda env with python dependencies
+              shell: bash -l {0}
+              run: |
+                  conda upgrade -y pip setuptools
+                  conda install toml requests
+                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                        requirements.txt \
+                        requirements-dev.txt \
+                        requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
+
+                  # Libtiff from conda defaults channel gets around issue with missing libwebp
+                  conda install --yes libtiff
+
+            - name: Build binaries
+              shell: bash -l {0}
+              run: |
+                  make binaries
+
+            - name: Set up GCP
+              # Secrets not available in PR so don't use GCP.
+              # We only want to upload artifacts to a release object in a release.
+              if: github.event_name != 'pull_request'
+              uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+              with:
+                  version: '281.0.0'
+                  service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+            - name: Deploy artifacts to GCS
+              # Secrets not available in PR so don't use GCP.
+              if: github.event_name != 'pull_request'
+              shell: bash -l {0}  # needed for conda activation
+              run: make deploy
+
+            # - name: Upload binaries artifact
+            #   uses: actions/upload-artifact@v2-preview
+            #   with:
+            #       name: InVEST-mac-binaries
+            #       path: dist/InVEST-*-mac.zip
+
+
     build-sampledata:
         name: Build sampledata archives
         needs: check-syntax-errors
