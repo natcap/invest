@@ -574,10 +574,22 @@ def create_coordinate_transformer(
         An OSR Coordinate Transformation object
 
     """
-    base_ref.SetAxisMappingStrategy(osr_axis_mapping_strategy)
-    target_ref.SetAxisMappingStrategy(osr_axis_mapping_strategy)
+    # Make a copy of the base and target spatial references to avoid side 
+    # effects from mutation of setting the axis mapping strategy
+    base_ref_wkt = base_ref.ExportToWkt()
+    target_ref_wkt = target_ref.ExportToWkt()
 
-    transformer = osr.CreateCoordinateTransformation(base_ref, target_ref)
+    base_ref_copy = osr.SpatialReference()
+    target_ref_copy = osr.SpatialReference()
+    
+    base_ref_copy.ImportFromWkt(base_ref_wkt)
+    target_ref_copy.ImportFromWkt(target_ref_wkt)
+    
+    base_ref_copy.SetAxisMappingStrategy(osr_axis_mapping_strategy)
+    target_ref_copy.SetAxisMappingStrategy(osr_axis_mapping_strategy)
+
+    transformer = osr.CreateCoordinateTransformation(
+        base_ref_copy, target_ref_copy)
     return transformer
 
 
