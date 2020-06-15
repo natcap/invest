@@ -677,13 +677,13 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
         target_srs.ImportFromEPSG(4326)
 
         transformer = utils.create_coordinate_transformer(base_srs, target_srs)
-        x, y, _ = transformer.TransformPoint(lon, lat)
+        actual_x, actual_y, _ = transformer.TransformPoint(lon, lat)
 
         expected_x = -124.525
         expected_y = 44.525
 
-        self.assertEqual(expected_x, x)
-        self.assertEqual(expected_y, y)
+        self.assertAlmostEqual(expected_x, actual_x, 5)
+        self.assertAlmostEqual(expected_y, actual_y, 5)
 
     def test_latlon_to_projected_transformer(self):
         """Utils: test transformer for lat/lon to projected."""
@@ -700,13 +700,13 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
         target_srs.ImportFromEPSG(26910)  # UTM10N EPSG
 
         transformer = utils.create_coordinate_transformer(base_srs, target_srs)
-        x, y, _ = transformer.TransformPoint(lon, lat)
+        actual_x, actual_y, _ = transformer.TransformPoint(lon, lat)
 
         expected_x = 378816.2531852932
         expected_y = 4931317.807472325
 
-        self.assertEqual(expected_x, x)
-        self.assertEqual(expected_y, y)
+        self.assertAlmostEqual(expected_x, actual_x, 5)
+        self.assertAlmostEqual(expected_y, actual_y, 5)
 
     def test_projected_to_latlon_transformer(self):
         """Utils: test transformer for projected to lat/lon."""
@@ -723,13 +723,13 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
         target_srs.ImportFromEPSG(4326)  # WSG84 EPSG
 
         transformer = utils.create_coordinate_transformer(base_srs, target_srs)
-        x, y, _ = transformer.TransformPoint(known_x, known_y)
+        actual_x, actual_y, _ = transformer.TransformPoint(known_x, known_y)
 
         expected_x = -124.52500000000002
         expected_y = 44.525
 
-        self.assertAlmostEqual(expected_x, x, places=3)
-        self.assertAlmostEqual(expected_y, y, places=3)
+        self.assertAlmostEqual(expected_x, actual_x, places=3)
+        self.assertAlmostEqual(expected_y, actual_y, places=3)
 
     def test_projected_to_projected_transformer(self):
         """Utils: test transformer for projected to projected."""
@@ -746,13 +746,13 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
         target_srs.ImportFromEPSG(26910)  # UTM10N EPSG
 
         transformer = utils.create_coordinate_transformer(base_srs, target_srs)
-        x, y, _ = transformer.TransformPoint(known_x, known_y)
+        actual_x, actual_y, _ = transformer.TransformPoint(known_x, known_y)
 
         expected_x = 378816.2531852932
         expected_y = 4931317.807472325
 
-        self.assertEqual(expected_x, x)
-        self.assertEqual(expected_y, y)
+        self.assertAlmostEqual(expected_x, actual_x, 5)
+        self.assertAlmostEqual(expected_y, actual_y, 5)
 
 
 class AssertVectorsEqualTests(unittest.TestCase):
