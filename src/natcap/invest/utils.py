@@ -11,6 +11,7 @@ import time
 
 import pandas
 import numpy
+from shapely.wkt import loads
 from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
@@ -41,6 +42,7 @@ GDAL_ERROR_LEVELS = {
 # leaves Projected CRS alone
 DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
+
 @contextlib.contextmanager
 def capture_gdal_logging():
     """Context manager for logging GDAL errors with python logging.
@@ -53,7 +55,8 @@ def capture_gdal_logging():
         ``None``
 
     Returns:
-        ``None``"""
+        ``None``
+    """
     osgeo_logger = logging.getLogger('osgeo')
 
     def _log_gdal_errors(err_level, err_no, err_msg):
@@ -69,7 +72,8 @@ def capture_gdal_logging():
             err_msg (string): The error string.
 
         Returns:
-            ``None``"""
+            ``None``
+        """
         osgeo_logger.log(
             level=GDAL_ERROR_LEVELS[err_level],
             msg='[errno {err}] {msg}'.format(
@@ -83,8 +87,7 @@ def capture_gdal_logging():
 
 
 def _format_time(seconds):
-    """Render the integer number of seconds as a string.  Returns a string.
-    """
+    """Render the integer number of seconds as a string. Returns a string."""
     hours, remainder = divmod(seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
@@ -100,8 +103,9 @@ def _format_time(seconds):
 
 
 @contextlib.contextmanager
-def prepare_workspace(workspace, name, logging_level=logging.NOTSET,
-                      exclude_threads=None):
+def prepare_workspace(
+        workspace, name, logging_level=logging.NOTSET, exclude_threads=None):
+    """Prepare the workspace."""
     if not os.path.exists(workspace):
         os.makedirs(workspace)
 
@@ -149,7 +153,8 @@ class ThreadFilter(logging.Filter):
             record (log record): The log record to filter.
 
         Returns:
-            True if the record should be included, false if not."""
+            True if the record should be included, false if not.
+        """
         if record.threadName == self.thread_name:
             return False
         return True
@@ -182,7 +187,8 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
             represents the file that is being written to.
 
     Returns:
-        ``None``"""
+        ``None``
+    """
     try:
         if os.path.exists(logfile):
             LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
@@ -235,7 +241,8 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
         ``sandbox`` (string): The path to the new folder on disk.
 
     Returns:
-        ``None``"""
+        ``None``
+    """
     sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
 
     try:
@@ -368,7 +375,6 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     kernel_dataset.FlushCache()
     kernel_band = None
     kernel_dataset = None
-
 
 
 def build_file_registry(base_file_path_list, file_suffix):
@@ -550,8 +556,8 @@ def mean_pixel_size_and_area(pixel_size_tuple):
 
 
 def create_coordinate_transformer(
-    base_ref, target_ref,
-    osr_axis_mapping_strategy=DEFAULT_OSR_AXIS_MAPPING_STRATEGY):
+        base_ref, target_ref,
+        osr_axis_mapping_strategy=DEFAULT_OSR_AXIS_MAPPING_STRATEGY):
     """Create a spatial reference coordinate transformation function.
 
     Args:
@@ -573,3 +579,125 @@ def create_coordinate_transformer(
 
     transformer = osr.CreateCoordinateTransformation(base_ref, target_ref)
     return transformer
+
+
+def _assert_vectors_equal(
+        expected_vector_path, actual_vector_path, tolerance_places=1e-3):
+    """Assert two vectors are equal.
+
+    Assert spatial reference, feature count, geometries, field names, and
+    values are equal with no respect to order of field names or geometries.
+
+    Args:
+        actual_vector_path (string): path on disk to a gdal Vector dataset.
+        expected_vector_path (string): path on disk to a gdal Vector dataset
+            to use as the ground truth.
+        tolerance_places (int): the decimal tolerance for comparing field
+            attribute values, default=3.
+
+    Returns:
+        A tuple (bool, string) where the boolean element is True if vectors
+        are equal and False if not. The string element is a message of
+        "success" if True or detailed error message if False.
+    """
+    try:
+        # Open vectors
+        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
+        actual_layer = actual_vector.GetLayer()
+        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
+        expected_layer = expected_vector.GetLayer()
+
+        # Check projections
+        expected_projection = expected_layer.GetSpatialRef()
+        expected_projection_wkt = expected_projection.ExportToWkt()
+        actual_projection = actual_layer.GetSpatialRef()
+        actual_projection_wkt = actual_projection.ExportToWkt()
+        if expected_projection_wkt != actual_projection_wkt:
+            return (
+                False,
+                "Vector projections are not the same. \n"
+                f"Expected projection wkt: {expected_projection_wkt}. \n"
+                f"Actual projection wkt: {actual_projection_wkt}. ")
+
+        # Check feature count
+        actual_feat_count = actual_layer.GetFeatureCount()
+        expected_feat_count = expected_layer.GetFeatureCount()
+        if expected_feat_count != actual_feat_count:
+            return (
+                False,
+                "Vector feature counts are not the same. \n"
+                f"Expected feature count: {expected_feat_count}. \n"
+                f"Actual feature count: {actual_feat_count}. ")
+
+        # Check field names
+        expected_field_names = [field.name for field in expected_layer.schema]
+        actual_field_names = [field.name for field in actual_layer.schema]
+        if sorted(expected_field_names) != sorted(actual_field_names):
+            return (
+                False,
+                "Vector field names are not the same. \n"
+                f"Expected field names: {sorted(expected_field_names)}. \n"
+                f"Actual field names: {sorted(actual_field_names)}. ")
+
+        # Check field values and geometries
+        for expected_feature in expected_layer:
+            fid = expected_feature.GetFID()
+            expected_values = [
+                expected_feature.GetField(field)
+                for field in expected_field_names]
+
+            actual_feature = actual_layer.GetFeature(fid)
+            actual_values = [
+                actual_feature.GetField(field)
+                for field in expected_field_names]
+
+            for av, ev in zip(actual_values, expected_values):
+                if av is not None:
+                    # Number comparison
+                    if isinstance(av, int) or isinstance(av, float):
+                        if not numpy.allclose(numpy.array([av]),
+                                              numpy.array([ev]),
+                                              atol=tolerance_places):
+                            return (
+                                False,
+                                "Vector field values are not equal: \n"
+                                f"Expected value: {ev}. \n"
+                                f"Actual value: {av}. ")
+                    # String and other comparison
+                    else:
+                        if av != ev:
+                            return (
+                                False,
+                                "Vector field values are not equal. \n"
+                                f"Expected value : {ev}. \n"
+                                f"Actual value : {av}. ")
+                else:
+                    if ev is not None:
+                        return (
+                            False,
+                            "Vector field values are not equal: \n"
+                            f"Expected value: {ev}. \n"
+                            f"Actual value: {av}. ")
+
+            expected_geom = expected_feature.GetGeometryRef()
+            expected_geom_wkt = expected_geom.ExportToWkt()
+            actual_geom = actual_feature.GetGeometryRef()
+            actual_geom_wkt = actual_geom.ExportToWkt()
+            expected_geom_shapely = loads(expected_geom_wkt)
+            actual_geom_shapely = loads(actual_geom_wkt)
+            if not expected_geom_shapely.almost_equals(actual_geom_shapely):
+                return (
+                    False,
+                    "Vector geometry assertion fail. \n"
+                    f"Expected geometry: {expected_geom_wkt}. \n"
+                    f"Actual geometry: {actual_geom_wkt}. ")
+
+            expected_feature = None
+            actual_feature = None
+    finally:
+        actual_layer = None
+        actual_vector = None
+        expected_layer = None
+        expected_vector = None
+
+    return (True, "success")

@@ -779,7 +779,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
         filepath = os.path.join(self.workspace_dir, 'dem.tif')
 
         pygeoprocessing.numpy_array_to_raster(
-            numpy.array([[1]], dtype=numpy.int32), -1, (1, -1), (0, 0), 
+            numpy.array([[1]], dtype=numpy.int32), -1, (1, -1), (0, 0),
             projection_wkt, filepath)
 
         args = {'dem_path': filepath}

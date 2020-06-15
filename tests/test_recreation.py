@@ -258,7 +258,7 @@ class TestRecServer(unittest.TestCase):
             self.workspace_dir, workspace_id + '.zip')
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(
             out_workspace_dir)
-        _assert_vector_attributes_eq(
+        utils._assert_vectors_equal(
             aoi_path,
             os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
@@ -352,7 +352,7 @@ class TestRecServer(unittest.TestCase):
             self.workspace_dir, out_vector_filename)
         expected_vector_path = os.path.join(
             REGRESSION_DATA, 'test_aoi_for_subset_pud.shp')
-        _assert_vector_attributes_eq(expected_vector_path, result_vector_path)
+        utils._assert_vectors_equal(expected_vector_path, result_vector_path)
 
         # ensure the remote workspace is as expected
         workspace_zip_binary = recreation_server.fetch_workspace_aoi(
@@ -362,7 +362,7 @@ class TestRecServer(unittest.TestCase):
         workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
         open(workspace_zip_path, 'wb').write(workspace_zip_binary)
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
-        _assert_vector_attributes_eq(
+        utils._assert_vectors_equal(
             aoi_path,
             os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
@@ -556,14 +556,14 @@ class TestRecServer(unittest.TestCase):
             args['workspace_dir'], 'predictor_data.shp')
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'predictor_data_all_metrics.shp')
-        _assert_vector_attributes_eq(
+        utils._assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 3)
 
         out_scenario_path = os.path.join(
             args['workspace_dir'], 'scenario_results.shp')
         expected_scenario_path = os.path.join(
             REGRESSION_DATA, 'scenario_results_all_metrics.shp')
-        _assert_vector_attributes_eq(
+        utils._assert_vectors_equal(
             out_scenario_path, expected_scenario_path, 3)
 
     def test_results_suffix_on_serverside_files(self):
@@ -842,7 +842,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'square_grid_vector_path.shp')
 
-        _assert_vector_attributes_eq(
+        utils._assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path)
 
     def test_hex_grid_regression(self):
@@ -859,7 +859,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        _assert_vector_attributes_eq(
+        utils._assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path)
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
@@ -925,7 +925,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        _assert_vector_attributes_eq(
+        utils._assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path)
 
     def test_existing_regression_coef(self):
@@ -974,7 +974,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_coeff_vector_path = os.path.join(
             REGRESSION_DATA, 'test_regression_coefficients.shp')
 
-        _assert_vector_attributes_eq(
+        utils._assert_vectors_equal(
             out_coefficient_vector_path, expected_coeff_vector_path, 6)
 
     def test_predictor_table_absolute_paths(self):
@@ -1186,44 +1186,6 @@ class RecreationValidationTests(unittest.TestCase):
         for keys, error_strings in validation_warnings:
             actual_messages.add(error_strings)
         self.assertTrue(expected_message in actual_messages)
-
-
-def _assert_vector_attributes_eq(
-        actual_vector_path, expected_vector_path, tolerance_places=3):
-    """Assert fieldnames and values are equal with no respect to order."""
-    try:
-        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
-        actual_layer = actual_vector.GetLayer()
-        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
-        expected_layer = expected_vector.GetLayer()
-
-        assert(
-            actual_layer.GetFeatureCount() == expected_layer.GetFeatureCount())
-
-        field_names = [field.name for field in expected_layer.schema]
-        for feature in expected_layer:
-            fid = feature.GetFID()
-            expected_values = [
-                feature.GetField(field) for field in field_names]
-
-            actual_feature = actual_layer.GetFeature(fid)
-            actual_values = [
-                actual_feature.GetField(field) for field in field_names]
-
-            for av, ev in zip(actual_values, expected_values):
-                if av is not None:
-                    numpy.testing.assert_almost_equal(
-                        av, ev, decimal=tolerance_places)
-                else:
-                    # Could happen when a raster predictor is only nodata
-                    assert(ev is None)
-            feature = None
-            actual_feature = None
-    finally:
-        actual_layer = None
-        actual_vector = None
-        expected_layer = None
-        expected_vector = None
 
 
 def _assert_regression_results_eq(

@@ -12,53 +12,10 @@ import numpy
 import pandas
 import pygeoprocessing
 from osgeo import ogr
-from osgeo import gdal
+
+
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         '..', 'data', 'invest-test-data', 'data_stack')
-
-
-def _assert_vectors_equal(
-        actual_vector_path, expected_vector_path, tolerance_places=3):
-    """Assert fieldnames and values are equal with no respect to order."""
-    try:
-        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
-        actual_layer = actual_vector.GetLayer()
-        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
-        expected_layer = expected_vector.GetLayer()
-
-        assert(
-            actual_layer.GetFeatureCount() == expected_layer.GetFeatureCount())
-
-        field_names = [field.name for field in expected_layer.schema]
-        for feature in expected_layer:
-            fid = feature.GetFID()
-            expected_values = [
-                feature.GetField(field) for field in field_names]
-
-            actual_feature = actual_layer.GetFeature(fid)
-            actual_values = [
-                actual_feature.GetField(field) for field in field_names]
-
-            for av, ev in zip(actual_values, expected_values):
-                if av is not None:
-                    numpy.testing.assert_almost_equal(
-                        av, ev, decimal=tolerance_places)
-                else:
-                    assert(ev is None)
-
-            expected_geom = feature.GetGeometryRef()
-            expected_geom_wkt = expected_geom.ExportToWkt()
-            actual_geom = feature.GetGeometryRef()
-            actual_geom_wkt = actual_geom.ExportToWkt()
-            assert(expected_geom_wkt == actual_geom_wkt)
-
-            feature = None
-            actual_feature = None
-    finally:
-        actual_layer = None
-        actual_vector = None
-        expected_layer = None
-        expected_vector = None
 
 
 class DatastacksTest(unittest.TestCase):
@@ -145,6 +102,7 @@ class DatastacksTest(unittest.TestCase):
     def test_collect_ogr_vector(self):
         """Datastack: test collect ogr vector."""
         from natcap.invest import datastack
+        from natcap.invest.utils import _assert_vectors_equal
         source_vector_path = os.path.join(DATA_DIR, 'watersheds.shp')
         source_vector = ogr.Open(source_vector_path)
 
@@ -351,6 +309,7 @@ class DatastacksTest(unittest.TestCase):
     def test_archive_extraction(self):
         """Datastack: test archive extraction."""
         from natcap.invest import datastack
+        from natcap.invest.utils import _assert_vectors_equal
         params = {
             'blank': '',
             'a': 1,

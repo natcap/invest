@@ -13,7 +13,10 @@ import textwrap
 
 import numpy
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
+from shapely.geometry import Polygon
+from shapely.geometry import Point
 
 import pygeoprocessing
 
@@ -750,3 +753,315 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
 
         self.assertEqual(expected_x, x)
         self.assertEqual(expected_y, y)
+
+
+class AssertVectorsEqualTests(unittest.TestCase):
+    """Tests for natcap.invest.utils._assert_vectors_equal."""
+    def setUp(self):
+        """Setup workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_identical_point_vectors(self):
+        """Utils: test identical point vectors pass."""
+        from natcap.invest import utils
+
+        # Setup parameters to create point shapefile
+        fields = {'id': ogr.OFTReal}
+        attrs = [{'id': 1}, {'id': 2}]
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
+
+        geometries = [Point(pos_x + 50, pos_y - 50),
+                      Point(pos_x + 50, pos_y - 150)]
+        shape_path = os.path.join(self.workspace_dir, 'point_shape.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPoint)
+
+        shape_copy_path = os.path.join(
+            self.workspace_dir, 'point_shape_copy.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_copy_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPoint)
+
+        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
+        self.assertTrue(result[0], result[1])
+
+    def test_identical_polygon_vectors(self):
+        """Utils: test identical polygon vectors pass."""
+        from natcap.invest import utils
+
+        # Setup parameters to create point shapefile
+        fields = {'id': ogr.OFTReal}
+        attrs = [{'id': 1}, {'id': 2}]
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
+
+        poly_geoms = {
+            'poly_1': [(pos_x + 200, pos_y), (pos_x + 250, pos_y),
+                       (pos_x + 250, pos_y - 100), (pos_x + 200, pos_y - 100),
+                       (pos_x + 200, pos_y)],
+            'poly_2': [(pos_x, pos_y - 150), (pos_x + 100, pos_y - 150),
+                       (pos_x + 100, pos_y - 200), (pos_x, pos_y - 200),
+                       (pos_x, pos_y - 150)]}
+
+        geometries = [
+            Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
+
+        shape_path = os.path.join(self.workspace_dir, 'poly_shape.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPolygon)
+
+        shape_copy_path = os.path.join(
+            self.workspace_dir, 'poly_shape_copy.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_copy_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPolygon)
+
+        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
+        self.assertTrue(result[0], result[1])
+
+    def test_identical_polygon_vectors_unorded_geometry(self):
+        """Utils: test identical polygon vectors w/ diff geometry order."""
+        from natcap.invest import utils
+
+        # Setup parameters to create point shapefile
+        fields = {'id': ogr.OFTReal}
+        attrs = [{'id': 1}, {'id': 2}]
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
+
+        poly_geoms = {
+            'poly_1': [(pos_x + 200, pos_y), (pos_x + 250, pos_y),
+                       (pos_x + 250, pos_y - 100), (pos_x + 200, pos_y - 100),
+                       (pos_x + 200, pos_y)],
+            'poly_2': [(pos_x, pos_y - 150), (pos_x + 100, pos_y - 150),
+                       (pos_x + 100, pos_y - 200), (pos_x, pos_y - 200),
+                       (pos_x, pos_y - 150)]}
+
+        poly_geoms_unordered = {
+            'poly_1': [(pos_x + 200, pos_y), (pos_x + 250, pos_y),
+                       (pos_x + 250, pos_y - 100), (pos_x + 200, pos_y - 100),
+                       (pos_x + 200, pos_y)],
+            'poly_2': [(pos_x, pos_y - 150), (pos_x, pos_y - 200),
+                       (pos_x + 100, pos_y - 200), (pos_x + 100, pos_y - 150),
+                       (pos_x, pos_y - 150)]}
+
+        geometries = [
+            Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
+
+        geometries_copy = [
+            Polygon(poly_geoms_unordered['poly_1']),
+            Polygon(poly_geoms_unordered['poly_2'])]
+
+        shape_path = os.path.join(self.workspace_dir, 'poly_shape.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPolygon)
+
+        shape_copy_path = os.path.join(
+            self.workspace_dir, 'poly_shape_copy.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries_copy, shape_copy_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPolygon)
+
+        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
+        self.assertTrue(result[0], result[1])
+
+    def test_different_field_value(self):
+        """Utils: test vectors w/ different field value fails."""
+        from natcap.invest import utils
+
+        # Setup parameters to create point shapefile
+        fields = {'id': ogr.OFTReal, 'foo': ogr.OFTReal}
+        attrs = [{'id': 1, 'foo': 2.3456}, {'id': 2, 'foo': 5.6789}]
+        attrs_copy = [{'id': 1, 'foo': 2.3467}, {'id': 2, 'foo': 5.6789}]
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
+
+        geometries = [Point(pos_x + 50, pos_y - 50),
+                      Point(pos_x + 50, pos_y - 150)]
+        shape_path = os.path.join(self.workspace_dir, 'point_shape.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPoint)
+
+        shape_copy_path = os.path.join(
+            self.workspace_dir, 'point_shape_copy.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_copy_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs_copy,
+            ogr_geom_type=ogr.wkbPoint)
+
+        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
+        self.assertFalse(result[0])
+        self.assertTrue("Vector field values are not equal" in result[1])
+
+    def test_different_field_names(self):
+        """Utils: test vectors w/ different field names fails."""
+        from natcap.invest import utils
+
+        # Setup parameters to create point shapefile
+        fields = {'id': ogr.OFTReal, 'foo': ogr.OFTReal}
+        fields_copy = {'id': ogr.OFTReal, 'foobar': ogr.OFTReal}
+        attrs = [{'id': 1, 'foo': 2.3456}, {'id': 2, 'foo': 5.6789}]
+        attrs_copy = [{'id': 1, 'foobar': 2.3456}, {'id': 2, 'foobar': 5.6789}]
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
+
+        geometries = [Point(pos_x + 50, pos_y - 50),
+                      Point(pos_x + 50, pos_y - 150)]
+        shape_path = os.path.join(self.workspace_dir, 'point_shape.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPoint)
+
+        shape_copy_path = os.path.join(
+            self.workspace_dir, 'point_shape_copy.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_copy_path, projection_wkt,
+            'ESRI Shapefile', fields=fields_copy, attribute_list=attrs_copy,
+            ogr_geom_type=ogr.wkbPoint)
+
+        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
+        self.assertFalse(result[0])
+        self.assertTrue("Vector field names are not the same" in result[1])
+
+    def test_different_feature_count(self):
+        """Utils: test vectors w/ different feature count fails."""
+        from natcap.invest import utils
+
+        # Setup parameters to create point shapefile
+        fields = {'id': ogr.OFTReal, 'foo': ogr.OFTReal}
+        attrs = [{'id': 1, 'foo': 2.3456}, {'id': 2, 'foo': 5.6789}]
+        attrs_copy = [
+            {'id': 1, 'foo': 2.3456}, {'id': 2, 'foo': 5.6789},
+            {'id': 3, 'foo': 5.0}]
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
+
+        geometries = [Point(pos_x + 50, pos_y - 50),
+                      Point(pos_x + 50, pos_y - 150)]
+
+        geometries_copy = [Point(pos_x + 50, pos_y - 50),
+                           Point(pos_x + 50, pos_y - 150),
+                           Point(pos_x + 55, pos_y - 55)]
+        shape_path = os.path.join(self.workspace_dir, 'point_shape.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPoint)
+
+        shape_copy_path = os.path.join(
+            self.workspace_dir, 'point_shape_copy.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries_copy, shape_copy_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs_copy,
+            ogr_geom_type=ogr.wkbPoint)
+
+        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
+        self.assertFalse(result[0])
+        self.assertTrue("Vector feature counts are not the same" in result[1])
+
+    def test_different_projections(self):
+        """Utils: test vectors w/ different projections fails."""
+        from natcap.invest import utils
+
+        # Setup parameters to create point shapefile
+        fields = {'id': ogr.OFTReal, 'foo': ogr.OFTReal}
+        attrs = [{'id': 1, 'foo': 2.3456}, {'id': 2, 'foo': 5.6789}]
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
+
+        geometries = [Point(pos_x + 50, pos_y - 50),
+                      Point(pos_x + 50, pos_y - 150)]
+
+        srs_copy = osr.SpatialReference()
+        srs_copy.ImportFromEPSG(26910)  # UTM Zone 10N
+        projection_wkt_copy = srs_copy.ExportToWkt()
+
+        origin_copy = (1180000, 690000)
+        pos_x_copy = origin_copy[0]
+        pos_y_copy = origin_copy[1]
+
+        geometries_copy = [Point(pos_x_copy + 50, pos_y_copy - 50),
+                           Point(pos_x_copy + 50, pos_y_copy - 150)]
+
+        shape_path = os.path.join(self.workspace_dir, 'point_shape.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPoint)
+
+        shape_copy_path = os.path.join(
+            self.workspace_dir, 'point_shape_copy.shp')
+        # Create point shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries_copy, shape_copy_path, projection_wkt_copy,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPoint)
+
+        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
+        self.assertFalse(result[0])
+        self.assertTrue("Vector projections are not the same" in result[1])

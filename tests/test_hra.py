@@ -2,12 +2,11 @@
 import os
 import shutil
 import tempfile
-import re
 import unittest
 
 import numpy
 import pandas
-from osgeo import gdal, ogr, osr
+from osgeo import ogr, osr
 import pygeoprocessing
 from shapely.geometry import Point, LineString
 
@@ -424,50 +423,6 @@ def _make_criteria_csv(
             table.write('"criteria 6",3,2,2,3,2,2,E\n')
 
 
-def _assert_vectors_equal(
-        actual_vector_path, expected_vector_path, tolerance_places=3):
-    """Assert fieldnames and values are equal with no respect to order."""
-    try:
-        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
-        actual_layer = actual_vector.GetLayer()
-        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
-        expected_layer = expected_vector.GetLayer()
-
-        assert(
-            actual_layer.GetFeatureCount() == expected_layer.GetFeatureCount())
-
-        field_names = [field.name for field in expected_layer.schema]
-        for feature in expected_layer:
-            fid = feature.GetFID()
-            expected_values = [
-                feature.GetField(field) for field in field_names]
-
-            actual_feature = actual_layer.GetFeature(fid)
-            actual_values = [
-                actual_feature.GetField(field) for field in field_names]
-
-            for av, ev in zip(actual_values, expected_values):
-                if av is not None:
-                    numpy.testing.assert_almost_equal(
-                        av, ev, decimal=tolerance_places)
-                else:
-                    assert(ev is None)
-
-            expected_geom = feature.GetGeometryRef()
-            expected_geom_wkt = expected_geom.ExportToWkt()
-            actual_geom = feature.GetGeometryRef()
-            actual_geom_wkt = actual_geom.ExportToWkt()
-            assert(expected_geom_wkt == actual_geom_wkt)
-
-            feature = None
-            actual_feature = None
-    finally:
-        actual_layer = None
-        actual_vector = None
-        expected_layer = None
-        expected_vector = None
-
-
 class HraUnitTests(unittest.TestCase):
     """Unit tests for the Wind Energy module."""
 
@@ -764,6 +719,7 @@ class HraUnitTests(unittest.TestCase):
     def test_simplify_geometry(self):
         """HRA: test _simplify_geometry function."""
         from natcap.invest.hra import _simplify_geometry
+        from natcap.invest.utils import _assert_vectors_equal
 
         complicated_vector_path = os.path.join(
             TEST_DATA, 'complicated_vector.gpkg')
@@ -785,6 +741,7 @@ class HraUnitTests(unittest.TestCase):
     def test_simplify_geometry_points(self):
         """HRA: test _simplify_geometry does not alter geoms given points."""
         from natcap.invest.hra import _simplify_geometry
+        from natcap.invest.utils import _assert_vectors_equal
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(EPSG_CODE)
@@ -808,6 +765,7 @@ class HraUnitTests(unittest.TestCase):
     def test_simplify_geometry_lines(self):
         """HRA: test _simplify_geometry does not alter geometry given lines."""
         from natcap.invest.hra import _simplify_geometry
+        from natcap.invest.utils import _assert_vectors_equal
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(EPSG_CODE)
@@ -864,6 +822,7 @@ class HraRegressionTests(unittest.TestCase):
     def test_hra_regression_euclidean_linear(self):
         """HRA: regression test synthetic data with linear, euclidean eqn."""
         import natcap.invest.hra
+        from natcap.invest.utils import _assert_vectors_equal
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         # Also test on GeoJSON outputs for visualization
@@ -920,8 +879,8 @@ class HraRegressionTests(unittest.TestCase):
 
         for output_vector, expected_vector in zip(
                 output_vector_paths, expected_vector_paths):
-            HraRegressionTests._assert_vectors_equal(
-                output_vector, expected_vector, precision=6)
+            _assert_vectors_equal(
+                output_vector, expected_vector, tolerance_places=6)
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
@@ -1145,56 +1104,3 @@ class HraRegressionTests(unittest.TestCase):
         expected_error = (['resolution'],
                           'Value does not meet condition value > 0')
         self.assertTrue(expected_error in validation_error_list)
-
-    @staticmethod
-    def _assert_vectors_equal(a_vector_path, b_vector_path, precision=6):
-        """Assert that geometries in two vectors are equal, order-insensitive.
-
-        Args:
-            a_vector_path (str): a path to a valid OGR vector.
-            b_vector_path (str): a path to a valid OGR vector.
-
-        Returns:
-            None.
-
-        Raises:
-            AssertionError when the two point geometries are not equal up to
-                desired precision (default is 1E-6).
-
-        """
-        a_vector = gdal.OpenEx(a_vector_path, gdal.OF_VECTOR)
-        a_layer = a_vector.GetLayer(0)
-        a_feat = a_layer.GetNextFeature()
-
-        b_vector = gdal.OpenEx(b_vector_path, gdal.OF_VECTOR)
-        b_layer = b_vector.GetLayer(0)
-        b_feat = b_layer.GetNextFeature()
-
-        while a_feat is not None:
-            # Get coordinates from geometry and store them in a list
-            a_geom = a_feat.GetGeometryRef()
-            a_geom_list = re.findall(r'\d+\.\d+', a_geom.ExportToWkt())
-            a_geom_list = [float(x) for x in a_geom_list]
-
-            b_geom = b_feat.GetGeometryRef()
-            b_geom_list = re.findall(r'\d+\.\d+', b_geom.ExportToWkt())
-            b_geom_list = [float(x) for x in b_geom_list]
-
-            try:
-                numpy.testing.assert_array_almost_equal(
-                    a_geom_list, b_geom_list, decimal=precision)
-            except AssertionError:
-                a_feature_fid = a_feat.GetFID()
-                b_feature_fid = b_feat.GetFID()
-                raise AssertionError('Geometries are not equal in feature %s, '
-                                     'regression feature %s in layer 0' %
-                                     (a_feature_fid, b_feature_fid))
-            a_feat = None
-            b_feat = None
-            a_feat = a_layer.GetNextFeature()
-            b_feat = b_layer.GetNextFeature()
-
-        a_layer = None
-        b_layer = None
-        a_vector = None
-        b_vector = None
