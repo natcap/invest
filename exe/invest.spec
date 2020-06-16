@@ -4,7 +4,7 @@ import sys
 import os
 import itertools
 import glob
-from PyInstaller.compat import is_win, is_darwin
+from PyInstaller.compat import is_win, is_darwin, is_linux
 
 # Global Variables
 current_dir = os.getcwd()  # assume we're building from the project root
@@ -54,6 +54,11 @@ if is_darwin:
     invest_a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
         glob.glob(os.path.join(conda_env, 'lib/libspatialindex*.dylib'))]
+elif is_linux:
+    # add rtree dependency dynamic libraries from conda environment
+    invest_a.binaries += [
+        (os.path.basename(name), name, 'BINARY') for name in
+        glob.glob(os.path.join(conda_env, 'lib/libspatialindex*'))]
 elif is_win:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/
