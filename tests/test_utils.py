@@ -827,7 +827,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
             Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
 
         shape_path = os.path.join(self.workspace_dir, 'poly_shape.shp')
-        # Create point shapefile to use as testing input
+        # Create polygon shapefile to use as testing input
         pygeoprocessing.shapely_geometry_to_vector(
             geometries, shape_path, projection_wkt,
             'ESRI Shapefile', fields=fields, attribute_list=attrs,
@@ -835,7 +835,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
 
         shape_copy_path = os.path.join(
             self.workspace_dir, 'poly_shape_copy.shp')
-        # Create point shapefile to use as testing input
+        # Create polygon shapefile to use as testing input
         pygeoprocessing.shapely_geometry_to_vector(
             geometries, shape_copy_path, projection_wkt,
             'ESRI Shapefile', fields=fields, attribute_list=attrs,
@@ -883,7 +883,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
             Polygon(poly_geoms_unordered['poly_2'])]
 
         shape_path = os.path.join(self.workspace_dir, 'poly_shape.shp')
-        # Create point shapefile to use as testing input
+        # Create polygon shapefile to use as testing input
         pygeoprocessing.shapely_geometry_to_vector(
             geometries, shape_path, projection_wkt,
             'ESRI Shapefile', fields=fields, attribute_list=attrs,
@@ -891,7 +891,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
 
         shape_copy_path = os.path.join(
             self.workspace_dir, 'poly_shape_copy.shp')
-        # Create point shapefile to use as testing input
+        # Create polygon shapefile to use as testing input
         pygeoprocessing.shapely_geometry_to_vector(
             geometries_copy, shape_copy_path, projection_wkt,
             'ESRI Shapefile', fields=fields, attribute_list=attrs,
@@ -1065,3 +1065,60 @@ class AssertVectorsEqualTests(unittest.TestCase):
         result = utils._assert_vectors_equal(shape_path, shape_copy_path)
         self.assertFalse(result[0])
         self.assertTrue("Vector projections are not the same" in result[1])
+
+    def test_different_geometry_fails(self):
+        """Utils: test vectors w/ diff geometries fail."""
+        from natcap.invest import utils
+
+        # Setup parameters to create point shapefile
+        fields = {'id': ogr.OFTReal}
+        attrs = [{'id': 1}, {'id': 2}]
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
+
+        poly_geoms = {
+            'poly_1': [(pos_x + 200, pos_y), (pos_x + 250, pos_y),
+                       (pos_x + 250, pos_y - 100), (pos_x + 200, pos_y - 100),
+                       (pos_x + 200, pos_y)],
+            'poly_2': [(pos_x, pos_y - 150), (pos_x + 100, pos_y - 150),
+                       (pos_x + 100, pos_y - 200), (pos_x, pos_y - 200),
+                       (pos_x, pos_y - 150)]}
+
+        poly_geoms_diff = {
+            'poly_1': [(pos_x + 200, pos_y), (pos_x + 250, pos_y),
+                       (pos_x + 250, pos_y - 100), (pos_x + 200, pos_y - 100),
+                       (pos_x + 200, pos_y)],
+            'poly_2': [(pos_x, pos_y - 150), (pos_x, pos_y - 201),
+                       (pos_x + 100, pos_y - 200), (pos_x + 100, pos_y - 150),
+                       (pos_x, pos_y - 150)]}
+
+        geometries = [
+            Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
+
+        geometries_diff = [
+            Polygon(poly_geoms_diff['poly_1']),
+            Polygon(poly_geoms_diff['poly_2'])]
+
+        shape_path = os.path.join(self.workspace_dir, 'poly_shape.shp')
+        # Create polygon shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, shape_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPolygon)
+
+        shape_diff_path = os.path.join(
+            self.workspace_dir, 'poly_shape_diff.shp')
+        # Create polygon shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries_diff, shape_diff_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPolygon)
+
+        result = utils._assert_vectors_equal(shape_path, shape_diff_path)
+        self.assertFalse(result[0], result[1])
+        self.assertTrue("Vector geometry assertion fail." in result[1])
