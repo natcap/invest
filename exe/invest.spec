@@ -11,7 +11,8 @@ current_dir = os.getcwd()  # assume we're building from the project root
 block_cipher = None
 invest_exename = 'invest'
 server_exename = 'server'
-conda_env = '/usr/local/miniconda/envs/mac-env'
+mac_conda_env = '/usr/local/miniconda/envs/invest-env'
+ubuntu_conda_env = '/usr/share/miniconda/envs/invest-env'
 
 
 kwargs = {
@@ -53,12 +54,12 @@ if is_darwin:
     # add rtree dependency dynamic libraries from conda environment
     invest_a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
-        glob.glob(os.path.join(conda_env, 'lib/libspatialindex*.dylib'))]
+        glob.glob(os.path.join(mac_conda_env, 'lib/libspatialindex*.dylib'))]
 elif is_linux:
     # add rtree dependency dynamic libraries from conda environment
     invest_a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
-        glob.glob(os.path.join(conda_env, 'lib/libspatialindex*'))]
+        glob.glob(os.path.join(ubuntu_conda_env, 'lib/libspatialindex*'))]
 elif is_win:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/
