@@ -594,7 +594,7 @@ def create_coordinate_transformer(
 
 
 def _assert_vectors_equal(
-        expected_vector_path, actual_vector_path, tolerance_places=1e-3):
+        expected_vector_path, actual_vector_path, field_value_atol=1e-3):
     """Assert two vectors are equal.
 
     Assert spatial reference, feature count, geometries, field names, and
@@ -604,8 +604,8 @@ def _assert_vectors_equal(
         actual_vector_path (string): path on disk to a gdal Vector dataset.
         expected_vector_path (string): path on disk to a gdal Vector dataset
             to use as the ground truth.
-        tolerance_places (int): the decimal tolerance for comparing field
-            attribute values, default=3.
+        field_value_atol (float): the absolute tolerance for comparing field
+            attribute values, default=1e-3.
 
     Returns:
         A tuple (bool, string) where the boolean element is True if vectors
@@ -669,7 +669,7 @@ def _assert_vectors_equal(
                     if isinstance(av, int) or isinstance(av, float):
                         if not numpy.allclose(numpy.array([av]),
                                               numpy.array([ev]),
-                                              atol=tolerance_places):
+                                              atol=field_value_atol):
                             return (
                                 False,
                                 "Vector field values are not equal: \n"

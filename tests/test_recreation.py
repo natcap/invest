@@ -557,14 +557,14 @@ class TestRecServer(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'predictor_data_all_metrics.shp')
         utils._assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 3)
+            out_grid_vector_path, expected_grid_vector_path, 1e-3)
 
         out_scenario_path = os.path.join(
             args['workspace_dir'], 'scenario_results.shp')
         expected_scenario_path = os.path.join(
             REGRESSION_DATA, 'scenario_results_all_metrics.shp')
         utils._assert_vectors_equal(
-            out_scenario_path, expected_scenario_path, 3)
+            out_scenario_path, expected_scenario_path, 1e-3)
 
     def test_results_suffix_on_serverside_files(self):
         """Recreation test suffix gets added to files created on server."""
@@ -975,7 +975,7 @@ class RecreationRegressionTests(unittest.TestCase):
             REGRESSION_DATA, 'test_regression_coefficients.shp')
 
         utils._assert_vectors_equal(
-            out_coefficient_vector_path, expected_coeff_vector_path, 6)
+            out_coefficient_vector_path, expected_coeff_vector_path, 1e-6)
 
     def test_predictor_table_absolute_paths(self):
         """Recreation test validation from full path."""

@@ -205,7 +205,7 @@ class GLOBIOTests(unittest.TestCase):
             None
 
         Raises:
-            AssertionError if results are out of range by `tolerance_places`
+            AssertionError if results are out of range by ``tolerance_places``
         """
         result_vector = gdal.OpenEx(result_vector_path, gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
