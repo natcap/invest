@@ -7,6 +7,9 @@ Unreleased Changes
     * Fixing an issue in Scenic Quality where the creation of the weighted sum
       of visibility rasters could cause "Too Many Open Files" errors and/or
       ``MemoryError`` when the model is run with many viewpoints.
+* SDR:
+    * Removed the unused parameter ``args['target_pixel_size']`` from the SDR
+      ``execute`` docstring.
 
 3.8.4 (2020-06-05)
 ------------------
