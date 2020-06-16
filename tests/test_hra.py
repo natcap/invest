@@ -880,7 +880,7 @@ class HraRegressionTests(unittest.TestCase):
         for output_vector, expected_vector in zip(
                 output_vector_paths, expected_vector_paths):
             _assert_vectors_equal(
-                output_vector, expected_vector, tolerance_places=6)
+                output_vector, expected_vector, field_value_atol=1e-6)
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
