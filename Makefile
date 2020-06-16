@@ -374,7 +374,7 @@ signcode_windows:
 	@echo "Installer was signed with signtool"
 
 zip_binaries:
-	$(ZIP) -r $(INVEST_BINARIES_DIR_ZIP) $(INVEST_BINARIES_DIR)
+	$(ZIP) -r $(INVEST_BINARIES_DIR_ZIP) $(INVEST_BINARIES_DIR)/*
 
 deploy:
 	-$(MAKE) zip_binaries
