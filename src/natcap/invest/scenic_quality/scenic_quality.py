@@ -4,9 +4,6 @@ import math
 import logging
 import tempfile
 import shutil
-import itertools
-import heapq
-import struct
 
 import numpy
 from osgeo import gdal
@@ -311,7 +308,8 @@ def execute(args):
             geometry = point.GetGeometryRef()
             viewpoint = (geometry.GetX(), geometry.GetY())
 
-            if not _viewpoint_within_raster(viewpoint, file_registry['clipped_dem']):
+            if not _viewpoint_within_raster(
+                    viewpoint, file_registry['clipped_dem']):
                 LOGGER.info(
                     ('Feature %s in layer %s is outside of the DEM bounding '
                      'box. Skipping.'), layer_name, point.GetFID())
@@ -408,7 +406,7 @@ def execute(args):
                       viewshed_valuation_path),
                 target_path_list=[viewshed_valuation_path],
                 dependent_task_list=[viewshed_task],
-                task_name='calculate_valuation_for_viewshed_%s' % feature_index)
+                task_name=f'calculate_valuation_for_viewshed_{feature_index}')
             valuation_tasks.append(valuation_task)
             valuation_filepaths.append(viewshed_valuation_path)
 
