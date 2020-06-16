@@ -20,6 +20,13 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Download invest binaries
+      shell: bash
+      run: |
+        npm run prebuilt-invest
+        unzip ./build/binaries.zip
+
+
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
       with: 

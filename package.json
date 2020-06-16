@@ -12,7 +12,8 @@
     "postinstall": "electron-builder install-app-deps",
     "build": "npx ./build.js",
     "dist": "electron-builder",
-    "pack": "electron-builder --dir"
+    "pack": "electron-builder --dir",
+    "prebuilt-invest": "npx ./scripts/get_invest_binaries_gcs.js"
   },
   "build": {
     "appId": "NaturalCapitalProject.Invest.Desktop",
