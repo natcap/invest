@@ -9,6 +9,9 @@ const fetch = require('node-fetch')
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 
+// If a local registry of available invest installations is present,
+// refer to it for the active version, otherwise default to the
+// invest & server binaries included in this app's installation.
 const investRegistryPath = path.join(
   app.getPath('userData'), 'invest_registry.json')
 let serverEXE;
@@ -17,6 +20,9 @@ if (fs.existsSync(investRegistryPath)) {
   const activeVersion = investRegistry['active']
   console.log(investRegistry)
   serverEXE = investRegistry['registry'][activeVersion]['server']
+} else {
+  // TODO: extension on this file is OS-dependent
+  serverEXE = path.join(__dirname, 'invest/server')
 }
 
 
