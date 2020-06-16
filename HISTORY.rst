@@ -1,9 +1,12 @@
 .. :changelog:
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* Scenic Quality
+    * Fixing an issue in Scenic Quality where the creation of the weighted sum
+      of visibility rasters could cause "Too Many Open Files" errors and/or
+      ``MemoryError`` when the model is run with many viewpoints.
 
 3.8.4 (2020-06-05)
 ------------------
