@@ -833,45 +833,52 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
     dem_raster_info = pygeoprocessing.get_raster_info(clipped_dem_path)
     dem_nodata = dem_raster_info['nodata'][0]
 
-    def _sum_and_weight(*args):
-        """Sum and weight the input matrices, masking the output to the DEM.
+    pygeoprocessing.new_raster_from_base(
+        clipped_dem_path, target_path, gdal.GDT_Float32, [target_nodata],
+        raster_driver_creation_tuple=FLOAT_GTIFF_CREATION_OPTIONS)
 
-        Parameters:
-            args (list): A list of 2n+1 items, where n is the number of
-                visibility rasters to sum and weight.  Item 0 in this list must
-                be the DEM array.  Items 1 through n of this list must be the
-                visibility arrays.  Items n+1 through 2n of this list must be
-                the weights that correspond with the visibility arrays, in
-                corresponding order.
+    weighted_sum_visibility_raster = gdal.OpenEx(
+        target_path, gdal.OF_RASTER | gdal.GA_Update)
+    weighted_sum_visibility_band = (
+        weighted_sum_visibility_raster.GetRasterBand(1))
 
-        Returns:
-            A 2D numpy array for the weighted sum of the visibility rasters.
+    dem_raster = gdal.OpenEx(clipped_dem_path, gdal.OF_RASTER)
+    dem_band = dem_raster.GetRasterBand(1)
+    for block_data in pygeoprocessing.iterblocks((clipped_dem_path, 1),
+                                                 offset_only=True):
+        dem_block = dem_band.ReadAsArray(**block_data)
+        valid_mask = (dem_block != dem_nodata)
 
-        """
-        dem = args[0]
-        n_visibility_arrays = (len(args) - 1) // 2
-        visibility_rasters = args[1: n_visibility_arrays + 1]
-        weights = args[n_visibility_arrays + 1:]
-
-        valid_mask = (dem != dem_nodata)
-
-        visibility_sum = numpy.empty(dem.shape, dtype=numpy.float32)
+        visibility_sum = numpy.empty(dem_block.shape, dtype=numpy.float32)
         visibility_sum[:] = target_nodata
         visibility_sum[valid_mask] = 0
 
-        # Weight and sum the outputs.
-        for visibility_matrix, weight in zip(visibility_rasters, weights):
-            visible_mask = (valid_mask & (visibility_matrix == 1))
-            visibility_sum[visible_mask] += (visibility_matrix[visible_mask] *
-                                             weight)
-        return visibility_sum
+        # Weight and sum the outputs, only opening one raster at a time.
+        # Opening rasters one at a time avoids errors about having too many
+        # files open at once and also avoids possible out-of-memory errors
+        # relative to if we were to open all the incoming rasters at once.
+        for vis_raster_path, weight in zip(visibility_raster_path_list,
+                                           weights):
+            visibility_raster = gdal.OpenEx(vis_raster_path, gdal.OF_RASTER)
+            visibility_band = visibility_raster.GetRasterBand(1)
+            visibility_block = visibility_band.ReadAsArray(**block_data)
 
-    pygeoprocessing.raster_calculator(
-        ([(clipped_dem_path, 1)] +
-         [(vis_path, 1) for vis_path in visibility_raster_path_list] +
-         [(weight, 'raw') for weight in weights]),
-        _sum_and_weight, target_path, gdal.GDT_Float32, target_nodata,
-        raster_driver_creation_tuple=FLOAT_GTIFF_CREATION_OPTIONS)
+            visible_mask = (valid_mask & (visibility_block == 1))
+            visibility_sum[visible_mask] += (
+                visibility_block[visible_mask] * weight)
+
+            visibility_band = None
+            visibility_raster = None
+
+        weighted_sum_visibility_band.WriteArray(
+            visibility_sum, xoff=block_data['xoff'], yoff=block_data['yoff'])
+
+    weighted_sum_visibility_band.ComputeStatistics(0)
+    weighted_sum_visibility_band = None
+    weighted_sum_visibility_raster = None
+
+    dem_band = None
+    dem_raster = None
 
 
 def _calculate_visual_quality(source_raster_path, working_dir, target_path):
