@@ -167,7 +167,7 @@ ARGS_SPEC = {
 def execute(args):
     """Run the Scenic Quality Model.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): (required) output directory for
             intermediate, temporary, and final files.
         args['results_suffix'] (string): (optional) string to append to any
@@ -464,7 +464,7 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
     Uses gdal.Layer.Clip() to clip a vector, where the output Layer
     inherits the projection and fields from the original.
 
-    Parameters:
+    Args:
         shape_to_clip_path (string): a path to a vector on disk. This is
             the Layer to clip. Must have same spatial reference as
             'binding_shape_path'.
@@ -514,7 +514,7 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
 def _sum_valuation_rasters(dem_path, valuation_filepaths, target_path):
     """Sum up all valuation rasters.
 
-    Parameters:
+    Args:
         dem_path (string): A path to the DEM.  Must perfectly overlap all of
             the rasters in ``valuation_filepaths``.
         valuation_filepaths (list of strings): A list of paths to individual
@@ -553,7 +553,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
                          valuation_raster_path):
     """Calculate valuation with one of the defined methods.
 
-    Parameters:
+    Args:
         visibility_path (string): The path to a visibility raster for a single
             point.  The visibility raster has pixel values of 0, 1, or nodata.
             This raster must be projected in meters.
@@ -687,7 +687,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 def _viewpoint_within_raster(viewpoint, dem_path):
     """Determine if a viewpoint overlaps a DEM.
 
-    Parameters:
+    Args:
         viewpoint (tuple): A coordinate pair indicating the (x, y) coordinates
             projected in the DEM's coordinate system.
         dem_path (string): The path to a DEM raster on disk.
@@ -709,7 +709,7 @@ def _viewpoint_within_raster(viewpoint, dem_path):
 def _viewpoint_over_nodata(viewpoint, dem_path):
     """Determine if a viewpoint overlaps a nodata value within the DEM.
 
-    Parameters:
+    Args:
         viewpoint (tuple): A coordinate pair indicating the (x, y) coordinates
             projected in the DEM's coordinate system.
         dem_path (string): The path to a DEM raster on disk.
@@ -744,7 +744,7 @@ def _viewpoint_over_nodata(viewpoint, dem_path):
 def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     """Clip and mask the DEM to the AOI.
 
-    Parameters:
+    Args:
         dem_path (string): The path to the DEM to use.  Must have the same
             projection as the AOI.
         aoi_path (string): The path to the AOI to use.  Must have the same
@@ -814,7 +814,7 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
                                          clipped_dem_path, target_path):
     """Count (and weight) the number of visible structures for each pixel.
 
-    Parameters:
+    Args:
         visibility_raster_path_list (list of strings): A list of strings to
             perfectly overlapping visibility rasters.
         weights (list of numbers): A list of numeric weights to apply to each
@@ -887,7 +887,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     Visual quality is based on the nearest-rank method for breaking pixel
     values from the source raster into percentiles.
 
-    Parameters:
+    Args:
         source_raster_path (string): The path to a raster from which
             percentiles should be calculated.  Nodata values and pixel values
             of 0 are ignored.
@@ -962,7 +962,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to ``execute``'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation
