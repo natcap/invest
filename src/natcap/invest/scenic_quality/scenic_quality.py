@@ -304,7 +304,19 @@ def execute(args):
         LOGGER.info('Layer %s has %s features', layer_name,
                     structures_layer.GetFeatureCount())
 
+        last_log_time = time.time()
+        n_features_touched = -1
         for point in structures_layer:
+            n_features_touched += 1
+            if time.time() - last_log_time > 5.0:
+                LOGGER.info(
+                    ("Setting up viewshed calculations for layer %s, approx. "
+                     "%.2f%%complete."),
+                    layer_name,
+                    100.0*(n_features_touched /
+                           structures_layer.GetFeatureCount()))
+                last_log_time = time.time()
+
             # Coordinates in map units to pass to viewshed algorithm
             geometry = point.GetGeometryRef()
             viewpoint = (geometry.GetX(), geometry.GetY())
