@@ -18,7 +18,6 @@ GIT_GUI_REPO_REV             := 33a5aa54923af5e115f1928b29ff22077115cb6b
 
 ENV = env
 ifeq ($(OS),Windows_NT)
-	OSNAME := windows  # $(OS) is empty if not Windows
 	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_SCRIPTS = $(ENV)\Scripts
@@ -38,8 +37,8 @@ ifeq ($(OS),Windows_NT)
 	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
 	/ := '\'
+	OSNAME := windows  # $(OS) is empty if not Windows
 else
-	OSNAME := $(shell uname)  # $(OS) is empty if not Windows
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
 	SHELL := /bin/bash
@@ -53,6 +52,7 @@ else
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python3
 	RM_DATA_DIR := yes | rm -r $(DATA_DIR)
+	OSNAME := $(shell uname)
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
 		.DEFAULT_GOAL := mac_installer
@@ -374,7 +374,7 @@ signcode_windows:
 	@echo "Installer was signed with signtool"
 
 zip_binaries:
-	cd $(DIST_DIR) && $(ZIP) -r $(notdir $(INVEST_BINARIES_DIR_ZIP)) $(INVEST_BINARIES_DIR)
+	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(INVEST_BINARIES_DIR_ZIP)) $(notdir $(INVEST_BINARIES_DIR))"
 
 deploy:
 	-$(MAKE) zip_binaries
