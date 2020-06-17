@@ -524,10 +524,10 @@ def _determine_valid_viewpoints(dem_path, structures_path):
             viewpoint = (item.bounds[0], item.bounds[2])
             metadata = item.object
             ix_viewpoint = int(
-                (viewpoint[0] - dem_gt[0]) / dem_gt[1]) - block_data['xoff']
+                (viewpoint[0] - dem_gt[0]) // dem_gt[1]) - block_data['xoff']
             iy_viewpoint = int(
-                (viewpoint[1] - dem_gt[3]) / dem_gt[5]) - block_data['yoff']
-            if dem_block[ix_viewpoint][iy_viewpoint] == dem_nodata:
+                (viewpoint[1] - dem_gt[3]) // dem_gt[5]) - block_data['yoff']
+            if dem_block[iy_viewpoint][ix_viewpoint] == dem_nodata:
                 LOGGER.info(
                     'Feature %s in layer %s is over nodata; skipping.',
                     point.GetFID(), layer_name)
