@@ -23,9 +23,10 @@ jobs:
     - name: Download invest binaries
       shell: bash
       run: |
-        npm run prebuilt-invest ${{ matrix.os }}
+        npm run prebuilt-invest -- --${{ matrix.os }}
+      # magical "-- --<arg>" passes the arg through to the script
         unzip ./build/binaries.zip -d ./build
-        rm binaries.zip
+        rm ./build/binaries.zip
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
