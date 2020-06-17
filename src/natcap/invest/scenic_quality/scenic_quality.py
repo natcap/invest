@@ -4,6 +4,7 @@ import math
 import logging
 import tempfile
 import shutil
+import time
 
 import numpy
 from osgeo import gdal
@@ -842,6 +843,11 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
 
     dem_raster = gdal.OpenEx(clipped_dem_path, gdal.OF_RASTER)
     dem_band = dem_raster.GetRasterBand(1)
+    last_log_time = time.time()
+    n_visibility_pixels = (
+        dem_raster_info['raster_size'][0] * dem_raster_info['raster_size'][1] *
+        len(visibility_raster_path_list))
+    n_visibility_pixels_touched = 0
     for block_data in pygeoprocessing.iterblocks((clipped_dem_path, 1),
                                                  offset_only=True):
         dem_block = dem_band.ReadAsArray(**block_data)
@@ -857,6 +863,12 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
         # relative to if we were to open all the incoming rasters at once.
         for vis_raster_path, weight in zip(visibility_raster_path_list,
                                            weights):
+            if time.time() - last_log_time > 5.0:
+                LOGGER.info(
+                    'Weighting and summing approx. %.2f%% complete.',
+                    100.0*(n_visibility_pixels_touched/n_visibility_pixels))
+                last_log_time = time.time()
+
             visibility_raster = gdal.OpenEx(vis_raster_path, gdal.OF_RASTER)
             visibility_band = visibility_raster.GetRasterBand(1)
             visibility_block = visibility_band.ReadAsArray(**block_data)
@@ -867,6 +879,7 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
 
             visibility_band = None
             visibility_raster = None
+            n_visibility_pixels_touched += dem_block.size
 
         weighted_sum_visibility_band.WriteArray(
             visibility_sum, xoff=block_data['xoff'], yoff=block_data['yoff'])
