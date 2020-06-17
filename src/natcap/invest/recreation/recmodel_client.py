@@ -1445,7 +1445,7 @@ def _validate_same_projection(base_vector_path, table_path):
     Parameters:
         base_vector_path (string): path to a GIS vector
         table_path (string): path to a csv table that has at least
-            the field 'path'
+            the field 'id'
 
     Returns:
         None
@@ -1457,8 +1457,8 @@ def _validate_same_projection(base_vector_path, table_path):
     """
     # This will load the table as paths which we can iterate through without
     # bothering the rest of the table structure
-    data_paths = utils.build_lookup_from_csv(
-        table_path, 'path')
+    data_dict = utils.build_lookup_from_csv(table_path, 'id')
+    data_paths = [data['path'] for _, data in data_dict.items()]
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
