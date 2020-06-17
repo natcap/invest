@@ -7,7 +7,7 @@ const url = require('url')
 const HOSTNAME = 'https://storage.googleapis.com/'
 const BUCKET = 'natcap-dev-build-artifacts'
 const FORK = 'invest/davemfish'
-const VERSION = '3.8.0.post629+g0e68c01c'
+const VERSION = '3.8.0.post630+gfca96140/'
 const SRCFILE = 'invest_binaries_Linux.zip'
 const DESTFILE = './build/binaries.zip'
 

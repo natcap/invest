@@ -24,8 +24,7 @@ jobs:
       shell: bash
       run: |
         npm run prebuilt-invest
-        unzip ./build/binaries.zip
-
+        unzip ./build/binaries.zip -d ./build
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
