@@ -4,9 +4,8 @@ const path = require('path')
 const url = require('url')
 
 const args = process.argv.slice(2)
-if (args.length > 1) {
-	console.log('expected exactly 1 argument: the current OS')
-	break
+if (args.length !== 1) {
+	throw new Error('expected exactly 1 argument: the current OS');
 }
 let fileSuffix;
 switch (args[0]) {
