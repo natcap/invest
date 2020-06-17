@@ -3,7 +3,7 @@
   "productName": "invest-electron",
   "version": "0.1.0-alpha",
   "description": "My Electron application description",
-  "main": "build/main.js",
+  "main": "src/main.js",
   "homepage": "./",
   "scripts": {
     "start": "cross-env FLASK_APP=src/server.py npx electron .",
