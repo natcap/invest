@@ -407,16 +407,47 @@ def execute(args):
 
 
 def _determine_valid_viewpoints(dem_path, structures_path):
-    # For each structures point:
-    #    * If the point is not within the raster, exclude it.
-    #    * Otherwise, add it to a spatial index.
-    # For each block in the DEM:
-    #    * determine if there are any points in the block.
-    #      If not, don't load the DEM pixels, just continue to the next block.
-    #    * If there are points in the block, load the DEM pixels and determine
-    #      if any of the points are over ndata.
-    # Return a tuple of (viewpoint_coordinate_tuple, max_radius, weight,
-    #                    viewpoint_height)
+    """Determine which viewpoints are valid and return them.
+
+    A point is considered valid when it meets all of these conditions:
+
+        1. The point must be within the bounding box of the DEM
+        2. The point must not overlap a DEM pixel that is nodata
+        3. The point must not have the same coordinates as another point
+
+    All invalid points are skipped, and a logger message is written for the
+    feature.
+
+    Args:
+        dem_path (str): The path to a GDAL-compatible digital elevation model
+            raster on disk.  The projection must match the projection of the
+            ``structures_path`` vector.
+        structures_path (str): The path to a GDAL-compatible vector containing
+            point geometries and, optionally, a few fields describing
+            parameters to the viewshed:
+
+                * 'RADIUS' or 'RADIUS2': How far out from the viewpoint (in m)
+                    the viewshed operation is permitted to extend. Default: no
+                    limit.
+                * 'HEIGHT': The height of the structure (in m). Default: 0.0
+                * 'WEIGHT': The numeric weight that this viewshed should be
+                    assigned when calculating visual quality. Default: 1.0
+
+    Returns:
+        An unsorted list of the valid viewpoints and their metadata.  The
+        tuples themselves are in the order::
+
+            (viewpoint, radius, weight, height)
+
+        Where
+
+            * ``viewpoint``: a tuple of
+                ``(projected x coord, projected y coord``)
+            * ``radius``: the maximum radius of the viewshed
+            * ``weight``: the weight of the viewshed (for calculating visual
+                quality)
+            * ``height``: The height of the structure at this point.
+    """
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
     dem_nodata = dem_raster_info['nodata'][0]
     dem_gt = dem_raster_info['geotransform']
