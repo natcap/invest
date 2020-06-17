@@ -3,11 +3,13 @@ const fs = require('fs')
 const path = require('path')
 const url = require('url')
 
-// todo, move this config to package.json or other config file
+// todo, move this config to package.json, other config file,
+// and/or command line args, e.g. Actions YAML should set OS suffix
+// for SRCFILE
 const HOSTNAME = 'https://storage.googleapis.com/'
 const BUCKET = 'natcap-dev-build-artifacts'
 const FORK = 'invest/davemfish'
-const VERSION = '3.8.0.post630+gfca96140/'
+const VERSION = '3.8.0.post631+ge925ab2b/'
 const SRCFILE = 'invest_binaries_Linux.zip'
 const DESTFILE = './build/binaries.zip'
 
