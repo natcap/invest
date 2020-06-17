@@ -23,8 +23,9 @@ jobs:
     - name: Download invest binaries
       shell: bash
       run: |
-        npm run prebuilt-invest
+        npm run prebuilt-invest matrix.os
         unzip ./build/binaries.zip -d ./build
+        rm binaries.zip
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
