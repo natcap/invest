@@ -11,6 +11,8 @@ from osgeo import gdal
 from osgeo import osr
 import taskgraph
 import pygeoprocessing
+import rtree
+import shapely.geometry
 
 from natcap.invest.scenic_quality.viewshed import viewshed
 from .. import utils
@@ -294,86 +296,21 @@ def execute(args):
     clipped_viewpoints_task.join()
 
     # phase 2: calculate viewsheds.
-    LOGGER.info('Setting up viewshed tasks')
-    viewpoint_tuples = []
-    structures_vector = gdal.OpenEx(file_registry['structures_reprojected'],
-                                    gdal.OF_VECTOR)
-    for structures_layer_index in range(structures_vector.GetLayerCount()):
-        structures_layer = structures_vector.GetLayer(structures_layer_index)
-        layer_name = structures_layer.GetName()
-        LOGGER.info('Layer %s has %s features', layer_name,
-                    structures_layer.GetFeatureCount())
+    valid_viewpoints_task = graph.add_task(
+        _determine_valid_viewpoints,
+        args=(file_registry['clipped_dem'],
+              file_registry['structures_clipped']),
+        dependent_task_list=[clipped_viewpoints_task, clipped_dem_task],
+        task_name='determine_valid_viewpoints')
 
-        last_log_time = time.time()
-        n_features_touched = -1
-        for point in structures_layer:
-            n_features_touched += 1
-            if time.time() - last_log_time > 5.0:
-                LOGGER.info(
-                    ("Setting up viewshed calculations for layer %s, approx. "
-                     "%.2f%%complete."),
-                    layer_name,
-                    100.0*(n_features_touched /
-                           structures_layer.GetFeatureCount()))
-                last_log_time = time.time()
-
-            # Coordinates in map units to pass to viewshed algorithm
-            geometry = point.GetGeometryRef()
-            viewpoint = (geometry.GetX(), geometry.GetY())
-
-            if not _viewpoint_within_raster(
-                    viewpoint, file_registry['clipped_dem']):
-                LOGGER.info(
-                    ('Feature %s in layer %s is outside of the DEM bounding '
-                     'box. Skipping.'), layer_name, point.GetFID())
-                continue
-
-            if _viewpoint_over_nodata(viewpoint, file_registry['clipped_dem']):
-                LOGGER.info(
-                    'Feature %s in layer %s is over nodata; skipping.',
-                    point.GetFID(), layer_name)
-                continue
-
-            # RADIUS is the suggested value for InVEST Scenic Quality
-            # RADIUS2 is for users coming from ArcGIS's viewshed.
-            # Assume positive infinity if neither field is provided.
-            # Positive infinity is represented in our viewshed by None.
-            max_radius = None
-            for fieldname in ('RADIUS', 'RADIUS2'):
-                try:
-                    max_radius = math.fabs(point.GetField(fieldname))
-                    break
-                except (ValueError, KeyError):
-                    # When this field is not present.
-                    # ValueError was changed to KeyError between GDAL 2.2 and
-                    # 2.4.
-                    pass
-
-            try:
-                viewpoint_height = math.fabs(point.GetField('HEIGHT'))
-            except (ValueError, KeyError):
-                # When height field is not present, assume height of 0.0
-                # ValueError was changed to KeyError between GDAL 2.2 and 2.4.
-                viewpoint_height = 0.0
-
-            try:
-                weight = float(point.GetField('WEIGHT'))
-            except (ValueError, KeyError):
-                # When no weight provided, set scale to 1
-                # ValueError was changed to KeyError between GDAL 2.2 and 2.4.
-                weight = 1.0
-
-            viewpoint_tuples.append((viewpoint, max_radius, weight,
-                                     viewpoint_height))
-    structures_vector = None
-
+    viewpoint_tuples = valid_viewpoints_task.get()
     if not viewpoint_tuples:
         raise ValueError('No valid viewpoints found. This may happen if '
                          'viewpoints are beyond the edge of the DEM or are '
                          'over nodata pixels.')
 
     # These are sorted outside the vector to ensure consistent ordering.  This
-    # helps avoid unnecesary recomputation in taskgraph for when an ESRI
+    # helps avoid unnecessary recomputation in taskgraph for when an ESRI
     # Shapefile, for example, returns a different order of points because
     # someone decided to repack it.
     viewshed_files = []
@@ -467,6 +404,148 @@ def execute(args):
 
     LOGGER.info('Waiting for Scenic Quality tasks to complete.')
     graph.join()
+
+
+def _determine_valid_viewpoints(dem_path, structures_path):
+    # For each structures point:
+    #    * If the point is not within the raster, exclude it.
+    #    * Otherwise, add it to a spatial index.
+    # For each block in the DEM:
+    #    * determine if there are any points in the block.
+    #      If not, don't load the DEM pixels, just continue to the next block.
+    #    * If there are points in the block, load the DEM pixels and determine
+    #      if any of the points are over ndata.
+    # Return a tuple of (viewpoint_coordinate_tuple, max_radius, weight,
+    #                    viewpoint_height)
+    dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
+    dem_nodata = dem_raster_info['nodata'][0]
+    dem_gt = dem_raster_info['geotransform']
+    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = (
+        dem_raster_info['bounding_box'])
+
+    # Use interleaved coordinates (xmin, ymin, xmax, ymax)
+    spatial_index = rtree.index.Index(interleaved=True)
+
+    structures_vector = gdal.OpenEx(structures_path, gdal.OF_VECTOR)
+    for structures_layer_index in range(structures_vector.GetLayerCount()):
+        structures_layer = structures_vector.GetLayer(structures_layer_index)
+        layer_name = structures_layer.GetName()
+        LOGGER.info('Layer %s has %s features', layer_name,
+                    structures_layer.GetFeatureCount())
+
+        fieldnames = set(column.GetName() for column in structures_layer.schema)
+        radius_fieldname = None
+        for possible_radius_fieldname in ('RADIUS', 'RADIUS2'):
+            if possible_radius_fieldname in fieldnames:
+                radius_fieldname = possible_radius_fieldname
+                break
+
+        height_present = False
+        height_fieldname = 'HEIGHT'
+        if height_fieldname in fieldnames:
+            height_present = True
+
+        weight_present = False
+        weight_fieldname = 'WEIGHT'
+        if weight_fieldname in fieldnames:
+            weight_present = True
+
+        last_log_time = time.time()
+        n_features_touched = -1
+        for point in structures_layer:
+            n_features_touched += 1
+            if time.time() - last_log_time > 5.0:
+                LOGGER.info(
+                    ("Checking structures in layer %s, approx. "
+                     "%.2f%%complete."), layer_name,
+                    100.0*(n_features_touched /
+                           structures_layer.GetFeatureCount()))
+                last_log_time = time.time()
+
+            # Coordinates in map units to pass to viewshed algorithm
+            geometry = point.GetGeometryRef()
+            viewpoint = (geometry.GetX(), geometry.GetY())
+
+            if (not bbox_minx <= viewpoint[0] <= bbox_maxx or
+                    not bbox_miny <= viewpoint[1] <= bbox_maxy):
+                LOGGER.info(
+                    ('Feature %s in layer %s is outside of the DEM bounding '
+                     'box. Skipping.'), point.GetFID(), layer_name)
+                continue
+
+            max_radius = None
+            if radius_fieldname:
+                max_radius = math.fabs(point.GetField(radius_fieldname))
+
+            height = 0.0
+            if height_present:
+                height = math.fabs(point.GetField(height_fieldname))
+
+            weight = 1.0
+            if weight_present:
+                weight = float(point.GetField(weight_fieldname))
+
+            spatial_index.insert(
+                point.GetFID(),
+                (viewpoint[0], viewpoint[1], viewpoint[0], viewpoint[1]),
+                {'max_radius': max_radius,
+                 'weight': weight,
+                 'height': height})
+
+    # Now check that the viewpoint isn't over nodata in the DEM.
+    valid_structures = {}
+
+    dem_origin_x = dem_gt[0]
+    dem_origin_y = dem_gt[3]
+    dem_pixelsize_x = dem_raster_info['pixel_size'][0]
+    dem_pixelsize_y = dem_raster_info['pixel_size'][1]
+    dem_raster = gdal.OpenEx(dem_path, gdal.OF_RASTER)
+    dem_band = dem_raster.GetRasterBand(1)
+    for block_data in pygeoprocessing.iterblocks((dem_path, 1),
+                                                 offset_only=True):
+        # Using shapely.geometry.box here so that it'll handle the min/max for
+        # us and all we need to define here are the correct coordinates.
+        block_geom = shapely.geometry.box(
+            dem_origin_x + dem_pixelsize_x * block_data['xoff'],
+            dem_origin_y + dem_pixelsize_y * block_data['yoff'],
+            dem_origin_x + dem_pixelsize_x * (
+                block_data['xoff'] + block_data['win_xsize']),
+            dem_origin_y + dem_pixelsize_y * (
+                block_data['yoff'] + block_data['win_ysize']))
+
+        intersecting_points = list(spatial_index.intersection(
+            block_geom.bounds, objects=True))
+        if len(intersecting_points) == 0:
+            import pdb; pdb.set_trace()
+            continue
+
+        dem_block = dem_band.ReadAsArray(**block_data)
+        for item in intersecting_points:
+            viewpoint = (item.bounds[0], item.bounds[2])
+            metadata = item.object
+            ix_viewpoint = int(
+                (viewpoint[0] - dem_gt[0]) / dem_gt[1]) - block_data['xoff']
+            iy_viewpoint = int(
+                (viewpoint[1] - dem_gt[3]) / dem_gt[5]) - block_data['yoff']
+            if dem_block[ix_viewpoint][iy_viewpoint] == dem_nodata:
+                LOGGER.info(
+                    'Feature %s in layer %s is over nodata; skipping.',
+                    point.GetFID(), layer_name)
+                continue
+
+            if viewpoint in valid_structures:
+                LOGGER.info(
+                    ('Feature %s in layer %s is a duplicate viewpoint. '
+                     'Skipping.'), point.GetFID(), layer_name)
+                continue
+
+            # if we've made it here, the viewpoint is valid.
+            valid_structures[viewpoint] = metadata
+
+    # Casting to a list so that taskgraph can pickle the result.
+    return list(
+        (point, meta['max_radius'], meta['weight'], meta['height'])
+        for (point, meta) in valid_structures.items())
 
 
 def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
@@ -693,63 +772,6 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     valuation_band = None
     valuation_raster.FlushCache()
     valuation_raster = None
-
-
-def _viewpoint_within_raster(viewpoint, dem_path):
-    """Determine if a viewpoint overlaps a DEM.
-
-    Args:
-        viewpoint (tuple): A coordinate pair indicating the (x, y) coordinates
-            projected in the DEM's coordinate system.
-        dem_path (string): The path to a DEM raster on disk.
-
-    Returns:
-        ``True`` if the viewpoint overlaps the DEM, ``False`` if not.
-
-    """
-    dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
-
-    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = (
-        dem_raster_info['bounding_box'])
-    if (not bbox_minx <= viewpoint[0] <= bbox_maxx or
-            not bbox_miny <= viewpoint[1] <= bbox_maxy):
-        return False
-    return True
-
-
-def _viewpoint_over_nodata(viewpoint, dem_path):
-    """Determine if a viewpoint overlaps a nodata value within the DEM.
-
-    Args:
-        viewpoint (tuple): A coordinate pair indicating the (x, y) coordinates
-            projected in the DEM's coordinate system.
-        dem_path (string): The path to a DEM raster on disk.
-
-    Returns:
-        ``True`` if the viewpoint overlaps a nodata value within the DEM,
-        ``False`` if not.  If the DEM does not have a nodata value defined,
-        returns ``False``.
-
-    """
-    raster = gdal.OpenEx(dem_path, gdal.OF_RASTER)
-    band = raster.GetRasterBand(1)
-    nodata = band.GetNoDataValue()
-    dem_gt = raster.GetGeoTransform()
-
-    ix_viewpoint = int((viewpoint[0] - dem_gt[0]) / dem_gt[1])
-    iy_viewpoint = int((viewpoint[1] - dem_gt[3]) / dem_gt[5])
-
-    value_under_viewpoint = band.ReadAsArray(
-        xoff=ix_viewpoint, yoff=iy_viewpoint, win_xsize=1, win_ysize=1)
-
-    band = None
-    raster = None
-
-    # If the nodata value is not set, ``nodata`` will be None and this should
-    # always return False.
-    if value_under_viewpoint == nodata:
-        return True
-    return False
 
 
 def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
