@@ -46,10 +46,10 @@ var render = function render() {
   if (fs.existsSync(INVEST_REGISTRY_PATH)) {
     const investRegistry = JSON.parse(fs.readFileSync(INVEST_REGISTRY_PATH))
     const activeVersion = investRegistry['active']
-    investEXE = investRegistry['registry'][activeVersion]['invest']
+    investExe = investRegistry['registry'][activeVersion]['invest']
   } else {
     // TODO: extension on this file is OS-dependent
-    investEXE = path.join(__dirname, 'invest/invest')
+    investExe = path.join(__dirname, 'invest/invest')
   }
   _reactDom["default"].render(
     _react["default"].createElement(

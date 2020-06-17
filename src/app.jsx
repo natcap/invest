@@ -44,11 +44,10 @@ export default class App extends React.Component {
     // TODO: also load and set investSettings from a cached state, instead 
     // of always re-setting to these hardcoded values on first launch?
 
-    const version = this.props.investRegistry['active']
-    const investEXE = this.props.investRegistry['registry'][version]['invest']
+    // const version = this.props.investRegistry['active']
+    // const investEXE = this.props.investRegistry['registry'][version]['invest']
     this.setState(
       {
-        investEXE: investEXE,
         investList: investList,
         recentSessions: recentSessions,
         investSettings: {
@@ -79,7 +78,7 @@ export default class App extends React.Component {
   render() {
     return (
       <InvestJob
-        investEXE={this.state.investEXE} 
+        investEXE={this.props.investEXE} 
         investList={this.state.investList}
         investSettings={this.state.investSettings}
         recentSessions={this.state.recentSessions}
