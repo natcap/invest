@@ -22,9 +22,9 @@ jobs:
 
     - name: Download invest binaries
       shell: bash
-      # magical "-- --<arg>" in run passes the arg through to the script
+      # magical "-- <arg>" in run passes the arg through to the script
       run: |
-        npm run prebuilt-invest -- --${{ matrix.os }}
+        npm run prebuilt-invest -- ${{ matrix.os }}
         unzip ./build/binaries.zip -d ./build
         rm ./build/binaries.zip
 
