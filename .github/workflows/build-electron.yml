@@ -23,7 +23,7 @@ jobs:
     - name: Download invest binaries
       shell: bash
       run: |
-        npm run prebuilt-invest matrix.os
+        npm run prebuilt-invest ${{ matrix.os }}
         unzip ./build/binaries.zip -d ./build
         rm binaries.zip
 
