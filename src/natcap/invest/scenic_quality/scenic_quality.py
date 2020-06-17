@@ -433,7 +433,8 @@ def _determine_valid_viewpoints(dem_path, structures_path):
         LOGGER.info('Layer %s has %s features', layer_name,
                     structures_layer.GetFeatureCount())
 
-        fieldnames = set(column.GetName() for column in structures_layer.schema)
+        fieldnames = set(
+            column.GetName() for column in structures_layer.schema)
         radius_fieldname = None
         for possible_radius_fieldname in ('RADIUS', 'RADIUS2'):
             if possible_radius_fieldname in fieldnames:
@@ -516,7 +517,6 @@ def _determine_valid_viewpoints(dem_path, structures_path):
         intersecting_points = list(spatial_index.intersection(
             block_geom.bounds, objects=True))
         if len(intersecting_points) == 0:
-            import pdb; pdb.set_trace()
             continue
 
         dem_block = dem_band.ReadAsArray(**block_data)

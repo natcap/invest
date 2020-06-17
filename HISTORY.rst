@@ -7,6 +7,10 @@ Unreleased Changes
     * Fixing an issue in Scenic Quality where the creation of the weighted sum
       of visibility rasters could cause "Too Many Open Files" errors and/or
       ``MemoryError`` when the model is run with many viewpoints.
+    * Progress logging has been added to several loops that may take a longer
+      time when the model is run with thousands of points at a time.
+    * A major part of the model's execution was optimized for speed,
+      particularly when the model is run with many, many points.
 * SDR:
     * Removed the unused parameter ``args['target_pixel_size']`` from the SDR
       ``execute`` docstring.
