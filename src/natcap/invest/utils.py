@@ -612,7 +612,7 @@ def _assert_vectors_equal(
 
     Raise:
         AssertionError
-           If vector projections, feature countx, field names, or geometries
+           If vector projections, feature counts, field names, or geometries
            do not match.
     """
     try:
