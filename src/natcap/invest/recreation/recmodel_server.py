@@ -26,6 +26,7 @@ import shapely.geometry
 import shapely.prepared
 
 from ... import invest
+from .. import utils
 from natcap.invest.recreation import out_of_core_quadtree
 from . import recmodel_client
 
@@ -250,8 +251,8 @@ class RecModel(object):
         lat_lng_ref = osr.SpatialReference()
         lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
 
-        to_lat_trans = osr.CoordinateTransformation(aoi_ref, lat_lng_ref)
-        from_lat_trans = osr.CoordinateTransformation(lat_lng_ref, aoi_ref)
+        to_lat_trans = utils.create_coordinate_transformer(aoi_ref, lat_lng_ref)
+        from_lat_trans = utils.create_coordinate_transformer(lat_lng_ref, aoi_ref)
 
         # calculate x_min transformed by comparing the x coordinate at both
         # the top and bottom of the aoi extent and taking the minimum

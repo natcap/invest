@@ -192,7 +192,7 @@ def execute(args):
         args['lulc_path'])
     target_pixel_size = lulc_raster_info['pixel_size']
     pixel_area = abs(target_pixel_size[0] * target_pixel_size[1])
-    target_sr_wkt = lulc_raster_info['projection']
+    target_sr_wkt = lulc_raster_info['projection_wkt']
 
     soil_raster_info = pygeoprocessing.get_raster_info(
         args['soils_hydrological_group_raster_path'])
@@ -205,7 +205,7 @@ def execute(args):
             ['mode', 'mode'],
             target_pixel_size, 'intersection'),
         kwargs={
-            'target_sr_wkt': target_sr_wkt,
+            'target_projection_wkt': target_sr_wkt,
             'base_vector_path_list': [args['aoi_watersheds_path']],
             'raster_align_index': 0},
         target_path_list=[aligned_lulc_path, aligned_soils_path],
@@ -513,7 +513,7 @@ def _add_zonal_stats(
         flood_vol_stats = pickle.load(flood_vol_pickle_file)
 
     base_sr_wkt = pygeoprocessing.get_vector_info(
-        base_watershed_result_vector_path)['projection']
+        base_watershed_result_vector_path)['projection_wkt']
     base_watershed_vector = gdal.OpenEx(
         base_watershed_result_vector_path, gdal.OF_VECTOR)
     base_watershed_layer = base_watershed_vector.GetLayer()
@@ -632,7 +632,7 @@ def _build_affected_vector(
     infrastructure_layer = infrastructure_vector.GetLayer()
 
     infrastructure_srs = infrastructure_layer.GetSpatialRef()
-    infrastructure_to_target = osr.CoordinateTransformation(
+    infrastructure_to_target = utils.create_coordinate_transformer(
         infrastructure_srs, target_srs)
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()

@@ -353,7 +353,7 @@ class SDRTests(unittest.TestCase):
             agg_results_path):
         """Test workspace state against expected aggregate results.
 
-        Parameters:
+        Args:
             workspace_dir (string): path to the completed model workspace
             file_list_path (string): path to a file that has a list of all
                 the expected files relative to the workspace base
@@ -415,7 +415,7 @@ class SDRTests(unittest.TestCase):
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
 
-        Parameters:
+        Args:
             base_list_path (string): a path to a file that has one relative
                 file path per line.
             directory_path (string): a path to a directory whose contents will
