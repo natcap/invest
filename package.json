@@ -11,8 +11,8 @@
     "test": "jest",
     "postinstall": "electron-builder install-app-deps",
     "build": "npx ./build.js",
-    "dist": "electron-builder",
-    "pack": "electron-builder --dir",
+    "dist": "electron-builder -c.extraMetadata.main=build/main.js",
+    "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js",
     "prebuilt-invest": "npx ./scripts/get_invest_binaries_gcs.js"
   },
   "build": {
