@@ -608,9 +608,12 @@ def _assert_vectors_equal(
             attribute values, default=1e-3.
 
     Returns:
-        A tuple (bool, string) where the boolean element is True if vectors
-        are equal and False if not. The string element is a message of
-        "success" if True or detailed error message if False.
+        None on success
+
+    Raise:
+        AssertionError
+           If vector projections, feature countx, field names, or geometries
+           do not match.
     """
     try:
         # Open vectors
@@ -625,8 +628,7 @@ def _assert_vectors_equal(
         actual_projection = actual_layer.GetSpatialRef()
         actual_projection_wkt = actual_projection.ExportToWkt()
         if expected_projection_wkt != actual_projection_wkt:
-            return (
-                False,
+            raise AssertionError (
                 "Vector projections are not the same. \n"
                 f"Expected projection wkt: {expected_projection_wkt}. \n"
                 f"Actual projection wkt: {actual_projection_wkt}. ")
@@ -635,8 +637,7 @@ def _assert_vectors_equal(
         actual_feat_count = actual_layer.GetFeatureCount()
         expected_feat_count = expected_layer.GetFeatureCount()
         if expected_feat_count != actual_feat_count:
-            return (
-                False,
+            raise AssertionError (
                 "Vector feature counts are not the same. \n"
                 f"Expected feature count: {expected_feat_count}. \n"
                 f"Actual feature count: {actual_feat_count}. ")
@@ -645,8 +646,7 @@ def _assert_vectors_equal(
         expected_field_names = [field.name for field in expected_layer.schema]
         actual_field_names = [field.name for field in actual_layer.schema]
         if sorted(expected_field_names) != sorted(actual_field_names):
-            return (
-                False,
+            raise AssertionError (
                 "Vector field names are not the same. \n"
                 f"Expected field names: {sorted(expected_field_names)}. \n"
                 f"Actual field names: {sorted(actual_field_names)}. ")
@@ -670,23 +670,20 @@ def _assert_vectors_equal(
                         if not numpy.allclose(numpy.array([av]),
                                               numpy.array([ev]),
                                               atol=field_value_atol):
-                            return (
-                                False,
+                            raise AssertionError (
                                 "Vector field values are not equal: \n"
                                 f"Expected value: {ev}. \n"
                                 f"Actual value: {av}. ")
                     # String and other comparison
                     else:
                         if av != ev:
-                            return (
-                                False,
+                            raise AssertionError (
                                 "Vector field values are not equal. \n"
                                 f"Expected value : {ev}. \n"
                                 f"Actual value : {av}. ")
                 else:
                     if ev is not None:
-                        return (
-                            False,
+                        raise AssertionError (
                             "Vector field values are not equal: \n"
                             f"Expected value: {ev}. \n"
                             f"Actual value: {av}. ")
@@ -698,8 +695,7 @@ def _assert_vectors_equal(
             expected_geom_shapely = loads(expected_geom_wkt)
             actual_geom_shapely = loads(actual_geom_wkt)
             if not expected_geom_shapely.almost_equals(actual_geom_shapely):
-                return (
-                    False,
+                raise AssertionError (
                     "Vector geometry assertion fail. \n"
                     f"Expected geometry: {expected_geom_wkt}. \n"
                     f"Actual geometry: {actual_geom_wkt}. ")
@@ -712,4 +708,4 @@ def _assert_vectors_equal(
         expected_layer = None
         expected_vector = None
 
-    return (True, "success")
+    return None

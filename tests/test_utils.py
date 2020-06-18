@@ -797,8 +797,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
             'ESRI Shapefile', fields=fields, attribute_list=attrs,
             ogr_geom_type=ogr.wkbPoint)
 
-        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
-        self.assertTrue(result[0], result[1])
+        utils._assert_vectors_equal(shape_path, shape_copy_path)
 
     def test_identical_polygon_vectors(self):
         """Utils: test identical polygon vectors pass."""
@@ -841,8 +840,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
             'ESRI Shapefile', fields=fields, attribute_list=attrs,
             ogr_geom_type=ogr.wkbPolygon)
 
-        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
-        self.assertTrue(result[0], result[1])
+        utils._assert_vectors_equal(shape_path, shape_copy_path)
 
     def test_identical_polygon_vectors_unorded_geometry(self):
         """Utils: test identical polygon vectors w/ diff geometry order."""
@@ -897,8 +895,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
             'ESRI Shapefile', fields=fields, attribute_list=attrs,
             ogr_geom_type=ogr.wkbPolygon)
 
-        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
-        self.assertTrue(result[0], result[1])
+        utils._assert_vectors_equal(shape_path, shape_copy_path)
 
     def test_different_field_value(self):
         """Utils: test vectors w/ different field value fails."""
@@ -933,9 +930,11 @@ class AssertVectorsEqualTests(unittest.TestCase):
             'ESRI Shapefile', fields=fields, attribute_list=attrs_copy,
             ogr_geom_type=ogr.wkbPoint)
 
-        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
-        self.assertFalse(result[0])
-        self.assertTrue("Vector field values are not equal" in result[1])
+        with self.assertRaises(AssertionError) as cm:
+            utils._assert_vectors_equal(shape_path, shape_copy_path)
+        
+        self.assertTrue(
+            "Vector field values are not equal" in str(cm.exception))
 
     def test_different_field_names(self):
         """Utils: test vectors w/ different field names fails."""
@@ -971,9 +970,11 @@ class AssertVectorsEqualTests(unittest.TestCase):
             'ESRI Shapefile', fields=fields_copy, attribute_list=attrs_copy,
             ogr_geom_type=ogr.wkbPoint)
 
-        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
-        self.assertFalse(result[0])
-        self.assertTrue("Vector field names are not the same" in result[1])
+        with self.assertRaises(AssertionError) as cm:
+            utils._assert_vectors_equal(shape_path, shape_copy_path)
+        
+        self.assertTrue(
+            "Vector field names are not the same" in str(cm.exception))
 
     def test_different_feature_count(self):
         """Utils: test vectors w/ different feature count fails."""
@@ -1014,9 +1015,11 @@ class AssertVectorsEqualTests(unittest.TestCase):
             'ESRI Shapefile', fields=fields, attribute_list=attrs_copy,
             ogr_geom_type=ogr.wkbPoint)
 
-        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
-        self.assertFalse(result[0])
-        self.assertTrue("Vector feature counts are not the same" in result[1])
+        with self.assertRaises(AssertionError) as cm:
+            utils._assert_vectors_equal(shape_path, shape_copy_path)
+        
+        self.assertTrue(
+            "Vector feature counts are not the same" in str(cm.exception))
 
     def test_different_projections(self):
         """Utils: test vectors w/ different projections fails."""
@@ -1062,9 +1065,11 @@ class AssertVectorsEqualTests(unittest.TestCase):
             'ESRI Shapefile', fields=fields, attribute_list=attrs,
             ogr_geom_type=ogr.wkbPoint)
 
-        result = utils._assert_vectors_equal(shape_path, shape_copy_path)
-        self.assertFalse(result[0])
-        self.assertTrue("Vector projections are not the same" in result[1])
+        with self.assertRaises(AssertionError) as cm:
+            utils._assert_vectors_equal(shape_path, shape_copy_path)
+        
+        self.assertTrue(
+            "Vector projections are not the same" in str(cm.exception))
 
     def test_different_geometry_fails(self):
         """Utils: test vectors w/ diff geometries fail."""
@@ -1119,6 +1124,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
             'ESRI Shapefile', fields=fields, attribute_list=attrs,
             ogr_geom_type=ogr.wkbPolygon)
 
-        result = utils._assert_vectors_equal(shape_path, shape_diff_path)
-        self.assertFalse(result[0], result[1])
-        self.assertTrue("Vector geometry assertion fail." in result[1])
+        with self.assertRaises(AssertionError) as cm:
+            utils._assert_vectors_equal(shape_path, shape_diff_path)
+        
+        self.assertTrue("Vector geometry assertion fail." in str(cm.exception))
