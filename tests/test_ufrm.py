@@ -61,6 +61,12 @@ class UFRMTests(unittest.TestCase):
             args['workspace_dir'], 'flood_risk_service_Test1.shp'),
             gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
+
+        # Check that all four expected fields are there.
+        self.assertEqual(
+            set(('aff_bld', 'serv_bld', 'rnf_rt_idx', 'rnf_rt_m3')),
+            set(field.GetName() for field in result_layer.schema))
+
         result_feature = next(result_layer)
         result_val = result_feature.GetField('serv_bld')
         result_feature = None
@@ -92,6 +98,28 @@ class UFRMTests(unittest.TestCase):
         # expected result observed from regression run.
         expected_result = 156070.36
         self.assertAlmostEqual(result_sum, expected_result, places=0)
+
+        result_vector = gdal.OpenEx(os.path.join(
+            args['workspace_dir'], 'flood_risk_service_Test1.shp'),
+            gdal.OF_VECTOR)
+        result_layer = result_vector.GetLayer()
+        result_feature = next(result_layer)
+
+        # Check that only the two expected fields are there.
+        self.assertEqual(
+            set(('rnf_rt_idx', 'rnf_rt_m3')),
+            set(field.GetName() for field in result_layer.schema))
+
+        result_val = result_feature.GetField('rnf_rt_m3')
+        result_feature = None
+        result_layer = None
+        result_vector = None
+        # expected result observed from regression run.
+        expected_result = 70870.4765625
+        places_to_round = (
+            int(round(numpy.log(expected_result)/numpy.log(10)))-6)
+        self.assertAlmostEqual(
+            result_val, expected_result, places=-places_to_round)
 
     def test_ufrm_value_error_on_bad_soil(self):
         """UFRM: assert exception on bad soil raster values."""

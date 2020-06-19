@@ -433,7 +433,7 @@ def _write_summary_vector(
 
     for field_name in target_fields:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
-        field_def.SetWidth(24)
+        field_def.SetWidth(36)
         field_def.SetPrecision(11)
         target_watershed_layer.CreateField(field_def)
 
