@@ -23,7 +23,7 @@ case 'ubuntu-latest':
 const HOSTNAME = 'https://storage.googleapis.com/'
 const BUCKET = 'natcap-dev-build-artifacts'
 const FORK = 'invest/davemfish'
-const VERSION = '3.8.0.post631+ge925ab2b/'
+const VERSION = '3.8.0.post632+g7a58318e/'
 const SRCFILE = `invest_binaries_${fileSuffix}.zip`
 const DESTFILE = './build/binaries.zip'
 
