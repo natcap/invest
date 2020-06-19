@@ -491,7 +491,6 @@ def _calculate_damage_to_infrastructure_in_aoi(
         A ``dict`` mapping the FID of geometries in ``aoi_vector_path`` with
         the ``float`` total damage to infrastructure in that AOI/watershed.
     """
-
     infrastructure_vector = gdal.OpenEx(structures_vector_path, gdal.OF_VECTOR)
     infrastructure_layer = infrastructure_vector.GetLayer()
 
@@ -940,8 +939,9 @@ def _lu_to_cn_op(
     # this is an array where each column represents a valid landcover
     # pixel and the rows are the curve number index for the landcover
     # type under that pixel (0..3 are CN_A..CN_D and 4 is "unknown")
+    valid_lucodes = lucode_array[valid_mask].astype(int)
     per_pixel_cn_array = (
-        lucode_to_cn_table[lucode_array[valid_mask].astype(int)].toarray().reshape(
+        lucode_to_cn_table[valid_lucodes].toarray().reshape(
             (-1, 4))).transpose()
 
     # this is the soil type array with values ranging from 0..4 that will
