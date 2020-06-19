@@ -11,3 +11,4 @@ qtpy>1.3  # pip-only
 qtawesome  # pip-only
 requests
 PySide2  # pip-only
+Flask
