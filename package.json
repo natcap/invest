@@ -16,6 +16,7 @@
     "prebuilt-invest": "npx ./scripts/get_invest_binaries_gcs.js"
   },
   "build": {
+    "asar": false,
     "appId": "NaturalCapitalProject.Invest.Desktop",
     "productName": "InVEST Desktop",
     "artifactName": "invest-desktop_${os}_${arch}_${version}.${ext}",
