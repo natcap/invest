@@ -114,8 +114,6 @@ ARGS_SPEC = {
 }
 
 
-
-
 def execute(args):
     """Urban Flood Risk Mitigation model.
 
@@ -143,9 +141,9 @@ def execute(args):
             contains a column 'Type' with integers (e.g. 1=residential,
             2=office, etc.).
         args['infrastructure_damage_loss_table_path'] (string): (optional)
-            path to a a CSV table with columns 'Type' and 'Damage' with values
+            path to a CSV table with columns 'Type' and 'Damage' with values
             of built infrastructure type from the 'Type' field in
-            `args['built_infrastructure_vector_path']` and potential damage
+            ``args['built_infrastructure_vector_path']`` and potential damage
             loss (in $/m^2).
         args['n_workers'] (int): (optional) if present, indicates how many
             worker processes should be used in parallel processing. -1
@@ -156,13 +154,6 @@ def execute(args):
         None.
 
     """
-    if 'built_infrastructure_vector_path' in args and (
-            args['built_infrastructure_vector_path'] != ''):
-        infrastructure_damage_loss_table_path = (
-            args['infrastructure_damage_loss_table_path'])
-    else:
-        infrastructure_damage_loss_table_path = None
-
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     temporary_working_dir = os.path.join(
@@ -290,7 +281,7 @@ def execute(args):
         task_name='generate runoff retention')
 
     # calculate runoff retention volumne
-    runoff_retention_ret_vol_raster_path = os.path.join(
+    runoff_retention_vol_raster_path = os.path.join(
         args['workspace_dir'], 'Runoff_retention_m3%s.tif' % file_suffix)
     runoff_retention_ret_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
@@ -300,9 +291,9 @@ def execute(args):
             (float(args['rainfall_depth']), 'raw'),
             (abs(target_pixel_size[0]*target_pixel_size[1]), 'raw'),
             (runoff_retention_nodata, 'raw')], _runoff_retention_ret_vol_op,
-            runoff_retention_ret_vol_raster_path, gdal.GDT_Float32,
+            runoff_retention_vol_raster_path, gdal.GDT_Float32,
             runoff_retention_nodata),
-        target_path_list=[runoff_retention_ret_vol_raster_path],
+        target_path_list=[runoff_retention_vol_raster_path],
         dependent_task_list=[runoff_retention_task],
         task_name='calculate runoff retention vol')
 
@@ -322,107 +313,246 @@ def execute(args):
         dependent_task_list=[q_pi_task],
         task_name='calculate service built raster')
 
-    if 'built_infrastructure_vector_path' not in args or (
-            args['built_infrastructure_vector_path'] in ('', None)):
-        task_graph.close()
-        task_graph.join()
-        return
-
-    # intersect built_infrastructure_vector_path with aoi_watersheds_path
-    intermediate_target_watershed_result_vector_path = os.path.join(
-        temporary_working_dir,
-        'intermediate_flood_risk_service%s.gpkg' % file_suffix)
-
-    # this is the field name that can be used to uniquely identify a feature
-    intermediate_affected_vector_task = task_graph.add_task(
-        func=_build_affected_vector,
+    reprojected_aoi_path = os.path.join(
+            intermediate_dir, 'reprojected_aoi.gpkg')
+    reprojected_aoi_task = task_graph.add_task(
+        func=pygeoprocessing.reproject_vector,
         args=(
-            args['aoi_watersheds_path'], target_sr_wkt,
-            infrastructure_damage_loss_table_path,
-            args['built_infrastructure_vector_path'],
-            intermediate_target_watershed_result_vector_path),
-        target_path_list=[intermediate_target_watershed_result_vector_path],
-        task_name='build affected vector')
+            args['aoi_watersheds_path'],
+            target_sr_wkt,
+            reprojected_aoi_path),
+        kwargs={'driver_name': 'GPKG'},
+        target_path_list=[reprojected_aoi_path],
+        task_name='reproject aoi/watersheds')
 
-    # do the pickle
-    runoff_retention_pickle_path = os.path.join(
-        temporary_working_dir,
-        'runoff_retention_stats%s.pickle' % file_suffix)
-    runoff_retention_pickle_task = task_graph.add_task(
-        func=_pickle_zonal_stats,
+    runoff_retention_stats_task = task_graph.add_task(
+        func=pygeoprocessing.zonal_statistics,
         args=(
-            intermediate_target_watershed_result_vector_path,
-            runoff_retention_raster_path, runoff_retention_pickle_path),
-        dependent_task_list=[
-            intermediate_affected_vector_task, runoff_retention_task],
-        target_path_list=[runoff_retention_pickle_path],
-        task_name='pickle runoff index stats')
+            (runoff_retention_raster_path, 1),
+            reprojected_aoi_path),
+        dependent_task_list=[runoff_retention_task],
+        task_name='zonal_statistics over runoff_retention raster')
 
-    runoff_retention_ret_vol_pickle_path = os.path.join(
-        temporary_working_dir,
-        'runoff_retention_ret_vol_stats%s.pickle' % file_suffix)
-    runoff_retention_ret_vol_pickle_task = task_graph.add_task(
-        func=_pickle_zonal_stats,
+    runoff_retention_volume_stats_task = task_graph.add_task(
+        func=pygeoprocessing.zonal_statistics,
         args=(
-            intermediate_target_watershed_result_vector_path,
-            runoff_retention_ret_vol_raster_path,
-            runoff_retention_ret_vol_pickle_path),
-        dependent_task_list=[
-            intermediate_affected_vector_task, runoff_retention_ret_vol_task],
-        target_path_list=[runoff_retention_ret_vol_pickle_path],
-        task_name='pickle runoff retention volume stats')
+            (runoff_retention_vol_raster_path, 1),
+            reprojected_aoi_path),
+        dependent_task_list=[runoff_retention_ret_vol_task],
+        task_name='zonal_statistics over runoff_retention_volume raster')
 
-    flood_vol_pickle_path = os.path.join(
-        temporary_working_dir, 'flood_vol_stats%s.pickle' % file_suffix)
-    flood_vol_pickle_task = task_graph.add_task(
-        func=_pickle_zonal_stats,
-        args=(
-            intermediate_target_watershed_result_vector_path,
-            flood_vol_raster_path, flood_vol_pickle_path),
-        dependent_task_list=[
-            intermediate_affected_vector_task, flood_vol_task],
-        target_path_list=[flood_vol_pickle_path],
-        task_name='pickle flood volume stats')
+    damage_per_aoi_stats = None
+    flood_volume_stats = None
+    summary_tasks = [
+            runoff_retention_stats_task,
+            runoff_retention_volume_stats_task]
+    if 'built_infrastructure_vector_path' in args and (
+            args['built_infrastructure_vector_path'] not in ('', None)):
+        # Reproject the built infrastructure vector to the target SRS.
+        reprojected_structures_path = os.path.join(
+                intermediate_dir, 'structures_reprojected.gpkg')
+        reproject_built_infrastructure_task = task_graph.add_task(
+            func=pygeoprocessing.reproject_vector,
+            args=(args['built_infrastructure_vector_path'],
+                  target_sr_wkt,
+                  reprojected_structures_path),
+            kwargs={'driver_name': 'GPKG'},
+            target_path_list=[reprojected_structures_path],
+            task_name='reproject built infrastructure to target SRS')
 
-    target_watershed_result_vector_path = os.path.join(
+        # determine the total damage to all infrastructure in the watershed/AOI
+        damage_to_infrastructure_in_aoi_task = task_graph.add_task(
+            func=_calculate_damage_to_infrastructure_in_aoi,
+            args=(reprojected_aoi_path,
+                  reprojected_structures_path,
+                  args['infrastructure_damage_loss_table_path']),
+            dependent_task_list=[
+                reprojected_aoi_task,
+                reproject_built_infrastructure_task],
+            task_name='calculate damage to infrastructure in aoi')
+        summary_tasks.append(damage_to_infrastructure_in_aoi_task)
+
+        # Determine flood_volume over the watershed
+        flood_volume_in_aoi_task = task_graph.add_task(
+            func=pygeoprocessing.zonal_statistics,
+            args=(
+                (runoff_retention_raster_path, 1),
+                reprojected_aoi_path),
+            dependent_task_list=[flood_vol_task],
+            task_name='zonal_statistics over the flood_volume raster')
+        flood_volume_stats = flood_volume_in_aoi_task.get()
+        damage_per_aoi_stats = damage_to_infrastructure_in_aoi_task.get()
+
+    summary_vector_path = os.path.join(
         args['workspace_dir'], 'flood_risk_service%s.shp' % file_suffix)
-
-    task_graph.add_task(
-        func=_add_zonal_stats,
-        args=(
-            runoff_retention_pickle_path,
-            runoff_retention_ret_vol_pickle_path,
-            flood_vol_pickle_path,
-            intermediate_target_watershed_result_vector_path,
-            target_watershed_result_vector_path),
-        target_path_list=[target_watershed_result_vector_path],
-        dependent_task_list=[
-            flood_vol_pickle_task, runoff_retention_ret_vol_pickle_task,
-            runoff_retention_pickle_task, intermediate_affected_vector_task],
-        task_name='add zonal stats')
+    write_summary_vector_stats = task_graph.add_task(
+        func=_write_summary_vector,
+        args=(reprojected_aoi_path,
+              summary_vector_path),
+        kwargs={
+            'runoff_ret_stats': runoff_retention_stats_task.get(),
+            'runoff_ret_vol_stats': runoff_retention_volume_stats_task.get(),
+            'damage_per_aoi_stats': damage_per_aoi_stats,
+            'flood_volume_stats': flood_volume_stats,
+        },
+        target_path_list=[summary_vector_path],
+        task_name='write summary stats to flood_risk_service.shp',
+        dependent_task_list=summary_tasks)
 
     task_graph.close()
     task_graph.join()
 
 
-def _pickle_zonal_stats(
-        base_vector_path, base_raster_path, target_pickle_path):
-    """Calculate Zonal Stats for a vector/raster pair and pickle result.
+def _write_summary_vector(
+        source_aoi_vector_path, target_vector_path, runoff_ret_stats=None,
+        runoff_ret_vol_stats=None, damage_per_aoi_stats=None,
+        flood_volume_stats=None):
+
+    source_aoi_vector = gdal.OpenEx(source_aoi_vector_path, gdal.OF_VECTOR)
+    source_aoi_layer = source_aoi_vector.GetLayer()
+    source_geom_type = source_aoi_layer.GetGeomType()
+    source_srs_wkt = pygeoprocessing.get_vector_info(
+        source_aoi_vector_path)['projection']
+    source_srs = osr.SpatialReference()
+    source_srs.ImportFromWkt(source_srs_wkt)
+
+    esri_driver = gdal.GetDriverByName('ESRI Shapefile')
+    target_watershed_vector = esri_driver.Create(
+        target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
+    layer_name = str(os.path.splitext(os.path.basename(
+        target_vector_path))[0])
+    LOGGER.debug("creating layer %s", layer_name)
+    target_watershed_layer = target_watershed_vector.CreateLayer(
+        str(layer_name), source_srs, source_geom_type)
+
+    target_fields = ['rnf_rt_idx', 'rnf_rt_m3']
+    if not damage_per_aoi_stats:
+        damage_per_aoi_stats = {}
+    else:
+        target_fields += ['aff_bld', 'serv_bld']
+
+    for field_name in target_fields:
+        field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+        field_def.SetWidth(24)
+        field_def.SetPrecision(11)
+        target_watershed_layer.CreateField(field_def)
+
+    target_layer_defn = target_watershed_layer.GetLayerDefn()
+    for base_feature in source_aoi_layer:
+        feature_id = base_feature.GetFID()
+        target_feature = ogr.Feature(target_layer_defn)
+        base_geom_ref = base_feature.GetGeometryRef()
+        target_feature.SetGeometry(base_geom_ref.Clone())
+        base_geom_ref = None
+
+        if feature_id in runoff_ret_stats:
+            pixel_count = runoff_ret_stats[feature_id]['count']
+            if pixel_count > 0:
+                mean_value = (
+                    runoff_ret_stats[feature_id]['sum'] / float(pixel_count))
+                target_feature.SetField('rnf_rt_idx', float(mean_value))
+
+        if feature_id in runoff_ret_vol_stats:
+            target_feature.SetField(
+                'rnf_rt_m3', float(
+                    runoff_ret_vol_stats[feature_id]['sum']))
+
+        if feature_id in damage_per_aoi_stats:
+            pixel_count = flood_volume_stats[feature_id]['count']
+            if pixel_count > 0:
+                damage_sum = damage_per_aoi_stats[feature_id]
+                target_feature.SetField(
+                    'serv_bld', damage_sum * float(
+                        runoff_ret_vol_stats[feature_id]['sum']))
+
+        target_watershed_layer.CreateFeature(target_feature)
+    target_watershed_layer.SyncToDisk()
+    target_watershed_layer = None
+    target_watershed_vector = None
+
+
+def _calculate_damage_to_infrastructure_in_aoi(
+        aoi_vector_path, structures_vector_path, structures_damage_table):
+    """Determine the damage to infrastructure in each AOI feature.
 
     Args:
-        base_vector_path (str): path to vector file
-        base_raster_path (str): path to raster file to aggregate over.
-        target_pickle_path (str): path to desired target pickle file that will
-            be a pickle of the pygeoprocessing.zonal_stats function.
+        aoi_vector_path (str): Path to a GDAL vector of AOI or watershed
+            polygons.  Must be in the same projection as
+            ``structures_vector_path``.
+        structures_vector_path (str): Path to a GDAL vector of built
+            infrastructure polygons.  Must be in the same projection as
+            ``aoi_vector_path``.  Must have a ``Type`` column matching a type
+            in the ``structures_damage_table`` table.
+        structures_damage_table (str): Path to a CSV containing information
+            about the damage to each type of structure. This table must have
+            the ``Type`` and ``Damage`` columns.
 
     Returns:
-        None.
-
+        A ``dict`` mapping the FID of geometries in ``aoi_vector_path`` with
+        the ``float`` total damage to infrastructure in that AOI/watershed.
     """
-    zonal_stats = pygeoprocessing.zonal_statistics(
-        (base_raster_path, 1), base_vector_path)
-    with open(target_pickle_path, 'wb') as pickle_file:
-        pickle.dump(zonal_stats, pickle_file)
+
+    infrastructure_vector = gdal.OpenEx(structures_vector_path, gdal.OF_VECTOR)
+    infrastructure_layer = infrastructure_vector.GetLayer()
+
+    damage_type_map = utils.build_lookup_from_csv(
+        structures_damage_table, 'type', to_lower=True, warn_if_missing=True)
+
+    infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
+    for field_name in ['type', 'Type', 'TYPE']:
+        type_index = infrastructure_layer_defn.GetFieldIndex(field_name)
+        if type_index != -1:
+            break
+    if type_index == -1:
+        raise ValueError(
+            "Could not find field 'Type' in %s",
+            structures_vector_path)
+
+    structures_index = rtree.index.Index(interleaved=True)
+    for infrastructure_feature in infrastructure_layer:
+        infrastructure_geometry = infrastructure_feature.GetGeometryRef()
+
+        # We've had a case on the forums where a user provided an
+        # infrastructure vector with either invalid or missing geometries. This
+        # allows us to handle these in the model run itself.
+        if not infrastructure_geometry:
+            LOGGER.debug(
+                'Infrastructure feature %s has no geometry; skipping.',
+                infrastructure_feature.GetFID())
+            continue
+
+        shapely_geometry = shapely.wkb.loads(
+            infrastructure_geometry.ExportToWkb())
+
+        structures_index.insert(
+            infrastructure_feature.GetFID(), shapely_geometry.bounds)
+
+    aoi_vector = gdal.OpenEx(aoi_vector_path, gdal.OF_VECTOR)
+    aoi_layer = aoi_vector.GetLayer()
+
+    aoi_damage = {}
+    for aoi_feature in aoi_layer:
+        aoi_geometry = aoi_feature.GetGeometryRef()
+        aoi_geometry_shapely = shapely.wkb.loads(aoi_geometry.ExportToWkb())
+        aoi_geometry_prep = shapely.prepared.prep(aoi_geometry_shapely)
+
+        total_damage = 0.0
+        for infrastructure_fid in structures_index.intersection(
+                aoi_geometry_shapely.bounds):
+            infrastructure_feature = infrastructure_layer.GetFeature(
+                infrastructure_fid)
+            infrastructure_geometry = shapely.wkb.loads(
+                infrastructure_feature.GetGeometryRef().ExportToWkb())
+            if aoi_geometry_prep.intersects(infrastructure_geometry):
+                intersection_geometry = aoi_geometry_shapely.intersection(
+                    infrastructure_geometry)
+                damage_type = infrastructure_feature.GetField(type_index)
+                damage = damage_type_map[damage_type]['damage']
+                total_damage += intersection_geometry.area * damage
+
+        aoi_damage[aoi_feature.GetFID()] = total_damage
+
+    return aoi_damage
 
 
 def _flood_vol_op(
