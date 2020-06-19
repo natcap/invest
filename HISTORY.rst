@@ -1,9 +1,16 @@
 .. :changelog:
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* Urban Flood Risk Mitigation
+    * Fixed an issue where the output vector ``flood_risk_service.shp`` would
+      only be created when the built infrastructure vector was provided.  Now,
+      the ``flood_risk_service.shp`` vector is always created, but the fields
+      created differ depending on whether the built infrastructure input is
+      present during the model run.
+    * Fixed an issue where the model would crash if an infrastructure geometry
+      were invalid or absent.  Such features are now skipped.
 
 3.8.4 (2020-06-05)
 ------------------
