@@ -1,16 +1,22 @@
 import path from 'path';
+import fs from 'fs';
 import React from 'react';
 import PropTypes from 'prop-types';
+import { remote } from 'electron';
 
 import { InvestJob } from './InvestJob';
 import { getInvestList, getFlaskIsReady } from './server_requests';
 import { updateRecentSessions, loadRecentSessions } from './utils';
 
+// TODO: clear out tmp dir on quit?
 const DIRECTORY_CONSTANTS = {
-  CACHE_DIR: path.join(__dirname, 'cache'), //  for storing state snapshot files
-  TEMP_DIR: path.join(__dirname, 'tmp'),  // for saving datastack json files prior to investExecute
+  CACHE_DIR: path.join(remote.app.getPath('userData'), 'state_cache'), //  for storing state snapshot files
+  TEMP_DIR: path.join(remote.app.getPath('userData'), 'tmp'),  // for saving datastack json files prior to investExecute
   INVEST_UI_DATA: path.join(__dirname, 'ui_data')
 }
+fs.mkdir(DIRECTORY_CONSTANTS.CACHE_DIR, (err) => {})
+fs.mkdir(DIRECTORY_CONSTANTS.TEMP_DIR, (err) => {})
+
 
 export default class App extends React.Component {
   /** This component manages any application state that should persist
@@ -20,7 +26,6 @@ export default class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      investEXE: undefined,
       investList: {},
       recentSessions: [],
       investSettings: {},
@@ -78,7 +83,7 @@ export default class App extends React.Component {
   render() {
     return (
       <InvestJob
-        investEXE={this.props.investEXE} 
+        investExe={this.props.investExe} 
         investList={this.state.investList}
         investSettings={this.state.investSettings}
         recentSessions={this.state.recentSessions}

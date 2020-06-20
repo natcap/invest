@@ -5,36 +5,41 @@ const app = require('electron').app
 const BrowserWindow = require('electron').BrowserWindow
 const fetch = require('node-fetch')
 
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
-let mainWindow;
-
-// If a local registry of available invest installations is present,
-// refer to it for the active version, otherwise default to the
-// invest & server binaries included in this app's installation.
-const investRegistryPath = path.join(
-  app.getPath('userData'), 'invest_registry.json')
-let serverEXE;
-if (fs.existsSync(investRegistryPath)) {
-  const investRegistry = JSON.parse(fs.readFileSync(investRegistryPath))
-  const activeVersion = investRegistry['active']
-  console.log(investRegistry)
-  serverEXE = investRegistry['registry'][activeVersion]['server']
-} else {
-  // TODO: extension on this file is OS-dependent
-  serverEXE = path.join(__dirname, 'invest/server')
-}
-
-
-const isDevMode = process.execPath.match(/[\\/]electron/);
-if (isDevMode) {
+const isDevMode = function() {
+  return process.argv[2] == '--dev'
+};
+if (isDevMode()) {
   // load the '.env' file from the project root
   const dotenv = require('dotenv');
   dotenv.config();  
 }
 
+// Binding to the invest server binary:
+let serverEXE;
+
+// A) look for a local registry of available invest installations
+const investRegistryPath = path.join(
+  app.getPath('userData'), 'invest_registry.json')
+if (fs.existsSync(investRegistryPath)) {
+  const investRegistry = JSON.parse(fs.readFileSync(investRegistryPath))
+  const activeVersion = investRegistry['active']
+  serverEXE = investRegistry['registry'][activeVersion]['server']
+
+// B) check for dev mode and an environment variable from dotenv
+} else if (isDevMode()) {
+  serverEXE = process.env.SERVER
+
+// C) point to binaries included in this app's installation.
+} else {
+  // TODO: extension on this file is OS-dependent
+  serverEXE = path.join(__dirname, 'invest/server')
+}
+
 let PORT = (process.env.PORT || '5000').trim();
 
+// Keep a global reference of the window object, if you don't, the window will
+// be closed automatically when the JavaScript object is garbage collected.
+let mainWindow;
 const createWindow = async () => {
   /** Much of this is electron app boilerplate, but here is also
   * where we fire up the python flask server.
@@ -54,7 +59,7 @@ const createWindow = async () => {
   mainWindow.loadURL(`file://${__dirname}/index.html`);
 
   // Open the DevTools.
-  if (isDevMode) {
+  if (isDevMode()) {
     const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
     await installExtension(REACT_DEVELOPER_TOOLS);
     // enableLiveReload({ strategy: 'react-hmr' });

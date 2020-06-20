@@ -28,11 +28,6 @@ import { Provider } from 'react-redux';
 import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
 const store = createStore(rootReducer)
 
-let gdalEnv = null;
-if (process.env.GDAL_DATA) {
-  gdalEnv = { GDAL_DATA: process.env.GDAL_DATA }
-}
-
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {
   'DEBUG':   '--debug',
@@ -194,7 +189,7 @@ export class InvestJob extends React.Component {
 
     // Write a temporary datastack json for passing as a command-line arg
     const temp_dir = fs.mkdtempSync(path.join(
-      process.cwd(), this.props.directoryConstants.TEMP_DIR, 'data-'))
+      this.props.directoryConstants.TEMP_DIR, 'data-'))
     const datastackPath = path.join(temp_dir, 'datastack.json')
     const _ = await this.argsToJsonFile(datastackPath, argsValues);
 
@@ -202,10 +197,9 @@ export class InvestJob extends React.Component {
     const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
     
     const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
-    const investRun = spawn(this.props.investEXE, cmdArgs, {
+    const investRun = spawn(this.props.investExe, cmdArgs, {
         cwd: process.cwd(),
-        shell: true, // without true, IOError when datastack.py loads json
-        env: gdalEnv
+        shell: true // without true, IOError when datastack.py loads json
       });
 
     
