@@ -340,7 +340,6 @@ def execute(args):
         task_name='zonal_statistics over runoff_retention_volume raster')
 
     damage_per_aoi_stats = None
-    flood_volume_stats = None
     summary_tasks = [
             runoff_retention_stats_task,
             runoff_retention_volume_stats_task]
@@ -369,24 +368,11 @@ def execute(args):
                 reproject_built_infrastructure_task],
             task_name='calculate damage to infrastructure in aoi')
 
-        # Determine flood_volume over the watershed
-        flood_volume_in_aoi_task = task_graph.add_task(
-            func=pygeoprocessing.zonal_statistics,
-            args=(
-                (flood_vol_raster_path, 1),
-                reprojected_aoi_path),
-            dependent_task_list=[flood_vol_task],
-            task_name='zonal_statistics over the flood_volume raster')
-
-        # It isn't strictly necessary for us to append these tasks to
+        # It isn't strictly necessary for us to append this task to
         # ``summary_tasks`` here, since the ``.get()`` calls below will block
         # until those tasks complete.  I'm adding these tasks ere anyways
         # "just in case".
-        summary_tasks += [
-            flood_volume_in_aoi_task,
-            damage_to_infrastructure_in_aoi_task,
-        ]
-        flood_volume_stats = flood_volume_in_aoi_task.get()
+        summary_tasks.append(damage_to_infrastructure_in_aoi_task)
         damage_per_aoi_stats = damage_to_infrastructure_in_aoi_task.get()
 
     summary_vector_path = os.path.join(
@@ -399,7 +385,6 @@ def execute(args):
             'runoff_ret_stats': runoff_retention_stats_task.get(),
             'runoff_ret_vol_stats': runoff_retention_volume_stats_task.get(),
             'damage_per_aoi_stats': damage_per_aoi_stats,
-            'flood_volume_stats': flood_volume_stats,
         },
         target_path_list=[summary_vector_path],
         task_name='write summary stats to flood_risk_service.shp',
@@ -411,8 +396,7 @@ def execute(args):
 
 def _write_summary_vector(
         source_aoi_vector_path, target_vector_path, runoff_ret_stats=None,
-        runoff_ret_vol_stats=None, damage_per_aoi_stats=None,
-        flood_volume_stats=None):
+        runoff_ret_vol_stats=None, damage_per_aoi_stats=None):
 
     source_aoi_vector = gdal.OpenEx(source_aoi_vector_path, gdal.OF_VECTOR)
     source_aoi_layer = source_aoi_vector.GetLayer()
@@ -464,7 +448,7 @@ def _write_summary_vector(
                     runoff_ret_vol_stats[feature_id]['sum']))
 
         if feature_id in damage_per_aoi_stats:
-            pixel_count = flood_volume_stats[feature_id]['count']
+            pixel_count = runoff_ret_vol_stats[feature_id]['count']
             if pixel_count > 0:
                 damage_sum = damage_per_aoi_stats[feature_id]
                 target_feature.SetField(
@@ -565,7 +549,7 @@ def _flood_vol_op(
     """Calculate vol of flood water.
 
     Parmeters:
-        rainfall_depth (float): depth of rainfal in mm.
+        rainfall_depth (float): depth of rainfall in mm.
         q_pi_array (numpy.ndarray): quick flow array.
         q_pi_nodata (float): nodata for q_pi.
         pixel_area (float): area of pixel in m^2.
