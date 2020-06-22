@@ -607,7 +607,7 @@ def _build_affected_vector(
     """
     if damage_table_path is not None and damage_table_path != '':
         damage_type_map = utils.build_lookup_from_csv(
-            damage_table_path, 'type', to_lower=True, warn_if_missing=True)
+            damage_table_path, 'type', to_lower=True)
     else:
         damage_type_map = None
 

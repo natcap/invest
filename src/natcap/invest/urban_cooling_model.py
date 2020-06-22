@@ -298,8 +298,7 @@ def execute(args):
         args['workspace_dir'], 'intermediate')
     utils.make_directories([args['workspace_dir'], intermediate_dir])
     biophysical_lucode_map = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'lucode', to_lower=True,
-        warn_if_missing=True)
+        args['biophysical_table_path'], 'lucode', to_lower=True)
 
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
@@ -949,8 +948,7 @@ def calculate_energy_savings(
     type_field_index = fieldnames.index('type')
 
     energy_consumption_table = utils.build_lookup_from_csv(
-        energy_consumption_table_path, 'type', to_lower=True,
-        warn_if_missing=True)
+        energy_consumption_table_path, 'type', to_lower=True)
 
     target_building_layer.StartTransaction()
     last_time = time.time()

@@ -611,6 +611,52 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4: {'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
+    
+    def test_trailing_comma(self):
+        """utils: test a trailing comma on first line is handled properly."""
+        from natcap.invest import utils
+        csv_text = ("lucode,desc,val1,val2\n"
+                    "1,corn,0.5,2,\n"
+                    "2,bread,1,4\n"
+                    "3,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        result = utils.build_lookup_from_csv(
+            table_path, 'lucode', to_lower=True)
+        
+        expected_result = {
+                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+                2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
+                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+                4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
+
+        self.assertDictEqual(result, expected_result)
+    
+    def test_trailing_comma_second_line(self):
+        """utils: test a trailing comma on second line is handled properly."""
+        from natcap.invest import utils
+        csv_text = ("lucode,desc,val1,val2\n"
+                    "1,corn,0.5,2\n"
+                    "2,bread,1,4,\n"
+                    "3,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        result = utils.build_lookup_from_csv(
+            table_path, 'lucode', to_lower=True)
+        
+        expected_result = {
+                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+                2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
+                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+                4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
+
+        self.assertDictEqual(result, expected_result)
 
     def test_results_lowercase_non_numeric(self):
         """utils: text handling of converting to lowercase."""

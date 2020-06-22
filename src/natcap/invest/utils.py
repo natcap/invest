@@ -431,8 +431,7 @@ def build_file_registry(base_file_path_list, file_suffix):
 
 
 def build_lookup_from_csv(
-        table_path, key_field, column_list=None, to_lower=True, 
-        warn_if_missing=True):
+        table_path, key_field, column_list=None, to_lower=True):
     """Read a CSV table into a dictionary indexed by ``key_field``.
 
     Creates a dictionary from a CSV whose keys are unique entries in the CSV
@@ -453,8 +452,6 @@ def build_lookup_from_csv(
         to_lower (bool): if True, converts all unicode in the CSV,
             including headers and values to lowercase, otherwise uses raw
             string values. default=True.
-        warn_if_missing (bool): If True, warnings are logged if there are
-            NaN holes.
 
     Returns:
         lookup_dict (dict): a dictionary of the form {
@@ -467,8 +464,9 @@ def build_lookup_from_csv(
 
     Raise:
         ValueError
-            If ValueError occurs during read or if ValueError occurs during 
-            conversion to dictionary.
+            If ValueError occurs during conversion to dictionary.
+        KeyError
+            If ``key_field`` is not present during ``set_index`` call.
     """
     # Check if the file encoding is UTF-8 BOM first
     encoding = None
@@ -484,13 +482,11 @@ def build_lookup_from_csv(
     if col_list and key_field not in col_list:
         col_list.append(key_field)
    
-    # InVEST models historically expect that if 'to_lower` is true, case 
-    # handling is done before trying to access the data. Pandas has no way to 
-    # ignore case on read, so we must do a generic read and handle setting the 
-    # index column later.
     table = pandas.read_csv(
-        table_path, sep=None, engine='python', encoding=encoding)
+        table_path, sep=None, index_col=False, engine='python', 
+        encoding=encoding)
 
+    # if 'to_lower`, case handling is done before trying to access the data.
     if to_lower:
         key_field = key_field.lower()
         # lowercase column names
@@ -515,9 +511,9 @@ def build_lookup_from_csv(
     if col_list: 
         table = table.loc[:, col_list] 
 
-    # look for NaN values
+    # look for NaN values and warn if any are found.
     table_na = table.isna()
-    if warn_if_missing and table_na.values.any():
+    if table_na.values.any():
         LOGGER.warning(
             f"Empty or NaN values were found in the table: {table_path}.")
     # look to see if an entire row is NA values
