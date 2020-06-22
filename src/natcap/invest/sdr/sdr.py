@@ -257,8 +257,6 @@ def execute(args):
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
             and >= 1 is number of processes.
-        args['target_pixel_size'] (list): requested target pixel size in
-            local projection coordinate system.
         args['biophysical_table_lucode_field'] (str): optional, if exists
             use this instead of 'lucode'.
 
