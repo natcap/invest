@@ -1,8 +1,6 @@
 """Urban Flood Risk Mitigation model."""
 import logging
 import os
-import time
-import pickle
 
 from osgeo import gdal
 from osgeo import ogr
@@ -283,14 +281,14 @@ def execute(args):
     # calculate runoff retention volumne
     runoff_retention_vol_raster_path = os.path.join(
         args['workspace_dir'], 'Runoff_retention_m3%s.tif' % file_suffix)
-    runoff_retention_ret_vol_task = task_graph.add_task(
+    runoff_retention_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
             (runoff_retention_raster_path, 1),
             (runoff_retention_nodata, 'raw'),
             (float(args['rainfall_depth']), 'raw'),
             (abs(target_pixel_size[0]*target_pixel_size[1]), 'raw'),
-            (runoff_retention_nodata, 'raw')], _runoff_retention_ret_vol_op,
+            (runoff_retention_nodata, 'raw')], _runoff_retention_vol_op,
             runoff_retention_vol_raster_path, gdal.GDT_Float32,
             runoff_retention_nodata),
         target_path_list=[runoff_retention_vol_raster_path],
@@ -338,7 +336,7 @@ def execute(args):
         args=(
             (runoff_retention_vol_raster_path, 1),
             reprojected_aoi_path),
-        dependent_task_list=[runoff_retention_ret_vol_task],
+        dependent_task_list=[runoff_retention_vol_task],
         task_name='zonal_statistics over runoff_retention_volume raster')
 
     damage_per_aoi_stats = None
@@ -578,7 +576,7 @@ def _flood_vol_op(
     return result
 
 
-def _runoff_retention_ret_vol_op(
+def _runoff_retention_vol_op(
         runoff_retention_array, runoff_retention_nodata, p_value,
         cell_area, target_nodata):
     """Calculate peak flow retention as a vol.
