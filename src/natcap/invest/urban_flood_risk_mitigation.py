@@ -374,7 +374,7 @@ def execute(args):
         flood_volume_in_aoi_task = task_graph.add_task(
             func=pygeoprocessing.zonal_statistics,
             args=(
-                (runoff_retention_raster_path, 1),
+                (flood_vol_raster_path, 1),
                 reprojected_aoi_path),
             dependent_task_list=[flood_vol_task],
             task_name='zonal_statistics over the flood_volume raster')
