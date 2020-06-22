@@ -1446,7 +1446,7 @@ def _validate_same_projection(base_vector_path, table_path):
     Parameters:
         base_vector_path (string): path to a GIS vector
         table_path (string): path to a csv table that has at least
-            the fields 'id' and 'path' 
+            the field 'path' 
 
     Returns:
         None
