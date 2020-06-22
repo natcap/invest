@@ -4,11 +4,14 @@
 Unreleased Changes
 ------------------
 * General
-    * Fix bug in ``utils.build_lookup_from_csv`` that was not allowing 
-      ``key_field`` in anything other than the first column.
+    * Fix bug in ``utils.build_lookup_from_csv`` that was allowing 
+      ``key_field`` to be non unique and overwriting values.
+    * Fix bug in ``utils.build_lookup_from_csv`` where trailing commas caused
+      returned values to be malformed.
     * Add optional argument ``column_list`` to ``utils.build_lookup_from_csv``
       that takes a list of column names and only returns those in the 
       dictionary.
+    * Remove ``warn_if_missing`` argument and warn by default. 
 * Scenic Quality
     * Fixing an issue in Scenic Quality where the creation of the weighted sum
       of visibility rasters could cause "Too Many Open Files" errors and/or
