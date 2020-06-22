@@ -1,8 +1,17 @@
+.navbar {
+	padding-bottom: 0;
+}
+
 .navbar-light .navbar-nav .nav-link{
     color: blue;
     font-size: 1.3rem;
     padding-right: 2rem;
     padding-left: 2rem;
+}
+
+.tab-content {
+	padding-left: 2rem;
+	padding-right: 2rem;
 }
 
 /* Default sized Radio buttons are too small */
@@ -13,6 +22,12 @@ input[type=radio]{
 }
 
 /* HomeTab styles */
+
+.invest-button {
+	color: #148F68;
+	font-weight: 600;
+}
+
 .session-card-group {
 	display: flex;
 	flex-wrap: wrap;
@@ -40,6 +55,7 @@ input[type=radio]{
 	color: white;
 	font-weight: 700;
 	padding-left: 1.25rem;
+	filter: opacity(0.75);
 }
 .card-title {
 	padding-top: 1rem;
@@ -50,6 +66,19 @@ input[type=radio]{
 }
 
 /* SetupTab styles */
+
+.setup-tab-footer {
+	padding-left: 2rem;
+	padding-right: 2rem;
+	padding-top: 1rem;
+	padding-bottom: 1rem;
+}
+
+.args-form {
+	height: 85vh;
+	overflow-y: auto;
+	overflow-x: hidden;
+}
 
 .arg-group {
 	margin-top: 2.0rem;
