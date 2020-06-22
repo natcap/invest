@@ -368,7 +368,6 @@ def execute(args):
                 reprojected_aoi_task,
                 reproject_built_infrastructure_task],
             task_name='calculate damage to infrastructure in aoi')
-        summary_tasks.append(damage_to_infrastructure_in_aoi_task)
 
         # Determine flood_volume over the watershed
         flood_volume_in_aoi_task = task_graph.add_task(
@@ -378,6 +377,15 @@ def execute(args):
                 reprojected_aoi_path),
             dependent_task_list=[flood_vol_task],
             task_name='zonal_statistics over the flood_volume raster')
+
+        # It isn't strictly necessary for us to append these tasks to
+        # ``summary_tasks`` here, since the ``.get()`` calls below will block
+        # until those tasks complete.  I'm adding these tasks ere anyways
+        # "just in case".
+        summary_tasks += [
+            flood_volume_in_aoi_task,
+            damage_to_infrastructure_in_aoi_task,
+        ]
         flood_volume_stats = flood_volume_in_aoi_task.get()
         damage_per_aoi_stats = damage_to_infrastructure_in_aoi_task.get()
 
