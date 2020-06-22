@@ -451,6 +451,7 @@ def _write_summary_vector(
             pixel_count = runoff_ret_vol_stats[feature_id]['count']
             if pixel_count > 0:
                 damage_sum = damage_per_aoi_stats[feature_id]
+                target_feature.SetField('aff_bld', damage_sum)
                 target_feature.SetField(
                     'serv_bld', damage_sum * float(
                         runoff_ret_vol_stats[feature_id]['sum']))
