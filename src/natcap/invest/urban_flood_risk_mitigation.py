@@ -401,7 +401,45 @@ def execute(args):
 def _write_summary_vector(
         source_aoi_vector_path, target_vector_path, runoff_ret_stats=None,
         runoff_ret_vol_stats=None, damage_per_aoi_stats=None):
+    """Write a vector with summary statistics.
 
+    This vector will always contain two fields::
+
+        * ``'rnf_rt_idx'``: Average of runoff retention values per watershed
+        * ``'rnf_rt_m3'``: Sum of runoff retention volumes, in m3,
+          per watershed.
+
+    If ``damage_per_aoi_stats`` is provided, then two additional columns will
+    be written to the vector::
+
+        * ``'aff_bld'``: Potential damage to built infrastructure in $,
+          per watershed.
+        * ``'serv_bld'``: Spatial indicator of the importance of the runoff
+          retention service (product of potential damage to built
+          infrastructure by runoff retention)
+
+    Args:
+        source_aoi_vector_path (str): The path to a GDAL vector that exists on
+            disk.
+        target_vector_path (str): The path to a vector that will be
+            created.  If a file already exists at this path, it will be deleted
+            before the new file is created.  This filepath must end with the
+            extension ``.shp``, as the file created will be an ESRI Shapefile.
+        runoff_ret_stats=None (None or dict): A dict representing summary
+            statistics of the runoff raster. If provided, it must be a
+            dictionary mapping feature IDs from ``source_aoi_vector_path`` to
+            dicts with ``'count'`` and ``'sum'`` keys.
+        runoff_ret_vol_stats=None (None or dict): A dict representing summary
+            statistics of the runoff volume raster. If provided, it must be a
+            dictionary mapping feature IDs from ``source_aoi_vector_path`` to
+            dicts with ``'count'`` and ``'sum'`` keys.
+        damage_per_aoi_stats=None (None or dict): A dict mapping feature IDs
+            from ``source_aoi_vector_path`` to float values representing the
+            total damage to built infrastructure in that watershed.
+
+    Returns:
+        ``None``
+    """
     source_aoi_vector = gdal.OpenEx(source_aoi_vector_path, gdal.OF_VECTOR)
     source_aoi_layer = source_aoi_vector.GetLayer()
     source_geom_type = source_aoi_layer.GetGeomType()
