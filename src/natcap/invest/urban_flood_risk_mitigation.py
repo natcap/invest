@@ -152,6 +152,10 @@ def execute(args):
         None.
 
     """
+    invalid_parameters = validate(args)
+    if invalid_parameters:
+        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
+
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     temporary_working_dir = os.path.join(
@@ -489,14 +493,16 @@ def _calculate_damage_to_infrastructure_in_aoi(
         structures_damage_table, 'type', to_lower=True, warn_if_missing=True)
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
-    for field_name in ['type', 'Type', 'TYPE']:
-        type_index = infrastructure_layer_defn.GetFieldIndex(field_name)
-        if type_index != -1:
+    type_index = -1
+    for field_defn in infrastructure_layer.schema:
+        field_name = field_defn.GetName()
+        if field_name.lower() == 'type':
+            type_index = infrastructure_layer_defn.GetFieldIndex(field_name)
             break
+
     if type_index == -1:
         raise ValueError(
-            "Could not find field 'Type' in %s",
-            structures_vector_path)
+            "Could not find field 'Type' in %s" % structures_vector_path)
 
     structures_index = rtree.index.Index(interleaved=True)
     for infrastructure_feature in infrastructure_layer:

@@ -148,6 +148,13 @@ class UFRMTests(unittest.TestCase):
                 'Check that the Soil Group raster does not contain')
             self.assertTrue(expected_message in actual_message)
 
+    def test_ufrm_invalid_validation(self):
+        """UFRM: assert validation error on bad args."""
+        from natcap.invest import urban_flood_risk_mitigation
+
+        with self.assertRaises(ValueError):
+            urban_flood_risk_mitigation.execute({})
+
     def test_validate(self):
         """UFRM: test validate function."""
         from natcap.invest import urban_flood_risk_mitigation
