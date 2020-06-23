@@ -22,6 +22,7 @@ import shapely.prepared
 import pygeoprocessing
 import numpy
 import numpy.linalg
+import pandas
 import shapely.speedups
 import taskgraph
 
@@ -1445,7 +1446,7 @@ def _validate_same_projection(base_vector_path, table_path):
     Parameters:
         base_vector_path (string): path to a GIS vector
         table_path (string): path to a csv table that has at least
-            the field 'path'
+            the field 'path' 
 
     Returns:
         None
@@ -1455,10 +1456,10 @@ def _validate_same_projection(base_vector_path, table_path):
             are not identical to the projection in base_vector_path
 
     """
-    # This will load the table as paths which we can iterate through without
-    # bothering the rest of the table structure
-    data_paths = utils.build_lookup_from_csv(
-        table_path, 'path')
+    # This will load the table as a list paths which we can iterate through 
+    # without bothering the rest of the table structure
+    data_paths = pandas.read_csv(
+        table_path, squeeze=True, usecols=['path']).tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()

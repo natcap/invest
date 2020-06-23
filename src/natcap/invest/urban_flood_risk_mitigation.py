@@ -528,7 +528,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
     infrastructure_layer = infrastructure_vector.GetLayer()
 
     damage_type_map = utils.build_lookup_from_csv(
-        structures_damage_table, 'type', to_lower=True, warn_if_missing=True)
+        structures_damage_table, 'type', to_lower=True)
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
     type_index = -1
