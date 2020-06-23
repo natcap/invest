@@ -160,7 +160,7 @@ def _calculate_args_bounding_box(args_dict):
 
                 local_bb = [0., 0., 0., 0.]
                 local_bb = spatial_info['bounding_box']
-                projection_wkt = spatial_info['projection']
+                projection_wkt = spatial_info['projection_wkt']
                 spatial_ref = osr.SpatialReference()
                 spatial_ref.ImportFromWkt(projection_wkt)
 
@@ -170,7 +170,7 @@ def _calculate_args_bounding_box(args_dict):
                     # lat/lng
                     lat_lng_ref = osr.SpatialReference()
                     lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
-                    to_lat_trans = osr.CoordinateTransformation(
+                    to_lat_trans = utils.create_coordinate_transformer(
                         spatial_ref, lat_lng_ref)
                     for point_index in [0, 2]:
                         local_bb[point_index], local_bb[point_index + 1], _ = (

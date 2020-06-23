@@ -256,7 +256,7 @@ def execute(args):
     reprojected_aoi_task = graph.add_task(
         pygeoprocessing.reproject_vector,
         args=(args['aoi_path'],
-              dem_raster_info['projection'],
+              dem_raster_info['projection_wkt'],
               file_registry['aoi_reprojected']),
         target_path_list=[file_registry['aoi_reprojected']],
         task_name='reproject_aoi_to_dem')
@@ -264,7 +264,7 @@ def execute(args):
     reprojected_viewpoints_task = graph.add_task(
         pygeoprocessing.reproject_vector,
         args=(args['structure_path'],
-              dem_raster_info['projection'],
+              dem_raster_info['projection_wkt'],
               file_registry['structures_reprojected']),
         target_path_list=[file_registry['structures_reprojected']],
         task_name='reproject_structures_to_dem')
@@ -758,7 +758,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
     # convert the distance transform to meters
     spatial_reference = osr.SpatialReference()
-    spatial_reference.ImportFromWkt(vis_raster_info['projection'])
+    spatial_reference.ImportFromWkt(vis_raster_info['projection_wkt'])
     linear_units = spatial_reference.GetLinearUnits()
     pixel_size_in_m = utils.mean_pixel_size_and_area(
         vis_raster_info['pixel_size'])[0] * linear_units

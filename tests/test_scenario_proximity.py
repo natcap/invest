@@ -5,7 +5,6 @@ import shutil
 import os
 
 import pandas
-import pygeoprocessing.testing
 
 TEST_DATA_DIR = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -27,8 +26,7 @@ class ScenarioProximityTests(unittest.TestCase):
 
     @staticmethod
     def generate_base_args(workspace_dir):
-        """Generate an args list that is consistent across all three regression
-        tests"""
+        """Generate an args list consistent across all regression tests."""
         args = {
             'aoi_path': os.path.join(
                 TEST_DATA_DIR, 'input', 'scenario_proximity_aoi.gpkg'),
@@ -87,11 +85,11 @@ class ScenarioProximityTests(unittest.TestCase):
                 TEST_DATA_DIR, 'expected_file_list_farthest.txt'),
             args['workspace_dir'])
 
-        pygeoprocessing.testing.assertions.assert_csv_equal(
-            os.path.join(self.workspace_dir, 'farthest_from_edge.csv'),
-            os.path.join(
-                TEST_DATA_DIR, 'farthest_from_edge_farthest.csv'),
-            rel_tol=1e-6)
+        model_df = pandas.read_csv(
+            os.path.join(self.workspace_dir, 'farthest_from_edge.csv'))
+        reg_df = pandas.read_csv(
+            os.path.join(TEST_DATA_DIR, 'farthest_from_edge_farthest.csv'))
+        pandas.testing.assert_frame_equal(model_df, reg_df)
 
     def test_scenario_gen_no_scenario(self):
         """Scenario Gen Proximity: no scenario should raise an exception."""
@@ -109,7 +107,7 @@ class ScenarioProximityTests(unittest.TestCase):
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
 
-        Parameters:
+        Args:
             base_list_path (string): a path to a file that has one relative
                 file path per line.
             directory_path (string): a path to a directory whose contents will
@@ -140,6 +138,7 @@ class ScenarioGenValidationTests(unittest.TestCase):
     """Tests for the Scenario Generator ARGS_SPEC and validation."""
 
     def setUp(self):
+        """Initiate list of required keys."""
         self.base_required_keys = [
             'focal_landcover_codes',
             'replacment_lucode',
@@ -157,7 +156,8 @@ class ScenarioGenValidationTests(unittest.TestCase):
         from natcap.invest import scenario_gen_proximity
         from natcap.invest import validation
 
-        validation_errors = scenario_gen_proximity.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = scenario_gen_proximity.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(self.base_required_keys)
         self.assertEqual(invalid_keys, expected_missing_keys)
@@ -169,7 +169,8 @@ class ScenarioGenValidationTests(unittest.TestCase):
         validation_errors = scenario_gen_proximity.validate(
             {'convert_nearest_to_edge': False,
              'convert_farthest_from_edge': False})
-        expected_message = 'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" must be selected'
+        expected_message = ('One or more of "convert_nearest_to_edge" or'
+                            ' "convert_farthest_from_edge" must be selected')
         actual_messages = set()
         for keys, error_strings in validation_errors:
             actual_messages.add(error_strings)
