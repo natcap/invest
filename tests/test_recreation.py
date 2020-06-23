@@ -14,8 +14,6 @@ import json
 import queue
 
 import Pyro4
-import pygeoprocessing
-import pygeoprocessing.testing
 import numpy
 import pandas
 from osgeo import gdal
@@ -72,7 +70,7 @@ def _timeout(max_timeout):
 def _make_empty_files(base_file_list):
     """Create a list of empty files.
 
-    Parameters:
+    Args:
         base_file_list: a list of paths to empty files to be created.
 
     Returns:
@@ -87,7 +85,7 @@ def _make_empty_files(base_file_list):
 def _resample_csv(base_csv_path, base_dst_path, resample_factor):
     """Resample (downsize) a csv file by a certain resample factor.
 
-    Parameters:
+    Args:
         base_csv_path (str): path to the source csv file to be resampled.
         base_dst_path (str): path to the destination csv file.
         resample_factor (int): the factor used to determined how many rows
@@ -157,8 +155,8 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
         file_hash = recmodel_server._hashfile(
             self.resampled_data_path, blocksize=2**20, fast_hash=False)
-        # The exact encoded string that is hashed is dependent on python version,
-        # with Python 3 including b prefix and \n suffix.
+        # The exact encoded string that is hashed is dependent on python
+        # version, with Python 3 including b prefix and \n suffix.
         # these hashes are for [py2.7, py3.6]
         self.assertIn(file_hash, ['c052e7a0a4c5e528', 'c8054b109d7a9d2a'])
 
@@ -260,9 +258,9 @@ class TestRecServer(unittest.TestCase):
             self.workspace_dir, workspace_id + '.zip')
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(
             out_workspace_dir)
-        pygeoprocessing.testing.assert_vectors_equal(
+        utils._assert_vectors_equal(
             aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1E-6)
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
     @_timeout(30.0)
     def test_empty_server(self):
@@ -354,8 +352,7 @@ class TestRecServer(unittest.TestCase):
             self.workspace_dir, out_vector_filename)
         expected_vector_path = os.path.join(
             REGRESSION_DATA, 'test_aoi_for_subset_pud.shp')
-        pygeoprocessing.testing.assert_vectors_equal(
-            expected_vector_path, result_vector_path, 1E-6)
+        utils._assert_vectors_equal(expected_vector_path, result_vector_path)
 
         # ensure the remote workspace is as expected
         workspace_zip_binary = recreation_server.fetch_workspace_aoi(
@@ -365,9 +362,9 @@ class TestRecServer(unittest.TestCase):
         workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
         open(workspace_zip_path, 'wb').write(workspace_zip_binary)
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
-        pygeoprocessing.testing.assert_vectors_equal(
+        utils._assert_vectors_equal(
             aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1E-6)
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
     def test_local_calc_poly_pud(self):
         """Recreation test single threaded local PUD calculation."""
@@ -508,7 +505,8 @@ class TestRecServer(unittest.TestCase):
         Executes Recreation model all the way through scenario prediction.
         With this 'extra_fields_features' AOI, we also cover two edge cases:
         1) the AOI has a pre-existing field that the model wishes to create.
-        2) the AOI has features only covering nodata raster predictor values."""
+        2) the AOI has features only covering nodata raster predictor values.
+        """
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
@@ -558,15 +556,15 @@ class TestRecServer(unittest.TestCase):
             args['workspace_dir'], 'predictor_data.shp')
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'predictor_data_all_metrics.shp')
-        _assert_vector_attributes_eq(
-            out_grid_vector_path, expected_grid_vector_path, 3)
+        utils._assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path, 1e-3)
 
         out_scenario_path = os.path.join(
             args['workspace_dir'], 'scenario_results.shp')
         expected_scenario_path = os.path.join(
             REGRESSION_DATA, 'scenario_results_all_metrics.shp')
-        _assert_vector_attributes_eq(
-            out_scenario_path, expected_scenario_path, 3)
+        utils._assert_vectors_equal(
+            out_scenario_path, expected_scenario_path, 1e-3)
 
     def test_results_suffix_on_serverside_files(self):
         """Recreation test suffix gets added to files created on server."""
@@ -844,8 +842,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'square_grid_vector_path.shp')
 
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 1E-6)
+        utils._assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path)
 
     def test_hex_grid_regression(self):
         """Recreation hex grid regression test."""
@@ -861,8 +859,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 1E-6)
+        utils._assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path)
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_no_grid_regression(self):
@@ -927,8 +925,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 1E-6)
+        utils._assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path)
 
     def test_existing_regression_coef(self):
         """Recreation test regression coefficients handle existing output."""
@@ -950,7 +948,8 @@ class RecreationRegressionTests(unittest.TestCase):
         predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
 
         # make outputs to be overwritten
-        predictor_dict = utils.build_lookup_from_csv(predictor_table_path, 'id')
+        predictor_dict = utils.build_lookup_from_csv(
+            predictor_table_path, 'id')
         predictor_list = predictor_dict.keys()
         tmp_working_dir = tempfile.mkdtemp(dir=self.workspace_dir)
         empty_json_list = [
@@ -975,8 +974,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_coeff_vector_path = os.path.join(
             REGRESSION_DATA, 'test_regression_coefficients.shp')
 
-        _assert_vector_attributes_eq(
-            out_coefficient_vector_path, expected_coeff_vector_path, 6)
+        utils._assert_vectors_equal(
+            out_coefficient_vector_path, expected_coeff_vector_path, 1e-6)
 
     def test_predictor_table_absolute_paths(self):
         """Recreation test validation from full path."""
@@ -1015,8 +1014,8 @@ class RecreationRegressionTests(unittest.TestCase):
         # The expected behavior here is that _validate_same_projection does
         # not raise a ValueError.  The try/except block makes that explicit
         # and also explicitly fails the test if it does. Note if a different
-        # exception is raised the test will raise an error, thus differentiating
-        # between a failed test and an error.
+        # exception is raised the test will raise an error, thus
+        # differentiating between a failed test and an error.
         try:
             recmodel_client._validate_same_projection(
                 response_vector_path, predictor_table_path)
@@ -1156,7 +1155,8 @@ class RecreationValidationTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest import validation
 
-        validation_errors = recmodel_client.validate({'compute_regression': True})
+        validation_errors = recmodel_client.validate(
+            {'compute_regression': True})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys + ['predictor_table_path'])
@@ -1171,7 +1171,8 @@ class RecreationValidationTests(unittest.TestCase):
             file.write('foo,bar,baz\n')
             file.write('a,b,c\n')
 
-        expected_message = "Fields are missing from this table: ['ID', 'PATH', 'TYPE']"
+        expected_message = ("Fields are missing from this table: "
+                            "['ID', 'PATH', 'TYPE']")
         validation_warnings = recmodel_client.validate(
             {'predictor_table_path': table_path})
         actual_messages = set()
@@ -1187,50 +1188,12 @@ class RecreationValidationTests(unittest.TestCase):
         self.assertTrue(expected_message in actual_messages)
 
 
-def _assert_vector_attributes_eq(
-        actual_vector_path, expected_vector_path, tolerance_places=3):
-    """Assert fieldnames and values are equal with no respect to order."""
-    try:
-        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
-        actual_layer = actual_vector.GetLayer()
-        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
-        expected_layer = expected_vector.GetLayer()
-
-        assert(
-            actual_layer.GetFeatureCount() == expected_layer.GetFeatureCount())
-
-        field_names = [field.name for field in expected_layer.schema]
-        for feature in expected_layer:
-            fid = feature.GetFID()
-            expected_values = [
-                feature.GetField(field) for field in field_names]
-
-            actual_feature = actual_layer.GetFeature(fid)
-            actual_values = [
-                actual_feature.GetField(field) for field in field_names]
-
-            for av, ev in zip(actual_values, expected_values):
-                if av is not None:
-                    numpy.testing.assert_almost_equal(
-                        av, ev, decimal=tolerance_places)
-                else:
-                    # Could happen when a raster predictor is only nodata
-                    assert(ev is None)
-            feature = None
-            actual_feature = None
-    finally:
-        actual_layer = None
-        actual_vector = None
-        expected_layer = None
-        expected_vector = None
-
-
 def _assert_regression_results_eq(
         workspace_dir, file_list_path, result_vector_path,
         expected_results_path):
     """Test workspace against the expected list of files and results.
 
-    Parameters:
+    Args:
         workspace_dir (string): path to the completed model workspace
         file_list_path (string): path to a file that has a list of all
             the expected files relative to the workspace base
@@ -1284,7 +1247,7 @@ def _assert_regression_results_eq(
 def _test_same_files(base_list_path, directory_path):
     """Assert expected files are in the `directory_path`.
 
-    Parameters:
+    Args:
         base_list_path (string): a path to a file that has one relative
             file path per line.
         directory_path (string): a path to a directory whose contents will

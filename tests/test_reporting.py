@@ -5,9 +5,8 @@ import shutil
 import os
 import codecs
 import itertools
+import filecmp
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'reporting')
@@ -75,12 +74,12 @@ class ReportingRegressionTests(unittest.TestCase):
 
         reporting.generate_report(args)
 
-        pygeoprocessing.testing.assert_text_equal(
+        self.assertTrue(filecmp.cmp(
             args['out_uri'],
             os.path.join(
-                REGRESSION_DATA, 'html_reports', 'report_csv_style.html'))
+                REGRESSION_DATA, 'html_reports', 'report_csv_style.html'),
+            shallow=False))
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_dict_script(self):
         """Reporting: test full report w/ dict table data and script file."""
         from natcap.invest import reporting
@@ -118,36 +117,6 @@ class ReportingRegressionTests(unittest.TestCase):
             # Strip trailing newlines.
             self.assertEqual(source_line.rstrip(), regression_line.rstrip())
 
-    @unittest.skip("skipping due to different number truncation in py36 and py27")
-    def test_generate_report_shape_json(self):
-        """Reporting: testing full report w/ shape table data and json file."""
-        from natcap.invest import reporting
-
-        workspace_dir = self.workspace_dir
-        workspace_dir = 'C:/Users/dmf/projects/invest_dev/py36_compatibility/reporting'
-        args = ReportingRegressionTests.generate_base_args()
-
-        shape_path = os.path.join(
-            REGRESSION_DATA, 'sample_input', 'sample_shape.shp')
-        json_data = "{'key': 0, 'data': {'door' : 1, 'room': 'kitchen'}}"
-
-        args['out_uri'] = os.path.join(
-            workspace_dir, 'report_shape_json.html')
-        args['elements'][0]['data_type'] = 'shapefile'
-        args['elements'][0]['data'] = shape_path
-        args['elements'][0]['key'] = 'ws_id'
-        args['elements'][1]['format'] = 'json'
-        args['elements'][1]['data_src'] = json_data
-        args['elements'][1]['input_type'] = 'Text'
-
-        reporting.generate_report(args)
-        print(args['out_uri'])
-        pygeoprocessing.testing.assert_text_equal(
-            args['out_uri'],
-            os.path.join(
-                REGRESSION_DATA, 'html_reports', 'report_shape_json.html'))
-
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_tags_error(self):
         """Reporting: testing module raises excpetion on included tags."""
         from natcap.invest import reporting
@@ -171,7 +140,6 @@ class ReportingRegressionTests(unittest.TestCase):
 
         self.assertRaises(Exception, reporting.generate_report, args)
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_head_error(self):
         """Reporting: test report raises exception on unknown head type."""
         from natcap.invest import reporting
@@ -193,7 +161,6 @@ class ReportingRegressionTests(unittest.TestCase):
 
         self.assertRaises(Exception, reporting.generate_report, args)
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_generate_report_remove_output(self):
         """Reporting: test full report removes html output if exists."""
         from natcap.invest import reporting
@@ -233,7 +200,6 @@ class ReportingRegressionTests(unittest.TestCase):
             # Strip trailing newlines.
             self.assertEqual(source_line.rstrip(), regression_line.rstrip())
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_table_generator_attributes(self):
         """Reporting: testing table generator with table attributes."""
         from natcap.invest.reporting import table_generator
@@ -269,7 +235,6 @@ class ReportingRegressionTests(unittest.TestCase):
 
         self.assertEqual(result_str, regression_str)
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_table_generator_no_attributes(self):
         """Reporting: testing table generator without table attributes."""
         from natcap.invest.reporting import table_generator
@@ -304,7 +269,6 @@ class ReportingRegressionTests(unittest.TestCase):
 
         self.assertEqual(result_str, regression_str)
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_table_generator_no_checkbox(self):
         """Reporting: testing table generator without checkbox column."""
         from natcap.invest.reporting import table_generator
@@ -337,7 +301,6 @@ class ReportingRegressionTests(unittest.TestCase):
 
         self.assertEqual(result_str, regression_str)
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_table_generator_no_td_classes(self):
         """Reporting: testing table generator without table data classes."""
         from natcap.invest.reporting import table_generator
@@ -372,7 +335,6 @@ class ReportingRegressionTests(unittest.TestCase):
 
         self.assertEqual(result_str, regression_str)
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_table_generator_no_col_attrs(self):
         """Reporting: testing table generator without column attributes."""
         from natcap.invest.reporting import table_generator
@@ -405,7 +367,6 @@ class ReportingRegressionTests(unittest.TestCase):
 
         self.assertEqual(result_str, regression_str)
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_table_generator_no_totals(self):
         """Reporting: testing table generator without totals."""
         from natcap.invest.reporting import table_generator

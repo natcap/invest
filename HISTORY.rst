@@ -1,10 +1,48 @@
-.. :changelog:
-
-
 ..
-Unreleased Changes
-------------------
-  * Refactor of Habitat Quality that implements TaskGraph and the following:
+  Changes should be grouped for readability.
+
+  InVEST model names:
+  - Carbon
+  - Coastal Blue Carbon
+  - Coastal Vulnerability
+  - Crop Production
+  - Delineateit
+  - Finfish
+  - Fisheries
+  - Forest Carbon Edge Effects
+  - Globio
+  - Habitat Quality
+  - HRA
+  - Annual Water Yield 
+  - NDR
+  - Pollination
+  - Recreation
+  - Routedem
+  - Scenario Generator
+  - Scenic Quality
+  - SDR
+  - Seasonal Water Yield
+  - Urban Cooling
+  - Urban Flood Risk
+  - Wave Energy
+  - Wind Energy
+
+  Everything else:
+  - General
+
+
+.. :changelog:
+Unreleased Changes (3.9)
+------------------------
+* General:
+  * Deprecating GDAL 2 and adding support for GDAL 3.
+  * Adding function in utils.py to handle InVEST coordindate transformations.
+  * Making InVEST compatible with Pygeoprocessing 2.0 by updating: 
+    * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
+    * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to 
+      ``projection_wkt``.
+* Habitat Quality:
+    * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under 
     required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``. 
     * Threat and Sensitivity column names are now case-insensitive.
@@ -21,6 +59,45 @@ Unreleased Changes
     than 1 to 1.
     * Fixing bug that was setting Threat raster values to 1 even if they were 
     floats between 0 and 1.
+    
+Unreleased Changes
+------------------
+* Scenic Quality
+    * Fixing an issue in Scenic Quality where the creation of the weighted sum
+      of visibility rasters could cause "Too Many Open Files" errors and/or
+      ``MemoryError`` when the model is run with many viewpoints.
+    * Progress logging has been added to several loops that may take a longer
+      time when the model is run with thousands of points at a time.
+    * A major part of the model's execution was optimized for speed,
+      particularly when the model is run with many, many points.
+* SDR:
+    * Removed the unused parameter ``args['target_pixel_size']`` from the SDR
+      ``execute`` docstring.
+
+3.8.4 (2020-06-05)
+------------------
+* General:
+    * Advanced the ``Taskgraph`` version requirement to fix a bug where workspace
+      directories created by InVEST versions <=3.8.0 could not be re-used by more
+      recent InVEST versions.
+* NDR:
+    * The Start Menu shortcut on Windows and launcher label on Mac now have
+      consistent labels for NDR: "NDR: Nutrient Delivery Ratio".
+* SDR:
+    * The Start Menu shortcut on Windows and launcher label on Mac now have
+      consistent labels for SDR: "SDR: Sediment Delivery Ratio".
+
+3.8.3 (2020-05-29)
+------------------
+* sdr
+  * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
+    available standard C library definition. This new definition helps to avoid
+    some compiler issues on Windows.
+
+3.8.2 (2020-05-15)
+------------------
+* InVEST's CSV encoding requirements are now described in the validation
+  error message displayed when a CSV cannot be opened.
 
 3.8.1 (2020-05-08)
 ------------------

@@ -25,7 +25,8 @@ echo "" >> $RELEASE_MESSAGE_RST_FILE  # extra line to clarify we're starting a b
 # The tail +3 cuts off the version string and underline of the title.
 sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3 >> $RELEASE_MESSAGE_RST_FILE
 
+# markdown_strict is needed for proper formatting in github issue text.
 pandoc \
     --from rst \
-    --to markdown \
+    --to markdown_strict \
     $RELEASE_MESSAGE_RST_FILE

@@ -5,7 +5,8 @@ import shutil
 import os
 
 import pandas
-import pygeoprocessing.testing
+import numpy
+import pygeoprocessing
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower',
@@ -18,7 +19,7 @@ class HydropowerTests(unittest.TestCase):
     """Regression Tests for Annual Water Yield Hydropower Model."""
 
     def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
+        """Overriding setUp func. to create temporary workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
@@ -77,6 +78,7 @@ class HydropowerTests(unittest.TestCase):
     def test_water_yield_subshed(self):
         """Hydro: testing water yield component only w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import utils
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
         args['sub_watersheds_path'] = os.path.join(
@@ -86,21 +88,22 @@ class HydropowerTests(unittest.TestCase):
 
         raster_results = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
+            model_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(
-                    args['workspace_dir'], 'output', 'per_pixel', raster_path),
+                    args['workspace_dir'], 'output', 'per_pixel', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(
-                    REGRESSION_DATA, raster_path.replace('_test', '')),
-                1e-6)
+                    REGRESSION_DATA, raster_path.replace('_test', '')))
+            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-03)
 
         vector_results = ['watershed_results_wyield_test.shp',
                           'subwatershed_results_wyield_test.shp']
         for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
+            utils._assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(
                     REGRESSION_DATA, 'water_yield', vector_path.replace(
-                        '_test', '')), 1e-3)
+                        '_test', '')))
 
         table_results = ['watershed_results_wyield_test.csv',
                          'subwatershed_results_wyield_test.csv']
@@ -116,6 +119,7 @@ class HydropowerTests(unittest.TestCase):
     def test_scarcity_subshed(self):
         """Hydro: testing Scarcity component w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import utils
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
         args['demand_table_path'] = os.path.join(
@@ -127,19 +131,19 @@ class HydropowerTests(unittest.TestCase):
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
+            model_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(
-                    args['workspace_dir'], 'output', 'per_pixel', raster_path),
-                os.path.join(REGRESSION_DATA, raster_path),
-                1e-6)
+                    args['workspace_dir'], 'output', 'per_pixel', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-03)
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
         for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
+            utils._assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'scarcity', vector_path),
-                1e-3)
+                os.path.join(REGRESSION_DATA, 'scarcity', vector_path))
 
         table_results = ['watershed_results_wyield.csv',
                          'subwatershed_results_wyield.csv']
@@ -153,6 +157,7 @@ class HydropowerTests(unittest.TestCase):
     def test_valuation_subshed(self):
         """Hydro: testing Valuation component w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import utils
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
         args['demand_table_path'] = os.path.join(
@@ -166,19 +171,19 @@ class HydropowerTests(unittest.TestCase):
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
+            model_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(
-                    args['workspace_dir'], 'output', 'per_pixel',
-                    raster_path), os.path.join(REGRESSION_DATA, raster_path),
-                1e-6)
+                    args['workspace_dir'], 'output', 'per_pixel', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array, 1e-03)
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
         for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
+            utils._assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'valuation', vector_path),
-                1e-3)
+                os.path.join(REGRESSION_DATA, 'valuation', vector_path))
 
         table_results = ['watershed_results_wyield.csv',
                          'subwatershed_results_wyield.csv']

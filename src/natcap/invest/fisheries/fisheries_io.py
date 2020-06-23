@@ -5,11 +5,11 @@ The Fisheries IO module contains functions for handling inputs and outputs
 import logging
 import os
 import csv
+import math
 
 import numpy
 from osgeo import ogr
 from osgeo import gdal
-import pygeoprocessing.testing
 
 from .. import reporting
 from .. import utils
@@ -271,9 +271,8 @@ def read_population_csv(args, path):
                 "Region vector shapes do not match. %s" % path)
 
     # Check that information is correct
-    assert pygeoprocessing.testing.isclose(
-        pop_dict['Larvaldispersal'].sum(), 1), (
-            "The Larvaldisperal vector does not sum exactly to one.. %s" % path)
+    assert math.isclose(pop_dict['Larvaldispersal'].sum(), 1), (
+            f"The Larvaldisperal vector does not sum exactly to one.. {path}")
 
     # Check that certain attributes have fraction elements
     Frac_Vectors = ['Survnaturalfrac', 'Vulnfishing',

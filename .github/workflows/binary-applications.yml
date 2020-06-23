@@ -203,7 +203,7 @@ jobs:
               shell: bash -l {0}
               run: |
                   make install
-                  make mac_zipfile userguide
+                  make mac_zipfile
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
@@ -217,6 +217,7 @@ jobs:
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
+              shell: bash -l {0}  # needed for conda activation
               run: make deploy
 
             - name: Upload binaries artifact
@@ -332,6 +333,6 @@ jobs:
                         hub release edit -a $FILE -m "" ${GITHUB_REF:10}
                     done
                     set +x
-                else:
+                else
                     echo "Release for ${GITHUB_REF:10} not found; skipping binary upload"
                 fi
