@@ -4,6 +4,6 @@ export const remote = {
 		showSaveDialog: jest.fn()
 	},
 	app: {
-		getPath: jest.fn()
+		getPath: jest.fn().mockImplementation(() => '../tests/data/foo')
 	}
 }

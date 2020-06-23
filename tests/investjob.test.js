@@ -9,16 +9,12 @@ import '@testing-library/jest-dom';
 
 import { InvestJob } from '../src/InvestJob';
 import { SetupTab } from '../src/components/SetupTab';
-import SAMPLE_SPEC from './data/carbon_args_spec.json';
 import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation, fetchDatastackFromFile } from '../src/server_requests';
 jest.mock('../src/server_requests');
+import { directories } from '../src/constants';
+import SAMPLE_SPEC from './data/carbon_args_spec.json';
 
-const DIRECTORY_CONSTANTS = {
-  CACHE_DIR: 'tests/data/testing-cache',
-  TEMP_DIR: 'tests/data/testing-tmp',
-  INVEST_UI_DATA: 'tests/data/testing-ui_data'
-}
 
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
 const MOCK_RECENT_SESSIONS_VALUE = 
@@ -51,7 +47,7 @@ function renderInvestJob() {
       recentSessions={MOCK_RECENT_SESSIONS_VALUE}
       updateRecentSessions={() => {}}
       saveSettings={() => {}}
-      directoryConstants={DIRECTORY_CONSTANTS}
+      directoryConstants={directories}
     />);
   return { getByText, getByLabelText, utils }
 }

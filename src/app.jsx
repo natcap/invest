@@ -1,8 +1,7 @@
-import path from 'path';
 import fs from 'fs';
 import React from 'react';
 import PropTypes from 'prop-types';
-import { remote } from 'electron';
+// import { remote } from 'electron';
 
 import { InvestJob } from './InvestJob';
 import { getInvestList, getFlaskIsReady } from './server_requests';
