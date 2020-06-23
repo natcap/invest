@@ -3,9 +3,11 @@ import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import Table from 'react-bootstrap/Table';
 import CardGroup from 'react-bootstrap/CardGroup';
 import Card from 'react-bootstrap/Card';
 import Spinner from 'react-bootstrap/Spinner';
+import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
@@ -20,7 +22,7 @@ import Row from 'react-bootstrap/Row';
 const STATUS_COLOR_MAP = {
   running: 'rgba(23, 162, 184, 0.7)',
   error: 'rgba(220, 53, 69, 0.7)',
-  success: 'rgba(40, 167, 69, 0.7)'
+  success: '#148F68' // invest green
 }
 
 export class HomeTab extends React.PureComponent {
@@ -43,23 +45,29 @@ export class HomeTab extends React.PureComponent {
     let investButtons = [];
     for (const model in investJSON) {
       investButtons.push(
-        <Button key={model}
-          value={investJSON[model]['internal_name']}
-          onClick={this.handleClick}
-          variant="outline-success">
-          {model}
-        </Button>
+        <tr>
+          <td>
+            <Button key={model} size="lg" block className="invest-button"
+              value={investJSON[model]['internal_name']}
+              onClick={this.handleClick}
+              variant="link">
+              {model}
+            </Button>
+          </td>
+        </tr>
       );
     }
 
     return (
       <Row>
-        <Col md={6}>
-          <ButtonGroup vertical className="mt-2">
-            {investButtons}
-          </ButtonGroup>
+        <Col md={5}>
+          <Table size="sm">
+            <tbody>
+              {investButtons}
+            </tbody>
+          </Table>
         </Col>
-        <Col md={6}>
+        <Col md={7}>
           <RecentInvestJobs
             loadState={this.props.loadState}
             recentSessions={this.props.recentSessions}/>
@@ -117,7 +125,7 @@ class RecentInvestJobs extends React.PureComponent {
         backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
       }
       recentButtons.push(
-        <Card className="text-left session-card border-0"
+        <Card className="text-left session-card"
           as="button"
           key={name}
           onClick={() => this.props.loadState(session[1]['statefile'])}>
@@ -142,18 +150,18 @@ class RecentInvestJobs extends React.PureComponent {
     });
 
     return (
-      <React.Fragment>
-        <div>
-          Select Recent Session:
-        </div>
+      <Container>
+        <h4>Recent Sessions:</h4>
         {recentButtons.length
-          ? <CardGroup className='session-card-group'>{recentButtons}</CardGroup>
+          ? <CardGroup className='session-card-group'>
+              {recentButtons}
+            </CardGroup>
           : <div>
               No recent sessions yet.<br></br> 
               Try the <b>Load</b> button to load a sample data json file
             </div>
         }
-      </React.Fragment>
+      </Container>
     );
   }
 }

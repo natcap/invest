@@ -1,5 +1,17 @@
+.navbar {
+	padding-bottom: 0;
+}
+
 .navbar-light .navbar-nav .nav-link{
     color: blue;
+    font-size: 1.3rem;
+    padding-right: 2rem;
+    padding-left: 2rem;
+}
+
+.tab-content {
+	padding-left: 2rem;
+	padding-right: 2rem;
 }
 
 /* Default sized Radio buttons are too small */
@@ -10,14 +22,27 @@ input[type=radio]{
 }
 
 /* HomeTab styles */
-.session-card-group {
-	flex-flow: column;
-	width: 500px; /* explicit width seems key for children to behave*/
+
+.invest-button {
+	color: #148F68;
+	font-weight: 600;
 }
 
+.session-card-group {
+	display: flex;
+	flex-wrap: wrap;
+	flex-direction: row;
+}
+
+/* cards can expand to fill space, via flex,
+   but need an explicit width so they are all uniform.*/
 .session-card {
-	width: inherit;
-	margin-bottom: 10px;
+	flex: 1 0 auto!important;
+	flex-direction: row;
+	width: 400px; 
+	margin-bottom: 15px!important;
+	border-width: 2px;
+	padding: 0;
 }
 
 .card-body {
@@ -27,7 +52,10 @@ input[type=radio]{
 }
 
 .card-header {
+	color: white;
+	font-weight: 700;
 	padding-left: 1.25rem;
+	filter: opacity(0.75);
 }
 .card-title {
 	padding-top: 1rem;
@@ -38,6 +66,19 @@ input[type=radio]{
 }
 
 /* SetupTab styles */
+
+.setup-tab-footer {
+	padding-left: 2rem;
+	padding-right: 2rem;
+	padding-top: 1rem;
+	padding-bottom: 1rem;
+}
+
+.args-form {
+	height: 85vh;
+	overflow-y: auto;
+	overflow-x: hidden;
+}
 
 .arg-group {
 	margin-top: 2.0rem;

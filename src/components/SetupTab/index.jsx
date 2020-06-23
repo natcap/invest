@@ -2,6 +2,7 @@ import React from 'react';
 import { remote } from 'electron';
 import PropTypes from 'prop-types';
 
+import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
@@ -316,7 +317,7 @@ export class SetupTab extends React.Component {
   render () {
     if (this.state.argsValues) {
       return (
-        <div>
+        <Container fluid={true}>
           <ArgsForm
             argsSpec={this.props.argsSpec}
             argsValues={this.state.argsValues}
@@ -327,30 +328,30 @@ export class SetupTab extends React.Component {
             batchUpdateArgs={this.batchUpdateArgs}
             investValidate={this.investValidate}
           />
-          <Row>
-          <Col sm="3">
-          <Button 
-            variant="primary" 
-            size="lg"
-            onClick={this.wrapInvestExecute}
-            disabled={!this.state.argsValid}>
-                Execute
-          </Button>
-          </Col>
-          <Col cm="8">
-          <DropdownButton
-            id="dropdown-basic-button"
-            title="Save Parameters"
-            renderMenuOnMount={true}  // w/o this, items inaccessible in jsdom test env
-            className="mx-3 float-right">
-            <SaveParametersButton
-              wrapArgsToJsonFile={this.wrapArgsToJsonFile}/>
-            <SavePythonButton
-              savePythonScript={this.savePythonScript}/>
-          </DropdownButton>
-          </Col>
+          <Row className="fixed-bottom setup-tab-footer">
+            <Col sm="3">
+              <Button 
+                variant="primary" 
+                size="lg"
+                onClick={this.wrapInvestExecute}
+                disabled={!this.state.argsValid}>
+                    Execute
+              </Button>
+            </Col>
+            <Col cm="8">
+              <DropdownButton
+                id="dropdown-basic-button"
+                title="Save Parameters"
+                renderMenuOnMount={true}  // w/o this, items inaccessible in jsdom test env
+                className="mx-3 float-right">
+                <SaveParametersButton
+                  wrapArgsToJsonFile={this.wrapArgsToJsonFile}/>
+                <SavePythonButton
+                  savePythonScript={this.savePythonScript}/>
+              </DropdownButton>
+            </Col>
           </Row>
-        </div>);
+        </Container>);
     }
     // The SetupTab remains disabled in this route, so no need
     // to render anything here.
@@ -467,7 +468,7 @@ class ArgsForm extends React.PureComponent {
     }
 
     return (
-      <Form data-testid='setup-form'
+      <Form data-testid='setup-form' className="args-form"
         validated={false}
         onDrop={this.onDragDrop}
         onDragOver={dragover_handler}>
