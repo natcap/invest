@@ -547,6 +547,11 @@ def execute(args):
                     ' calculation for this land cover.')
                 exit_landcover = True
                 break
+            # Check to make sure max_dist is greater than 0
+            if threat_data['max_dist'] <= 0.0:
+                raise ValueError(
+                    f"The max distance for threat: '{threat}' is less than"
+                    " or equal to 0. MAX_DIST should be a positive value.")
 
             kernel_path = os.path.join(
                 kernel_dir, f'kernel_{threat}{lulc_key}{file_suffix}.tif')

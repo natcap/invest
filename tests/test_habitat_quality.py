@@ -7,37 +7,9 @@ import os
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
+from shapely.geometry import Polygon
 import numpy
 import pygeoprocessing
-
-# Projection to user for generated sample data UTM Zone 10N
-EPSG = 26910
-
-
-def make_simple_poly(origin_xy):
-    """Make a 50x100 ogr rectangular geometry clockwisely from ``origin_xy``.
-
-    Args:
-        origin_xy (tuple): the longitude and latitude of the origin of the
-            rectangle.
-
-    Returns:
-        An OGR wkbPolygon with rectangle geometry.
-    """
-    # Create a rectangular ring
-    lon, lat = origin_xy[0], origin_xy[1]
-    width = 100
-    ring = ogr.Geometry(ogr.wkbLinearRing)
-    ring.AddPoint(lon, lat)
-    ring.AddPoint(lon + width, lat)
-    ring.AddPoint(lon + width, lat - width / 2.0)
-    ring.AddPoint(lon, lat - width / 2.0)
-    ring.AddPoint(lon, lat)
-
-    # Create polygon geometry
-    poly = ogr.Geometry(ogr.wkbPolygon)
-    poly.AddGeometry(ring)
-    return poly
 
 
 def make_raster_from_array(
@@ -53,26 +25,14 @@ def make_raster_from_array(
     Returns:
         None.
     """
+    # Projection to user for generated sample data UTM Zone 10N
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(EPSG)
+    srs.ImportFromEPSG(26910)
     project_wkt = srs.ExportToWkt()
-
-    gtiff_driver = gdal.GetDriverByName('GTiff')
-    ny, nx = base_array.shape
-    new_raster = gtiff_driver.Create(
-        base_raster_path, nx, ny, 1, gdal_type)
-
-    new_raster.SetProjection(project_wkt)
     origin = (1180000, 690000)
-    new_raster.SetGeoTransform([origin[0], 1.0, 0.0, origin[1], 0.0, -1.0])
-    new_band = new_raster.GetRasterBand(1)
-    # Sometimes we want to NOT set a nodata value to test on
-    if nodata_val is not None:
-        new_band.SetNoDataValue(nodata_val)
-    new_band.WriteArray(base_array)
-    new_raster.FlushCache()
-    new_band = None
-    new_raster = None
+
+    pygeoprocessing.numpy_array_to_raster(
+        base_array, nodata_val, (1, -1), origin, project_wkt, base_raster_path)
 
 
 def make_access_shp(access_shp_path):
@@ -84,41 +44,34 @@ def make_access_shp(access_shp_path):
     Returns:
         None.
     """
-    # Set up parameters. Fid and access values are based on the sample data
-    fid_list = [0.0, 1.0]
-    access_list = [0.2, 1.0]
-    coord_list = [(1180000.0, 690000.0 - i * 50) for i in range(2)]
-    poly_list = [make_simple_poly(coord) for coord in coord_list]
-
-    # Create a new shapefile
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    data_source = driver.CreateDataSource(access_shp_path)
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(EPSG)
-    layer = data_source.CreateLayer('access_samp', srs, ogr.wkbPolygon)
+    srs.ImportFromEPSG(26910)
+    projection_wkt = srs.ExportToWkt()
+    origin = (1180000, 690000)
+    pos_x = origin[0]
+    pos_y = origin[1]
 
-    # Add FID and ACCESS fields and make their format same to sample data
-    fid_field = ogr.FieldDefn('FID', ogr.OFTInteger64)
-    fid_field.SetWidth(11)
-    fid_field.SetPrecision(0)
-    layer.CreateField(fid_field)
+    # Setup parameters for creating point shapefile
+    fields = {'FID': ogr.OFTInteger64, 'ACCESS': ogr.OFTReal}
+    attrs = [{'FID': 0, 'ACCESS': 0.2}, {'FI': 1, 'ACCESS': 1.0}]
 
-    access_field = ogr.FieldDefn('ACCESS', ogr.OFTReal)
-    access_field.SetWidth(8)
-    access_field.SetPrecision(1)
-    layer.CreateField(access_field)
+    poly_geoms = {
+        'poly_1': [(pos_x, pos_y), (pos_x + 100, pos_y),
+                   (pos_x + 100, pos_y - 100 / 2.0),
+                   (pos_x, pos_y - 100 / 2.0),
+                   (pos_x, pos_y)],
+        'poly_2': [(pos_x, pos_y - 50.0), (pos_x + 100, pos_y - 50.0),
+                   (pos_x + 100, (pos_y - 50.0) - (100 / 2.0)),
+                   (pos_x, (pos_y - 50.0) - (100 / 2.0)),
+                   (pos_x, pos_y - 50.0)]}
 
-    # Create the feature
-    for fid_val, access_val, poly in zip(fid_list, access_list, poly_list):
-        feature = ogr.Feature(layer.GetLayerDefn())
-        feature.SetField('FID', fid_val)
-        feature.SetField('ACCESS', access_val)
-        feature.SetGeometry(poly)
-        layer.CreateFeature(feature)
-        feature = None
-    layer.SyncToDisk()
-    data_source.SyncToDisk()
-    data_source = None
+    poly_geometries = [
+        Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
+
+    # Create point shapefile to use for testing input
+    pygeoprocessing.shapely_geometry_to_vector(
+        poly_geometries, access_shp_path, projection_wkt, 'ESRI Shapefile',
+        fields=fields, attribute_list=attrs, ogr_geom_type=ogr.wkbPolygon)
 
 
 def make_threats_raster(
@@ -749,6 +702,55 @@ class HabitatQualityTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             habitat_quality.execute(args)
+
+    def test_habitat_quality_threat_max_dist(self):
+        """Habitat Quality: expected ValueError on max_dist <=0."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+            }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'])
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        # create the threat CSV table
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.0,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+
+        with self.assertRaises(ValueError) as cm:
+            habitat_quality.execute(args)
+
+        self.assertTrue(
+            "max distance for threat: 'threat_1' is less" in str(cm.exception))
 
     def test_habitat_quality_invalid_decay_type(self):
         """Habitat Quality: expected ValueError on invalid decay type."""
