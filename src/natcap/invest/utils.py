@@ -453,7 +453,7 @@ def build_lookup_from_csv(
     indexed by the other columns in ``table_path`` including ``key_field``
     whose values are the values on that row of the CSV table.
 
-    If an entire row is NA/NaN (including ``key_field``) then it is dropped 
+    If an entire row is NA/NaN (including ``key_field``) then it is dropped
     from the table and a warning is given of the dropped rows.
 
     Args:
@@ -461,7 +461,7 @@ def build_lookup_from_csv(
             least the header key_field
         key_field: (string): a column in the CSV file at `table_path` that
             can uniquely identify each row in the table and sets the row index.
-        column_list (list): a list of column names to subset from the CSV 
+        column_list (list): a list of column names to subset from the CSV
             file, default=None
         to_lower (bool): if True, converts all unicode in the CSV,
             including headers and values to lowercase, otherwise uses raw
@@ -488,16 +488,16 @@ def build_lookup_from_csv(
         first_line = file_obj.readline()
         if first_line.startswith(codecs.BOM_UTF8):
             encoding = 'utf-8-sig'
-  
+
     # Reassign to avoid mutation
     col_list = column_list
-    # if a list of columns are provided to use and return, make sure 
-    # 'key_field' is one of them. 
+    # if a list of columns are provided to use and return, make sure
+    # 'key_field' is one of them.
     if col_list and key_field not in col_list:
         col_list.append(key_field)
-   
+
     table = pandas.read_csv(
-        table_path, sep=None, index_col=False, engine='python', 
+        table_path, sep=None, index_col=False, engine='python',
         encoding=encoding)
 
     # if 'to_lower`, case handling is done before trying to access the data.
@@ -507,7 +507,7 @@ def build_lookup_from_csv(
         if col_list:
             col_list = [col.lower() for col in col_list]
         table.columns = table.columns.str.lower()
-        # lowercase values 
+        # lowercase values
         table = table.applymap(
             lambda x: x.lower() if isinstance(x, str) else x)
 
@@ -515,15 +515,15 @@ def build_lookup_from_csv(
     try:
         table.set_index(key_field, drop=False, inplace=True)
     except KeyError:
-        # If 'key_field' is not a column then KeyError is raised for using 
+        # If 'key_field' is not a column then KeyError is raised for using
         # it as the index column
         LOGGER.error(f"'key_field' : '{key_field}' could not be found as a"
                      f" column in the table. Table path: {table_path}.")
-        raise 
+        raise
 
     # Subset dataframe by columns if desired
-    if col_list: 
-        table = table.loc[:, col_list] 
+    if col_list:
+        table = table.loc[:, col_list]
 
     # look for NaN values and warn if any are found.
     table_na = table.isna()
@@ -544,12 +544,12 @@ def build_lookup_from_csv(
     try:
         lookup_dict = table.to_dict(orient='index')
     except ValueError:
-        # If 'key_field' is not unique then a value error is raised. 
+        # If 'key_field' is not unique then a value error is raised.
         LOGGER.error(f"The 'key_field' : '{key_field}' column values are not"
                      f" unique: {table.index.tolist()}")
         raise
 
-    return lookup_dict 
+    return lookup_dict
 
 
 def make_directories(directory_list):
@@ -611,17 +611,17 @@ def create_coordinate_transformer(
         An OSR Coordinate Transformation object
 
     """
-    # Make a copy of the base and target spatial references to avoid side 
+    # Make a copy of the base and target spatial references to avoid side
     # effects from mutation of setting the axis mapping strategy
     base_ref_wkt = base_ref.ExportToWkt()
     target_ref_wkt = target_ref.ExportToWkt()
 
     base_ref_copy = osr.SpatialReference()
     target_ref_copy = osr.SpatialReference()
-    
+
     base_ref_copy.ImportFromWkt(base_ref_wkt)
     target_ref_copy.ImportFromWkt(target_ref_wkt)
-    
+
     base_ref_copy.SetAxisMappingStrategy(osr_axis_mapping_strategy)
     target_ref_copy.SetAxisMappingStrategy(osr_axis_mapping_strategy)
 

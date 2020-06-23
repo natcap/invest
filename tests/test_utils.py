@@ -521,7 +521,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 },
             }
         self.assertDictEqual(result, expected_dict)
-    
+
     def test_unique_key_not_first_column(self):
         """utils: test success when key field is not first column."""
         from natcap.invest import utils
@@ -543,7 +543,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
-    
+
     def test_non_unique_keys(self):
         """utils: test error is raised if keys are not unique."""
         from natcap.invest import utils
@@ -558,7 +558,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             utils.build_lookup_from_csv(table_path, 'lucode', to_lower=True)
-    
+
     def test_missing_key_field(self):
         """utils: test error is raised when missing key field."""
         from natcap.invest import utils
@@ -573,7 +573,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
 
         with self.assertRaises(KeyError):
             utils.build_lookup_from_csv(table_path, 'lucode', to_lower=True)
-    
+
     def test_nan_holes(self):
         """utils: test empty strings returned when missing data is present."""
         from natcap.invest import utils
@@ -595,7 +595,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4: {'desc': 'butter', 'val1': '', 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
-    
+
     def test_nan_row(self):
         """utils: test NaN row is dropped."""
         from natcap.invest import utils
@@ -616,7 +616,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4.0: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4.0}}
 
         self.assertDictEqual(result, expected_result)
-    
+
     def test_column_subset(self):
         """utils: test column subset is properly returned."""
         from natcap.invest import utils
@@ -631,7 +631,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
 
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True, column_list=['val1', 'val2'])
-        
+
         expected_result = {
                 1: {'val1': 0.5, 'val2': 2, 'lucode': 1},
                 2: {'val1': 1, 'val2': 4, 'lucode': 2},
@@ -639,7 +639,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4: {'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
-    
+
     def test_trailing_comma(self):
         """utils: test a trailing comma on first line is handled properly."""
         from natcap.invest import utils
@@ -654,7 +654,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
 
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
-        
+
         expected_result = {
                 1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
                 2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
@@ -662,7 +662,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
-    
+
     def test_trailing_comma_second_line(self):
         """utils: test a trailing comma on second line is handled properly."""
         from natcap.invest import utils
@@ -677,7 +677,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
 
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
-        
+
         expected_result = {
                 1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
                 2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
@@ -1068,7 +1068,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
 
         with self.assertRaises(AssertionError) as cm:
             utils._assert_vectors_equal(shape_path, shape_copy_path)
-        
+
         self.assertTrue(
             "Vector field values are not equal" in str(cm.exception))
 
@@ -1108,7 +1108,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
 
         with self.assertRaises(AssertionError) as cm:
             utils._assert_vectors_equal(shape_path, shape_copy_path)
-        
+
         self.assertTrue(
             "Vector field names are not the same" in str(cm.exception))
 
@@ -1153,7 +1153,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
 
         with self.assertRaises(AssertionError) as cm:
             utils._assert_vectors_equal(shape_path, shape_copy_path)
-        
+
         self.assertTrue(
             "Vector feature counts are not the same" in str(cm.exception))
 
@@ -1203,7 +1203,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
 
         with self.assertRaises(AssertionError) as cm:
             utils._assert_vectors_equal(shape_path, shape_copy_path)
-        
+
         self.assertTrue(
             "Vector projections are not the same" in str(cm.exception))
 
@@ -1262,5 +1262,5 @@ class AssertVectorsEqualTests(unittest.TestCase):
 
         with self.assertRaises(AssertionError) as cm:
             utils._assert_vectors_equal(shape_path, shape_diff_path)
-        
+
         self.assertTrue("Vector geometry assertion fail." in str(cm.exception))
