@@ -7,15 +7,7 @@ import { remote } from 'electron';
 import { InvestJob } from './InvestJob';
 import { getInvestList, getFlaskIsReady } from './server_requests';
 import { updateRecentSessions, loadRecentSessions } from './utils';
-
-// TODO: clear out tmp dir on quit?
-const DIRECTORY_CONSTANTS = {
-  CACHE_DIR: path.join(remote.app.getPath('userData'), 'state_cache'), //  for storing state snapshot files
-  TEMP_DIR: path.join(remote.app.getPath('userData'), 'tmp'),  // for saving datastack json files prior to investExecute
-  INVEST_UI_DATA: path.join(__dirname, 'ui_data')
-}
-fs.mkdir(DIRECTORY_CONSTANTS.CACHE_DIR, (err) => {})
-fs.mkdir(DIRECTORY_CONSTANTS.TEMP_DIR, (err) => {})
+import { directories } from './constants';
 
 
 export default class App extends React.Component {
@@ -60,6 +52,10 @@ export default class App extends React.Component {
           loggingLevel: 'INFO',
         }
       });
+
+    // TODO: clear out tmp dir on quit?
+    fs.mkdir(directories.CACHE_DIR, (err) => {})
+    fs.mkdir(directories.TEMP_DIR, (err) => {})
   }
 
   async updateRecentSessions(jobdata) {
@@ -88,7 +84,7 @@ export default class App extends React.Component {
         investSettings={this.state.investSettings}
         recentSessions={this.state.recentSessions}
         appdata={this.props.appdata}
-        directoryConstants={DIRECTORY_CONSTANTS}
+        directoryConstants={directories}
         updateRecentSessions={this.updateRecentSessions}
         saveSettings={this.saveSettings}
       />

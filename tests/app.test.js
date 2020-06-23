@@ -1,18 +1,28 @@
 import path from 'path';
 import fs from 'fs';
 import React from 'react';
+import { remote } from 'electron';
 import { fireEvent, render, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 import App from '../src/app';
 import { getInvestList, getFlaskIsReady } from '../src/server_requests';
 jest.mock('../src/server_requests');
-getFlaskIsReady.mockResolvedValue('Flask ready');
-getInvestList.mockResolvedValue({});
+
+beforeEach(() => {
+  getFlaskIsReady.mockResolvedValue('Flask ready');
+  getInvestList.mockResolvedValue({});
+  remote.app.getPath.mockResolvedValue('./data/foo')
+})
+
+afterEach(() => {
+  jest.resetAllMocks();
+})
 
 const TEST_JOB_DATA = path.join(__dirname, './data/jobdb.json');
 
 test('Recent Sessions: each has a button', async () => {
+  console.log(remote.app.getPath())
   const { getByText, getByLabelText, debug } = render(
     <App appdata={TEST_JOB_DATA}/>);
   const db = JSON.parse(fs.readFileSync(TEST_JOB_DATA));

@@ -33,7 +33,7 @@ const MOCK_RECENT_SESSIONS_VALUE =
         "description": null } ] ]
 
 beforeEach(() => {
-  jest.resetAllMocks(); 
+  jest.resetAllMocks();
   // Careful with reset because "resetting a spy results
   // in a function with no return value". I had been using spies to observe
   // function calls, but not to mock return values. Spies used for that 
