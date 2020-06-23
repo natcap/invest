@@ -354,8 +354,7 @@ def execute(args):
             args['model_data_path'], _REGRESSION_TABLE_PATTERN % crop_name)
 
         crop_regression_table = utils.build_lookup_from_csv(
-            crop_regression_table_path, 'climate_bin',
-            to_lower=True, warn_if_missing=False)
+            crop_regression_table_path, 'climate_bin', to_lower=True)
         for bin_id in crop_regression_table:
             for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 if crop_regression_table[bin_id][header.lower()] == '':
