@@ -22,19 +22,14 @@ var _reactHotLoader = require("react-hot-loader");
 
 var _app = _interopRequireDefault(require("./app"));
 var InvestConfigModal = _interopRequireDefault(require("./components/InvestConfigModal"));
-
-
-const JOBS_DATABASE = path.join(__dirname, 'jobdb.json')
-const INVEST_REGISTRY_PATH = path.join(
-      remote.app.getPath('userData'), 'invest_registry.json')
+const { fileRegistry } = require("./constants")
 
 
 // Binding to the invest binary:
 let investExe;
-
 // A) look for a local registry of available invest installations
-if (fs.existsSync(INVEST_REGISTRY_PATH)) {
-  const investRegistry = JSON.parse(fs.readFileSync(INVEST_REGISTRY_PATH))
+if (fs.existsSync(fileRegistry.INVEST_REGISTRY_PATH)) {
+  const investRegistry = JSON.parse(fs.readFileSync(fileRegistry.INVEST_REGISTRY_PATH))
   const activeVersion = investRegistry['active']
   investExe = investRegistry['registry'][activeVersion]['invest']
 
@@ -47,7 +42,6 @@ if (fs.existsSync(INVEST_REGISTRY_PATH)) {
   // TODO: extension on this file is OS-dependent
   investExe = path.join(__dirname, 'invest/invest')
 }
-
 
 const { Menu, MenuItem } = remote;
 let rightClickPosition = null
@@ -80,7 +74,7 @@ var render = function render() {
   _reactDom["default"].render(
     _react["default"].createElement(
       _reactHotLoader.AppContainer, null, _react["default"].createElement(
-        _app["default"], { appdata: JOBS_DATABASE, investExe: investExe })),
+        _app["default"], { appdata: fileRegistry.JOBS_DATABASE, investExe: investExe })),
     document.getElementById('App'));
   // }
   // } else {

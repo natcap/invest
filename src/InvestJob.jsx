@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { spawn } from 'child_process';
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -56,7 +57,7 @@ export class InvestJob extends React.Component {
 
     this.state = {
       setupKey: 0,
-      sessionID: null,                 // modelName + workspace.directory + workspace.suffix
+      sessionID: null,                 // hash of modelName + workspace generated at model execution
       modelName: '',                   // as appearing in `invest list`
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null,                  // ARGS_SPEC.args, the immutable args stuff
@@ -87,19 +88,17 @@ export class InvestJob extends React.Component {
     * This triggers automatically when the invest subprocess starts and again
     * when it exits.
     */
-    const jobName = this.state.sessionID;
     const jsonContent = JSON.stringify(this.state, null, 2);
     const filepath = path.join(
-      this.props.directoryConstants.CACHE_DIR, jobName + '.json');
+      this.props.directoryConstants.CACHE_DIR, this.state.sessionID + '.json');
     fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
       if (err) {
         console.log("An error occured while writing JSON Object to File.");
         return console.log(err);
       }
-      console.log("saved: " + jobName);
     });
     let job = {};
-    job[jobName] = {
+    job[this.state.sessionID] = {
       model: this.state.modelName,
       workspace: this.state.workspace,
       statefile: filepath,
@@ -180,12 +179,15 @@ export class InvestJob extends React.Component {
     * with the final status of the invest run.
     */
     const workspace = {
-      directory: argsValues.workspace_dir.value,
+      directory: path.resolve(argsValues.workspace_dir.value),
       suffix: argsValues.results_suffix.value
     }
-    // model name, workspace, and suffix are suitable for a unique job identifier
-    const sessionName = [
-      this.state.modelName, workspace.directory, workspace.suffix].join('-')
+    // If the same model, workspace, and suffix are executed, invest
+    // will overwrite the previous outputs. So our recent session
+    // catalogue should overwite as well, and that's assured by this
+    // non-unique sessionID.
+    const sessionID = crypto.createHash('sha1').update(
+      this.state.modelName + JSON.stringify(workspace)).digest('hex')
 
     // Write a temporary datastack json for passing as a command-line arg
     const temp_dir = fs.mkdtempSync(path.join(
@@ -215,7 +217,7 @@ export class InvestJob extends React.Component {
         this.setState(
           {
             logfile: logfilename,
-            sessionID: sessionName,
+            sessionID: sessionID,
             sessionProgress: 'log',
             workspace: workspace,
             jobStatus: 'running'
@@ -420,6 +422,7 @@ export class InvestJob extends React.Component {
 }
 
 InvestJob.propTypes = {
+  investExe: PropTypes.string,
   investList: PropTypes.object,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,

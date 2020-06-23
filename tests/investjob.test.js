@@ -12,7 +12,7 @@ import { SetupTab } from '../src/components/SetupTab';
 import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation, fetchDatastackFromFile } from '../src/server_requests';
 jest.mock('../src/server_requests');
-import { directories } from '../src/constants';
+import { fileRegistry } from '../src/constants';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 
 
@@ -47,7 +47,7 @@ function renderInvestJob() {
       recentSessions={MOCK_RECENT_SESSIONS_VALUE}
       updateRecentSessions={() => {}}
       saveSettings={() => {}}
-      directoryConstants={directories}
+      directoryConstants={fileRegistry}
     />);
   return { getByText, getByLabelText, utils }
 }
