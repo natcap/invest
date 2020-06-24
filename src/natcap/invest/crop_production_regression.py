@@ -572,7 +572,7 @@ def execute(args):
     LOGGER.info("Generating report table")
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
-    tabulate_results_task = task_graph.add_task(
+    _ = task_graph.add_task(
         func=tabulate_regression_results,
         args=(nutrient_table,
               crop_to_landcover_table, pixel_area_ha,
@@ -590,7 +590,7 @@ def execute(args):
             output_dir, _AGGREGATE_VECTOR_FILE_PATTERN % (file_suffix))
         aggregate_results_table_path = os.path.join(
             output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
-        aggregate_results_task = task_graph.add_task(
+        _ = task_graph.add_task(
             func=aggregate_regression_results_to_polygons,
             args=(args['aggregate_polygon_path'],
                   target_aggregate_vector_path,
@@ -612,18 +612,18 @@ def _x_yield_op(
     """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC)).
 
     The regression model has identical mathematical equations for
-    the nitrogen, phosporous, and potassium.  The only difference is
-    the scalars in the equation (fertizlization rate and pixel area).
+    the nitrogen, phosphorous, and potassium.  The only difference is
+    the scalars in the equation (fertilization rate and pixel area).
     """
     result = numpy.empty(b_x.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
     valid_mask = (
         (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
         (lulc_array == crop_lucode))
-    result[valid_mask] = y_max[valid_mask] * (
+    result[valid_mask] = pixel_area_ha * y_max[valid_mask] * (
         1 - b_x[valid_mask] * numpy.exp(
-            -c_x[valid_mask] * fert_rate) *
-        pixel_area_ha)
+            -c_x[valid_mask] * fert_rate))
+
     return result
 
 
@@ -706,7 +706,7 @@ def tabulate_regression_results(
         landcover_raster_path (string): path to landcover raster
         landcover_nodata (float): landcover raster nodata value
         output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to appened to any output filenames.
+        file_suffix (string): string to appended to any output filenames.
         target_table_path (string): path to 'result_table.csv' in the output
             workspace
 
@@ -808,7 +808,7 @@ def aggregate_regression_results_to_polygons(
         nutrient_table (dict): a lookup of nutrient values by crop in the
             form of nutrient_table[<crop>][<nutrient>].
         output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to appened to any output filenames.
+        file_suffix (string): string to appended to any output filenames.
         target_aggregate_table_path (string): path to 'aggregate_results.csv'
             in the output workspace
 
