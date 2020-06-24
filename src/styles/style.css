@@ -2,11 +2,23 @@
 	padding-bottom: 0;
 }
 
-.navbar-light .navbar-nav .nav-link{
-    color: blue;
-    font-size: 1.3rem;
+.navbar-light .navbar-nav .nav-link {
     padding-right: 2rem;
     padding-left: 2rem;
+}
+
+.nav-link {
+	color: gray;
+	font-size: 1.3rem;
+	font-weight: 550;
+}
+
+.navbar-brand {
+	font-style: italic;
+	font-weight: 600;
+	font-size: 1.5rem;
+	letter-spacing: 2px;
+	color: gray;
 }
 
 .tab-content {
@@ -22,6 +34,12 @@ input[type=radio]{
 }
 
 /* HomeTab styles */
+
+.invest-list-table {
+	display: block;
+	height: 90vh;
+	overflow-y: auto;
+}
 
 .invest-button {
 	color: #148F68;
@@ -57,10 +75,21 @@ input[type=radio]{
 	padding-left: 1.25rem;
 	filter: opacity(0.75);
 }
+
 .card-title {
 	padding-top: 1rem;
 	padding-left: 1.25rem;
 }
+
+.card-title .text-heading {
+	color: gray;
+}
+
+.card-title .text-mono {
+	font-family: monospace;
+	font-size: 1.5rem;
+}
+
 .card-text {
 	padding-left: 1.25rem;
 }
@@ -91,4 +120,9 @@ input[type=radio]{
 
 .arg-disable .form-label {
 	color: lightgray;
+}
+
+.form-control {
+	font-family: monospace;
+	font-size:1.3rem;
 }

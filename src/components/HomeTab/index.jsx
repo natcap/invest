@@ -61,7 +61,7 @@ export class HomeTab extends React.PureComponent {
     return (
       <Row>
         <Col md={5}>
-          <Table size="sm">
+          <Table size="sm" className="invest-list-table">
             <tbody>
               {investButtons}
             </tbody>
@@ -137,10 +137,12 @@ class RecentInvestJobs extends React.PureComponent {
               }
             </Card.Header>
             <Card.Title>
-              <em>Workspace: </em>{workspaceDir}
+              <span className='text-heading'>{'Workspace: '}</span>
+              <span className='text-mono'>{workspaceDir}</span>
             </Card.Title>
             <Card.Title>
-              { suffix && <em>Suffix: </em> }{suffix}
+              <span className='text-heading'>{ suffix && 'Suffix: ' }</span>
+              <span className='text-mono'>{suffix}</span>
             </Card.Title>
             <Card.Text>{description || <em>no description</em>}</Card.Text>
           <Card.Footer className="text-muted">{datetime}</Card.Footer>
