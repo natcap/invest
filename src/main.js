@@ -1,8 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const spawn = require('child_process').spawn;
-const app = require('electron').app
-const BrowserWindow = require('electron').BrowserWindow
+const { app, BrowserWindow, screen } = require('electron')
 const fetch = require('node-fetch')
 
 const isDevMode = function() {
@@ -47,9 +46,12 @@ const createWindow = async () => {
   createPythonFlaskProcess();
 
   // Create the browser window.
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize
+  console.log(width + ' ' + height)
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 1000,
+    width: width * 0.75,
+    height: height,
+    useContentSize: true,
     webPreferences: {
       nodeIntegration: true
     }
