@@ -21,7 +21,6 @@ var _reactDom = _interopRequireDefault(require("react-dom"));
 var _reactHotLoader = require("react-hot-loader");
 
 var _app = _interopRequireDefault(require("./app"));
-var InvestConfigModal = _interopRequireDefault(require("./components/InvestConfigModal"));
 const { fileRegistry } = require("./constants")
 
 
@@ -39,8 +38,8 @@ if (fs.existsSync(fileRegistry.INVEST_REGISTRY_PATH)) {
 
 // C) point to binaries included in this app's installation.
 } else {
-  // TODO: extension on this file is OS-dependent
-  investExe = path.join(__dirname, 'invest/invest')
+  const binary = (process.platform === 'win32') ? 'invest.exe' : 'invest'
+  investExe = path.join(__dirname, 'invest', binary)
 }
 
 const { Menu, MenuItem } = remote;
@@ -61,32 +60,11 @@ window.addEventListener('contextmenu', (e) => {
 
 
 var render = function render() {
-
-  // let investExe;
-  // if (fs.existsSync(INVEST_REGISTRY_PATH)) {
-  //   const investRegistry = JSON.parse(fs.readFileSync(INVEST_REGISTRY_PATH))
-  //   const activeVersion = investRegistry['active']
-  //   investExe = investRegistry['registry'][activeVersion]['invest']
-  // } else {
-  //   // TODO: extension on this file is OS-dependent
-  //   investExe = path.join(__dirname, 'invest/invest')
-  // }
   _reactDom["default"].render(
     _react["default"].createElement(
       _reactHotLoader.AppContainer, null, _react["default"].createElement(
         _app["default"], { appdata: fileRegistry.JOBS_DATABASE, investExe: investExe })),
     document.getElementById('App'));
-  // }
-  // } else {
-  //   _reactDom["default"].render(
-  //     _react["default"].createElement(
-  //       InvestConfigModal["default"], {
-  //         investVersion: undefined,
-  //         investRegistry: { active: undefined, registry: {} }
-  //       }),
-  //     document.getElementById('App'));
-  // }
-
 };
 
 render();

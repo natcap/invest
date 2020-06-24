@@ -30,8 +30,8 @@ if (fs.existsSync(investRegistryPath)) {
 
 // C) point to binaries included in this app's installation.
 } else {
-  // TODO: extension on this file is OS-dependent
-  serverEXE = path.join(__dirname, 'invest/server')
+  const binary = (process.platform === 'win32') ? 'server.exe' : 'server'
+  serverEXE = path.join(__dirname, 'invest', binary)
 }
 
 let PORT = (process.env.PORT || '5000').trim();
