@@ -3,6 +3,51 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Fix bug in ``utils.build_lookup_from_csv`` that was allowing
+      ``key_field`` to be non unique and overwriting values.
+    * Fix bug in ``utils.build_lookup_from_csv`` where trailing commas caused
+      returned values to be malformed.
+    * Add optional argument ``column_list`` to ``utils.build_lookup_from_csv``
+      that takes a list of column names and only returns those in the
+      dictionary.
+    * Remove ``warn_if_missing`` argument from ``utils.build_lookup_from_csv``
+      and warning by default.
+* Urban Flood Risk Mitigation
+    * Fixed an issue where the output vector ``flood_risk_service.shp`` would
+      only be created when the built infrastructure vector was provided.  Now,
+      the ``flood_risk_service.shp`` vector is always created, but the fields
+      created differ depending on whether the built infrastructure input is
+      present during the model run.
+    * Fixed an issue where the model would crash if an infrastructure geometry
+      were invalid or absent.  Such features are now skipped.
+* Scenic Quality
+    * Fixing an issue in Scenic Quality where the creation of the weighted sum
+      of visibility rasters could cause "Too Many Open Files" errors and/or
+      ``MemoryError`` when the model is run with many viewpoints.
+    * Progress logging has been added to several loops that may take a longer
+      time when the model is run with thousands of points at a time.
+    * A major part of the model's execution was optimized for speed,
+      particularly when the model is run with many, many points.
+* SDR:
+    * Removed the unused parameter ``args['target_pixel_size']`` from the SDR
+      ``execute`` docstring.
+
+3.8.4 (2020-06-05)
+------------------
+* General:
+    * Advanced the ``Taskgraph`` version requirement to fix a bug where workspace
+      directories created by InVEST versions <=3.8.0 could not be re-used by more
+      recent InVEST versions.
+* NDR:
+    * The Start Menu shortcut on Windows and launcher label on Mac now have
+      consistent labels for NDR: "NDR: Nutrient Delivery Ratio".
+* SDR:
+    * The Start Menu shortcut on Windows and launcher label on Mac now have
+      consistent labels for SDR: "SDR: Sediment Delivery Ratio".
+
+3.8.3 (2020-05-29)
+------------------
 * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
   available standard C library definition.  This new definition helps to avoid
   some compiler issues on Windows.
