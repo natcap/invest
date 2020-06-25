@@ -5,7 +5,6 @@ import shutil
 import tempfile
 import os
 import pickle
-import re
 
 import numpy
 import numpy.testing
@@ -31,11 +30,12 @@ def _create_vertical_csv(data, file_path):
         down the first column. The second column has the corresponding
         values. This is how Wind Energy csv inputs are expected.
 
-    Parameters:
+    Args:
         data (dict): a Dictionary where each key is the name
             of a field and set in the first column. The second
             column is set with the value of that key.
-        file_path (string): a file path for the new table to be written to disk.
+        file_path (string): a file path for the new table to be written to
+            disk.
 
     Returns:
         None
@@ -53,7 +53,7 @@ class WindEnergyUnitTests(unittest.TestCase):
     """Unit tests for the Wind Energy module."""
 
     def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
+        """Overriding setUp func. to create temporary workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
@@ -65,7 +65,7 @@ class WindEnergyUnitTests(unittest.TestCase):
     def test_calculate_distances_land_grid(self):
         """WindEnergy: testing 'calculate_distances_land_grid' function."""
         from natcap.invest import wind_energy
-        
+
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
         projection_wkt = srs.ExportToWkt()
@@ -76,22 +76,22 @@ class WindEnergyUnitTests(unittest.TestCase):
         # Setup parameters for creating point shapefile
         fields = {'id': ogr.OFTReal, 'L2G': ogr.OFTReal}
         attrs = [{'id': 1, 'L2G': 10}, {'id': 2, 'L2G': 20}]
-        
+
         geometries = [
             Point(pos_x + 50, pos_y - 50), Point(pos_x + 50, pos_y - 150)]
         land_shape_path = os.path.join(self.workspace_dir, 'temp_shape.shp')
         # Create point shapefile to use for testing input
         pygeoprocessing.shapely_geometry_to_vector(
-            geometries, land_shape_path, projection_wkt, 'ESRI Shapefile', 
+            geometries, land_shape_path, projection_wkt, 'ESRI Shapefile',
             fields=fields, attribute_list=attrs, ogr_geom_type=ogr.wkbPoint)
 
         # Setup parameters for create raster
-        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
+        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]], dtype=numpy.int32)
         harvested_masked_path = os.path.join(
             self.workspace_dir, 'temp_raster.tif')
         # Create raster to use for testing input
         pygeoprocessing.numpy_array_to_raster(
-            matrix, -1, (100, -100), origin, projection_wkt, 
+            matrix, -1, (100, -100), origin, projection_wkt,
             harvested_masked_path)
 
         tmp_dist_final_path = os.path.join(
@@ -102,7 +102,8 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         # Compare the results
         res_array = pygeoprocessing.raster_to_numpy_array(tmp_dist_final_path)
-        exp_array = numpy.array([[10, 110, 210, 310], [20, 120, 220, 320]])
+        exp_array = numpy.array(
+            [[10, 110, 210, 310], [20, 120, 220, 320]], dtype=numpy.int32)
         numpy.testing.assert_allclose(res_array, exp_array)
 
     def test_calculate_land_to_grid_distance(self):
@@ -134,8 +135,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         poly_vector_path = os.path.join(self.workspace_dir, 'poly_shape.shp')
         # Create polygon shapefile to use as testing input
         pygeoprocessing.shapely_geometry_to_vector(
-            poly_geometries, poly_vector_path, projection_wkt, 
-            'ESRI Shapefile', fields=fields, attribute_list=attr_poly, 
+            poly_geometries, poly_vector_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attr_poly,
             ogr_geom_type=ogr.wkbPolygon)
 
         point_geometries = [
@@ -144,10 +145,10 @@ class WindEnergyUnitTests(unittest.TestCase):
         point_vector_path = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile to use as testing input
         pygeoprocessing.shapely_geometry_to_vector(
-            point_geometries, point_vector_path, projection_wkt, 
-            'ESRI Shapefile', fields=fields, attribute_list=attr_pt, 
+            point_geometries, point_vector_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attr_pt,
             ogr_geom_type=ogr.wkbPoint)
-        
+
         target_point_vector_path = os.path.join(
             self.workspace_dir, 'target_point.shp')
         # Call function to test
@@ -194,28 +195,28 @@ class WindEnergyUnitTests(unittest.TestCase):
         # Setup parameters to create point shapefile
         fields = {'id': ogr.OFTReal}
         attrs = [{'id': 1}, {'id': 2}]
-        
+
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
         projection_wkt = srs.ExportToWkt()
         origin = (443723.127327877911739, 4956546.905980412848294)
         pos_x = origin[0]
         pos_y = origin[1]
-        
+
         geometries = [Point(pos_x + 50, pos_y - 50),
                       Point(pos_x + 50, pos_y - 150)]
         land_shape_path = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile to use as testing input
         pygeoprocessing.shapely_geometry_to_vector(
-            geometries, land_shape_path, projection_wkt, 
-            'ESRI Shapefile', fields=fields, attribute_list=attrs, 
+            geometries, land_shape_path, projection_wkt,
+            'ESRI Shapefile', fields=fields, attribute_list=attrs,
             ogr_geom_type=ogr.wkbPoint)
 
-        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
+        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]], dtype=numpy.int32)
         harvested_masked_path = os.path.join(self.workspace_dir, 'raster.tif')
         # Create raster to use as testing input
         pygeoprocessing.numpy_array_to_raster(
-            matrix, -1, (100, -100), origin, projection_wkt, 
+            matrix, -1, (100, -100), origin, projection_wkt,
             harvested_masked_path)
 
         tmp_dist_final_path = os.path.join(
@@ -225,7 +226,8 @@ class WindEnergyUnitTests(unittest.TestCase):
             land_shape_path, harvested_masked_path, tmp_dist_final_path, '')
 
         # Compare
-        exp_array = numpy.array([[0, 100, 200, 300], [0, 100, 200, 300]])
+        exp_array = numpy.array(
+            [[0, 100, 200, 300], [0, 100, 200, 300]], dtype=numpy.int32)
         res_array = pygeoprocessing.raster_to_numpy_array(tmp_dist_final_path)
         numpy.testing.assert_array_equal(res_array, exp_array)
 
@@ -366,6 +368,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_no_aoi(self):
         """WindEnergy: testing base case w/o AOI, distances, or valuation."""
         from natcap.invest import wind_energy
+        from natcap.invest.utils import _assert_vectors_equal
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         # Also test on input bathymetry that has equal x, y pixel sizes
@@ -386,13 +389,14 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_path = 'wind_energy_points.shp'
 
-        WindEnergyRegressionTests._assert_vectors_equal(
+        _assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
             os.path.join(REGRESSION_DATA, 'noaoi', vector_path))
 
     def test_no_land_polygon(self):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
         from natcap.invest import wind_energy
+        from natcap.invest.utils import _assert_vectors_equal
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(
@@ -412,13 +416,14 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_path = 'wind_energy_points.shp'
 
-        WindEnergyRegressionTests._assert_vectors_equal(
+        _assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
             os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path))
 
     def test_no_distances(self):
         """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
         from natcap.invest import wind_energy
+        from natcap.invest.utils import _assert_vectors_equal
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(
@@ -432,19 +437,22 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
 
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', raster_path),
+            model_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'nodistances', raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array)
 
         vector_path = 'wind_energy_points.shp'
 
-        WindEnergyRegressionTests._assert_vectors_equal(
+        _assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
             os.path.join(REGRESSION_DATA, 'nodistances', vector_path))
 
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest import wind_energy
+        from natcap.invest.utils import _assert_vectors_equal
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(
@@ -479,20 +487,22 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
 
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path),
-                1E-6)
+            model_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array)
 
         vector_path = 'wind_energy_points.shp'
 
-        WindEnergyRegressionTests._assert_vectors_equal(
+        _assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
             os.path.join(REGRESSION_DATA, 'pricevalgrid', vector_path))
 
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest import wind_energy
+        from natcap.invest.utils import _assert_vectors_equal
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_vector_path'] = os.path.join(
@@ -521,19 +531,23 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
 
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path),
-                1E-4)  # loosened tolerance to pass against GDAL 2.2.4 and 2.4.1
+            model_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path))
+            # loosened tolerance to pass against GDAL 2.2.4 and 2.4.1
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=1e-04)
 
         vector_path = 'wind_energy_points.shp'
-        WindEnergyRegressionTests._assert_vectors_equal(
+        _assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
             os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path))
 
     def test_val_no_grid_land_pts(self):
         """WindEnergy: testing Valuation without grid or land points."""
         from natcap.invest import wind_energy
+        from natcap.invest.utils import _assert_vectors_equal
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         # Also use an already projected bathymetry
         args['bathymetry_path'] = os.path.join(
@@ -561,18 +575,19 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
 
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'priceval', raster_path),
-                1E-6)
+            model_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, 'priceval', raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array)
 
         vector_path = 'wind_energy_points.shp'
-        WindEnergyRegressionTests._assert_vectors_equal(
+        _assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
             os.path.join(REGRESSION_DATA, 'priceval', vector_path))
 
     def test_field_error_missing_bio_param(self):
-        """WindEnergy: testing that ValueError raised when missing bio param."""
+        """WindEnergy: test that ValueError raised when missing bio param."""
         from natcap.invest import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
@@ -599,8 +614,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # creating a stand in turbine parameter csv file that is missing
         # a biophysical field / value. This should raise the exception
-        tmp, file_path = tempfile.mkstemp(suffix='.csv',
-                                          dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(
+            suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
@@ -649,8 +664,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # creating a stand in global wind params table that has a different
         # 'time' value than what is given in the wind schedule table.
         # This should raise the exception
-        tmp, file_path = tempfile.mkstemp(suffix='.csv',
-                                          dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(
+            suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'air_density': 1.225, 'exponent_power_curve': 2,
@@ -669,7 +684,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         self.assertRaises(ValueError, wind_energy.execute, args)
 
     def test_missing_valuation_params(self):
-        """WindEnergy: testing that ValueError is thrown when val params miss."""
+        """WindEnergy: test that ValueError is thrown when val params miss."""
         from natcap.invest import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
@@ -704,8 +719,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # creating a stand in turbine parameter csv file that is missing
         # a valuation field / value. This should raise the exception
-        tmp, file_path = tempfile.mkstemp(suffix='.csv',
-                                          dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(
+            suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
@@ -717,82 +732,12 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
-    @staticmethod
-    def _assert_vectors_equal(a_vector_path, b_vector_path):
-        """Assert that geometries and fields in the two vectors are equal.
-
-        Parameters:
-            a_vector_path (str): a path to an OGR vector.
-            b_vector_path (str): a path to an OGR vector.
-
-        Returns:
-            None.
-
-        Raises:
-            AssertionError when the two geometries or field values are not
-            equal up to desired precision (default is 6).
-
-        """
-        a_shape = ogr.Open(a_vector_path)
-        a_layer = a_shape.GetLayer(0)
-        a_feat = a_layer.GetNextFeature()
-
-        b_shape = ogr.Open(b_vector_path)
-        b_layer = b_shape.GetLayer(0)
-        b_feat = b_layer.GetNextFeature()
-
-        while a_feat is not None:
-            # Get coordinates from geometry and store them in a list
-            a_geom = a_feat.GetGeometryRef()
-            a_geom_list = re.findall(r'\d+\.\d+', a_geom.ExportToWkt())
-            a_geom_list = [float(x) for x in a_geom_list]
-
-            b_geom = b_feat.GetGeometryRef()
-            b_geom_list = re.findall(r'\d+\.\d+', b_geom.ExportToWkt())
-            b_geom_list = [float(x) for x in b_geom_list]
-
-            try:
-                numpy.testing.assert_array_almost_equal(
-                    a_geom_list, b_geom_list, decimal=4)
-            except AssertionError:
-                a_feature_fid = a_feat.GetFID()
-                b_feature_fid = b_feat.GetFID()
-                raise AssertionError('Geometries are not equal in feature %s, '
-                                     'regression feature %s.' %
-                                     (a_feature_fid, b_feature_fid))
-
-            # Get field names/values as dictionaries and compare them without
-            # specifying
-            a_fields = a_feat.items()
-            b_fields = b_feat.items()
-            for a_field, a_value in a_fields.items():
-                try:
-                    b_value = b_fields[a_field]
-                except KeyError:
-                    raise AssertionError(
-                        'Field %s in feature %s does not exist in regression'
-                        'feature %s.' % (a_field, a_feature_fid, b_feature_fid))
-                try:
-                    numpy.testing.assert_almost_equal(a_value, b_value)
-                except AssertionError:
-                    raise AssertionError(
-                        'Values in %s field are not equal in feature %s: %s, '
-                        'regression feature %s: %s.' %
-                        (a_field, a_feature_fid, a_value, b_feature_fid, b_value))
-
-            a_feat = None
-            b_feat = None
-            a_feat = a_layer.GetNextFeature()
-            b_feat = b_layer.GetNextFeature()
-
-        a_shape = None
-        b_shape = None
-
 
 class WindEnergyValidationTests(unittest.TestCase):
     """Tests for the Wind Energy Model ARGS_SPEC and validation."""
 
     def setUp(self):
+        """Setup a list of required keys."""
         self.base_required_keys = [
             'workspace_dir',
             'number_of_turbines',

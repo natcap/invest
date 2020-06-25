@@ -4,15 +4,15 @@ import math
 import logging
 import tempfile
 import shutil
-import itertools
-import heapq
-import struct
+import time
 
 import numpy
 from osgeo import gdal
 from osgeo import osr
 import taskgraph
 import pygeoprocessing
+import rtree
+import shapely.geometry
 
 from natcap.invest.scenic_quality.viewshed import viewshed
 from .. import utils
@@ -167,7 +167,7 @@ ARGS_SPEC = {
 def execute(args):
     """Run the Scenic Quality Model.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): (required) output directory for
             intermediate, temporary, and final files.
         args['results_suffix'] (string): (optional) string to append to any
@@ -256,7 +256,7 @@ def execute(args):
     reprojected_aoi_task = graph.add_task(
         pygeoprocessing.reproject_vector,
         args=(args['aoi_path'],
-              dem_raster_info['projection'],
+              dem_raster_info['projection_wkt'],
               file_registry['aoi_reprojected']),
         target_path_list=[file_registry['aoi_reprojected']],
         task_name='reproject_aoi_to_dem')
@@ -264,7 +264,7 @@ def execute(args):
     reprojected_viewpoints_task = graph.add_task(
         pygeoprocessing.reproject_vector,
         args=(args['structure_path'],
-              dem_raster_info['projection'],
+              dem_raster_info['projection_wkt'],
               file_registry['structures_reprojected']),
         target_path_list=[file_registry['structures_reprojected']],
         task_name='reproject_structures_to_dem')
@@ -296,73 +296,21 @@ def execute(args):
     clipped_viewpoints_task.join()
 
     # phase 2: calculate viewsheds.
-    LOGGER.info('Setting up viewshed tasks')
-    viewpoint_tuples = []
-    structures_vector = gdal.OpenEx(file_registry['structures_reprojected'],
-                                    gdal.OF_VECTOR)
-    for structures_layer_index in range(structures_vector.GetLayerCount()):
-        structures_layer = structures_vector.GetLayer(structures_layer_index)
-        layer_name = structures_layer.GetName()
-        LOGGER.info('Layer %s has %s features', layer_name,
-                    structures_layer.GetFeatureCount())
+    valid_viewpoints_task = graph.add_task(
+        _determine_valid_viewpoints,
+        args=(file_registry['clipped_dem'],
+              file_registry['structures_clipped']),
+        dependent_task_list=[clipped_viewpoints_task, clipped_dem_task],
+        task_name='determine_valid_viewpoints')
 
-        for point in structures_layer:
-            # Coordinates in map units to pass to viewshed algorithm
-            geometry = point.GetGeometryRef()
-            viewpoint = (geometry.GetX(), geometry.GetY())
-
-            if not _viewpoint_within_raster(viewpoint, file_registry['clipped_dem']):
-                LOGGER.info(
-                    ('Feature %s in layer %s is outside of the DEM bounding '
-                     'box. Skipping.'), layer_name, point.GetFID())
-                continue
-
-            if _viewpoint_over_nodata(viewpoint, file_registry['clipped_dem']):
-                LOGGER.info(
-                    'Feature %s in layer %s is over nodata; skipping.',
-                    point.GetFID(), layer_name)
-                continue
-
-            # RADIUS is the suggested value for InVEST Scenic Quality
-            # RADIUS2 is for users coming from ArcGIS's viewshed.
-            # Assume positive infinity if neither field is provided.
-            # Positive infinity is represented in our viewshed by None.
-            max_radius = None
-            for fieldname in ('RADIUS', 'RADIUS2'):
-                try:
-                    max_radius = math.fabs(point.GetField(fieldname))
-                    break
-                except (ValueError, KeyError):
-                    # When this field is not present.
-                    # ValueError was changed to KeyError between GDAL 2.2 and
-                    # 2.4.
-                    pass
-
-            try:
-                viewpoint_height = math.fabs(point.GetField('HEIGHT'))
-            except (ValueError, KeyError):
-                # When height field is not present, assume height of 0.0
-                # ValueError was changed to KeyError between GDAL 2.2 and 2.4.
-                viewpoint_height = 0.0
-
-            try:
-                weight = float(point.GetField('WEIGHT'))
-            except (ValueError, KeyError):
-                # When no weight provided, set scale to 1
-                # ValueError was changed to KeyError between GDAL 2.2 and 2.4.
-                weight = 1.0
-
-            viewpoint_tuples.append((viewpoint, max_radius, weight,
-                                     viewpoint_height))
-    structures_vector = None
-
+    viewpoint_tuples = valid_viewpoints_task.get()
     if not viewpoint_tuples:
         raise ValueError('No valid viewpoints found. This may happen if '
                          'viewpoints are beyond the edge of the DEM or are '
                          'over nodata pixels.')
 
     # These are sorted outside the vector to ensure consistent ordering.  This
-    # helps avoid unnecesary recomputation in taskgraph for when an ESRI
+    # helps avoid unnecessary recomputation in taskgraph for when an ESRI
     # Shapefile, for example, returns a different order of points because
     # someone decided to repack it.
     viewshed_files = []
@@ -408,7 +356,7 @@ def execute(args):
                       viewshed_valuation_path),
                 target_path_list=[viewshed_valuation_path],
                 dependent_task_list=[viewshed_task],
-                task_name='calculate_valuation_for_viewshed_%s' % feature_index)
+                task_name=f'calculate_valuation_for_viewshed_{feature_index}')
             valuation_tasks.append(valuation_task)
             valuation_filepaths.append(viewshed_valuation_path)
 
@@ -458,13 +406,186 @@ def execute(args):
     graph.join()
 
 
+def _determine_valid_viewpoints(dem_path, structures_path):
+    """Determine which viewpoints are valid and return them.
+
+    A point is considered valid when it meets all of these conditions:
+
+        1. The point must be within the bounding box of the DEM
+        2. The point must not overlap a DEM pixel that is nodata
+        3. The point must not have the same coordinates as another point
+
+    All invalid points are skipped, and a logger message is written for the
+    feature.
+
+    Args:
+        dem_path (str): The path to a GDAL-compatible digital elevation model
+            raster on disk.  The projection must match the projection of the
+            ``structures_path`` vector.
+        structures_path (str): The path to a GDAL-compatible vector containing
+            point geometries and, optionally, a few fields describing
+            parameters to the viewshed:
+
+                * 'RADIUS' or 'RADIUS2': How far out from the viewpoint (in m)
+                    the viewshed operation is permitted to extend. Default: no
+                    limit.
+                * 'HEIGHT': The height of the structure (in m). Default: 0.0
+                * 'WEIGHT': The numeric weight that this viewshed should be
+                    assigned when calculating visual quality. Default: 1.0
+
+    Returns:
+        An unsorted list of the valid viewpoints and their metadata.  The
+        tuples themselves are in the order::
+
+            (viewpoint, radius, weight, height)
+
+        Where
+
+            * ``viewpoint``: a tuple of
+                ``(projected x coord, projected y coord``)
+            * ``radius``: the maximum radius of the viewshed
+            * ``weight``: the weight of the viewshed (for calculating visual
+                quality)
+            * ``height``: The height of the structure at this point.
+    """
+    dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
+    dem_nodata = dem_raster_info['nodata'][0]
+    dem_gt = dem_raster_info['geotransform']
+    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = (
+        dem_raster_info['bounding_box'])
+
+    # Use interleaved coordinates (xmin, ymin, xmax, ymax)
+    spatial_index = rtree.index.Index(interleaved=True)
+
+    structures_vector = gdal.OpenEx(structures_path, gdal.OF_VECTOR)
+    for structures_layer_index in range(structures_vector.GetLayerCount()):
+        structures_layer = structures_vector.GetLayer(structures_layer_index)
+        layer_name = structures_layer.GetName()
+        LOGGER.info('Layer %s has %s features', layer_name,
+                    structures_layer.GetFeatureCount())
+
+        radius_fieldname = None
+        fieldnames = set(
+            column.GetName() for column in structures_layer.schema)
+        possible_radius_fieldnames = set(
+            ['RADIUS', 'RADIUS2']).intersection(fieldnames)
+        if possible_radius_fieldnames:
+            radius_fieldname = possible_radius_fieldnames.pop()
+
+        height_present = False
+        height_fieldname = 'HEIGHT'
+        if height_fieldname in fieldnames:
+            height_present = True
+
+        weight_present = False
+        weight_fieldname = 'WEIGHT'
+        if weight_fieldname in fieldnames:
+            weight_present = True
+
+        last_log_time = time.time()
+        n_features_touched = -1
+        for point in structures_layer:
+            n_features_touched += 1
+            if time.time() - last_log_time > 5.0:
+                LOGGER.info(
+                    ("Checking structures in layer %s, approx. "
+                     "%.2f%%complete."), layer_name,
+                    100.0*(n_features_touched /
+                           structures_layer.GetFeatureCount()))
+                last_log_time = time.time()
+
+            # Coordinates in map units to pass to viewshed algorithm
+            geometry = point.GetGeometryRef()
+            viewpoint = (geometry.GetX(), geometry.GetY())
+
+            if (not bbox_minx <= viewpoint[0] <= bbox_maxx or
+                    not bbox_miny <= viewpoint[1] <= bbox_maxy):
+                LOGGER.info(
+                    ('Feature %s in layer %s is outside of the DEM bounding '
+                     'box. Skipping.'), point.GetFID(), layer_name)
+                continue
+
+            max_radius = None
+            if radius_fieldname:
+                max_radius = math.fabs(point.GetField(radius_fieldname))
+
+            height = 0.0
+            if height_present:
+                height = math.fabs(point.GetField(height_fieldname))
+
+            weight = 1.0
+            if weight_present:
+                weight = float(point.GetField(weight_fieldname))
+
+            spatial_index.insert(
+                point.GetFID(),
+                (viewpoint[0], viewpoint[1], viewpoint[0], viewpoint[1]),
+                {'max_radius': max_radius,
+                 'weight': weight,
+                 'height': height})
+
+    # Now check that the viewpoint isn't over nodata in the DEM.
+    valid_structures = {}
+
+    dem_origin_x = dem_gt[0]
+    dem_origin_y = dem_gt[3]
+    dem_pixelsize_x = dem_raster_info['pixel_size'][0]
+    dem_pixelsize_y = dem_raster_info['pixel_size'][1]
+    dem_raster = gdal.OpenEx(dem_path, gdal.OF_RASTER)
+    dem_band = dem_raster.GetRasterBand(1)
+    for block_data in pygeoprocessing.iterblocks((dem_path, 1),
+                                                 offset_only=True):
+        # Using shapely.geometry.box here so that it'll handle the min/max for
+        # us and all we need to define here are the correct coordinates.
+        block_geom = shapely.geometry.box(
+            dem_origin_x + dem_pixelsize_x * block_data['xoff'],
+            dem_origin_y + dem_pixelsize_y * block_data['yoff'],
+            dem_origin_x + dem_pixelsize_x * (
+                block_data['xoff'] + block_data['win_xsize']),
+            dem_origin_y + dem_pixelsize_y * (
+                block_data['yoff'] + block_data['win_ysize']))
+
+        intersecting_points = list(spatial_index.intersection(
+            block_geom.bounds, objects=True))
+        if len(intersecting_points) == 0:
+            continue
+
+        dem_block = dem_band.ReadAsArray(**block_data)
+        for item in intersecting_points:
+            viewpoint = (item.bounds[0], item.bounds[2])
+            metadata = item.object
+            ix_viewpoint = int(
+                (viewpoint[0] - dem_gt[0]) // dem_gt[1]) - block_data['xoff']
+            iy_viewpoint = int(
+                (viewpoint[1] - dem_gt[3]) // dem_gt[5]) - block_data['yoff']
+            if dem_block[iy_viewpoint][ix_viewpoint] == dem_nodata:
+                LOGGER.info(
+                    'Feature %s in layer %s is over nodata; skipping.',
+                    point.GetFID(), layer_name)
+                continue
+
+            if viewpoint in valid_structures:
+                LOGGER.info(
+                    ('Feature %s in layer %s is a duplicate viewpoint. '
+                     'Skipping.'), point.GetFID(), layer_name)
+                continue
+
+            # if we've made it here, the viewpoint is valid.
+            valid_structures[viewpoint] = metadata
+
+    # Casting to a list so that taskgraph can pickle the result.
+    return list(
+        (point, meta['max_radius'], meta['weight'], meta['height'])
+        for (point, meta) in valid_structures.items())
+
+
 def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
     """Clip one vector by another.
 
     Uses gdal.Layer.Clip() to clip a vector, where the output Layer
     inherits the projection and fields from the original.
 
-    Parameters:
+    Args:
         shape_to_clip_path (string): a path to a vector on disk. This is
             the Layer to clip. Must have same spatial reference as
             'binding_shape_path'.
@@ -514,7 +635,7 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
 def _sum_valuation_rasters(dem_path, valuation_filepaths, target_path):
     """Sum up all valuation rasters.
 
-    Parameters:
+    Args:
         dem_path (string): A path to the DEM.  Must perfectly overlap all of
             the rasters in ``valuation_filepaths``.
         valuation_filepaths (list of strings): A list of paths to individual
@@ -553,7 +674,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
                          valuation_raster_path):
     """Calculate valuation with one of the defined methods.
 
-    Parameters:
+    Args:
         visibility_path (string): The path to a visibility raster for a single
             point.  The visibility raster has pixel values of 0, 1, or nodata.
             This raster must be projected in meters.
@@ -637,7 +758,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
     # convert the distance transform to meters
     spatial_reference = osr.SpatialReference()
-    spatial_reference.ImportFromWkt(vis_raster_info['projection'])
+    spatial_reference.ImportFromWkt(vis_raster_info['projection_wkt'])
     linear_units = spatial_reference.GetLinearUnits()
     pixel_size_in_m = utils.mean_pixel_size_and_area(
         vis_raster_info['pixel_size'])[0] * linear_units
@@ -684,67 +805,10 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     valuation_raster = None
 
 
-def _viewpoint_within_raster(viewpoint, dem_path):
-    """Determine if a viewpoint overlaps a DEM.
-
-    Parameters:
-        viewpoint (tuple): A coordinate pair indicating the (x, y) coordinates
-            projected in the DEM's coordinate system.
-        dem_path (string): The path to a DEM raster on disk.
-
-    Returns:
-        ``True`` if the viewpoint overlaps the DEM, ``False`` if not.
-
-    """
-    dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
-
-    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = (
-        dem_raster_info['bounding_box'])
-    if (not bbox_minx <= viewpoint[0] <= bbox_maxx or
-            not bbox_miny <= viewpoint[1] <= bbox_maxy):
-        return False
-    return True
-
-
-def _viewpoint_over_nodata(viewpoint, dem_path):
-    """Determine if a viewpoint overlaps a nodata value within the DEM.
-
-    Parameters:
-        viewpoint (tuple): A coordinate pair indicating the (x, y) coordinates
-            projected in the DEM's coordinate system.
-        dem_path (string): The path to a DEM raster on disk.
-
-    Returns:
-        ``True`` if the viewpoint overlaps a nodata value within the DEM,
-        ``False`` if not.  If the DEM does not have a nodata value defined,
-        returns ``False``.
-
-    """
-    raster = gdal.OpenEx(dem_path, gdal.OF_RASTER)
-    band = raster.GetRasterBand(1)
-    nodata = band.GetNoDataValue()
-    dem_gt = raster.GetGeoTransform()
-
-    ix_viewpoint = int((viewpoint[0] - dem_gt[0]) / dem_gt[1])
-    iy_viewpoint = int((viewpoint[1] - dem_gt[3]) / dem_gt[5])
-
-    value_under_viewpoint = band.ReadAsArray(
-        xoff=ix_viewpoint, yoff=iy_viewpoint, win_xsize=1, win_ysize=1)
-
-    band = None
-    raster = None
-
-    # If the nodata value is not set, ``nodata`` will be None and this should
-    # always return False.
-    if value_under_viewpoint == nodata:
-        return True
-    return False
-
-
 def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     """Clip and mask the DEM to the AOI.
 
-    Parameters:
+    Args:
         dem_path (string): The path to the DEM to use.  Must have the same
             projection as the AOI.
         aoi_path (string): The path to the AOI to use.  Must have the same
@@ -814,7 +878,7 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
                                          clipped_dem_path, target_path):
     """Count (and weight) the number of visible structures for each pixel.
 
-    Parameters:
+    Args:
         visibility_raster_path_list (list of strings): A list of strings to
             perfectly overlapping visibility rasters.
         weights (list of numbers): A list of numeric weights to apply to each
@@ -833,45 +897,64 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
     dem_raster_info = pygeoprocessing.get_raster_info(clipped_dem_path)
     dem_nodata = dem_raster_info['nodata'][0]
 
-    def _sum_and_weight(*args):
-        """Sum and weight the input matrices, masking the output to the DEM.
+    pygeoprocessing.new_raster_from_base(
+        clipped_dem_path, target_path, gdal.GDT_Float32, [target_nodata],
+        raster_driver_creation_tuple=FLOAT_GTIFF_CREATION_OPTIONS)
 
-        Parameters:
-            args (list): A list of 2n+1 items, where n is the number of
-                visibility rasters to sum and weight.  Item 0 in this list must
-                be the DEM array.  Items 1 through n of this list must be the
-                visibility arrays.  Items n+1 through 2n of this list must be
-                the weights that correspond with the visibility arrays, in
-                corresponding order.
+    weighted_sum_visibility_raster = gdal.OpenEx(
+        target_path, gdal.OF_RASTER | gdal.GA_Update)
+    weighted_sum_visibility_band = (
+        weighted_sum_visibility_raster.GetRasterBand(1))
 
-        Returns:
-            A 2D numpy array for the weighted sum of the visibility rasters.
+    dem_raster = gdal.OpenEx(clipped_dem_path, gdal.OF_RASTER)
+    dem_band = dem_raster.GetRasterBand(1)
+    last_log_time = time.time()
+    n_visibility_pixels = (
+        dem_raster_info['raster_size'][0] * dem_raster_info['raster_size'][1] *
+        len(visibility_raster_path_list))
+    n_visibility_pixels_touched = 0
+    for block_data in pygeoprocessing.iterblocks((clipped_dem_path, 1),
+                                                 offset_only=True):
+        dem_block = dem_band.ReadAsArray(**block_data)
+        valid_mask = (dem_block != dem_nodata)
 
-        """
-        dem = args[0]
-        n_visibility_arrays = (len(args) - 1) // 2
-        visibility_rasters = args[1: n_visibility_arrays + 1]
-        weights = args[n_visibility_arrays + 1:]
-
-        valid_mask = (dem != dem_nodata)
-
-        visibility_sum = numpy.empty(dem.shape, dtype=numpy.float32)
+        visibility_sum = numpy.empty(dem_block.shape, dtype=numpy.float32)
         visibility_sum[:] = target_nodata
         visibility_sum[valid_mask] = 0
 
-        # Weight and sum the outputs.
-        for visibility_matrix, weight in zip(visibility_rasters, weights):
-            visible_mask = (valid_mask & (visibility_matrix == 1))
-            visibility_sum[visible_mask] += (visibility_matrix[visible_mask] *
-                                             weight)
-        return visibility_sum
+        # Weight and sum the outputs, only opening one raster at a time.
+        # Opening rasters one at a time avoids errors about having too many
+        # files open at once and also avoids possible out-of-memory errors
+        # relative to if we were to open all the incoming rasters at once.
+        for vis_raster_path, weight in zip(visibility_raster_path_list,
+                                           weights):
+            if time.time() - last_log_time > 5.0:
+                LOGGER.info(
+                    'Weighting and summing approx. %.2f%% complete.',
+                    100.0*(n_visibility_pixels_touched/n_visibility_pixels))
+                last_log_time = time.time()
 
-    pygeoprocessing.raster_calculator(
-        ([(clipped_dem_path, 1)] +
-         [(vis_path, 1) for vis_path in visibility_raster_path_list] +
-         [(weight, 'raw') for weight in weights]),
-        _sum_and_weight, target_path, gdal.GDT_Float32, target_nodata,
-        raster_driver_creation_tuple=FLOAT_GTIFF_CREATION_OPTIONS)
+            visibility_raster = gdal.OpenEx(vis_raster_path, gdal.OF_RASTER)
+            visibility_band = visibility_raster.GetRasterBand(1)
+            visibility_block = visibility_band.ReadAsArray(**block_data)
+
+            visible_mask = (valid_mask & (visibility_block == 1))
+            visibility_sum[visible_mask] += (
+                visibility_block[visible_mask] * weight)
+
+            visibility_band = None
+            visibility_raster = None
+            n_visibility_pixels_touched += dem_block.size
+
+        weighted_sum_visibility_band.WriteArray(
+            visibility_sum, xoff=block_data['xoff'], yoff=block_data['yoff'])
+
+    weighted_sum_visibility_band.ComputeStatistics(0)
+    weighted_sum_visibility_band = None
+    weighted_sum_visibility_raster = None
+
+    dem_band = None
+    dem_raster = None
 
 
 def _calculate_visual_quality(source_raster_path, working_dir, target_path):
@@ -880,7 +963,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     Visual quality is based on the nearest-rank method for breaking pixel
     values from the source raster into percentiles.
 
-    Parameters:
+    Args:
         source_raster_path (string): The path to a raster from which
             percentiles should be calculated.  Nodata values and pixel values
             of 0 are ignored.
@@ -955,7 +1038,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to ``execute``'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation

@@ -30,7 +30,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
     def get_harvest_info(workspace, filename='results_table.csv'):
         """Extract final harvest info from the results CSV.
 
-        Parameters:
+        Args:
             workspace (string): The path to the output workspace.  The file
                 *workspace*/output/results_table.csv must exist.
 
@@ -73,16 +73,14 @@ class FisheriesSampleDataTests(unittest.TestCase):
         from natcap.invest.fisheries import fisheries
         args = {
             'alpha': 6050000.0,
-            'aoi_vector_path': os.path.join(SAMPLE_DATA,
-                                             'shapefile_galveston',
-                                             'Galveston_Subregion.shp'),
+            'aoi_vector_path': os.path.join(
+                SAMPLE_DATA, 'shapefile_galveston', 'Galveston_Subregion.shp'),
             'beta': 4.14e-08,
             'do_batch': False,
             'harvest_units': 'Weight',
             'migr_cont': False,
-            'population_csv_path': os.path.join(SAMPLE_DATA,
-                                                 'input_shrimp',
-                                                 'population_params.csv'),
+            'population_csv_path': os.path.join(
+                SAMPLE_DATA, 'input_shrimp', 'population_params.csv'),
             'population_type': 'Stage-Based',
             'recruitment_type': 'Fixed',
             'sexsp': 'No',
@@ -97,7 +95,8 @@ class FisheriesSampleDataTests(unittest.TestCase):
         }
         validation_warnings = fisheries.validate(args)
         self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('required but has no value' in validation_warnings[0][1])
+        self.assertTrue(
+            'required but has no value' in validation_warnings[0][1])
 
     def test_validation_batch(self):
         """Fisheries: Batch parameters (full model validation)."""
@@ -106,18 +105,16 @@ class FisheriesSampleDataTests(unittest.TestCase):
         # enabled.
         args = {
             'alpha': 5.77e6,
-            'aoi_vector_path': os.path.join(SAMPLE_DATA,
-                                             'shapefile_belize',
-                                             'Lob_Belize_Subregions.shp'),
+            'aoi_vector_path': os.path.join(
+                SAMPLE_DATA, 'shapefile_belize', 'Lob_Belize_Subregions.shp'),
             'beta': 2.885e6,
             'do_batch': False,
             'harvest_units': 'Weight',
             'migr_cont': True,
-            'migration_dir': os.path.join(SAMPLE_DATA,
-                                           'input_lobster', 'Migrations'),
-            'population_csv_path': os.path.join(SAMPLE_DATA,
-                                                 'input_lobster',
-                                                 'population_params.csv'),
+            'migration_dir': os.path.join(
+                SAMPLE_DATA, 'input_lobster', 'Migrations'),
+            'population_csv_path': os.path.join(
+                SAMPLE_DATA, 'input_lobster', 'population_params.csv'),
             'population_type': 'Age-Based',
             'recruitment_type': 'Beverton-Holt',
             'sexsp': 'No',
@@ -169,7 +166,8 @@ class FisheriesSampleDataTests(unittest.TestCase):
         """Fisheries: Validate AOI fields."""
         from natcap.invest.fisheries import fisheries
 
-        args = {'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.gpkg')}
+        args = {
+            'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.gpkg')}
         gpkg_driver = gdal.GetDriverByName('GPKG')
         vector = gpkg_driver.Create(
             args['aoi_vector_path'], 0, 0, 0, gdal.GDT_Unknown)
@@ -179,7 +177,8 @@ class FisheriesSampleDataTests(unittest.TestCase):
         layer = None
         vector = None
 
-        validation_warnings = fisheries.validate(args, limit_to='aoi_vector_path')
+        validation_warnings = fisheries.validate(
+            args, limit_to='aoi_vector_path')
         self.assertEqual(len(validation_warnings), 1)
         self.assertTrue('Fields are missing from the first layer' in
                         validation_warnings[0][1])
@@ -200,16 +199,14 @@ class FisheriesSampleDataTests(unittest.TestCase):
         from natcap.invest.fisheries import fisheries
         args = {
             'alpha': 6050000.0,
-            'aoi_vector_path': os.path.join(SAMPLE_DATA,
-                                             'shapefile_galveston',
-                                             'Galveston_Subregion.shp'),
+            'aoi_vector_path': os.path.join(
+                SAMPLE_DATA, 'shapefile_galveston', 'Galveston_Subregion.shp'),
             'beta': 4.14e-08,
             'do_batch': False,
             'harvest_units': 'Weight',
             'migr_cont': False,
-            'population_csv_path': os.path.join(SAMPLE_DATA,
-                                                 'input_shrimp',
-                                                 'population_params.csv'),
+            'population_csv_path': os.path.join(
+                SAMPLE_DATA, 'input_shrimp', 'population_params.csv'),
             'population_type': 'Stage-Based',
             'recruitment_type': 'Fixed',
             'sexsp': 'No',
@@ -225,7 +222,8 @@ class FisheriesSampleDataTests(unittest.TestCase):
         fisheries.execute(args)
         final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
             args['workspace_dir'], 'results_table_foo.csv')
-        self.assertEqual(final_timestep_data['spawners'], '(fixed recruitment)')
+        self.assertEqual(
+            final_timestep_data['spawners'], '(fixed recruitment)')
         self.assertEqual(final_timestep_data['harvest'], 3120557.88)
 
     def test_sampledata_lobster(self):
@@ -233,18 +231,16 @@ class FisheriesSampleDataTests(unittest.TestCase):
         from natcap.invest.fisheries import fisheries
         args = {
             'alpha': 5.77e6,
-            'aoi_vector_path': os.path.join(SAMPLE_DATA,
-                                             'shapefile_belize',
-                                             'Lob_Belize_Subregions.shp'),
+            'aoi_vector_path': os.path.join(
+                SAMPLE_DATA, 'shapefile_belize', 'Lob_Belize_Subregions.shp'),
             'beta': 2.885e6,
             'do_batch': False,
             'harvest_units': 'Weight',
             'migr_cont': True,
-            'migration_dir': os.path.join(SAMPLE_DATA,
-                                           'input_lobster', 'Migrations'),
-            'population_csv_path': os.path.join(SAMPLE_DATA,
-                                                 'input_lobster',
-                                                 'population_params.csv'),
+            'migration_dir': os.path.join(
+                SAMPLE_DATA, 'input_lobster', 'Migrations'),
+            'population_csv_path': os.path.join(
+                SAMPLE_DATA, 'input_lobster', 'population_params.csv'),
             'population_type': 'Age-Based',
             'recruitment_type': 'Beverton-Holt',
             'sexsp': 'No',
@@ -269,16 +265,14 @@ class FisheriesSampleDataTests(unittest.TestCase):
         from natcap.invest.fisheries import fisheries
         args = {
             'alpha': 6.05e6,
-            'aoi_vector_path': os.path.join(SAMPLE_DATA,
-                                             'shapefile_galveston',
-                                             'Galveston_Subregion.shp'),
+            'aoi_vector_path': os.path.join(
+                SAMPLE_DATA, 'shapefile_galveston', 'Galveston_Subregion.shp'),
             'beta': 4.14e-08,
             'do_batch': False,
             'harvest_units': 'Individuals',
             'migr_cont': False,
-            'population_csv_path': os.path.join(SAMPLE_DATA,
-                                                 'input_blue_crab',
-                                                 'population_params.csv'),
+            'population_csv_path': os.path.join(
+                SAMPLE_DATA, 'input_blue_crab', 'population_params.csv'),
             'population_type': 'Age-Based',
             'recruitment_type': 'Ricker',
             'sexsp': 'No',
@@ -301,15 +295,13 @@ class FisheriesSampleDataTests(unittest.TestCase):
         from natcap.invest.fisheries import fisheries
         args = {
             'alpha': 6.05e6,
-            'aoi_vector_path': os.path.join(SAMPLE_DATA,
-                                             'shapefile_galveston',
-                                             'Galveston_Subregion.shp'),
+            'aoi_vector_path': os.path.join(
+                SAMPLE_DATA, 'shapefile_galveston', 'Galveston_Subregion.shp'),
             'beta': 4.14e-08,
             'do_batch': True,
             'harvest_units': 'Individuals',
             'migr_cont': False,
-            'population_csv_dir': os.path.join(SAMPLE_DATA,
-                                                'input_blue_crab'),
+            'population_csv_dir': os.path.join(SAMPLE_DATA, 'input_blue_crab'),
             'population_type': 'Age-Based',
             'recruitment_type': 'Ricker',
             'sexsp': 'No',
@@ -332,16 +324,15 @@ class FisheriesSampleDataTests(unittest.TestCase):
         from natcap.invest.fisheries import fisheries
         args = {
             'alpha': 2e6,
-            'aoi_vector_path': os.path.join(SAMPLE_DATA,
-                                             'shapefile_hood_canal',
-                                             'DC_HoodCanal_Subregions.shp'),
+            'aoi_vector_path': os.path.join(
+                SAMPLE_DATA, 'shapefile_hood_canal',
+                'DC_HoodCanal_Subregions.shp'),
             'beta': 3.09e-7,
             'do_batch': False,
             'harvest_units': 'Individuals',
             'migr_cont': False,
-            'population_csv_path': os.path.join(SAMPLE_DATA,
-                                                 'input_dungeness_crab',
-                                                 'population_params.csv'),
+            'population_csv_path': os.path.join(
+                SAMPLE_DATA, 'input_dungeness_crab', 'population_params.csv'),
             'population_type': 'Age-Based',
             'recruitment_type': 'Ricker',
             'sexsp': 'Yes',
@@ -361,12 +352,11 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @staticmethod
     def fecundity_args(workspace):
-        """
-        Create a base set of args for the fecundity recruitment model.
+        """Create a base set of args for the fecundity recruitment model.
 
         The AOI is located in Belize.
 
-        Parameters:
+        Args:
             workspace (string): The path to the workspace on disk.
 
         Returns:
@@ -374,15 +364,14 @@ class FisheriesSampleDataTests(unittest.TestCase):
         """
         args = {
             'alpha': 5.77e6,
-            'aoi_vector_path': os.path.join(SAMPLE_DATA,
-                                             'shapefile_belize',
-                                             'Lob_Belize_Subregions.shp'),
+            'aoi_vector_path': os.path.join(
+                SAMPLE_DATA, 'shapefile_belize', 'Lob_Belize_Subregions.shp'),
             'beta': 2.885e6,
             'do_batch': False,
             'harvest_units': 'Weight',
             'migr_cont': False,
-            'population_csv_path': os.path.join(TEST_DATA,
-                                                 'sample_fecundity_params.csv'),
+            'population_csv_path': os.path.join(
+                TEST_DATA, 'sample_fecundity_params.csv'),
             'population_type': 'Age-Based',
             'recruitment_type': 'Fecundity',
             'sexsp': 'No',
@@ -397,10 +386,9 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     @staticmethod
     def galveston_args(workspace):
-        """
-        Create a base set of fecundity args for Galveston Bay.
+        """Create a base set of fecundity args for Galveston Bay.
 
-        Parameters:
+        Args:
             workspace (string): The path to the workspace on disk.
 
         Returns:
@@ -409,9 +397,8 @@ class FisheriesSampleDataTests(unittest.TestCase):
         args = FisheriesSampleDataTests.fecundity_args(workspace)
         args.update({
             'alpha': 6050000.0,
-            'aoi_vector_path': os.path.join(SAMPLE_DATA,
-                                             'shapefile_galveston',
-                                             'Galveston_Subregion.shp'),
+            'aoi_vector_path': os.path.join(
+                SAMPLE_DATA, 'shapefile_galveston', 'Galveston_Subregion.shp'),
             'beta': 4.14e-08,
             'harvest_units': 'Individuals',
             'spawn_units': 'Individuals',
@@ -441,7 +428,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
             # This doesn't model anything real, but it will produce outputs as
             # expected.
             'recruitment_func': lambda x: (numpy.ones((9,)),
-                                            numpy.float64(100))
+                                           numpy.float64(100))
         })
 
         fisheries.execute(args)
@@ -495,9 +482,8 @@ class FisheriesSampleDataTests(unittest.TestCase):
         args = {
             'alpha': 6050000.0,
             'beta': 4.14e-08,
-            'aoi_vector_path': os.path.join(SAMPLE_DATA,
-                                             'shapefile_galveston',
-                                             'Galveston_Subregion.shp'),
+            'aoi_vector_path': os.path.join(
+                SAMPLE_DATA, 'shapefile_galveston', 'Galveston_Subregion.shp'),
             'do_batch': False,
             'harvest_units': 'Weight',
             'migr_cont': False,
@@ -518,15 +504,17 @@ class FisheriesSampleDataTests(unittest.TestCase):
         fisheries.execute(args)
         final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
             args['workspace_dir'], 'results_table_foo.csv')
-        self.assertEqual(final_timestep_data['spawners'], '(fixed recruitment)')
+        self.assertEqual(
+            final_timestep_data['spawners'], '(fixed recruitment)')
         self.assertEqual(final_timestep_data['harvest'], 3120557.88)
 
         # verify that two identical subregions were found.
         in_subregion = False
         subregions = {}
-        harvest_table_path = os.path.join(self.workspace_dir, 'output',
-                                          'results_table_foo.csv')
-        with io.open(harvest_table_path, 'r', newline=os.linesep) as harvest_table:
+        harvest_table_path = os.path.join(
+            self.workspace_dir, 'output', 'results_table_foo.csv')
+        with io.open(
+                harvest_table_path, 'r', newline=os.linesep) as harvest_table:
             for line in harvest_table:
                 if in_subregion:
                     if line.lower().startswith('total'):
@@ -560,10 +548,10 @@ class FisheriesHSTTest(unittest.TestCase):
         args = {
             'gamma': 0.5,
             'hab_cont': False,
-            'habitat_chg_csv_path': os.path.join(HST_INPUTS,
-                                                  'habitat_chg_params.csv'),
-            'habitat_dep_csv_path': os.path.join(HST_INPUTS,
-                                                  'habitat_dep_params.csv'),
+            'habitat_chg_csv_path': os.path.join(
+                HST_INPUTS, 'habitat_chg_params.csv'),
+            'habitat_dep_csv_path': os.path.join(
+                HST_INPUTS, 'habitat_dep_params.csv'),
             'pop_cont': False,
             'population_csv_path': os.path.join(HST_INPUTS, 'pop_params.csv'),
             'sexsp': 'No',
@@ -572,7 +560,8 @@ class FisheriesHSTTest(unittest.TestCase):
         fisheries_hst.execute(args)
 
         actual_values_df = pandas.read_csv(
-            os.path.join(args['workspace_dir'], 'output', 'pop_params_modified.csv'))
+            os.path.join(
+                args['workspace_dir'], 'output', 'pop_params_modified.csv'))
         expected_values_df = pandas.read_csv(
             os.path.join(TEST_DATA, 'pop_params_modified.csv'))
         pandas.testing.assert_frame_equal(actual_values_df, expected_values_df)
@@ -583,13 +572,13 @@ class FisheriesHSTTest(unittest.TestCase):
         args = {
             'gamma': 0.5,
             'hab_cont': False,
-            'habitat_chg_csv_path': os.path.join(HST_INPUTS,
-                                                  'habitat_chg_params.csv'),
-            'habitat_dep_csv_path': os.path.join(HST_INPUTS,
-                                                  'habitat_dep_params.csv'),
+            'habitat_chg_csv_path': os.path.join(
+                HST_INPUTS, 'habitat_chg_params.csv'),
+            'habitat_dep_csv_path': os.path.join(
+                HST_INPUTS, 'habitat_dep_params.csv'),
             'pop_cont': False,
-            'population_csv_path': os.path.join(TEST_DATA,
-                                                 'hst_pop_params_sexsp.csv'),
+            'population_csv_path': os.path.join(
+                TEST_DATA, 'hst_pop_params_sexsp.csv'),
             'sexsp': 'Yes',
             'workspace_dir': self.workspace_dir,
         }
@@ -597,7 +586,9 @@ class FisheriesHSTTest(unittest.TestCase):
         fisheries_hst.execute(args)
 
         actual_values_df = pandas.read_csv(
-            os.path.join(args['workspace_dir'], 'output', 'hst_pop_params_sexsp_modified.csv'))
+            os.path.join(
+                args['workspace_dir'], 'output',
+                'hst_pop_params_sexsp_modified.csv'))
         expected_values_df = pandas.read_csv(
             os.path.join(TEST_DATA, 'hst_pop_params_sexsp_modified.csv'))
         pandas.testing.assert_frame_equal(actual_values_df, expected_values_df)

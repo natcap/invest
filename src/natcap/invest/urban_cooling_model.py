@@ -298,8 +298,7 @@ def execute(args):
         args['workspace_dir'], 'intermediate')
     utils.make_directories([args['workspace_dir'], intermediate_dir])
     biophysical_lucode_map = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'lucode', to_lower=True,
-        warn_if_missing=True)
+        args['biophysical_table_path'], 'lucode', to_lower=True)
 
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
@@ -354,7 +353,7 @@ def execute(args):
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
             'raster_align_index': 1,
-            'target_sr_wkt': lulc_raster_info['projection']},
+            'target_projection_wkt': lulc_raster_info['projection_wkt']},
         target_path_list=aligned_raster_path_list,
         task_name='align rasters')
 
@@ -417,7 +416,7 @@ def execute(args):
             green_area_sum_raster_path),
         kwargs={
             'working_dir': intermediate_dir,
-            'ignore_nodata': True},
+            'ignore_nodata_and_edges': True},
         target_path_list=[green_area_sum_raster_path],
         dependent_task_list=[
             task_path_prop_map['green_area'][0],  # reclassed green area task
@@ -536,7 +535,7 @@ def execute(args):
     intermediate_uhi_result_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
-            args['aoi_vector_path'], lulc_raster_info['projection'],
+            args['aoi_vector_path'], lulc_raster_info['projection_wkt'],
             intermediate_aoi_vector_path),
         kwargs={'driver_name': 'ESRI Shapefile'},
         target_path_list=[intermediate_aoi_vector_path],
@@ -609,7 +608,7 @@ def execute(args):
         intermediate_building_vector_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(
-                args['building_vector_path'], lulc_raster_info['projection'],
+                args['building_vector_path'], lulc_raster_info['projection_wkt'],
                 intermediate_building_vector_path),
             kwargs={'driver_name': 'ESRI Shapefile'},
             target_path_list=[intermediate_building_vector_path],
@@ -949,8 +948,7 @@ def calculate_energy_savings(
     type_field_index = fieldnames.index('type')
 
     energy_consumption_table = utils.build_lookup_from_csv(
-        energy_consumption_table_path, 'type', to_lower=True,
-        warn_if_missing=True)
+        energy_consumption_table_path, 'type', to_lower=True)
 
     target_building_layer.StartTransaction()
     last_time = time.time()
@@ -1366,7 +1364,7 @@ def convolve_2d_by_exponential(
     pygeoprocessing.convolve_2d(
         (signal_raster_path, 1), (exponential_kernel_path, 1),
         target_convolve_raster_path, working_dir=temporary_working_dir,
-        ignore_nodata=True)
+        ignore_nodata_and_edges=True)
     shutil.rmtree(temporary_working_dir)
 
 

@@ -11,6 +11,7 @@ import time
 
 import pandas
 import numpy
+from shapely.wkt import loads
 from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
@@ -32,6 +33,15 @@ GDAL_ERROR_LEVELS = {
     gdal.CE_Fatal: logging.CRITICAL,
 }
 
+# In GDAL 3.0 spatial references no longer ignore Geographic CRS Axis Order
+# and conform to Lat first, Lon Second. Transforms expect (lat, lon) order
+# as opposed to the GIS friendly (lon, lat). See
+# https://trac.osgeo.org/gdal/wiki/rfc73_proj6_wkt2_srsbarn Axis order
+# issues. SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER) swaps the
+# axis order, which will use Lon,Lat order for Geographic CRS, but otherwise
+# leaves Projected CRS alone
+DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
+
 
 @contextlib.contextmanager
 def capture_gdal_logging():
@@ -41,11 +51,12 @@ def capture_gdal_logging():
     that corresponds to a log level in ``logging``.  Error messages are logged
     with the ``osgeo.gdal`` logger.
 
-    Parameters:
+    Args:
         ``None``
 
     Returns:
-        ``None``"""
+        ``None``
+    """
     osgeo_logger = logging.getLogger('osgeo')
 
     def _log_gdal_errors(err_level, err_no, err_msg):
@@ -54,14 +65,15 @@ def capture_gdal_logging():
         All error messages are logged with reasonable ``logging`` levels based
         on the GDAL error level.
 
-        Parameters:
+        Args:
             err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
             err_no (int): The GDAL error number.  For a full listing of error
                 codes, see: http://www.gdal.org/cpl__error_8h.html
             err_msg (string): The error string.
 
         Returns:
-            ``None``"""
+            ``None``
+        """
         osgeo_logger.log(
             level=GDAL_ERROR_LEVELS[err_level],
             msg='[errno {err}] {msg}'.format(
@@ -75,8 +87,7 @@ def capture_gdal_logging():
 
 
 def _format_time(seconds):
-    """Render the integer number of seconds as a string.  Returns a string.
-    """
+    """Render the integer number of seconds as a string. Returns a string."""
     hours, remainder = divmod(seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
@@ -92,8 +103,9 @@ def _format_time(seconds):
 
 
 @contextlib.contextmanager
-def prepare_workspace(workspace, name, logging_level=logging.NOTSET,
-                      exclude_threads=None):
+def prepare_workspace(
+        workspace, name, logging_level=logging.NOTSET, exclude_threads=None):
+    """Prepare the workspace."""
     if not os.path.exists(workspace):
         os.makedirs(workspace)
 
@@ -127,7 +139,7 @@ class ThreadFilter(logging.Filter):
     def __init__(self, thread_name):
         """Construct a ThreadFilter.
 
-        Parameters:
+        Args:
             thread_name (string): The thread name to filter on.
 
         """
@@ -137,11 +149,12 @@ class ThreadFilter(logging.Filter):
     def filter(self, record):
         """Filter the given log record.
 
-        Parameters:
+        Args:
             record (log record): The log record to filter.
 
         Returns:
-            True if the record should be included, false if not."""
+            True if the record should be included, false if not.
+        """
         if record.threadName == self.thread_name:
             return False
         return True
@@ -152,7 +165,7 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
                 log_fmt=LOG_FMT, date_fmt=None):
     """Log all messages within this context to a file.
 
-    Parameters:
+    Args:
         logfile (string): The path to where the logfile will be written.
             If there is already a file at this location, it will be
             overwritten.
@@ -174,7 +187,8 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
             represents the file that is being written to.
 
     Returns:
-        ``None``"""
+        ``None``
+    """
     try:
         if os.path.exists(logfile):
             LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
@@ -215,7 +229,7 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
     When the context manager exits, the created temporary directory is
     recursively removed.
 
-    Parameters:
+    Args:
         suffix='' (string): a suffix for the name of the directory.
         prefix='tmp' (string): the prefix to use for the directory name.
         dir=None (string or None): If a string, a directory that should be
@@ -227,7 +241,8 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
         ``sandbox`` (string): The path to the new folder on disk.
 
     Returns:
-        ``None``"""
+        ``None``
+    """
     sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
 
     try:
@@ -246,7 +261,7 @@ def make_suffix_string(args, suffix_key):
     suffix key.  In general, prepends an '_' when necessary and generates an
     empty string when necessary.
 
-    Parameters:
+    Args:
         args (dict): the classic InVEST model parameter dictionary that is
             passed to `execute`.
         suffix_key (string): the key used to index the base suffix.
@@ -272,7 +287,7 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
 
     The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
 
-    Parameters:
+    Args:
         expected_distance (int or float): The distance (in pixels) of the
             kernel's radius, the distance at which the value of the decay
             function is equal to `1/e`.
@@ -362,11 +377,10 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     kernel_dataset = None
 
 
-
 def build_file_registry(base_file_path_list, file_suffix):
     """Combine file suffixes with key names, base filenames, and directories.
 
-    Parameters:
+    Args:
         base_file_tuple_list (list): a list of (dict, path) tuples where
             the dictionaries have a 'file_key': 'basefilename' pair, or
             'file_key': list of 'basefilename's.  'path'
@@ -431,24 +445,27 @@ def build_file_registry(base_file_path_list, file_suffix):
 
 
 def build_lookup_from_csv(
-        table_path, key_field, to_lower=True, warn_if_missing=True):
-    """Read a CSV table into a dictionary indexed by `key_field`.
+        table_path, key_field, column_list=None, to_lower=True):
+    """Read a CSV table into a dictionary indexed by ``key_field``.
 
     Creates a dictionary from a CSV whose keys are unique entries in the CSV
-    table under the column named by `key_field` and values are dictionaries
-    indexed by the other columns in `table_path` including `key_field` whose
-    values are the values on that row of the CSV table.
+    table under the column named by ``key_field`` and values are dictionaries
+    indexed by the other columns in ``table_path`` including ``key_field``
+    whose values are the values on that row of the CSV table.
 
-    Parameters:
+    If an entire row is NA/NaN (including ``key_field``) then it is dropped
+    from the table and a warning is given of the dropped rows.
+
+    Args:
         table_path (string): path to a CSV file containing at
             least the header key_field
         key_field: (string): a column in the CSV file at `table_path` that
-            can uniquely identify each row in the table.
+            can uniquely identify each row in the table and sets the row index.
+        column_list (list): a list of column names to subset from the CSV
+            file, default=None
         to_lower (bool): if True, converts all unicode in the CSV,
             including headers and values to lowercase, otherwise uses raw
-            string values.
-        warn_if_missing (bool): If True, warnings are logged if there are
-            empty headers or value rows.
+            string values. default=True.
 
     Returns:
         lookup_dict (dict): a dictionary of the form {
@@ -456,8 +473,14 @@ def build_lookup_from_csv(
                 key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}
             }
 
-        if `to_lower` all strings including key_fields and values are
+        if ``to_lower`` all strings including key_fields and values are
         converted to lowercase unicode.
+
+    Raise:
+        ValueError
+            If ValueError occurs during conversion to dictionary.
+        KeyError
+            If ``key_field`` is not present during ``set_index`` call.
     """
     # Check if the file encoding is UTF-8 BOM first
     encoding = None
@@ -465,39 +488,67 @@ def build_lookup_from_csv(
         first_line = file_obj.readline()
         if first_line.startswith(codecs.BOM_UTF8):
             encoding = 'utf-8-sig'
-    table = pandas.read_csv(
-        table_path, sep=None, engine='python', encoding=encoding)
-    header_row = list(table)
 
+    # Reassign to avoid mutation
+    col_list = column_list
+    # if a list of columns are provided to use and return, make sure
+    # 'key_field' is one of them.
+    if col_list and key_field not in col_list:
+        col_list.append(key_field)
+
+    table = pandas.read_csv(
+        table_path, sep=None, index_col=False, engine='python',
+        encoding=encoding)
+
+    # if 'to_lower`, case handling is done before trying to access the data.
     if to_lower:
         key_field = key_field.lower()
-        header_row = [
-            x if not isinstance(x, str) else x.lower()
-            for x in header_row]
+        # lowercase column names
+        if col_list:
+            col_list = [col.lower() for col in col_list]
+        table.columns = table.columns.str.lower()
+        # lowercase values
+        table = table.applymap(
+            lambda x: x.lower() if isinstance(x, str) else x)
 
-    if key_field not in header_row:
-        raise ValueError(
-            '%s expected in %s for the CSV file at %s' % (
-                key_field, header_row, table_path))
-    if warn_if_missing and '' in header_row:
-        LOGGER.warn(
-            "There are empty strings in the header row at %s", table_path)
+    # Set 'key_field' as the index of the dataframe
+    try:
+        table.set_index(key_field, drop=False, inplace=True)
+    except KeyError:
+        # If 'key_field' is not a column then KeyError is raised for using
+        # it as the index column
+        LOGGER.error(f"'key_field' : '{key_field}' could not be found as a"
+                     f" column in the table. Table path: {table_path}.")
+        raise
 
-    key_index = header_row.index(key_field)
-    lookup_dict = {}
-    for index, row in table.iterrows():
-        if to_lower:
-            row = pandas.Series([
-                x if not isinstance(x, str) else x.lower()
-                for x in row])
-        # check if every single element in the row is null
-        if row.isnull().values.all():
-            LOGGER.warn(
-                "Encountered an entirely blank row on line %d", index+2)
-            continue
-        if row.isnull().values.any():
-            row = row.fillna('')
-        lookup_dict[row[key_index]] = dict(zip(header_row, row))
+    # Subset dataframe by columns if desired
+    if col_list:
+        table = table.loc[:, col_list]
+
+    # look for NaN values and warn if any are found.
+    table_na = table.isna()
+    if table_na.values.any():
+        LOGGER.warning(
+            f"Empty or NaN values were found in the table: {table_path}.")
+    # look to see if an entire row is NA values
+    table_na_rows = table_na.all(axis=1)
+    na_rows = table_na_rows.index[table_na_rows].tolist()
+    # if a completely empty row, drop it
+    if na_rows:
+        LOGGER.warning(
+            "Encountered an entirely blank row on line(s)"
+            f" {[x+2 for x in na_rows]}. Dropping rows from table.")
+        table.dropna(how="all", inplace=True)
+    # fill the rest of empty or NaN values with empty string
+    table.fillna(value="", inplace=True)
+    try:
+        lookup_dict = table.to_dict(orient='index')
+    except ValueError:
+        # If 'key_field' is not unique then a value error is raised.
+        LOGGER.error(f"The 'key_field' : '{key_field}' column values are not"
+                     f" unique: {table.index.tolist()}")
+        raise
+
     return lookup_dict
 
 
@@ -539,3 +590,159 @@ def mean_pixel_size_and_area(pixel_size_tuple):
                 pixel_size_tuple))
 
     return (x_size, x_size*y_size)
+
+
+def create_coordinate_transformer(
+        base_ref, target_ref,
+        osr_axis_mapping_strategy=DEFAULT_OSR_AXIS_MAPPING_STRATEGY):
+    """Create a spatial reference coordinate transformation function.
+
+    Args:
+        base_ref (osr spatial reference): A defined spatial reference to
+            transform FROM
+        target_ref (osr spatial reference): A defined spatial reference
+            to transform TO
+        osr_axis_mapping_strategy (int): OSR axis mapping strategy for
+            ``SpatialReference`` objects. Defaults to
+            ``utils.DEFAULT_OSR_AXIS_MAPPING_STRATEGY``. This parameter should
+            not be changed unless you know what you are doing.
+
+    Returns:
+        An OSR Coordinate Transformation object
+
+    """
+    # Make a copy of the base and target spatial references to avoid side
+    # effects from mutation of setting the axis mapping strategy
+    base_ref_wkt = base_ref.ExportToWkt()
+    target_ref_wkt = target_ref.ExportToWkt()
+
+    base_ref_copy = osr.SpatialReference()
+    target_ref_copy = osr.SpatialReference()
+
+    base_ref_copy.ImportFromWkt(base_ref_wkt)
+    target_ref_copy.ImportFromWkt(target_ref_wkt)
+
+    base_ref_copy.SetAxisMappingStrategy(osr_axis_mapping_strategy)
+    target_ref_copy.SetAxisMappingStrategy(osr_axis_mapping_strategy)
+
+    transformer = osr.CreateCoordinateTransformation(
+        base_ref_copy, target_ref_copy)
+    return transformer
+
+
+def _assert_vectors_equal(
+        expected_vector_path, actual_vector_path, field_value_atol=1e-3):
+    """Assert two vectors are equal.
+
+    Assert spatial reference, feature count, geometries, field names, and
+    values are equal with no respect to order of field names or geometries.
+
+    Args:
+        actual_vector_path (string): path on disk to a gdal Vector dataset.
+        expected_vector_path (string): path on disk to a gdal Vector dataset
+            to use as the ground truth.
+        field_value_atol (float): the absolute tolerance for comparing field
+            attribute values, default=1e-3.
+
+    Returns:
+        None on success
+
+    Raise:
+        AssertionError
+           If vector projections, feature counts, field names, or geometries
+           do not match.
+    """
+    try:
+        # Open vectors
+        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
+        actual_layer = actual_vector.GetLayer()
+        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
+        expected_layer = expected_vector.GetLayer()
+
+        # Check projections
+        expected_projection = expected_layer.GetSpatialRef()
+        expected_projection_wkt = expected_projection.ExportToWkt()
+        actual_projection = actual_layer.GetSpatialRef()
+        actual_projection_wkt = actual_projection.ExportToWkt()
+        if expected_projection_wkt != actual_projection_wkt:
+            raise AssertionError (
+                "Vector projections are not the same. \n"
+                f"Expected projection wkt: {expected_projection_wkt}. \n"
+                f"Actual projection wkt: {actual_projection_wkt}. ")
+
+        # Check feature count
+        actual_feat_count = actual_layer.GetFeatureCount()
+        expected_feat_count = expected_layer.GetFeatureCount()
+        if expected_feat_count != actual_feat_count:
+            raise AssertionError (
+                "Vector feature counts are not the same. \n"
+                f"Expected feature count: {expected_feat_count}. \n"
+                f"Actual feature count: {actual_feat_count}. ")
+
+        # Check field names
+        expected_field_names = [field.name for field in expected_layer.schema]
+        actual_field_names = [field.name for field in actual_layer.schema]
+        if sorted(expected_field_names) != sorted(actual_field_names):
+            raise AssertionError (
+                "Vector field names are not the same. \n"
+                f"Expected field names: {sorted(expected_field_names)}. \n"
+                f"Actual field names: {sorted(actual_field_names)}. ")
+
+        # Check field values and geometries
+        for expected_feature in expected_layer:
+            fid = expected_feature.GetFID()
+            expected_values = [
+                expected_feature.GetField(field)
+                for field in expected_field_names]
+
+            actual_feature = actual_layer.GetFeature(fid)
+            actual_values = [
+                actual_feature.GetField(field)
+                for field in expected_field_names]
+
+            for av, ev in zip(actual_values, expected_values):
+                if av is not None:
+                    # Number comparison
+                    if isinstance(av, int) or isinstance(av, float):
+                        if not numpy.allclose(numpy.array([av]),
+                                              numpy.array([ev]),
+                                              atol=field_value_atol):
+                            raise AssertionError (
+                                "Vector field values are not equal: \n"
+                                f"Expected value: {ev}. \n"
+                                f"Actual value: {av}. ")
+                    # String and other comparison
+                    else:
+                        if av != ev:
+                            raise AssertionError (
+                                "Vector field values are not equal. \n"
+                                f"Expected value : {ev}. \n"
+                                f"Actual value : {av}. ")
+                else:
+                    if ev is not None:
+                        raise AssertionError (
+                            "Vector field values are not equal: \n"
+                            f"Expected value: {ev}. \n"
+                            f"Actual value: {av}. ")
+
+            expected_geom = expected_feature.GetGeometryRef()
+            expected_geom_wkt = expected_geom.ExportToWkt()
+            actual_geom = actual_feature.GetGeometryRef()
+            actual_geom_wkt = actual_geom.ExportToWkt()
+            expected_geom_shapely = loads(expected_geom_wkt)
+            actual_geom_shapely = loads(actual_geom_wkt)
+            if not expected_geom_shapely.almost_equals(actual_geom_shapely):
+                raise AssertionError (
+                    "Vector geometry assertion fail. \n"
+                    f"Expected geometry: {expected_geom_wkt}. \n"
+                    f"Actual geometry: {actual_geom_wkt}. ")
+
+            expected_feature = None
+            actual_feature = None
+    finally:
+        actual_layer = None
+        actual_vector = None
+        expected_layer = None
+        expected_vector = None
+
+    return None
