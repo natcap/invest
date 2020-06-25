@@ -5,8 +5,6 @@ import PropTypes from 'prop-types';
 import { InvestJob } from './InvestJob';
 import { getInvestList, getFlaskIsReady } from './server_requests';
 import { updateRecentSessions, loadRecentSessions } from './utils';
-import { fileRegistry } from './constants';
-
 
 export default class App extends React.Component {
   /** This component manages any application state that should persist
@@ -50,10 +48,6 @@ export default class App extends React.Component {
           loggingLevel: 'INFO',
         }
       });
-
-    // TODO: clear out tmp dir on quit?
-    fs.mkdir(fileRegistry.CACHE_DIR, (err) => {})
-    fs.mkdir(fileRegistry.TEMP_DIR, (err) => {})
   }
 
   async updateRecentSessions(jobdata) {
@@ -82,7 +76,6 @@ export default class App extends React.Component {
         investSettings={this.state.investSettings}
         recentSessions={this.state.recentSessions}
         appdata={this.props.appdata}
-        directoryConstants={fileRegistry}
         updateRecentSessions={this.updateRecentSessions}
         saveSettings={this.saveSettings}
       />

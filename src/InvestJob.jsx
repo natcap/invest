@@ -22,6 +22,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { getSpec, fetchDatastackFromFile,
          writeParametersToFile } from './server_requests';
 import { argsDictFromObject, findMostRecentLogfile } from './utils';
+import { fileRegistry } from './constants';
 
 // TODO see issue #12
 import { createStore } from 'redux';
@@ -81,6 +82,12 @@ export class InvestJob extends React.Component {
     this.setSessionID = this.setSessionID.bind(this);
   }
 
+  componentDidMount() {
+    // TODO: clear out tmp dir on quit?
+    fs.mkdir(fileRegistry.CACHE_DIR, (err) => {})
+    fs.mkdir(fileRegistry.TEMP_DIR, (err) => {})
+  }
+
   saveState() {
     /** Save the state of this component (1) and the current InVEST job (2).
     * 1. Save the state object of this component to a JSON file .
@@ -90,7 +97,7 @@ export class InvestJob extends React.Component {
     */
     const jsonContent = JSON.stringify(this.state, null, 2);
     const filepath = path.join(
-      this.props.directoryConstants.CACHE_DIR, this.state.sessionID + '.json');
+      fileRegistry.CACHE_DIR, this.state.sessionID + '.json');
     fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
       if (err) {
         console.log("An error occured while writing JSON Object to File.");
@@ -191,7 +198,7 @@ export class InvestJob extends React.Component {
 
     // Write a temporary datastack json for passing as a command-line arg
     const temp_dir = fs.mkdtempSync(path.join(
-      this.props.directoryConstants.TEMP_DIR, 'data-'))
+      fileRegistry.TEMP_DIR, 'data-'))
     const datastackPath = path.join(temp_dir, 'datastack.json')
     const _ = await this.argsToJsonFile(datastackPath, argsValues);
 
@@ -211,7 +218,7 @@ export class InvestJob extends React.Component {
     investRun.stdout.on('data', async (data) => {
       if (!logfilename) {
         logfilename = await findMostRecentLogfile(workspace.directory)
-        console.log(logfilename)
+        console.log(`${data}`)
         // TODO: handle case when logfilename is undefined? It seems like
         // sometimes there is some stdout emitted before a logfile exists.
         this.setState(
@@ -254,6 +261,7 @@ export class InvestJob extends React.Component {
       this.setState({
         jobStatus: status,
       }, () => {
+        console.log(`invest closed with ${status}`)
         this.saveState();
       });
     });
@@ -288,7 +296,7 @@ export class InvestJob extends React.Component {
       let uiSpec = {};
       try {
         uiSpec = JSON.parse(fs.readFileSync(
-          path.join(this.props.directoryConstants.INVEST_UI_DATA, spec.module + '.json')))
+          path.join(fileRegistry.INVEST_UI_DATA, spec.module + '.json')))
       } catch (err) {
         if (err.code !== 'ENOENT') {
           throw err
