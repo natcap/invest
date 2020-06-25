@@ -1,8 +1,13 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import events from 'events';
 import React from 'react';
 import { remote } from 'electron';
+import { spawn } from 'child_process';
+jest.mock('child_process');
+import Stream from 'stream';
+
 import { fireEvent, render,
          wait, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -323,69 +328,68 @@ test('Test various ways for repeated re-renders of SetupTab', async () => {
       .toHaveValue(mockDatastack.args.workspace_dir)
   });
 })
-// test('Execute launches a python subprocess', async () => {
-//   /*
-//   This functionality might be better tested in an end-end test,
-//   maybe using spectron and the actual flask server. I have not
-//   gotten this to work yet - mocking the spawn call and getting
-//   the spawned object's .on.stdout callback to fire being the main
-//   sticking point.
-//   */
-//   // investExecute() expects to find these args:
-//   const spec = { args: {
-//     workspace_dir: { 
-//       name: 'Workspace', 
-//       type: 'directory'},
-//     results_suffix: {
-//       name: 'suffix',
-//       type: 'freestyle_string'} } }
 
-//   const stdOutText = 'hello'
-//   getSpec.mockResolvedValue(spec);
-//   fetchValidation.mockResolvedValue([]);
-//   // TODO: create this stuff dynamically here:
-//   const fakeWorkspace = '../data';  // it contains this logfile:
-//   findMostRecentLogfile.mockResolvedValue('invest_logfile.txt')
+test.only('Execute launches a python subprocess', async () => {
+  
+  const spec = { args: {
+    workspace_dir: { 
+      name: 'Workspace', 
+      type: 'directory'},
+    results_suffix: {
+      name: 'suffix',
+      type: 'freestyle_string'} } }
 
-//   let spawnEvent = new events.EventEmitter();
-//   spawnEvent.stdout = new events.EventEmitter();
-//   spawnEvent.stderr = new events.EventEmitter();
-//   sinon.stub(child_process, 'spawn').returns(spawnEvent);
-//   // jest.mock('child_process');
-//   // let mockSpawn = spawn.mockImplementation(() => {
-//   //   // spawn('python', ['mock_invest.py', stdOutText]) // no errors
-//   //   let spawnEvent = new events.EventEmitter();
-//   //   spawnEvent.stdout = new events.EventEmitter();
-//   //   spawnEvent.stderr = new events.EventEmitter();
-//   //   return spawnEvent;
-//   // })
+  getSpec.mockResolvedValue(spec);
+  fetchValidation.mockResolvedValue([]);
 
-//   const { getByText, getByLabelText, getByTestId, debug } = render(
-//     <InvestJob 
-//       investList={{Carbon: {internal_name: 'carbon'}}}
-//       investSettings={{
-//           nWorkers: '-1',
-//           loggingLevel: 'INFO',
-//         }}
-//       recentSessions={[]}
-//       updateRecentSessions={() => {}}
-//       saveSettings={() => {}}
-//     />);
+  const fakeWorkspace = 'tests/data';
+  const mockInvestProc = new events.EventEmitter();
+  mockInvestProc.stdout = new Stream.Readable({
+    read() {},
+  })
+  mockInvestProc.stderr = new Stream.Readable({
+    read() {}
+  })
+  spawn.mockImplementation((exe, cmdArgs, options) => {
+    // To simulate an invest model run, write a logfile to the workspace
+    // The line-ending is critical; the log is read with `tail.on('line'...)`
+    fs.writeFileSync(
+      path.join(fakeWorkspace, 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt'),
+      JSON.stringify(spec.args) + os.EOL)
 
-//   const carbon = getByText('Carbon');
-//   fireEvent.click(carbon);  // Choosing a model from the list
-//   const input = await waitForElement(() => {
-//     return getByLabelText(spec.args.workspace_dir.name)
-//   })
-//   fireEvent.change(input, { target: { value: fakeWorkspace } })
-//   const execute = await waitForElement(() => getByText('Execute'))
-//   fireEvent.click(execute);
-//   console.log(spawnEvent);
-//   spawnEvent.stdout.emit('data', stdOutText);
+    return mockInvestProc
+  })
+  
+  // const invest = spawn('fakeExe', ['foo'], {})
+  // invest.stdout.on('data', async (data) => {
+  //   console.log(`${data}`)
+  // })
+  // invest.on('close', (code) => {
+  //   console.log('closed')
+  // })
 
-//   await wait(() => {
-//     // debug()
-//     // expect(getByText('Model Completed'))
-//     expect(getByText('This is a fake invest logfile'))
-//   });
-// })
+  const { getByText, getByLabelText, utils } = renderInvestJob()
+
+  const carbon = getByText('Carbon');
+  fireEvent.click(carbon);
+  const workspaceInput = await utils.findByLabelText(
+    RegExp(`${spec.args.workspace_dir.name}`))
+  fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
+  
+  const execute = await utils.findByText('Execute');
+  fireEvent.click(execute);
+  
+  // Emit some stdout, pause, then exit without error
+  mockInvestProc.stdout.push('hello from stdout')
+  mockInvestProc.stdout.push(null)
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  mockInvestProc.emit('close', 0)
+  
+  await waitFor(() => {
+    expect(getByText('Log').classList.contains('active')).toBeTruthy();
+    // some text from the logfile should be rendered:
+    expect(getByText('workspace_dir', { exact: false }))
+      .toBeInTheDocument();
+    expect(getByText('Model Completed')).toBeInTheDocument();
+  });
+})
