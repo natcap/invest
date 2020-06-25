@@ -941,12 +941,15 @@ def _collapse_infrastructure_layers(
         """For each pixel, create mask 1 if all valid, else set to nodata."""
         infrastructure_result = numpy.empty_like(
             infrastructure_array_list[0], dtype=numpy.int32)
-        infrastructure_result[:] = infrastructure_nodata
+        # Zero's indicate where there's no infrastructure influence but not
+        # necessarily nodata
+        infrastructure_result[:] = 0
 
-        nodata_mask = (
-            numpy.isclose(
-                infrastructure_array_list[0], infrastructure_nodata_list[0]))
+        nodata_mask = numpy.isclose(
+            infrastructure_array_list[0], infrastructure_nodata_list[0])
+
         infrastructure_mask = infrastructure_array_list[0] > 0 & ~nodata_mask
+
         for index in range(1, len(infrastructure_array_list)):
             current_nodata = numpy.isclose(
                 infrastructure_array_list[index],
@@ -956,9 +959,8 @@ def _collapse_infrastructure_layers(
                 infrastructure_mask |
                 ((infrastructure_array_list[index] > 0) & ~current_nodata))
 
-            nodata_mask = (
-                nodata_mask & current_nodata)
-        
+            nodata_mask = (nodata_mask & current_nodata)
+
         infrastructure_result[infrastructure_mask] = 1
         infrastructure_result[nodata_mask] = infrastructure_nodata
         return infrastructure_result

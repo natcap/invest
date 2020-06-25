@@ -13,6 +13,9 @@ Unreleased Changes
       dictionary.
     * Remove ``warn_if_missing`` argument from ``utils.build_lookup_from_csv``
       and warning by default.
+* GLOBIO
+    * Fix a bug that mishandled combining infrastructure data when only one
+      infrastructure data was present.
 * Urban Flood Risk Mitigation
     * Fixed an issue where the output vector ``flood_risk_service.shp`` would
       only be created when the built infrastructure vector was provided.  Now,

@@ -116,6 +116,80 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'msa_shape_infra_regression.tif'),
             1e-6)
 
+    def test_globio_single_infra(self):
+        """GLOBIO: regression testing with single infrastructure raster."""
+        from natcap.invest import globio
+        import pygeoprocessing
+
+        # Create a temporary infrastructure directory with one raster
+        tmp_infra_dir = os.path.join(self.workspace_dir, "single_infra")
+        os.mkdir(tmp_infra_dir)
+        tmp_roads_path = os.path.join(tmp_infra_dir, "roads.tif")
+
+        single_infra_path = os.path.join(
+            SAMPLE_DATA, 'infrastructure_dir', 'roads.tif')
+        shutil.copyfile(single_infra_path, tmp_roads_path)
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'sub_aoi.shp'),
+            'globio_lulc_path': '',
+            'infrastructure_dir':  tmp_infra_dir,
+            'intensification_fraction': '0.46',
+            'lulc_to_globio_table_path': os.path.join(
+                SAMPLE_DATA, 'lulc_conversion_table.csv'),
+            'lulc_path': os.path.join(SAMPLE_DATA, 'lulc_2008.tif'),
+            'msa_parameters_path': os.path.join(
+                SAMPLE_DATA, 'msa_parameters.csv'),
+            'pasture_threshold': '0.5',
+            'pasture_path': os.path.join(SAMPLE_DATA, 'pasture.tif'),
+            'potential_vegetation_path': os.path.join(
+                SAMPLE_DATA, 'potential_vegetation.tif'),
+            'predefined_globio': False,
+            'primary_threshold': 0.66,
+            'workspace_dir': os.path.join(self.workspace_dir, 'output'),
+            'n_workers': '-1',
+        }
+
+        globio.execute(args)
+
+        # With a single infrastructure raster the combined infrastructure
+        # should be a perfect mask for the raster.
+        result_path = os.path.join(
+            args['workspace_dir'], 'intermediate_outputs', 'tmp',
+            'combined_infrastructure.tif')
+
+        roads_info = pygeoprocessing.get_raster_info(tmp_roads_path)
+        roads_nodata = roads_info['nodata'][0]
+        result_info = pygeoprocessing.get_raster_info(result_path)
+        result_nodata = result_info['nodata'][0]
+
+        aligned_roads_path = os.path.join(
+            self.workspace_dir, 'aligned_roads.tif')
+        aligned_result_path = os.path.join(
+            self.workspace_dir, 'aligned_result.tif')
+        pygeoprocessing.align_and_resize_raster_stack(
+            [tmp_roads_path, result_path],
+            [aligned_roads_path, aligned_result_path],
+            ('near', 'near'), roads_info['pixel_size'], 'intersection')
+
+        roads_raster = gdal.OpenEx(aligned_roads_path, gdal.OF_RASTER)
+        roads_band = roads_raster.GetRasterBand(1)
+        roads_array = roads_band.ReadAsArray()
+        result_raster = gdal.OpenEx(aligned_result_path, gdal.OF_RASTER)
+        result_band = result_raster.GetRasterBand(1)
+        result_array = result_band.ReadAsArray()
+
+        # Coherce nodata values to be the same for testing non-nodata values
+        roads_array[roads_array==roads_nodata] = result_nodata
+        # Make our input infrastructure values into what we expect for a mask
+        roads_array[roads_array>0] = 1
+        numpy.testing.assert_allclose(result_array, roads_array)
+
+        roads_band = None
+        roads_raster = None
+        result_band = None
+        result_raster = None
+
     def test_globio_full(self):
         """GLOBIO: regression testing all functionality (mode a)."""
         from natcap.invest import globio
