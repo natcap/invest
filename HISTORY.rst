@@ -41,6 +41,7 @@ Unreleased Changes (3.9)
     * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
     * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to 
       ``projection_wkt``.
+  * Adding support for Python 3.8
 
 Unreleased Changes
 ------------------

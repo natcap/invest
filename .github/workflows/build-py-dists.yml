@@ -11,12 +11,9 @@ jobs:
             fail-fast: false
             matrix:
                 os: [windows-latest, macos-latest]
-                python-version: [3.6, 3.7, 3.8]
+                python-version: [3.7, 3.8]
                 python-arch: [x86, x64]
                 include:
-                    - python-version: 3.6
-                      numpy: "numpy~=1.14"
-
                     - python-version: 3.7
                       numpy: "numpy~=1.15"
 
