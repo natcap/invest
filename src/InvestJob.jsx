@@ -113,7 +113,7 @@ export class InvestJob extends React.Component {
       humanTime: new Date().toLocaleString(),
       systemTime: new Date().getTime(),
     }
-    this.props.updateRecentSessions(job, this.props.appdata);
+    this.props.updateRecentSessions(job, this.props.jobDatabase);
   }
   
   setSessionID(event) {
@@ -437,7 +437,7 @@ InvestJob.propTypes = {
     loggingLevel: PropTypes.string,
   }),
   recentSessions: PropTypes.array,
-  appdata: PropTypes.string,
+  jobDatabase: PropTypes.string,
   directoryConstants: PropTypes.shape({
     CACHE_DIR: PropTypes.string,
     TEMP_DIR: PropTypes.string,

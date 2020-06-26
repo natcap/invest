@@ -18,7 +18,7 @@ export default class App extends React.Component {
       recentSessions: [],
       investSettings: {},
     };
-    this.updateRecentSessions = this.updateRecentSessions.bind(this);
+    this.setRecentSessions = this.setRecentSessions.bind(this);
     this.saveSettings = this.saveSettings.bind(this);
   }
 
@@ -33,7 +33,7 @@ export default class App extends React.Component {
     // const readydata = await getFlaskIsReady(); 
     // await new Promise(resolve => setTimeout(resolve, 1));
     const investList = await getInvestList();
-    const recentSessions = await loadRecentSessions(this.props.appdata)
+    const recentSessions = await loadRecentSessions(this.props.jobDatabase)
     // TODO: also load and set investSettings from a cached state, instead 
     // of always re-setting to these hardcoded values on first launch?
 
@@ -50,13 +50,13 @@ export default class App extends React.Component {
       });
   }
 
-  async updateRecentSessions(jobdata) {
+  async setRecentSessions(jobdata) {
     /** Update the recent sessions list when a new invest job was saved.
     * This triggers on InvestJob.saveState().
     * 
     * @param {object} jobdata - the metadata describing an invest job.
     */
-    const recentSessions = await updateRecentSessions(jobdata, this.props.appdata);
+    const recentSessions = await updateRecentSessions(jobdata, this.props.jobDatabase);
     this.setState({
       recentSessions: recentSessions
     })
@@ -75,8 +75,8 @@ export default class App extends React.Component {
         investList={this.state.investList}
         investSettings={this.state.investSettings}
         recentSessions={this.state.recentSessions}
-        appdata={this.props.appdata}
-        updateRecentSessions={this.updateRecentSessions}
+        jobDatabase={this.props.jobDatabase}
+        updateRecentSessions={this.setRecentSessions}
         saveSettings={this.saveSettings}
       />
     );
@@ -84,5 +84,5 @@ export default class App extends React.Component {
 }
 
 App.propTypes = {
-  appdata: PropTypes.string
+  jobDatabase: PropTypes.string
 }

@@ -46,13 +46,14 @@ function renderInvestJob() {
   * needed for these tests.
   */
   const { getByText, getByLabelText, ...utils } = render(
-    <InvestJob 
+    <InvestJob
+      investExe=''
       investList={{Carbon: {internal_name: 'carbon'}}}
       investSettings={{nWorkers: '-1'}}
       recentSessions={MOCK_RECENT_SESSIONS_VALUE}
+      jobDatabase={fileRegistry.JOBS_DATABASE}
       updateRecentSessions={() => {}}
       saveSettings={() => {}}
-      directoryConstants={fileRegistry}
     />);
   return { getByText, getByLabelText, utils }
 }

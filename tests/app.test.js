@@ -8,20 +8,23 @@ import '@testing-library/jest-dom'
 import App from '../src/app';
 import { getInvestList, getFlaskIsReady } from '../src/server_requests';
 jest.mock('../src/server_requests');
+import { fileRegistry } from '../src/constants';
 
 getFlaskIsReady.mockResolvedValue('Flask ready');
 getInvestList.mockResolvedValue({});
 
-const TEST_JOB_DATA = path.join(__dirname, './data/jobdb.json');
 
 test('Recent Sessions: each has a button', async () => {
+  // This is a special json containing data used for testing
+  const testJobsDatabase = path.join(__dirname, './data/jobdb.json');
   const { getByText, getByLabelText, debug } = render(
-    <App appdata={TEST_JOB_DATA}/>);
-  const db = JSON.parse(fs.readFileSync(TEST_JOB_DATA));
+    <App jobDatabase={testJobsDatabase}/>);
+  const db = JSON.parse(fs.readFileSync(testJobsDatabase));
 
   await waitFor(() => {
     Object.keys(db).forEach(job => {
-      expect(getByText(db[job].workspace.directory)).toBeTruthy();
+      expect(getByText(db[job].workspace.directory))
+        .toBeTruthy();
     })
   })
 })
@@ -31,7 +34,7 @@ test('Settings dialog interactions: logging level', async () => {
   const DEFAULT = 'INFO';
 
   const { getByText, getByLabelText, debug } = render(
-    <App appdata={TEST_JOB_DATA}/>);
+    <App appdata={fileRegistry.JOBS_DATABASE}/>);
 
   // Check the default settings
   fireEvent.click(getByText('Settings'));
@@ -62,7 +65,7 @@ test('Settings dialog interactions: n workers', async () => {
   const labelText = 'Taskgraph n_workers parameter'
 
   const { getByText, getByLabelText, debug } = render(
-    <App appdata={TEST_JOB_DATA}/>);
+    <App appdata={fileRegistry.JOBS_DATABASE}/>);
 
   fireEvent.click(getByText('Settings'));
   const input = getByLabelText(labelText, { exact: false })

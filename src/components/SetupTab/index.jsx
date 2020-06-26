@@ -386,11 +386,7 @@ class ArgsForm extends React.PureComponent {
   }
 
   handleChange(event) {
-    /** Pass input value up to InvestJob for storage & validation.
-    *
-    * For text fields, this is on the onKeyUp handler, specifically 
-    * so that we don't call investValidate over and over while 
-    * laying on the backspace key (or any key).
+    /** Pass input value up to SetupTab for storage & validation.
     */
     const value = event.target.value;
     const argkey = event.target.name;

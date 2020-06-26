@@ -63,7 +63,7 @@ var render = function render() {
   _reactDom["default"].render(
     _react["default"].createElement(
       _reactHotLoader.AppContainer, null, _react["default"].createElement(
-        _app["default"], { appdata: fileRegistry.JOBS_DATABASE, investExe: investExe })),
+        _app["default"], { jobDatabase: fileRegistry.JOBS_DATABASE, investExe: investExe })),
     document.getElementById('App'));
 };
 
