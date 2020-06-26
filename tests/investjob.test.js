@@ -329,8 +329,8 @@ test('Test various ways for repeated re-renders of SetupTab', async () => {
   });
 })
 
-test.only('Execute launches a python subprocess', async () => {
-  
+describe('InVEST subprocess testing', () => {
+
   const spec = { args: {
     workspace_dir: { 
       name: 'Workspace', 
@@ -339,57 +339,107 @@ test.only('Execute launches a python subprocess', async () => {
       name: 'suffix',
       type: 'freestyle_string'} } }
 
-  getSpec.mockResolvedValue(spec);
-  fetchValidation.mockResolvedValue([]);
-
+  const dummyTextToLog = JSON.stringify(spec.args)
+  const logfileName = 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt'
   const fakeWorkspace = 'tests/data';
+  const logfilePath = path.join(fakeWorkspace, logfileName)
+
   const mockInvestProc = new events.EventEmitter();
-  mockInvestProc.stdout = new Stream.Readable({
-    read() {},
-  })
-  mockInvestProc.stderr = new Stream.Readable({
-    read() {}
-  })
-  spawn.mockImplementation((exe, cmdArgs, options) => {
-    // To simulate an invest model run, write a logfile to the workspace
-    // The line-ending is critical; the log is read with `tail.on('line'...)`
-    fs.writeFileSync(
-      path.join(fakeWorkspace, 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt'),
-      JSON.stringify(spec.args) + os.EOL)
 
-    return mockInvestProc
+  beforeEach(() => {
+    // Need to reset these streams since mockInvestProc is shared by tests
+    // and the streams apparently receive the EOF signal in each test.
+    mockInvestProc.stdout = new Stream.Readable({
+      read() {},
+    })
+    mockInvestProc.stderr = new Stream.Readable({
+      read() {}
+    })
+    getSpec.mockResolvedValue(spec);
+    fetchValidation.mockResolvedValue([]);
+    
+    spawn.mockImplementation((exe, cmdArgs, options) => {
+      // To simulate an invest model run, write a logfile to the workspace
+      // The line-ending is critical; the log is read with `tail.on('line'...)`
+      fs.writeFileSync(logfilePath, dummyTextToLog + os.EOL)
+      return mockInvestProc
+    })
+  })
+
+  afterEach(() => {
+    fs.unlinkSync(logfilePath)
+    jest.resetAllMocks();
   })
   
-  // const invest = spawn('fakeExe', ['foo'], {})
-  // invest.stdout.on('data', async (data) => {
-  //   console.log(`${data}`)
-  // })
-  // invest.on('close', (code) => {
-  //   console.log('closed')
-  // })
+  test('Invest subprocess - exit without error', async () => {
+    
+    /* A reminder of what needs to work with the mocked spawn:
+    
+    const invest = spawn('fakeExe', ['foo'], {})
+    invest.stdout.on('data', async (data) => {
+      console.log(`${data}`)
+    })
+    invest.on('close', (code) => {
+      console.log('closed')
+    })
+    */
 
-  const { getByText, getByLabelText, utils } = renderInvestJob()
+    const { getByText, getByLabelText, utils } = renderInvestJob()
 
-  const carbon = getByText('Carbon');
-  fireEvent.click(carbon);
-  const workspaceInput = await utils.findByLabelText(
-    RegExp(`${spec.args.workspace_dir.name}`))
-  fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
-  
-  const execute = await utils.findByText('Execute');
-  fireEvent.click(execute);
-  
-  // Emit some stdout, pause, then exit without error
-  mockInvestProc.stdout.push('hello from stdout')
-  mockInvestProc.stdout.push(null)
-  await new Promise(resolve => setTimeout(resolve, 2000))
-  mockInvestProc.emit('close', 0)
-  
-  await waitFor(() => {
-    expect(getByText('Log').classList.contains('active')).toBeTruthy();
-    // some text from the logfile should be rendered:
-    expect(getByText('workspace_dir', { exact: false }))
-      .toBeInTheDocument();
-    expect(getByText('Model Completed')).toBeInTheDocument();
-  });
+    const carbon = getByText('Carbon');
+    fireEvent.click(carbon);
+    const workspaceInput = await utils.findByLabelText(
+      RegExp(`${spec.args.workspace_dir.name}`))
+    fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
+    
+    const execute = await utils.findByText('Execute');
+    fireEvent.click(execute);
+    
+    // Emit some stdout, pause, then exit without error
+    mockInvestProc.stdout.push('hello from stdout')
+    // mockInvestProc.stdout.push(null)
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    mockInvestProc.emit('close', 0)  // 0 - exit w/o error
+    
+    await waitFor(() => {
+      expect(getByText('Log').classList.contains('active')).toBeTruthy();
+      // some text from the logfile should be rendered:
+      expect(getByText(dummyTextToLog, { exact: false }))
+        .toBeInTheDocument();
+      expect(getByText('Model Completed')).toBeInTheDocument();
+    });
+  })
+
+  test('Invest subprocess - exit with error', async () => {
+
+    const { getByText, getByLabelText, utils } = renderInvestJob()
+
+    const carbon = getByText('Carbon');
+    fireEvent.click(carbon);
+    const workspaceInput = await utils.findByLabelText(
+      RegExp(`${spec.args.workspace_dir.name}`))
+    fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
+    
+    const execute = await utils.findByText('Execute');
+    fireEvent.click(execute);
+    
+    const errorMessage = 'fail'
+    // Emit some stdout, some stderr, then pause and exit with error
+    mockInvestProc.stdout.push('hello from stdout')
+    // mockInvestProc.stdout.push(null)
+    mockInvestProc.stderr.push(errorMessage)
+    // mockInvestProc.stderr.push(null)
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    mockInvestProc.emit('close', 1)  // 1 - exit w/ error
+    
+    await waitFor(() => {
+      expect(getByText('Log').classList.contains('active')).toBeTruthy();
+      // some text from the logfile should be rendered:
+      expect(getByText(dummyTextToLog, { exact: false }))
+        .toBeInTheDocument();
+      // stderr text should be rendered too
+      expect(getByText(errorMessage)).toBeInTheDocument();
+    });
+  })
+
 })
