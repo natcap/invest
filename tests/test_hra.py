@@ -867,7 +867,8 @@ class HraRegressionTests(unittest.TestCase):
                 output_raster_paths, expected_raster_paths):
             model_array = pygeoprocessing.raster_to_numpy_array(output_raster)
             reg_array = pygeoprocessing.raster_to_numpy_array(expected_raster)
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-06)
 
         # Assert GeoJSON vectors are equal
         output_vector_paths = [os.path.join(
@@ -935,7 +936,8 @@ class HraRegressionTests(unittest.TestCase):
                 output_raster_paths, expected_raster_paths):
             model_array = pygeoprocessing.raster_to_numpy_array(output_raster)
             reg_array = pygeoprocessing.raster_to_numpy_array(expected_raster)
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-06)
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(

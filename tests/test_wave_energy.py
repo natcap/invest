@@ -407,7 +407,8 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'valuation', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-06)
 
         vector_results = ['GridPts_prj.shp', 'LandPts_prj.shp']
 
@@ -443,7 +444,8 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'aoi', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-06)
 
         table_results = ['capwe_rc.csv', 'wp_rc.csv']
 
@@ -470,7 +472,8 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'noaoi', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-06)
 
         table_results = ['capwe_rc.csv', 'wp_rc.csv']
 

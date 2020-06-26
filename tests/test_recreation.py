@@ -795,7 +795,8 @@ class RecreationRegressionTests(unittest.TestCase):
             3.98165865e-01]
 
         for key in expected_results:
-            numpy.testing.assert_allclose(results[key], expected_results[key])
+            numpy.testing.assert_allclose(
+                results[key], expected_results[key], rtol=0, atol=1e-06)
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_base_regression(self):

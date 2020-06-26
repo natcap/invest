@@ -68,7 +68,8 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'msa.tif'))
         reg_array = pygeoprocessing.raster_to_numpy_array(
             os.path.join(REGRESSION_DATA, 'msa_lulc_regression.tif'))
-        numpy.testing.assert_allclose(model_array, reg_array)
+        numpy.testing.assert_allclose(
+            model_array, reg_array, rtol=0, atol=1e-06)
 
     def test_globio_empty_infra(self):
         """GLOBIO: testing that empty infra directory raises exception."""
@@ -117,7 +118,8 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'msa.tif'))
         reg_array = pygeoprocessing.raster_to_numpy_array(
             os.path.join(REGRESSION_DATA, 'msa_shape_infra_regression.tif'))
-        numpy.testing.assert_allclose(model_array, reg_array)
+        numpy.testing.assert_allclose(
+            model_array, reg_array, rtol=0, atol=1e-06)
 
     def test_globio_full(self):
         """GLOBIO: regression testing all functionality (mode a)."""

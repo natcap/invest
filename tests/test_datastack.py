@@ -79,7 +79,8 @@ class DatastacksTest(unittest.TestCase):
         model_array = pygeoprocessing.raster_to_numpy_array(params['raster'])
         reg_array = pygeoprocessing.raster_to_numpy_array(
             os.path.join(out_directory, archived_params['raster']))
-        numpy.testing.assert_allclose(model_array, reg_array)
+        numpy.testing.assert_allclose(
+            model_array, reg_array, rtol=0, atol=1e-06)
 
     def test_collect_geotiff(self):
         """Datastack: test collect geotiff."""
@@ -97,7 +98,8 @@ class DatastacksTest(unittest.TestCase):
         model_array = pygeoprocessing.raster_to_numpy_array(params['raster'])
         reg_array = pygeoprocessing.raster_to_numpy_array(
             os.path.join(dest_dir, 'data', archived_params['raster']))
-        numpy.testing.assert_allclose(model_array, reg_array)
+        numpy.testing.assert_allclose(
+            model_array, reg_array, rtol=0, atol=1e-06)
 
     def test_collect_ogr_vector(self):
         """Datastack: test collect ogr vector."""
@@ -349,7 +351,8 @@ class DatastacksTest(unittest.TestCase):
         model_array = pygeoprocessing.raster_to_numpy_array(
             archive_params['raster'])
         reg_array = pygeoprocessing.raster_to_numpy_array(params['raster'])
-        numpy.testing.assert_allclose(model_array, reg_array)
+        numpy.testing.assert_allclose(
+            model_array, reg_array, rtol=0, atol=1e-06)
         _assert_vectors_equal(
             archive_params['vector'], params['vector'])
         model_df = pandas.read_csv(archive_params['table'])

@@ -94,7 +94,8 @@ class HydropowerTests(unittest.TestCase):
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(
                     REGRESSION_DATA, raster_path.replace('_test', '')))
-            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-03)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-03)
 
         vector_results = ['watershed_results_wyield_test.shp',
                           'subwatershed_results_wyield_test.shp']
@@ -136,7 +137,8 @@ class HydropowerTests(unittest.TestCase):
                     args['workspace_dir'], 'output', 'per_pixel', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-03)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-03)
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
@@ -176,7 +178,8 @@ class HydropowerTests(unittest.TestCase):
                     args['workspace_dir'], 'output', 'per_pixel', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array, 1e-03)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-03)
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
