@@ -18,9 +18,9 @@ import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation, fetchDatastackFromFile } from '../src/server_requests';
 jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants';
+import { cleanupDir } from '../src/utils'
+
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
-
-
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
 const MOCK_RECENT_SESSIONS_VALUE = 
   [ [ "job1",
@@ -33,13 +33,6 @@ const MOCK_RECENT_SESSIONS_VALUE =
         "systemTime": 1583259376573.759,
         "description": null } ] ]
 
-beforeEach(() => {
-  jest.resetAllMocks();
-  // Careful with reset because "resetting a spy results
-  // in a function with no return value". I had been using spies to observe
-  // function calls, but not to mock return values. Spies used for that 
-  // purpose should be 'restored' not 'reset'. Do that inside the test as-needed.
-})
 
 function renderInvestJob() {
   /* Render an InvestJob component with the minimal props 
@@ -57,6 +50,19 @@ function renderInvestJob() {
     />);
   return { getByText, getByLabelText, utils }
 }
+
+afterAll(() => {
+    cleanupDir(fileRegistry.TEMP_DIR)
+    cleanupDir(fileRegistry.CACHE_DIR)
+})
+
+beforeEach(() => {
+  jest.resetAllMocks();
+  // Careful with reset because "resetting a spy results
+  // in a function with no return value". I had been using spies to observe
+  // function calls, but not to mock return values. Spies used for that 
+  // purpose should be 'restored' not 'reset'. Do that inside the test as-needed.
+})
 
 test('Clicking an invest button renders SetupTab', async () => {
   getSpec.mockResolvedValue(SAMPLE_SPEC);

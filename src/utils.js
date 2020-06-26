@@ -134,3 +134,16 @@ export function argsDictFromObject(args) {
   }
   return(JSON.stringify(args_dict));
 }
+
+/* Convenience function, mainly for cleaning up after tests */
+export function cleanupDir(dir) {
+  fs.readdirSync(dir).forEach(filename => {
+    const filepath = path.join(dir, filename)
+    if (fs.lstatSync(filepath).isFile()) {
+      fs.unlinkSync(filepath)
+    } else {
+      cleanupDir(filepath)
+    }
+  })
+  fs.rmdirSync(dir)
+}

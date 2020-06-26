@@ -9,10 +9,15 @@ import App from '../src/app';
 import { getInvestList, getFlaskIsReady } from '../src/server_requests';
 jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants';
+import { cleanupDir } from '../src/utils'
 
 getFlaskIsReady.mockResolvedValue('Flask ready');
 getInvestList.mockResolvedValue({});
 
+afterAll(() => {
+    cleanupDir(fileRegistry.TEMP_DIR)
+    cleanupDir(fileRegistry.CACHE_DIR)
+})
 
 test('Recent Sessions: each has a button', async () => {
   // This is a special json containing data used for testing

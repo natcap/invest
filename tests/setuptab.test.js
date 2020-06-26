@@ -10,6 +10,7 @@ import { InvestJob } from '../src/InvestJob';
 import { getSpec, fetchDatastackFromFile, fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants'
+import { cleanupDir } from '../src/utils'
 
 // generated this file from `invest getspec carbon --json`
 // import ARGS_SPEC from './data/carbon_args_spec.json';
@@ -24,20 +25,9 @@ import { fileRegistry } from '../src/constants'
 //   option_string: "select"
 // }
 
-function cleanupDir(dir) {
-  fs.readdirSync(dir).forEach(file => {
-    fs.unlinkSync(path.join(dir, file))
-  })
-  fs.rmdirSync(dir)
-}
-
-beforeAll(() => {
-  // fs.mkdirSync(fileRegistry.)
-})
-
 afterAll(() => {
-    // cleanupDir(fileRegistry.TEMP_DIR)
-    // cleanupDir(fileRegistry.CACHE_DIR)
+    cleanupDir(fileRegistry.TEMP_DIR)
+    cleanupDir(fileRegistry.CACHE_DIR)
 })
 
 beforeEach(() => {
