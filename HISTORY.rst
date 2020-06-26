@@ -1,7 +1,11 @@
 .. :changelog:
 
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.5 (2020-06-26)
 ------------------
 * General
     * Fix bug in ``utils.build_lookup_from_csv`` that was allowing
