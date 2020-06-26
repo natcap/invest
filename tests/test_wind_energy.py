@@ -104,7 +104,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         res_array = pygeoprocessing.raster_to_numpy_array(tmp_dist_final_path)
         exp_array = numpy.array(
             [[10, 110, 210, 310], [20, 120, 220, 320]], dtype=numpy.int32)
-        numpy.testing.assert_allclose(res_array, exp_array)
+        numpy.testing.assert_allclose(
+            res_array, exp_array, rtol=0, atol=1e-06)
 
     def test_calculate_land_to_grid_distance(self):
         """WindEnergy: testing 'point_to_polygon_distance' function."""
@@ -164,7 +165,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         field_index = point_layer.GetFeature(0).GetFieldIndex(field_name)
         for i, point_feat in enumerate(point_layer):
             result_val = point_feat.GetField(field_index)
-            numpy.testing.assert_allclose(result_val, exp_results[i])
+            numpy.testing.assert_allclose(
+                result_val, exp_results[i], rtol=0, atol=1e-06)
 
     def test_read_csv_wind_parameters(self):
         """WindEnergy: testing 'read_csv_wind_parameter' function."""
@@ -229,7 +231,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         exp_array = numpy.array(
             [[0, 100, 200, 300], [0, 100, 200, 300]], dtype=numpy.int32)
         res_array = pygeoprocessing.raster_to_numpy_array(tmp_dist_final_path)
-        numpy.testing.assert_array_equal(res_array, exp_array)
+        numpy.testing.assert_array_equal(
+            res_array, exp_array, rtol=0, atol=1e-06)
 
     def test_wind_data_to_point_vector(self):
         """WindEnergy: testing 'wind_data_to_point_vector' function."""
@@ -385,7 +388,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'noaoi', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-06)
 
         vector_path = 'wind_energy_points.shp'
 
@@ -412,7 +416,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'nolandpoly', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-06)
 
         vector_path = 'wind_energy_points.shp'
 
@@ -441,7 +446,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'nodistances', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-06)
 
         vector_path = 'wind_energy_points.shp'
 
@@ -491,7 +497,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-06)
 
         vector_path = 'wind_energy_points.shp'
 
@@ -537,7 +544,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path))
             # loosened tolerance to pass against GDAL 2.2.4 and 2.4.1
             numpy.testing.assert_allclose(
-                model_array, reg_array, rtol=1e-04)
+                model_array, reg_array, rtol=0, atol=1e-06)
 
         vector_path = 'wind_energy_points.shp'
         _assert_vectors_equal(
@@ -579,12 +586,14 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'priceval', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(
+                model_array, reg_array, rtol=0, atol=1e-06)
 
         vector_path = 'wind_energy_points.shp'
         _assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'priceval', vector_path))
+            os.path.join(REGRESSION_DATA, 'priceval', vector_path),
+            )
 
     def test_field_error_missing_bio_param(self):
         """WindEnergy: test that ValueError raised when missing bio param."""

@@ -78,7 +78,7 @@ class UCMTests(unittest.TestCase):
             for key, expected_value in expected_results.items():
                 actual_value = float(results_feature.GetField(key))
                 self.assertAlmostEqual(
-                    actual_value, expected_value,
+                    actual_value, expected_value, places=6,
                     msg='%s should be close to %f, actual: %f' % (
                         key, expected_value, actual_value))
         finally:
@@ -204,7 +204,7 @@ class UCMTests(unittest.TestCase):
             for key, expected_value in expected_results.items():
                 actual_value = float(results_feature.GetField(key))
                 self.assertAlmostEqual(
-                    actual_value, expected_value,
+                    actual_value, expected_value, places=6,
                     msg='%s should be close to %f, actual: %f' % (
                         key, expected_value, actual_value))
         finally:
