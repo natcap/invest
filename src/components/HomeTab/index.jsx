@@ -45,9 +45,9 @@ export class HomeTab extends React.PureComponent {
     let investButtons = [];
     for (const model in investJSON) {
       investButtons.push(
-        <tr>
+        <tr key={model}>
           <td>
-            <Button key={model} size="lg" block className="invest-button"
+            <Button size="lg" block className="invest-button"
               value={investJSON[model]['internal_name']}
               onClick={this.handleClick}
               variant="link">
