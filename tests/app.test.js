@@ -16,9 +16,13 @@ jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants';
 import { cleanupDir } from '../src/utils'
 
+
 afterAll(() => {
-    cleanupDir(fileRegistry.TEMP_DIR)
-    cleanupDir(fileRegistry.CACHE_DIR)
+  // cache dir accumulates files when Execute is clicked
+  fs.readdirSync(fileRegistry.CACHE_DIR).forEach(filename => {
+    fs.unlinkSync(path.join(fileRegistry.CACHE_DIR, filename))
+  })
+  jest.resetAllMocks()
 })
 
 test('Recent Sessions: each has a button', async () => {
@@ -117,12 +121,14 @@ describe('InVEST subprocess testing', () => {
 
   const dummyTextToLog = JSON.stringify(spec.args)
   const logfileName = 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt'
-  const fakeWorkspace = 'tests/data'
-  const logfilePath = path.join(fakeWorkspace, logfileName)
-
+  let fakeWorkspace;
   let mockInvestProc;
 
   beforeEach(() => {
+    // const fakeWorkspace = 'tests/data'
+    fakeWorkspace = fs.mkdtempSync(path.join(
+      'tests/data', 'data-'))
+    const logfilePath = path.join(fakeWorkspace, logfileName)
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
     mockInvestProc = new events.EventEmitter();
@@ -146,7 +152,7 @@ describe('InVEST subprocess testing', () => {
   })
 
   afterEach(() => {
-    fs.unlinkSync(logfilePath)
+    cleanupDir(fakeWorkspace)
     jest.resetAllMocks();
   })
   

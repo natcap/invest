@@ -3,32 +3,13 @@ import path from 'path';
 import React from 'react';
 import { remote } from 'electron';
 import { createEvent, fireEvent, render,
-         waitFor, waitForElement } from '@testing-library/react'
+         waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 import { InvestJob } from '../src/InvestJob';
 import { getSpec, fetchDatastackFromFile, fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants'
-import { cleanupDir } from '../src/utils'
-
-// generated this file from `invest getspec carbon --json`
-// import ARGS_SPEC from './data/carbon_args_spec.json';
-// const ARG_TYPE_INPUT_MAP = {
-//   csv: "text",
-//   vector: "text",
-//   raster: "text",
-//   directory: "text",
-//   freestyle_string: "text",
-//   number: "text",
-//   boolean: "radio",
-//   option_string: "select"
-// }
-
-afterAll(() => {
-    cleanupDir(fileRegistry.TEMP_DIR)
-    cleanupDir(fileRegistry.CACHE_DIR)
-})
 
 beforeEach(() => {
   jest.resetAllMocks()
@@ -46,7 +27,6 @@ function renderSetupFromSpec(spec) {
       updateRecentSessions={() => {}}
       saveSettings={() => {}}
     />);
-  // fireEvent.click(getByText('Carbon'));
   return { getByText, getByLabelText, utils }
 }
 

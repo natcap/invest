@@ -2,17 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import { findMostRecentLogfile, loadRecentSessions,
          updateRecentSessions, boolStringToBoolean,
-         argsValuesFromSpec } from '../src/utils';
+         argsValuesFromSpec, cleanupDir } from '../src/utils';
 
 function setupDir() {
   return fs.mkdtempSync('tests/data/_');
-}
-
-function cleanupDir(dir) {
-  fs.readdirSync(dir).forEach(file => {
-  	fs.unlinkSync(path.join(dir, file))
-  })
-  fs.rmdirSync(dir)
 }
 
 test('Test findMostRecentLogfile ignores files that are not invest logs', async () => {

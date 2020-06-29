@@ -1,6 +1,5 @@
 import React from 'react';
 import { remote } from 'electron';
-
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
@@ -10,7 +9,6 @@ import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation, fetchDatastackFromFile } from '../src/server_requests';
 jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants';
-import { cleanupDir } from '../src/utils'
 
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
@@ -42,11 +40,6 @@ function renderInvestJob() {
     />);
   return { getByText, getByLabelText, utils }
 }
-
-afterAll(() => {
-    cleanupDir(fileRegistry.TEMP_DIR)
-    cleanupDir(fileRegistry.CACHE_DIR)
-})
 
 beforeEach(() => {
   jest.resetAllMocks();
