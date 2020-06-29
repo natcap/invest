@@ -21,7 +21,8 @@ import { LoadButton } from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, fetchDatastackFromFile,
          writeParametersToFile } from './server_requests';
-import { argsDictFromObject, findMostRecentLogfile } from './utils';
+import { argsDictFromObject, findMostRecentLogfile,
+         cleanupDir } from './utils';
 import { fileRegistry } from './constants';
 
 // TODO see issue #12
@@ -260,6 +261,7 @@ export class InvestJob extends React.Component {
         jobStatus: status,
       }, () => {
         this.saveState();
+        cleanupDir(temp_dir)
       });
     });
   }

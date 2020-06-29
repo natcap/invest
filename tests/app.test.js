@@ -17,6 +17,7 @@ import { fileRegistry } from '../src/constants';
 import { cleanupDir } from '../src/utils'
 
 afterAll(() => {
+    cleanupDir(fileRegistry.TEMP_DIR)
     cleanupDir(fileRegistry.CACHE_DIR)
 })
 
