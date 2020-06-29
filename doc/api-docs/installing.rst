@@ -77,6 +77,17 @@ http://www.lfd.uci.edu/~gohlke/pythonlibs/
 PyQt4 installers can also be downloaded from the `Riverbank Computing website <https://www.riverbankcomputing.com/software/pyqt/download>`_.
 
 
+Conda Packages
+--------------
+
+If you're using a conda environment to manage your ``natcap.invest`` installation,
+it's easiest to install a few binary packages first before using pip to install
+the rest::
+
+    $ conda install "gdal>=3" numpy shapely rtree
+    $ pip install natcap.invest
+
+
 Python Dependencies
 -------------------
 
@@ -85,6 +96,7 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
 .. include:: ../../requirements.txt
     :literal:
     :start-line: 9
+
 
 
 

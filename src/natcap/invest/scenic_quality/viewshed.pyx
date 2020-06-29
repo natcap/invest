@@ -680,7 +680,7 @@ def viewshed(dem_raster_path_band,
 
     # get the pixel size in terms of meters.
     dem_srs = osr.SpatialReference()
-    dem_srs.ImportFromWkt(dem_raster_info['projection'])
+    dem_srs.ImportFromWkt(dem_raster_info['projection_wkt'])
     linear_units = dem_srs.GetLinearUnits()
     cdef double pixel_size = utils.mean_pixel_size_and_area(
         dem_raster_info['pixel_size'])[0]*linear_units

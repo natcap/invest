@@ -67,7 +67,7 @@ class UFRMTests(unittest.TestCase):
             set(('aff_bld', 'serv_bld', 'rnf_rt_idx', 'rnf_rt_m3')),
             set(field.GetName() for field in result_layer.schema))
 
-        result_feature = next(result_layer)
+        result_feature = result_layer.GetFeature(0)
         for fieldname, expected_value in (
                 ('aff_bld', 187010830.32202843),
                 ('serv_bld', 13253546667257.65),
@@ -107,7 +107,7 @@ class UFRMTests(unittest.TestCase):
             args['workspace_dir'], 'flood_risk_service_Test1.shp'),
             gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
-        result_feature = next(result_layer)
+        result_feature = result_layer.GetFeature(0)
 
         # Check that only the two expected fields are there.
         self.assertEqual(

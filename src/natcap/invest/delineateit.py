@@ -386,7 +386,7 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
     nyquist_limit = numpy.mean(numpy.abs(dem_info['pixel_size'])) / 2.
 
     dem_srs = osr.SpatialReference()
-    dem_srs.ImportFromWkt(dem_info['projection'])
+    dem_srs.ImportFromWkt(dem_info['projection_wkt'])
 
     gpkg_driver = gdal.GetDriverByName('GPKG')
     target_vector = gpkg_driver.Create(target_vector_path, 0, 0, 0,

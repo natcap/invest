@@ -2,7 +2,6 @@
 import importlib
 import itertools
 import logging
-import os
 import pkgutil
 import unittest
 

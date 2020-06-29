@@ -1482,7 +1482,7 @@ def _create_aoi_raster(base_aoi_vector_path, target_aoi_raster_path,
 
     """
     base_sr_wkt = pygeoprocessing.get_vector_info(
-        base_aoi_vector_path)['projection']
+        base_aoi_vector_path)['projection_wkt']
     if base_sr_wkt != target_sr_wkt:
         # Reproject clip vector to the spatial reference of the base vector.
         # Note: reproject_vector can be expensive if vector has many features.
@@ -2052,17 +2052,17 @@ def _get_suitable_projection_params(
     aoi_vector_info = pygeoprocessing.get_vector_info(aoi_vector_path)
 
     base_raster_srs = osr.SpatialReference()
-    base_raster_srs.ImportFromWkt(base_raster_info['projection'])
+    base_raster_srs.ImportFromWkt(base_raster_info['projection_wkt'])
 
     if not base_raster_srs.IsProjected():
         wgs84_sr = osr.SpatialReference()
         wgs84_sr.ImportFromEPSG(4326)
         aoi_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
-            aoi_vector_info['bounding_box'], aoi_vector_info['projection'],
+            aoi_vector_info['bounding_box'], aoi_vector_info['projection_wkt'],
             wgs84_sr.ExportToWkt())
 
         base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
-            base_raster_info['bounding_box'], base_raster_info['projection'],
+            base_raster_info['bounding_box'], base_raster_info['projection_wkt'],
             wgs84_sr.ExportToWkt())
 
         target_bounding_box_wgs84 = pygeoprocessing.merge_bounding_box_list(
@@ -2095,10 +2095,10 @@ def _get_suitable_projection_params(
     else:
         # If the base raster is already projected, transform the bounding
         # box from base raster and aoi vector bounding boxes
-        target_sr_wkt = base_raster_info['projection']
+        target_sr_wkt = base_raster_info['projection_wkt']
 
         aoi_bounding_box = pygeoprocessing.transform_bounding_box(
-            aoi_vector_info['bounding_box'], aoi_vector_info['projection'],
+            aoi_vector_info['bounding_box'], aoi_vector_info['projection_wkt'],
             target_sr_wkt)
 
         target_bounding_box = pygeoprocessing.merge_bounding_box_list(
@@ -2117,7 +2117,7 @@ def _get_suitable_projection_params(
 
 def _clip_to_projection_with_square_pixels(
         base_raster_path, clip_vector_path, target_raster_path,
-        target_sr_wkt, target_pixel_size, target_bounding_box):
+        target_projection_wkt, target_pixel_size, target_bounding_box):
     """Clip raster with vector into target projected coordinate system.
 
     If pixel size of target raster is not square, the minimum absolute value
@@ -2126,8 +2126,8 @@ def _clip_to_projection_with_square_pixels(
     Parameters:
         base_raster_path (str): path to base raster.
         clip_vector_path (str): path to base clip vector.
-        target_sr_wkt (str): a projection string used as the target projection
-            for warping the base raster.
+        target_projection_wkt (str): a projection string used as the target
+            projection for warping the base raster.
         target_pixel_size (tuple): a tuple of equal x, y pixel sizes in minimum
             absolute value.
         target_bounding_box (list): a list of the form [xmin, ymin, xmax, ymax]
@@ -2144,7 +2144,7 @@ def _clip_to_projection_with_square_pixels(
         target_raster_path,
         _TARGET_RESAMPLE_METHOD,
         target_bb=target_bounding_box,
-        target_sr_wkt=target_sr_wkt,
+        target_projection_wkt=target_projection_wkt,
         vector_mask_options={'mask_vector_path': clip_vector_path})
 
 
@@ -2237,7 +2237,7 @@ def _wind_data_to_point_vector(wind_data_pickle_path,
         ref_sr = osr.SpatialReference(wkt=ref_projection_wkt)
         if ref_sr.IsProjected:
             # Get coordinate transformation between two projections
-            coord_trans = osr.CoordinateTransformation(target_sr, ref_sr)
+            coord_trans = utils.create_coordinate_transformer(target_sr, ref_sr)
             need_geotranform = True
     else:
         need_geotranform = False
@@ -2319,9 +2319,9 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
 
     # Get the base and target spatial reference in Well Known Text
     base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
-        'projection']
+        'projection_wkt']
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
-        'projection']
+        'projection_wkt']
 
     # Create path for the reprojected shapefile
     clipped_vector_path = os.path.join(
@@ -2372,9 +2372,9 @@ def _clip_vector_by_vector(
 
     # Get the base and target spatial reference in Well Known Text
     base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
-        'projection']
+        'projection_wkt']
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
-        'projection']
+        'projection_wkt']
 
     if base_sr_wkt != target_sr_wkt:
         # Reproject clip vector to the spatial reference of the base vector.
