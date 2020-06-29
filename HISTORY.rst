@@ -13,7 +13,7 @@
   - Globio
   - Habitat Quality
   - HRA
-  - Annual Water Yield 
+  - Annual Water Yield
   - NDR
   - Pollination
   - Recreation
@@ -37,22 +37,31 @@ Unreleased Changes (3.9)
 * General:
   * Deprecating GDAL 2 and adding support for GDAL 3.
   * Adding function in utils.py to handle InVEST coordindate transformations.
-  * Making InVEST compatible with Pygeoprocessing 2.0 by updating: 
+  * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
     * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
-    * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to 
+    * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to
       ``projection_wkt``.
 
-Unreleased Changes
+3.8.5 (2020-06-26)
 ------------------
 * General
-    * Fix bug in ``utils.build_lookup_from_csv`` that was allowing 
+    * Fix bug in ``utils.build_lookup_from_csv`` that was allowing
       ``key_field`` to be non unique and overwriting values.
     * Fix bug in ``utils.build_lookup_from_csv`` where trailing commas caused
       returned values to be malformed.
     * Add optional argument ``column_list`` to ``utils.build_lookup_from_csv``
-      that takes a list of column names and only returns those in the 
+      that takes a list of column names and only returns those in the
       dictionary.
-    * Remove ``warn_if_missing`` argument and warn by default. 
+    * Remove ``warn_if_missing`` argument from ``utils.build_lookup_from_csv``
+      and warning by default.
+* Urban Flood Risk Mitigation
+    * Fixed an issue where the output vector ``flood_risk_service.shp`` would
+      only be created when the built infrastructure vector was provided.  Now,
+      the ``flood_risk_service.shp`` vector is always created, but the fields
+      created differ depending on whether the built infrastructure input is
+      present during the model run.
+    * Fixed an issue where the model would crash if an infrastructure geometry
+      were invalid or absent.  Such features are now skipped.
 * Scenic Quality
     * Fixing an issue in Scenic Quality where the creation of the weighted sum
       of visibility rasters could cause "Too Many Open Files" errors and/or
