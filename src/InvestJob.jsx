@@ -218,7 +218,6 @@ export class InvestJob extends React.Component {
     investRun.stdout.on('data', async (data) => {
       if (!logfilename) {
         logfilename = await findMostRecentLogfile(workspace.directory)
-        console.log(`${data}`)
         // TODO: handle case when logfilename is undefined? It seems like
         // sometimes there is some stdout emitted before a logfile exists.
         this.setState(
@@ -243,7 +242,6 @@ export class InvestJob extends React.Component {
     // in which case it's useful to console.log too.
     let stderr = Object.assign('', this.state.logStdErr);
     investRun.stderr.on('data', (data) => {
-      console.log(`${data}`)
       stderr += `${data}`
       this.setState({
         logStdErr: stderr,
@@ -261,7 +259,6 @@ export class InvestJob extends React.Component {
       this.setState({
         jobStatus: status,
       }, () => {
-        console.log(`invest closed with ${status}`)
         this.saveState();
       });
     });

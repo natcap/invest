@@ -153,9 +153,13 @@ class RecentInvestJobs extends React.PureComponent {
 
     return (
       <Container>
-        <h4>Recent Sessions:</h4>
+        <label htmlFor='session-card-group'>
+          <h4>Recent Sessions:</h4>
+        </label>
         {recentButtons.length
-          ? <CardGroup className='session-card-group'>
+          ? <CardGroup
+              id='session-card-group'
+              className='session-card-group'>
               {recentButtons}
             </CardGroup>
           : <div>
