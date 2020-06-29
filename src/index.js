@@ -39,7 +39,8 @@ if (fs.existsSync(fileRegistry.INVEST_REGISTRY_PATH)) {
 // C) point to binaries included in this app's installation.
 } else {
   const binary = (process.platform === 'win32') ? 'invest.exe' : 'invest'
-  investExe = path.join(__dirname, 'invest', binary)
+  investExe = path.join(
+    process.resourcesPath, 'app.asar.unpacked', 'build', 'invest', binary)
 }
 
 const { Menu, MenuItem } = remote;

@@ -14,7 +14,7 @@ if (isDevMode()) {
 }
 
 // Binding to the invest server binary:
-let serverEXE;
+let serverExe;
 
 // A) look for a local registry of available invest installations
 const investRegistryPath = path.join(
@@ -22,16 +22,20 @@ const investRegistryPath = path.join(
 if (fs.existsSync(investRegistryPath)) {
   const investRegistry = JSON.parse(fs.readFileSync(investRegistryPath))
   const activeVersion = investRegistry['active']
-  serverEXE = investRegistry['registry'][activeVersion]['server']
+  serverExe = investRegistry['registry'][activeVersion]['server']
 
 // B) check for dev mode and an environment variable from dotenv
 } else if (isDevMode()) {
-  serverEXE = process.env.SERVER
+  serverExe = process.env.SERVER
 
 // C) point to binaries included in this app's installation.
 } else {
   const binary = (process.platform === 'win32') ? 'server.exe' : 'server'
-  serverEXE = path.join(__dirname, 'invest', binary)
+  // serverExe = path.join(__dirname, 'invest', binary)
+  console.log(process.resourcesPath)
+  serverExe = path.join(
+    process.resourcesPath, 'app.asar.unpacked', 'build', 'invest', binary)
+  console.log(serverExe)
 }
 
 let PORT = (process.env.PORT || '5000').trim();
@@ -79,15 +83,15 @@ const createWindow = async () => {
 
 function createPythonFlaskProcess() {
   /** Spawn a child process running the Python Flask server.*/
-  if (serverEXE) {
-    const pythonServerProcess = spawn(serverEXE, {
+  if (serverExe) {
+    const pythonServerProcess = spawn(serverExe, {
         shell: true,
         // stdio: 'ignore',
         detatched: true,
       });
 
     console.log('Started python process as PID ' + pythonServerProcess.pid);
-
+    console.log(serverExe)
     pythonServerProcess.stdout.on('data', (data) => {
       console.log(`${data}`);
     });
