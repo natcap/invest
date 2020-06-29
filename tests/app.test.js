@@ -17,7 +17,6 @@ import { fileRegistry } from '../src/constants';
 import { cleanupDir } from '../src/utils'
 
 afterAll(() => {
-    cleanupDir(fileRegistry.TEMP_DIR)
     cleanupDir(fileRegistry.CACHE_DIR)
 })
 
@@ -120,11 +119,12 @@ describe('InVEST subprocess testing', () => {
   const fakeWorkspace = 'tests/data'
   const logfilePath = path.join(fakeWorkspace, logfileName)
 
-  const mockInvestProc = new events.EventEmitter();
+  let mockInvestProc;
 
   beforeEach(() => {
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
+    mockInvestProc = new events.EventEmitter();
     mockInvestProc.stdout = new Stream.Readable({
       read() {},
     })
@@ -181,7 +181,6 @@ describe('InVEST subprocess testing', () => {
   })
 
   test('Invest subprocess - exit with error', async () => {
-    // const { getByText, getByLabelText, utils } = renderInvestJob()
     const { getByText, getByLabelText, ...utils } = render(
       <App jobDatabase={fileRegistry.JOBS_DATABASE}/>);
 
