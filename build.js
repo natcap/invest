@@ -7,7 +7,6 @@ const glob = require('glob');
 
 const SRC_DIR = 'src'
 const BUILD_DIR = 'build'
-const DATA_DIR = 'ui_data'
 
 if (!fs.existsSync(BUILD_DIR)) {
 	fs.mkdirSync(BUILD_DIR)
@@ -27,19 +26,10 @@ if (runBabel.stderr) {
 // copy all other files to their same relative location in the build dir
 glob(SRC_DIR.concat(path.sep, '**', path.sep, '*'), (err, files) => {
 	files.forEach(file => {
-		if (['.css', '.html'].includes(path.extname(file))) {
+		if (['.css', '.html', '.json'].includes(path.extname(file))) {
 			const dest = file.replace(SRC_DIR, BUILD_DIR)
 			fs.copySync(file, dest)
 		}
 	})
 })
 
-const dataFiles = fs.readdirSync(DATA_DIR)
-dataFiles.forEach(file => {
-	fs.copySync(
-		path.join(DATA_DIR, file),
-		path.join(BUILD_DIR, DATA_DIR, file))
-})
-
-console.log('build directory contains:')
-console.log(fs.readdirSync(BUILD_DIR));
