@@ -22,7 +22,8 @@
     "artifactName": "invest-desktop_${os}_${arch}_${version}.${ext}",
     "mac": {
       "category": "public.app-category.business",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "target": "zip"
     },
     "linux": {
       "target": [
