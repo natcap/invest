@@ -9,15 +9,19 @@ if (args.length !== 1) {
 }
 let fileSuffix;
 switch (args[0]) {
-case 'windows-latest':
-	fileSuffix = 'Windows'
-	break
-case 'macos-latest':
-	fileSuffix = 'Darwin'
-	break
-case 'ubuntu-latest':
-	fileSuffix = 'Linux'
+	case 'windows-latest':
+		fileSuffix = 'Windows'
+		break
+	case 'macos-latest':
+		fileSuffix = 'Darwin'
+		break
+	case 'ubuntu-latest':
+		fileSuffix = 'Linux'
+		break
+	default:
+		throw new Error("expected argument to be in ['windows-latest, 'macos-latest', 'ubuntu-latest']")
 }
+console.log(fileSuffix)
 
 // todo, move this config to package.json, other config file,
 // and/or command line args, e.g. Actions YAML should set OS suffix
