@@ -254,16 +254,11 @@ def execute(args):
     kernel_dir = os.path.join(intermediate_output_dir, 'kernels')
     utils.make_directories([intermediate_output_dir, output_dir, kernel_dir])
 
-    work_token_dir = os.path.join(
+    taskgraph_working_dir = os.path.join(
         intermediate_output_dir, '_taskgraph_working_dir')
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+
+    n_workers = args.get('n_workers', -1)
+    task_graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
 
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
