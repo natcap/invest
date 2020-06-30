@@ -10,7 +10,7 @@ if (args.length !== 1) {
 let fileSuffix;
 switch (args[0]) {
 	case 'windows-latest':
-		fileSuffix = 'Windows'
+		fileSuffix = 'windows'
 		break
 	case 'macos-latest':
 		fileSuffix = 'Darwin'
