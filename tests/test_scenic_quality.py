@@ -7,8 +7,8 @@ import glob
 
 from osgeo import gdal
 from osgeo import osr
-import pygeoprocessing.testing
-from pygeoprocessing.testing import sampledata
+from osgeo import ogr
+import pygeoprocessing
 from shapely.geometry import Polygon, Point
 import numpy
 
@@ -33,14 +33,13 @@ class ScenicQualityTests(unittest.TestCase):
     def create_dem(dem_path):
         """Create a known DEM at the given path.
 
-        Parameters:
+        Args:
             dem_path (string): Where to store the DEM.
 
         Returns:
             ``None``
 
         """
-        from pygeoprocessing.testing import create_raster_on_disk
         dem_matrix = numpy.array(
             [[10, 2, 2, 2, 10],
              [2, 10, 2, 10, 2],
@@ -48,17 +47,11 @@ class ScenicQualityTests(unittest.TestCase):
              [2, 10, 2, 10, 2],
              [10, 2, 2, 2, 10]], dtype=numpy.int8)
 
-        create_raster_on_disk(
-            [dem_matrix],
-            origin=(2, -2),
-            projection_wkt=WKT,
-            nodata=255,  # byte nodata value
-            pixel_size=(2, -2),
+        # byte nodata value
+        pygeoprocessing.numpy_array_to_raster(
+            dem_matrix, 255, (2, -2), (2, -2), WKT, dem_path,
             raster_driver_creation_tuple=(
-                'GTIFF', ['TILED=YES',
-                          'BIGTIFF=YES',
-                          'COMPRESS=LZW']),
-            filename=dem_path)
+                'GTIFF', ['TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW']))
 
     @staticmethod
     def create_aoi(aoi_path):
@@ -66,16 +59,16 @@ class ScenicQualityTests(unittest.TestCase):
 
         The envelope of the AOI perfectly overlaps the outside edge of the DEM.
 
-        Parameters:
+        Args:
             aoi_path (string): The filepath where the AOI should be written.
 
         Returns:
             ``None``
 
         """
-        sampledata.create_vector_on_disk(
-            [Polygon([(2, -2), (2, -12), (12, -12), (12, -2), (2, -2)])],
-            WKT, filename=aoi_path)
+        geoms = [Polygon([(2, -2), (2, -12), (12, -12), (12, -2), (2, -2)])]
+        pygeoprocessing.shapely_geometry_to_vector(
+            geoms, aoi_path, WKT, 'GeoJSON')
 
     @staticmethod
     def create_viewpoints(viewpoints_path, fields=None, attributes=None):
@@ -85,12 +78,12 @@ class ScenicQualityTests(unittest.TestCase):
         The second viewpoint is off the edge of the DEM and will therefore not
         be included in the Scenic Quality analysis.
 
-        Parameters:
+        Args:
             viewpoints_path (string): The filepath where the viewpoints vector
                 should be saved.
             fields=None (dict): If provided, this must be a dict mapping
                 fieldnames to datatypes, as expected by
-                ``pygeoprocessing.create_vector_on_disk``.
+                ``pygeoprocessing.shapely_geometry_to_vector``.
             attributes=None (dict): If provided, this must be a list of dicts
                 mapping fieldnames (which match the keys in ``fields``) to
                 values that will be used as the column value for each feature
@@ -100,15 +93,16 @@ class ScenicQualityTests(unittest.TestCase):
             ``None``
 
         """
-        sampledata.create_vector_on_disk(
-            [Point(7.0, -3.0),
-             Point(1.0, -7.0),  # off the edge of DEM, won't be included.
-             Point(7.0, -11.0),
-             Point(11.0, -7.0)],
-            projection=WKT,
-            fields=fields,
-            attributes=attributes,
-            filename=viewpoints_path)
+        geometries = [
+            Point(7.0, -3.0),
+            Point(1.0, -7.0),  # off the edge of DEM, won't be included.
+            Point(7.0, -11.0),
+            Point(11.0, -7.0)]
+
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, viewpoints_path, WKT, 'GeoJSON',
+            fields=fields, attribute_list=attributes,
+            ogr_geom_type=ogr.wkbPoint)
 
     def test_exception_when_no_structures_aoi_overlap(self):
         """SQ: model raises exception when AOI does not overlap structures."""
@@ -123,9 +117,9 @@ class ScenicQualityTests(unittest.TestCase):
 
         # AOI DEFINITELY doesn't overlap with the viewpoints.
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
-        sampledata.create_vector_on_disk(
-            [Polygon([(2, 2), (2, 12), (12, 12), (12, 2), (2, 2)])],
-            WKT, filename=aoi_path)
+        geometries = [Polygon([(2, 2), (2, 12), (12, 12), (12, 2), (2, 2)])]
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, aoi_path, WKT, 'GeoJSON')
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -155,9 +149,9 @@ class ScenicQualityTests(unittest.TestCase):
                                        'viewpoints.geojson')
         ScenicQualityTests.create_viewpoints(
             viewpoints_path,
-            fields={'RADIUS': 'real',
-                    'HEIGHT': 'real',
-                    'WEIGHT': 'real'},
+            fields={'RADIUS': ogr.OFTReal,
+                    'HEIGHT': ogr.OFTReal,
+                    'WEIGHT': ogr.OFTReal},
             attributes=[
                 {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
                 {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
@@ -244,36 +238,32 @@ class ScenicQualityTests(unittest.TestCase):
         with size < 1m.
         """
         from natcap.invest.scenic_quality import scenic_quality
-        from pygeoprocessing.testing import create_raster_on_disk
 
         dem_matrix = numpy.array(
             [[-1, -1, 2, -1, -1],
              [-1, -1, -1, -1, -1],
              [-1, -1, -1, -1, -1],
              [-1, -1, -1, -1, -1],
-             [-1, -1, -1, -1, -1]], dtype=numpy.int)
+             [-1, -1, -1, -1, -1]], dtype=numpy.int32)
 
         dem_path = os.path.join(self.workspace_dir, 'dem.tif')
-        create_raster_on_disk(
-            [dem_matrix],
-            origin=(0, 0),
-            projection_wkt=WKT,
-            nodata=-1,
-            pixel_size=(0.5, -0.5),
-            filename=dem_path)
+        pygeoprocessing.numpy_array_to_raster(
+            dem_matrix, -1, (0.5, -0.5), (0, 0), WKT, dem_path)
 
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
-        sampledata.create_vector_on_disk(
-            [Point(1.25, -0.5),  # Valid in DEM but outside of AOI.
-             Point(-1.0, -5.0),  # off the edge of DEM.
-             Point(1.25, -1.5)],  # Within AOI, over nodata.
-            WKT, filename=viewpoints_path)
+        geometries = [Point(1.25, -0.5),  # Valid in DEM but outside of AOI.
+                      Point(-1.0, -5.0),  # off the edge of DEM.
+                      Point(1.25, -1.5)]  # Within AOI, over nodata.
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, viewpoints_path, WKT, 'GeoJSON',
+            ogr_geom_type=ogr.wkbPoint)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
-        sampledata.create_vector_on_disk(
-            [Polygon([(1, -1), (1, -2.5), (2.5, -2.5), (2.5, -1), (1, -1)])],
-            WKT, filename=aoi_path)
+        geometries_aoi = [
+            Polygon([(1, -1), (1, -2.5), (2.5, -2.5), (2.5, -1), (1, -1)])]
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries_aoi, aoi_path, WKT, 'GeoJSON')
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -349,20 +339,15 @@ class ScenicQualityTests(unittest.TestCase):
              [0, 1, 1, 2, 1],
              [1, 1, 1, 1, 2]], dtype=numpy.int8)
 
-        value_raster = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output',
-                         'vshed_value_foo.tif'), gdal.OF_RASTER)
-        value_band = value_raster.GetRasterBand(1)
-        value_matrix = value_band.ReadAsArray()
+        value_matrix = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(
+                args['workspace_dir'], 'output', 'vshed_value_foo.tif'))
 
         numpy.testing.assert_almost_equal(expected_value, value_matrix)
 
         # verify that the correct number of viewpoints has been tallied.
-        vshed_raster = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output',
-                         'vshed_foo.tif'), gdal.OF_RASTER)
-        vshed_band = vshed_raster.GetRasterBand(1)
-        vshed_matrix = vshed_band.ReadAsArray()
+        vshed_matrix = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(args['workspace_dir'], 'output', 'vshed_foo.tif'))
 
         # Because our B coefficient is 0, the vshed matrix should match the
         # value matrix.
@@ -374,13 +359,13 @@ class ScenicQualityTests(unittest.TestCase):
              [0, 3, 3, 4, 3],
              [0, 0, 4, 3, 3],
              [0, 3, 3, 4, 3],
-             [3, 3, 3, 3, 4]])
-        visual_quality_raster = os.path.join(
-            args['workspace_dir'], 'output', 'vshed_qual_foo.tif')
-        quality_matrix = gdal.OpenEx(visual_quality_raster,
-                                     gdal.OF_RASTER).ReadAsArray()
-        numpy.testing.assert_almost_equal(expected_visual_quality,
-                                          quality_matrix)
+             [3, 3, 3, 3, 4]], dtype=numpy.int32)
+
+        quality_matrix = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(
+                args['workspace_dir'], 'output', 'vshed_qual_foo.tif'))
+        numpy.testing.assert_almost_equal(
+            expected_visual_quality, quality_matrix)
 
     def test_viewshed_with_fields(self):
         """SQ: verify that we can specify viewpoint fields."""
@@ -393,9 +378,9 @@ class ScenicQualityTests(unittest.TestCase):
                                        'viewpoints.geojson')
         ScenicQualityTests.create_viewpoints(
             viewpoints_path,
-            fields={'RADIUS': 'real',
-                    'HEIGHT': 'real',
-                    'WEIGHT': 'real'},
+            fields={'RADIUS': ogr.OFTReal,
+                    'HEIGHT': ogr.OFTReal,
+                    'WEIGHT': ogr.OFTReal},
             attributes=[
                 {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
                 {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
@@ -429,15 +414,13 @@ class ScenicQualityTests(unittest.TestCase):
              [0., 2.82842712, 2., 9.89949494, 5.],
              [0., 0., 24., 5., 0.],
              [0., 7.07106781, 5., 14.14213562, 5.],
-             [10., 5., 0., 5., 20.]])
+             [10., 5., 0., 5., 20.]], dtype=numpy.float32)
 
-        value_raster = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output',
-                         'vshed_value.tif'), gdal.OF_RASTER)
-        value_band = value_raster.GetRasterBand(1)
-        value_matrix = value_band.ReadAsArray()
+        value_matrix = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(args['workspace_dir'], 'output', 'vshed_value.tif'))
 
-        numpy.testing.assert_almost_equal(expected_value, value_matrix)
+        numpy.testing.assert_almost_equal(
+            expected_value, value_matrix, decimal=6)
 
         # Verify that the sum of the viewsheds (which is weighted) is correct.
         expected_weighted_vshed = numpy.array(
@@ -446,10 +429,10 @@ class ScenicQualityTests(unittest.TestCase):
              [0., 0., 6., 2.5, 2.5],
              [0., 2.5, 2.5, 5., 2.5],
              [2.5, 2.5, 2.5, 2.5, 5.]], dtype=numpy.float32)
-        vshed_raster_path = os.path.join(args['workspace_dir'], 'output',
-                                         'vshed.tif')
-        weighted_vshed_matrix = gdal.OpenEx(
-            vshed_raster_path, gdal.OF_RASTER).ReadAsArray()
+        vshed_raster_path = os.path.join(
+            args['workspace_dir'], 'output', 'vshed.tif')
+        weighted_vshed_matrix = pygeoprocessing.raster_to_numpy_array(
+            vshed_raster_path)
         numpy.testing.assert_almost_equal(expected_weighted_vshed,
                                           weighted_vshed_matrix)
 
@@ -459,11 +442,11 @@ class ScenicQualityTests(unittest.TestCase):
              [0, 1, 1, 3, 3],
              [0, 0, 4, 3, 0],
              [0, 3, 3, 4, 3],
-             [3, 3, 0, 3, 4]])
+             [3, 3, 0, 3, 4]], dtype=numpy.int32)
         visual_quality_raster = os.path.join(
             args['workspace_dir'], 'output', 'vshed_qual.tif')
-        quality_matrix = gdal.OpenEx(
-            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
+        quality_matrix = pygeoprocessing.raster_to_numpy_array(
+            visual_quality_raster)
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           quality_matrix)
 
@@ -506,11 +489,8 @@ class ScenicQualityTests(unittest.TestCase):
              [0., 0.05910575, 0.13533528, 0.11821149, 0.13533528],
              [0.01831564, 0.13533528, 1., 0.13533528, 0.03663128]])
 
-        value_raster = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output', 'vshed_value.tif'),
-            gdal.OF_RASTER)
-        value_band = value_raster.GetRasterBand(1)
-        value_matrix = value_band.ReadAsArray()
+        value_matrix = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(args['workspace_dir'], 'output', 'vshed_value.tif'))
 
         numpy.testing.assert_almost_equal(expected_value, value_matrix)
 
@@ -553,11 +533,9 @@ class ScenicQualityTests(unittest.TestCase):
              [0., 2.34245405, 2.09861229, 4.68490809, 2.09861229],
              [2.60943791, 2.09861229, 1., 2.09861229, 5.21887582]])
 
-        value_raster = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output',
-                         'vshed_value.tif'), gdal.OF_RASTER)
-        value_band = value_raster.GetRasterBand(1)
-        value_matrix = value_band.ReadAsArray()
+        value_matrix = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(
+                args['workspace_dir'], 'output', 'vshed_value.tif'))
 
         numpy.testing.assert_almost_equal(expected_value, value_matrix)
 
@@ -565,7 +543,7 @@ class ScenicQualityTests(unittest.TestCase):
         """SQ: verify visual quality calculations."""
         from natcap.invest.scenic_quality import scenic_quality
         visible_structures = numpy.tile(
-            numpy.array([3, 0, 0, 0, 6, 7, 8]), (5, 1))
+            numpy.array([3, 0, 0, 0, 6, 7, 8], dtype=numpy.int32), (5, 1))
 
         n_visible = os.path.join(self.workspace_dir, 'n_visible.tif')
         visual_quality_raster = os.path.join(self.workspace_dir,
@@ -583,10 +561,10 @@ class ScenicQualityTests(unittest.TestCase):
                                                  visual_quality_raster)
 
         expected_visual_quality = numpy.tile(
-            numpy.array([1, 0, 0, 0, 2, 3, 4]), (5, 1))
+            numpy.array([1, 0, 0, 0, 2, 3, 4], dtype=numpy.int32), (5, 1))
 
-        visual_quality_matrix = gdal.OpenEx(
-            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
+        visual_quality_matrix = pygeoprocessing.raster_to_numpy_array(
+            visual_quality_raster)
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           visual_quality_matrix)
 
@@ -621,15 +599,16 @@ class ScenicQualityTests(unittest.TestCase):
         expected_visual_quality = numpy.concatenate(
             [numpy.full(shape, n) for n in range(n_blocks)])
 
-        visual_quality_matrix = gdal.OpenEx(
-            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
+        visual_quality_matrix = pygeoprocessing.raster_to_numpy_array(
+            visual_quality_raster)
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           visual_quality_matrix)
 
     def test_visual_quality_low_count(self):
         """SQ: verify visual quality calculations for low pixel counts."""
         from natcap.invest.scenic_quality import scenic_quality
-        visible_structures = numpy.array([[-1, 3, 0, 0, 0, 3, 6, 7]])
+        visible_structures = numpy.array(
+            [[-1, 3, 0, 0, 0, 3, 6, 7]], dtype=numpy.int32)
 
         n_visible = os.path.join(self.workspace_dir, 'n_visible.tif')
         visual_quality_raster = os.path.join(self.workspace_dir,
@@ -646,10 +625,11 @@ class ScenicQualityTests(unittest.TestCase):
                                                  self.workspace_dir,
                                                  visual_quality_raster)
 
-        expected_visual_quality = numpy.array([[255, 2, 0, 0, 0, 2, 3, 4]])
+        expected_visual_quality = numpy.array(
+            [[255, 2, 0, 0, 0, 2, 3, 4]], dtype=numpy.int32)
 
-        visual_quality_matrix = gdal.OpenEx(
-            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
+        visual_quality_matrix = pygeoprocessing.raster_to_numpy_array(
+            visual_quality_raster)
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           visual_quality_matrix)
 
@@ -674,10 +654,11 @@ class ScenicQualityTests(unittest.TestCase):
                                                  self.workspace_dir,
                                                  visual_quality_raster)
 
-        expected_visual_quality = numpy.array([[255, 1, 0, 0, 0, 2, 3, 4]])
+        expected_visual_quality = numpy.array(
+            [[255, 1, 0, 0, 0, 2, 3, 4]], dtype=numpy.int32)
 
-        visual_quality_matrix = gdal.OpenEx(
-            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
+        visual_quality_matrix = pygeoprocessing.raster_to_numpy_array(
+            visual_quality_raster)
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           visual_quality_matrix)
 
@@ -792,18 +773,15 @@ class ScenicQualityValidationTests(unittest.TestCase):
     def test_dem_projected_in_m(self):
         """SQ Validate: the DEM must be projected in meters."""
         from natcap.invest.scenic_quality import scenic_quality
-        from pygeoprocessing.testing import create_raster_on_disk
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(4326)  # WGS84 is not projected.
+        projection_wkt = srs.ExportToWkt()
         filepath = os.path.join(self.workspace_dir, 'dem.tif')
-        create_raster_on_disk(
-            [numpy.array([[1]])],
-            origin=(0, 0),
-            projection_wkt=srs.ExportToWkt(),
-            nodata=-1,
-            pixel_size=(1, -1),
-            filename=filepath)
+
+        pygeoprocessing.numpy_array_to_raster(
+            numpy.array([[1]], dtype=numpy.int32), -1, (1, -1), (0, 0),
+            projection_wkt, filepath)
 
         args = {'dem_path': filepath}
 
@@ -828,7 +806,7 @@ class ViewshedTests(unittest.TestCase):
     def create_dem(matrix, filepath, pixel_size=(1, 1), nodata=-1):
         """Create a DEM in WGS84 coordinate system.
 
-        Parameters:
+        Args:
             matrix (numpy.array): A 2D numpy array of pixel values.
             filepath (string): The filepath where the new raster file will be
                 written.
@@ -837,20 +815,12 @@ class ViewshedTests(unittest.TestCase):
 
         Returns:
             ``None``.
-
         """
-        from pygeoprocessing.testing import create_raster_on_disk
-
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(4326)  # WGS84
-        wkt = srs.ExportToWkt()
-        create_raster_on_disk(
-            [matrix],
-            origin=(0, 0),
-            projection_wkt=wkt,
-            nodata=nodata,
-            pixel_size=pixel_size,
-            filename=filepath)
+        projection_wkt = srs.ExportToWkt()
+        pygeoprocessing.numpy_array_to_raster(
+            matrix, nodata, pixel_size, (0, 0), projection_wkt, filepath)
 
     def test_pixels_not_square(self):
         """SQ Viewshed: exception raised when pixels are not square."""
@@ -900,9 +870,8 @@ class ViewshedTests(unittest.TestCase):
                                            'auxiliary.tif'),
                  refraction_coeff=1.0, max_distance=max_dist)
 
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
         expected_visibility = numpy.zeros(matrix.shape)
 
         expected_visibility = numpy.array(
@@ -915,9 +884,10 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_refractivity(self):
-        """SQ Viewshed: refractivity partly compensates for earth's curvature."""
+        """SQ Vshed: refractivity partly compensates for earth's curvature."""
         from natcap.invest.scenic_quality.viewshed import viewshed
-        matrix = numpy.array([[2, 1, 1, 2, 1, 1, 1, 1, 1, 50]])
+        matrix = numpy.array(
+            [[2, 1, 1, 2, 1, 1, 1, 1, 1, 50]], dtype=numpy.int32)
         viewpoint = (0, 0)
         matrix[viewpoint] = 2
         matrix[0, 3] = 2
@@ -938,9 +908,8 @@ class ViewshedTests(unittest.TestCase):
                                            'auxiliary.tif'),
                  refraction_coeff=0.1)
 
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
 
         # Because of refractivity calculations (and the size of the pixels),
         # the pixels farther to the right are visible despite being 'hidden'
@@ -953,7 +922,7 @@ class ViewshedTests(unittest.TestCase):
         """SQ Viewshed: intervening nodata does not affect visibility."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         nodata = 255
-        matrix = numpy.array([[2, 2, nodata, 3]])
+        matrix = numpy.array([[2, 2, nodata, 3]], dtype=numpy.int32)
         viewpoint = (0, 0)
 
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
@@ -967,9 +936,8 @@ class ViewshedTests(unittest.TestCase):
                                            'auxiliary.tif'),
                  refraction_coeff=0.0)
 
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
 
         expected_visibility = numpy.array(
             [[1, 1, 0, 1]], dtype=numpy.uint8)
@@ -979,7 +947,7 @@ class ViewshedTests(unittest.TestCase):
         """SQ Viewshed: assume a reasonable nodata value if none defined."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         nodata = None  # viewshed assumes an unlikely nodata value.
-        matrix = numpy.array([[2, 2, 1, 3]])
+        matrix = numpy.array([[2, 2, 1, 3]], dtype=numpy.int32)
         viewpoint = (0, 0)
 
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
@@ -993,9 +961,8 @@ class ViewshedTests(unittest.TestCase):
                                            'auxiliary.tif'),
                  refraction_coeff=0.0)
 
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
 
         expected_visibility = numpy.array(
             [[1, 1, 0, 1]], dtype=numpy.uint8)
@@ -1007,17 +974,16 @@ class ViewshedTests(unittest.TestCase):
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(4326)
+        projection_wkt = srs.ExportToWkt()
 
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
         visibility_filepath = os.path.join(self.workspace_dir,
                                            'visibility.tif')
-        pygeoprocessing.testing.create_raster_on_disk(
-            [numpy.ones((10, 10))], (0, 0), projection_wkt=srs.ExportToWkt(),
-            nodata=-1, pixel_size=(1, -1),
-            raster_driver_creation_tuple=(
+        pygeoprocessing.numpy_array_to_raster(
+            numpy.ones((10, 10)), -1, (1, -1), (0, 0), projection_wkt,
+            dem_filepath, raster_driver_creation_tuple=(
                 'GTIFF', ('TILED=NO', 'BIGTIFF=YES', 'COMPRESS=LZW',
-                          'BLOCKXSIZE=20', 'BLOCKYSIZE=40')),
-            filename=dem_filepath)
+                          'BLOCKXSIZE=20', 'BLOCKYSIZE=40')))
 
         with self.assertRaises(ValueError):
             viewshed(
@@ -1042,9 +1008,8 @@ class ViewshedTests(unittest.TestCase):
                  aux_filepath=os.path.join(self.workspace_dir,
                                            'auxiliary.tif'))
 
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
 
         expected_visibility = numpy.zeros(visibility_matrix.shape)
         expected_visibility[matrix != 0] = 1
@@ -1068,9 +1033,8 @@ class ViewshedTests(unittest.TestCase):
                  aux_filepath=os.path.join(self.workspace_dir,
                                            'auxiliary.tif'))
 
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
 
         expected_visibility = numpy.ones(visibility_matrix.shape)
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
@@ -1091,9 +1055,8 @@ class ViewshedTests(unittest.TestCase):
                                            'auxiliary.tif'),
                  refraction_coeff=1.0)
 
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
         numpy.testing.assert_equal(visibility_matrix, numpy.ones(matrix.shape))
 
     def test_cliff_bottom_half_visibility(self):
@@ -1118,9 +1081,8 @@ class ViewshedTests(unittest.TestCase):
 
         expected_visibility = numpy.ones(matrix.shape)
         expected_visibility[8:] = 0
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_cliff_top_half_visibility(self):
@@ -1144,9 +1106,8 @@ class ViewshedTests(unittest.TestCase):
         )
         expected_visibility = numpy.ones(matrix.shape)
         expected_visibility[:7] = 0
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_cliff_left_half_visibility(self):
@@ -1170,9 +1131,8 @@ class ViewshedTests(unittest.TestCase):
         )
         expected_visibility = numpy.ones(matrix.shape)
         expected_visibility[:, :7] = 0
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_cliff_right_half_visibility(self):
@@ -1196,9 +1156,8 @@ class ViewshedTests(unittest.TestCase):
         )
         expected_visibility = numpy.ones(matrix.shape)
         expected_visibility[:, 13:] = 0
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_pillars(self):
@@ -1248,9 +1207,9 @@ class ViewshedTests(unittest.TestCase):
              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-             [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
+             [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]],
+            dtype=numpy.int32)
 
-        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
-        visibility_band = visibility_raster.GetRasterBand(1)
-        visibility_matrix = visibility_band.ReadAsArray()
+        visibility_matrix = pygeoprocessing.raster_to_numpy_array(
+            visibility_filepath)
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)

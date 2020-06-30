@@ -108,7 +108,7 @@ class CropProductionTests(unittest.TestCase):
             raster_path, n, n, 1, gdal.GDT_Int32, options=[
                 'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
                 'BLOCKXSIZE=16', 'BLOCKYSIZE=16'])
-        new_raster.SetProjection(base_lulc_info['projection'])
+        new_raster.SetProjection(base_lulc_info['projection_wkt'])
         new_raster.SetGeoTransform([origin_x, 1.0, 0.0, origin_y, 0.0, -1.0])
         new_band = new_raster.GetRasterBand(1)
         array = numpy.array(range(n*n), dtype=numpy.int32).reshape((n, n))
@@ -272,7 +272,7 @@ class CropProductionTests(unittest.TestCase):
             raster_path, n, n, 1, gdal.GDT_Int32, options=[
                 'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
                 'BLOCKXSIZE=16', 'BLOCKYSIZE=16'])
-        new_raster.SetProjection(base_lulc_info['projection'])
+        new_raster.SetProjection(base_lulc_info['projection_wkt'])
         new_raster.SetGeoTransform([origin_x, 1.0, 0.0, origin_y, 0.0, -1.0])
         new_band = new_raster.GetRasterBand(1)
         array = numpy.array(range(n*n), dtype=numpy.int32).reshape((n, n))
@@ -319,7 +319,8 @@ class CropValidationTests(unittest.TestCase):
         from natcap.invest import crop_production_percentile
         from natcap.invest import validation
 
-        validation_errors = crop_production_percentile.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = crop_production_percentile.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(self.base_required_keys)
         self.assertEqual(invalid_keys, expected_missing_keys)
@@ -329,7 +330,8 @@ class CropValidationTests(unittest.TestCase):
         from natcap.invest import crop_production_regression
         from natcap.invest import validation
 
-        validation_errors = crop_production_regression.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = crop_production_regression.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys +

@@ -652,7 +652,7 @@ def _build_spatial_index(
     carbon_model_reproject_path = os.path.join(
         local_model_dir, 'local_carbon_shape.shp')
     lulc_projection_wkt = pygeoprocessing.get_raster_info(
-        base_raster_path)['projection']
+        base_raster_path)['projection_wkt']
     pygeoprocessing.reproject_vector(
         tropical_forest_edge_carbon_model_vector_path, lulc_projection_wkt,
         carbon_model_reproject_path)

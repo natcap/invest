@@ -185,7 +185,7 @@ def execute(args):
         args['lulc_path'])
     target_pixel_size = lulc_raster_info['pixel_size']
     pixel_area = abs(target_pixel_size[0] * target_pixel_size[1])
-    target_sr_wkt = lulc_raster_info['projection']
+    target_sr_wkt = lulc_raster_info['projection_wkt']
 
     soil_raster_info = pygeoprocessing.get_raster_info(
         args['soils_hydrological_group_raster_path'])
@@ -198,7 +198,7 @@ def execute(args):
             ['mode', 'mode'],
             target_pixel_size, 'intersection'),
         kwargs={
-            'target_sr_wkt': target_sr_wkt,
+            'target_projection_wkt': target_sr_wkt,
             'base_vector_path_list': [args['aoi_watersheds_path']],
             'raster_align_index': 0},
         target_path_list=[aligned_lulc_path, aligned_soils_path],
@@ -444,7 +444,7 @@ def _write_summary_vector(
     source_aoi_layer = source_aoi_vector.GetLayer()
     source_geom_type = source_aoi_layer.GetGeomType()
     source_srs_wkt = pygeoprocessing.get_vector_info(
-        source_aoi_vector_path)['projection']
+        source_aoi_vector_path)['projection_wkt']
     source_srs = osr.SpatialReference()
     source_srs.ImportFromWkt(source_srs_wkt)
 
