@@ -380,7 +380,7 @@ def execute(args):
 
     LOGGER.info("Checking threat raster values are valid ( 0 <= x <= 1 ).")
     # Assert that threat rasters have valid values.
-    for _, values in threat_values_task_lookup.items():
+    for values in threat_values_task_lookup.values():
         # get returned boolean to see if values were valid
         valid_threat_values = values['task'].get()
         if not valid_threat_values:
@@ -401,19 +401,16 @@ def execute(args):
     # is a folder
     aligned_raster_list = []
     for path in lulc_and_threat_raster_list:
-        ext = os.path.splitext(path)[1]
-        if not ext:
-            threat_dir_name = os.path.basename(os.path.dirname(path))
+        if os.path.isdir(path):
+            threat_dir_name = (f'{os.path.basename(os.path.dirname(path))}'
+                               f'_aligned{file_suffix}.tif')
             aligned_raster_list.append(
-                os.path.join(
-                    intermediate_output_dir,
-                    f'{threat_dir_name}_aligned{file_suffix}.tif'))
+                os.path.join(intermediate_output_dir, threat_dir_name))
         else:
+            aligned_path = (f'{os.path.splitext(os.path.basename(path))[0]}'
+                            f'_aligned{file_suffix}.tif')
             aligned_raster_list.append(
-                os.path.join(
-                    intermediate_output_dir,
-                    os.path.basename(path).replace(
-                        ext, f'_aligned{file_suffix}.tif')))
+                os.path.join(intermediate_output_dir, aligned_path))
 
     LOGGER.debug(f"Raster paths for aligning: {aligned_raster_list}")
     # Align and resize all the land cover and threat rasters,
@@ -431,17 +428,16 @@ def execute(args):
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
     for lulc_key, lulc_path in lulc_path_dict.items():
         lulc_path_dict[lulc_key] = os.path.join(
-            intermediate_output_dir, os.path.basename(lulc_path).replace(
-                os.path.splitext(lulc_path)[1],
-                f'_aligned{file_suffix}.tif'))
+            intermediate_output_dir,
+            (f'{os.path.splitext(os.path.basename(lulc_path))[0]}'
+             f'_aligned{file_suffix}.tif'))
         for threat in threat_dict:
             threat_path = threat_path_dict['threat' + lulc_key][threat]
             if threat_path in lulc_and_threat_raster_list:
                 aligned_threat_path = os.path.join(
                     intermediate_output_dir,
-                    os.path.basename(threat_path).replace(
-                        os.path.splitext(threat_path)[1],
-                        f'_aligned{file_suffix}.tif'))
+                    (f'{os.path.splitext(os.path.basename(threat_path))[0]}'
+                     f'_aligned{file_suffix}.tif'))
                 # Use these updated threat raster paths in future calculations
                 threat_path_dict['threat' + lulc_key][threat] = (
                     aligned_threat_path)
@@ -705,7 +701,7 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
         valid_pixels = ~(
             numpy.isclose(degradation, _OUT_NODATA) |
             numpy.isclose(habitat, _OUT_NODATA))
-        
+
         out_array[valid_pixels] = (
             habitat[valid_pixels] *
             (1.0 - (degradation[valid_pixels]**_SCALING_PARAM) /
@@ -829,9 +825,8 @@ def _compute_rarity_operation(
         [base_lulc_path_band, lulc_path_band], trim_op, new_cover_path[0],
         gdal.GDT_Float32, _OUT_NODATA)
 
-    LOGGER.info(
-        'Starting rarity computation on %s land cover.',
-        os.path.basename(lulc_path_band[0]))
+    LOGGER.info('Starting rarity computation on'
+                f' {os.path.basename(lulc_path_band[0])} land cover.')
 
     lulc_code_count_x = _raster_pixel_count(new_cover_path)
 
@@ -855,9 +850,8 @@ def _compute_rarity_operation(
         new_cover_path, code_index, rarity_path, gdal.GDT_Float32,
         _OUT_NODATA)
 
-    LOGGER.info(
-        'Finished rarity computation on %s land cover.',
-        os.path.basename(lulc_path_band[0]))
+    LOGGER.info('Finished rarity computation on'
+                f' {os.path.basename(lulc_path_band[0])} land cover.')
 
 
 def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
@@ -885,7 +879,7 @@ def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
     # convert max distance from meters to the number of pixels that
     # represents on the raster
     max_dist_pixel = max_dist_m / abs(threat_pixel_size[0])
-    LOGGER.debug('Max distance in pixels: %f', max_dist_pixel)
+    LOGGER.debug(f'Max distance in pixels: {max_dist_pixel}')
 
     # blur the raster based on the decay type
     if decay_type == 'linear':
@@ -897,8 +891,7 @@ def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
             "Unknown type of decay in biophysical table, should be"
             f" either 'linear' or 'exponential'. Input was {decay_type}"
             " for threat"
-            f" os.path.splitext(os.path.basename(raster_path_band[0]))[0]))"
-            )
+            f" {os.path.splitext(os.path.basename(raster_path_band[0]))[0]}")
 
     decay_func(max_dist_pixel, kernel_path)
 
@@ -928,17 +921,19 @@ def _collect_unique_lucodes(raster_path_band):
 
 
 def _raster_pixel_count(raster_path_band):
-    """Count unique pixel values in raster.
+    """Count unique pixel values in single band raster.
 
     Args:
         raster_path_band (tuple): a 2 tuple of the form
-            (filepath to raster, band index).
+            (filepath to raster, band index) where the raster has a single
+            band.
 
     Returns:
         dict of pixel values to frequency.
     """
-    nodata = pygeoprocessing.get_raster_info(
-                raster_path_band[0])['nodata'][0]
+    nodata_seq = pygeoprocessing.get_raster_info(raster_path_band[0])['nodata']
+    nodata = nodata_seq[0]
+
     counts = collections.defaultdict(int)
     for _, raster_block in pygeoprocessing.iterblocks(raster_path_band):
         for value, count in zip(
@@ -1042,23 +1037,23 @@ def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
 def _validate_threat_path(threat_path, lulc_key):
     """Check ``threat_path`` is a valid raster file against ``lulc_key``.
 
-    Check to see that the path is a valid raster and if not use ``lulc_key`` 
+    Check to see that the path is a valid raster and if not use ``lulc_key``
     to determine how to handle the non valid raster.
 
     Args:
         threat_path (str): path on disk for a possible raster file.
-        lulc_key (str): an string indicating which land cover this threat 
+        lulc_key (str): an string indicating which land cover this threat
             path is associated with. Can be: '_b' | '_c' | '_f'
 
     Returns:
         If ``threat_path`` is a valid raster file then,
-            return ``threat_path``. 
+            return ``threat_path``.
         If ``threat_path`` is not valid then,
             return ``None`` if ``lulc_key`` == '_b'
             return 'error` otherwise
     """
-    # Checking threat path exists to control custom error messages 
-    # for user readability. 
+    # Checking threat path exists to control custom error messages
+    # for user readability.
     if os.path.exists(threat_path):
         threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
         if threat_gis_type != pygeoprocessing.RASTER_TYPE:
