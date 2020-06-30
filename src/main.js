@@ -84,10 +84,11 @@ const createWindow = async () => {
 function createPythonFlaskProcess() {
   /** Spawn a child process running the Python Flask server.*/
   if (serverExe) {
-    const pythonServerProcess = spawn(serverExe, {
-        shell: true,
-        // stdio: 'ignore',
-        detatched: true,
+    // The most reliable, cross-platform way to make sure spawn
+    // can find the exe is to pass only the command name while
+    // also putting it's location on the PATH:
+    const pythonServerProcess = spawn(path.basename(serverExe), {
+        env: {PATH: path.dirname(serverExe)}
       });
 
     console.log('Started python process as PID ' + pythonServerProcess.pid);

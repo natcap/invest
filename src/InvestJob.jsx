@@ -206,8 +206,8 @@ export class InvestJob extends React.Component {
     const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
     
     const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
-    const investRun = spawn(this.props.investExe, cmdArgs, {
-        cwd: process.cwd(),
+    const investRun = spawn(path.basename(this.props.investExe), cmdArgs, {
+        env: { PATH: path.dirname(this.props.investExe) },
         shell: true // without true, IOError when datastack.py loads json
       });
 
