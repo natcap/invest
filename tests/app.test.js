@@ -29,8 +29,10 @@ test('Recent Sessions: each has a button', async () => {
   getInvestList.mockResolvedValue({});
   // This is a special json containing data used for testing
   const testJobsDatabase = path.join(__dirname, './data/jobdb.json');
-  const { getByText, getByLabelText, debug } = render(
-    <App jobDatabase={testJobsDatabase}/>);
+  const { getByText } = render(
+    <App
+      jobDatabase={testJobsDatabase}
+      investExe='foo'/>);
   const db = JSON.parse(fs.readFileSync(testJobsDatabase));
 
   await waitFor(() => {
@@ -45,8 +47,10 @@ test('Settings dialog interactions: logging level', async () => {
   getInvestList.mockResolvedValue({});
   const DEFAULT = 'INFO';
 
-  const { getByText, getByLabelText, debug } = render(
-    <App jobDatabase={fileRegistry.JOBS_DATABASE}/>);
+  const { getByText, getByLabelText } = render(
+    <App
+      jobDatabase={fileRegistry.JOBS_DATABASE}
+      investExe='foo'/>);
 
   // Check the default settings
   fireEvent.click(getByText('Settings'));
@@ -77,8 +81,10 @@ test('Settings dialog interactions: n workers', async () => {
   const badValue = 'a'
   const labelText = 'Taskgraph n_workers parameter'
 
-  const { getByText, getByLabelText, debug } = render(
-    <App jobDatabase={fileRegistry.JOBS_DATABASE}/>);
+  const { getByText, getByLabelText } = render(
+    <App
+      jobDatabase={fileRegistry.JOBS_DATABASE}
+      investExe='foo'/>);
 
   fireEvent.click(getByText('Settings'));
   const input = getByLabelText(labelText, { exact: false })
@@ -158,7 +164,9 @@ describe('InVEST subprocess testing', () => {
   
   test('Invest subprocess - exit without error', async () => {
     const { getByText, getByLabelText, ...utils } = render(
-      <App jobDatabase={fileRegistry.JOBS_DATABASE}/>);
+      <App
+        jobDatabase={fileRegistry.JOBS_DATABASE}
+        investExe='foo'/>);
 
     const carbon = await utils.findByText('Carbon');
     fireEvent.click(carbon);
@@ -189,7 +197,9 @@ describe('InVEST subprocess testing', () => {
 
   test('Invest subprocess - exit with error', async () => {
     const { getByText, getByLabelText, ...utils } = render(
-      <App jobDatabase={fileRegistry.JOBS_DATABASE}/>);
+      <App
+        jobDatabase={fileRegistry.JOBS_DATABASE}
+        investExe='foo'/>);
 
     const carbon = await utils.findByText('Carbon');
     fireEvent.click(carbon);
