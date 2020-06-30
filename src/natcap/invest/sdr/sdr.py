@@ -328,7 +328,7 @@ def execute(args):
     min_pixel_size = numpy.min(numpy.abs(dem_raster_info['pixel_size']))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
-    target_sr_wkt = dem_raster_info['projection']
+    target_sr_wkt = dem_raster_info['projection_wkt']
     vector_mask_options = {'mask_vector_path': args['watersheds_path']}
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
@@ -336,7 +336,7 @@ def execute(args):
             base_list, aligned_list, interpolation_list,
             target_pixel_size, 'intersection'),
         kwargs={
-            'target_sr_wkt': target_sr_wkt,
+            'target_projection_wkt': target_sr_wkt,
             'base_vector_path_list': (args['watersheds_path'],),
             'raster_align_index': 0,
             'vector_mask_options': vector_mask_options,

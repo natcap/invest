@@ -528,7 +528,7 @@ def execute(args):
             pygeoprocessing.convolve_2d(
                 (threat_raster_path, 1), (kernel_path, 1),
                 filtered_threat_raster_path,
-                ignore_nodata=True)
+                ignore_nodata_and_edges=True)
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(

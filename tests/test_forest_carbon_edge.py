@@ -180,7 +180,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         self.assertTrue(expected_message in actual_message, actual_message)
 
     def test_carbon_nodata_lulc(self):
-        """Forest Carbon Edge: ensure nodata lulc raster cause exception"""
+        """Forest Carbon Edge: ensure nodata lulc raster cause exception."""
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
@@ -210,7 +210,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
 
-        Parameters:
+        Args:
             base_list_path (string): a path to a file that has one relative
                 file path per line.
             directory_path (string): a path to a directory whose contents will
@@ -241,7 +241,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             expected_vector_path):
         """Test workspace state against expected aggregate results.
 
-        Parameters:
+        Args:
             workspace_dir (string): path to the completed model workspace
             id_fieldname (string): fieldname of the unique ID.
             field_list (list of string): list of fields to check
@@ -319,7 +319,8 @@ class ForestCarbonEdgeValidationTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
         from natcap.invest import validation
 
-        validation_errors = forest_carbon_edge_effect.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = forest_carbon_edge_effect.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(self.base_required_keys)
         self.assertEqual(invalid_keys, expected_missing_keys)

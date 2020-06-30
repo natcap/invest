@@ -569,7 +569,7 @@ def check_spatial_overlap(spatial_filepaths_list,
 
         if different_projections_ok:
             bounding_box = pygeoprocessing.transform_bounding_box(
-                bounding_box, info['projection'], wgs84_wkt)
+                bounding_box, info['projection_wkt'], wgs84_wkt)
 
         if all([numpy.isinf(coord) for coord in bounding_box]):
             LOGGER.warning(

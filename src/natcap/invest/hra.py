@@ -280,7 +280,7 @@ def execute(args):
     # Get target projection from the AOI vector file
     if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
         target_sr_wkt = pygeoprocessing.get_vector_info(
-            args['aoi_vector_path'])['projection']
+            args['aoi_vector_path'])['projection_wkt']
         target_sr = osr.SpatialReference()
         if target_sr_wkt:
             target_sr.ImportFromWkt(target_sr_wkt)
@@ -460,7 +460,7 @@ def execute(args):
         args=(base_raster_list, align_raster_list,
               [_RESAMPLE_METHOD] * len(base_raster_list),
               target_pixel_size, 'union'),
-        kwargs={'target_sr_wkt': target_sr_wkt},
+        kwargs={'target_projection_wkt': target_sr_wkt},
         target_path_list=align_raster_list,
         task_name='align_and_resize_raster_task',
         dependent_task_list=align_and_resize_dependency_list)
@@ -1030,11 +1030,11 @@ def _calc_and_pickle_zonal_stats(
     zonal_raster_info = pygeoprocessing.get_raster_info(zonal_raster_path)
     target_pixel_size = zonal_raster_info['pixel_size']
     target_bounding_box = zonal_raster_info['bounding_box']
-    target_sr_wkt = zonal_raster_info['projection']
+    target_sr_wkt = zonal_raster_info['projection_wkt']
     pygeoprocessing.warp_raster(
         score_raster_path, target_pixel_size, clipped_score_raster_path,
         _RESAMPLE_METHOD, target_bb=target_bounding_box,
-        target_sr_wkt=target_sr_wkt)
+        target_projection_wkt=target_sr_wkt)
 
     # Return a dictionary with values of 0, if the two input rasters do not
     # intersect at all.
