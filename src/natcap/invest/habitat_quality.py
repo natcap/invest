@@ -323,24 +323,19 @@ def execute(args):
                 threat_path = os.path.join(
                     threat_csv_dirpath, threat_path_relative)
 
-                # check gis type of threat path and catch thrown ValueError
-                # from get_gis_type if path does not exist
-                try:
-                    threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
-                    # if threat path not of type RASTER then raise value error
-                    if threat_gis_type != pygeoprocessing.RASTER_TYPE:
-                        raise ValueError
-                except ValueError:
-                    # it's okay to have no threat raster for baseline scenario
-                    if lulc_key != '_b':
-                        raise ValueError(
-                            'There was an Error locating a threat raster from '
-                            'the path in CSV for column: '
-                            f'{_THREAT_SCENARIO_MAP[lulc_key]} and threat: '
-                            f'{threat}. The path in the CSV column should be '
-                            'relative to the threat CSV table.')
-                    else:
-                        threat_path = None
+                threat_path_err_msg = (
+                    'There was an Error locating a threat raster from '
+                    'the path in CSV for column: '
+                    f'{_THREAT_SCENARIO_MAP[lulc_key]} and threat: '
+                    f'{threat}. The path in the CSV column should be '
+                    'relative to the threat CSV table.')
+
+                threat_validate_result = _validate_threat_path(
+                    threat_path, lulc_key)
+                if threat_validate_result == 'error':
+                    raise ValueError(threat_path_err_msg)
+
+                threat_path = threat_validate_result
 
                 threat_path_dict['threat' + lulc_key][threat] = threat_path
                 # save threat paths in a list for alignment and resize
@@ -1044,6 +1039,43 @@ def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
 
     return values_valid
 
+def _validate_threat_path(threat_path, lulc_key):
+    """Check ``threat_path`` is a valid raster file against ``lulc_key``.
+
+    Check to see that the path is a valid raster and if not use ``lulc_key`` 
+    to determine how to handle the non valid raster.
+
+    Args:
+        threat_path (str): path on disk for a possible raster file.
+        lulc_key (str): an string indicating which land cover this threat 
+            path is associated with. Can be: '_b' | '_c' | '_f'
+
+    Returns:
+        If ``threat_path`` is a valid raster file then,
+            return ``threat_path``. 
+        If ``threat_path`` is not valid then,
+            return ``None`` if ``lulc_key`` == '_b'
+            return 'error` otherwise
+    """
+    # Checking threat path exists to control custom error messages 
+    # for user readability. 
+    if os.path.exists(threat_path):
+        threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
+        if threat_gis_type != pygeoprocessing.RASTER_TYPE:
+            # Raise a value error with custom message to help users
+            # debug threat raster issues
+            if lulc_key != '_b':
+                return "error"
+            # it's OK to have no threat raster w/ baseline scenario
+            else:
+                return None
+        else:
+            return threat_path
+    else:
+        if lulc_key != '_b':
+            return "error"
+        else:
+            return None
 
 @validation.invest_validator
 def validate(args, limit_to=None):
@@ -1115,24 +1147,14 @@ def validate(args, limit_to=None):
                         threat_csv_dirpath,
                         threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
 
-                    # check gis type of threat path and catch thrown ValueError
-                    # from get_gis_type if path does not exist
-                    try:
-                        threat_gis_type = pygeoprocessing.get_gis_type(
-                            threat_path)
-                        # if threat path not of type RASTER then raise
-                        # valueerror
-                        if threat_gis_type != pygeoprocessing.RASTER_TYPE:
-                            raise ValueError
-                    except ValueError:
-                        # it's okay to have no threat raster for baseline
-                        # scenario
-                        if lulc_key != '_b':
-                            bad_threat_paths.append(
-                                    (threat, _THREAT_SCENARIO_MAP[lulc_key]))
-                            continue
-                        else:
-                            threat_path = None
+                    threat_validate_result = _validate_threat_path(
+                        threat_path, lulc_key)
+                    if threat_validate_result == 'error':
+                        bad_threat_paths.append(
+                            (threat, _THREAT_SCENARIO_MAP[lulc_key]))
+                        continue
+
+                    threat_path = threat_validate_result
 
                     if threat_path:
                         # check for duplicate absolute threat path names that
