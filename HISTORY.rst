@@ -1,9 +1,10 @@
 .. :changelog:
 
-
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* Crop Production
+    * Fixed critical bug in crop regression that caused incorrect yields in
+      all cases.
 
 3.8.5 (2020-06-26)
 ------------------
@@ -17,14 +18,6 @@
       dictionary.
     * Remove ``warn_if_missing`` argument from ``utils.build_lookup_from_csv``
       and warning by default.
-* Urban Flood Risk Mitigation
-    * Fixed an issue where the output vector ``flood_risk_service.shp`` would
-      only be created when the built infrastructure vector was provided.  Now,
-      the ``flood_risk_service.shp`` vector is always created, but the fields
-      created differ depending on whether the built infrastructure input is
-      present during the model run.
-    * Fixed an issue where the model would crash if an infrastructure geometry
-      were invalid or absent.  Such features are now skipped.
 * Scenic Quality
     * Fixing an issue in Scenic Quality where the creation of the weighted sum
       of visibility rasters could cause "Too Many Open Files" errors and/or
@@ -36,6 +29,14 @@
 * SDR:
     * Removed the unused parameter ``args['target_pixel_size']`` from the SDR
       ``execute`` docstring.
+* Urban Flood Risk Mitigation
+    * Fixed an issue where the output vector ``flood_risk_service.shp`` would
+      only be created when the built infrastructure vector was provided.  Now,
+      the ``flood_risk_service.shp`` vector is always created, but the fields
+      created differ depending on whether the built infrastructure input is
+      present during the model run.
+    * Fixed an issue where the model would crash if an infrastructure geometry
+      were invalid or absent.  Such features are now skipped.
 
 3.8.4 (2020-06-05)
 ------------------
