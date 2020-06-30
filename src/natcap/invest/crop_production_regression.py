@@ -706,7 +706,7 @@ def tabulate_regression_results(
         landcover_raster_path (string): path to landcover raster
         landcover_nodata (float): landcover raster nodata value
         output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to appended to any output filenames.
+        file_suffix (string): string to append to any output filenames.
         target_table_path (string): path to 'result_table.csv' in the output
             workspace
 
@@ -808,7 +808,7 @@ def aggregate_regression_results_to_polygons(
         nutrient_table (dict): a lookup of nutrient values by crop in the
             form of nutrient_table[<crop>][<nutrient>].
         output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to appended to any output filenames.
+        file_suffix (string): string to append to any output filenames.
         target_aggregate_table_path (string): path to 'aggregate_results.csv'
             in the output workspace
 
