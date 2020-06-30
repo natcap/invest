@@ -1,9 +1,10 @@
 .. :changelog:
 
-
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* Crop Production
+    * Fixed critical bug in crop regression that caused incorrect yields in
+      all cases.
 
 3.8.5 (2020-06-26)
 ------------------
@@ -17,9 +18,6 @@
       dictionary.
     * Remove ``warn_if_missing`` argument from ``utils.build_lookup_from_csv``
       and warning by default.
-* Crop Production
-    * Fixed critical bug in crop regression that caused incorrect yields in
-      all cases.
 * Scenic Quality
     * Fixing an issue in Scenic Quality where the creation of the weighted sum
       of visibility rasters could cause "Too Many Open Files" errors and/or
