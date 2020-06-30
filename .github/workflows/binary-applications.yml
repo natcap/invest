@@ -241,17 +241,6 @@ jobs:
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
-            # - name: Install homebrew dependencies
-            #   run: |
-            #       brew update
-            #       brew install mercurial pandoc
-
-            # - name: Restore conda cache
-            #   uses: actions/cache@v1
-            #   with:
-            #       path: ~/opt/anaconda3
-            #       key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
-
             - name: Set up conda
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
@@ -295,12 +284,6 @@ jobs:
               if: github.event_name != 'pull_request'
               shell: bash -l {0}  # needed for conda activation
               run: make deploy
-
-            # - name: Upload binaries artifact
-            #   uses: actions/upload-artifact@v2-preview
-            #   with:
-            #       name: InVEST-mac-binaries
-            #       path: dist/InVEST-*-mac.zip
 
 
     build-sampledata:
