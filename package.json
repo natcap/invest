@@ -24,9 +24,6 @@
       "category": "public.app-category.business",
       "icon": "build/icon.png"
     },
-    "dmg": {
-      "icon": "build/icon.png"
-    },
     "linux": {
       "target": [
         "AppImage"
