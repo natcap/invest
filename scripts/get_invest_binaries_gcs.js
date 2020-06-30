@@ -11,8 +11,10 @@ let fileSuffix;
 switch (args[0]) {
 case 'windows-latest':
 	fileSuffix = 'Windows'
+	break
 case 'macos-latest':
 	fileSuffix = 'Darwin'
+	break
 case 'ubuntu-latest':
 	fileSuffix = 'Linux'
 }

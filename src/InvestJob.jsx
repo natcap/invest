@@ -84,7 +84,6 @@ export class InvestJob extends React.Component {
   }
 
   componentDidMount() {
-    // TODO: clear out tmp dir on quit?
     fs.mkdir(fileRegistry.CACHE_DIR, (err) => {})
     fs.mkdir(fileRegistry.TEMP_DIR, (err) => {})
   }
