@@ -3,14 +3,30 @@ const path = require('path')
 const spawn = require('child_process').spawn;
 const { app, BrowserWindow, screen } = require('electron')
 const fetch = require('node-fetch')
+const winston = require('winston')
 
 const isDevMode = function() {
   return process.argv[2] == '--dev'
 };
+
+const logger = winston.createLogger({
+  level: 'debug',
+  format: winston.format.simple(),
+  transports: [
+    new winston.transports.File({
+      filename: path.join(app.getPath('userData'), 'main.log')
+    })
+  ]
+})
+
 if (isDevMode()) {
   // load the '.env' file from the project root
   const dotenv = require('dotenv');
-  dotenv.config();  
+  dotenv.config();
+  // log to console in addition to the file in userData
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple()
+  }))
 }
 
 // Binding to the invest server binary:
@@ -32,10 +48,10 @@ if (fs.existsSync(investRegistryPath)) {
 } else {
   const binary = (process.platform === 'win32') ? 'server.exe' : 'server'
   // serverExe = path.join(__dirname, 'invest', binary)
-  console.log(process.resourcesPath)
+  logger.debug(process.resourcesPath)
   serverExe = path.join(
     process.resourcesPath, 'app.asar.unpacked', 'build', 'invest', binary)
-  console.log(serverExe)
+  logger.debug(serverExe)
 }
 
 let PORT = (process.env.PORT || '5000').trim();
@@ -51,7 +67,7 @@ const createWindow = async () => {
 
   // Create the browser window.
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
-  console.log(width + ' ' + height)
+  logger.debug(width + ' ' + height)
   mainWindow = new BrowserWindow({
     width: width * 0.75,
     height: height,
@@ -91,24 +107,24 @@ function createPythonFlaskProcess() {
         env: {PATH: path.dirname(serverExe)}
       });
 
-    console.log('Started python process as PID ' + pythonServerProcess.pid);
-    console.log(serverExe)
+    logger.debug('Started python process as PID ' + pythonServerProcess.pid);
+    logger.debug(serverExe)
     pythonServerProcess.stdout.on('data', (data) => {
-      console.log(`${data}`);
+      logger.debug(`${data}`);
     });
     pythonServerProcess.stderr.on('data', (data) => {
-      console.log(`${data}`);
+      logger.debug(`${data}`);
     });
     pythonServerProcess.on('error', (err) => {
-      console.log('Process failed.');
-      console.log(err);
+      logger.debug('Process failed.');
+      logger.debug(err);
     });
     pythonServerProcess.on('close', (code, signal) => {
-      console.log(code);
-      console.log('Child process terminated due to signal ' + signal);
+      logger.debug(code);
+      logger.debug('Child process terminated due to signal ' + signal);
     });
   } else {
-    console.log('no existing invest installations found')
+    logger.debug('no existing invest installations found')
   }
 }
 
@@ -118,8 +134,8 @@ function shutdownPythonProcess() {
       method: 'get',
     })
     .then((response) => { return response.text() })
-    .then((text) => { console.log(text) })
-    .catch((error) => { console.log(error) })
+    .then((text) => { logger.debug(text) })
+    .catch((error) => { logger.debug(error) })
   )
 }
 
