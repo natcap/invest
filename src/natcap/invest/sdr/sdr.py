@@ -807,7 +807,7 @@ def _calculate_ls_factor(
         # from McCool paper: "as a final check against excessively long slope
         # length calculations ... cap of 333m"
         # from Rafa, this should really be the upstream area capped to
-        # "333m^2" because McCool is 1D
+        # "333^2 m^2" because McCool is 1D
         contributing_area[contributing_area > 333**2] = 333**2
 
         ls_prime_factor = (
