@@ -2,14 +2,35 @@
 const fs = require('fs');
 const path = require('path');
 const { remote } = require('electron');
+const winston = require('winston');
 
 const isDevMode = function() {
   return remote.process.argv[2] == '--dev'
 };
+
+const renderLogFormat = winston.format.combine(
+    winston.format.splat(),
+    winston.format.simple()
+  )
+
+winston.loggers.add('logger', {
+  level: 'debug',
+  format: renderLogFormat,
+  transports: [
+    new winston.transports.File({
+      filename: path.join(remote.app.getPath('userData'), 'render.log')
+    })
+  ]
+})
+const logger = winston.loggers.get('logger')
+
 if (isDevMode()) {
   require("@babel/register");
   const dotenv = require('dotenv');
-  dotenv.config();  
+  dotenv.config();
+  logger.add(new winston.transports.Console({
+    format: renderLogFormat
+  }))
 }
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
@@ -61,6 +82,7 @@ window.addEventListener('contextmenu', (e) => {
 
 
 var render = function render() {
+  logger.debug(investExe)
   _reactDom["default"].render(
     _react["default"].createElement(
       _reactHotLoader.AppContainer, null, _react["default"].createElement(
@@ -71,6 +93,6 @@ var render = function render() {
 render();
 
 if (module.hot) {
-  console.log('if hot module');
+  logger.debug('if hot module');
   module.hot.accept(render);
 }

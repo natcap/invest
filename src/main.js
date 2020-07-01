@@ -9,7 +9,7 @@ const isDevMode = function() {
   return process.argv[2] == '--dev'
 };
 
-const logger = winston.createLogger({
+const loggerMain = winston.createLogger({
   level: 'debug',
   format: winston.format.simple(),
   transports: [
@@ -24,7 +24,7 @@ if (isDevMode()) {
   const dotenv = require('dotenv');
   dotenv.config();
   // log to console in addition to the file in userData
-  logger.add(new winston.transports.Console({
+  loggerMain.add(new winston.transports.Console({
     format: winston.format.simple()
   }))
 }
@@ -48,10 +48,10 @@ if (fs.existsSync(investRegistryPath)) {
 } else {
   const binary = (process.platform === 'win32') ? 'server.exe' : 'server'
   // serverExe = path.join(__dirname, 'invest', binary)
-  logger.debug(process.resourcesPath)
+  loggerMain.debug(process.resourcesPath)
   serverExe = path.join(
     process.resourcesPath, 'app.asar.unpacked', 'build', 'invest', binary)
-  logger.debug(serverExe)
+  loggerMain.debug(serverExe)
 }
 
 let PORT = (process.env.PORT || '5000').trim();
@@ -67,7 +67,7 @@ const createWindow = async () => {
 
   // Create the browser window.
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
-  logger.debug(width + ' ' + height)
+  loggerMain.debug(width + ' ' + height)
   mainWindow = new BrowserWindow({
     width: width * 0.75,
     height: height,
@@ -107,24 +107,24 @@ function createPythonFlaskProcess() {
         env: {PATH: path.dirname(serverExe)}
       });
 
-    logger.debug('Started python process as PID ' + pythonServerProcess.pid);
-    logger.debug(serverExe)
+    loggerMain.debug('Started python process as PID ' + pythonServerProcess.pid);
+    loggerMain.debug(serverExe)
     pythonServerProcess.stdout.on('data', (data) => {
-      logger.debug(`${data}`);
+      loggerMain.debug(`${data}`);
     });
     pythonServerProcess.stderr.on('data', (data) => {
-      logger.debug(`${data}`);
+      loggerMain.debug(`${data}`);
     });
     pythonServerProcess.on('error', (err) => {
-      logger.debug('Process failed.');
-      logger.debug(err);
+      loggerMain.debug('Process failed.');
+      loggerMain.debug(err);
     });
     pythonServerProcess.on('close', (code, signal) => {
-      logger.debug(code);
-      logger.debug('Child process terminated due to signal ' + signal);
+      loggerMain.debug(code);
+      loggerMain.debug('Child process terminated due to signal ' + signal);
     });
   } else {
-    logger.debug('no existing invest installations found')
+    loggerMain.debug('no existing invest installations found')
   }
 }
 
@@ -134,8 +134,8 @@ function shutdownPythonProcess() {
       method: 'get',
     })
     .then((response) => { return response.text() })
-    .then((text) => { logger.debug(text) })
-    .catch((error) => { logger.debug(error) })
+    .then((text) => { loggerMain.debug(text) })
+    .catch((error) => { loggerMain.debug(error) })
   )
 }
 
