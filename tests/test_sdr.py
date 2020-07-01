@@ -27,17 +27,11 @@ def assert_expected_results_in_vector(expected_results, vector_path):
     watershed_results_layer = None
     watershed_results_feature = None
     for key in expected_results:
-        # numpy.testing.assert_almost_equal(
-        #     expected_results[key], actual_results[key], decimal=6)
-
-        # In order to pass with GDAL<2.3 and GDAL>2.3:
-        # asserting equality to 5 significant figures instead of 6 decimal
-        # places. GDAL 2.3 introduced new warping behavior yielding different
-        # pixel values when also using a smoothing interpolation method.
-        # Surprisingly, these differences are not washed out by an
-        # aggregation such as zonal statistics.
         numpy.testing.assert_approx_equal(
-            actual_results[key], expected_results[key], significant=2)
+            actual_results[key], expected_results[key], significant=6,
+            err_msg=(
+                f'actual_results: {actual_results}, '
+                f'expected_results: {expected_results}'))
 
 
 class SDRTests(unittest.TestCase):
@@ -216,11 +210,12 @@ class SDRTests(unittest.TestCase):
         args['watersheds_path'] = target_watersheds_path
         sdr.execute(args)
         expected_results = {
-            'usle_tot': 12.69931602478,
-            'sed_retent': 402704.96875,
-            'sed_export': 0.7930983305,
-            'sed_dep': 8.58807754517,
+            'usle_tot': 12.04494380951,
+            'sed_retent': 367660.25,
+            'sed_export': 0.71140885353,
+            'sed_dep': 7.84880876541,
         }
+
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
         assert_expected_results_in_vector(expected_results, vector_path)
@@ -266,10 +261,11 @@ class SDRTests(unittest.TestCase):
 
         sdr.execute(args)
         expected_results = {
-            'sed_retent': 402704.96875,
-            'sed_export': 0.7930983305,
-            'usle_tot': 12.69931602478,
+            'sed_retent': 367660.25,
+            'sed_export': 0.71140885353,
+            'usle_tot': 12.04494380951,
         }
+
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
         # make args explicit that this is a base run of SWY
@@ -289,10 +285,11 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_retent': 345797.375,
-            'sed_export': 0.63070225716,
-            'usle_tot': 11.46732711792,
+            'sed_retent': 335578.875,
+            'sed_export': 0.60814452171,
+            'usle_tot': 11.43409824371,
         }
+
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
         assert_expected_results_in_vector(expected_results, vector_path)
@@ -313,10 +310,11 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_retent': 436809.59375,
-            'sed_export': 0.94600570202,
-            'usle_tot': 11.59875869751,
+            'sed_retent': 414067.65625,
+            'sed_export': 0.88248616457,
+            'usle_tot': 11.37281990051,
         }
+
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
         assert_expected_results_in_vector(expected_results, vector_path)

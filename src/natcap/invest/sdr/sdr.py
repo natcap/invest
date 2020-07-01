@@ -804,15 +804,17 @@ def _calculate_ls_factor(
             beta[big_slope_mask] / (1 + beta[big_slope_mask]))
         m_exp[~big_slope_mask] = m_table[m_indexes]
 
+        # from McCool paper: "as a final check against excessively long slope
+        # length calculations ... cap of 333m"
+        # from Rafa, this should really be the upstream area capped to
+        # "333^2 m^2" because McCool is 1D
+        contributing_area[contributing_area > 333**2] = 333**2
+
         ls_prime_factor = (
             ((contributing_area + cell_area)**(m_exp+1) -
              contributing_area ** (m_exp+1)) /
             ((cell_size ** (m_exp + 2)) * (avg_aspect[valid_mask]**m_exp) *
              (22.13**m_exp)))
-
-        # from McCool paper: "as a final check against excessively long slope
-        # length calculations ... cap of 333m"
-        ls_prime_factor[ls_prime_factor > 333] = 333
 
         result[valid_mask] = ls_prime_factor * slope_factor
         return result

@@ -41,6 +41,10 @@ Unreleased Changes (3.9)
     * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
     * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to
       ``projection_wkt``.
+* SDR:
+  * Fixing an issue where the LS factor should be capped to an upstream area of
+    333^2 m^2. In previous versions the LS factor was erroniously capped to
+    "333" leading to high export spikes in some pixels.
 
 Unreleased Changes
 ------------------
