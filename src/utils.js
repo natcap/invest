@@ -1,9 +1,11 @@
 import path from 'path';
 import fs from 'fs';
 import glob from 'glob';
+import winston from 'winston';
+const logger = winston.loggers.get('logger')
 
 const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g
-
+logger.debug(LOGFILE_REGEX)
 export function loadRecentSessions(jobDatabase) {
   /** Load job data from a persistent file and return the jobs
   * sorted by creation time. Right now the persistent file is a JSON.
@@ -52,10 +54,10 @@ export async function updateRecentSessions(jobdata, jobDatabase) {
   }
   fs.writeFileSync(jobDatabase, jsonContent, 'utf8', function (err) {
     if (err) {
-      console.log("An error occured while writing JSON Object to File.");
-      return console.log(err);
+      logger.debug("An error occured while writing JSON Object to File.");
+      return logger.debug(err);
     }
-    console.log("updated" + this.state.sessionID);
+    logger.debug("updated" + this.state.sessionID);
   });
   const updated = await loadRecentSessions(jobDatabase);
   return updated
@@ -91,7 +93,7 @@ export function findMostRecentLogfile(directory) {
       resolve(sortedFiles[0]);
       return
     }
-    console.log(`No invest logfile found in ${directory}`)
+    logger.debug(`No invest logfile found in ${directory}`)
     resolve(undefined)
   });
 }

@@ -1,6 +1,8 @@
 import React from 'react';
 import { remote } from 'electron';
 import PropTypes from 'prop-types';
+import winston from 'winston';
+const logger = winston.loggers.get('logger')
 
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
@@ -410,8 +412,6 @@ class ArgsForm extends React.PureComponent {
     const data = await remote.dialog.showOpenDialog({ properties: [prop] })
     if (data.filePaths.length) {
       this.props.updateArgValues(argname, data.filePaths[0]);  // dialog defaults allow only 1 selection
-    } else {
-      console.log('browse dialog was cancelled')
     }
   }
 
@@ -431,7 +431,7 @@ class ArgsForm extends React.PureComponent {
     if (datastack['module_name'] === this.props.pyModuleName) {
       this.props.batchUpdateArgs(datastack['args']);
     } else {
-      console.log('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.pyModuleName)
+      logger.debug('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.pyModuleName)
       throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.pyModuleName)
     }
   }

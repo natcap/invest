@@ -1,4 +1,6 @@
 import fetch from 'node-fetch';
+import winston from 'winston';
+const logger = winston.loggers.get('logger')
 
 // TODO: elsewhere I've used async/await instead of 
 // .then chaining of callbacks. Consider refactoring
@@ -17,19 +19,19 @@ export function getFlaskIsReady(retries=0) {
       method: 'get',
     })
     .then((response) => { return response.text() })
-    // .then((text) => { console.log(text) })
+    // .then((text) => { logger.debug(text) })
     .catch(async (error) => {
-      console.log(error)
+      logger.debug(error)
       if (error.code === 'ECONNREFUSED') {
         while (retries < 21) {
           retries++;
           // try again after a short pause
           await new Promise(resolve => setTimeout(resolve, 50));
-          console.log('retry # ' + retries);
+          logger.debug('retry # ' + retries);
           return await getFlaskIsReady(retries)
         }
       } else {
-        console.log(error)
+        logger.debug(error)
         return error 
       }
    })
@@ -45,7 +47,7 @@ export function getInvestList() {
       return response
     })
     .then((response) => { return response.json() })
-    .catch((error) => { console.log(error) })
+    .catch((error) => { logger.debug(error) })
   )
 }
 
@@ -57,7 +59,7 @@ export function getSpec(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
     .then((response) => { return response.json() })
-    .catch((error) => { console.log(error) })
+    .catch((error) => { logger.debug(error) })
   )
 }
 
@@ -69,7 +71,7 @@ export function fetchValidation(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
     .then((response) => { return response.json() })
-    .catch((error) => { console.log(error) })
+    .catch((error) => { logger.debug(error) })
   )
 }
 
@@ -81,7 +83,7 @@ export function fetchLogfilename(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
     .then((response) => { return response.text() })
-    .catch((error) => { console.log(error) })
+    .catch((error) => { logger.debug(error) })
     )
 }
 
@@ -93,7 +95,7 @@ export function fetchDatastackFromFile(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
     .then((response) => { return response.json() })
-    .catch((error) => { console.log(error) })
+    .catch((error) => { logger.debug(error) })
   )
 }
 
@@ -104,8 +106,8 @@ export function saveToPython(payload) {
     headers: { 'Content-Type': 'application/json' },
   })
   .then((response) => { return response.text() })
-  .then((text) => { console.log(text) })
-  .catch((error) => { console.log(error) })
+  .then((text) => { logger.debug(text) })
+  .catch((error) => { logger.debug(error) })
 }
 
 export function writeParametersToFile(payload) {
@@ -119,7 +121,7 @@ export function writeParametersToFile(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
     .then((response) => { return response.text() })
-    .then((text) => { console.log(text) })
-    .catch((error) => { console.log(error) })
+    .then((text) => { logger.debug(text) })
+    .catch((error) => { logger.debug(error) })
   );
 }

@@ -4,6 +4,8 @@ import crypto from 'crypto';
 import { spawn } from 'child_process';
 import React from 'react';
 import PropTypes from 'prop-types';
+import winston from 'winston';
+const logger = winston.loggers.get('logger')
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -100,8 +102,8 @@ export class InvestJob extends React.Component {
       fileRegistry.CACHE_DIR, this.state.sessionID + '.json');
     fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
       if (err) {
-        console.log("An error occured while writing JSON Object to File.");
-        return console.log(err);
+        logger.debug("An error occured while writing JSON Object to File.");
+        return logger.debug(err);
       }
     });
     let job = {};
@@ -150,7 +152,7 @@ export class InvestJob extends React.Component {
         alert('Cannot load this session because data is missing')
       }
     } else {
-      console.log('state file not found: ' + sessionFilename);
+      logger.debug('state file not found: ' + sessionFilename);
     }
   }
 
@@ -239,7 +241,7 @@ export class InvestJob extends React.Component {
     // so that it can be displayed separately when invest exits,
     // and because it could actually be stderr emitted from the 
     // invest CLI or even the shell, rather than the invest model,
-    // in which case it's useful to console.log too.
+    // in which case it's useful to logger.debug too.
     let stderr = Object.assign('', this.state.logStdErr);
     investRun.stderr.on('data', (data) => {
       stderr += `${data}`
@@ -322,7 +324,7 @@ export class InvestJob extends React.Component {
         activeTab: 'setup'
       });
     } else {
-      console.log('no spec found')
+      logger.debug('no spec found')
       return new Promise((resolve) => resolve(false))
     }
     return new Promise((resolve) => resolve(true))

@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import { Tail } from 'tail';
 import os from 'os';
 import { shell } from 'electron';
+import winston from 'winston';
+const logger = winston.loggers.get('logger')
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -67,8 +69,8 @@ export class LogTab extends React.Component {
         // in case a recent session was loaded but the logfile
         // no longer exists 
         this.setState({logdata: `Logfile is missing: ${os.EOL}${this.props.logfile}`})
-        console.log(error)
-        console.log(`Not able to read ${this.props.logfile}`)
+        logger.debug(error)
+        logger.debug(`Not able to read ${this.props.logfile}`)
       }
 
     // No new logfile. No existing logdata.
@@ -81,7 +83,7 @@ export class LogTab extends React.Component {
         this.tail.unwatch()
       }
       catch(error) {
-        console.log(error)
+        logger.debug(error)
       }
     }
   }
