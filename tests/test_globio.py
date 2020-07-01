@@ -119,74 +119,54 @@ class GLOBIOTests(unittest.TestCase):
     def test_globio_single_infra(self):
         """GLOBIO: regression testing with single infrastructure raster."""
         from natcap.invest import globio
-        import pygeoprocessing
 
+        roads_path = os.path.join(
+            SAMPLE_DATA, 'infrastructure_dir', 'roads.tif')
+        base_raster = gdal.OpenEx(roads_path, gdal.OF_RASTER)
+        projection_wkt = base_raster.GetProjection()
+        base_geotransform = base_raster.GetGeoTransform()
+        base_raster = None
+        
         # Create a temporary infrastructure directory with one raster
         tmp_infra_dir = os.path.join(self.workspace_dir, "single_infra")
         os.mkdir(tmp_infra_dir)
         tmp_roads_path = os.path.join(tmp_infra_dir, "roads.tif")
+        
+        tmp_roads_array = numpy.array([
+            [0, 0, 0, 0], [0.5, 1, 1, 13.0], [1, 0, 1, 13.0], [1, 1, 0, 0]])
+        tmp_roads_nodata = 13.0
+        raster_driver = gdal.GetDriverByName('GTiff')
+        ny, nx = tmp_roads_array.shape
+        new_raster = raster_driver.Create(
+            tmp_roads_path, nx, ny, 1, gdal.GDT_Float32)
+        new_raster.SetProjection(projection_wkt)
+        new_raster.SetGeoTransform(
+            [base_geotransform[0], 10, 0.0, base_geotransform[3], 0.0, -10])
+        new_band = new_raster.GetRasterBand(1)
+        new_band.SetNoDataValue(tmp_roads_nodata)
+        new_band.WriteArray(tmp_roads_array)
+        new_raster.FlushCache()
+        new_band = None
+        new_raster = None
 
-        single_infra_path = os.path.join(
-            SAMPLE_DATA, 'infrastructure_dir', 'roads.tif')
-        shutil.copyfile(single_infra_path, tmp_roads_path)
+        temp_dir = os.path.join(self.workspace_dir, "tmp_dir")
+        os.mkdir(temp_dir)
 
-        args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'sub_aoi.shp'),
-            'globio_lulc_path': '',
-            'infrastructure_dir':  tmp_infra_dir,
-            'intensification_fraction': '0.46',
-            'lulc_to_globio_table_path': os.path.join(
-                SAMPLE_DATA, 'lulc_conversion_table.csv'),
-            'lulc_path': os.path.join(SAMPLE_DATA, 'lulc_2008.tif'),
-            'msa_parameters_path': os.path.join(
-                SAMPLE_DATA, 'msa_parameters.csv'),
-            'pasture_threshold': '0.5',
-            'pasture_path': os.path.join(SAMPLE_DATA, 'pasture.tif'),
-            'potential_vegetation_path': os.path.join(
-                SAMPLE_DATA, 'potential_vegetation.tif'),
-            'predefined_globio': False,
-            'primary_threshold': 0.66,
-            'workspace_dir': os.path.join(self.workspace_dir, 'output'),
-            'n_workers': '-1',
-        }
-
-        globio.execute(args)
-
-        # With a single infrastructure raster the combined infrastructure
-        # should be a perfect mask for the raster.
         result_path = os.path.join(
-            args['workspace_dir'], 'intermediate_outputs', 'tmp',
-            'combined_infrastructure.tif')
+            self.workspace_dir, 'combined_infrastructure.tif')
+        
+        globio._collapse_infrastructure_layers(
+            tmp_infra_dir, tmp_roads_path, result_path, temp_dir)
 
-        roads_info = pygeoprocessing.get_raster_info(tmp_roads_path)
-        roads_nodata = roads_info['nodata'][0]
-        result_info = pygeoprocessing.get_raster_info(result_path)
-        result_nodata = result_info['nodata'][0]
+        expected_result = numpy.array([
+            [0, 0, 0, 0], [1, 1, 1, 255], [1, 0, 1, 255], [1, 1, 0, 0]])
 
-        aligned_roads_path = os.path.join(
-            self.workspace_dir, 'aligned_roads.tif')
-        aligned_result_path = os.path.join(
-            self.workspace_dir, 'aligned_result.tif')
-        pygeoprocessing.align_and_resize_raster_stack(
-            [tmp_roads_path, result_path],
-            [aligned_roads_path, aligned_result_path],
-            ('near', 'near'), roads_info['pixel_size'], 'intersection')
-
-        roads_raster = gdal.OpenEx(aligned_roads_path, gdal.OF_RASTER)
-        roads_band = roads_raster.GetRasterBand(1)
-        roads_array = roads_band.ReadAsArray()
-        result_raster = gdal.OpenEx(aligned_result_path, gdal.OF_RASTER)
+        result_raster = gdal.OpenEx(result_path, gdal.OF_RASTER)
         result_band = result_raster.GetRasterBand(1)
         result_array = result_band.ReadAsArray()
 
-        # Coherce nodata values to be the same for testing non-nodata values
-        roads_array[roads_array==roads_nodata] = result_nodata
-        # Make our input infrastructure values into what we expect for a mask
-        roads_array[roads_array>0] = 1
-        numpy.testing.assert_allclose(result_array, roads_array)
+        numpy.testing.assert_allclose(result_array, expected_result)
 
-        roads_band = None
-        roads_raster = None
         result_band = None
         result_raster = None
 
