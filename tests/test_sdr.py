@@ -26,18 +26,15 @@ def assert_expected_results_in_vector(expected_results, vector_path):
     watershed_results_vector = None
     watershed_results_layer = None
     watershed_results_feature = None
-    for key in expected_results:
-        # numpy.testing.assert_almost_equal(
-        #     expected_results[key], actual_results[key], decimal=6)
-
-        # In order to pass with GDAL<2.3 and GDAL>2.3:
-        # asserting equality to 5 significant figures instead of 6 decimal
-        # places. GDAL 2.3 introduced new warping behavior yielding different
-        # pixel values when also using a smoothing interpolation method.
-        # Surprisingly, these differences are not washed out by an
-        # aggregation such as zonal statistics.
-        numpy.testing.assert_approx_equal(
-            actual_results[key], expected_results[key], significant=2)
+    try:
+        for key in expected_results:
+            numpy.testing.assert_approx_equal(
+                actual_results[key], expected_results[key], significant=6)
+    except AssertionError:
+        print(
+            f'expected results: {expected_results}, '
+            f'actual_results: {actual_results}')
+        raise
 
 
 class SDRTests(unittest.TestCase):
