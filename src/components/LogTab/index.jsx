@@ -3,14 +3,15 @@ import PropTypes from 'prop-types';
 import { Tail } from 'tail';
 import os from 'os';
 import { shell } from 'electron';
-import winston from 'winston';
-const logger = winston.loggers.get('logger')
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
+
+import { getLogger } from '../../logger'
+const logger = getLogger('renderer')
 
 const logStyle = {
   whiteSpace: 'pre-line',

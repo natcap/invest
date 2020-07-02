@@ -1,11 +1,12 @@
 import path from 'path';
 import fs from 'fs';
 import glob from 'glob';
-import winston from 'winston';
-const logger = winston.loggers.get('logger')
+
+import { getLogger } from './logger'
+const logger = getLogger('renderer')
 
 const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g
-logger.debug(LOGFILE_REGEX)
+
 export function loadRecentSessions(jobDatabase) {
   /** Load job data from a persistent file and return the jobs
   * sorted by creation time. Right now the persistent file is a JSON.

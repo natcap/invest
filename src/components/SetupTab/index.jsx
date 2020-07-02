@@ -1,8 +1,6 @@
 import React from 'react';
 import { remote } from 'electron';
 import PropTypes from 'prop-types';
-import winston from 'winston';
-const logger = winston.loggers.get('logger')
 
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
@@ -16,6 +14,8 @@ import { SaveParametersButton, SavePythonButton } from '../SaveDropdown'
 import { fetchDatastackFromFile, fetchValidation, 
          saveToPython } from '../../server_requests';
 import { argsDictFromObject, boolStringToBoolean } from '../../utils';
+import { getLogger } from '../../logger'
+const logger = getLogger('renderer')
 
 function toggleDependentInputs(argsSpec, argsValues, argkey) {
   /** Toggle properties that control the display of argument inputs.

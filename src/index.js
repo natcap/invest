@@ -2,14 +2,13 @@
 const fs = require('fs');
 const path = require('path');
 const { remote } = require('electron');
-const winston = require('winston');
 const { getLogger } = require('./logger')
 
 const isDevMode = function() {
   return remote.process.argv[2] == '--dev'
 };
 
-const logger = getLogger('index')
+const logger = getLogger('renderer')
 
 if (isDevMode()) {
   require("@babel/register");

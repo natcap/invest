@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
-import winston from 'winston';
-const logger = winston.loggers.get('logger')
+import { getLogger } from './logger'
+const logger = getLogger('main')
 
 // TODO: elsewhere I've used async/await instead of 
 // .then chaining of callbacks. Consider refactoring

@@ -15,27 +15,29 @@ if (remote) {
   isDevMode = process.argv[2] == '--dev'
 }
 
-const format = winston.format.combine(
-  winston.format.splat(),
-  winston.format.simple())
-
-const transport = new winston.transports.File({
-  format: format,
-  level: 'debug',
-  filename: path.join(userDataPath, 'log.txt')})
-
-const transportArray = [transport]
-if (isDevMode) {
-  transportArray.push(new winston.transports.Console({
-    format: format,
-    level: 'debug'
-  }))
-}
 
 function getLogger(label) {
   if (!winston.loggers.has(label)) {
+    const myFormat = winston.format.printf(
+      ({ level, message, label, timestamp }) => {
+      return `${timestamp} [${label}] ${level}: ${message}`
+    })
+
+    const transport = new winston.transports.File({
+      level: 'debug',
+      filename: path.join(userDataPath, 'log.txt')})
+
+    const transportArray = [transport]
+    if (isDevMode) {
+      transportArray.push(new winston.transports.Console({
+        level: 'debug'
+      }))
+    }
     winston.loggers.add(label, {
-      format: winston.format.label({ label: label}),
+      format: winston.format.combine(
+        winston.format.label({ label: label}),
+        winston.format.timestamp(),
+        myFormat),
       transports: transportArray
     })
   }

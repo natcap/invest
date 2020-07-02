@@ -4,8 +4,6 @@ import crypto from 'crypto';
 import { spawn } from 'child_process';
 import React from 'react';
 import PropTypes from 'prop-types';
-import winston from 'winston';
-const logger = winston.loggers.get('logger')
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -26,6 +24,8 @@ import { getSpec, fetchDatastackFromFile,
 import { argsDictFromObject, findMostRecentLogfile,
          cleanupDir } from './utils';
 import { fileRegistry } from './constants';
+import { getLogger } from './logger'
+const logger = getLogger('renderer')
 
 // TODO see issue #12
 import { createStore } from 'redux';
