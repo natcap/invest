@@ -958,7 +958,7 @@ def _collapse_infrastructure_layers(
                 infrastructure_mask |
                 ((infrastructure_array_list[index] > 0) & ~current_nodata))
 
-            nodata_mask = (nodata_mask | current_nodata)
+            nodata_mask = (nodata_mask & current_nodata)
 
         infrastructure_result[infrastructure_mask] = 1
         infrastructure_result[nodata_mask] = infrastructure_nodata

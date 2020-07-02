@@ -120,6 +120,7 @@ class GLOBIOTests(unittest.TestCase):
         """GLOBIO: regression testing with single infrastructure raster."""
         from natcap.invest import globio
 
+        # Use the projection and geostransform from sample data to build test
         roads_path = os.path.join(
             SAMPLE_DATA, 'infrastructure_dir', 'roads.tif')
         base_raster = gdal.OpenEx(roads_path, gdal.OF_RASTER)
@@ -154,7 +155,9 @@ class GLOBIOTests(unittest.TestCase):
 
         result_path = os.path.join(
             self.workspace_dir, 'combined_infrastructure.tif')
-        
+       
+        # No need to run the whole model so call infrastructure combining 
+        # function directly
         globio._collapse_infrastructure_layers(
             tmp_infra_dir, tmp_roads_path, result_path, temp_dir)
 
