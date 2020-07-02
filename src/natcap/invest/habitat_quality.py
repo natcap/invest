@@ -931,8 +931,8 @@ def _raster_pixel_count(raster_path_band):
     Returns:
         dict of pixel values to frequency.
     """
-    nodata_seq = pygeoprocessing.get_raster_info(raster_path_band[0])['nodata']
-    nodata = nodata_seq[0]
+    nodata = pygeoprocessing.get_raster_info(
+        raster_path_band[0])['nodata'][raster_path_band[1]-1]
 
     counts = collections.defaultdict(int)
     for _, raster_block in pygeoprocessing.iterblocks(raster_path_band):
