@@ -1,6 +1,10 @@
 .. :changelog:
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.6 (2020-07-03)
 ------------------
 * Crop Production
     * Fixed critical bug in crop regression that caused incorrect yields in
