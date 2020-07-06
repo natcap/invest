@@ -46,7 +46,11 @@ Unreleased Changes (3.9)
     333^2 m^2. In previous versions the LS factor was erroniously capped to
     "333" leading to high export spikes in some pixels.
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.6 (2020-07-03)
 ------------------
 * Crop Production
     * Fixed critical bug in crop regression that caused incorrect yields in
