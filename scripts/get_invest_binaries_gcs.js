@@ -2,6 +2,7 @@ const https = require('https')
 const fs = require('fs')
 const path = require('path')
 const url = require('url')
+const package = require('../package')
 
 const args = process.argv.slice(2)
 if (args.length !== 1) {
@@ -21,15 +22,11 @@ switch (args[0]) {
 	default:
 		throw new Error("expected argument to be in ['windows-latest, 'macos-latest', 'ubuntu-latest']")
 }
-console.log(fileSuffix)
 
-// todo, move this config to package.json, other config file,
-// and/or command line args, e.g. Actions YAML should set OS suffix
-// for SRCFILE
-const HOSTNAME = 'https://storage.googleapis.com/'
-const BUCKET = 'natcap-dev-build-artifacts'
-const FORK = 'invest/davemfish'
-const VERSION = '3.8.0.post632+g7a58318e/'
+const HOSTNAME = package.invest.hostname
+const BUCKET = package.invest.bucket
+const FORK = package.invest.fork
+const VERSION = package.invest.version
 const SRCFILE = `invest_binaries_${fileSuffix}.zip`
 const DESTFILE = './build/binaries.zip'
 
