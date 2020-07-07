@@ -258,7 +258,7 @@ def execute(args):
     taskgraph_working_dir = os.path.join(
         intermediate_output_dir, '_taskgraph_working_dir')
 
-    n_workers = args.get('n_workers', -1)
+    n_workers = int(args.get('n_workers', -1))
     task_graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
 
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
