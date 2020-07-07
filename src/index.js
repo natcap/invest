@@ -7,7 +7,9 @@ const isDevMode = function() {
   return remote.process.argv[2] == '--dev'
 };
 if (isDevMode()) {
+  // in dev mode we can have babel transpile modules on import
   require("@babel/register");
+  // load the '.env' file from the project root
   const dotenv = require('dotenv');
   dotenv.config();  
 }
