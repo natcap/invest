@@ -935,26 +935,32 @@ def _collapse_infrastructure_layers(
             "infrastructure directory didn't have any rasters or "
             "vectors at %s", infrastructure_dir)
 
-    infrastructure_nodata = -1
+    infrastructure_nodata = 255
 
     def _collapse_infrastructure_op(*infrastructure_array_list):
         """For each pixel, create mask 1 if all valid, else set to nodata."""
-        nodata_mask = (
-            numpy.isclose(
-                infrastructure_array_list[0], infrastructure_nodata_list[0]))
-        infrastructure_result = infrastructure_array_list[0] > 0
+        # Zeroes indicate where there's no infrastructure influence but not
+        # necessarily nodata
+        infrastructure_result = numpy.zeros(
+            infrastructure_array_list[0].shape, dtype=numpy.uint8)
+
+        nodata_mask = numpy.isclose(
+            infrastructure_array_list[0], infrastructure_nodata_list[0])
+
+        infrastructure_mask = (infrastructure_array_list[0] > 0) & ~nodata_mask
+
         for index in range(1, len(infrastructure_array_list)):
             current_nodata = numpy.isclose(
                 infrastructure_array_list[index],
                 infrastructure_nodata_list[index])
 
-            infrastructure_result = (
-                infrastructure_result |
+            infrastructure_mask = (
+                infrastructure_mask |
                 ((infrastructure_array_list[index] > 0) & ~current_nodata))
 
-            nodata_mask = (
-                nodata_mask & current_nodata)
+            nodata_mask = (nodata_mask & current_nodata)
 
+        infrastructure_result[infrastructure_mask] = 1
         infrastructure_result[nodata_mask] = infrastructure_nodata
         return infrastructure_result
 

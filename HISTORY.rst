@@ -67,6 +67,9 @@ Unreleased Changes (3.9)
 ..
   Unreleased Changes
   ------------------
+* GLOBIO
+    * Fix a bug that mishandled combining infrastructure data when only one
+      infrastructure data was present.
 
 3.8.6 (2020-07-03)
 ------------------
