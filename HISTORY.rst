@@ -3,6 +3,9 @@
 ..
   Unreleased Changes
   ------------------
+* GLOBIO
+    * Fix a bug that mishandled combining infrastructure data when only one
+      infrastructure data was present.
 
 3.8.6 (2020-07-03)
 ------------------
@@ -22,9 +25,6 @@
       dictionary.
     * Remove ``warn_if_missing`` argument from ``utils.build_lookup_from_csv``
       and warning by default.
-* GLOBIO
-    * Fix a bug that mishandled combining infrastructure data when only one
-      infrastructure data was present.
 * Scenic Quality
     * Fixing an issue in Scenic Quality where the creation of the weighted sum
       of visibility rasters could cause "Too Many Open Files" errors and/or
