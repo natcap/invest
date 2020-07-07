@@ -90,8 +90,7 @@ ARGS_SPEC = {
         "threats_table_path": {
             "validation_options": {
                 "required_fields": [
-                    "THREAT", "MAX_DIST", "WEIGHT", "DECAY", "BASE_PATH",
-                    "CUR_PATH", "FUT_PATH"],
+                    "THREAT", "MAX_DIST", "WEIGHT", "DECAY", "CUR_PATH"],
             },
             "type": "csv",
             "required": True,
@@ -118,12 +117,15 @@ ARGS_SPEC = {
                 "for these columns. "
                 "BASE_PATH: optional. The THREAT raster filepath for "
                 "the base scenario (if present) where the filepath is "
-                "relative to the THREAT CSV input. CUR_PATH: required.  "
+                "relative to the THREAT CSV input. Entries can be left empty "
+                "if there is no baseline scenario or if using the baseline "
+                "LULC for rarity calculations only. CUR_PATH: required.  "
                 "The THREAT raster filepath for the current scenario "
                 "where the filepath is relative to the THREAT CSV input. "
                 "FUT_PATH: optional. The THREAT raster filepath for the "
                 "future scenario (if present) where the filepath is "
-                "relative to the THREAT CSV input."
+                "relative to the THREAT CSV input. Entries can be left empty "
+                "if looking at current scenario only."
                 ),
             "name": "Threats Data"
         },
@@ -220,9 +222,8 @@ def execute(args):
             containing data of all the considered threats. Each row is a
             degradation source and each column a different attribute of the
             source with the following names (case-insensitive):
-            'THREAT','MAX_DIST','WEIGHT', 'DECAY', 'BASE_PATH', 'CUR_PATH',
-            'FUT_PATH'
-            (required).
+            'THREAT','MAX_DIST','WEIGHT', 'DECAY', 'CUR_PATH' (required)
+            'BASE_PATH', 'FUT_PATH' (optional).
         args['access_vector_path'] (string): a path to an input polygon
             shapefile containing data on the relative protection against
             threats (optional)
@@ -1129,6 +1130,7 @@ def validate(args, limit_to=None):
         bad_threat_paths = []
         duplicate_paths = []
         threat_path_list = []
+        bad_threat_columns = []
         for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
                                     ('_f', 'lulc_fut_path'),
                                     ('_b', 'lulc_bas_path')):
@@ -1137,16 +1139,21 @@ def validate(args, limit_to=None):
                 # associated raster which should be found in
                 # threat_raster_folder
                 for threat in threat_dict:
+                    threat_table_path_col = _THREAT_SCENARIO_MAP[lulc_key]
+                    if threat_table_path_col not in threat_dict[threat]:
+                        bad_threat_columns.append(threat_table_path_col)
+                        break
+
                     # Threat path from threat CSV is relative to CSV
                     threat_path = os.path.join(
                         threat_csv_dirpath,
-                        threat_dict[threat][_THREAT_SCENARIO_MAP[lulc_key]])
+                        threat_dict[threat][threat_table_path_col])
 
                     threat_validate_result = _validate_threat_path(
                         threat_path, lulc_key)
                     if threat_validate_result == 'error':
                         bad_threat_paths.append(
-                            (threat, _THREAT_SCENARIO_MAP[lulc_key]))
+                            (threat, threat_table_path_col))
                         continue
 
                     threat_path = threat_validate_result
@@ -1159,6 +1166,13 @@ def validate(args, limit_to=None):
                         else:
                             duplicate_paths.append(
                                 os.path.basename(threat_path))
+
+        if bad_threat_columns:
+            validation_warnings.append(
+                (['threats_table_path'],
+                 (f"The column '{bad_threat_columns[0]}' was not found"
+                  " in the Threat Data table for the corresponding"
+                  " input LULC scenario.")))
 
         if bad_threat_paths:
             validation_warnings.append(

@@ -793,6 +793,107 @@ class HabitatQualityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             habitat_quality.execute(args)
 
+    def test_habitat_quality_no_base_column(self):
+        """Habitat Quality: no baseline LULC and no column should pass."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                    lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        # leave out BASE_PATH column
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.04,0.7,threat_1,linear,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+
+        try:
+            habitat_quality.execute(args)
+            self.assertTrue(True)
+        except:
+            self.fail("HQ failed when using threat data CSV missing BASE_PATH"
+                      " column.")
+    
+    def test_habitat_quality_no_fut_column(self):
+        """Habitat Quality: no future LULC and no column should pass."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                    lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        # leave out FUT_PATH column
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH\n')
+            open_table.write(
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif\n')
+
+        try:
+            habitat_quality.execute(args)
+            self.assertTrue(True)
+        except:
+            self.fail("HQ failed when using threat data CSV missing FUT_PATH"
+                      " column.")
+    
     def test_habitat_quality_bad_rasters(self):
         """Habitat Quality: raise error on threats that aren't real rasters."""
         from natcap.invest import habitat_quality
@@ -1938,11 +2039,62 @@ class HabitatQualityTests(unittest.TestCase):
 
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
-                'MAX_DIST,WEIGHT,THREAT,DECAY,,CUR_PATH,FUT_PATH\n')
+                'MAX_DIST,WEIGHT,THREAT,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
+                '0.04,0.7,threat_1,threat_1_cur.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,threat_2_c.tif,threat_2_f.tif\n')
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            "expected failed validations instead didn't get any.")
+        self.assertTrue(
+            "Fields are missing from this table: ['DECAY']" in
+            validate_result[0][1], validate_result[0][1])
+    
+    def test_habitat_quality_validate_missing_base_column(self):
+        """Habitat Quality: test validate for a missing base column."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': '',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                    lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.04,0.7,threat_1,linear,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1950,5 +2102,56 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertTrue(
-            "Fields are missing from this table: ['BASE_PATH']" in
+            "The column 'base_path' was not found" in
+            validate_result[0][1], validate_result[0][1])
+    
+    def test_habitat_quality_validate_missing_fut_column(self):
+        """Habitat Quality: test validate for a missing fut column."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': '',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                    lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32)
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH\n')
+            open_table.write(
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif')
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.assertTrue(
+            validate_result,
+            "expected failed validations instead didn't get any.")
+        self.assertTrue(
+            "The column 'fut_path' was not found" in
             validate_result[0][1], validate_result[0][1])
