@@ -87,7 +87,7 @@ jobs:
                   PIP_PREFER_BINARY: 1
               run: |
                   python -m pip install --upgrade pip nose setuptools
-                  python -m pip install Cython
+                  python -m pip install Cython requests numpy
                   python -m pip install -r requirements.txt -r requirements-dev.txt
                   python setup.py install
 
