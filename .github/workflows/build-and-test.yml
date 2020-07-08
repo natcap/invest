@@ -135,8 +135,9 @@ jobs:
                   path: dist
 
     test-source-distribution:
-        name: "Test source distribution"
+        name: "Check sdist"
         runs-on: ${{ matrix.os }}
+        needs: check-syntax-errors
         strategy:
             matrix:
                 python-version: [3.6, 3.7]
