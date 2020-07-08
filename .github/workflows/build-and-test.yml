@@ -1,4 +1,4 @@
-name: Run InVEST Tests
+name: Run Tests, Build Python Distribtutions
 
 on:
     push:
