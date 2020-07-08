@@ -121,6 +121,63 @@ class GLOBIOTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             model_array, reg_array, rtol=0, atol=1e-06)
 
+    def test_globio_single_infra(self):
+        """GLOBIO: regression testing with single infrastructure raster."""
+        from natcap.invest import globio
+
+        # Use the projection and geostransform from sample data to build test
+        roads_path = os.path.join(
+            SAMPLE_DATA, 'infrastructure_dir', 'roads.tif')
+        base_raster = gdal.OpenEx(roads_path, gdal.OF_RASTER)
+        projection_wkt = base_raster.GetProjection()
+        base_geotransform = base_raster.GetGeoTransform()
+        base_raster = None
+        
+        # Create a temporary infrastructure directory with one raster
+        tmp_infra_dir = os.path.join(self.workspace_dir, "single_infra")
+        os.mkdir(tmp_infra_dir)
+        tmp_roads_path = os.path.join(tmp_infra_dir, "roads.tif")
+        
+        tmp_roads_array = numpy.array([
+            [0, 0, 0, 0], [0.5, 1, 1, 13.0], [1, 0, 1, 13.0], [1, 1, 0, 0]])
+        tmp_roads_nodata = 13.0
+        raster_driver = gdal.GetDriverByName('GTiff')
+        ny, nx = tmp_roads_array.shape
+        new_raster = raster_driver.Create(
+            tmp_roads_path, nx, ny, 1, gdal.GDT_Float32)
+        new_raster.SetProjection(projection_wkt)
+        new_raster.SetGeoTransform(
+            [base_geotransform[0], 10, 0.0, base_geotransform[3], 0.0, -10])
+        new_band = new_raster.GetRasterBand(1)
+        new_band.SetNoDataValue(tmp_roads_nodata)
+        new_band.WriteArray(tmp_roads_array)
+        new_raster.FlushCache()
+        new_band = None
+        new_raster = None
+
+        temp_dir = os.path.join(self.workspace_dir, "tmp_dir")
+        os.mkdir(temp_dir)
+
+        result_path = os.path.join(
+            self.workspace_dir, 'combined_infrastructure.tif')
+       
+        # No need to run the whole model so call infrastructure combining 
+        # function directly
+        globio._collapse_infrastructure_layers(
+            tmp_infra_dir, tmp_roads_path, result_path, temp_dir)
+
+        expected_result = numpy.array([
+            [0, 0, 0, 0], [1, 1, 1, 255], [1, 0, 1, 255], [1, 1, 0, 0]])
+
+        result_raster = gdal.OpenEx(result_path, gdal.OF_RASTER)
+        result_band = result_raster.GetRasterBand(1)
+        result_array = result_band.ReadAsArray()
+
+        numpy.testing.assert_allclose(result_array, expected_result)
+
+        result_band = None
+        result_raster = None
+
     def test_globio_full(self):
         """GLOBIO: regression testing all functionality (mode a)."""
         from natcap.invest import globio

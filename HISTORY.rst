@@ -13,7 +13,7 @@
   - Globio
   - Habitat Quality
   - HRA
-  - Annual Water Yield 
+  - Annual Water Yield
   - NDR
   - Pollination
   - Recreation
@@ -37,23 +37,60 @@ Unreleased Changes (3.9)
 * General:
   * Deprecating GDAL 2 and adding support for GDAL 3.
   * Adding function in utils.py to handle InVEST coordindate transformations.
-  * Making InVEST compatible with Pygeoprocessing 2.0 by updating: 
+  * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
     * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
-    * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to 
+    * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to
       ``projection_wkt``.
   * Adding support for Python 3.8
+* Habitat Quality:
+    * Refactor of Habitat Quality that implements TaskGraph
+    * Threat files are now indicated in the Threat Table csv input under 
+      required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``. 
+    * Threat and Sensitivity column names are now case-insensitive.
+    * Sensitivity threat columns now match threat names from Threat Table 
+      exactly, without the need for "L_". "L_" prefix is deprecated.
+    * Threat raster input folder has been removed.
+    * Validation enhancements that check whether threat raster paths are valid.
+    * HQ update to User's Guide.
+    * Changing sample data to reflect Threat Table csv input changes and 
+      bumping revision.
+    * More comprehensive testing for Habitat Quality and validation.
+    * Checking if Threat raster values are between 0 and 1 range, raising 
+      ValueError if not. No longer snapping values less than 0 to 0 and greater
+      than 1 to 1.
+    * Fixing bug that was setting Threat raster values to 1 even if they were 
+      floats between 0 and 1.
+* SDR:
+  * Fixing an issue where the LS factor should be capped to an upstream area of
+    333^2 m^2. In previous versions the LS factor was erroniously capped to
+    "333" leading to high export spikes in some pixels.
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+* GLOBIO
+    * Fix a bug that mishandled combining infrastructure data when only one
+      infrastructure data was present.
+
+3.8.6 (2020-07-03)
+------------------
+* Crop Production
+    * Fixed critical bug in crop regression that caused incorrect yields in
+      all cases.
+>>>>>>> release/3.9
+
+3.8.5 (2020-06-26)
 ------------------
 * General
-    * Fix bug in ``utils.build_lookup_from_csv`` that was allowing 
+    * Fix bug in ``utils.build_lookup_from_csv`` that was allowing
       ``key_field`` to be non unique and overwriting values.
     * Fix bug in ``utils.build_lookup_from_csv`` where trailing commas caused
       returned values to be malformed.
     * Add optional argument ``column_list`` to ``utils.build_lookup_from_csv``
-      that takes a list of column names and only returns those in the 
+      that takes a list of column names and only returns those in the
       dictionary.
-    * Remove ``warn_if_missing`` argument and warn by default. 
+    * Remove ``warn_if_missing`` argument from ``utils.build_lookup_from_csv``
+      and warning by default.
 * Scenic Quality
     * Fixing an issue in Scenic Quality where the creation of the weighted sum
       of visibility rasters could cause "Too Many Open Files" errors and/or
@@ -65,6 +102,14 @@ Unreleased Changes
 * SDR:
     * Removed the unused parameter ``args['target_pixel_size']`` from the SDR
       ``execute`` docstring.
+* Urban Flood Risk Mitigation
+    * Fixed an issue where the output vector ``flood_risk_service.shp`` would
+      only be created when the built infrastructure vector was provided.  Now,
+      the ``flood_risk_service.shp`` vector is always created, but the fields
+      created differ depending on whether the built infrastructure input is
+      present during the model run.
+    * Fixed an issue where the model would crash if an infrastructure geometry
+      were invalid or absent.  Such features are now skipped.
 
 3.8.4 (2020-06-05)
 ------------------
