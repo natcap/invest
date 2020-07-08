@@ -231,7 +231,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         exp_array = numpy.array(
             [[0, 100, 200, 300], [0, 100, 200, 300]], dtype=numpy.int32)
         res_array = pygeoprocessing.raster_to_numpy_array(tmp_dist_final_path)
-        numpy.testing.assert_array_equal(
+        numpy.testing.assert_allclose(
             res_array, exp_array, rtol=0, atol=1e-06)
 
     def test_wind_data_to_point_vector(self):
@@ -498,7 +498,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path))
             numpy.testing.assert_allclose(
-                model_array, reg_array, rtol=0, atol=1e-06)
+                model_array, reg_array, rtol=0, atol=1e-04)
 
         vector_path = 'wind_energy_points.shp'
 
@@ -544,7 +544,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path))
             # loosened tolerance to pass against GDAL 2.2.4 and 2.4.1
             numpy.testing.assert_allclose(
-                model_array, reg_array, rtol=0, atol=1e-06)
+                model_array, reg_array, rtol=1e-04, atol=0)
 
         vector_path = 'wind_energy_points.shp'
         _assert_vectors_equal(

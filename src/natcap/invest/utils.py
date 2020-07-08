@@ -705,8 +705,8 @@ def _assert_vectors_equal(
                     # Number comparison
                     if isinstance(av, int) or isinstance(av, float):
                         if not numpy.allclose(numpy.array([av]),
-                                              numpy.array([ev]), 
-                                              rtol=0, atol=field_value_atol): 
+                                              numpy.array([ev]),
+                                              rtol=0, atol=field_value_atol):
                             raise AssertionError (
                                 "Vector field values are not equal: \n"
                                 f"Expected value: {ev}. \n"
