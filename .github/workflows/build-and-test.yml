@@ -128,7 +128,7 @@ jobs:
 
             - uses: actions/upload-artifact@v1
               with:
-                  name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-arch }}
+                  name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
                   path: dist
 
     test-source-distribution:
