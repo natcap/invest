@@ -77,7 +77,6 @@ Unreleased Changes (3.9)
 * Crop Production
     * Fixed critical bug in crop regression that caused incorrect yields in
       all cases.
->>>>>>> release/3.9
 
 3.8.5 (2020-06-26)
 ------------------
