@@ -1,32 +1,79 @@
+const fs = require('fs')
+const path = require('path')
 const spawn = require('child_process').spawn;
-const app = require('electron').app
-const BrowserWindow = require('electron').BrowserWindow
+const { app, BrowserWindow, ipcMain, screen } = require('electron')
 const fetch = require('node-fetch')
 
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
-let mainWindow;
-
-const isDevMode = process.execPath.match(/[\\/]electron/);
+const isDevMode = process.argv[2] == '--dev'
 if (isDevMode) {
   // load the '.env' file from the project root
   const dotenv = require('dotenv');
   dotenv.config();  
 }
 
-let PYTHON = (process.env.PYTHON || 'python').trim();
+function findInvestBinaries() {
+
+  return new Promise(resolve => {
+    // Binding to the invest server binary:
+    let serverExe;
+    let investExe;
+
+    // A) look for a local registry of available invest installations
+    const investRegistryPath = path.join(
+      app.getPath('userData'), 'invest_registry.json')
+    if (fs.existsSync(investRegistryPath)) {
+      const investRegistry = JSON.parse(fs.readFileSync(investRegistryPath))
+      const activeVersion = investRegistry['active']
+      serverExe = investRegistry['registry'][activeVersion]['server']
+      investExe = investRegistry['registry'][activeVersion]['invest']
+
+    // B) check for dev mode and an environment variable from dotenv
+    } else if (isDevMode) {
+      serverExe = process.env.SERVER
+      investExe = process.env.INVEST
+
+    // C) point to binaries included in this app's installation.
+    } else {
+      const ext = (process.platform === 'win32') ? '.exe' : ''
+      binaryPath = path.join(
+        process.resourcesPath, 'app.asar.unpacked', 'build', 'invest') 
+      serverExe = path.join(binaryPath, 'server' + ext)
+      investExe = path.join(binaryPath, 'invest' + ext)
+      console.log(serverExe)
+    }
+    resolve({ invest: investExe, server: serverExe })
+  })
+}
+
+
 let PORT = (process.env.PORT || '5000').trim();
 
+// Keep a global reference of the window object, if you don't, the window will
+// be closed automatically when the JavaScript object is garbage collected.
+let mainWindow;
 const createWindow = async () => {
   /** Much of this is electron app boilerplate, but here is also
   * where we fire up the python flask server.
   */
-  createPythonFlaskProcess();
+
+  // The main process needs to know the location of the invest server binary
+  // The renderer process needs the invest cli binary. We can find them
+  // together here and pass data to the renderer upon request.
+  const binaries = await findInvestBinaries()
+  const mainProcessVars = { investExe: binaries.invest }
+  ipcMain.on('variable-request', (event, arg) => {
+    event.reply('variable-reply', mainProcessVars)
+  })
+
+  createPythonFlaskProcess(binaries.server);
 
   // Create the browser window.
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize
+  console.log(width + ' ' + height)
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 1000,
+    width: width * 0.75,
+    height: height,
+    useContentSize: true,
     webPreferences: {
       nodeIntegration: true
     }
@@ -36,12 +83,14 @@ const createWindow = async () => {
   mainWindow.loadURL(`file://${__dirname}/index.html`);
 
   // Open the DevTools.
-  if (isDevMode) {
-    const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
-    await installExtension(REACT_DEVELOPER_TOOLS);
-    // enableLiveReload({ strategy: 'react-hmr' });
-    mainWindow.webContents.openDevTools();
-  }
+  mainWindow.webContents.on('did-frame-finish-load', async () => {
+    if (isDevMode) {
+      const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
+      await installExtension(REACT_DEVELOPER_TOOLS);
+      // enableLiveReload({ strategy: 'react-hmr' });
+      mainWindow.webContents.openDevTools();
+    }
+  })
 
   // Emitted when the window is closed.
   mainWindow.on('closed', () => {
@@ -52,31 +101,35 @@ const createWindow = async () => {
   });
 };
 
-function createPythonFlaskProcess() {
+function createPythonFlaskProcess(serverExe) {
   /** Spawn a child process running the Python Flask server.*/
-  const pythonServerProcess = spawn(
-    PYTHON, ['-m', 'flask', 'run'], {
-      shell: true,
-      // stdio: 'ignore',
-      detatched: true,
+  if (serverExe) {
+    // The most reliable, cross-platform way to make sure spawn
+    // can find the exe is to pass only the command name while
+    // also putting it's location on the PATH:
+    const pythonServerProcess = spawn(path.basename(serverExe), {
+        env: {PATH: path.dirname(serverExe)}
+      });
+
+    console.log('Started python process as PID ' + pythonServerProcess.pid);
+    console.log(serverExe)
+    pythonServerProcess.stdout.on('data', (data) => {
+      console.log(`${data}`);
     });
-
-  console.log('Started python process as PID ' + pythonServerProcess.pid);
-
-  pythonServerProcess.stdout.on('data', (data) => {
-    console.log(`${data}`);
-  });
-  pythonServerProcess.stderr.on('data', (data) => {
-    console.log(`${data}`);
-  });
-  pythonServerProcess.on('error', (err) => {
-    console.log('Process failed.');
-    console.log(err);
-  });
-  pythonServerProcess.on('close', (code, signal) => {
-    console.log(code);
-    console.log('Child process terminated due to signal ' + signal);
-  });
+    pythonServerProcess.stderr.on('data', (data) => {
+      console.log(`${data}`);
+    });
+    pythonServerProcess.on('error', (err) => {
+      console.log('Process failed.');
+      console.log(err);
+    });
+    pythonServerProcess.on('close', (code, signal) => {
+      console.log(code);
+      console.log('Child process terminated due to signal ' + signal);
+    });
+  } else {
+    console.log('no existing invest installations found')
+  }
 }
 
 function shutdownPythonProcess() {
@@ -95,6 +148,14 @@ function shutdownPythonProcess() {
 // Some APIs can only be used after this event occurs.
 app.on('ready', createWindow);
 
+app.on('activate', () => {
+  // On OS X it's common to re-create a window in the app when the
+  // dock icon is clicked and there are no other windows open.
+  if (mainWindow === null) {
+    createWindow();
+  }
+});
+
 // Quit when all windows are closed.
 app.on('window-all-closed', async () => {
   // On OS X it is common for applications and their menu bar
@@ -104,14 +165,6 @@ app.on('window-all-closed', async () => {
     // process dies before flask has time to kill its server.
     await shutdownPythonProcess();
     app.quit()
-  }
-});
-
-app.on('activate', () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (mainWindow === null) {
-    createWindow();
   }
 });
 

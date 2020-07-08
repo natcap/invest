@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { spawn } from 'child_process';
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -20,23 +21,15 @@ import { LoadButton } from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, fetchDatastackFromFile,
          writeParametersToFile } from './server_requests';
-import { argsDictFromObject, findMostRecentLogfile } from './utils';
+import { argsDictFromObject, findMostRecentLogfile,
+         cleanupDir } from './utils';
+import { fileRegistry } from './constants';
 
 // TODO see issue #12
 import { createStore } from 'redux';
 import { Provider } from 'react-redux';
 import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
 const store = createStore(rootReducer)
-
-let INVEST_EXE = 'invest'
-if (process.env.INVEST) {  // if it was set, override
-  INVEST_EXE = process.env.INVEST
-}
-
-let gdalEnv = null;
-if (process.env.GDAL_DATA) {
-  gdalEnv = { GDAL_DATA: process.env.GDAL_DATA }
-}
 
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {
@@ -66,7 +59,7 @@ export class InvestJob extends React.Component {
 
     this.state = {
       setupKey: 0,
-      sessionID: null,                 // modelName + workspace.directory + workspace.suffix
+      sessionID: null,                 // hash of modelName + workspace generated at model execution
       modelName: '',                   // as appearing in `invest list`
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null,                  // ARGS_SPEC.args, the immutable args stuff
@@ -90,6 +83,11 @@ export class InvestJob extends React.Component {
     this.setSessionID = this.setSessionID.bind(this);
   }
 
+  componentDidMount() {
+    fs.mkdir(fileRegistry.CACHE_DIR, (err) => {})
+    fs.mkdir(fileRegistry.TEMP_DIR, (err) => {})
+  }
+
   saveState() {
     /** Save the state of this component (1) and the current InVEST job (2).
     * 1. Save the state object of this component to a JSON file .
@@ -97,18 +95,17 @@ export class InvestJob extends React.Component {
     * This triggers automatically when the invest subprocess starts and again
     * when it exits.
     */
-    const jobName = this.state.sessionID;
     const jsonContent = JSON.stringify(this.state, null, 2);
-    const filepath = path.join(this.props.directoryConstants.CACHE_DIR, jobName + '.json');
+    const filepath = path.join(
+      fileRegistry.CACHE_DIR, this.state.sessionID + '.json');
     fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
       if (err) {
         console.log("An error occured while writing JSON Object to File.");
         return console.log(err);
       }
-      console.log("saved: " + jobName);
     });
     let job = {};
-    job[jobName] = {
+    job[this.state.sessionID] = {
       model: this.state.modelName,
       workspace: this.state.workspace,
       statefile: filepath,
@@ -116,7 +113,7 @@ export class InvestJob extends React.Component {
       humanTime: new Date().toLocaleString(),
       systemTime: new Date().getTime(),
     }
-    this.props.updateRecentSessions(job, this.props.appdata);
+    this.props.updateRecentSessions(job, this.props.jobDatabase);
   }
   
   setSessionID(event) {
@@ -189,16 +186,19 @@ export class InvestJob extends React.Component {
     * with the final status of the invest run.
     */
     const workspace = {
-      directory: argsValues.workspace_dir.value,
+      directory: path.resolve(argsValues.workspace_dir.value),
       suffix: argsValues.results_suffix.value
     }
-    // model name, workspace, and suffix are suitable for a unique job identifier
-    const sessionName = [
-      this.state.modelName, workspace.directory, workspace.suffix].join('-')
+    // If the same model, workspace, and suffix are executed, invest
+    // will overwrite the previous outputs. So our recent session
+    // catalogue should overwite as well, and that's assured by this
+    // non-unique sessionID.
+    const sessionID = crypto.createHash('sha1').update(
+      this.state.modelName + JSON.stringify(workspace)).digest('hex')
 
     // Write a temporary datastack json for passing as a command-line arg
     const temp_dir = fs.mkdtempSync(path.join(
-      process.cwd(), this.props.directoryConstants.TEMP_DIR, 'data-'))
+      fileRegistry.TEMP_DIR, 'data-'))
     const datastackPath = path.join(temp_dir, 'datastack.json')
     const _ = await this.argsToJsonFile(datastackPath, argsValues);
 
@@ -206,10 +206,9 @@ export class InvestJob extends React.Component {
     const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
     
     const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
-    const investRun = spawn(INVEST_EXE, cmdArgs, {
-        cwd: process.cwd(),
-        shell: true, // without true, IOError when datastack.py loads json
-        env: gdalEnv
+    const investRun = spawn(path.basename(this.props.investExe), cmdArgs, {
+        env: { PATH: path.dirname(this.props.investExe) },
+        shell: true // without true, IOError when datastack.py loads json
       });
 
     
@@ -219,13 +218,12 @@ export class InvestJob extends React.Component {
     investRun.stdout.on('data', async (data) => {
       if (!logfilename) {
         logfilename = await findMostRecentLogfile(workspace.directory)
-        console.log(logfilename)
         // TODO: handle case when logfilename is undefined? It seems like
         // sometimes there is some stdout emitted before a logfile exists.
         this.setState(
           {
             logfile: logfilename,
-            sessionID: sessionName,
+            sessionID: sessionID,
             sessionProgress: 'log',
             workspace: workspace,
             jobStatus: 'running'
@@ -244,7 +242,6 @@ export class InvestJob extends React.Component {
     // in which case it's useful to console.log too.
     let stderr = Object.assign('', this.state.logStdErr);
     investRun.stderr.on('data', (data) => {
-      console.log(`${data}`)
       stderr += `${data}`
       this.setState({
         logStdErr: stderr,
@@ -263,6 +260,7 @@ export class InvestJob extends React.Component {
         jobStatus: status,
       }, () => {
         this.saveState();
+        cleanupDir(temp_dir)
       });
     });
   }
@@ -296,7 +294,7 @@ export class InvestJob extends React.Component {
       let uiSpec = {};
       try {
         uiSpec = JSON.parse(fs.readFileSync(
-          path.join(this.props.directoryConstants.INVEST_UI_DATA, spec.module + '.json')))
+          path.join(fileRegistry.INVEST_UI_DATA, spec.module + '.json')))
       } catch (err) {
         if (err.code !== 'ENOENT') {
           throw err
@@ -430,13 +428,14 @@ export class InvestJob extends React.Component {
 }
 
 InvestJob.propTypes = {
+  investExe: PropTypes.string,
   investList: PropTypes.object,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
   }),
   recentSessions: PropTypes.array,
-  appdata: PropTypes.string,
+  jobDatabase: PropTypes.string,
   directoryConstants: PropTypes.shape({
     CACHE_DIR: PropTypes.string,
     TEMP_DIR: PropTypes.string,

@@ -82,12 +82,14 @@ export function findMostRecentLogfile(directory) {
     })
     if (logfiles.length === 1) {
       resolve(logfiles[0])
+      return
     } else if (logfiles.length > 1) {
       // reverse sort (b - a) based on last-modified time
       const sortedFiles = logfiles.sort(function(a, b) {
         return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs
       });
       resolve(sortedFiles[0]);
+      return
     }
     console.log(`No invest logfile found in ${directory}`)
     resolve(undefined)
@@ -131,4 +133,17 @@ export function argsDictFromObject(args) {
     args_dict[argname] = args[argname]['value']
   }
   return(JSON.stringify(args_dict));
+}
+
+/* Convenience function, mainly for cleaning up after tests */
+export function cleanupDir(dir) {
+  fs.readdirSync(dir).forEach(filename => {
+    const filepath = path.join(dir, filename)
+    if (fs.lstatSync(filepath).isFile()) {
+      fs.unlinkSync(filepath)
+    } else {
+      cleanupDir(filepath)
+    }
+  })
+  fs.rmdirSync(dir)
 }

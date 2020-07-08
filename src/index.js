@@ -1,7 +1,15 @@
 "use strict";
+const fs = require('fs');
+const path = require('path');
+const { remote, ipcRenderer } = require('electron');
 
-if (process.env.DEVMODE) {
+const isDevMode = remote.process.argv[2] == '--dev'
+if (isDevMode) {
+  // in dev mode we can have babel transpile modules on import
   require("@babel/register");
+  // load the '.env' file from the project root
+  const dotenv = require('dotenv');
+  dotenv.config();
 }
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
@@ -13,11 +21,12 @@ var _reactDom = _interopRequireDefault(require("react-dom"));
 var _reactHotLoader = require("react-hot-loader");
 
 var _app = _interopRequireDefault(require("./app"));
+const { fileRegistry } = require("./constants")
 
-const { remote } = require('electron');
+// Create a right-click menu
+// TODO: Not sure if Inspect Element should be available in production
+// very useful in dev though.
 const { Menu, MenuItem } = remote;
-const JOBS_DATABASE = 'jobdb.json'
-
 let rightClickPosition = null
 const menu = new Menu();
 menu.append(new MenuItem({
@@ -34,14 +43,23 @@ window.addEventListener('contextmenu', (e) => {
 }, false)
 
 
-var render = function render() {
+var render = async function render(investExe) {
+
   _reactDom["default"].render(
     _react["default"].createElement(
       _reactHotLoader.AppContainer, null, _react["default"].createElement(
-        _app["default"], { appdata: JOBS_DATABASE })), document.getElementById('App'));
+        _app["default"], { 
+          jobDatabase: fileRegistry.JOBS_DATABASE,
+          investExe: investExe })),
+    document.getElementById('App'));
 };
 
-render();
+ipcRenderer.on('variable-reply', (event, arg) => {
+  // render the App after receiving any critical data
+  // from the main process
+  render(arg.investExe)
+})
+ipcRenderer.send('variable-request', 'ping')
 
 if (module.hot) {
   console.log('if hot module');

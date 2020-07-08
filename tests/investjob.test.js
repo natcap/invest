@@ -1,25 +1,16 @@
-import fs from 'fs';
-import path from 'path';
-import events from 'events';
 import React from 'react';
 import { remote } from 'electron';
-import { fireEvent, render,
-         wait, waitFor } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import { InvestJob } from '../src/InvestJob';
 import { SetupTab } from '../src/components/SetupTab';
-import SAMPLE_SPEC from './data/carbon_args_spec.json';
 import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation, fetchDatastackFromFile } from '../src/server_requests';
 jest.mock('../src/server_requests');
+import { fileRegistry } from '../src/constants';
 
-const DIRECTORY_CONSTANTS = {
-  CACHE_DIR: 'tests/data/testing-cache',
-  TEMP_DIR: 'tests/data/testing-tmp',
-  INVEST_UI_DATA: 'tests/data/testing-ui_data'
-}
-
+import SAMPLE_SPEC from './data/carbon_args_spec.json';
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
 const MOCK_RECENT_SESSIONS_VALUE = 
   [ [ "job1",
@@ -32,29 +23,31 @@ const MOCK_RECENT_SESSIONS_VALUE =
         "systemTime": 1583259376573.759,
         "description": null } ] ]
 
-beforeEach(() => {
-  jest.resetAllMocks(); 
-  // Careful with reset because "resetting a spy results
-  // in a function with no return value". I had been using spies to observe
-  // function calls, but not to mock return values. Spies used for that 
-  // purpose should be 'restored' not 'reset'. Do that inside the test as-needed.
-})
 
 function renderInvestJob() {
   /* Render an InvestJob component with the minimal props 
   * needed for these tests.
   */
   const { getByText, getByLabelText, ...utils } = render(
-    <InvestJob 
+    <InvestJob
+      investExe=''
       investList={{Carbon: {internal_name: 'carbon'}}}
       investSettings={{nWorkers: '-1'}}
       recentSessions={MOCK_RECENT_SESSIONS_VALUE}
+      jobDatabase={fileRegistry.JOBS_DATABASE}
       updateRecentSessions={() => {}}
       saveSettings={() => {}}
-      directoryConstants={DIRECTORY_CONSTANTS}
     />);
   return { getByText, getByLabelText, utils }
 }
+
+beforeEach(() => {
+  jest.resetAllMocks();
+  // Careful with reset because "resetting a spy results
+  // in a function with no return value". I had been using spies to observe
+  // function calls, but not to mock return values. Spies used for that 
+  // purpose should be 'restored' not 'reset'. Do that inside the test as-needed.
+})
 
 test('Clicking an invest button renders SetupTab', async () => {
   getSpec.mockResolvedValue(SAMPLE_SPEC);
@@ -327,69 +320,4 @@ test('Test various ways for repeated re-renders of SetupTab', async () => {
       .toHaveValue(mockDatastack.args.workspace_dir)
   });
 })
-// test('Execute launches a python subprocess', async () => {
-//   /*
-//   This functionality might be better tested in an end-end test,
-//   maybe using spectron and the actual flask server. I have not
-//   gotten this to work yet - mocking the spawn call and getting
-//   the spawned object's .on.stdout callback to fire being the main
-//   sticking point.
-//   */
-//   // investExecute() expects to find these args:
-//   const spec = { args: {
-//     workspace_dir: { 
-//       name: 'Workspace', 
-//       type: 'directory'},
-//     results_suffix: {
-//       name: 'suffix',
-//       type: 'freestyle_string'} } }
 
-//   const stdOutText = 'hello'
-//   getSpec.mockResolvedValue(spec);
-//   fetchValidation.mockResolvedValue([]);
-//   // TODO: create this stuff dynamically here:
-//   const fakeWorkspace = '../data';  // it contains this logfile:
-//   findMostRecentLogfile.mockResolvedValue('invest_logfile.txt')
-
-//   let spawnEvent = new events.EventEmitter();
-//   spawnEvent.stdout = new events.EventEmitter();
-//   spawnEvent.stderr = new events.EventEmitter();
-//   sinon.stub(child_process, 'spawn').returns(spawnEvent);
-//   // jest.mock('child_process');
-//   // let mockSpawn = spawn.mockImplementation(() => {
-//   //   // spawn('python', ['mock_invest.py', stdOutText]) // no errors
-//   //   let spawnEvent = new events.EventEmitter();
-//   //   spawnEvent.stdout = new events.EventEmitter();
-//   //   spawnEvent.stderr = new events.EventEmitter();
-//   //   return spawnEvent;
-//   // })
-
-//   const { getByText, getByLabelText, getByTestId, debug } = render(
-//     <InvestJob 
-//       investList={{Carbon: {internal_name: 'carbon'}}}
-//       investSettings={{
-//           nWorkers: '-1',
-//           loggingLevel: 'INFO',
-//         }}
-//       recentSessions={[]}
-//       updateRecentSessions={() => {}}
-//       saveSettings={() => {}}
-//     />);
-
-//   const carbon = getByText('Carbon');
-//   fireEvent.click(carbon);  // Choosing a model from the list
-//   const input = await waitForElement(() => {
-//     return getByLabelText(spec.args.workspace_dir.name)
-//   })
-//   fireEvent.change(input, { target: { value: fakeWorkspace } })
-//   const execute = await waitForElement(() => getByText('Execute'))
-//   fireEvent.click(execute);
-//   console.log(spawnEvent);
-//   spawnEvent.stdout.emit('data', stdOutText);
-
-//   await wait(() => {
-//     // debug()
-//     // expect(getByText('Model Completed'))
-//     expect(getByText('This is a fake invest logfile'))
-//   });
-// })

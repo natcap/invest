@@ -3,50 +3,13 @@ import path from 'path';
 import React from 'react';
 import { remote } from 'electron';
 import { createEvent, fireEvent, render,
-         waitFor, waitForElement } from '@testing-library/react'
+         waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 import { InvestJob } from '../src/InvestJob';
 import { getSpec, fetchDatastackFromFile, fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
-
-const DIRECTORY_CONSTANTS = {
-  CACHE_DIR: 'tests/data/testing-cache', //  for storing state snapshot files
-  TEMP_DIR: 'tests/data/testing-tmp',  // for saving datastack json files prior to investExecute
-  INVEST_UI_DATA: 'tests/data/testing-ui_data'
-}
-
-// generated this file from `invest getspec carbon --json`
-// import ARGS_SPEC from './data/carbon_args_spec.json';
-// const ARG_TYPE_INPUT_MAP = {
-//   csv: "text",
-//   vector: "text",
-//   raster: "text",
-//   directory: "text",
-//   freestyle_string: "text",
-//   number: "text",
-//   boolean: "radio",
-//   option_string: "select"
-// }
-
-function cleanupDir(dir) {
-  fs.readdirSync(dir).forEach(file => {
-    fs.unlinkSync(path.join(dir, file))
-  })
-  fs.rmdirSync(dir)
-}
-
-beforeAll(() => {
-  for (const dir in DIRECTORY_CONSTANTS) {
-    fs.mkdirSync(DIRECTORY_CONSTANTS[dir])
-  }
-})
-
-afterAll(() => {
-  for (const dir in DIRECTORY_CONSTANTS) {
-    cleanupDir(DIRECTORY_CONSTANTS[dir])
-  }
-})
+import { fileRegistry } from '../src/constants'
 
 beforeEach(() => {
   jest.resetAllMocks()
@@ -55,15 +18,15 @@ beforeEach(() => {
 function renderSetupFromSpec(spec) {
   getSpec.mockResolvedValue(spec);
   const { getByText, getByLabelText, ...utils } = render(
-    <InvestJob 
+    <InvestJob
+      investExe = ''
       investList={{Carbon: {internal_name: 'carbon'}}}
       investSettings={null}
       recentSessions={[]}
+      jobDatabase={fileRegistry.JOBS_DATABASE}
       updateRecentSessions={() => {}}
       saveSettings={() => {}}
-      directoryConstants={DIRECTORY_CONSTANTS}
     />);
-  // fireEvent.click(getByText('Carbon'));
   return { getByText, getByLabelText, utils }
 }
 
@@ -256,7 +219,7 @@ test('SetupTab: test a UI spec with a boolean controller arg', async () => {
     // arg5 is deliberately missing from ui_spec to demonstrate that that is okay. 
 
   fs.writeFileSync(path.join(
-    DIRECTORY_CONSTANTS.INVEST_UI_DATA, spec.module + '.json'),
+    fileRegistry.INVEST_UI_DATA, spec.module + '.json'),
       JSON.stringify(ui_spec))
   
   fetchValidation.mockResolvedValue([])
@@ -368,7 +331,7 @@ test('SetupTab: test grouping and sorting of args', async () => {
   }
 
   fs.writeFileSync(path.join(
-    DIRECTORY_CONSTANTS.INVEST_UI_DATA, spec.module + '.json'),
+    fileRegistry.INVEST_UI_DATA, spec.module + '.json'),
       JSON.stringify(ui_spec))
   
   fetchValidation.mockResolvedValue([])

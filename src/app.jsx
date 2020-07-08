@@ -1,15 +1,10 @@
+import fs from 'fs';
 import React from 'react';
 import PropTypes from 'prop-types';
 
 import { InvestJob } from './InvestJob';
 import { getInvestList, getFlaskIsReady } from './server_requests';
 import { updateRecentSessions, loadRecentSessions } from './utils';
-
-const DIRECTORY_CONSTANTS = {
-  CACHE_DIR: 'cache', //  for storing state snapshot files
-  TEMP_DIR: 'tmp',  // for saving datastack json files prior to investExecute
-  INVEST_UI_DATA: 'ui_data'
-}
 
 export default class App extends React.Component {
   /** This component manages any application state that should persist
@@ -23,7 +18,7 @@ export default class App extends React.Component {
       recentSessions: [],
       investSettings: {},
     };
-    this.updateRecentSessions = this.updateRecentSessions.bind(this);
+    this.setRecentSessions = this.setRecentSessions.bind(this);
     this.saveSettings = this.saveSettings.bind(this);
   }
 
@@ -38,9 +33,12 @@ export default class App extends React.Component {
     // const readydata = await getFlaskIsReady(); 
     // await new Promise(resolve => setTimeout(resolve, 1));
     const investList = await getInvestList();
-    const recentSessions = await loadRecentSessions(this.props.appdata)
+    const recentSessions = await loadRecentSessions(this.props.jobDatabase)
     // TODO: also load and set investSettings from a cached state, instead 
     // of always re-setting to these hardcoded values on first launch?
+
+    // const version = this.props.investRegistry['active']
+    // const investEXE = this.props.investRegistry['registry'][version]['invest']
     this.setState(
       {
         investList: investList,
@@ -52,13 +50,13 @@ export default class App extends React.Component {
       });
   }
 
-  async updateRecentSessions(jobdata) {
+  async setRecentSessions(jobdata) {
     /** Update the recent sessions list when a new invest job was saved.
     * This triggers on InvestJob.saveState().
     * 
     * @param {object} jobdata - the metadata describing an invest job.
     */
-    const recentSessions = await updateRecentSessions(jobdata, this.props.appdata);
+    const recentSessions = await updateRecentSessions(jobdata, this.props.jobDatabase);
     this.setState({
       recentSessions: recentSessions
     })
@@ -72,13 +70,13 @@ export default class App extends React.Component {
 
   render() {
     return (
-      <InvestJob 
+      <InvestJob
+        investExe={this.props.investExe} 
         investList={this.state.investList}
         investSettings={this.state.investSettings}
         recentSessions={this.state.recentSessions}
-        appdata={this.props.appdata}
-        directoryConstants={DIRECTORY_CONSTANTS}
-        updateRecentSessions={this.updateRecentSessions}
+        jobDatabase={this.props.jobDatabase}
+        updateRecentSessions={this.setRecentSessions}
         saveSettings={this.saveSettings}
       />
     );
@@ -86,5 +84,5 @@ export default class App extends React.Component {
 }
 
 App.propTypes = {
-  appdata: PropTypes.string
+  jobDatabase: PropTypes.string
 }

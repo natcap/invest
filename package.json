@@ -6,31 +6,55 @@
   "main": "src/main.js",
   "homepage": "./",
   "scripts": {
-    "start": "cross-env FLASK_APP=src/server.py npx electron .",
+    "start": "cross-env FLASK_APP=src/server.py npx electron . --dev",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest",
+    "postinstall": "electron-builder install-app-deps",
     "build": "npx ./build.js",
-    "package": "electron-builder build --linux -c.extraMetadata.main=build/main.js --publish never"
+    "dist": "electron-builder -c.extraMetadata.main=build/main.js",
+    "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js",
+    "prebuilt-invest": "npx ./scripts/get_invest_binaries_gcs.js"
   },
   "build": {
-    "appId": "invest",
+    "asarUnpack": ["build/invest/"],
+    "appId": "NaturalCapitalProject.Invest.Desktop",
+    "productName": "InVEST Desktop",
+    "artifactName": "invest-desktop_${os}_${arch}_${version}.${ext}",
+    "mac": {
+      "category": "public.app-category.business",
+      "icon": "build/icon.png",
+      "target": "zip"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "build/icon.png",
+      "category": "Science"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
     "files": [
       "build/**/*",
       "node_modules/**/*"
-    ],
-    "directories": {
-      "buildResources": "assets"
-    }
+    ]
   },
   "jest": {
     "collectCoverage": true,
     "testEnvironment": "jest-environment-jsdom-sixteen"
   },
+  "invest" : {
+    "hostname": "https://storage.googleapis.com/",
+    "bucket": "natcap-dev-build-artifacts",
+    "fork": "invest/davemfish",
+    "version": "3.8.0.post632+g7a58318e/"
+  },
   "keywords": [],
   "author": "dmf",
   "license": "MIT",
   "dependencies": {
-    "@babel/runtime": "^7.8.4",
     "@turf/turf": "^5.1.6",
     "chroma-js": "^2.1.0",
     "cross-env": "^5.2.1",
@@ -56,11 +80,12 @@
     "tail": "^2.0.3"
   },
   "devDependencies": {
-    "@babel/cli": "^7.8.4",
-    "@babel/plugin-transform-runtime": "^7.8.3",
-    "@babel/preset-env": "^7.8.4",
-    "@babel/preset-react": "^7.8.3",
-    "@babel/register": "^7.8.6",
+    "@babel/cli": "^7.10.1",
+    "@babel/plugin-transform-runtime": "^7.10.1",
+    "@babel/preset-env": "^7.10.2",
+    "@babel/preset-react": "^7.10.1",
+    "@babel/register": "^7.10.1",
+    "@babel/runtime": "^7.10.2",
     "@electron-forge/cli": "^6.0.0-beta.50",
     "@electron-forge/maker-deb": "^6.0.0-beta.50",
     "@electron-forge/maker-rpm": "^6.0.0-beta.50",
@@ -76,7 +101,6 @@
     "electron-devtools-installer": "^2.2.4",
     "jest": "^26.0.1",
     "jest-environment-jsdom-sixteen": "^1.0.3",
-    "react-scripts": "^3.4.1",
     "react-test-renderer": "^16.12.0",
     "sinon": "^9.0.1",
     "spectron": "^10.0.0"
