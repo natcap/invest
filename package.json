@@ -47,6 +47,12 @@
     "collectCoverage": true,
     "testEnvironment": "jest-environment-jsdom-sixteen"
   },
+  "invest" : {
+    "hostname": "https://storage.googleapis.com/",
+    "bucket": "natcap-dev-build-artifacts",
+    "fork": "invest/davemfish",
+    "version": "3.8.0.post632+g7a58318e/"
+  },
   "keywords": [],
   "author": "dmf",
   "license": "MIT",

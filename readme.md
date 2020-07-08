@@ -17,7 +17,7 @@ Options for creating these exes:
 this is only available on branch `experimental/merge-pyinstaller-invest-gui` 
 of `github.com/davemfish/invest`
 * download pre-built binaries. see `scripts/get_invest_binaries_gcs.js`
-`npm run prebuilt-invest "windows-latest"` (or "macos-latest" "ubuntu-latest")
+`npm run prebuilt-invest "windows-latest"` (or "macos-latest" "ubuntu-latest") and the "invest" section of `package.json`  
 `unzip ./build/binaries.zip -d ./build`
 
 `npm start`  

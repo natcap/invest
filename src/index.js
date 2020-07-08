@@ -1,17 +1,16 @@
 "use strict";
 const fs = require('fs');
 const path = require('path');
-const { remote } = require('electron');
+const { remote, ipcRenderer } = require('electron');
 const { getLogger } = require('./logger')
-
-const isDevMode = function() {
-  return remote.process.argv[2] == '--dev'
-};
 
 const logger = getLogger('renderer')
 
-if (isDevMode()) {
+const isDevMode = remote.process.argv[2] == '--dev'
+if (isDevMode) {
+  // in dev mode we can have babel transpile modules on import
   require("@babel/register");
+  // load the '.env' file from the project root
   const dotenv = require('dotenv');
   dotenv.config();
 }
@@ -27,26 +26,9 @@ var _reactHotLoader = require("react-hot-loader");
 var _app = _interopRequireDefault(require("./app"));
 const { fileRegistry } = require("./constants")
 
-
-// Binding to the invest binary:
-let investExe;
-// A) look for a local registry of available invest installations
-if (fs.existsSync(fileRegistry.INVEST_REGISTRY_PATH)) {
-  const investRegistry = JSON.parse(fs.readFileSync(fileRegistry.INVEST_REGISTRY_PATH))
-  const activeVersion = investRegistry['active']
-  investExe = investRegistry['registry'][activeVersion]['invest']
-
-// B) check for dev mode and an environment variable from dotenv
-} else if (isDevMode()) {
-  investExe = process.env.INVEST
-
-// C) point to binaries included in this app's installation.
-} else {
-  const binary = (process.platform === 'win32') ? 'invest.exe' : 'invest'
-  investExe = path.join(
-    process.resourcesPath, 'app.asar.unpacked', 'build', 'invest', binary)
-}
-
+// Create a right-click menu
+// TODO: Not sure if Inspect Element should be available in production
+// very useful in dev though.
 const { Menu, MenuItem } = remote;
 let rightClickPosition = null
 const menu = new Menu();
@@ -63,17 +45,22 @@ window.addEventListener('contextmenu', (e) => {
   menu.popup({ window: remote.getCurrentWindow() })
 }, false)
 
-
-var render = function render() {
-  logger.debug(investExe)
+var render = async function render(investExe) {
   _reactDom["default"].render(
     _react["default"].createElement(
       _reactHotLoader.AppContainer, null, _react["default"].createElement(
-        _app["default"], { jobDatabase: fileRegistry.JOBS_DATABASE, investExe: investExe })),
+        _app["default"], { 
+          jobDatabase: fileRegistry.JOBS_DATABASE,
+          investExe: investExe })),
     document.getElementById('App'));
 };
 
-render();
+ipcRenderer.on('variable-reply', (event, arg) => {
+  // render the App after receiving any critical data
+  // from the main process
+  render(arg.investExe)
+})
+ipcRenderer.send('variable-request', 'ping')
 
 if (module.hot) {
   logger.debug('if hot module');
