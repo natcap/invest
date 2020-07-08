@@ -136,7 +136,12 @@ jobs:
 
     test-source-distribution:
         name: "Test source distribution"
-        runs-on: ubuntu-latest
+        runs-on: ${{ matrix.os }}
+        strategy:
+            matrix:
+                python-version: [3.6, 3.7]
+                python-architecture: [x64]
+                os: [windows-latest, macos-latest]
         steps:
             - uses: actions/checkout@v2
 
@@ -168,7 +173,19 @@ jobs:
 
             - name: Install from source distribution
               shell: bash -l {0}
-              run : make install
+              run : |
+                  # Prevent pip from thinking that CWD is a natcap.invest
+                  # installation. It's not.
+                  rm -r natcap.invest.egg-info
+
+                  # Install natcap.invest from the sdist in dist/
+                  pip install --isolated --find-links=dist natcap.invest
+
+                  # Model tests should cover model functionality, we just want
+                  # to be sure that we can import `natcap.invest` here.
+                  # The point here is to make sure that we can build
+                  # natcap.invest from source and that it imports.
+                  python -c "from natcap.invest import *"
 
             - uses: actions/upload-artifact@v1
               with:
