@@ -1,4 +1,4 @@
-ame: Run InVEST Tests
+name: Run InVEST Tests
 
 on:
     push:
