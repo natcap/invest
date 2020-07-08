@@ -74,7 +74,7 @@ jobs:
 
             - name: Set up Windows python
               if: matrix.os == 'windows-latest'
-              uses: actions/setup-miniconda@v1.1.2
+              uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   activate-environment: win-env
                   auto-update-conda: true
