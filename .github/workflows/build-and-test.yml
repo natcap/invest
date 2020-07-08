@@ -74,21 +74,21 @@ jobs:
 
             - name: Set up Windows python
               if: matrix.os == 'windows-latest'
-              uses: actions/setup-python@v1
+              uses: actions/setup-miniconda@v1.1.2
               with:
-                python-version: ${{ matrix.python-version }}
-                architecture: ${{ matrix.python-architecture }}
+                  activate-environment: win-env
+                  auto-update-conda: true
+                  python-version: ${{ matrix.python-version }}
+                  channels: conda-forge
 
             - name: Install dependencies Windows
               if: matrix.os == 'windows-latest'
-              env:
-                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
-                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
-                  PIP_PREFER_BINARY: 1
+              shell: bash -l {0}
               run: |
-                  python -m pip install --upgrade pip nose setuptools
-                  python -m pip install Cython requests numpy
-                  python -m pip install -r requirements.txt -r requirements-dev.txt
+                  conda upgrade -y pip setuptools
+                  conda install Cython requests numpy
+                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
                   python setup.py install
 
             - name: Set up MacOS python
