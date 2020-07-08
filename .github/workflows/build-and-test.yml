@@ -123,6 +123,7 @@ jobs:
             - name: Run model tests
               shell: bash -l {0}
               run: |
+                  make install
                   make test
 
             - uses: actions/upload-artifact@v1
