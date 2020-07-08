@@ -163,7 +163,7 @@ jobs:
                   conda upgrade -y pip setuptools
                   pip install toml twine
                   pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
 
             - name: Build source distribution
