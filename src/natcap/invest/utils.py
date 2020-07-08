@@ -704,12 +704,13 @@ def _assert_vectors_equal(
                 if av is not None:
                     # Number comparison
                     if isinstance(av, int) or isinstance(av, float):
-                        numpy.testing.assert_allclose(
-                            numpy.array([av]), numpy.array([ev]), rtol=0, 
-                            atol=field_value_atol, 
-                            err_msg = ("Vector field values are not equal: \n"
-                                       f"Expected value: {ev}. \n"
-                                       f"Actual value: {av}. "))
+                        if not numpy.allclose(numpy.array([av]),
+                                              numpy.array([ev]), 
+                                              rtol=0, atol=field_value_atol): 
+                            raise AssertionError (
+                                "Vector field values are not equal: \n"
+                                f"Expected value: {ev}. \n"
+                                f"Actual value: {av}. ")
                     # String and other comparison
                     else:
                         if av != ev:
