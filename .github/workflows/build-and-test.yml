@@ -42,7 +42,7 @@ jobs:
             fail-fast: false
             max-parallel: 4
             matrix:
-                python-version: [3.7, 3.8]
+                python-version: [3.8]
                 python-architecture: [x86, x64]
                 os: [windows-latest, macos-latest]
                 exclude:
@@ -74,23 +74,21 @@ jobs:
 
             - name: Set up Windows python
               if: matrix.os == 'windows-latest'
-              uses: goanpeca/setup-miniconda@v1.1.2
+              uses: actions/setup-python@v2
               with:
-                  activate-environment: win-env
-                  auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
-                  channels: conda-forge
+                  architecture: ${{ matrix.python-architecture }}
 
             - name: Install dependencies Windows
               if: matrix.os == 'windows-latest'
-              shell: bash -l {0}
+              env:
+                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
+                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
+                  PIP_PREFER_BINARY: 1
               run: |
-                  conda upgrade -y pip setuptools
-                  conda install Cython requests numpy
-                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
+                  python -m pip install --upgrade pip wheel nose
+                  python -m pip install -r requirements.txt
                   python setup.py install
-                  conda list
 
             - name: Set up MacOS python
               if: matrix.os != 'windows-latest'
@@ -159,7 +157,7 @@ jobs:
             fail-fast: False
             max-parallel: 4
             matrix:
-                python-version: [3.7, 3.8]
+                python-version: [3.7]
                 python-architecture: [x86, x64]
                 os: [windows-latest]
 
