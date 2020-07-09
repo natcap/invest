@@ -15,8 +15,20 @@ if (remote) {
   isDevMode = process.argv[2] == '--dev'
 }
 
-
-function getLogger(label) {
+/**
+ * Creates and returns a logger with Console & File transports.
+ *
+ * @param {string} label - for identifying the origin of the message
+ * @returns {logger} - with File and Console transports. 
+ */
+function getLogger(label, filename='log.txt') {
+  // Right now the logging in this app has multiple loggers streaming to the
+  // same file. Maybe that's okay? The goal is having only one file on disk.
+  // But it feels wrong to create several different loggers just so that
+  // each message can have a 'label' that refers to the calling file.
+  // The only alternative I know of is to pass extra metadata anytime we log,
+  // but that also feels wrong:
+  // `logger.debug('foo', {label: filename})`
   if (!winston.loggers.has(label)) {
     const myFormat = winston.format.printf(
       ({ level, message, label, timestamp }) => {
@@ -25,7 +37,7 @@ function getLogger(label) {
 
     const transport = new winston.transports.File({
       level: 'debug',
-      filename: path.join(userDataPath, 'log.txt'),
+      filename: path.join(userDataPath, filename),
       handleExceptions: true
     })
 
