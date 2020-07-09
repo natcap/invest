@@ -70,8 +70,8 @@ export class LogTab extends React.Component {
         // in case a recent session was loaded but the logfile
         // no longer exists 
         this.setState({logdata: `Logfile is missing: ${os.EOL}${this.props.logfile}`})
-        logger.debug(error)
-        logger.debug(`Not able to read ${this.props.logfile}`)
+        logger.error(`Not able to read ${this.props.logfile}`)
+        logger.error(error.stack)
       }
 
     // No new logfile. No existing logdata.
@@ -84,7 +84,7 @@ export class LogTab extends React.Component {
         this.tail.unwatch()
       }
       catch(error) {
-        logger.debug(error)
+        logger.error(error.stack)
       }
     }
   }

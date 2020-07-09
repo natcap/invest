@@ -55,8 +55,8 @@ export async function updateRecentSessions(jobdata, jobDatabase) {
   }
   fs.writeFileSync(jobDatabase, jsonContent, 'utf8', function (err) {
     if (err) {
-      logger.debug("An error occured while writing JSON Object to File.");
-      return logger.debug(err);
+      logger.error("An error occured while writing JSON Object to File.");
+      return logger.error(err.stack);
     }
     logger.debug("updated" + this.state.sessionID);
   });
@@ -94,7 +94,7 @@ export function findMostRecentLogfile(directory) {
       resolve(sortedFiles[0]);
       return
     }
-    logger.debug(`No invest logfile found in ${directory}`)
+    logger.error(`No invest logfile found in ${directory}`)
     resolve(undefined)
   });
 }

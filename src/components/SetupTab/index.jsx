@@ -14,8 +14,7 @@ import { SaveParametersButton, SavePythonButton } from '../SaveDropdown'
 import { fetchDatastackFromFile, fetchValidation, 
          saveToPython } from '../../server_requests';
 import { argsDictFromObject, boolStringToBoolean } from '../../utils';
-import { getLogger } from '../../logger'
-const logger = getLogger('renderer')
+
 
 function toggleDependentInputs(argsSpec, argsValues, argkey) {
   /** Toggle properties that control the display of argument inputs.
@@ -431,7 +430,6 @@ class ArgsForm extends React.PureComponent {
     if (datastack['module_name'] === this.props.pyModuleName) {
       this.props.batchUpdateArgs(datastack['args']);
     } else {
-      logger.debug('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.pyModuleName)
       throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.pyModuleName)
     }
   }

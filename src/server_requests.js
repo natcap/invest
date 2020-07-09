@@ -19,9 +19,8 @@ export function getFlaskIsReady(retries=0) {
       method: 'get',
     })
     .then((response) => { return response.text() })
-    // .then((text) => { logger.debug(text) })
     .catch(async (error) => {
-      logger.debug(error)
+      logger.error(error.stack)
       if (error.code === 'ECONNREFUSED') {
         while (retries < 21) {
           retries++;
@@ -31,7 +30,7 @@ export function getFlaskIsReady(retries=0) {
           return await getFlaskIsReady(retries)
         }
       } else {
-        logger.debug(error)
+        logger.error(error.stack)
         return error 
       }
    })
@@ -47,7 +46,7 @@ export function getInvestList() {
       return response
     })
     .then((response) => { return response.json() })
-    .catch((error) => { logger.debug(error) })
+    .catch((error) => { logger.error(error.stack) })
   )
 }
 
@@ -59,7 +58,7 @@ export function getSpec(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
     .then((response) => { return response.json() })
-    .catch((error) => { logger.debug(error) })
+    .catch((error) => { logger.error(error.stack) })
   )
 }
 
@@ -71,7 +70,7 @@ export function fetchValidation(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
     .then((response) => { return response.json() })
-    .catch((error) => { logger.debug(error) })
+    .catch((error) => { logger.error(error.stack) })
   )
 }
 
@@ -83,7 +82,7 @@ export function fetchLogfilename(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
     .then((response) => { return response.text() })
-    .catch((error) => { logger.debug(error) })
+    .catch((error) => { logger.error(error.stack) })
     )
 }
 
@@ -95,7 +94,7 @@ export function fetchDatastackFromFile(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
     .then((response) => { return response.json() })
-    .catch((error) => { logger.debug(error) })
+    .catch((error) => { logger.error(error.stack) })
   )
 }
 
@@ -107,7 +106,7 @@ export function saveToPython(payload) {
   })
   .then((response) => { return response.text() })
   .then((text) => { logger.debug(text) })
-  .catch((error) => { logger.debug(error) })
+  .catch((error) => { logger.error(error.stack) })
 }
 
 export function writeParametersToFile(payload) {
@@ -122,6 +121,6 @@ export function writeParametersToFile(payload) {
     })
     .then((response) => { return response.text() })
     .then((text) => { logger.debug(text) })
-    .catch((error) => { logger.debug(error) })
+    .catch((error) => { logger.error(error.stack) })
   );
 }
