@@ -102,8 +102,8 @@ export class InvestJob extends React.Component {
       fileRegistry.CACHE_DIR, this.state.sessionID + '.json');
     fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
       if (err) {
-        logger.debug("An error occured while writing JSON Object to File.");
-        return logger.debug(err);
+        logger.error("An error occured while writing JSON Object to File.");
+        return logger.error(err.stack);
       }
     });
     let job = {};
@@ -152,7 +152,7 @@ export class InvestJob extends React.Component {
         alert('Cannot load this session because data is missing')
       }
     } else {
-      logger.debug('state file not found: ' + sessionFilename);
+      logger.error('state file not found: ' + sessionFilename);
     }
   }
 
@@ -207,7 +207,8 @@ export class InvestJob extends React.Component {
     // Get verbosity level from the app's settings
     const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
     
-    const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
+    const cmdArgs = [verbosity, 'run', this.state.modelName,
+                     '--headless', '-d ' + datastackPath]
     const investRun = spawn(path.basename(this.props.investExe), cmdArgs, {
         env: { PATH: path.dirname(this.props.investExe) },
         shell: true // without true, IOError when datastack.py loads json
@@ -298,9 +299,7 @@ export class InvestJob extends React.Component {
         uiSpec = JSON.parse(fs.readFileSync(
           path.join(fileRegistry.INVEST_UI_DATA, spec.module + '.json')))
       } catch (err) {
-        if (err.code !== 'ENOENT') {
-          throw err
-        }
+        logger.error(err.stack)
       }
       
       // extend the args spec with the UI spec
@@ -324,7 +323,7 @@ export class InvestJob extends React.Component {
         activeTab: 'setup'
       });
     } else {
-      logger.debug('no spec found')
+      logger.error(`no spec found for ${modelName}`)
       return new Promise((resolve) => resolve(false))
     }
     return new Promise((resolve) => resolve(true))

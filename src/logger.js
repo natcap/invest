@@ -25,12 +25,15 @@ function getLogger(label) {
 
     const transport = new winston.transports.File({
       level: 'debug',
-      filename: path.join(userDataPath, 'log.txt')})
+      filename: path.join(userDataPath, 'log.txt'),
+      handleExceptions: true
+    })
 
     const transportArray = [transport]
     if (isDevMode) {
       transportArray.push(new winston.transports.Console({
-        level: 'debug'
+        level: 'debug',
+        handleExceptions: true
       }))
     }
     winston.loggers.add(label, {

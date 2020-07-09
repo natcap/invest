@@ -123,15 +123,16 @@ function createPythonFlaskProcess(serverExe) {
       logger.debug(`${data}`);
     });
     pythonServerProcess.on('error', (err) => {
-      logger.debug('Process failed.');
-      logger.debug(err);
+      // If the python server process crashes, for now crash node also
+      logger.error(err.stack)
+      throw err
     });
     pythonServerProcess.on('close', (code, signal) => {
       logger.debug(code);
       logger.debug('Child process terminated due to signal ' + signal);
     });
   } else {
-    logger.debug('no existing invest installations found')
+    logger.error('no existing invest installations found')
   }
 }
 
@@ -142,7 +143,7 @@ function shutdownPythonProcess() {
     })
     .then((response) => { return response.text() })
     .then((text) => { logger.debug(text) })
-    .catch((error) => { logger.debug(error) })
+    .catch((error) => { logger.error(error.stack) })
   )
 }
 
