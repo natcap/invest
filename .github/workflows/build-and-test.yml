@@ -123,7 +123,7 @@ jobs:
             - name: Run model tests
               shell: bash -l {0}
               run: |
-                  make install
+                  pip install --isolated --upgrade --only-binary natcap.invest --find-links=dist natcap.invest
                   make test
 
             - uses: actions/upload-artifact@v1
