@@ -74,7 +74,7 @@ jobs:
 
             - name: Set up Windows python
               if: matrix.os == 'windows-latest' && matrix.python-architecture == 'x86'
-              uses: goanpeca/setup-miniconda@v1.1.2
+              uses: goanpeca/setup-miniconda@v1.6.0
               with:
                   installer-url: https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.3-Windows-x86.exe
                   activate-environment: win-env
@@ -84,7 +84,7 @@ jobs:
             
             - name: Set up Windows python
               if: matrix.os == 'windows-latest' && matrix.python-architecture == 'x64'
-              uses: goanpeca/setup-miniconda@v1.1.2
+              uses: goanpeca/setup-miniconda@v1.6.0
               with:
                   activate-environment: win-env
                   auto-update-conda: true
@@ -103,7 +103,7 @@ jobs:
 
             - name: Set up MacOS python
               if: matrix.os != 'windows-latest'
-              uses: goanpeca/setup-miniconda@v1.1.2
+              uses: goanpeca/setup-miniconda@v1.6.0
               with:
                   activate-environment: mac-env
                   auto-update-conda: true
