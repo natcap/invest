@@ -1,4 +1,4 @@
-name: Run Tests, Build Python Distribtutions
+name: Run Tests, Build Python Distributions
 
 on:
     push:
