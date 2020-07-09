@@ -76,7 +76,7 @@ jobs:
               if: matrix.os == 'windows-latest' && matrix.python-architecture == 'x86'
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  miniconda-version: Miniconda3-py37_4.8.3-Windows-x86.exe
+                  conda-version: win-32
                   activate-environment: win-env
                   auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
