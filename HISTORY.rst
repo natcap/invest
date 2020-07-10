@@ -9,6 +9,10 @@ Unreleased Changes
     * The output vector ``flood_risk_service.shp`` now includes a field,
       ``flood_vol`` that is the sum of the modeled flood volume (from
       ``Q_m3.tif``) within the AOI.
+    * Fieldnames in ``flood_risk_service.shp`` have been updated to more
+      closely match the variables they match as documented in the User's Guide
+      chapter.  Specifically, ``serv_bld`` is now ``serv.blt`` and ``aff_bld``
+      is now ``aff.bld``.
 
 3.8.6 (2020-07-03)
 ------------------
