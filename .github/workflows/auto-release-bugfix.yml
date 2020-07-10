@@ -1,8 +1,8 @@
 name: Automated Bugfix Release
 on:
-    schedule:
+    #schedule:
         # 9am PST on Friday of each week
-        - cron: '0 17 * * 5'
+        #- cron: '0 17 * * 5'
 
 jobs:
     create-bugfix-release:
