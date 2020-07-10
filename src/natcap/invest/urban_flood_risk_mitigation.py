@@ -425,14 +425,15 @@ def _write_summary_vector(
         * ``'rnf_rt_m3'``: Sum of runoff retention volumes, in m3,
           per watershed.
 
-    If ``damage_per_aoi_stats`` is provided, then two additional columns will
-    be written to the vector::
+    If ``damage_per_aoi_stats`` and ``flood_volume_stats`` are provided, then
+    a few additional columns will be written to the vector::
 
         * ``'aff_bld'``: Potential damage to built infrastructure in $,
           per watershed.
         * ``'serv_bld'``: Spatial indicator of the importance of the runoff
           retention service (product of potential damage to built
           infrastructure by runoff retention)
+        * ``'flood_vol'``: The volume of flood (runoff), in m3, per watershed.
 
     Args:
         source_aoi_vector_path (str): The path to a GDAL vector that exists on
@@ -479,13 +480,9 @@ def _write_summary_vector(
     target_fields = ['rnf_rt_idx', 'rnf_rt_m3']
     if not damage_per_aoi_stats:
         damage_per_aoi_stats = {}
-    else:
-        target_fields += ['aff_bld', 'serv_bld']
-
-    if not flood_volume_stats:
         flood_volume_stats = {}
     else:
-        target_fields += ['flood_vol']
+        target_fields += ['aff_bld', 'serv_bld', 'flood_vol']
 
     for field_name in target_fields:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
