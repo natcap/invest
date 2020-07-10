@@ -344,6 +344,7 @@ def execute(args):
         task_name='zonal_statistics over runoff_retention_volume raster')
 
     damage_per_aoi_stats = None
+    flood_volume_stats = None
     summary_tasks = [
             runoff_retention_stats_task,
             runoff_retention_volume_stats_task]
@@ -372,16 +373,29 @@ def execute(args):
                 reproject_built_infrastructure_task],
             task_name='calculate damage to infrastructure in aoi')
 
-        # It isn't strictly necessary for us to append this task to
+        # Determine flood_volume over the watershed
+        flood_volume_in_aoi_task = task_graph.add_task(
+            func=pygeoprocessing.zonal_statistics,
+            args=(
+                (flood_vol_raster_path, 1),
+                reprojected_aoi_path),
+            dependent_task_list=[flood_vol_task],
+            task_name='zonal_statistics over the flood_volume raster')
+
+        # It isn't strictly necessary for us to append these tasks to
         # ``summary_tasks`` here, since the ``.get()`` calls below will block
         # until those tasks complete.  I'm adding these tasks ere anyways
         # "just in case".
-        summary_tasks.append(damage_to_infrastructure_in_aoi_task)
+        summary_tasks += [
+            flood_volume_in_aoi_task,
+            damage_to_infrastructure_in_aoi_task,
+        ]
+        flood_volume_stats = flood_volume_in_aoi_task.get()
         damage_per_aoi_stats = damage_to_infrastructure_in_aoi_task.get()
 
     summary_vector_path = os.path.join(
         args['workspace_dir'], 'flood_risk_service%s.shp' % file_suffix)
-    write_summary_vector_stats = task_graph.add_task(
+    _ = task_graph.add_task(
         func=_write_summary_vector,
         args=(reprojected_aoi_path,
               summary_vector_path),
@@ -389,6 +403,7 @@ def execute(args):
             'runoff_ret_stats': runoff_retention_stats_task.get(),
             'runoff_ret_vol_stats': runoff_retention_volume_stats_task.get(),
             'damage_per_aoi_stats': damage_per_aoi_stats,
+            'flood_volume_stats': flood_volume_stats,
         },
         target_path_list=[summary_vector_path],
         task_name='write summary stats to flood_risk_service.shp',
@@ -400,7 +415,8 @@ def execute(args):
 
 def _write_summary_vector(
         source_aoi_vector_path, target_vector_path, runoff_ret_stats=None,
-        runoff_ret_vol_stats=None, damage_per_aoi_stats=None):
+        runoff_ret_vol_stats=None, damage_per_aoi_stats=None,
+        flood_volume_stats=None):
     """Write a vector with summary statistics.
 
     This vector will always contain two fields::
@@ -436,6 +452,9 @@ def _write_summary_vector(
         damage_per_aoi_stats=None (None or dict): A dict mapping feature IDs
             from ``source_aoi_vector_path`` to float values representing the
             total damage to built infrastructure in that watershed.
+        flood_volume_stats=None (None or dict): A dict mapping feature IDs from
+            ``source_aoi_vector_path`` to float values representing the flood
+            volume over the AOI.
 
     Returns:
         ``None``
@@ -462,6 +481,11 @@ def _write_summary_vector(
         damage_per_aoi_stats = {}
     else:
         target_fields += ['aff_bld', 'serv_bld']
+
+    if not flood_volume_stats:
+        flood_volume_stats = {}
+    else:
+        target_fields += ['flood_vol']
 
     for field_name in target_fields:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
@@ -497,6 +521,10 @@ def _write_summary_vector(
                 target_feature.SetField(
                     'serv_bld', damage_sum * float(
                         runoff_ret_vol_stats[feature_id]['sum']))
+
+        if feature_id in flood_volume_stats:
+            target_feature.SetField(
+                'flood_vol', float(flood_volume_stats[feature_id]['sum']))
 
         target_watershed_layer.CreateFeature(target_feature)
     target_watershed_layer.SyncToDisk()

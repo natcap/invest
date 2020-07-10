@@ -1,11 +1,14 @@
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
 * GLOBIO
     * Fix a bug that mishandled combining infrastructure data when only one
       infrastructure data was present.
+* Urban Flood Risk
+    * The output vector ``flood_risk_service.shp`` now includes a field,
+      ``flood_vol`` that is the sum of the modeled flood volume (from
+      ``Q_m3.tif``) within the AOI.
 
 3.8.6 (2020-07-03)
 ------------------
