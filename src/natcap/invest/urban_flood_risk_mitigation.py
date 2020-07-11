@@ -238,7 +238,7 @@ def execute(args):
             cn_raster_path, gdal.GDT_Float32, cn_nodata),
         target_path_list=[cn_raster_path],
         dependent_task_list=[align_raster_stack_task],
-        task_name='create cn raster')
+        task_name='create Curve Number raster')
 
     # Generate S_max
     s_max_nodata = -9999
@@ -251,7 +251,7 @@ def execute(args):
             _s_max_op, s_max_raster_path, gdal.GDT_Float32, s_max_nodata),
         target_path_list=[s_max_raster_path],
         dependent_task_list=[cn_raster_task],
-        task_name='create s_max')
+        task_name='create S_max')
 
     # Generate Qpi
     q_pi_nodata = -9999.
@@ -265,7 +265,7 @@ def execute(args):
             q_pi_raster_path, gdal.GDT_Float32, q_pi_nodata),
         target_path_list=[q_pi_raster_path],
         dependent_task_list=[s_max_task],
-        task_name='create q_pi')
+        task_name='create Q_mm.tif')
 
     # Generate Runoff Retention
     runoff_retention_nodata = -9999.
@@ -345,6 +345,7 @@ def execute(args):
 
     damage_per_aoi_stats = None
     flood_volume_stats = None
+    service_built_stats = None
     summary_tasks = [
             runoff_retention_stats_task,
             runoff_retention_volume_stats_task]
@@ -379,8 +380,22 @@ def execute(args):
             args=(
                 (flood_vol_raster_path, 1),
                 reprojected_aoi_path),
-            dependent_task_list=[flood_vol_task],
+            dependent_task_list=[flood_vol_task, reprojected_aoi_task],
             task_name='zonal_statistics over the flood_volume raster')
+
+        damage_per_aoi_stats = damage_to_infrastructure_in_aoi_task.get()
+        service_built_task = task_graph.add_task(
+            func=_calculate_service_built,
+            args=(
+                q_pi_raster_path,
+                float(args['rainfall_depth']),
+                reprojected_aoi_path,
+                damage_per_aoi_stats),
+            dependent_task_list=[
+                q_pi_task, reprojected_aoi_task,
+                damage_to_infrastructure_in_aoi_task],
+            task_name='Calculate service.built.'
+        )
 
         # It isn't strictly necessary for us to append these tasks to
         # ``summary_tasks`` here, since the ``.get()`` calls below will block
@@ -389,9 +404,10 @@ def execute(args):
         summary_tasks += [
             flood_volume_in_aoi_task,
             damage_to_infrastructure_in_aoi_task,
+            service_built_task,
         ]
         flood_volume_stats = flood_volume_in_aoi_task.get()
-        damage_per_aoi_stats = damage_to_infrastructure_in_aoi_task.get()
+        service_built_stats = service_built_task.get()
 
     summary_vector_path = os.path.join(
         args['workspace_dir'], 'flood_risk_service%s.shp' % file_suffix)
@@ -404,6 +420,7 @@ def execute(args):
             'runoff_ret_vol_stats': runoff_retention_volume_stats_task.get(),
             'damage_per_aoi_stats': damage_per_aoi_stats,
             'flood_volume_stats': flood_volume_stats,
+            'service_built_stats': service_built_stats,
         },
         target_path_list=[summary_vector_path],
         task_name='write summary stats to flood_risk_service.shp',
@@ -416,7 +433,7 @@ def execute(args):
 def _write_summary_vector(
         source_aoi_vector_path, target_vector_path, runoff_ret_stats=None,
         runoff_ret_vol_stats=None, damage_per_aoi_stats=None,
-        flood_volume_stats=None):
+        flood_volume_stats=None, service_built_stats=None):
     """Write a vector with summary statistics.
 
     This vector will always contain two fields::
@@ -431,8 +448,7 @@ def _write_summary_vector(
         * ``'aff.bld'``: Potential damage to built infrastructure in $,
           per watershed.
         * ``'serv.blt'``: Spatial indicator of the importance of the runoff
-          retention service (product of potential damage to built
-          infrastructure by runoff retention)
+          retention service
         * ``'flood_vol'``: The volume of flood (runoff), in m3, per watershed.
 
     Args:
@@ -455,7 +471,11 @@ def _write_summary_vector(
             total damage to built infrastructure in that watershed.
         flood_volume_stats=None (None or dict): A dict mapping feature IDs from
             ``source_aoi_vector_path`` to float values representing the flood
-            volume over the AOI.
+            volume over the AOI.  Required if ``damage_per_aoi_stats``
+            provided.
+        service_built_stats=None (None or dict): A dict mapping feature IDs from
+            ``source_aoi_vector_path`` to float values representing
+            ``service.built``.
 
     Returns:
         ``None``
@@ -515,9 +535,10 @@ def _write_summary_vector(
             if pixel_count > 0:
                 damage_sum = damage_per_aoi_stats[feature_id]
                 target_feature.SetField('aff.bld', damage_sum)
+
+                # This is the service.built equation.
                 target_feature.SetField(
-                    'serv.blt', damage_sum * float(
-                        runoff_ret_vol_stats[feature_id]['sum']))
+                    'serv.blt', service_built_stats[feature_id])
 
         if feature_id in flood_volume_stats:
             target_feature.SetField(
@@ -527,6 +548,26 @@ def _write_summary_vector(
     target_watershed_layer.SyncToDisk()
     target_watershed_layer = None
     target_watershed_vector = None
+
+
+def _calculate_service_built(
+        runoff_raster_path, rainfall_depth, aoi_vector_path,
+        damage_per_aoi_stats):
+    """Calculate service.built."""
+    runoff_raster_info = pygeoprocessing.get_raster_info(runoff_raster_path)
+    pixel_area = abs(runoff_raster_info['pixel_size'][0] *
+                     runoff_raster_info['pixel_size'][1])
+    runoff_stats = pygeoprocessing.zonal_statistics(
+        (runoff_raster_path, 1), aoi_vector_path)
+
+    service_built = {}
+    for aoi_fid, aoi_stats in runoff_stats.items():
+        service_built[aoi_fid] = (
+            damage_per_aoi_stats[aoi_fid] * 0.001 * (
+                (float(aoi_stats['count']) * rainfall_depth) -
+                float(aoi_stats['sum'])) * pixel_area)
+
+    return service_built
 
 
 def _calculate_damage_to_infrastructure_in_aoi(
@@ -634,7 +675,7 @@ def _flood_vol_op(
     valid_mask = q_pi_array != q_pi_nodata
     # 0.001 converts mm (rainfall depth) to m (pixel area units)
     result[valid_mask] = (
-        0.001 * (rainfall_depth - q_pi_array[valid_mask]) * pixel_area)
+        q_pi_array[valid_mask] * rainfall_depth * pixel_area * 0.001)
     return result
 
 
@@ -651,7 +692,7 @@ def _runoff_retention_vol_op(
         target_nodata (float): target nodata to write.
 
     Returns:
-        (R_i*Qpi*p_val*cell_size/1000.)
+        (runoff_retention * p_value * pixel_area * 10e-3)
 
     """
     result = numpy.empty(runoff_retention_array.shape, dtype=numpy.float32)
@@ -682,7 +723,7 @@ def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
     valid_mask = numpy.ones(q_pi_array.shape, dtype=numpy.bool)
     if q_pi_nodata:
         valid_mask[:] = ~numpy.isclose(q_pi_array, q_pi_nodata)
-    result[valid_mask] = 1.0 - q_pi_array[valid_mask] / p_value
+    result[valid_mask] = 1.0 - (q_pi_array[valid_mask] / p_value)
     return result
 
 

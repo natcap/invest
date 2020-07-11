@@ -74,7 +74,7 @@ class UFRMTests(unittest.TestCase):
                 ('serv.blt', 13253546667257.65),
                 ('rnf_rt_idx', 0.70387527942),
                 ('rnf_rt_m3', 70870.4765625),
-                ('flood_vol', 70870.484375)):
+                ('flood_vol', 1192625.75)):
             result_val = result_feature.GetField(fieldname)
             places_to_round = (
                 int(round(numpy.log(expected_value)/numpy.log(10)))-6)
