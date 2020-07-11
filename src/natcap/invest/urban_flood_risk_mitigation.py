@@ -256,7 +256,7 @@ def execute(args):
     # Generate Qpi
     q_pi_nodata = -9999.
     q_pi_raster_path = os.path.join(
-        intermediate_dir, 'Q_mm%s.tif' % file_suffix)
+        args['workspace_dir'], 'Q_mm%s.tif' % file_suffix)
     q_pi_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
