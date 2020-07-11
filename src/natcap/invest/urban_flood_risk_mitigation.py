@@ -553,7 +553,24 @@ def _write_summary_vector(
 def _calculate_service_built(
         runoff_raster_path, rainfall_depth, aoi_vector_path,
         damage_per_aoi_stats):
-    """Calculate service.built."""
+    """Calculate service.built.
+
+    Args:
+        runoff_raster_path (str): The path to a GDAL raster on disk
+            representing runoff.
+        rainfall_depth (float): The rainfall depth (in mm).
+        aoi_vector_path (str): The path to a GDAL vector on disk representing
+            the AOI or watersheds.  Must be in the same projection as
+            ``runoff_raster_path``.
+        damage_per_aoi_stats (dict): A dictionary mapping feature IDs from
+            ``aoi_vector_path`` to float values indicating the value of the
+            damage to built infrastructure within the AOI/watershed.
+
+    Returns:
+        A dict mapping feature IDs from ``aoi_vector_path`` to the calculated
+        ``service.built`` value for each AOI/watershed feature.
+
+    """
     runoff_raster_info = pygeoprocessing.get_raster_info(runoff_raster_path)
     pixel_area = abs(runoff_raster_info['pixel_size'][0] *
                      runoff_raster_info['pixel_size'][1])
@@ -829,8 +846,9 @@ def _lu_to_cn_op(
             soil_choose_array,
             per_pixel_cn_array)
     except ValueError as error:
-        err_msg = 'Check that the Soil Group raster does not contain values ' \
-            'other than (1, 2, 3, 4)'
+        err_msg = (
+            'Check that the Soil Group raster does not contain values '
+            'other than (1, 2, 3, 4)')
         raise ValueError(str(error) + '\n' + err_msg)
 
     return result
