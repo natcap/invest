@@ -13,6 +13,10 @@ Unreleased Changes
       closely match the variables they match as documented in the User's Guide
       chapter.  Specifically, ``serv_bld`` is now ``serv.blt`` and ``aff_bld``
       is now ``aff.bld``.
+    * ``Q_mm.tif`` has been moved from the intermediate directory into the
+      workspace.
+    * Fixed a bug in the flood volume (``Q_mm.tif``) calculations that was
+      producing incorrect values in all cases.
 
 3.8.6 (2020-07-03)
 ------------------
