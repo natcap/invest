@@ -473,8 +473,8 @@ def _write_summary_vector(
             ``source_aoi_vector_path`` to float values representing the flood
             volume over the AOI.  Required if ``damage_per_aoi_stats``
             provided.
-        service_built_stats=None (None or dict): A dict mapping feature IDs from
-            ``source_aoi_vector_path`` to float values representing
+        service_built_stats=None (None or dict): A dict mapping feature IDs
+            from ``source_aoi_vector_path`` to float values representing
             ``service.built``.
 
     Returns:
