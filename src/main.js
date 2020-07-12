@@ -72,7 +72,6 @@ const createWindow = async () => {
 
   // Create the browser window.
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
-  logger.debug(width + ' ' + height)
   mainWindow = new BrowserWindow({
     width: width * 0.75,
     height: height,
@@ -107,12 +106,19 @@ const createWindow = async () => {
 function createPythonFlaskProcess(serverExe) {
   /** Spawn a child process running the Python Flask server.*/
   if (serverExe) {
-    // The most reliable, cross-platform way to make sure spawn
-    // can find the exe is to pass only the command name while
-    // also putting it's location on the PATH:
-    const pythonServerProcess = spawn(path.basename(serverExe), {
+    let pythonServerProcess
+    if (isDevMode && process.env.PYTHON && serverExe.endsWith('.py')) {
+      // A special devMode case for launching from the source code
+      // to facilitate debugging & development of src/server.py
+      pythonServerProcess = spawn(process.env.PYTHON, [serverExe]);
+    } else {
+      // The most reliable, cross-platform way to make sure spawn
+      // can find the exe is to pass only the command name while
+      // also putting it's location on the PATH:
+      pythonServerProcess = spawn(path.basename(serverExe), {
         env: {PATH: path.dirname(serverExe)}
       });
+    }
 
     logger.debug('Started python process as PID ' + pythonServerProcess.pid);
     logger.debug(serverExe)
@@ -123,13 +129,14 @@ function createPythonFlaskProcess(serverExe) {
       logger.debug(`${data}`);
     });
     pythonServerProcess.on('error', (err) => {
-      // If the python server process crashes, for now crash node also
       logger.error(err.stack)
+      logger.error(
+        `The flask app ${serverExe} crashed or failed to start`
+        `so this application must be restarted`)
       throw err
     });
     pythonServerProcess.on('close', (code, signal) => {
-      logger.debug(code);
-      logger.debug('Child process terminated due to signal ' + signal);
+      logger.debug(`Flask process terminated with code ${code} and signal ${signal}`);
     });
   } else {
     logger.error('no existing invest installations found')
