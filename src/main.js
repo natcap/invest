@@ -5,7 +5,7 @@ const { app, BrowserWindow, ipcMain, screen } = require('electron')
 const fetch = require('node-fetch')
 const { getLogger } = require('./logger')
 
-const logger = getLogger('main')
+const logger = getLogger(__filename.split('/').slice(-1)[0])
 
 const isDevMode = process.argv[2] == '--dev'
 if (isDevMode) {

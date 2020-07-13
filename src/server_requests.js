@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import { getLogger } from './logger'
-const logger = getLogger('main')
+const logger = getLogger(__filename.split('/').slice(-1)[0])
 
 // TODO: elsewhere I've used async/await instead of 
 // .then chaining of callbacks. Consider refactoring

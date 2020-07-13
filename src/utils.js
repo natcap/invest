@@ -3,7 +3,7 @@ import fs from 'fs';
 import glob from 'glob';
 
 import { getLogger } from './logger'
-const logger = getLogger('renderer')
+const logger = getLogger(__filename.split('/').slice(-1)[0])
 
 const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g
 

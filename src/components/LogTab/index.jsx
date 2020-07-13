@@ -11,7 +11,7 @@ import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 
 import { getLogger } from '../../logger'
-const logger = getLogger('renderer')
+const logger = getLogger(__filename.split('/').slice(-2).join('/'))
 
 const logStyle = {
   whiteSpace: 'pre-line',

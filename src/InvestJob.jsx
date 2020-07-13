@@ -25,7 +25,7 @@ import { argsDictFromObject, findMostRecentLogfile,
          cleanupDir } from './utils';
 import { fileRegistry } from './constants';
 import { getLogger } from './logger'
-const logger = getLogger('renderer')
+const logger = getLogger(__filename.split('/').slice(-1)[0])
 
 // TODO see issue #12
 import { createStore } from 'redux';

@@ -4,7 +4,7 @@ const path = require('path');
 const { remote, ipcRenderer } = require('electron');
 const { getLogger } = require('./logger')
 
-const logger = getLogger('renderer')
+const logger = getLogger(__filename.split('/').slice(-1)[0])
 
 const isDevMode = remote.process.argv[2] == '--dev'
 if (isDevMode) {
