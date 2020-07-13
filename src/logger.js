@@ -1,5 +1,6 @@
 const path = require('path');
 const winston = require('winston');
+require('winston-daily-rotate-file');
 const { app, remote } = require('electron');
 
 
@@ -21,7 +22,7 @@ if (remote) {
  * @param {string} label - for identifying the origin of the message
  * @returns {logger} - with File and Console transports. 
  */
-function getLogger(label, filename='log.txt') {
+function getLogger(label) {
   // Right now the logging in this app has multiple loggers streaming to the
   // same file. Maybe that's okay? The goal is having only one file on disk.
   // But it feels wrong to create several different loggers just so that
@@ -35,9 +36,12 @@ function getLogger(label, filename='log.txt') {
       return `${timestamp} [${label}] ${level}: ${message}`
     })
 
-    const transport = new winston.transports.File({
+    const transport = new winston.transports.DailyRotateFile({
       level: 'debug',
-      filename: path.join(userDataPath, filename),
+      filename: path.join(userDataPath, 'invest-workbench-log-%DATE%.txt'),
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '3d',  // days
       handleExceptions: true
     })
 
