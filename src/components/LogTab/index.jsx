@@ -10,6 +10,9 @@ import Container from 'react-bootstrap/Container';
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 
+import { getLogger } from '../../logger'
+const logger = getLogger(__filename.split('/').slice(-2).join('/'))
+
 const logStyle = {
   whiteSpace: 'pre-line',
   maxHeight: '700px',
@@ -67,8 +70,8 @@ export class LogTab extends React.Component {
         // in case a recent session was loaded but the logfile
         // no longer exists 
         this.setState({logdata: `Logfile is missing: ${os.EOL}${this.props.logfile}`})
-        console.log(error)
-        console.log(`Not able to read ${this.props.logfile}`)
+        logger.error(`Not able to read ${this.props.logfile}`)
+        logger.error(error.stack)
       }
 
     // No new logfile. No existing logdata.
@@ -81,7 +84,7 @@ export class LogTab extends React.Component {
         this.tail.unwatch()
       }
       catch(error) {
-        console.log(error)
+        logger.error(error.stack)
       }
     }
   }

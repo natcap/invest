@@ -10,15 +10,11 @@ workflows of an InVEST user.
 
 `npm install` from repo directory  
 
-Create `.env` in the project root by copying `.env-example` and modifying the
-invest and server executeable paths as needed.
-Options for creating these exes:  
-* run `make binaries` from the `natcap/invest` repository. Though currently
-this is only available on branch `experimental/merge-pyinstaller-invest-gui` 
-of `github.com/davemfish/invest`
-* download pre-built binaries. see `scripts/get_invest_binaries_gcs.js`
-`npm run prebuilt-invest "windows-latest"` (or "macos-latest" "ubuntu-latest") and the "invest" section of `package.json`  
+`npm run prebuilt-invest "windows-latest"` (or "macos-latest" "ubuntu-latest")
 `unzip ./build/binaries.zip -d ./build`
+
+Create `.env` in the project root by copying `.env-example` and modifying the
+invest and server executeable paths as needed. See `.env-example` for details.
 
 `npm start`  
 

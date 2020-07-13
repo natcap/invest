@@ -15,6 +15,7 @@ import { fetchDatastackFromFile, fetchValidation,
          saveToPython } from '../../server_requests';
 import { argsDictFromObject, boolStringToBoolean } from '../../utils';
 
+
 function toggleDependentInputs(argsSpec, argsValues, argkey) {
   /** Toggle properties that control the display of argument inputs.
   *
@@ -410,8 +411,6 @@ class ArgsForm extends React.PureComponent {
     const data = await remote.dialog.showOpenDialog({ properties: [prop] })
     if (data.filePaths.length) {
       this.props.updateArgValues(argname, data.filePaths[0]);  // dialog defaults allow only 1 selection
-    } else {
-      console.log('browse dialog was cancelled')
     }
   }
 
@@ -431,7 +430,6 @@ class ArgsForm extends React.PureComponent {
     if (datastack['module_name'] === this.props.pyModuleName) {
       this.props.batchUpdateArgs(datastack['args']);
     } else {
-      console.log('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.pyModuleName)
       throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.pyModuleName)
     }
   }

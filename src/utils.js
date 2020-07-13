@@ -2,6 +2,9 @@ import path from 'path';
 import fs from 'fs';
 import glob from 'glob';
 
+import { getLogger } from './logger'
+const logger = getLogger(__filename.split('/').slice(-1)[0])
+
 const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g
 
 export function loadRecentSessions(jobDatabase) {
@@ -52,10 +55,10 @@ export async function updateRecentSessions(jobdata, jobDatabase) {
   }
   fs.writeFileSync(jobDatabase, jsonContent, 'utf8', function (err) {
     if (err) {
-      console.log("An error occured while writing JSON Object to File.");
-      return console.log(err);
+      logger.error("An error occured while writing JSON Object to File.");
+      return logger.error(err.stack);
     }
-    console.log("updated" + this.state.sessionID);
+    logger.debug("updated" + this.state.sessionID);
   });
   const updated = await loadRecentSessions(jobDatabase);
   return updated
@@ -91,7 +94,7 @@ export function findMostRecentLogfile(directory) {
       resolve(sortedFiles[0]);
       return
     }
-    console.log(`No invest logfile found in ${directory}`)
+    logger.error(`No invest logfile found in ${directory}`)
     resolve(undefined)
   });
 }

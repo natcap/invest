@@ -24,6 +24,8 @@ import { getSpec, fetchDatastackFromFile,
 import { argsDictFromObject, findMostRecentLogfile,
          cleanupDir } from './utils';
 import { fileRegistry } from './constants';
+import { getLogger } from './logger'
+const logger = getLogger(__filename.split('/').slice(-1)[0])
 
 // TODO see issue #12
 import { createStore } from 'redux';
@@ -100,8 +102,8 @@ export class InvestJob extends React.Component {
       fileRegistry.CACHE_DIR, this.state.sessionID + '.json');
     fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
       if (err) {
-        console.log("An error occured while writing JSON Object to File.");
-        return console.log(err);
+        logger.error("An error occured while writing JSON Object to File.");
+        return logger.error(err.stack);
       }
     });
     let job = {};
@@ -150,7 +152,7 @@ export class InvestJob extends React.Component {
         alert('Cannot load this session because data is missing')
       }
     } else {
-      console.log('state file not found: ' + sessionFilename);
+      logger.error('state file not found: ' + sessionFilename);
     }
   }
 
@@ -205,7 +207,8 @@ export class InvestJob extends React.Component {
     // Get verbosity level from the app's settings
     const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
     
-    const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
+    const cmdArgs = [verbosity, 'run', this.state.modelName,
+                     '--headless', '-d ' + datastackPath]
     const investRun = spawn(path.basename(this.props.investExe), cmdArgs, {
         env: { PATH: path.dirname(this.props.investExe) },
         shell: true // without true, IOError when datastack.py loads json
@@ -239,7 +242,7 @@ export class InvestJob extends React.Component {
     // so that it can be displayed separately when invest exits,
     // and because it could actually be stderr emitted from the 
     // invest CLI or even the shell, rather than the invest model,
-    // in which case it's useful to console.log too.
+    // in which case it's useful to logger.debug too.
     let stderr = Object.assign('', this.state.logStdErr);
     investRun.stderr.on('data', (data) => {
       stderr += `${data}`
@@ -296,9 +299,7 @@ export class InvestJob extends React.Component {
         uiSpec = JSON.parse(fs.readFileSync(
           path.join(fileRegistry.INVEST_UI_DATA, spec.module + '.json')))
       } catch (err) {
-        if (err.code !== 'ENOENT') {
-          throw err
-        }
+        logger.error(err.stack)
       }
       
       // extend the args spec with the UI spec
@@ -322,7 +323,7 @@ export class InvestJob extends React.Component {
         activeTab: 'setup'
       });
     } else {
-      console.log('no spec found')
+      logger.error(`no spec found for ${modelName}`)
       return new Promise((resolve) => resolve(false))
     }
     return new Promise((resolve) => resolve(true))

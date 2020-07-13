@@ -21,9 +21,7 @@ export class SaveParametersButton extends React.Component {
       { defaultPath: 'invest_args.json' })
     if (data.filePath) {   
       this.props.wrapArgsToJsonFile(data.filePath);
-    } else {
-      console.log('save parameters was cancelled')
-    }
+    } 
   }
 
   render() {
@@ -58,8 +56,6 @@ export class SavePythonButton extends React.Component {
       { defaultPath: 'execute_invest.py' })
     if (data.filePath) {
       this.props.savePythonScript(data.filePath)
-    } else {
-      console.log('save to python was cancelled')
     }
   }
 

@@ -2,6 +2,9 @@
 const fs = require('fs');
 const path = require('path');
 const { remote, ipcRenderer } = require('electron');
+const { getLogger } = require('./logger')
+
+const logger = getLogger(__filename.split('/').slice(-1)[0])
 
 const isDevMode = remote.process.argv[2] == '--dev'
 if (isDevMode) {
@@ -42,9 +45,7 @@ window.addEventListener('contextmenu', (e) => {
   menu.popup({ window: remote.getCurrentWindow() })
 }, false)
 
-
 var render = async function render(investExe) {
-
   _reactDom["default"].render(
     _react["default"].createElement(
       _reactHotLoader.AppContainer, null, _react["default"].createElement(
@@ -62,6 +63,6 @@ ipcRenderer.on('variable-reply', (event, arg) => {
 ipcRenderer.send('variable-request', 'ping')
 
 if (module.hot) {
-  console.log('if hot module');
+  logger.debug('if hot module');
   module.hot.accept(render);
 }
