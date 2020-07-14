@@ -187,7 +187,7 @@ jobs:
                   rm -r natcap.invest.egg-info
 
                   # Install natcap.invest from the sdist in dist/
-                  pip install --isolated --find-links=dist natcap.invest
+                  pip install $(find dist -name "natcap.invest*")
 
                   # Model tests should cover model functionality, we just want
                   # to be sure that we can import `natcap.invest` here.
