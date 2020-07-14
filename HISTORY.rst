@@ -2,6 +2,10 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Fixed an issue where some users would be unable to launch InVEST binaries
+      on Windows.  This crash was due to a configuration issue in
+      ``PySide2==5.15.0`` that will be fixed in a future release of PySide2.
 * GLOBIO
     * Fix a bug that mishandled combining infrastructure data when only one
       infrastructure data was present.
