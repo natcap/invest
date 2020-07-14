@@ -238,7 +238,7 @@ def execute(args):
             cn_raster_path, gdal.GDT_Float32, cn_nodata),
         target_path_list=[cn_raster_path],
         dependent_task_list=[align_raster_stack_task],
-        task_name='create cn raster')
+        task_name='create Curve Number raster')
 
     # Generate S_max
     s_max_nodata = -9999
@@ -251,12 +251,12 @@ def execute(args):
             _s_max_op, s_max_raster_path, gdal.GDT_Float32, s_max_nodata),
         target_path_list=[s_max_raster_path],
         dependent_task_list=[cn_raster_task],
-        task_name='create s_max')
+        task_name='create S_max')
 
     # Generate Qpi
     q_pi_nodata = -9999.
     q_pi_raster_path = os.path.join(
-        intermediate_dir, 'Q_mm%s.tif' % file_suffix)
+        args['workspace_dir'], 'Q_mm%s.tif' % file_suffix)
     q_pi_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
@@ -265,7 +265,7 @@ def execute(args):
             q_pi_raster_path, gdal.GDT_Float32, q_pi_nodata),
         target_path_list=[q_pi_raster_path],
         dependent_task_list=[s_max_task],
-        task_name='create q_pi')
+        task_name='create Q_mm.tif')
 
     # Generate Runoff Retention
     runoff_retention_nodata = -9999.
@@ -282,7 +282,7 @@ def execute(args):
         dependent_task_list=[q_pi_task],
         task_name='generate runoff retention')
 
-    # calculate runoff retention volumne
+    # calculate runoff retention volume
     runoff_retention_vol_raster_path = os.path.join(
         args['workspace_dir'], 'Runoff_retention_m3%s.tif' % file_suffix)
     runoff_retention_vol_task = task_graph.add_task(
@@ -327,6 +327,15 @@ def execute(args):
         target_path_list=[reprojected_aoi_path],
         task_name='reproject aoi/watersheds')
 
+    # Determine flood_volume over the watershed
+    flood_volume_in_aoi_task = task_graph.add_task(
+        func=pygeoprocessing.zonal_statistics,
+        args=(
+            (flood_vol_raster_path, 1),
+            reprojected_aoi_path),
+        dependent_task_list=[flood_vol_task, reprojected_aoi_task],
+        task_name='zonal_statistics over the flood_volume raster')
+
     runoff_retention_stats_task = task_graph.add_task(
         func=pygeoprocessing.zonal_statistics,
         args=(
@@ -344,7 +353,9 @@ def execute(args):
         task_name='zonal_statistics over runoff_retention_volume raster')
 
     damage_per_aoi_stats = None
+    flood_volume_stats = flood_volume_in_aoi_task.get()
     summary_tasks = [
+            flood_volume_in_aoi_task,
             runoff_retention_stats_task,
             runoff_retention_volume_stats_task]
     if 'built_infrastructure_vector_path' in args and (
@@ -372,16 +383,17 @@ def execute(args):
                 reproject_built_infrastructure_task],
             task_name='calculate damage to infrastructure in aoi')
 
+        damage_per_aoi_stats = damage_to_infrastructure_in_aoi_task.get()
+
         # It isn't strictly necessary for us to append this task to
         # ``summary_tasks`` here, since the ``.get()`` calls below will block
         # until those tasks complete.  I'm adding these tasks ere anyways
         # "just in case".
         summary_tasks.append(damage_to_infrastructure_in_aoi_task)
-        damage_per_aoi_stats = damage_to_infrastructure_in_aoi_task.get()
 
     summary_vector_path = os.path.join(
         args['workspace_dir'], 'flood_risk_service%s.shp' % file_suffix)
-    write_summary_vector_stats = task_graph.add_task(
+    _ = task_graph.add_task(
         func=_write_summary_vector,
         args=(reprojected_aoi_path,
               summary_vector_path),
@@ -389,6 +401,7 @@ def execute(args):
             'runoff_ret_stats': runoff_retention_stats_task.get(),
             'runoff_ret_vol_stats': runoff_retention_volume_stats_task.get(),
             'damage_per_aoi_stats': damage_per_aoi_stats,
+            'flood_volume_stats': flood_volume_stats,
         },
         target_path_list=[summary_vector_path],
         task_name='write summary stats to flood_risk_service.shp',
@@ -399,24 +412,24 @@ def execute(args):
 
 
 def _write_summary_vector(
-        source_aoi_vector_path, target_vector_path, runoff_ret_stats=None,
-        runoff_ret_vol_stats=None, damage_per_aoi_stats=None):
+        source_aoi_vector_path, target_vector_path, runoff_ret_stats,
+        runoff_ret_vol_stats, flood_volume_stats, damage_per_aoi_stats=None):
     """Write a vector with summary statistics.
 
     This vector will always contain two fields::
 
+        * ``'flood_vol'``: The volume of flood (runoff), in m3, per watershed.
         * ``'rnf_rt_idx'``: Average of runoff retention values per watershed
         * ``'rnf_rt_m3'``: Sum of runoff retention volumes, in m3,
           per watershed.
 
-    If ``damage_per_aoi_stats`` is provided, then two additional columns will
+    If ``damage_per_aoi_stats`` is provided, then these additional columns will
     be written to the vector::
 
-        * ``'aff_bld'``: Potential damage to built infrastructure in $,
+        * ``'aff.bld'``: Potential damage to built infrastructure in $,
           per watershed.
-        * ``'serv_bld'``: Spatial indicator of the importance of the runoff
-          retention service (product of potential damage to built
-          infrastructure by runoff retention)
+        * ``'serv.blt'``: Spatial indicator of the importance of the runoff
+          retention service
 
     Args:
         source_aoi_vector_path (str): The path to a GDAL vector that exists on
@@ -425,17 +438,20 @@ def _write_summary_vector(
             created.  If a file already exists at this path, it will be deleted
             before the new file is created.  This filepath must end with the
             extension ``.shp``, as the file created will be an ESRI Shapefile.
-        runoff_ret_stats=None (None or dict): A dict representing summary
-            statistics of the runoff raster. If provided, it must be a
-            dictionary mapping feature IDs from ``source_aoi_vector_path`` to
-            dicts with ``'count'`` and ``'sum'`` keys.
-        runoff_ret_vol_stats=None (None or dict): A dict representing summary
-            statistics of the runoff volume raster. If provided, it must be a
-            dictionary mapping feature IDs from ``source_aoi_vector_path`` to
-            dicts with ``'count'`` and ``'sum'`` keys.
-        damage_per_aoi_stats=None (None or dict): A dict mapping feature IDs
-            from ``source_aoi_vector_path`` to float values representing the
-            total damage to built infrastructure in that watershed.
+        runoff_ret_stats (dict): A dict representing summary statistics of the
+            runoff raster. If provided, it must be a dictionary mapping feature
+            IDs from ``source_aoi_vector_path`` to dicts with ``'count'`` and
+            ``'sum'`` keys.
+        runoff_ret_vol_stats (dict): A dict representing summary statistics of
+            the runoff volume raster. If provided, it must be a dictionary
+            mapping feature IDs from ``source_aoi_vector_path`` to dicts with
+            ``'count'`` and ``'sum'`` keys.
+        flood_volume_stats(dict): A dict mapping feature IDs from
+            ``source_aoi_vector_path`` to float values representing the flood
+            volume over the AOI.
+        damage_per_aoi_stats (dict): A dict mapping feature IDs from
+            ``source_aoi_vector_path`` to float values representing the total
+            damage to built infrastructure in that watershed.
 
     Returns:
         ``None``
@@ -457,11 +473,11 @@ def _write_summary_vector(
     target_watershed_layer = target_watershed_vector.CreateLayer(
         str(layer_name), source_srs, source_geom_type)
 
-    target_fields = ['rnf_rt_idx', 'rnf_rt_m3']
+    target_fields = ['rnf_rt_idx', 'rnf_rt_m3', 'flood_vol']
     if not damage_per_aoi_stats:
         damage_per_aoi_stats = {}
     else:
-        target_fields += ['aff_bld', 'serv_bld']
+        target_fields += ['aff.bld', 'serv.blt']
 
     for field_name in target_fields:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
@@ -493,10 +509,16 @@ def _write_summary_vector(
             pixel_count = runoff_ret_vol_stats[feature_id]['count']
             if pixel_count > 0:
                 damage_sum = damage_per_aoi_stats[feature_id]
-                target_feature.SetField('aff_bld', damage_sum)
+                target_feature.SetField('aff.bld', damage_sum)
+
+                # This is the service.built equation.
                 target_feature.SetField(
-                    'serv_bld', damage_sum * float(
-                        runoff_ret_vol_stats[feature_id]['sum']))
+                    'serv.blt', (
+                        damage_sum * runoff_ret_vol_stats[feature_id]['sum']))
+
+        if feature_id in flood_volume_stats:
+            target_feature.SetField(
+                'flood_vol', float(flood_volume_stats[feature_id]['sum']))
 
         target_watershed_layer.CreateFeature(target_feature)
     target_watershed_layer.SyncToDisk()
@@ -609,7 +631,7 @@ def _flood_vol_op(
     valid_mask = q_pi_array != q_pi_nodata
     # 0.001 converts mm (rainfall depth) to m (pixel area units)
     result[valid_mask] = (
-        0.001 * (rainfall_depth - q_pi_array[valid_mask]) * pixel_area)
+        q_pi_array[valid_mask] * rainfall_depth * pixel_area * 0.001)
     return result
 
 
@@ -626,7 +648,7 @@ def _runoff_retention_vol_op(
         target_nodata (float): target nodata to write.
 
     Returns:
-        (R_i*Qpi*p_val*cell_size/1000.)
+        (runoff_retention * p_value * pixel_area * 10e-3)
 
     """
     result = numpy.empty(runoff_retention_array.shape, dtype=numpy.float32)
@@ -657,7 +679,7 @@ def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
     valid_mask = numpy.ones(q_pi_array.shape, dtype=numpy.bool)
     if q_pi_nodata:
         valid_mask[:] = ~numpy.isclose(q_pi_array, q_pi_nodata)
-    result[valid_mask] = 1.0 - q_pi_array[valid_mask] / p_value
+    result[valid_mask] = 1.0 - (q_pi_array[valid_mask] / p_value)
     return result
 
 
@@ -763,8 +785,9 @@ def _lu_to_cn_op(
             soil_choose_array,
             per_pixel_cn_array)
     except ValueError as error:
-        err_msg = 'Check that the Soil Group raster does not contain values ' \
-            'other than (1, 2, 3, 4)'
+        err_msg = (
+            'Check that the Soil Group raster does not contain values '
+            'other than (1, 2, 3, 4)')
         raise ValueError(str(error) + '\n' + err_msg)
 
     return result
