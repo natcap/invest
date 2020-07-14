@@ -345,7 +345,6 @@ def execute(args):
 
     damage_per_aoi_stats = None
     flood_volume_stats = None
-    service_built_stats = None
     summary_tasks = [
             runoff_retention_stats_task,
             runoff_retention_volume_stats_task]
@@ -384,18 +383,6 @@ def execute(args):
             task_name='zonal_statistics over the flood_volume raster')
 
         damage_per_aoi_stats = damage_to_infrastructure_in_aoi_task.get()
-        service_built_task = task_graph.add_task(
-            func=_calculate_service_built,
-            args=(
-                q_pi_raster_path,
-                float(args['rainfall_depth']),
-                reprojected_aoi_path,
-                damage_per_aoi_stats),
-            dependent_task_list=[
-                q_pi_task, reprojected_aoi_task,
-                damage_to_infrastructure_in_aoi_task],
-            task_name='Calculate service.built.'
-        )
 
         # It isn't strictly necessary for us to append these tasks to
         # ``summary_tasks`` here, since the ``.get()`` calls below will block
@@ -404,10 +391,8 @@ def execute(args):
         summary_tasks += [
             flood_volume_in_aoi_task,
             damage_to_infrastructure_in_aoi_task,
-            service_built_task,
         ]
         flood_volume_stats = flood_volume_in_aoi_task.get()
-        service_built_stats = service_built_task.get()
 
     summary_vector_path = os.path.join(
         args['workspace_dir'], 'flood_risk_service%s.shp' % file_suffix)
@@ -420,7 +405,6 @@ def execute(args):
             'runoff_ret_vol_stats': runoff_retention_volume_stats_task.get(),
             'damage_per_aoi_stats': damage_per_aoi_stats,
             'flood_volume_stats': flood_volume_stats,
-            'service_built_stats': service_built_stats,
         },
         target_path_list=[summary_vector_path],
         task_name='write summary stats to flood_risk_service.shp',
@@ -433,7 +417,7 @@ def execute(args):
 def _write_summary_vector(
         source_aoi_vector_path, target_vector_path, runoff_ret_stats=None,
         runoff_ret_vol_stats=None, damage_per_aoi_stats=None,
-        flood_volume_stats=None, service_built_stats=None):
+        flood_volume_stats=None):
     """Write a vector with summary statistics.
 
     This vector will always contain two fields::
@@ -473,9 +457,6 @@ def _write_summary_vector(
             ``source_aoi_vector_path`` to float values representing the flood
             volume over the AOI.  Required if ``damage_per_aoi_stats``
             provided.
-        service_built_stats=None (None or dict): A dict mapping feature IDs
-            from ``source_aoi_vector_path`` to float values representing
-            ``service.built``.
 
     Returns:
         ``None``
@@ -538,7 +519,8 @@ def _write_summary_vector(
 
                 # This is the service.built equation.
                 target_feature.SetField(
-                    'serv.blt', service_built_stats[feature_id])
+                    'serv.blt', (
+                        damage_sum * runoff_ret_vol_stats[feature_id]['sum']))
 
         if feature_id in flood_volume_stats:
             target_feature.SetField(
@@ -548,43 +530,6 @@ def _write_summary_vector(
     target_watershed_layer.SyncToDisk()
     target_watershed_layer = None
     target_watershed_vector = None
-
-
-def _calculate_service_built(
-        runoff_raster_path, rainfall_depth, aoi_vector_path,
-        damage_per_aoi_stats):
-    """Calculate service.built.
-
-    Args:
-        runoff_raster_path (str): The path to a GDAL raster on disk
-            representing runoff.
-        rainfall_depth (float): The rainfall depth (in mm).
-        aoi_vector_path (str): The path to a GDAL vector on disk representing
-            the AOI or watersheds.  Must be in the same projection as
-            ``runoff_raster_path``.
-        damage_per_aoi_stats (dict): A dictionary mapping feature IDs from
-            ``aoi_vector_path`` to float values indicating the value of the
-            damage to built infrastructure within the AOI/watershed.
-
-    Returns:
-        A dict mapping feature IDs from ``aoi_vector_path`` to the calculated
-        ``service.built`` value for each AOI/watershed feature.
-
-    """
-    runoff_raster_info = pygeoprocessing.get_raster_info(runoff_raster_path)
-    pixel_area = abs(runoff_raster_info['pixel_size'][0] *
-                     runoff_raster_info['pixel_size'][1])
-    runoff_stats = pygeoprocessing.zonal_statistics(
-        (runoff_raster_path, 1), aoi_vector_path)
-
-    service_built = {}
-    for aoi_fid, aoi_stats in runoff_stats.items():
-        service_built[aoi_fid] = (
-            damage_per_aoi_stats[aoi_fid] * 0.001 * (
-                (float(aoi_stats['count']) * rainfall_depth) -
-                float(aoi_stats['sum'])) * pixel_area)
-
-    return service_built
 
 
 def _calculate_damage_to_infrastructure_in_aoi(
