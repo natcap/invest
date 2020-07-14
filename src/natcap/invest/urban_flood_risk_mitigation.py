@@ -282,7 +282,7 @@ def execute(args):
         dependent_task_list=[q_pi_task],
         task_name='generate runoff retention')
 
-    # calculate runoff retention volumne
+    # calculate runoff retention volume
     runoff_retention_vol_raster_path = os.path.join(
         args['workspace_dir'], 'Runoff_retention_m3%s.tif' % file_suffix)
     runoff_retention_vol_task = task_graph.add_task(

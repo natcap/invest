@@ -15,7 +15,7 @@ Unreleased Changes
       is now ``aff.bld``.
     * ``Q_mm.tif`` has been moved from the intermediate directory into the
       workspace.
-    * Fixed a bug in the flood volume (``Q_mm.tif``) calculations that was
+    * Fixed a bug in the flood volume (``Q_m3.tif``) calculations that was
       producing incorrect values in all cases.
 
 3.8.6 (2020-07-03)
