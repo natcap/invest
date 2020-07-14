@@ -113,12 +113,13 @@ class UFRMTests(unittest.TestCase):
 
         # Check that only the two expected fields are there.
         self.assertEqual(
-            set(('rnf_rt_idx', 'rnf_rt_m3')),
+            set(('rnf_rt_idx', 'rnf_rt_m3', 'flood_vol')),
             set(field.GetName() for field in result_layer.schema))
 
         for fieldname, expected_value in (
                 ('rnf_rt_idx', 0.70387527942),
-                ('rnf_rt_m3', 70870.4765625)):
+                ('rnf_rt_m3', 70870.4765625),
+                ('flood_vol', 1192625.75)):
             result_val = result_feature.GetField(fieldname)
             places_to_round = (
                 int(round(numpy.log(expected_value)/numpy.log(10)))-6)

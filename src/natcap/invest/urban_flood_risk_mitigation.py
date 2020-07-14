@@ -327,6 +327,15 @@ def execute(args):
         target_path_list=[reprojected_aoi_path],
         task_name='reproject aoi/watersheds')
 
+    # Determine flood_volume over the watershed
+    flood_volume_in_aoi_task = task_graph.add_task(
+        func=pygeoprocessing.zonal_statistics,
+        args=(
+            (flood_vol_raster_path, 1),
+            reprojected_aoi_path),
+        dependent_task_list=[flood_vol_task, reprojected_aoi_task],
+        task_name='zonal_statistics over the flood_volume raster')
+
     runoff_retention_stats_task = task_graph.add_task(
         func=pygeoprocessing.zonal_statistics,
         args=(
@@ -344,8 +353,9 @@ def execute(args):
         task_name='zonal_statistics over runoff_retention_volume raster')
 
     damage_per_aoi_stats = None
-    flood_volume_stats = None
+    flood_volume_stats = flood_volume_in_aoi_task.get()
     summary_tasks = [
+            flood_volume_in_aoi_task,
             runoff_retention_stats_task,
             runoff_retention_volume_stats_task]
     if 'built_infrastructure_vector_path' in args and (
@@ -373,26 +383,13 @@ def execute(args):
                 reproject_built_infrastructure_task],
             task_name='calculate damage to infrastructure in aoi')
 
-        # Determine flood_volume over the watershed
-        flood_volume_in_aoi_task = task_graph.add_task(
-            func=pygeoprocessing.zonal_statistics,
-            args=(
-                (flood_vol_raster_path, 1),
-                reprojected_aoi_path),
-            dependent_task_list=[flood_vol_task, reprojected_aoi_task],
-            task_name='zonal_statistics over the flood_volume raster')
-
         damage_per_aoi_stats = damage_to_infrastructure_in_aoi_task.get()
 
-        # It isn't strictly necessary for us to append these tasks to
+        # It isn't strictly necessary for us to append this task to
         # ``summary_tasks`` here, since the ``.get()`` calls below will block
         # until those tasks complete.  I'm adding these tasks ere anyways
         # "just in case".
-        summary_tasks += [
-            flood_volume_in_aoi_task,
-            damage_to_infrastructure_in_aoi_task,
-        ]
-        flood_volume_stats = flood_volume_in_aoi_task.get()
+        summary_tasks.append(damage_to_infrastructure_in_aoi_task)
 
     summary_vector_path = os.path.join(
         args['workspace_dir'], 'flood_risk_service%s.shp' % file_suffix)
@@ -415,25 +412,24 @@ def execute(args):
 
 
 def _write_summary_vector(
-        source_aoi_vector_path, target_vector_path, runoff_ret_stats=None,
-        runoff_ret_vol_stats=None, damage_per_aoi_stats=None,
-        flood_volume_stats=None):
+        source_aoi_vector_path, target_vector_path, runoff_ret_stats,
+        runoff_ret_vol_stats, flood_volume_stats, damage_per_aoi_stats=None):
     """Write a vector with summary statistics.
 
     This vector will always contain two fields::
 
+        * ``'flood_vol'``: The volume of flood (runoff), in m3, per watershed.
         * ``'rnf_rt_idx'``: Average of runoff retention values per watershed
         * ``'rnf_rt_m3'``: Sum of runoff retention volumes, in m3,
           per watershed.
 
-    If ``damage_per_aoi_stats`` and ``flood_volume_stats`` are provided, then
-    a few additional columns will be written to the vector::
+    If ``damage_per_aoi_stats`` is provided, then these additional columns will
+    be written to the vector::
 
         * ``'aff.bld'``: Potential damage to built infrastructure in $,
           per watershed.
         * ``'serv.blt'``: Spatial indicator of the importance of the runoff
           retention service
-        * ``'flood_vol'``: The volume of flood (runoff), in m3, per watershed.
 
     Args:
         source_aoi_vector_path (str): The path to a GDAL vector that exists on
@@ -442,21 +438,20 @@ def _write_summary_vector(
             created.  If a file already exists at this path, it will be deleted
             before the new file is created.  This filepath must end with the
             extension ``.shp``, as the file created will be an ESRI Shapefile.
-        runoff_ret_stats=None (None or dict): A dict representing summary
-            statistics of the runoff raster. If provided, it must be a
-            dictionary mapping feature IDs from ``source_aoi_vector_path`` to
-            dicts with ``'count'`` and ``'sum'`` keys.
-        runoff_ret_vol_stats=None (None or dict): A dict representing summary
-            statistics of the runoff volume raster. If provided, it must be a
-            dictionary mapping feature IDs from ``source_aoi_vector_path`` to
-            dicts with ``'count'`` and ``'sum'`` keys.
-        damage_per_aoi_stats=None (None or dict): A dict mapping feature IDs
-            from ``source_aoi_vector_path`` to float values representing the
-            total damage to built infrastructure in that watershed.
-        flood_volume_stats=None (None or dict): A dict mapping feature IDs from
+        runoff_ret_stats (dict): A dict representing summary statistics of the
+            runoff raster. If provided, it must be a dictionary mapping feature
+            IDs from ``source_aoi_vector_path`` to dicts with ``'count'`` and
+            ``'sum'`` keys.
+        runoff_ret_vol_stats (dict): A dict representing summary statistics of
+            the runoff volume raster. If provided, it must be a dictionary
+            mapping feature IDs from ``source_aoi_vector_path`` to dicts with
+            ``'count'`` and ``'sum'`` keys.
+        flood_volume_stats(dict): A dict mapping feature IDs from
             ``source_aoi_vector_path`` to float values representing the flood
-            volume over the AOI.  Required if ``damage_per_aoi_stats``
-            provided.
+            volume over the AOI.
+        damage_per_aoi_stats (dict): A dict mapping feature IDs from
+            ``source_aoi_vector_path`` to float values representing the total
+            damage to built infrastructure in that watershed.
 
     Returns:
         ``None``
@@ -478,12 +473,11 @@ def _write_summary_vector(
     target_watershed_layer = target_watershed_vector.CreateLayer(
         str(layer_name), source_srs, source_geom_type)
 
-    target_fields = ['rnf_rt_idx', 'rnf_rt_m3']
+    target_fields = ['rnf_rt_idx', 'rnf_rt_m3', 'flood_vol']
     if not damage_per_aoi_stats:
         damage_per_aoi_stats = {}
-        flood_volume_stats = {}
     else:
-        target_fields += ['aff.bld', 'serv.blt', 'flood_vol']
+        target_fields += ['aff.bld', 'serv.blt']
 
     for field_name in target_fields:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
