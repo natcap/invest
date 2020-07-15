@@ -10,7 +10,7 @@ merge:
 ## There is a merge conflict in this PR
 
 1. Leave a comment on this PR about the merge conflict and close the PR.
-2. In your fork, update the upstream `$SOURCE_BRANCH` and `$RELEASE_BRANCH`.
+2. In your fork, `git pull` the upstream `$SOURCE_BRANCH` and `$RELEASE_BRANCH`.
 3. Make a new `pr-resolution` branch off of `$RELEASE_BRANCH`:
    ```shell
    $ git checkout $SOURCE_BRANCH
@@ -31,7 +31,7 @@ merge:
 
 1. Leave a comment on this PR about the content that should not be included
    and close the PR.
-2. In your fork, update the upstream `$SOURCE_BRANCH` and `$RELEASE_BRANCH`.
+2. In your fork, `git pull` the upstream `$SOURCE_BRANCH` and `$RELEASE_BRANCH`.
 3. Make a new `pr-resolution` branch off of `$RELEASE_BRANCH`:
    ```shell
    $ git checkout $SOURCE_BRANCH
