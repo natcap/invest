@@ -33,12 +33,16 @@ hub release create \
     "$VERSION"
 
 PR_MSG_TEXT=build/pr_msg_text_$VERSION.txt
+SOURCE_BRANCH="master"  # TODO: does this need to be exported?
+BUGFIX_VERSION="$VERSION"  # TODO: does this need to be exported?
+GITHUB_REPOSITORY="$GH_USER/invest"  # Assume repo is called invest.
 envsubst < ci/release/bugfix-autorelease-branch-pr-body.md > "$PR_MSG_TEXT"
 hub pull-request \
     --base "natcap/invest:master" \
     --head "natcap/invest:autorelease/$VERSION" \
     --reviewer "$RELEASE_MANAGER" \
     --assign "$RELEASE_MANAGER" \
+    --labels "auto" \
     --file "$PR_MSG_TEXT"
 
 twine upload dist/natcap.invest.*
