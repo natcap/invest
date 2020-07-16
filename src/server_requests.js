@@ -1,53 +1,50 @@
 import fetch from 'node-fetch';
-import { getLogger } from './logger'
-const logger = getLogger(__filename.split('/').slice(-1)[0])
+import { getLogger } from './logger';
 
-// TODO: elsewhere I've used async/await instead of 
-// .then chaining of callbacks. Consider refactoring
-// everything here with async/await.
-
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const PORT = process.env.PORT || '5000';
 const HOSTNAME = 'http://localhost';
 
-export function getFlaskIsReady(retries=0) {
-  /* Recursive function to find out if the Flask server is online.
-  * Sometimes the app will make a server request before it's ready,
-  * so awaiting this response is one way to avoid that. 
-  */
-  return(
+/** Recursive function to find out if the Flask server is online.
+ *
+ * Sometimes the app will make a server request before it's ready,
+ * so awaiting this response is one way to avoid that.
+ *
+ * @param {int} retries - number of times to retry a request
+ * @returns { Promise } 
+ */
+export function getFlaskIsReady(retries = 0) {
+  return (
     fetch(`${HOSTNAME}:${PORT}/ready`, {
       method: 'get',
     })
-    .then((response) => { return response.text() })
-    .catch(async (error) => {
-      logger.error(error.stack)
-      if (error.code === 'ECONNREFUSED') {
-        while (retries < 21) {
-          retries++;
-          // try again after a short pause
-          await new Promise(resolve => setTimeout(resolve, 50));
-          logger.debug('retry # ' + retries);
-          return await getFlaskIsReady(retries)
+      .then((response) => response.text())
+      .catch(async (error) => {
+        logger.error(error.stack);
+        if (error.code === 'ECONNREFUSED') {
+          while (retries < 21) {
+            retries++;
+            // try again after a short pause
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            logger.debug(`retry # ${retries}`);
+            return await getFlaskIsReady(retries)
+          }
+        } else {
+          logger.error(error.stack);
+          throw error;
         }
-      } else {
-        logger.error(error.stack)
-        return error 
-      }
-   })
-  )
+      })
+  );
 }
 
 export function getInvestList() {
-  return(
+  return (
     fetch(`${HOSTNAME}:${PORT}/models`, {
       method: 'get',
     })
-    .then((response) => { 
-      return response
-    })
-    .then((response) => { return response.json() })
-    .catch((error) => { logger.error(error.stack) })
-  )
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
 }
 
 export function getSpec(payload) {
@@ -57,9 +54,9 @@ export function getSpec(payload) {
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
     })
-    .then((response) => { return response.json() })
-    .catch((error) => { logger.error(error.stack) })
-  )
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
 }
 
 export function fetchValidation(payload) {
@@ -69,9 +66,9 @@ export function fetchValidation(payload) {
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
     })
-    .then((response) => { return response.json() })
-    .catch((error) => { logger.error(error.stack) })
-  )
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
 }
 
 export function fetchLogfilename(payload) {
@@ -81,9 +78,9 @@ export function fetchLogfilename(payload) {
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
     })
-    .then((response) => { return response.text() })
-    .catch((error) => { logger.error(error.stack) })
-    )
+      .then((response) => response.text())
+      .catch((error) => logger.error(error.stack))
+  );
 }
 
 export function fetchDatastackFromFile(payload) {
@@ -93,9 +90,9 @@ export function fetchDatastackFromFile(payload) {
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
     })
-    .then((response) => { return response.json() })
-    .catch((error) => { logger.error(error.stack) })
-  )
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
 }
 
 export function saveToPython(payload) {
@@ -104,23 +101,27 @@ export function saveToPython(payload) {
     body: JSON.stringify(payload),
     headers: { 'Content-Type': 'application/json' },
   })
-  .then((response) => { return response.text() })
-  .then((text) => { logger.debug(text) })
-  .catch((error) => { logger.error(error.stack) })
+    .then((response) => response.text())
+    .then((text) => logger.debug(text))
+    .catch((error) => logger.error(error.stack));
 }
 
+/**
+ * @param  {object} payload - body expected by write_parameter_set_file endpoint
+ * @returns {Promise} - resolves to null
+ */
 export function writeParametersToFile(payload) {
-  // even though we don't need a response sent back
-  // from this fetch, we must ``return`` a Promise 
-  // in order to ``await writeParametersToFile``.
+  // Even though the purpose here is to request a file
+  // is written to disk, we want to return a Promise in
+  // order to await success.
   return (
     fetch(`${HOSTNAME}:${PORT}/write_parameter_set_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
     })
-    .then((response) => { return response.text() })
-    .then((text) => { logger.debug(text) })
-    .catch((error) => { logger.error(error.stack) })
+      .then((response) => response.text())
+      .then((text) => logger.debug(text))
+      .catch((error) => logger.error(error.stack))
   );
 }
