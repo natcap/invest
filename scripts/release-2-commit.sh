@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+VERSION=$1
 : "${VERSION:?'The version string is needed as parameter 1.'}"
 
 set -e

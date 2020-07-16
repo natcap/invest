@@ -8,9 +8,15 @@
 # Example invokation:
 #     ./check_required_programs.sh program1 program2 program3
 
-for program in $@
+EXITCODE=0
+for program in "$@"
 do
-    which $program > /dev/null \
-        && echo "\e[32mOK\e[0m: $program  \t$(which $program)" \
-        || echo "\e[31mMISSING\e[0m: $program"
+    if which "$program" > /dev/null
+    then
+        echo "\e[32mOK\e[0m: $program  \t$(which $program)"
+    else
+        echo "\e[31mMISSING\e[0m: $program"
+        EXITCODE=1
+    fi
 done
+exit $EXITCODE

@@ -82,12 +82,14 @@ BUILD_DIR := build
 # a zipfile of the source code).
 FORKNAME := $(word 2, $(subst :,,$(subst github.com, ,$(shell git remote get-url origin))))
 FORKUSER := $(word 1, $(subst /, ,$(FORKNAME)))
+RELEASES_BUCKET := gs://releases.naturalcapitalproject.org
+DEV_BUILD_BUCKET := gs://natcap-dev-build-artifacts
 ifeq ($(FORKUSER),natcap)
-	BUCKET := gs://releases.naturalcapitalproject.org
+	BUCKET := $(RELEASES_BUCKET)
 	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
 	INSTALLER_NAME_FORKUSER :=
 else
-	BUCKET := gs://natcap-dev-build-artifacts
+	BUCKET := $(DEV_BUILD_BUCKET)
 	DIST_URL_BASE := $(BUCKET)/invest/$(FORKUSER)/$(VERSION)
 	INSTALLER_NAME_FORKUSER := $(FORKUSER)
 endif
