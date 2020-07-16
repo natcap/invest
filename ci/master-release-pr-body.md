@@ -10,37 +10,43 @@ merge:
 ## There is a merge conflict in this PR
 
 1. Leave a comment on this PR about the merge conflict and close the PR.
-2. In your fork, make a new `pr-resolution` branch off of `$SOURCE_BRANCH`:
+2. In your fork, `git pull` the upstream `$SOURCE_BRANCH` and `$RELEASE_BRANCH`.
+3. Make a new `pr-resolution` branch off of `$RELEASE_BRANCH`:
    ```shell
    $ git checkout $SOURCE_BRANCH
    $ git pull upstream $SOURCE_BRANCH  # Include the latest changes on the upstream master
+   $ git checkout $RELEASE_BRANCH
+   $ git pull upstream $RELEASE_BRANCH  # Include the latest changes on the upstream release
    $ git checkout -b pr-resolution
-   $ git merge $RELEASE_BRANCH
+   $ git merge $SOURCE_BRANCH
    ```
-3. Resolve the conflicts locally
-4. Commit the changes to `pr-resolution`.
-5. Create a PR from `pr-resolution` into `$RELEASE_BRANCH`, and include a link
+4. Resolve the conflicts locally
+5. Commit the changes to `pr-resolution`.
+6. Create a PR from `pr-resolution` into `$RELEASE_BRANCH`, and include a link
    to the origin PR in the description.
-6. When the PR is complete, delete the `pr-resolution` branch.  That will
+7. When the PR is complete, delete the `pr-resolution` branch.  That will
    help us avoid confusion and extra work down the road when we do this again.
 
 ## This PR contains content that should not be in `$RELEASE_BRANCH`
 
 1. Leave a comment on this PR about the content that should not be included
    and close the PR.
-2. In your fork, make a new `pr-resolution` branch off of `$SOURCE_BRANCH`:
+2. In your fork, `git pull` the upstream `$SOURCE_BRANCH` and `$RELEASE_BRANCH`.
+3. Make a new `pr-resolution` branch off of `$RELEASE_BRANCH`:
    ```shell
    $ git checkout $SOURCE_BRANCH
    $ git pull upstream $SOURCE_BRANCH  # Include the latest changes on the upstream master
+   $ git checkout $RELEASE_BRANCH
+   $ git pull upstream $RELEASE_BRANCH  # Include the latest changes on the upstream release
    $ git checkout -b pr-resolution
-   $ git merge $RELEASE_BRANCH
+   $ git merge $SOURCE_BRANCH
    ```
-3. Handle the content that should not end up in `$RELEASE_BRANCH` however it
+4. Handle the content that should not end up in `$RELEASE_BRANCH` however it
    needs to be handled.
-4. Commit the updated content to `pr-resolution`.
-5. Create a PR from `pr-resolution` into `$RELEASE_BRANCH`, and include a link
+5. Commit the updated content to `pr-resolution`.
+6. Create a PR from `pr-resolution` into `$RELEASE_BRANCH`, and include a link
    to the origin PR in the description.
-6. When the PR is complete, delete the `pr-resolution` branch.  That will
+7. When the PR is complete, delete the `pr-resolution` branch.  That will
    help us avoid confusion and extra work down the road when we do this again.
 
 ## What happens if we accidentally merge something we shouldn't?
