@@ -9,6 +9,9 @@ Unreleased Changes
 * GLOBIO
     * Fix a bug that mishandled combining infrastructure data when only one
       infrastructure data was present.
+* Urban Cooling
+    * Energy units are now (correctly) expressed in kWh.  They were previously
+      (incorrectly) expressed in kW.
 * Urban Flood Risk
     * The output vector ``flood_risk_service.shp`` now includes a field,
       ``flood_vol`` that is the sum of the modeled flood volume (from
