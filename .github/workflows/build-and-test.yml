@@ -218,7 +218,7 @@ jobs:
               # Only upload sdist in one of the matrix cases so we don't
               # overwrite artifacts or have duplicates (mac/windows sdists have
               # different extensions)
-              if: github.event_name != 'pull_request' && matrix.os == macos-latest && matrix.python-version == 3.7
+              if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == '3.7'
               run: |
                   $env:GSUTIL_PATH = (Get-Command gsutil).path
 
