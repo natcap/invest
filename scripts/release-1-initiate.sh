@@ -5,6 +5,8 @@ VERSION=$1
 
 : ${VERSION:?"The version string is needed as parameter 1."}
 
+set -e
+
 if ! git diff --exit-code > /dev/null  # fail if uncommitted, unstaged changes
 then
     echo "You have uncommitted changes."
