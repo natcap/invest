@@ -759,9 +759,9 @@ def _lu_to_cn_op(
     result = numpy.empty_like(lucode_array, dtype=numpy.float32)
     result[:] = cn_nodata
     valid_mask = numpy.ones(lucode_array.shape, dtype=numpy.bool)
-    if lucode_nodata:
+    if isinstance(lucode_nodata, (int, float)):
         valid_mask[:] &= ~numpy.isclose(lucode_array, lucode_nodata)
-    if soil_type_nodata:
+    if isinstance(soil_type_nodata, (int, float)):
         valid_mask[:] &= ~numpy.isclose(soil_type_array, soil_type_nodata)
 
     # this is an array where each column represents a valid landcover
