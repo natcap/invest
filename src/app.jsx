@@ -30,11 +30,14 @@ export default class App extends React.Component {
     // Adding even a 1ms pause between calls avoids that problem, as does not
     // calling getFlaskIsReady. Unless we observe the app trying getInvestList
     // before flask is ready, we don't need getFlaskIsReady anyway.
-    // const readydata = await getFlaskIsReady(); 
+    // const readydata = await getFlaskIsReady();
     // await new Promise(resolve => setTimeout(resolve, 1));
     const investList = await getInvestList();
-    const recentSessions = await loadRecentSessions(this.props.jobDatabase)
-    // TODO: also load and set investSettings from a cached state, instead 
+    let recentSessions = [];
+    if (fs.existsSync(this.props.jobDatabase)) {
+      recentSessions = await loadRecentSessions(this.props.jobDatabase);
+    }
+    // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?
 
     // const version = this.props.investRegistry['active']

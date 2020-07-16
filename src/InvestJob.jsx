@@ -293,13 +293,18 @@ export class InvestJob extends React.Component {
       const {args, ...modelSpec} = spec;
       
       // Even if UI spec doesn't exist for a model, a minimum viable input
-      // form can still be generated, so don't crash here.
+      // form can still be generated, so log errors but don't throw.
       let uiSpec = {};
       try {
         uiSpec = JSON.parse(fs.readFileSync(
           path.join(fileRegistry.INVEST_UI_DATA, spec.module + '.json')))
       } catch (err) {
-        logger.error(err.stack)
+        if (err.code === 'ENOENT') {
+          logger.warn(err)
+          logger.warn(`No UI spec exists for ${spec.module}`)
+        } else {
+          logger.error(err.stack)
+        }
       }
       
       // extend the args spec with the UI spec

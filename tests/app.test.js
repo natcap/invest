@@ -43,6 +43,18 @@ test('Recent Sessions: each has a button', async () => {
   })
 })
 
+test('Recent Sessions: database is missing', async () => {
+  getInvestList.mockResolvedValue({});
+  const testJobsDatabase = 'foo.json';
+  const { findByText } = render(
+    <App
+      jobDatabase={testJobsDatabase}
+      investExe='foo'/>);
+
+  const node = await findByText(/No recent sessions/)
+  expect(node).toBeInTheDocument()
+})
+
 test('Settings dialog interactions: logging level', async () => {
   getInvestList.mockResolvedValue({});
   const DEFAULT = 'INFO';
