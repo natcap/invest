@@ -428,6 +428,35 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
   })
 })
 
+test.only('SetupTab: test validation payload is well-formatted', async () => {
+  const spec = { args: {
+    a: { 
+      name: 'afoo', 
+      type: 'freestyle_string'},
+    b: {
+      name: 'bfoo', 
+      type: 'number'},
+    c: {
+      name: 'cfoo',
+      type: 'csv'} } }
+
+  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
+  
+  // Mocking to return the payload so we can assert we always send
+  // correct payload to this endpoint.
+  fetchValidation.mockImplementation((payload) => {
+    return payload
+  })
+  fireEvent.click(getByText('Carbon')); // triggers validation
+  await waitFor(() => {
+    const expectedKeys = ['model_module', 'args'];
+    const payload = fetchValidation.mock.results[0].value
+    expectedKeys.forEach((key) => {
+      expect(Object.keys(payload).includes(key)).toBe(true)
+    })
+  })
+})
+
 test('SetupTab: test dragover of a datastack/logfile', async () => {
   /** Fire a drop event and mock the resolved datastack.
   * This expects batchUpdateArgs to update form values after the drop.
