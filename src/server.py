@@ -57,13 +57,12 @@ def get_invest_models():
 def get_invest_getspec():
     """Gets the ARGS_SPEC dict from an InVEST model.
 
-    Body (JSON string):
-        model: carbon
-    
+    Body (JSON string): "carbon"
+
     Returns:
         A JSON string.
     """
-    target_model = request.get_json()['model']
+    target_model = request.get_json()
     target_module = natcap.invest.cli._MODEL_UIS[target_model].pyname
     model_module = importlib.import_module(name=target_module)
     spec = model_module.ARGS_SPEC

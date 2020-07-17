@@ -20,12 +20,11 @@ export function getFlaskIsReady(retries = 0) {
     })
       .then((response) => response.text())
       .catch(async (error) => {
-        logger.error(error.stack);
         if (error.code === 'ECONNREFUSED') {
           while (retries < 21) {
             retries++;
             // try again after a short pause
-            await new Promise((resolve) => setTimeout(resolve, 50));
+            await new Promise((resolve) => setTimeout(resolve, 500));
             logger.debug(`retry # ${retries}`);
             return await getFlaskIsReady(retries)
           }
@@ -123,5 +122,21 @@ export function writeParametersToFile(payload) {
       .then((response) => response.text())
       .then((text) => logger.debug(text))
       .catch((error) => logger.error(error.stack))
+  );
+}
+
+/**
+ * Request the shutdown of the Flask app
+ *
+ * @returns {Promise} resolves string communicating success
+ */
+export function shutdownPythonProcess() {
+  return (
+    fetch(`http://localhost:${PORT}/shutdown`, {
+      method: 'get',
+    })
+      .then((response) => response.text())
+      .then((text) => { logger.debug(text); })
+      .catch((error) => { logger.error(error.stack); })
   );
 }

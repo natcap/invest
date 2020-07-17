@@ -283,10 +283,7 @@ export class InvestJob extends React.Component {
     *                   agruments dictionary
     */
 
-    const payload = { 
-        model: modelName
-    };
-    const spec = await getSpec(payload);
+    const spec = await getSpec(modelName);
     if (spec) {
       // This "destructuring" captures spec.args into args and leaves 
       // the rest of spec in modelSpec.
