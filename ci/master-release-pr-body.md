@@ -1,4 +1,4 @@
-AUTO: merge $SOURCE_BRANCH into $RELEASE_BRANCH
+Merge $SOURCE_BRANCH into $RELEASE_BRANCH
 
 This PR was automatically generated in response to a push to `master`,
 and is a chance to review any changes that will be included in the release

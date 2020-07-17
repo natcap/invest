@@ -69,6 +69,7 @@ jobs:
                           --base $GITHUB_REPOSITORY:$RELEASE_BRANCH \
                           --reviewer "$PR_USERNAME" \
                           --assign "$PR_USERNAME" \
+                          --labels "auto" \
                           --file $PR_BODY_FILE || ERRORSPRESENT=$(($ERRORSPRESENT | $?))
                   done
 

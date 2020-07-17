@@ -1,4 +1,4 @@
-Auto: Release $BUGFIX_VERSION and merge into $SOURCE_BRANCH
+Release $BUGFIX_VERSION and merge into $SOURCE_BRANCH
 
 # Release $BUGFIX_VERSION
 
