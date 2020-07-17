@@ -1,6 +1,10 @@
 .. :changelog:
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.7 (2020-07-17)
 ------------------
 * General
     * Fixed an issue where some users would be unable to launch InVEST binaries
