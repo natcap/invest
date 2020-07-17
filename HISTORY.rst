@@ -64,7 +64,11 @@ Unreleased Changes (3.9)
     333^2 m^2. In previous versions the LS factor was erroniously capped to
     "333" leading to high export spikes in some pixels.
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.7 (2020-07-17)
 ------------------
 * General
     * Fixed an issue where some users would be unable to launch InVEST binaries
