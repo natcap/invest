@@ -70,18 +70,6 @@ export function fetchValidation(payload) {
   );
 }
 
-export function fetchLogfilename(payload) {
-  return (
-    fetch(`${HOSTNAME}:${PORT}/get_invest_logfilename`, {
-      method: 'post',
-      body: JSON.stringify(payload),
-      headers: { 'Content-Type': 'application/json' },
-    })
-      .then((response) => response.text())
-      .catch((error) => logger.error(error.stack))
-  );
-}
-
 export function fetchDatastackFromFile(payload) {
   return (
     fetch(`${HOSTNAME}:${PORT}/post_datastack_file`, {
