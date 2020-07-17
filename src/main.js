@@ -1,103 +1,18 @@
-const fs = require('fs');
-const path = require('path');
-const { spawn } = require('child_process');
-const {
-  app, BrowserWindow, ipcMain, screen
-} = require('electron');
-const fetch = require('node-fetch');
-const { getLogger } = require('./logger');
+// const fs = require('fs');
+// const path = require('path');
+// const { spawn } = require('child_process');
+const { app, BrowserWindow, ipcMain, screen } = require('electron');
+// const { getLogger } = require('./logger');
+const { shutdownPythonProcess } = require('./server_requests');
+const { findInvestBinaries, createPythonFlaskProcess } = require('./main_helpers');
 
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+// const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const isDevMode = process.argv[2] === '--dev';
 if (isDevMode) {
   // load the '.env' file from the project root
   const dotenv = require('dotenv');
   dotenv.config();
-}
-
-/**
- * Find paths to local invest binaries under dev or production environments.
- *
- * @returns {Promise} Resolves object with filepaths to invest binaries
- */
-function findInvestBinaries() {
-  return new Promise(resolve => {
-    // Binding to the invest server binary:
-    let serverExe;
-    let investExe;
-
-    // A) look for a local registry of available invest installations
-    const investRegistryPath = path.join(
-      app.getPath('userData'), 'invest_registry.json'
-    );
-    if (fs.existsSync(investRegistryPath)) {
-      const investRegistry = JSON.parse(fs.readFileSync(investRegistryPath));
-      const activeVersion = investRegistry.active;
-      serverExe = investRegistry.registry[activeVersion].server;
-      investExe = investRegistry.registry[activeVersion].invest;
-
-    // B) check for dev mode and an environment variable from dotenv
-    } else if (isDevMode) {
-      serverExe = process.env.SERVER;
-      investExe = process.env.INVEST;
-
-    // C) point to binaries included in this app's installation.
-    } else {
-      const ext = (process.platform === 'win32') ? '.exe' : '';
-      const binaryPath = path.join(
-        process.resourcesPath, 'app.asar.unpacked', 'build', 'invest'
-      );
-      serverExe = path.join(binaryPath, `server${ext}`);
-      investExe = path.join(binaryPath, `invest${ext}`);
-    }
-    resolve({ invest: investExe, server: serverExe });
-  });
-}
-
-/**
- * Spawn a child process running the Python Flask app.
- *
- * @param  {string} serverExe - path to executeable that launches flask app.
- */
-function createPythonFlaskProcess(serverExe) {
-  if (serverExe) {
-    let pythonServerProcess;
-    if (isDevMode && process.env.PYTHON && serverExe.endsWith('.py')) {
-      // A special devMode case for launching from the source code
-      // to facilitate debugging & development of src/server.py
-      pythonServerProcess = spawn(process.env.PYTHON, [serverExe]);
-    } else {
-      // The most reliable, cross-platform way to make sure spawn
-      // can find the exe is to pass only the command name while
-      // also putting it's location on the PATH:
-      pythonServerProcess = spawn(path.basename(serverExe), {
-        env: { PATH: path.dirname(serverExe) }
-      });
-    }
-
-    logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-    logger.debug(serverExe);
-    pythonServerProcess.stdout.on('data', (data) => {
-      logger.debug(`${data}`);
-    });
-    pythonServerProcess.stderr.on('data', (data) => {
-      logger.debug(`${data}`);
-    });
-    pythonServerProcess.on('error', (err) => {
-      logger.error(err.stack);
-      logger.error(
-        `The flask app ${serverExe} crashed or failed to start
-         so this application must be restarted`
-      );
-      throw err;
-    });
-    pythonServerProcess.on('close', (code, signal) => {
-      logger.debug(`Flask process terminated with code ${code} and signal ${signal}`);
-    });
-  } else {
-    logger.error('no existing invest installations found');
-  }
 }
 
 const PORT = (process.env.PORT || '5000').trim();
@@ -113,13 +28,13 @@ const createWindow = async () => {
   // The main process needs to know the location of the invest server binary
   // The renderer process needs the invest cli binary. We can find them
   // together here and pass data to the renderer upon request.
-  const binaries = await findInvestBinaries();
+  const binaries = await findInvestBinaries(isDevMode);
   const mainProcessVars = { investExe: binaries.invest };
   ipcMain.on('variable-request', (event, arg) => {
     event.reply('variable-reply', mainProcessVars);
   });
 
-  createPythonFlaskProcess(binaries.server);
+  createPythonFlaskProcess(binaries.server, isDevMode);
 
   // Create the browser window.
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -153,22 +68,6 @@ const createWindow = async () => {
     mainWindow = null;
   });
 };
-
-/**
- * Request the shutdown of the Flask app
- *
- * @returns {Promise} resolves string communicating success
- */
-function shutdownPythonProcess() {
-  return (
-    fetch(`http://localhost:${PORT}/shutdown`, {
-      method: 'get',
-    })
-      .then((response) => response.text())
-      .then((text) => { logger.debug(text); })
-      .catch((error) => { logger.error(error.stack); })
-  );
-}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
