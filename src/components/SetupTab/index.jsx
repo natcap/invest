@@ -422,10 +422,7 @@ class ArgsForm extends React.PureComponent {
     if (fileList.length !== 1) {
       throw alert('only drop one file at a time.')
     }
-    const payload = { 
-      datastack_path: fileList[0].path
-    }
-    const datastack = await fetchDatastackFromFile(payload)
+    const datastack = await fetchDatastackFromFile(fileList[0].path);
 
     if (datastack['module_name'] === this.props.pyModuleName) {
       this.props.batchUpdateArgs(datastack['args']);

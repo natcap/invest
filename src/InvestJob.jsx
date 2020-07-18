@@ -139,8 +139,7 @@ export class InvestJob extends React.Component {
       // Right now saveState is only called w/in investExecute and only
       // after invest has created a logfile, which means an invest logfile
       // should always exist and can be used to get args values and initialize SetupTab.
-      const datastack = await fetchDatastackFromFile(
-        { datastack_path: loadedState.logfile })
+      const datastack = await fetchDatastackFromFile(loadedState.logfile);
       if (datastack) {
         loadedState['argsInitDict'] = datastack['args']
         Object.assign(loadedState, {setupKey: changeSetupKey(this.state.setupKey)})

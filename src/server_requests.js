@@ -83,14 +83,16 @@ export function fetchDatastackFromFile(payload) {
 }
 
 export function saveToPython(payload) {
-  fetch(`${HOSTNAME}:${PORT}/save_to_python`, {
-    method: 'post',
-    body: JSON.stringify(payload),
-    headers: { 'Content-Type': 'application/json' },
-  })
-    .then((response) => response.text())
-    .then((text) => logger.debug(text))
-    .catch((error) => logger.error(error.stack));
+  return (
+    fetch(`${HOSTNAME}:${PORT}/save_to_python`, {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.text())
+      .then((text) => logger.debug(text))
+      .catch((error) => logger.error(error.stack))
+  );
 }
 
 /**

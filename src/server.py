@@ -99,13 +99,12 @@ def get_invest_validate():
 def post_datastack_file():
     """Extracts InVEST model args from json, logfiles, or datastacks.
 
-    Body (JSON string):
-        datastack_path: string
+    Body (JSON string): path to file
     
     Returns:
         A JSON string.
     """
-    filepath = request.get_json()['datastack_path']
+    filepath = request.get_json()
     stack_type, stack_info = natcap.invest.datastack.get_datastack_info(
         filepath)
     model_run_name = MODULE_MODELRUN_MAP[stack_info.model_name]

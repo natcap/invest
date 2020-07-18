@@ -20,10 +20,7 @@ export class LoadButton extends React.Component {
   async browseFile(event) {
     const data = await remote.dialog.showOpenDialog()
     if (data.filePaths.length) {
-      const payload = { 
-        datastack_path: data.filePaths[0]
-      }
-      const datastack = await fetchDatastackFromFile(payload)
+      const datastack = await fetchDatastackFromFile(data.filePaths[0]);
       this.props.investGetSpec(datastack.model_run_name, datastack['args'])
     }
   }
