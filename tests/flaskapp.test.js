@@ -1,4 +1,5 @@
 import fs from 'fs';
+import readline from 'readline';
 import { spawn, spawnSync } from 'child_process';
 import fetch from 'node-fetch';
 import * as server_requests from '../src/server_requests';
@@ -104,8 +105,15 @@ test('write parameters to python script', async () => {
     pyname: spec.module,
     args: argsDict,
   };
-  
   const _ = await server_requests.saveToPython(payload);
-  // This will err if the file was not written
+  
+  const file = readline.createInterface({
+    input: fs.createReadStream(filepath),
+    crlfDelay: Infinity
+  })
+  for await (const line of file) {
+    expect(`${line}`).toBe('# coding=UTF-8')
+    break
+  }
   fs.unlinkSync(filepath)
 })
