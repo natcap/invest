@@ -935,6 +935,8 @@ def calculate_energy_savings(
     target_building_vector = gdal.OpenEx(
         target_building_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     target_building_layer = target_building_vector.GetLayer()
+    target_building_srs = target_building_layer.GetSpatialRef()
+    target_building_square_units = target_building_srs.GetLinearUnits() ** 2
     target_building_layer.CreateField(
         ogr.FieldDefn('energy_sav', ogr.OFTReal))
     target_building_layer.CreateField(
@@ -998,12 +1000,14 @@ def calculate_energy_savings(
             # KeyError when cost column not present.
             building_cost = 1.0
 
-        # Calculate Equation 7: Energy Savings.
+        # Calculate Equations 8, 9: Energy Savings.
         # We'll only calculate energy savings if there were polygons with valid
         # stats that could be aggregated from t_air_mean.
         if t_air_mean:
+            building_area = target_feature.GetGeometryRef().Area()
+            building_area_m2 = building_area * target_building_square_units
             savings = (
-                consumption_increase * (
+                consumption_increase * building_area_m2 * (
                     t_ref_raw - t_air_mean + uhi_max) * building_cost)
             target_feature.SetField('energy_sav', savings)
 
