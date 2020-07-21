@@ -89,6 +89,8 @@ Unreleased Changes (3.9)
       workspace.
     * Fixed a bug in the flood volume (``Q_m3.tif``) calculations that was
       producing incorrect values in all cases.
+    * Fixed a bug where input rasters with nodata values of 0 were not handled
+      properly.
 
 3.8.6 (2020-07-03)
 ------------------
