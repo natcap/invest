@@ -7,6 +7,9 @@ Unreleased Changes
       (incorrectly) expressed in kW.
     * Energy savings calculations now require that consumption is in units of
       kWh/degree C/m^2 for each building class.
+    * Fixing an issue where blank values of the Cooling Coefficient weights
+      (shade, albedo, ETI) would raise an error.  Now, a default value for the
+      coefficient is assumed if any single value is left blank.
 
 3.8.7 (2020-07-17)
 ------------------

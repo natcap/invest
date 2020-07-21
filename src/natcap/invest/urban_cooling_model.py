@@ -303,9 +303,24 @@ def execute(args):
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
     # weights.
-    cc_weight_shade_raw = float(args.get('cc_weight_shade', 0.6))
-    cc_weight_albedo_raw = float(args.get('cc_weight_albedo', 0.2))
-    cc_weight_eti_raw = float(args.get('cc_weight_eti', 0.2))
+    # TypeError when float(None)
+    # ValueError when float('')
+    # KeyError when the parameter is not present in the args dict.
+    try:
+        cc_weight_shade_raw = float(args['cc_weight_shade'])
+    except (ValueError, TypeError, KeyError):
+        cc_weight_shade_raw = 0.6
+
+    try:
+        cc_weight_albedo_raw = float(args['cc_weight_albedo'])
+    except (ValueError, TypeError, KeyError):
+        cc_weight_albedo_raw = 0.2
+
+    try:
+        cc_weight_eti_raw = float(args['cc_weight_eti'])
+    except (ValueError, TypeError, KeyError):
+        cc_weight_eti_raw = 0.2
+
     t_ref_raw = float(args['t_ref'])
     uhi_max_raw = float(args['uhi_max'])
     cc_weight_sum = sum(
