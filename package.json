@@ -60,7 +60,6 @@
     "@turf/turf": "^5.1.6",
     "chroma-js": "^2.1.0",
     "cross-env": "^5.2.1",
-    "electron": "^8.1.1",
     "esm": "^3.2.25",
     "font-awesome": "^4.7.0",
     "glob": "^7.1.6",
