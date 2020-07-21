@@ -38,6 +38,7 @@ const download = function(url, dest) {
 		console.log(response.statusCode)
 		if (response.statusCode != 200) {
 			fileStream.close()
+			console.log(url)
 			return
 		}
 		response.pipe(fileStream)

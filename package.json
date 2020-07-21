@@ -51,7 +51,7 @@
     "hostname": "https://storage.googleapis.com/",
     "bucket": "natcap-dev-build-artifacts",
     "fork": "invest/davemfish",
-    "version": "3.8.4.post26+g203a6345/"
+    "version": "3.8.0.post634+g203a6345/"
   },
   "keywords": [],
   "author": "dmf",
