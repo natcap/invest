@@ -5,7 +5,7 @@ Unreleased Changes
 * Urban Cooling
     * Energy units are now (correctly) expressed in kWh.  They were previously
       (incorrectly) expressed in kW.
-    * Energy savings calculations now assume that consumption is in units of
+    * Energy savings calculations now require that consumption is in units of
       kWh/degree C/m^2 for each building class.
 
 3.8.7 (2020-07-17)
