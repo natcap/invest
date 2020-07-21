@@ -1,8 +1,12 @@
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* Urban Cooling
+    * Energy units are now (correctly) expressed in kWh.  They were previously
+      (incorrectly) expressed in kW.
+    * Energy savings calculations now assume that consumption is in units of
+      kWh/degree C/m^2 for each building class.
 
 3.8.7 (2020-07-17)
 ------------------
@@ -13,9 +17,6 @@
 * GLOBIO
     * Fix a bug that mishandled combining infrastructure data when only one
       infrastructure data was present.
-* Urban Cooling
-    * Energy units are now (correctly) expressed in kWh.  They were previously
-      (incorrectly) expressed in kW.
 * Urban Flood Risk
     * The output vector ``flood_risk_service.shp`` now includes a field,
       ``flood_vol`` that is the sum of the modeled flood volume (from
