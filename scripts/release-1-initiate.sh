@@ -28,9 +28,6 @@ then
     exit 3
 fi
 
-exit 1
-
-
 python ci/release/increment-userguide-revision.py
 python ci/release/update-history.py "$VERSION" "$(date '"+%Y-%m-%d')"
 
