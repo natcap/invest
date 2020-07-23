@@ -77,6 +77,8 @@ class UCMTests(unittest.TestCase):
         try:
             for key, expected_value in expected_results.items():
                 actual_value = float(results_feature.GetField(key))
+                # These accumulated values (esp. avd_eng_cn) are accumulated
+                # and may differ past about 4 decimal places.
                 self.assertAlmostEqual(
                     actual_value, expected_value, places=4,
                     msg='%s should be close to %f, actual: %f' % (
@@ -104,6 +106,8 @@ class UCMTests(unittest.TestCase):
                     # When energy_sav is NoneType
                     n_nonetype += 1
 
+            # Expected energy savings is an accumulated value and may differ
+            # past about 4 decimal places.
             self.assertAlmostEqual(
                 energy_sav, expected_energy_sav, places=4, msg=(
                     '%f should be close to %f' % (
@@ -204,6 +208,8 @@ class UCMTests(unittest.TestCase):
         try:
             for key, expected_value in expected_results.items():
                 actual_value = float(results_feature.GetField(key))
+                # These accumulated values (esp. avd_eng_cn) are accumulated
+                # and may differ past about 4 decimal places.
                 self.assertAlmostEqual(
                     actual_value, expected_value, places=4,
                     msg='%s should be close to %f, actual: %f' % (
