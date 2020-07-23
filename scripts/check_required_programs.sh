@@ -13,9 +13,9 @@ for program in "$@"
 do
     if which "$program" > /dev/null
     then
-        echo "\e[32mOK\e[0m: $program  \t$(which $program)"
+        echo "OK: $program  $(which $program)"
     else
-        echo "\e[31mMISSING\e[0m: $program"
+        echo "MISSING: $program"
         EXITCODE=1
     fi
 done
