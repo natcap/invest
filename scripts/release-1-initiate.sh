@@ -31,9 +31,10 @@ fi
 python ci/release/increment-userguide-revision.py
 python ci/release/update-history.py "$VERSION" "$(date '+%Y-%m-%d')"
 
+echo ""
 echo "Changes have been made to the following files:"
 echo "  * HISTORY.rst has been updated with the release version and today's date"
 echo "  * Makefile has been updated with the latest user's guide revision"
 echo ""
 echo "To continue with the release:"
-echo "  $ ./scripts/release-2-commit.sh"
+echo "  $ ./scripts/release-2-commit.sh $VERSION"
