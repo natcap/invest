@@ -1,8 +1,7 @@
 .. :changelog:
 
-Unreleased Changes
-------------------
-* This is a test change.
+.. Unreleased Changes
+   ------------------
 
 3.8.7 (2020-07-17)
 ------------------
