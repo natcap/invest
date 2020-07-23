@@ -29,7 +29,7 @@ then
 fi
 
 python ci/release/increment-userguide-revision.py
-python ci/release/update-history.py "$VERSION" "$(date '"+%Y-%m-%d')"
+python ci/release/update-history.py "$VERSION" "$(date '+%Y-%m-%d')"
 
 echo "Changes have been made to the following files:"
 echo "  * HISTORY.rst has been updated with the release version and today's date"
