@@ -30,18 +30,26 @@ class UCMTests(unittest.TestCase):
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
             'results_suffix': 'test_suffix',
             't_ref': 35.0,
-            't_obs_raster_path': os.path.join(REGRESSION_DATA, "Tair_Sept.tif"),
-            'lulc_raster_path': os.path.join(REGRESSION_DATA, "LULC_SFBA.tif"),
-            'ref_eto_raster_path': os.path.join(REGRESSION_DATA, "ETo_SFBA.tif"),
-            'aoi_vector_path': os.path.join(REGRESSION_DATA, "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(REGRESSION_DATA, "biophysical_table_ucm.csv"),
+            't_obs_raster_path': os.path.join(
+                REGRESSION_DATA, "Tair_Sept.tif"),
+            'lulc_raster_path': os.path.join(
+                REGRESSION_DATA, "LULC_SFBA.tif"),
+            'ref_eto_raster_path': os.path.join(
+                REGRESSION_DATA, "ETo_SFBA.tif"),
+            'aoi_vector_path': os.path.join(
+                REGRESSION_DATA,
+                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
+            'biophysical_table_path': os.path.join(
+                REGRESSION_DATA, "biophysical_table_ucm.csv"),
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'factors',
             'do_valuation': True,
             't_air_average_radius': "1000.0",
-            'building_vector_path': os.path.join(REGRESSION_DATA, "buildings_clip.gpkg"),
-            'energy_consumption_table_path': os.path.join(REGRESSION_DATA, "Energy.csv"),
+            'building_vector_path': os.path.join(
+                REGRESSION_DATA, "buildings_clip.gpkg"),
+            'energy_consumption_table_path': os.path.join(
+                REGRESSION_DATA, "Energy.csv"),
             'avg_rel_humidity': '30.0',
             'cc_weight_shade': '',  # to trigger default of 0.6
             'cc_weight_albedo': None,  # to trigger default of 0.2
@@ -156,7 +164,8 @@ class UCMTests(unittest.TestCase):
             'ref_eto_raster_path': os.path.join(
                 REGRESSION_DATA, "ETo_SFBA.tif"),
             'aoi_vector_path': os.path.join(
-                REGRESSION_DATA, "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
+                REGRESSION_DATA,
+                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
             'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, "biophysical_table_ucm.csv"),
             'green_area_cooling_distance': 1000.0,
@@ -209,18 +218,25 @@ class UCMTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
             'results_suffix': 'test_suffix',
             't_ref': 35.0,
-            't_obs_raster_path': os.path.join(REGRESSION_DATA, "Tair_Sept.tif"),
+            't_obs_raster_path': os.path.join(
+                REGRESSION_DATA, "Tair_Sept.tif"),
             'lulc_raster_path': os.path.join(REGRESSION_DATA, "LULC_SFBA.tif"),
-            'ref_eto_raster_path': os.path.join(REGRESSION_DATA, "ETo_SFBA.tif"),
-            'aoi_vector_path': os.path.join(REGRESSION_DATA, "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(REGRESSION_DATA, "biophysical_table_ucm.csv"),
+            'ref_eto_raster_path': os.path.join(
+                REGRESSION_DATA, "ETo_SFBA.tif"),
+            'aoi_vector_path': os.path.join(
+                REGRESSION_DATA,
+                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
+            'biophysical_table_path': os.path.join(
+                REGRESSION_DATA, "biophysical_table_ucm.csv"),
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'factors',
             'do_valuation': True,
             't_air_average_radius': "1000.0",
-            'building_vector_path': os.path.join(REGRESSION_DATA, "buildings_clip.gpkg"),
-            'energy_consumption_table_path': os.path.join(REGRESSION_DATA, "Energy.csv"),
+            'building_vector_path': os.path.join(
+                REGRESSION_DATA, "buildings_clip.gpkg"),
+            'energy_consumption_table_path': os.path.join(
+                REGRESSION_DATA, "Energy.csv"),
             'avg_rel_humidity': '30.0',
             'cc_weight_shade': '0.6',
             'cc_weight_albedo': '0.2',
@@ -228,7 +244,6 @@ class UCMTests(unittest.TestCase):
             'n_workers': -1,
             }
 
-        gpkg_driver = gdal.GetDriverByName('GPKG')
         bad_building_vector_path = os.path.join(
             self.workspace_dir, 'bad_building_vector.gpkg')
 
@@ -257,18 +272,26 @@ class UCMTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
             'results_suffix': 'test_suffix',
             't_ref': 35.0,
-            't_obs_raster_path': os.path.join(REGRESSION_DATA, "Tair_Sept.tif"),
-            'lulc_raster_path': os.path.join(REGRESSION_DATA, "LULC_SFBA.tif"),
-            'ref_eto_raster_path': os.path.join(REGRESSION_DATA, "ETo_SFBA.tif"),
-            'aoi_vector_path': os.path.join(REGRESSION_DATA, "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(REGRESSION_DATA, "biophysical_table_ucm.csv"),
+            't_obs_raster_path': os.path.join(
+                REGRESSION_DATA, "Tair_Sept.tif"),
+            'lulc_raster_path': os.path.join(
+                REGRESSION_DATA, "LULC_SFBA.tif"),
+            'ref_eto_raster_path': os.path.join(
+                REGRESSION_DATA, "ETo_SFBA.tif"),
+            'aoi_vector_path': os.path.join(
+                REGRESSION_DATA,
+                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
+            'biophysical_table_path': os.path.join(
+                REGRESSION_DATA, "biophysical_table_ucm.csv"),
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'factors',
             'do_valuation': True,
             't_air_average_radius': "1000.0",
-            'building_vector_path': os.path.join(REGRESSION_DATA, "buildings_clip.gpkg"),
-            'energy_consumption_table_path': os.path.join(REGRESSION_DATA, "Energy.csv"),
+            'building_vector_path': os.path.join(
+                REGRESSION_DATA, "buildings_clip.gpkg"),
+            'energy_consumption_table_path': os.path.join(
+                REGRESSION_DATA, "Energy.csv"),
             'avg_rel_humidity': '30.0',
             # Explicitly leaving CC weight parameters out.
             'n_workers': -1,
@@ -285,7 +308,8 @@ class UCMTests(unittest.TestCase):
         args['t_ref'] = 35.0
         args['cc_weight_shade'] = -0.6
         result = natcap.invest.urban_cooling_model.validate(args)
-        self.assertEqual(result[0][1], "Value does not meet condition value > 0")
+        self.assertEqual(
+            result[0][1], "Value does not meet condition value > 0")
 
         args['cc_weight_shade'] = "not a number"
         result = natcap.invest.urban_cooling_model.validate(args)
