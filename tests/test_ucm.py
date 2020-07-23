@@ -147,9 +147,12 @@ class UCMTests(unittest.TestCase):
                     # When energy_sav is Nonetype
                     n_nonetype += 1
 
-            self.assertAlmostEqual(energy_sav, expected_energy_sav, msg=(
-                '%f should be close to %f' % (
-                    energy_sav, expected_energy_sav)))
+            # These accumulated values are accumulated
+            # and may differ past about 4 decimal places.
+            self.assertAlmostEqual(
+                energy_sav, expected_energy_sav, places=4, msg=(
+                    '%f should be close to %f' % (
+                        energy_sav, expected_energy_sav)))
             self.assertEqual(n_nonetype, 119)
         finally:
             buildings_layer = None
