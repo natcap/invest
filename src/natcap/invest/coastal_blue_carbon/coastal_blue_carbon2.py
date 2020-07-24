@@ -5,10 +5,19 @@ import taskgraph
 import pygeoprocessing
 import pandas
 import numpy
+import scipy.sparse
 
 from .. import utils
 
 LOGGER = logging.getLogger(__name__)
+
+
+TRANS_EMPTY = 0
+TRANS_NO_CHANGE = 1
+TRANS_ACCUM = 2
+TRANS_LOW_IMPACT = 3
+TRANS_MED_IMPACT = 4
+TRANS_HIGH_IMPACT = 5
 
 
 def execute(args):
@@ -76,6 +85,9 @@ def execute(args):
         target_path_list=aligned_paths,
         task_name='Align input landcover rasters.')
 
+    # Let's assume that the LULC initial variables and the carbon pool
+    # transient table are combined into a single lookup table.
+    # TODO: parse out all of the values here.
 
 
 
@@ -85,6 +97,41 @@ def execute(args):
 
 
 
+
+def _read_transition_matrix(transition_csv_path, biophysical_dict):
+    encoding = None
+    if utils.has_utf8_bom(csv_path):
+        encoding = 'utf-8-sig'
+
+    table = pandas.read_csv(
+        transition_csv_path, sep=None, index_col=False, engine='python',
+        encoding=encoding)
+
+    # Load up a sparse matrix with the transitions to save on memory usage.
+    n_rows = len(table.index)
+    soil_disturbance_matrix = scipy.sparse.dok_matrix((n_rows, n_rows), dtype=numpy.float32)
+    biomass_disturbance_matrix = scipy.sparse.dok_matrix((n_rows, n_rows), dtype=numpy.float32)
+    transitions = {
+        '': TRANS_EMPTY,
+        'NCC': TRANS_NO_CHANGE,
+        'accum': TRANS_ACCUM,
+        'low-impact-disturb': TRANS_LOW_IMPACT,
+        'med-impact-disturb': TRANS_MED_IMPACT,
+        'high-impact-disturb': TRANS_HIGH_IMPACT,
+    }
+
+    for index, row in table.iterrows():
+        for colname, col_value in row.items():
+            # Only set values where the transition HAS a value.
+            # Takes advantage of the sparse characteristic of the model.
+            col_value = col_value.strip()
+            if col_value.endswith('disturb'):
+                soil_disturbance_matrix[index, colname] = (
+                    biophysical_dict[f'soil-{col_value}'])
+                biomass_disturbance_matrix[index, colname] = (
+                    biophysical_dict[f'biomass-{col_value}'])
+
+    return soil_disturbance_matrix, biomass_disturbance_matrix
 
 
 def _extract_transitions_from_table(csv_path):
