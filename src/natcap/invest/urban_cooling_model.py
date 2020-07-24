@@ -177,7 +177,7 @@ ARGS_SPEC = {
             },
             "about": (
                 "A CSV table containing information on energy consumption "
-                "for various types of buildings, in kWh/degC/m^2."
+                "for various types of buildings, in kWh/deg C/m^2."
             ),
         },
         "cc_method": {
