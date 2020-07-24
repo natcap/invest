@@ -1078,3 +1078,14 @@ class CBCValidationTests(unittest.TestCase):
         for keys, error_strings in validation_warnings:
             actual_messages.add(error_strings)
         self.assertTrue(expected_message in actual_messages)
+
+
+class TestCBC2(unittest.TestCase):
+    def setUp(self):
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace_dir)
+
+    def test_extract_transitions(self):
+        csv_path = os.path.join(self.workspace_dir, 'transitions.csv')
