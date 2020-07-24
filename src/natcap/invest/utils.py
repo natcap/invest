@@ -484,10 +484,8 @@ def build_lookup_from_csv(
     """
     # Check if the file encoding is UTF-8 BOM first
     encoding = None
-    with open(table_path, 'rb') as file_obj:
-        first_line = file_obj.readline()
-        if first_line.startswith(codecs.BOM_UTF8):
-            encoding = 'utf-8-sig'
+    if has_utf8_bom(table_path):
+        encoding = 'utf-8-sig'
 
     # Reassign to avoid mutation
     col_list = column_list
@@ -746,3 +744,19 @@ def _assert_vectors_equal(
         expected_vector = None
 
     return None
+
+
+def has_utf8_bom(textfile_path):
+    """Determine if the text file has a UTF-8 byte-order marker.
+
+    Args:
+        textfile_path (str): The path to a file on disk.
+
+    Returns:
+        A bool indicating whether the textfile has a BOM.  If ``True``, a BOM
+        is present.
+
+    """
+    with open(textfile_path, 'rb') as file_obj:
+        first_line = file_obj.readline()
+        return first_line.startswith(codecs.BOM_UTF8)
