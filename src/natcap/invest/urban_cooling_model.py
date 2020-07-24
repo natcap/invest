@@ -246,7 +246,8 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output file names
         args['t_ref'] (str/float): reference air temperature.
-        args['lulc_raster_path'] (str): path to landcover raster.
+        args['lulc_raster_path'] (str): path to landcover raster.  This raster
+            must be in a linearly-projected CRS.
         args['ref_eto_raster_path'] (str): path to evapotranspiration raster.
         args['aoi_vector_path'] (str): path to desired AOI.
         args['biophysical_table_path'] (str): table to map landcover codes to
@@ -924,6 +925,8 @@ def calculate_energy_savings(
         target_building_vector_path (str): path to target vector that
             will contain the additional field 'energy_sav' calculated as
             ``consumption.increase(b) * ((T_(air,MAX)  - T_(air,i)))``.
+            This vector must be in a linearly projected spatial reference
+            system.
 
     Return:
         None.
