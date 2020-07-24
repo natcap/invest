@@ -82,8 +82,12 @@ BUILD_DIR := build
 # a zipfile of the source code).
 FORKNAME := $(word 2, $(subst :,,$(subst github.com, ,$(shell git remote get-url origin))))
 FORKUSER := $(word 1, $(subst /, ,$(FORKNAME)))
+
+# We use these release buckets here in Makefile and also in our release scripts.
+# See scripts/release-3-publish.sh.
 RELEASES_BUCKET := gs://releases.naturalcapitalproject.org
 DEV_BUILD_BUCKET := gs://natcap-dev-build-artifacts
+
 ifeq ($(FORKUSER),natcap)
 	BUCKET := $(RELEASES_BUCKET)
 	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
