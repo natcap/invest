@@ -3,6 +3,7 @@
 VERSION=$1
 : "${VERSION:?'The version string is needed as parameter 1.'}"
 
+# Exit the script immediately if any subshell has a nonzero exit code.
 set -e
 
 # Members of the natcap software team can push to the autorelease branch on
