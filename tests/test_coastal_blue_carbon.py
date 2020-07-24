@@ -1080,6 +1080,32 @@ class CBCValidationTests(unittest.TestCase):
         self.assertTrue(expected_message in actual_messages)
 
 
+def make_raster_from_array(
+        base_array, base_raster_path, nodata_val=-1, gdal_type=gdal.GDT_Int32):
+    """Make a raster from an array on a designated path.
+
+    Args:
+        base_array (numpy.ndarray): the 2D array for making the raster.
+        nodata_val (int; float): nodata value for the raster.
+        gdal_type (gdal datatype; int): gdal datatype for the raster.
+        base_raster_path (str): the path for the raster to be created.
+
+    Returns:
+        None.
+    """
+    # Projection to user for generated sample data UTM Zone 10N
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)
+    project_wkt = srs.ExportToWkt()
+    origin = (1180000, 690000)
+
+    pygeoprocessing.numpy_array_to_raster(
+        base_array, nodata_val, (1, -1), origin, project_wkt, base_raster_path)
+
+
+from natcap.invest.coastal_blue_carbon import coastal_blue_carbon2
+
+
 class TestCBC2(unittest.TestCase):
     def setUp(self):
         self.workspace_dir = tempfile.mkdtemp()
@@ -1089,3 +1115,27 @@ class TestCBC2(unittest.TestCase):
 
     def test_extract_transitions(self):
         csv_path = os.path.join(self.workspace_dir, 'transitions.csv')
+
+        transition_years = (2000, 2010, 2020)
+        transition_rasters = []
+        with open(csv_path, 'w') as transitions_csv:
+            transitions_csv.write('TRANSITION_YEAR,RASTER_PATH\n')
+            for transition_year in transition_years:
+                transition_file_path = os.path.join(
+                    self.workspace_dir, f'{transition_year}.tif)')
+                transition_rasters.append(transition_file_path)
+                transitions_csv.write(
+                    f'{transition_year},{transition_file_path}\n')
+
+                make_raster_from_array(
+                    numpy.array([[0]], dtype=numpy.int16), transition_file_path)
+
+        extracted_transitions = (
+            coastal_blue_carbon2._extract_transitions_from_table(csv_path))
+
+        self.assertEqual(
+            extracted_transitions,
+            dict(zip(transition_years, transition_rasters)))
+
+
+

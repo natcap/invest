@@ -36,6 +36,15 @@ def _extract_transitions_from_table(csv_path):
     table = pandas.read_csv(
         csv_path, sep=None, index_col=False, engine='python',
         encoding=encoding)
+    table.columns = table.columns.str.lower()
+    table.set_index('transition_year', drop=False, inplace=True)
+
+    output_dict = {}
+    row_dict = table[['transition_year', 'raster_path']].to_dict(orient='index')
+    for index, row in row_dict.items():
+        output_dict[index] = row['raster_path']
+
+    return output_dict
 
 
 
