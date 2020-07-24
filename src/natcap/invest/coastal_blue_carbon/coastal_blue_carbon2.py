@@ -131,7 +131,7 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
                 biomass_disturbance_matrix[index, colname] = (
                     biophysical_dict[f'biomass-{col_value}'])
 
-    return soil_disturbance_matrix, biomass_disturbance_matrix
+    return biomass_disturbance_matrix, soil_disturbance_matrix
 
 
 def _extract_transitions_from_table(csv_path):
