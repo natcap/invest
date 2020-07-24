@@ -120,6 +120,19 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
         'high-impact-disturb': TRANS_HIGH_IMPACT,
     }
 
+    # TODO: I don't actually know if this is any better than the dict-based
+    # approach we had before since that, too, was basically sparse.
+    # If we really wanted to save memory, we wouldn't duplicate the float32
+    # values here and instead use the transitions to index into the various
+    # biophysical values when reclassifying. That way we rely on python's
+    # assumption that ints<2000 or so are singletons and thus use less memory.
+    # Even so, the RIGHT way to do this is to have the user provide their own
+    # maps of the following values PER TRANSITION:
+    #  * {soil,biomass} disturbance values
+    #  * {soil,biomass} halflife values
+    #  * {soil,biomass} yearly accumulation
+    #  * litter
+    #  --> maybe some others, too?
     for index, row in table.iterrows():
         for colname, col_value in row.items():
             # Only set values where the transition HAS a value.
