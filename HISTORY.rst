@@ -1,8 +1,15 @@
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* Urban Cooling
+    * Energy units are now (correctly) expressed in kWh.  They were previously
+      (incorrectly) expressed in kW.
+    * Energy savings calculations now require that consumption is in units of
+      kWh/degree C/m^2 for each building class.
+    * Fixing an issue where blank values of the Cooling Coefficient weights
+      (shade, albedo, ETI) would raise an error.  Now, a default value for the
+      coefficient is assumed if any single value is left blank.
 * HRA
     * Raise ValueError if habitat or stressor inputs are not projected.
 
@@ -27,6 +34,8 @@
       workspace.
     * Fixed a bug in the flood volume (``Q_m3.tif``) calculations that was
       producing incorrect values in all cases.
+    * Fixed a bug where input rasters with nodata values of 0 were not handled
+      properly.
 
 3.8.6 (2020-07-03)
 ------------------
