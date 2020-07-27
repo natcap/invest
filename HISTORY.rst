@@ -1,7 +1,11 @@
 .. :changelog:
 
+..
 Unreleased Changes
 ------------------
+* Coastal Vulnerability
+    * Improved handling of invalid AOI geometries to avoid crashing and instead
+      fix the geometry when possible and skip it otherwise.
 * Urban Cooling
     * Energy units are now (correctly) expressed in kWh.  They were previously
       (incorrectly) expressed in kW.
