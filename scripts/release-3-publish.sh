@@ -21,7 +21,9 @@ source ./ci/release/RELEASE_MANAGER.env
 
 ./scripts/check_required_programs.sh pandoc twine gsutil hub envsubst
 
-make dist build
+# Using -p here to not fail the command if the directory already exists.
+mkdir -p dist build
+
 gsutil cp "$BUCKET/$VERSION/*.zip" dist  # UG, sampledata, mac binaries
 gsutil cp "$BUCKET/$VERSION/*.exe" dist  # Windows installer
 gsutil cp "$BUCKET/$VERSION/natcap.invest*" dist  # Grab python distributions
