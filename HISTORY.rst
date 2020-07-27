@@ -3,6 +3,8 @@
 ..
   Unreleased Changes
   ------------------
+* HRA
+    * Raise ValueError if habitat or stressor inputs are not projected.
 
 3.8.7 (2020-07-17)
 ------------------
