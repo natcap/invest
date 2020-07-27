@@ -177,7 +177,7 @@ ARGS_SPEC = {
             },
             "about": (
                 "A CSV table containing information on energy consumption "
-                "for various types of buildings, in kW/degC."
+                "for various types of buildings, in kWh/deg C/m^2."
             ),
         },
         "cc_method": {
@@ -246,7 +246,8 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output file names
         args['t_ref'] (str/float): reference air temperature.
-        args['lulc_raster_path'] (str): path to landcover raster.
+        args['lulc_raster_path'] (str): path to landcover raster.  This raster
+            must be in a linearly-projected CRS.
         args['ref_eto_raster_path'] (str): path to evapotranspiration raster.
         args['aoi_vector_path'] (str): path to desired AOI.
         args['biophysical_table_path'] (str): table to map landcover codes to
@@ -303,9 +304,24 @@ def execute(args):
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
     # weights.
-    cc_weight_shade_raw = float(args.get('cc_weight_shade', 0.6))
-    cc_weight_albedo_raw = float(args.get('cc_weight_albedo', 0.2))
-    cc_weight_eti_raw = float(args.get('cc_weight_eti', 0.2))
+    # TypeError when float(None)
+    # ValueError when float('')
+    # KeyError when the parameter is not present in the args dict.
+    try:
+        cc_weight_shade_raw = float(args['cc_weight_shade'])
+    except (ValueError, TypeError, KeyError):
+        cc_weight_shade_raw = 0.6
+
+    try:
+        cc_weight_albedo_raw = float(args['cc_weight_albedo'])
+    except (ValueError, TypeError, KeyError):
+        cc_weight_albedo_raw = 0.2
+
+    try:
+        cc_weight_eti_raw = float(args['cc_weight_eti'])
+    except (ValueError, TypeError, KeyError):
+        cc_weight_eti_raw = 0.2
+
     t_ref_raw = float(args['t_ref'])
     uhi_max_raw = float(args['uhi_max'])
     cc_weight_sum = sum(
@@ -909,6 +925,8 @@ def calculate_energy_savings(
         target_building_vector_path (str): path to target vector that
             will contain the additional field 'energy_sav' calculated as
             ``consumption.increase(b) * ((T_(air,MAX)  - T_(air,i)))``.
+            This vector must be in a linearly projected spatial reference
+            system.
 
     Return:
         None.
@@ -935,6 +953,8 @@ def calculate_energy_savings(
     target_building_vector = gdal.OpenEx(
         target_building_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     target_building_layer = target_building_vector.GetLayer()
+    target_building_srs = target_building_layer.GetSpatialRef()
+    target_building_square_units = target_building_srs.GetLinearUnits() ** 2
     target_building_layer.CreateField(
         ogr.FieldDefn('energy_sav', ogr.OFTReal))
     target_building_layer.CreateField(
@@ -998,12 +1018,14 @@ def calculate_energy_savings(
             # KeyError when cost column not present.
             building_cost = 1.0
 
-        # Calculate Equation 7: Energy Savings.
+        # Calculate Equations 8, 9: Energy Savings.
         # We'll only calculate energy savings if there were polygons with valid
         # stats that could be aggregated from t_air_mean.
         if t_air_mean:
+            building_area = target_feature.GetGeometryRef().Area()
+            building_area_m2 = building_area * target_building_square_units
             savings = (
-                consumption_increase * (
+                consumption_increase * building_area_m2 * (
                     t_ref_raw - t_air_mean + uhi_max) * building_cost)
             target_feature.SetField('energy_sav', savings)
 

@@ -133,7 +133,7 @@ jobs:
             - name: Run model tests
               shell: bash -l {0}
               run: |
-                  pip install --isolated --upgrade --only-binary natcap.invest --find-links=dist natcap.invest
+                  pip install $(find dist -name "natcap.invest*.whl")
                   make test
 
             - uses: actions/upload-artifact@v1
@@ -209,7 +209,7 @@ jobs:
                   rm -r natcap.invest.egg-info
 
                   # Install natcap.invest from the sdist in dist/
-                  pip install --isolated --find-links=dist natcap.invest
+                  pip install $(find dist -name "natcap.invest*")
 
                   # Model tests should cover model functionality, we just want
                   # to be sure that we can import `natcap.invest` here.
