@@ -2,9 +2,9 @@ import fs from 'fs';
 import readline from 'readline';
 import { spawn, spawnSync } from 'child_process';
 import fetch from 'node-fetch';
-import * as server_requests from '../src/server_requests';
-import { findInvestBinaries, createPythonFlaskProcess } from '../src/main_helpers';
-import { argsDictFromObject } from '../src/utils';
+import * as server_requests from '../../src/server_requests';
+import { findInvestBinaries, createPythonFlaskProcess } from '../../src/main_helpers';
+import { argsDictFromObject } from '../../src/utils';
 import dotenv from 'dotenv';
 dotenv.config();
 
