@@ -78,6 +78,8 @@ Unreleased Changes
     * Fixing an issue where blank values of the Cooling Coefficient weights
       (shade, albedo, ETI) would raise an error.  Now, a default value for the
       coefficient is assumed if any single value is left blank.
+* HRA
+    * Raise ValueError if habitat or stressor inputs are not projected.
 
 3.8.7 (2020-07-17)
 ------------------
