@@ -24,7 +24,7 @@ jobs:
     - name: Clone natcap/invest
       uses: actions/checkout@v2
       with:
-        name: natcap/invest
+        repository: natcap/invest
         ref: refs/heads/master
         path: ./invest
 
