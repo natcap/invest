@@ -428,7 +428,7 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
   })
 })
 
-test.only('SetupTab: test validation payload is well-formatted', async () => {
+test('SetupTab: test validation payload is well-formatted', async () => {
   const spec = { args: {
     a: { 
       name: 'afoo', 

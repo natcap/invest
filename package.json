@@ -8,7 +8,8 @@
   "scripts": {
     "start": "cross-env FLASK_APP=src/server.py npx electron . --dev",
     "lint": "eslint --cache --color --ext .jsx,.js src",
-    "test": "jest",
+    "test": "jest tests/*.test.js",
+    "test-binaries": "jest tests/binary_tests/*",
     "postinstall": "electron-builder install-app-deps",
     "build": "npx ./build.js",
     "dist": "electron-builder -c.extraMetadata.main=build/main.js",
