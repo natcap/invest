@@ -744,7 +744,7 @@ class HraUnitTests(unittest.TestCase):
             1E-6)
 
     def test_simplify_geometry_points(self):
-        """HRA: test _simplify_geometry does't alter geometry given points."""
+        """HRA: test _simplify_geometry does not alter point geometries."""
         from natcap.invest.hra import _simplify_geometry
 
         srs = osr.SpatialReference()
@@ -965,8 +965,8 @@ class HraRegressionTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
-    def test_layer_no_projection(self):
-        """HRA: testing habitats and stressors without projection."""
+    def test_layer_without_spatial_ref(self):
+        """HRA: test habitats and stressors w/out spatial references."""
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
@@ -982,12 +982,12 @@ class HraRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
 
-        expected_message = 'The following layer does not have a projection'
+        expected_message = "The following layer does not have a spatial"
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
-    def test_layer_geographic(self):
-        """HRA: testing habitats and stressors that are not projected."""
+    def test_non_projected_layers(self):
+        """HRA: test habitat and stressor layers that are not projected."""
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
@@ -1024,8 +1024,7 @@ class HraRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
 
-        expected_message = ("The following layer is not projected in linear"
-                            " units:")
+        expected_message = "The following layer does not have a spatial"
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 

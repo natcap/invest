@@ -2385,8 +2385,8 @@ def _label_linear_unit(row):
             to transform them to meters
 
     Raises:
-        ValueError if any of the file's spatial reference is missing.
-        ValueError if any of the file's are not linearly projected.
+        ValueError if any of the file's spatial reference is missing or if 
+            any of the file's are not linearly projected.
 
     """
     if row['IS_RASTER']:
@@ -2402,13 +2402,10 @@ def _label_linear_unit(row):
         layer = None
         vector = None
 
-    if not spat_ref:
+    if not spat_ref or not spat_ref.IsProjected():
         raise ValueError(
-            f"The following layer does not have a projection: {row['PATH']}")
-    elif not spat_ref.IsProjected():
-        raise ValueError(
-            "The following layer is not projected in linear units:"
-            f"{row['PATH']}")
+            "The following layer does not have a spatial reference or is not"
+            f"projected (in linear units): {row['PATH']}")
     else:
         return float(spat_ref.GetLinearUnits())
 
