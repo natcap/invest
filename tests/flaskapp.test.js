@@ -111,8 +111,6 @@ test('write parameters to python script', async () => {
     input: fs.createReadStream(filepath),
     crlfDelay: Infinity
   })
-  // This is enough to confirm the file was written sucessfully.
-  // The contents of the file is already well-tested in natcap.invest
   for await (const line of file) {
     expect(`${line}`).toBe('# coding=UTF-8')
     break

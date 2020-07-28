@@ -17,21 +17,10 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-
     - name: install environment
       run: npm install
-
-    - name: Download invest binaries
-      shell: bash
-      # "-- <arg>" in run passes the arg through to the script
-      run: |
-        npm run prebuilt-invest -- ${{ matrix.os }}
-        unzip ./build/binaries.zip -d ./build
-        rm ./build/binaries.zip
 
     - name: run tests
       run: npm test
       env:
         CI: true
-        INVEST: ./build/invest/invest
-        SERVER: ./build/invest/server
