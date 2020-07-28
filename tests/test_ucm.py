@@ -51,9 +51,9 @@ class UCMTests(unittest.TestCase):
             'energy_consumption_table_path': os.path.join(
                 REGRESSION_DATA, "Energy.csv"),
             'avg_rel_humidity': '30.0',
-            'cc_weight_shade': '0.6',
-            'cc_weight_albedo': '0.2',
-            'cc_weight_eti': '0.2',
+            'cc_weight_shade': '',  # to trigger default of 0.6
+            'cc_weight_albedo': None,  # to trigger default of 0.2
+            # Purposefully excluding cc_weight_eti to trigger default of 0.2
             'n_workers': -1,
         }
 
@@ -68,7 +68,7 @@ class UCMTests(unittest.TestCase):
             'avg_cc': 0.222150472947109,
             'avg_tmp_v': 37.325275675470998,
             'avg_tmp_an': 2.325275675470998,
-            'avd_eng_cn': 9019.152329608312357,
+            'avd_eng_cn': 3520212.4242880843,
             'avg_wbgt_v': 32.60417266705069,
             'avg_ltls_v': 75.000000000000000,
             'avg_hvls_v': 75.000000000000000,
@@ -77,8 +77,10 @@ class UCMTests(unittest.TestCase):
         try:
             for key, expected_value in expected_results.items():
                 actual_value = float(results_feature.GetField(key))
+                # These accumulated values (esp. avd_eng_cn) are accumulated
+                # and may differ past about 4 decimal places.
                 self.assertAlmostEqual(
-                    actual_value, expected_value,
+                    actual_value, expected_value, places=4,
                     msg='%s should be close to %f, actual: %f' % (
                         key, expected_value, actual_value))
         finally:
@@ -87,7 +89,7 @@ class UCMTests(unittest.TestCase):
 
         # Assert that the decimal value of the energy savings value is what we
         # expect.
-        expected_energy_sav = 9361.431821463711
+        expected_energy_sav = 3564033.336855425
         energy_sav = 0.0
         n_nonetype = 0
         stats_vector_path = (
@@ -104,9 +106,12 @@ class UCMTests(unittest.TestCase):
                     # When energy_sav is NoneType
                     n_nonetype += 1
 
-            self.assertAlmostEqual(energy_sav, expected_energy_sav, msg=(
-                '%f should be close to %f' % (
-                    energy_sav, expected_energy_sav)))
+            # Expected energy savings is an accumulated value and may differ
+            # past about 4 decimal places.
+            self.assertAlmostEqual(
+                energy_sav, expected_energy_sav, places=4, msg=(
+                    '%f should be close to %f' % (
+                        energy_sav, expected_energy_sav)))
             self.assertEqual(n_nonetype, 119)
         finally:
             buildings_layer = None
@@ -142,9 +147,12 @@ class UCMTests(unittest.TestCase):
                     # When energy_sav is Nonetype
                     n_nonetype += 1
 
-            self.assertAlmostEqual(energy_sav, expected_energy_sav, msg=(
-                '%f should be close to %f' % (
-                    energy_sav, expected_energy_sav)))
+            # These accumulated values are accumulated
+            # and may differ past about 4 decimal places.
+            self.assertAlmostEqual(
+                energy_sav, expected_energy_sav, places=4, msg=(
+                    '%f should be close to %f' % (
+                        energy_sav, expected_energy_sav)))
             self.assertEqual(n_nonetype, 119)
         finally:
             buildings_layer = None
@@ -195,7 +203,7 @@ class UCMTests(unittest.TestCase):
             'avg_cc': 0.428302583240327,
             'avg_tmp_v': 36.60869797039769,
             'avg_tmp_an': 1.608697970397692,
-            'avd_eng_cn': 18787.273592787547,
+            'avd_eng_cn': 7240099.951768191,
             'avg_wbgt_v': 31.91108630952381,
             'avg_ltls_v': 28.744239631336406,
             'avg_hvls_v': 75.000000000000000,
@@ -203,8 +211,10 @@ class UCMTests(unittest.TestCase):
         try:
             for key, expected_value in expected_results.items():
                 actual_value = float(results_feature.GetField(key))
+                # These accumulated values (esp. avd_eng_cn) are accumulated
+                # and may differ past about 4 decimal places.
                 self.assertAlmostEqual(
-                    actual_value, expected_value,
+                    actual_value, expected_value, places=4,
                     msg='%s should be close to %f, actual: %f' % (
                         key, expected_value, actual_value))
         finally:
