@@ -14,19 +14,59 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-    
+
+
     - name: Install Node.js
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+    
+    - name: Clone natcap/invest
+      uses: actions/checkout@v2
+      with:
+        name: natcap/invest
+        ref: refs/heads/master
+        path: ./invest
 
-    - name: Download invest binaries
-      shell: bash
-      # "-- <arg>" in run passes the arg through to the script
+    - name: Set up conda
+      uses: goanpeca/setup-miniconda@v1.1.2
+      with:
+        activate-environment: invest-env  # This is also hardcoded in Pyinstaller's invest.spec
+        auto-update-conda: true
+        python-version: 3.7
+        channels: conda-forge
+
+    - name: Build conda env with python dependencies
+      shell: bash -l {0}
+      working-directory: ./invest
       run: |
-        npm run prebuilt-invest -- ${{ matrix.os }}
-        unzip ./build/binaries.zip -d ./build
-        rm ./build/binaries.zip
+          conda upgrade -y pip setuptools
+          conda install toml requests
+          conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+          python ./scripts/convert-requirements-to-conda-yml.py \
+                requirements.txt \
+                requirements-dev.txt \
+                requirements-gui.txt > requirements-all.yml
+          conda env update --file requirements-all.yml
+
+          # Libtiff from conda defaults channel gets around issue with missing libwebp
+          conda install --yes libtiff
+
+    - name: Build binaries
+      shell: bash -l {0}
+      working-directory: ./invest
+      run: |
+          make install
+          make binaries
+    # - name: Build invest binaries
+    #   shell: bash
+    #   # "-- <arg>" in run passes the arg through to the script
+    #   run: |
+        # npm run clone-invest
+        # npm run pyinstaller merge.spec
+        # npm run prebuilt-invest -- ${{ matrix.os }}
+        # unzip ./build/binaries.zip -d ./build
+        # rm ./build/binaries.zip
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
