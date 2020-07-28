@@ -1,8 +1,10 @@
 import os
 import logging
 
+from osgeo import gdal
 import taskgraph
 import pygeoprocessing
+from pygeoprocessing.symbolic import evaluate_raster_calculator_expression
 import pandas
 import numpy
 import scipy.sparse
@@ -12,6 +14,7 @@ from .. import utils
 LOGGER = logging.getLogger(__name__)
 
 
+NODATA_FLOAT32 = numpy.finfo(numpy.float32).min
 TRANS_EMPTY = 0
 TRANS_NO_CHANGE = 1
 TRANS_ACCUM = 2
@@ -62,8 +65,10 @@ def execute(args):
         pass
 
     base_paths = [args['baseline_lulc_path']]
+    aligned_paths_dict = {}
     aligned_paths = [os.path.join(
         intermediate_dir, f'aligned_baseline_lulc{suffix}'.tif)]
+    aligned_paths_dict[int(args['baseline_lulc_year'])] = aligned_paths[0]
     for transition_year in transitions:
         base_paths.append(transitions[transition_year])
         transition_years.add(transition_year)
@@ -85,9 +90,82 @@ def execute(args):
         target_path_list=aligned_paths,
         task_name='Align input landcover rasters.')
 
-    # Let's assume that the LULC initial variables and the carbon pool
+    # We're assuming that the LULC initial variables and the carbon pool
     # transient table are combined into a single lookup table.
-    # TODO: parse out all of the values here.
+    biophysical_columns = ['lulc-class']
+    for pool_type in ('soil', 'biomass'):
+        biophysical_columns.append(f'{pool_type}-half-life')
+        biophysical_columns.append(f'{pool_type}-yearly-accumulation')
+        for impact_type in ('low', 'med', 'high'):
+            biophysical_columns.append(
+                f'{pool_type}-{impact_type}-impact-disturb')
+
+    biophysical_parameters = utils.build_lookup_from_csv(
+        args['biophysical_table_path'], 'code',
+        column_list=biophysical_columns)
+
+    for year in range(min(transitions), max(transitions)+1):
+        if year in transitions:
+            lulc_path = aligned_paths_dict[year]
+
+        stocks_rasters = {}
+        stocks_tasks = {}
+        if year == min(transitions):
+            # Reclassify soil, biomass stocks.
+            for stock in ('biomass', 'soil'):
+                stocks_rasters[stock] = os.path.join(
+                    intermediate_dir, f'baseline-{stock}{suffix}.tif')
+                stocks_tasks[stock] = task_graph.add_task(
+                    func=pygeoprocessing.reclassify_raster,
+                    args=(
+                        (lulc_path, 1),
+                        {lucode: values[stock] for (lucode, values) in
+                            biophysical_parameters.items()},
+                        stocks_rasters[stock],
+                        gdal.GDT_Float32,
+                        NODATA_FLOAT32),
+                    dependent_task_list=[alignment_task],
+                    target_path_list=[stocks_rasters[stock]],
+                    task_name=f'Reclassify baseline {stock} raster')
+
+            # Sum the biomass and stocks rasters for the base year.
+            total_stock_raster_path = os.path.join(
+                intermediate_dir, f'total_stock_{year}{suffix}.tif')
+            total_stocks_task = task_graph.add_task(
+                func=evaluate_raster_calculator_expression,
+                args=(
+                    'biomass + soil',
+                    stocks_tasks,
+                    NODATA_FLOAT32,
+                    total_stock_raster_path),
+                dependent_task_list=list(stocks_tasks.values()),
+                target_path_list=[total_stocks_task],
+                task_name=f'Calculate total carbon stocks for {year}')
+
+        if year in transitions:
+            litter_raster_path = os.path.join(
+                intermediate_dir, f'baseline-litter{suffix}.tif')
+            stocks_tasks.append(task_graph.add_task(
+                func=pygeoprocessing.reclassify_raster,
+                args=(
+                    (lulc_path, 1),
+                    {lucode: values['litter'] for (lucode, values) in
+                        biophysical_parameters.items()},
+                    gdal.GDT_Float32,
+                    NODATA_FLOAT32),
+                dependent_task_list=[alignment_task],
+                target_path_list=[litter_raster_path],
+                task_name=(
+                    f'Reclassify litter raster for transition year {year}')))
+
+
+
+
+
+
+
+
+
 
 
 
@@ -109,8 +187,10 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
 
     # Load up a sparse matrix with the transitions to save on memory usage.
     n_rows = len(table.index)
-    soil_disturbance_matrix = scipy.sparse.dok_matrix((n_rows, n_rows), dtype=numpy.float32)
-    biomass_disturbance_matrix = scipy.sparse.dok_matrix((n_rows, n_rows), dtype=numpy.float32)
+    soil_disturbance_matrix = scipy.sparse.dok_matrix(
+        (n_rows, n_rows), dtype=numpy.float32)
+    biomass_disturbance_matrix = scipy.sparse.dok_matrix(
+        (n_rows, n_rows), dtype=numpy.float32)
     transitions = {
         '': TRANS_EMPTY,
         'NCC': TRANS_NO_CHANGE,
