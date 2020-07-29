@@ -151,10 +151,10 @@ def execute(args):
                     func=pygeoprocessing.reclassify_raster,
                     args=(
                         (aligned_paths_dict[transition_year], 1),
-                        {lucode: values[pool] for (lucode, values) in
-                            biophysical_parameters.items()},
+                        {lucode: values[f'{pool}-initial'] for (lucode, values)
+                            in biophysical_parameters.items()},
                         halflife_rasters[transition_year][pool],
-                        gdal.GDT_FLoat32,
+                        gdal.GDT_Float32,
                         NODATA_FLOAT32),
                     dependent_task_list=[alignment_task],
                     target_path_list=[halflife_rasters[transition_year][pool]],
@@ -170,17 +170,17 @@ def execute(args):
                     func=pygeoprocessing.reclassify_raster,
                     args=(
                         (aligned_paths_dict[transition_year], 1),
-                        {lucode: values[pool] for (lucode, values) in
+                        {lucode: values[f'{pool}-yearly-accumulation']
+                            for (lucode, values) in
                             biophysical_parameters.items()},
                         yearly_accum_rasters[transition_year][pool],
-                        gdal.GDT_FLoat32,
+                        gdal.GDT_Float32,
                         NODATA_FLOAT32),
                     dependent_task_list=[alignment_task],
                     target_path_list=[
                         yearly_accum_rasters[transition_year][pool]],
                     task_name=(
                         f'Mapping {pool} half-life for {transition_year}')))
-
 
     # Phase 3: do the timeseries analysis.
     for year in range(min(transition_years), max(transition_years)+1):
