@@ -253,7 +253,7 @@ ARGS_SPEC = {
 
 
 _OUTPUT_BASE_FILES = {
-    'aggregate_vector_path': 'aggregated_results.shp',
+    'aggregate_vector_path': 'aggregated_results_swy.shp',
     'annual_precip_path': 'P.tif',
     'cn_path': 'CN.tif',
     'l_avail_path': 'L_avail.tif',
