@@ -64,9 +64,9 @@ def execute(args):
 
     try:
         # TODO: validate that args['analysis_year'] > max(transition_years)
-        transition_years.add(int(args['analysis_year']))
+        analysis_year = int(args['analysis_year'])
     except (KeyError, ValueError, TypeError):
-        pass
+        analysis_year = None
 
     base_paths = [args['baseline_lulc_path']]
     aligned_paths_dict = {}
@@ -182,8 +182,14 @@ def execute(args):
                     task_name=(
                         f'Mapping {pool} half-life for {transition_year}')))
 
+    return
+
     # Phase 3: do the timeseries analysis.
-    for year in range(min(transition_years), max(transition_years)+1):
+    if analysis_year:
+        final_timestep = analysis_year
+    else:
+        final_timestep = max(transition_years)
+    for year in range(min(transition_years), final_timestep+1):
         if year in transitions:
             lulc_path = aligned_paths_dict[year]
 
