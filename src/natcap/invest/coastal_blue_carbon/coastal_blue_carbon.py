@@ -364,6 +364,9 @@ def execute(args):
             C_list = [valid_C_prior] + C_r + [C_r[-1]]
         else:
             C_list = [valid_C_prior]*2  # allow for a final analysis
+
+        # This iterates over the transition years.
+        # e.g. 2020, 2030, 2040, etc.
         for i in range(0, d['transitions']):
             D_biomass[i] = reclass_transition(
                 C_list[i],

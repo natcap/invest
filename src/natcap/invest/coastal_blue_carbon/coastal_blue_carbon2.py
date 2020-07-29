@@ -1,5 +1,6 @@
 import os
 import logging
+import collections
 
 from osgeo import gdal
 import taskgraph
@@ -46,6 +47,7 @@ def execute(args):
     else:
         transitions = {}
 
+    # Phase 1: alignment and preparation of inputs
     baseline_lulc_info = pygeoprocessing.get_raster_info(
         args['baseline_lulc_path'])
     target_sr_wkt = baseline_lulc_info['projection_wkt']
@@ -54,7 +56,8 @@ def execute(args):
 
     transition_years = set()
     try:
-        transition_years.add(int(args['baseline_lulc_year']))
+        baseline_lulc_year = int(args['baseline_lulc_year'])
+        transition_years.add(baseline_lulc_year)
     except (KeyError, ValueError, TypeError):
         LOGGER.error('The baseline_lulc_year is required but not provided.')
         raise ValueError('Baseline lulc year is required.')
@@ -94,18 +97,92 @@ def execute(args):
 
     # We're assuming that the LULC initial variables and the carbon pool
     # transient table are combined into a single lookup table.
-    biophysical_columns = ['lulc-class', 'litter-initial']
-    for pool_type in ('soil', 'biomass'):
-        biophysical_columns.append(f'{pool_type}-initial')
-        biophysical_columns.append(f'{pool_type}-half-life')
-        biophysical_columns.append(f'{pool_type}-yearly-accumulation')
-        for impact_type in ('low', 'med', 'high'):
-            biophysical_columns.append(
-                f'{pool_type}-{impact_type}-impact-disturb')
-
     biophysical_parameters = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'code')
 
+    def _reclassify(
+            source_raster_path, reclassification_map,
+            target_raster_path):
+        return task_graph.add_task(
+            func=pygeoprocessing.reclassify_raster,
+            args=(
+                (source_raster_path, 1),
+                reclassification_map,
+                target_raster_path,
+                gdal.GDT_Float32,
+                NODATA_FLOAT32),
+            dependent_task_list=[alignment_task],
+            target_path_list=[target_raster_path],
+            task_name=f'Reclassify {target_raster_path}')
+
+
+    # Phase 2: Set up the spatial variables that change with each transitition
+    disturbance_rasters = {}
+    halflife_rasters = {}
+    yearly_accum_rasters = {}
+
+    # This dict of lists is so that we can use them effectively to schedule the
+    # next waves of timeframe tasks in the main timeseries loop.
+    transition_tasks = collections.defaultdict(list)
+    for transition_year in sorted(transition_years):
+        disturbance_rasters[transition_year] = {}
+        halflife_rasters[transition_year] = {}
+        yearly_accum_rasters[transition_year] = {}
+        for pool in ('soil', 'biomass'):
+            if transition_year == baseline_lulc_year:
+                # There's no disturbance possible in the baseline because we're
+                # not transitioning landcover classes.
+                disturbance_rasters[transition_year][pool] = None
+            else:
+                # Reclassify disturbance{pool}
+                # This is based on the transition from one landcover class to
+                # another.
+                disturbance_rasters[transition_year][pool] = os.path.join(
+                    intermediate_dir,
+                    f'disturbance-{pool}-{transition_year}{suffix}.tif')
+                transition_tasks[transition_year].append(task_graph.add_task())
+
+            # Reclassify halflife{pool}
+            halflife_rasters[transition_year][pool] = os.path.join(
+                intermediate_dir,
+                f'halflife-{pool}-{transition_year}{suffix}.tif')
+            transition_tasks[transition_year].append(
+                task_graph.add_task(
+                    func=pygeoprocessing.reclassify_raster,
+                    args=(
+                        (aligned_paths_dict[transition_year], 1),
+                        {lucode: values[pool] for (lucode, values) in
+                            biophysical_parameters.items()},
+                        halflife_rasters[transition_year][pool],
+                        gdal.GDT_FLoat32,
+                        NODATA_FLOAT32),
+                    dependent_task_list=[alignment_task],
+                    target_path_list=[halflife_rasters[transition_year][pool]],
+                    task_name=(
+                        f'Mapping {pool} half-life for {transition_year}')))
+
+            # Reclassify yearly-accumulation{pool}
+            yearly_accum_rasters[transition_year][pool] = os.path.join(
+                intermediate_dir,
+                f'halflife-{pool}-{transition_year}{suffix}.tif')
+            transition_tasks[transition_year].append(
+                task_graph.add_task(
+                    func=pygeoprocessing.reclassify_raster,
+                    args=(
+                        (aligned_paths_dict[transition_year], 1),
+                        {lucode: values[pool] for (lucode, values) in
+                            biophysical_parameters.items()},
+                        yearly_accum_rasters[transition_year][pool],
+                        gdal.GDT_FLoat32,
+                        NODATA_FLOAT32),
+                    dependent_task_list=[alignment_task],
+                    target_path_list=[
+                        yearly_accum_rasters[transition_year][pool]],
+                    task_name=(
+                        f'Mapping {pool} half-life for {transition_year}')))
+
+
+    # Phase 3: do the timeseries analysis.
     for year in range(min(transition_years), max(transition_years)+1):
         if year in transitions:
             lulc_path = aligned_paths_dict[year]
@@ -161,6 +238,32 @@ def execute(args):
                 target_path_list=[litter_raster_path],
                 task_name=(
                     f'Reclassify litter raster for transition year {year}'))
+
+            # Reclassify the transition LULC for this transition year into
+            # the disturbance values.  This is a 2-dimensional
+            # reclassification (so a raster calculator operation)
+            # Disturbance reclassification happens for soil and biomass.
+            disturbance_raster_path = os.path.join(
+                intermediate_dir, f'disturbance-{year}{suffix}.tif')
+
+            # Reclassify the transition LULC for soil and biomass halflife
+
+            # Reclassify the transition LULC for soil and biomass annual
+            # accumulation.
+
+            # Calculate the total disturbed carbon (R_biomass and R_soil)
+
+        # Transient analysis
+        #
+        # For each year from the baseline:
+        #     * Calculate emissions for biomass and soil (uses R_biomass,
+        #       R_soil from the most recent transition)
+        #     * Calculate net sequestration (A - E, for each of {biomass,
+        #       soil})
+        #     * Calculate Total carbon stock for the year,
+        #     * if we're doing economic analysis:
+        #        * calculate the value (N * price_this_year)
+
 
 
 
