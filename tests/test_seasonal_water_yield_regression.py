@@ -13,6 +13,7 @@ import pygeoprocessing.testing
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'seasonal_water_yield')
+AGGREGATED_RESULTS_FILENAME = 'aggregated_results_swy.shp'
 
 
 def make_simple_shp(base_shp_path, origin):
@@ -279,7 +280,7 @@ def make_agg_results_csv(result_csv_path,
                          climate_zones=False,
                          recharge=False,
                          vector_exists=False):
-    """Make csv file that has the expected aggregated_results.shp table.
+    """Make csv file that has the expected aggregated_results_swy.shp table.
 
     The csv table is in the form of fid,vri_sum,qb_val per line.
 
@@ -451,7 +452,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         l_path = os.path.join(self.workspace_dir, 'L.tif')
         make_recharge_raster(l_path)
         aggregate_vector_path = os.path.join(self.workspace_dir,
-                                             'aggregated_results.shp')
+                                             AGGREGATED_RESULTS_FILENAME)
         make_simple_shp(aggregate_vector_path, (1180000.0, 690000.0))
         seasonal_water_yield._aggregate_recharge(aoi_path, l_path, l_path,
                                                  aggregate_vector_path)
@@ -649,7 +650,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
+            os.path.join(args['workspace_dir'], AGGREGATED_RESULTS_FILENAME),
             agg_results_csv_path)
 
     def test_bad_biophysical_table(self):
@@ -701,7 +702,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
+            os.path.join(args['workspace_dir'], AGGREGATED_RESULTS_FILENAME),
             agg_results_csv_path)
 
     def test_climate_zones_regression(self):
@@ -769,7 +770,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path, recharge=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
+            os.path.join(args['workspace_dir'], AGGREGATED_RESULTS_FILENAME),
             agg_results_csv_path)
 
     @staticmethod
@@ -782,7 +783,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             result_vector_path (string): path to the summary shapefile
                 produced by the SWY model.
             agg_results_path (string): path to a csv file that has the
-                expected aggregated_results.shp table in the form of
+                expected aggregated_results_swy.shp table in the form of
                 fid,vri_sum,qb_val per line
 
         Returns:
@@ -792,7 +793,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             AssertionError if any files are missing or results are out of
             range by `tolerance_places`
         """
-        # we expect a file called 'aggregated_results.shp'
+        # we expect a file called 'aggregated_results_swy.shp'
         result_vector = gdal.OpenEx(result_vector_path, gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
 
