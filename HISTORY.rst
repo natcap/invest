@@ -16,6 +16,8 @@ Unreleased Changes
       coefficient is assumed if any single value is left blank.
 * HRA
     * Raise ValueError if habitat or stressor inputs are not projected.
+* Seasonal Water Yield
+    * Updated output file name from aggregate_results.shp to aggregate_results_swy.shp for consistency
 
 3.8.7 (2020-07-17)
 ------------------
