@@ -69,10 +69,10 @@ def execute(args):
         analysis_year = None
 
     base_paths = [args['baseline_lulc_path']]
-    aligned_paths_dict = {}
+    aligned_lulc_paths = {}
     aligned_paths = [os.path.join(
         intermediate_dir, f'aligned_lulc_baseline{suffix}.tif')]
-    aligned_paths_dict[int(args['baseline_lulc_year'])] = aligned_paths[0]
+    aligned_lulc_paths[int(args['baseline_lulc_year'])] = aligned_paths[0]
     for transition_year in transitions:
         base_paths.append(transitions[transition_year])
         transition_years.add(transition_year)
@@ -80,7 +80,7 @@ def execute(args):
             os.path.join(
                 intermediate_dir,
                 f'aligned_lulc_transition_{transition_year}{suffix}.tif'))
-        aligned_paths_dict[transition_year] = aligned_paths[-1]
+        aligned_lulc_paths[transition_year] = aligned_paths[-1]
 
     alignment_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
@@ -100,31 +100,33 @@ def execute(args):
     biophysical_parameters = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'code')
 
-    def _reclassify(
-            source_raster_path, reclassification_map,
-            target_raster_path):
-        return task_graph.add_task(
-            func=pygeoprocessing.reclassify_raster,
-            args=(
-                (source_raster_path, 1),
-                reclassification_map,
-                target_raster_path,
-                gdal.GDT_Float32,
-                NODATA_FLOAT32),
-            dependent_task_list=[alignment_task],
-            target_path_list=[target_raster_path],
-            task_name=f'Reclassify {target_raster_path}')
-
-
     # Phase 2: Set up the spatial variables that change with each transitition
     disturbance_rasters = {}
     halflife_rasters = {}
     yearly_accum_rasters = {}
+    litter_rasters = {}
 
     # This dict of lists is so that we can use them effectively to schedule the
     # next waves of timeframe tasks in the main timeseries loop.
     transition_tasks = collections.defaultdict(list)
     for transition_year in sorted(transition_years):
+        # TODO: should ``litter`` field be ``litter-initial``?
+        litter_rasters[transition_year] = os.path.join(
+            intermediate_dir, f'litter-{transition_year}{suffix}.tif')
+        transition_tasks[transition_year].append(task_graph.add_task(
+            func=pygeoprocessing.reclassify_raster,
+            args=(
+                (aligned_lulc_paths[transition_year], 1),
+                {lucode: values['litter'] for (lucode, values) in
+                    biophysical_parameters.items()},
+                litter_rasters[transition_year],
+                gdal.GDT_Float32,
+                NODATA_FLOAT32),
+            dependent_task_list=[alignment_task],
+            target_path_list=[litter_rasters[transition_year]],
+            task_name=(
+                f'Reclassify litter raster for {transition_year}')))
+
         disturbance_rasters[transition_year] = {}
         halflife_rasters[transition_year] = {}
         yearly_accum_rasters[transition_year] = {}
@@ -150,7 +152,7 @@ def execute(args):
                 task_graph.add_task(
                     func=pygeoprocessing.reclassify_raster,
                     args=(
-                        (aligned_paths_dict[transition_year], 1),
+                        (aligned_lulc_paths[transition_year], 1),
                         {lucode: values[f'{pool}-initial'] for (lucode, values)
                             in biophysical_parameters.items()},
                         halflife_rasters[transition_year][pool],
@@ -169,7 +171,7 @@ def execute(args):
                 task_graph.add_task(
                     func=pygeoprocessing.reclassify_raster,
                     args=(
-                        (aligned_paths_dict[transition_year], 1),
+                        (aligned_lulc_paths[transition_year], 1),
                         {lucode: values[f'{pool}-yearly-accumulation']
                             for (lucode, values) in
                             biophysical_parameters.items()},
@@ -182,8 +184,6 @@ def execute(args):
                     task_name=(
                         f'Mapping {pool} half-life for {transition_year}')))
 
-    return
-
     # Phase 3: do the timeseries analysis.
     if analysis_year:
         final_timestep = analysis_year
@@ -191,7 +191,7 @@ def execute(args):
         final_timestep = max(transition_years)
     for year in range(min(transition_years), final_timestep+1):
         if year in transitions:
-            lulc_path = aligned_paths_dict[year]
+            lulc_path = aligned_lulc_paths[year]
 
         stocks_rasters = {}
         stocks_tasks = {}
