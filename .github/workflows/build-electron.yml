@@ -52,21 +52,18 @@ jobs:
           # Libtiff from conda defaults channel gets around issue with missing libwebp
           conda install --yes libtiff
 
-    - name: Build binaries
+          conda install Flask
+
+    - name: Install natcap.invest
       shell: bash -l {0}
       working-directory: ./invest
       run: |
           make install
-          make binaries
-    # - name: Build invest binaries
-    #   shell: bash
-    #   # "-- <arg>" in run passes the arg through to the script
-    #   run: |
-        # npm run clone-invest
-        # npm run pyinstaller merge.spec
-        # npm run prebuilt-invest -- ${{ matrix.os }}
-        # unzip ./build/binaries.zip -d ./build
-        # rm ./build/binaries.zip
+
+    - name: Freeze Python environment
+      shell: bash -l {0}
+      run: |
+        python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest.spec
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
