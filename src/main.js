@@ -8,7 +8,7 @@ if (isDevMode) {
 }
 
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
-const { shutdownPythonProcess } = require('./server_requests');
+const { getFlaskIsReady, shutdownPythonProcess } = require('./server_requests');
 const { findInvestBinaries, createPythonFlaskProcess } = require('./main_helpers');
 
 
@@ -32,6 +32,8 @@ const createWindow = async () => {
   });
 
   createPythonFlaskProcess(binaries.server, isDevMode);
+  // Wait for a response from the server before loading the app
+  const _ = await getFlaskIsReady();
 
   // Create the browser window.
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
