@@ -71,7 +71,8 @@ def execute(args):
     base_paths = [args['baseline_lulc_path']]
     aligned_lulc_paths = {}
     aligned_paths = [os.path.join(
-        intermediate_dir, f'aligned_lulc_baseline{suffix}.tif')]
+        intermediate_dir,
+        f'aligned_lulc_baseline_{baseline_lulc_year}{suffix}.tif')]
     aligned_lulc_paths[int(args['baseline_lulc_year'])] = aligned_paths[0]
     for transition_year in transitions:
         base_paths.append(transitions[transition_year])
@@ -142,7 +143,7 @@ def execute(args):
                 disturbance_rasters[transition_year][pool] = os.path.join(
                     intermediate_dir,
                     f'disturbance-{pool}-{transition_year}{suffix}.tif')
-                transition_tasks[transition_year].append(task_graph.add_task())
+                #transition_tasks[transition_year].append(task_graph.add_task())
 
             # Reclassify halflife{pool}
             halflife_rasters[transition_year][pool] = os.path.join(
@@ -190,74 +191,10 @@ def execute(args):
     else:
         final_timestep = max(transition_years)
     for year in range(min(transition_years), final_timestep+1):
-        if year in transitions:
-            lulc_path = aligned_lulc_paths[year]
+        pass
 
-        stocks_rasters = {}
-        stocks_tasks = {}
-        if year == min(transitions):
-            # Reclassify soil, biomass stocks.
-            for stock in ('biomass-initial', 'soil-initial'):
-                stocks_rasters[stock] = os.path.join(
-                    intermediate_dir, f'baseline-{stock}{suffix}.tif')
-                stocks_tasks[stock] = task_graph.add_task(
-                    func=pygeoprocessing.reclassify_raster,
-                    args=(
-                        (lulc_path, 1),
-                        {lucode: values[stock] for (lucode, values) in
-                            biophysical_parameters.items()},
-                        stocks_rasters[stock],
-                        gdal.GDT_Float32,
-                        NODATA_FLOAT32),
-                    dependent_task_list=[alignment_task],
-                    target_path_list=[stocks_rasters[stock]],
-                    task_name=f'Reclassify baseline {stock} raster')
 
-            # Sum the biomass and stocks rasters for the base year.
-            total_stock_raster_path = os.path.join(
-                intermediate_dir, f'total_stock_{year}{suffix}.tif')
-            total_stocks_task = task_graph.add_task(
-                func=evaluate_raster_calculator_expression,
-                args=(
-                    'biomass + soil',
-                    {'biomass': (stocks_rasters['biomass-initial'], 1),
-                     'soil': (stocks_rasters['soil-initial'], 1)},
-                    NODATA_FLOAT32,
-                    total_stock_raster_path),
-                dependent_task_list=list(stocks_tasks.values()),
-                target_path_list=[total_stock_raster_path],
-                task_name=f'Calculate total carbon stocks for {year}')
-
-        if year in transitions:
-            litter_raster_path = os.path.join(
-                intermediate_dir, f'baseline-litter{suffix}.tif')
-            task_graph.add_task(
-                func=pygeoprocessing.reclassify_raster,
-                args=(
-                    (lulc_path, 1),
-                    {lucode: values['litter'] for (lucode, values) in
-                        biophysical_parameters.items()},
-                    litter_raster_path,
-                    gdal.GDT_Float32,
-                    NODATA_FLOAT32),
-                dependent_task_list=[alignment_task],
-                target_path_list=[litter_raster_path],
-                task_name=(
-                    f'Reclassify litter raster for transition year {year}'))
-
-            # Reclassify the transition LULC for this transition year into
-            # the disturbance values.  This is a 2-dimensional
-            # reclassification (so a raster calculator operation)
-            # Disturbance reclassification happens for soil and biomass.
-            disturbance_raster_path = os.path.join(
-                intermediate_dir, f'disturbance-{year}{suffix}.tif')
-
-            # Reclassify the transition LULC for soil and biomass halflife
-
-            # Reclassify the transition LULC for soil and biomass annual
-            # accumulation.
-
-            # Calculate the total disturbed carbon (R_biomass and R_soil)
+        # Calculate the total disturbed carbon (R_biomass and R_soil)
 
         # Transient analysis
         #
