@@ -80,7 +80,9 @@
     "react-leaflet-choropleth": "^2.0.1",
     "react-redux": "^7.2.0",
     "redux": "^4.0.5",
-    "tail": "^2.0.3"
+    "tail": "^2.0.3",
+    "winston": "^3.3.3",
+    "winston-daily-rotate-file": "^4.5.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.10.1",
@@ -115,9 +117,7 @@
     "jest-environment-jsdom-sixteen": "^1.0.3",
     "react-test-renderer": "^16.12.0",
     "sinon": "^9.0.1",
-    "spectron": "^10.0.0",
-    "winston": "^3.3.3",
-    "winston-daily-rotate-file": "^4.5.0"
+    "spectron": "^10.0.0"
   },
   "browserslist": {
     "production": [
