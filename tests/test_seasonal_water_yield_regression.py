@@ -739,7 +739,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path, climate_zones=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results_cz.shp'),
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy_cz.shp'),
             agg_results_csv_path)
 
     def test_user_recharge(self):
