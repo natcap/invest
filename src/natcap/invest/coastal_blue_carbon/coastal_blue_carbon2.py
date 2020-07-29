@@ -16,12 +16,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 NODATA_FLOAT32 = float(numpy.finfo(numpy.float32).min)
-TRANS_EMPTY = 0
-TRANS_NO_CHANGE = 1
-TRANS_ACCUM = 2
-TRANS_LOW_IMPACT = 3
-TRANS_MED_IMPACT = 4
-TRANS_HIGH_IMPACT = 5
 
 
 def execute(args):
@@ -241,14 +235,6 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
         (n_rows, n_rows), dtype=numpy.float32)
     biomass_disturbance_matrix = scipy.sparse.dok_matrix(
         (n_rows, n_rows), dtype=numpy.float32)
-    transitions = {
-        '': TRANS_EMPTY,
-        'NCC': TRANS_NO_CHANGE,
-        'accum': TRANS_ACCUM,
-        'low-impact-disturb': TRANS_LOW_IMPACT,
-        'med-impact-disturb': TRANS_MED_IMPACT,
-        'high-impact-disturb': TRANS_HIGH_IMPACT,
-    }
 
     # TODO: I don't actually know if this is any better than the dict-based
     # approach we had before since that, too, was basically sparse.
