@@ -1,19 +1,16 @@
-// const fs = require('fs');
-// const path = require('path');
-// const { spawn } = require('child_process');
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
-// const { getLogger } = require('./logger');
-const { shutdownPythonProcess } = require('./server_requests');
-const { findInvestBinaries, createPythonFlaskProcess } = require('./main_helpers');
-
-// const logger = getLogger(__filename.split('/').slice(-1)[0]);
-
 const isDevMode = process.argv[2] === '--dev';
 if (isDevMode) {
+  // in dev mode we can have babel transpile modules on import
+  require("@babel/register");
   // load the '.env' file from the project root
   const dotenv = require('dotenv');
   dotenv.config();
 }
+
+const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { shutdownPythonProcess } = require('./server_requests');
+const { findInvestBinaries, createPythonFlaskProcess } = require('./main_helpers');
+
 
 const PORT = (process.env.PORT || '5000').trim();
 
