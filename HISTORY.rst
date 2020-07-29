@@ -17,7 +17,8 @@ Unreleased Changes
 * HRA
     * Raise ValueError if habitat or stressor inputs are not projected.
 * Seasonal Water Yield
-    * Updated output file name from aggregate_results.shp to aggregate_results_swy.shp for consistency
+    * Updated output file name from aggregate_results.shp to aggregate_results_swy.shp
+      for consistency with NDR and SDR
 
 3.8.7 (2020-07-17)
 ------------------
