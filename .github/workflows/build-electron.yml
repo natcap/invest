@@ -52,7 +52,7 @@ jobs:
           # Libtiff from conda defaults channel gets around issue with missing libwebp
           conda install --yes libtiff
 
-          conda install Flask
+          conda install flask
 
     - name: Install natcap.invest
       shell: bash -l {0}
@@ -63,7 +63,7 @@ jobs:
     - name: Freeze Python environment
       shell: bash -l {0}
       run: |
-        python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest.spec
+        python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
