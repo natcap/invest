@@ -620,9 +620,9 @@ class TestModel(unittest.TestCase):
         # because the values are determined by multiple inputs, and any changes
         # in those inputs would propagate to this raster.
         numpy.testing.assert_allclose(
-            netseq_array, netseq_test, rtol=0, atol=1e-6)
+            netseq_array, netseq_test, rtol=0, atol=1.5e-4)
         numpy.testing.assert_allclose(
-            npv_array, npv_test, rtol=0, atol=1e-6)
+            npv_array, npv_test, rtol=0, atol=1.5e-4)
 
     def test_model_run_2(self):
         """Coastal Blue Carbon: Test CBC without analysis year."""
@@ -652,7 +652,7 @@ class TestModel(unittest.TestCase):
         # because the values are determined by multiple inputs, and any changes
         # in those inputs would propagate to this raster.
         numpy.testing.assert_allclose(
-            netseq_array, netseq_test, rtol=0, atol=1e-6)
+            netseq_array, netseq_test, rtol=0, atol=1.5e-4)
 
     def test_model_no_valuation(self):
         """Coastal Blue Carbon: Test main model without valuation."""
@@ -683,7 +683,7 @@ class TestModel(unittest.TestCase):
         # because the values are determined by multiple inputs, and any changes
         # in those inputs would propagate to this raster.
         numpy.testing.assert_allclose(
-            netseq_array, netseq_test, rtol=0, atol=1e-6)
+            netseq_array, netseq_test, rtol=0, atol=1.5e-4)
 
     def test_binary(self):
         """Coastal Blue Carbon: Test CBC model against InVEST-Data."""
@@ -738,7 +738,7 @@ class TestModel(unittest.TestCase):
                         dtype=numpy.float32)
 
         a.sort()
-        numpy.testing.assert_allclose(u, a, rtol=1.5e-2, atol=0)
+        numpy.testing.assert_allclose(u, a, rtol=0, atol=1.5e-2)
 
         # walk through all files in the workspace and assert that outputs have
         # the file suffix.
