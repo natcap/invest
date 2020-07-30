@@ -65,6 +65,11 @@ jobs:
       run: |
         python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec
 
+    - name: NPM Install
+      run: npm install
+
+      # Also run all tests on the build dir code?
+
     - name: Run tests that require binaries
       shell: bash -l {0}
       run: npm run test-binaries
