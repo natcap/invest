@@ -25,7 +25,7 @@ jobs:
     - name: Clone natcap/invest
       uses: actions/checkout@v2
       env: 
-        INVEST_VERSION: jq .invest.version package.json
+        INVEST_VERSION: "$(jq .invest.version package.json)"
       with:
         repository: natcap/invest
         ref: refs/tags/${{env.INVEST_VERSION}}
