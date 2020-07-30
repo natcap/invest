@@ -1181,7 +1181,7 @@ class HraRegressionTests(unittest.TestCase):
 
             try:
                 numpy.testing.assert_allclose(
-                    a_geom_list, b_geom_list, rtol=0, atol=1 * 10**-precision)
+                    a_geom_list, b_geom_list, rtol=0, atol=10**-precision)
             except AssertionError:
                 a_feature_fid = a_feat.GetFID()
                 b_feature_fid = b_feat.GetFID()

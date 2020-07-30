@@ -234,7 +234,7 @@ def assert_array_sum(base_raster_path, desired_sum, include_nodata=True):
         base_array = base_array[~numpy.isclose(base_array, nodata)]
 
     raster_sum = numpy.sum(base_array)
-    numpy.testing.assert_allclose(raster_sum, desired_sum, rtol=0, atol=1.5e-3)
+    numpy.testing.assert_allclose(raster_sum, desired_sum, rtol=0, atol=1e-3)
 
 
 class HabitatQualityTests(unittest.TestCase):

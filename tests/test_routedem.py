@@ -165,7 +165,7 @@ class RouteDEMTests(unittest.TestCase):
             numpy.unique(slope_array), 
             rtol=0, atol=1e-6)
         numpy.testing.assert_allclose(
-            numpy.sum(slope_array), 4088.7358, rtol=0, atol=1.5e-4)
+            numpy.sum(slope_array), 4088.7358, rtol=0, atol=1e-4)
 
     def test_routedem_d8(self):
         """RouteDEM: test d8 routing."""

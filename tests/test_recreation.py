@@ -1213,7 +1213,7 @@ def _assert_vector_attributes_eq(
             for av, ev in zip(actual_values, expected_values):
                 if av is not None:
                     numpy.testing.assert_allclose(
-                        av, ev, rtol=0, atol=1.5 * 10**-tolerance_places)
+                        av, ev, rtol=0, atol=10**-tolerance_places)
                 else:
                     # Could happen when a raster predictor is only nodata
                     assert(ev is None)
@@ -1270,7 +1270,7 @@ def _assert_regression_results_eq(
             for v, ev in zip(values, expected_values):
                 if v is not None:
                     numpy.testing.assert_allclose(
-                        v, ev, rtol=0, atol=1.5 * 10**-tolerance_places)
+                        v, ev, rtol=0, atol=10**-tolerance_places)
                 else:
                     # Could happen when a raster predictor is only nodata
                     assert(numpy.isnan(ev))

@@ -812,7 +812,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                     numpy.testing.assert_allclose(
                         feature.GetField(field),
                         value,
-                        rtol=0, atol=1.5 * 10**-tolerance_places)
+                        rtol=0, atol=10**-tolerance_places)
                 ogr.Feature.__swig_destroy__(feature)
                 feature = None
 
