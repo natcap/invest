@@ -65,6 +65,10 @@ jobs:
       run: |
         python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec
 
+    - name: Run tests that require binaries
+      shell: bash -l {0}
+      run: npm run test-binaries
+
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
       with:
@@ -80,3 +84,4 @@ jobs:
       with:
         name: invest-desktop-${{ matrix.os }}
         path: dist/invest-desktop_*
+
