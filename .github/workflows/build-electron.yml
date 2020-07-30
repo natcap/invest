@@ -22,7 +22,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
     
     - name: Set env var for invest version
-      run: echo ::set-env name=INVEST_VERSION::$(jq .invest.version package.json)
+      run: echo ::set-env name=INVEST_VERSION::$(jq -r .invest.version package.json)
 
     - name: Clone natcap/invest
       uses: actions/checkout@v2
