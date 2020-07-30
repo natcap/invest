@@ -38,12 +38,11 @@ def assert_expected_results_in_vector(expected_results, vector_path):
         # aggregation such as zonal statistics.
         
         # Following numpy recommendation to use alternatives to 
-        # assert_approx_equal, this has been replaced with assert_allclose
-        # using an absolute tolerance of 1,
-        # which is similar to (the same as?) 2 significant figures,
-        # given that the compared values have 2 digits right of the decimal.
+        # assert_approx_equal, this has been replaced with assert_allclose.
+        # Using a relative tolerance of 0.1, which scales similarly
+        # to a tolerance of 2 significant figures.
         numpy.testing.assert_allclose(
-            actual_results[key], expected_results[key], rtol=0, atol=1)
+            actual_results[key], expected_results[key], rtol=0.1, atol=0)
 
 
 class SDRTests(unittest.TestCase):
