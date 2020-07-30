@@ -15,6 +15,7 @@ export function findInvestBinaries(isDevMode) {
     // Binding to the invest server binary:
     let serverExe;
     let investExe;
+    const ext = (process.platform === 'win32') ? '.exe' : '';
 
     // A) look for a local registry of available invest installations
     const investRegistryPath = path.join(
@@ -28,12 +29,15 @@ export function findInvestBinaries(isDevMode) {
 
     // B) check for dev mode and an environment variable from dotenv
     } else if (isDevMode) {
-      serverExe = process.env.SERVER;
-      investExe = process.env.INVEST;
+      // If no dotenv vars are set, default to where this project's
+      // build process places the binaries.
+      console.log(process.env.SERVER);
+      serverExe = `${process.env.SERVER || 'build/invest/server'}${ext}`;
+      investExe = `${process.env.INVEST || 'build/invest/invest'}${ext}`;
+      console.log(serverExe);
 
     // C) point to binaries included in this app's installation.
     } else {
-      const ext = (process.platform === 'win32') ? '.exe' : '';
       const binaryPath = path.join(
         process.resourcesPath, 'app.asar.unpacked', 'build', 'invest'
       );
