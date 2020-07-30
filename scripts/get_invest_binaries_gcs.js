@@ -1,3 +1,13 @@
+/**
+ * 2020-07-30 - the workbench build process no longer depends on
+ * pre-built binaries, instead building them itself, so this script
+ * is not being used anymore.
+ * 
+ * This is a utility script for fetching prebuilt invest binaries
+ * that include the server.py module and thus are compatible with the
+ * workbench.
+ */
+
 const https = require('https')
 const fs = require('fs')
 const path = require('path')
