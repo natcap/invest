@@ -7,6 +7,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 4
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         node-version: [12.x]
@@ -45,16 +46,16 @@ jobs:
           conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
           python ./scripts/convert-requirements-to-conda-yml.py \
                 requirements.txt \
-                requirements-dev.txt \
-                requirements-gui.txt > requirements-all.yml
+                requirements-dev.txt > requirements-all.yml
           conda env update --file requirements-all.yml
 
           # Libtiff from conda defaults channel gets around issue with missing libwebp
           conda install --yes libtiff
 
+          # The dependencies not required by natcap.invest
           conda install flask
 
-    - name: Install natcap.invest
+    - name: Install natcap.invest python package
       shell: bash -l {0}
       working-directory: ./invest
       run: |
