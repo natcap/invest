@@ -13,8 +13,7 @@
     "postinstall": "electron-builder install-app-deps",
     "build": "npx ./build.js",
     "dist": "electron-builder -c.extraMetadata.main=build/main.js",
-    "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js",
-    "prebuilt-invest": "npx ./scripts/get_invest_binaries_gcs.js"
+    "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js"
   },
   "build": {
     "asarUnpack": [
@@ -49,10 +48,7 @@
     "testEnvironment": "jest-environment-jsdom-sixteen"
   },
   "invest": {
-    "hostname": "https://storage.googleapis.com/",
-    "bucket": "natcap-dev-build-artifacts",
-    "fork": "invest/davemfish",
-    "version": "3.8.0.post634+g203a6345/"
+    "version": "3.8.7"
   },
   "keywords": [],
   "author": "dmf",
