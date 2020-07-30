@@ -16,6 +16,9 @@ Unreleased Changes
       coefficient is assumed if any single value is left blank.
 * HRA
     * Raise ValueError if habitat or stressor inputs are not projected.
+* Seasonal Water Yield
+    * Updated output file name from aggregated_results.shp to aggregated_results_swy.shp
+      for consistency with NDR and SDR
 * Tests
     * Replaced usages of numpy testing methods ``assert_array_almost_equal``, 
       ``assert_almost_equal``, and ``assert_approx_equal`` with ``assert_allclose``
