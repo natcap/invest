@@ -28,7 +28,7 @@ jobs:
         INVEST_VERSION: jq .invest.version package.json
       with:
         repository: natcap/invest
-        ref: refs/tags/env.INVEST_VERSION
+        ref: refs/tags/${{env.INVEST_VERSION}}
         path: ./invest
 
     - name: Set up conda
