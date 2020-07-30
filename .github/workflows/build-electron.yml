@@ -16,16 +16,16 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-
     - name: Install Node.js
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
     
+    - name: Set env var for invest version
+      run: echo ::set-env name=INVEST_VERSION::$(jq .invest.version package.json)
+
     - name: Clone natcap/invest
       uses: actions/checkout@v2
-      env: 
-        INVEST_VERSION: "$(jq .invest.version package.json)"
       with:
         repository: natcap/invest
         ref: refs/tags/${{env.INVEST_VERSION}}
