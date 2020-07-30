@@ -1153,11 +1153,15 @@ class TestCBC2(unittest.TestCase):
             [0, 1],
             [1, 0]], dtype=numpy.int8)
 
+        carbon_storage_matrix = numpy.array([
+            [2., 2.],
+            [2., 2.]], dtype=numpy.float32)
+
         returned_matrix = coastal_blue_carbon2._reclassify_transition(
-            landuse_from_matrix, landuse_to_matrix,
-            transition_magnitude_matrix, None, None)
+            landuse_from_matrix, landuse_to_matrix, carbon_storage_matrix,
+            transition_magnitude_matrix, None, None, None)
         expected_matrix = numpy.array([
-            [0.0, 3.3],
-            [1.1, 2.2]], dtype=numpy.float32)
+            [0.0, 6.6],
+            [2.2, 4.4]], dtype=numpy.float32)
         numpy.testing.assert_almost_equal(
             returned_matrix, expected_matrix)

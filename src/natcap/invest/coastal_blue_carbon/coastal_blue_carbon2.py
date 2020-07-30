@@ -313,32 +313,47 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
 
 def _reclassify_transition(
         landuse_transition_from_matrix, landuse_transition_to_matrix,
-        transition_magnitude_matrix, from_nodata, to_nodata):
-    """Reclassify transitions using the transition matrix.
+        carbon_storage_matrix, disturbance_magnitude_matrix, from_nodata,
+        to_nodata, storage_nodata):
+    """Calculate the volume of carbon disturbed.
+
+    This function calculates the volume of disturbed carbon for each
+    landcover transitioning from one landcover type to a disturbance type.
+    The magnitude of the disturbance is in ``disturbance_magnitude_matrix`` and
+    the existing carbon storage is found in ``carbon_storage_matrix``.
+
+    The volume of carbon disturbed is calculated according to:
+
+        carbon_disturbed = disturbance_magnitude * carbon_storage
 
     Args:
         landuse_transition_from_matrix (numpy.ndarray): An integer landcover
             array representing landcover codes that we are transitioning FROM.
         landuse_transition_to_matrix (numpy.ndarray): An integer landcover
             array representing landcover codes that we are transitioning TO.
-        transition_magnitude_matrix (scipy.sparse.dok_matrix): A sparse matrix
+        disturbance_magnitude_matrix (scipy.sparse.dok_matrix): A sparse matrix
             where axis 0 represents the integer landcover codes being
             transitioned from and axis 1 represents the integer landcover codes
             being transitioned to.  The values at the intersection of these
             coordinate pairs are ``numpy.float32`` values representing the
             magnitude of the disturbance in a given carbon stock during this
             transition.
+        carbon_storage_matrix(numpy.ndarray): A ``numpy.float32`` matrix of
+            values representing carbon storage in some pool of carbon.
         from_nodata (number or None): The nodata value of the
             ``landuse_transition_from_matrix``, or ``None`` if no nodata value
             is defined.
         to_nodata (number or None): The nodata value of the
             ``landuse_transition_to_matrix``, or ``None`` if no nodata value
             is defined.
+        storage_nodata (number or None): The nodata value of the
+            ``carbon_storage_matrix``, or ``None`` if no nodata value
+            is defined.
+
 
     Returns:
-        A ``numpy.array`` of dtype ``numpy.float32`` with the appropriate
-        disturbance values based on the transitions defined in
-        ``transition_magnitude_matrix``.
+        A ``numpy.array`` of dtype ``numpy.float32`` with the volume of
+        disturbed carbon for this transition.
     """
     output_matrix = numpy.empty(landuse_transition_from_matrix.shape,
                                 dtype=numpy.float32)
@@ -352,9 +367,13 @@ def _reclassify_transition(
     if to_nodata is not None:
         valid_pixels &= (landuse_transition_to_matrix != to_nodata)
 
-    output_matrix[valid_pixels] = transition_magnitude_matrix[
-        landuse_transition_from_matrix[valid_pixels],
-        landuse_transition_to_matrix[valid_pixels]].toarray().flatten()
+    if storage_nodata is not None:
+        valid_pixels &= (~numpy.isclose(carbon_storage_matrix, storage_nodata))
+
+    output_matrix[valid_pixels] = (
+        carbon_storage_matrix[valid_pixels] * disturbance_magnitude_matrix[
+            landuse_transition_from_matrix[valid_pixels],
+            landuse_transition_to_matrix[valid_pixels]].toarray().flatten())
 
     return output_matrix
 
