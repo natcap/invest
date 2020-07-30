@@ -13,6 +13,7 @@ import numpy
 from osgeo import gdal, osr
 import pygeoprocessing
 from natcap.invest import utils
+import scipy.sparse
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -1128,7 +1129,8 @@ class TestCBC2(unittest.TestCase):
                     f'{transition_year},{transition_file_path}\n')
 
                 make_raster_from_array(
-                    numpy.array([[0]], dtype=numpy.int16), transition_file_path)
+                    numpy.array([[0]], dtype=numpy.int16),
+                    transition_file_path)
 
         extracted_transitions = (
             coastal_blue_carbon2._extract_transitions_from_table(csv_path))
@@ -1137,5 +1139,25 @@ class TestCBC2(unittest.TestCase):
             extracted_transitions,
             dict(zip(transition_years, transition_rasters)))
 
+    def test_reclassify_transition(self):
+        """CBC: Reclassify a landcover transition in terms of disturbance."""
+        transition_magnitude_matrix = scipy.sparse.dok_matrix([
+            [0.0, 1.1],
+            [2.2, 3.3]], dtype=numpy.float32)
 
+        landuse_from_matrix = numpy.array([
+            [0, 1],
+            [0, 1]], dtype=numpy.int8)
 
+        landuse_to_matrix = numpy.array([
+            [0, 1],
+            [1, 0]], dtype=numpy.int8)
+
+        returned_matrix = coastal_blue_carbon2._reclassify_transition(
+            landuse_from_matrix, landuse_to_matrix,
+            transition_magnitude_matrix, None, None)
+        expected_matrix = numpy.array([
+            [0.0, 3.3],
+            [1.1, 2.2]], dtype=numpy.float32)
+        numpy.testing.assert_almost_equal(
+            returned_matrix, expected_matrix)

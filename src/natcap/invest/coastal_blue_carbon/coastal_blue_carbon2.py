@@ -5,7 +5,6 @@ import collections
 from osgeo import gdal
 import taskgraph
 import pygeoprocessing
-from pygeoprocessing.symbolic import evaluate_raster_calculator_expression
 import pandas
 import numpy
 import scipy.sparse
@@ -222,7 +221,7 @@ def execute(args):
 
 def _read_transition_matrix(transition_csv_path, biophysical_dict):
     encoding = None
-    if utils.has_utf8_bom(csv_path):
+    if utils.has_utf8_bom(transition_csv_path):
         encoding = 'utf-8-sig'
 
     table = pandas.read_csv(
@@ -261,6 +260,54 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
                     biophysical_dict[f'biomass-{col_value}'])
 
     return biomass_disturbance_matrix, soil_disturbance_matrix
+
+
+def _reclassify_transition(
+        landuse_transition_from_matrix, landuse_transition_to_matrix,
+        transition_magnitude_matrix, from_nodata, to_nodata):
+    """Reclassify transitions using the transition matrix.
+
+    Args:
+        landuse_transition_from_matrix (numpy.ndarray): An integer landcover
+            array representing landcover codes that we are transitioning FROM.
+        landuse_transition_to_matrix (numpy.ndarray): An integer landcover
+            array representing landcover codes that we are transitioning TO.
+        transition_magnitude_matrix (scipy.sparse.dok_matrix): A sparse matrix
+            where axis 0 represents the integer landcover codes being
+            transitioned from and axis 1 represents the integer landcover codes
+            being transitioned to.  The values at the intersection of these
+            coordinate pairs are ``numpy.float32`` values representing the
+            magnitude of the disturbance in a given carbon stock during this
+            transition.
+        from_nodata (number or None): The nodata value of the
+            ``landuse_transition_from_matrix``, or ``None`` if no nodata value
+            is defined.
+        to_nodata (number or None): The nodata value of the
+            ``landuse_transition_to_matrix``, or ``None`` if no nodata value
+            is defined.
+
+    Returns:
+        A ``numpy.array`` of dtype ``numpy.float32`` with the appropriate
+        disturbance values based on the transitions defined in
+        ``transition_magnitude_matrix``.
+    """
+    output_matrix = numpy.empty(landuse_transition_from_matrix.shape,
+                                dtype=numpy.float32)
+    output_matrix[:] = NODATA_FLOAT32
+
+    valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
+                              dtype=numpy.bool)
+    if from_nodata is not None:
+        valid_pixels &= (landuse_transition_from_matrix != from_nodata)
+
+    if to_nodata is not None:
+        valid_pixels &= (landuse_transition_to_matrix != to_nodata)
+
+    output_matrix[valid_pixels] = transition_magnitude_matrix[
+        landuse_transition_from_matrix[valid_pixels],
+        landuse_transition_to_matrix[valid_pixels]].toarray().flatten()
+
+    return output_matrix
 
 
 def _extract_transitions_from_table(csv_path):
