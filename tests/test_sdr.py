@@ -39,10 +39,11 @@ def assert_expected_results_in_vector(expected_results, vector_path):
         
         # Following numpy recommendation to use alternatives to 
         # assert_approx_equal, this has been replaced with assert_allclose
-        # using an absolute tolerance of 1e-2,
-        # which is similar to (the same as?) 2 significant figures
+        # using an absolute tolerance of 1,
+        # which is similar to (the same as?) 2 significant figures,
+        # given that the compared values have 2 digits right of the decimal.
         numpy.testing.assert_allclose(
-            actual_results[key], expected_results[key], rtol=0, atol=1e-2)
+            actual_results[key], expected_results[key], rtol=0, atol=1)
 
 
 class SDRTests(unittest.TestCase):

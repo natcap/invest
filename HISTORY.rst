@@ -16,6 +16,10 @@ Unreleased Changes
       coefficient is assumed if any single value is left blank.
 * HRA
     * Raise ValueError if habitat or stressor inputs are not projected.
+* Tests
+    * Replaced usages of numpy testing methods `assert_array_almost_equal`, 
+      `assert_almost_equal`, and `assert_approx_equal` with `asserty_allclose`
+      for consistency with numpy recommendations.
 
 3.8.7 (2020-07-17)
 ------------------
