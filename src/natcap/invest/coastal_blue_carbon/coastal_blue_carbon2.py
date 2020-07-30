@@ -100,10 +100,19 @@ def execute(args):
     yearly_accum_rasters = {}
     litter_rasters = {}
 
+    biomass_disturb_matrix, soil_disturb_matrix = _read_transition_matrix(
+        args['landcover_transitions_table'], biophysical_parameters)
+    disturbance_matrices = {}
+    disturbance_matrices['soil'] = soil_disturb_matrix
+    disturbance_matrices['biomass'] = biomass_disturb_matrix
+
     # This dict of lists is so that we can use them effectively to schedule the
     # next waves of timeframe tasks in the main timeseries loop.
     transition_tasks = collections.defaultdict(list)
-    for transition_year in sorted(transition_years):
+    for prior_transition_year, transition_year in zip(
+            [None] + sorted(transition_years)[: -1],
+            sorted(transition_years)):
+
         # TODO: should ``litter`` field be ``litter-initial``?
         litter_rasters[transition_year] = os.path.join(
             intermediate_dir, f'litter-{transition_year}{suffix}.tif')
@@ -133,10 +142,28 @@ def execute(args):
                 # Reclassify disturbance{pool}
                 # This is based on the transition from one landcover class to
                 # another.
+                LOGGER.info(
+                        f'Creating disturbance raster for transition '
+                        f'{prior_transition_year} - {transition_year}')
                 disturbance_rasters[transition_year][pool] = os.path.join(
                     intermediate_dir,
                     f'disturbance-{pool}-{transition_year}{suffix}.tif')
-                #transition_tasks[transition_year].append(task_graph.add_task())
+                prior_transition_nodata = pygeoprocessing.get_raster_info(
+                    aligned_lulc_paths[prior_transition_year])['nodata'][0]
+                current_transition_nodata = pygeoprocessing.get_raster_info(
+                    aligned_lulc_paths[transition_year])['nodata'][0]
+                transition_tasks[transition_year].append(task_graph.add_task(
+                    func=pygeoprocessing.raster_calculator,
+                    args=(
+                        [(aligned_lulc_paths[prior_transition_year], 1),
+                         (aligned_lulc_paths[transition_year], 1),
+                         (disturbance_matrices[pool], 'raw'),
+                         (prior_transition_nodata, 'raw'),
+                         (current_transition_nodata, 'raw')],
+                        _reclassify_transition,
+                        disturbance_rasters[transition_year][pool],
+                        gdal.GDT_Float32,
+                        NODATA_FLOAT32)))
 
             # Reclassify halflife{pool}
             halflife_rasters[transition_year][pool] = os.path.join(
@@ -177,6 +204,13 @@ def execute(args):
                         yearly_accum_rasters[transition_year][pool]],
                     task_name=(
                         f'Mapping {pool} half-life for {transition_year}')))
+
+    if transition_years == set([baseline_lulc_year]):
+        LOGGER.info('No transition years provided.  Exiting.')
+        task_graph.close()
+        task_graph.join()
+        return
+
 
     # Phase 3: do the timeseries analysis.
     if analysis_year:
@@ -228,6 +262,11 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
         transition_csv_path, sep=None, index_col=False, engine='python',
         encoding=encoding)
 
+    lulc_class_to_lucode = {
+        values['lulc-class']: lucode for (lucode, values) in
+        biophysical_dict.items()}
+    import pprint; pprint.pprint(lulc_class_to_lucode)
+
     # Load up a sparse matrix with the transitions to save on memory usage.
     n_rows = len(table.index)
     soil_disturbance_matrix = scipy.sparse.dok_matrix(
@@ -249,15 +288,25 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
     #  * litter
     #  --> maybe some others, too?
     for index, row in table.iterrows():
-        for colname, col_value in row.items():
+        from_lucode = lulc_class_to_lucode[row['lulc-class'].lower()]
+
+        for colname, field_value in row.items():
+            if colname == 'lulc-class':
+                continue
+
+            to_lucode = lulc_class_to_lucode[colname.lower()]
+
             # Only set values where the transition HAS a value.
             # Takes advantage of the sparse characteristic of the model.
-            col_value = col_value.strip()
-            if col_value.endswith('disturb'):
-                soil_disturbance_matrix[index, colname] = (
-                    biophysical_dict[f'soil-{col_value}'])
-                biomass_disturbance_matrix[index, colname] = (
-                    biophysical_dict[f'biomass-{col_value}'])
+            if (isinstance(field_value, float) and
+                    numpy.isnan(field_value)):
+                continue
+
+            if field_value.endswith('disturb'):
+                soil_disturbance_matrix[from_lucode, to_lucode] = (
+                    biophysical_dict[from_lucode][f'soil-{field_value}'])
+                biomass_disturbance_matrix[from_lucode, to_lucode] = (
+                    biophysical_dict[from_lucode][f'biomass-{field_value}'])
 
     return biomass_disturbance_matrix, soil_disturbance_matrix
 
