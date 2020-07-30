@@ -13,7 +13,6 @@ import pygeoprocessing.testing
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'seasonal_water_yield')
-AGGREGATED_RESULTS_FILENAME = 'aggregated_results_swy.shp'
 
 
 def make_simple_shp(base_shp_path, origin):
@@ -452,7 +451,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         l_path = os.path.join(self.workspace_dir, 'L.tif')
         make_recharge_raster(l_path)
         aggregate_vector_path = os.path.join(self.workspace_dir,
-                                             AGGREGATED_RESULTS_FILENAME)
+                                             'aggregated_results_swy.shp')
         make_simple_shp(aggregate_vector_path, (1180000.0, 690000.0))
         seasonal_water_yield._aggregate_recharge(aoi_path, l_path, l_path,
                                                  aggregate_vector_path)
@@ -650,7 +649,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], AGGREGATED_RESULTS_FILENAME),
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
     def test_bad_biophysical_table(self):
@@ -702,7 +701,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], AGGREGATED_RESULTS_FILENAME),
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
     def test_climate_zones_regression(self):
@@ -770,7 +769,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path, recharge=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], AGGREGATED_RESULTS_FILENAME),
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
     @staticmethod
