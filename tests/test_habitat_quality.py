@@ -234,7 +234,7 @@ def assert_array_sum(base_raster_path, desired_sum, include_nodata=True):
         base_array = base_array[~numpy.isclose(base_array, nodata)]
 
     raster_sum = numpy.sum(base_array)
-    numpy.testing.assert_almost_equal(raster_sum, desired_sum, decimal=3)
+    numpy.testing.assert_allclose(raster_sum, desired_sum, rtol=0, atol=1.5e-3)
 
 
 class HabitatQualityTests(unittest.TestCase):
@@ -351,8 +351,8 @@ class HabitatQualityTests(unittest.TestCase):
             # LULC rasters.
             raster_info = pygeoprocessing.get_raster_info(raster_path)
             raster_bbox = raster_info['bounding_box']
-            numpy.testing.assert_array_almost_equal(
-                raster_bbox, base_lulc_bbox)
+            numpy.testing.assert_allclose(
+                raster_bbox, base_lulc_bbox, rtol=0, atol=1e-6)
 
     def test_habitat_quality_numeric_threats(self):
         """Habitat Quality: regression test on numeric threat names."""

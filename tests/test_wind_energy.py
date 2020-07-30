@@ -731,8 +731,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
             b_geom_list = [float(x) for x in b_geom_list]
 
             try:
-                numpy.testing.assert_array_almost_equal(
-                    a_geom_list, b_geom_list, decimal=4)
+                numpy.testing.assert_allclose(
+                    a_geom_list, b_geom_list, rtol=0, atol=1.5e-4)
             except AssertionError:
                 a_feature_fid = a_feat.GetFID()
                 b_feature_fid = b_feat.GetFID()
@@ -752,7 +752,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
                         'Field %s in feature %s does not exist in regression'
                         'feature %s.' % (a_field, a_feature_fid, b_feature_fid))
                 try:
-                    numpy.testing.assert_almost_equal(a_value, b_value)
+                    numpy.testing.assert_allclose(a_value, b_value, rtol=0, atol=1e-6)
                 except AssertionError:
                     raise AssertionError(
                         'Values in %s field are not equal in feature %s: %s, '

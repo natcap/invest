@@ -735,7 +735,8 @@ class RecreationRegressionTests(unittest.TestCase):
         with open(target_path, 'r') as file:
             predictor_results = json.load(file)
         # These constants were calculated by hand by Dave.
-        numpy.testing.assert_almost_equal(predictor_results['0'], 13.0)
+        numpy.testing.assert_allclose(
+            predictor_results['0'], 13.0, rtol=0, atol=1e-6)
 
     def test_raster_sum_mean_nodata(self):
         """Recreation test sum/mean if raster has no valid pixels.
@@ -1211,8 +1212,8 @@ def _assert_vector_attributes_eq(
 
             for av, ev in zip(actual_values, expected_values):
                 if av is not None:
-                    numpy.testing.assert_almost_equal(
-                        av, ev, decimal=tolerance_places)
+                    numpy.testing.assert_allclose(
+                        av, ev, rtol=0, atol=1.5 * 10**-tolerance_places)
                 else:
                     # Could happen when a raster predictor is only nodata
                     assert(ev is None)
@@ -1268,8 +1269,8 @@ def _assert_regression_results_eq(
             expected_values = list(expected_results.iloc[fid])
             for v, ev in zip(values, expected_values):
                 if v is not None:
-                    numpy.testing.assert_almost_equal(
-                        v, ev, decimal=tolerance_places)
+                    numpy.testing.assert_allclose(
+                        v, ev, rtol=0, atol=1.5 * 10**-tolerance_places)
                 else:
                     # Could happen when a raster predictor is only nodata
                     assert(numpy.isnan(ev))

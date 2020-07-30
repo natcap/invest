@@ -202,8 +202,9 @@ class ScenicQualityTests(unittest.TestCase):
             args['workspace_dir'], 'output', 'vshed_qual.tif')
         quality_matrix = gdal.OpenEx(
             visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
-        numpy.testing.assert_almost_equal(expected_visual_quality,
-                                          quality_matrix)
+        numpy.testing.assert_allclose(expected_visual_quality,
+                                          quality_matrix,
+                                          rtol=0, atol=1e-6)
 
     def test_invalid_valuation_function(self):
         """SQ: model raises exception with invalid valuation function."""
@@ -355,7 +356,8 @@ class ScenicQualityTests(unittest.TestCase):
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
-        numpy.testing.assert_almost_equal(expected_value, value_matrix)
+        numpy.testing.assert_allclose(
+            expected_value, value_matrix, rtol=0, atol=1e-6)
 
         # verify that the correct number of viewpoints has been tallied.
         vshed_raster = gdal.OpenEx(
@@ -366,7 +368,8 @@ class ScenicQualityTests(unittest.TestCase):
 
         # Because our B coefficient is 0, the vshed matrix should match the
         # value matrix.
-        numpy.testing.assert_almost_equal(expected_value, vshed_matrix)
+        numpy.testing.assert_allclose(
+            expected_value, vshed_matrix, rtol=0, atol=1e-6)
 
         # Test the visual quality raster.
         expected_visual_quality = numpy.array(
@@ -379,8 +382,9 @@ class ScenicQualityTests(unittest.TestCase):
             args['workspace_dir'], 'output', 'vshed_qual_foo.tif')
         quality_matrix = gdal.OpenEx(visual_quality_raster,
                                      gdal.OF_RASTER).ReadAsArray()
-        numpy.testing.assert_almost_equal(expected_visual_quality,
-                                          quality_matrix)
+        numpy.testing.assert_allclose(expected_visual_quality,
+                                      quality_matrix,
+                                      rtol=0, atol=1e-6)
 
     def test_viewshed_with_fields(self):
         """SQ: verify that we can specify viewpoint fields."""
@@ -437,7 +441,8 @@ class ScenicQualityTests(unittest.TestCase):
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
-        numpy.testing.assert_almost_equal(expected_value, value_matrix)
+        numpy.testing.assert_allclose(
+            expected_value, value_matrix, rtol=0, atol=1e-6)
 
         # Verify that the sum of the viewsheds (which is weighted) is correct.
         expected_weighted_vshed = numpy.array(
@@ -450,8 +455,9 @@ class ScenicQualityTests(unittest.TestCase):
                                          'vshed.tif')
         weighted_vshed_matrix = gdal.OpenEx(
             vshed_raster_path, gdal.OF_RASTER).ReadAsArray()
-        numpy.testing.assert_almost_equal(expected_weighted_vshed,
-                                          weighted_vshed_matrix)
+        numpy.testing.assert_allclose(expected_weighted_vshed,
+                                      weighted_vshed_matrix,
+                                      rtol=0, atol=1e-6)
 
         # Test the visual quality raster since this run is weighted.
         expected_visual_quality = numpy.array(
@@ -464,8 +470,9 @@ class ScenicQualityTests(unittest.TestCase):
             args['workspace_dir'], 'output', 'vshed_qual.tif')
         quality_matrix = gdal.OpenEx(
             visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
-        numpy.testing.assert_almost_equal(expected_visual_quality,
-                                          quality_matrix)
+        numpy.testing.assert_allclose(expected_visual_quality,
+                                      quality_matrix,
+                                      rtol=0, atol=1e-6)
 
     def test_exponential_valuation(self):
         """SQ: verify values on exponential valuation."""
@@ -512,7 +519,7 @@ class ScenicQualityTests(unittest.TestCase):
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
-        numpy.testing.assert_almost_equal(expected_value, value_matrix)
+        numpy.testing.assert_allclose(expected_value, value_matrix, rtol=0, atol=1e-6)
 
     def test_logarithmic_valuation(self):
         """SQ: verify values on logarithmic valuation."""
@@ -559,7 +566,8 @@ class ScenicQualityTests(unittest.TestCase):
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
-        numpy.testing.assert_almost_equal(expected_value, value_matrix)
+        numpy.testing.assert_allclose(
+            expected_value, value_matrix, rtol=0, atol=1e-6)
 
     def test_visual_quality(self):
         """SQ: verify visual quality calculations."""
@@ -587,8 +595,9 @@ class ScenicQualityTests(unittest.TestCase):
 
         visual_quality_matrix = gdal.OpenEx(
             visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
-        numpy.testing.assert_almost_equal(expected_visual_quality,
-                                          visual_quality_matrix)
+        numpy.testing.assert_allclose(expected_visual_quality,
+                                      visual_quality_matrix,
+                                      rtol=0, atol=1e-6)
 
     def test_visual_quality_large_blocks(self):
         """SQ: verify visual quality on large blocks."""
@@ -623,8 +632,9 @@ class ScenicQualityTests(unittest.TestCase):
 
         visual_quality_matrix = gdal.OpenEx(
             visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
-        numpy.testing.assert_almost_equal(expected_visual_quality,
-                                          visual_quality_matrix)
+        numpy.testing.assert_allclose(expected_visual_quality,
+                                      visual_quality_matrix,
+                                      rtol=0, atol=1e-6)
 
     def test_visual_quality_low_count(self):
         """SQ: verify visual quality calculations for low pixel counts."""
@@ -650,8 +660,9 @@ class ScenicQualityTests(unittest.TestCase):
 
         visual_quality_matrix = gdal.OpenEx(
             visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
-        numpy.testing.assert_almost_equal(expected_visual_quality,
-                                          visual_quality_matrix)
+        numpy.testing.assert_allclose(expected_visual_quality,
+                                      visual_quality_matrix,
+                                      rtol=0, atol=1e-6)
 
     def test_visual_quality_floats(self):
         """SQ: verify visual quality calculations for floating-point vshed."""
@@ -678,8 +689,9 @@ class ScenicQualityTests(unittest.TestCase):
 
         visual_quality_matrix = gdal.OpenEx(
             visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
-        numpy.testing.assert_almost_equal(expected_visual_quality,
-                                          visual_quality_matrix)
+        numpy.testing.assert_allclose(expected_visual_quality,
+                                      visual_quality_matrix,
+                                      rtol=0, atol=1e-6)
 
 
 class ScenicQualityValidationTests(unittest.TestCase):
