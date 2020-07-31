@@ -278,7 +278,7 @@ class GLOBIOTests(unittest.TestCase):
                 result_value = feature.GetField('msa_mean')
                 if result_value is not None:
                     # The coefficient of 1.5 here derives from when
-                    # `assert_array_almost_equal` was used, which had parameter
+                    # `assert_almost_equal` was used, which had parameter
                     # `decimal`. In the numpy implementation, this meant an
                     # absolute tolerance of 1.5 * 10**-decimal.
                     # In other places we were able to round 1.5 down to 1,
