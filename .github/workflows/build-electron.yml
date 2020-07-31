@@ -83,9 +83,10 @@ jobs:
         PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
         PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
         PIP_PREFER_BINARY: 1
+        SITE_PACKAGES: "C:/hostedtoolcache/windows/Python/3.7.8/x64/lib/site-packages"
       run: |
         python -m pip install -r requirements.txt -r requirements-dev.txt
-        python -c "import site; print(site.getsitepackages())"
+        cp ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos_c.dll ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos.dll
     
     - name: Install natcap.invest python package
       shell: bash -l {0}
