@@ -64,7 +64,7 @@ def assert_raster_equal_value(base_raster_path, val_to_compare):
 
     array_to_compare = numpy.empty(base_array.shape)
     array_to_compare.fill(val_to_compare)
-    numpy.testing.assert_almost_equal(base_array, array_to_compare)
+    numpy.testing.assert_allclose(base_array, array_to_compare, rtol=0, atol=1e-6)
 
 
 def make_pools_csv(pools_csv_path):

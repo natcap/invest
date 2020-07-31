@@ -619,10 +619,10 @@ class TestModel(unittest.TestCase):
         # will properly propagate across the model. the npv raster was chosen
         # because the values are determined by multiple inputs, and any changes
         # in those inputs would propagate to this raster.
-        numpy.testing.assert_array_almost_equal(
-            netseq_array, netseq_test, decimal=4)
-        numpy.testing.assert_array_almost_equal(
-            npv_array, npv_test, decimal=4)
+        numpy.testing.assert_allclose(
+            netseq_array, netseq_test, rtol=0, atol=1e-4)
+        numpy.testing.assert_allclose(
+            npv_array, npv_test, rtol=0, atol=1e-4)
 
     def test_model_run_2(self):
         """Coastal Blue Carbon: Test CBC without analysis year."""
@@ -651,8 +651,8 @@ class TestModel(unittest.TestCase):
         # will properly propagate across the model. the npv raster was chosen
         # because the values are determined by multiple inputs, and any changes
         # in those inputs would propagate to this raster.
-        numpy.testing.assert_array_almost_equal(
-            netseq_array, netseq_test, decimal=4)
+        numpy.testing.assert_allclose(
+            netseq_array, netseq_test, rtol=0, atol=1e-4)
 
     def test_model_no_valuation(self):
         """Coastal Blue Carbon: Test main model without valuation."""
@@ -682,8 +682,8 @@ class TestModel(unittest.TestCase):
         # will properly propagate across the model. the npv raster was chosen
         # because the values are determined by multiple inputs, and any changes
         # in those inputs would propagate to this raster.
-        numpy.testing.assert_array_almost_equal(
-            netseq_array, netseq_test, decimal=4)
+        numpy.testing.assert_allclose(
+            netseq_array, netseq_test, rtol=0, atol=1e-4)
 
     def test_binary(self):
         """Coastal Blue Carbon: Test CBC model against InVEST-Data."""
@@ -738,7 +738,7 @@ class TestModel(unittest.TestCase):
                         dtype=numpy.float32)
 
         a.sort()
-        numpy.testing.assert_array_almost_equal(u, a, decimal=2)
+        numpy.testing.assert_allclose(u, a, rtol=0, atol=1e-2)
 
         # walk through all files in the workspace and assert that outputs have
         # the file suffix.
@@ -962,7 +962,7 @@ class CBCRefactorTest(unittest.TestCase):
             lulc_matrix, reclass_map, out_dtype=numpy.float32,
             nodata_mask=lulc_nodata)
 
-        numpy.testing.assert_almost_equal(reclassified_array, expected_array)
+        numpy.testing.assert_allclose(reclassified_array, expected_array, rtol=0, atol=1e-6)
 
 
 class CBCValidationTests(unittest.TestCase):

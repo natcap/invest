@@ -1180,8 +1180,8 @@ class HraRegressionTests(unittest.TestCase):
             b_geom_list = [float(x) for x in b_geom_list]
 
             try:
-                numpy.testing.assert_array_almost_equal(
-                    a_geom_list, b_geom_list, decimal=precision)
+                numpy.testing.assert_allclose(
+                    a_geom_list, b_geom_list, rtol=0, atol=10**-precision)
             except AssertionError:
                 a_feature_fid = a_feat.GetFID()
                 b_feature_fid = b_feat.GetFID()
