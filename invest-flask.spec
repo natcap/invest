@@ -14,6 +14,7 @@ invest_exename = 'invest'
 server_exename = 'server'
 mac_conda_env = '/usr/local/miniconda/envs/invest-env'
 ubuntu_conda_env = '/usr/share/miniconda/envs/invest-env'
+windows_conda_env = 'C:\\Miniconda\\envs\\invest-env'
 
 
 kwargs = {
