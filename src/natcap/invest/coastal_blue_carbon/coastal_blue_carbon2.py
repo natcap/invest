@@ -208,7 +208,8 @@ def execute(args):
 
                 # Disturbances only happen during transition years, not during
                 # the baseline year.
-                if year != baseline_lulc_year:
+                # disturbances only affect soil and biomass carbon, not litter.
+                if year != baseline_lulc_year and pool != 'litter':
                     disturbance_rasters[transition_year][pool] = os.path.join(
                         intermediate_dir,
                         f'disturbance-{pool}-{transition_year}{suffix}.tif')
@@ -235,6 +236,24 @@ def execute(args):
                             disturbance_rasters[transition_year][pool]],
                         task_name=(
                             f'Mapping {pool} carbon volume disturbed in {year}'))
+
+                    year_of_disturbance_rasters[year][pool] = os.path.join(
+                        intermediate_dir,
+                        (f'year-of-latest-disturbance-{pool}-'
+                            f'{transition_year}{suffix}.tif'))
+                    year_of_disturbance_tasks[transition_year][pool] = (
+                        task_graph.add_task(
+                            func=_track_latest_transition_year,
+                            args=(disturbance_rasters[transition_year][pool],
+                                  year_of_disturbance_rasters[last_transition_year][pool],
+                                  transition_year,
+                                  year_of_disturbance_rasters[transition_year][pool]),
+                            dependent_task_list=[disturbance_task],
+                            target_path_list=[
+                                year_of_disturbance_rasters[transition_year][pool]],
+                            task_name=(
+                                f'Tracking the year of latest {pool} carbon '
+                                f'disturbance as of {transition_year}')))
 
         for pool in ('soil', 'biomass'):
             # calculate emissions for this year
@@ -299,6 +318,29 @@ def execute(args):
 
     # Final phase:
     # Sum timeseries rasters (A, E, N, T currently summed in the model)
+
+
+def _subtract_rasters(raster_a_path, raster_b_path, target_raster_path):
+    raster_a_nodata = pygeoprocessing.get_raster_info(
+        raster_a_path)['nodata'][0]
+    raster_b_nodata = pygeoprocessing.get_raster_info(
+        raster_b_path)['nodata'][0]
+
+    def _subtract(matrix_a, matrix_b):
+        target_matrix = numpy.empty(matrix_a.shape, dtype=numpy.float32)
+        target_matrix[:] = NODATA_FLOAT32
+
+        valid_pixels = (
+            ~numpy.isclose(matrix_a, raster_a_nodata) &
+            ~numpy.isclose(matrix_b, raster_b_nodata))
+
+        target_matrix[valid_pixels] = (
+            matrix_a[valid_pixels] - matrix_b[valid_pixels])
+        return target_matrix
+
+    pygeoprocessing.raster_calculator(
+        [(raster_a_path, 1), (raster_b_path, 1)], _subtract,
+        target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32)
 
 
 def _calculate_emissions(
