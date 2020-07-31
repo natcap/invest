@@ -83,7 +83,9 @@ jobs:
         PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
         PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
         PIP_PREFER_BINARY: 1
-      run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      run: |
+        python -m pip install -r requirements.txt -r requirements-dev.txt
+        python -c "import site; print(site.getsitepackages())"
     
     - name: Install natcap.invest python package
       shell: bash -l {0}
