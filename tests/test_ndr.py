@@ -101,8 +101,8 @@ class NDRTests(unittest.TestCase):
             numpy.count_nonzero(numpy.isclose(normalized_array,
                                               normalized_raster_nodata)))
 
-        numpy.testing.assert_array_almost_equal(
-            normalized_array, expected_array)
+        numpy.testing.assert_allclose(
+            normalized_array, expected_array, rtol=0, atol=1e-6)
 
     def test_missing_headers(self):
         """NDR biphysical headers missing should raise a ValueError."""

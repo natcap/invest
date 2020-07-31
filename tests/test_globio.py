@@ -280,10 +280,16 @@ class GLOBIOTests(unittest.TestCase):
                 fid = feature.GetFID()
                 result_value = feature.GetField('msa_mean')
                 if result_value is not None:
-                    numpy.testing.assert_almost_equal(
+                    # The coefficient of 1.5 here derives from when
+                    # `assert_almost_equal` was used, which had parameter
+                    # `decimal`. In the numpy implementation, this meant an
+                    # absolute tolerance of 1.5 * 10**-decimal.
+                    # In other places we were able to round 1.5 down to 1,
+                    # but here the slightly larger tolerance is needed.
+                    numpy.testing.assert_allclose(
                         result_value,
                         float(expected_results[fid]['msa_mean']),
-                        decimal=tolerance_places)
+                        rtol=0, atol=1.5 * 10**-tolerance_places)
                 else:
                     # the out-of-bounds polygon will have no result_value
                     assert(expected_results[fid]['msa_mean'] == '')

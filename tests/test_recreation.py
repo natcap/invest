@@ -733,7 +733,8 @@ class RecreationRegressionTests(unittest.TestCase):
         with open(target_path, 'r') as file:
             predictor_results = json.load(file)
         # These constants were calculated by hand by Dave.
-        numpy.testing.assert_almost_equal(predictor_results['0'], 13.0)
+        numpy.testing.assert_allclose(
+            predictor_results['0'], 13.0, rtol=0, atol=1e-6)
 
     def test_raster_sum_mean_nodata(self):
         """Recreation test sum/mean if raster has no valid pixels.
@@ -1188,6 +1189,44 @@ class RecreationValidationTests(unittest.TestCase):
         self.assertTrue(expected_message in actual_messages)
 
 
+def _assert_vector_attributes_eq(
+        actual_vector_path, expected_vector_path, tolerance_places=3):
+    """Assert fieldnames and values are equal with no respect to order."""
+    try:
+        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
+        actual_layer = actual_vector.GetLayer()
+        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
+        expected_layer = expected_vector.GetLayer()
+
+        assert(
+            actual_layer.GetFeatureCount() == expected_layer.GetFeatureCount())
+
+        field_names = [field.name for field in expected_layer.schema]
+        for feature in expected_layer:
+            fid = feature.GetFID()
+            expected_values = [
+                feature.GetField(field) for field in field_names]
+
+            actual_feature = actual_layer.GetFeature(fid)
+            actual_values = [
+                actual_feature.GetField(field) for field in field_names]
+
+            for av, ev in zip(actual_values, expected_values):
+                if av is not None:
+                    numpy.testing.assert_allclose(
+                        av, ev, rtol=0, atol=10**-tolerance_places)
+                else:
+                    # Could happen when a raster predictor is only nodata
+                    assert(ev is None)
+            feature = None
+            actual_feature = None
+    finally:
+        actual_layer = None
+        actual_vector = None
+        expected_layer = None
+        expected_vector = None
+
+
 def _assert_regression_results_eq(
         workspace_dir, file_list_path, result_vector_path,
         expected_results_path):
@@ -1231,8 +1270,8 @@ def _assert_regression_results_eq(
             expected_values = list(expected_results.iloc[fid])
             for v, ev in zip(values, expected_values):
                 if v is not None:
-                    numpy.testing.assert_almost_equal(
-                        v, ev, decimal=tolerance_places)
+                    numpy.testing.assert_allclose(
+                        v, ev, rtol=0, atol=10**-tolerance_places)
                 else:
                     # Could happen when a raster predictor is only nodata
                     assert(numpy.isnan(ev))
