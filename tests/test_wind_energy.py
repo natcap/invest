@@ -731,8 +731,14 @@ class WindEnergyRegressionTests(unittest.TestCase):
             b_geom_list = [float(x) for x in b_geom_list]
 
             try:
+                # The coefficient of 1.5 here derives from when
+                # `assert_array_almost_equal` was used, which had parameter
+                # `decimal=4`. In the numpy implementation, this meant an
+                # absolute tolerance of 1.5 * 10**-4.
+                # In other places we were able to round 1.5 down to 1,
+                # but here the slightly larger tolerance is needed.
                 numpy.testing.assert_allclose(
-                    a_geom_list, b_geom_list, rtol=0, atol=1e-4)
+                    a_geom_list, b_geom_list, rtol=0, atol=1.5e-4)
             except AssertionError:
                 a_feature_fid = a_feat.GetFID()
                 b_feature_fid = b_feat.GetFID()
