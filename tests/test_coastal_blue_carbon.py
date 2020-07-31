@@ -1165,3 +1165,27 @@ class TestCBC2(unittest.TestCase):
             [2.2, 4.4]], dtype=numpy.float32)
         numpy.testing.assert_almost_equal(
             returned_matrix, expected_matrix)
+
+    def test_track_latest_transition_year(self):
+        """CBC: Track the latest disturbance year."""
+        current_disturbance_volume_matrix = numpy.array([
+            [5.0, 1.0],
+            [-1, 3.0]], dtype=numpy.float32)
+
+        known_transition_years_matrix = numpy.array([
+            [100, 100],
+            [5, 6]], dtype=numpy.uint16)
+
+        latest_disturbance_year_matrix = (
+            coastal_blue_carbon2._track_latest_transition_year(
+                current_disturbance_volume_matrix,
+                known_transition_years_matrix,
+                current_transition_year=11,
+                current_disturbance_nodata=-1,
+                known_transition_years_nodata=100))
+
+        expected_array = numpy.array([
+            [11, 11],
+            [5, 11]], dtype=numpy.uint16)
+        numpy.testing.assert_allclose(
+            latest_disturbance_year_matrix, expected_array)

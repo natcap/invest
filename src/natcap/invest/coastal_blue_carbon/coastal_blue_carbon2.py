@@ -1,6 +1,5 @@
 import os
 import logging
-import collections
 
 from osgeo import gdal
 import taskgraph
@@ -243,11 +242,18 @@ def execute(args):
                             f'{transition_year}{suffix}.tif'))
                     year_of_disturbance_tasks[transition_year][pool] = (
                         task_graph.add_task(
-                            func=_track_latest_transition_year,
-                            args=(disturbance_rasters[transition_year][pool],
-                                  year_of_disturbance_rasters[last_transition_year][pool],
-                                  transition_year,
-                                  year_of_disturbance_rasters[transition_year][pool]),
+                            func=pygeoprocessing.raster_calculator,
+                            args=(
+                                [(disturbance_rasters[transition_year][pool],
+                                    1),
+                                 (year_of_disturbance_rasters[last_transition_year][pool], 1),
+                                 (transition_year, 'raw'),
+                                 (year_of_disturbance_rasters[transition_year][pool], 1)
+                                ],
+                                _track_latest_transition_year,
+                                year_of_disturbance_rasters[transition_year][pool],
+                                gdal.GDT_UInt16,
+                                NODATA_UINT16),
                             dependent_task_list=[disturbance_task],
                             target_path_list=[
                                 year_of_disturbance_rasters[transition_year][pool]],
@@ -318,6 +324,30 @@ def execute(args):
 
     # Final phase:
     # Sum timeseries rasters (A, E, N, T currently summed in the model)
+
+
+def _track_latest_transition_year(
+        current_disturbance_volume_matrix, known_transition_years_matrix,
+        current_transition_year, current_disturbance_nodata,
+        known_transition_years_nodata):
+
+    target_matrix = numpy.empty(
+        current_disturbance_volume_matrix.shape, dtype=numpy.uint16)
+    target_matrix[:] = NODATA_UINT16
+
+    # Keep any years that are already known to be disturbed.
+    pixels_previously_disturbed = ~numpy.isclose(
+        known_transition_years_matrix, known_transition_years_nodata)
+    target_matrix[pixels_previously_disturbed] = (
+        known_transition_years_matrix[pixels_previously_disturbed])
+
+    # Track any pixels that are known to be disturbed in this current
+    # transition year.
+    newly_disturbed_pixels = ~numpy.isclose(
+        current_disturbance_volume_matrix, current_disturbance_nodata)
+    target_matrix[newly_disturbed_pixels] = current_transition_year
+
+    return target_matrix
 
 
 def _subtract_rasters(raster_a_path, raster_b_path, target_raster_path):
