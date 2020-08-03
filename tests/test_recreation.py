@@ -1189,44 +1189,6 @@ class RecreationValidationTests(unittest.TestCase):
         self.assertTrue(expected_message in actual_messages)
 
 
-def _assert_vector_attributes_eq(
-        actual_vector_path, expected_vector_path, tolerance_places=3):
-    """Assert fieldnames and values are equal with no respect to order."""
-    try:
-        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
-        actual_layer = actual_vector.GetLayer()
-        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
-        expected_layer = expected_vector.GetLayer()
-
-        assert(
-            actual_layer.GetFeatureCount() == expected_layer.GetFeatureCount())
-
-        field_names = [field.name for field in expected_layer.schema]
-        for feature in expected_layer:
-            fid = feature.GetFID()
-            expected_values = [
-                feature.GetField(field) for field in field_names]
-
-            actual_feature = actual_layer.GetFeature(fid)
-            actual_values = [
-                actual_feature.GetField(field) for field in field_names]
-
-            for av, ev in zip(actual_values, expected_values):
-                if av is not None:
-                    numpy.testing.assert_allclose(
-                        av, ev, rtol=0, atol=10**-tolerance_places)
-                else:
-                    # Could happen when a raster predictor is only nodata
-                    assert(ev is None)
-            feature = None
-            actual_feature = None
-    finally:
-        actual_layer = None
-        actual_vector = None
-        expected_layer = None
-        expected_vector = None
-
-
 def _assert_regression_results_eq(
         workspace_dir, file_list_path, result_vector_path,
         expected_results_path):
