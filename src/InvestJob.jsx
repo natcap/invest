@@ -12,7 +12,7 @@ import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Spinner from 'react-bootstrap/Spinner';
 
-import { HomeTab } from './components/HomeTab';
+import HomeTab from './components/HomeTab';
 import { SetupTab } from './components/SetupTab';
 import { LogTab } from './components/LogTab';
 import { ResourcesTab } from './components/ResourcesTab';

@@ -11,7 +11,6 @@ const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const { getFlaskIsReady, shutdownPythonProcess } = require('./server_requests');
 const { findInvestBinaries, createPythonFlaskProcess } = require('./main_helpers');
 
-
 const PORT = (process.env.PORT || '5000').trim();
 
 // Keep a global reference of the window object, if you don't, the window will

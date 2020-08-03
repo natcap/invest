@@ -2,7 +2,6 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
-import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Table from 'react-bootstrap/Table';
 import CardGroup from 'react-bootstrap/CardGroup';
 import Card from 'react-bootstrap/Card';
@@ -22,13 +21,14 @@ import Row from 'react-bootstrap/Row';
 const STATUS_COLOR_MAP = {
   running: 'rgba(23, 162, 184, 0.7)',
   error: 'rgba(220, 53, 69, 0.7)',
-  success: '#148F68' // invest green
-}
+  success: '#148F68', // invest green
+};
 
-export class HomeTab extends React.PureComponent {
-  /** Renders a button for each invest model and for each cached invest job.
-  */
-
+/**
+ * Renders a table of buttons for each invest model and
+ * a list of cards for each cached invest job.
+ */
+export default class HomeTab extends React.PureComponent {
   constructor(props) {
     super(props);
     this.handleClick = this.handleClick.bind(this);
@@ -39,24 +39,28 @@ export class HomeTab extends React.PureComponent {
     this.props.investGetSpec(modelName);
   }
 
-  render () {
-    // A button for each model
-    const investJSON = this.props.investList;
-    let investButtons = [];
-    for (const model in investJSON) {
+  render() {
+    const { investList, loadState, recentSessions } = this.props;
+    // A button in a table row for each model
+    const investButtons = [];
+    Object.keys(investList).forEach((model) => {
       investButtons.push(
         <tr key={model}>
           <td>
-            <Button size="lg" block className="invest-button"
-              value={investJSON[model]['internal_name']}
+            <Button
+              className="invest-button"
+              block
+              size="lg"
+              value={investList[model].internal_name}
               onClick={this.handleClick}
-              variant="link">
+              variant="link"
+            >
               {model}
             </Button>
           </td>
         </tr>
       );
-    }
+    });
 
     return (
       <Row>
@@ -69,8 +73,9 @@ export class HomeTab extends React.PureComponent {
         </Col>
         <Col md={7}>
           <RecentInvestJobs
-            loadState={this.props.loadState}
-            recentSessions={this.props.recentSessions}/>
+            loadState={loadState}
+            recentSessions={recentSessions}
+          />
         </Col>
       </Row>
     );
@@ -78,62 +83,67 @@ export class HomeTab extends React.PureComponent {
 }
 
 HomeTab.propTypes = {
-  investList: PropTypes.object,
-  investGetSpec: PropTypes.func,
-  saveState: PropTypes.func,
-  loadState: PropTypes.func,
-  recentSessions: PropTypes.array
-}
+  investList: PropTypes.objectOf(
+    PropTypes.shape({
+      internal_name: PropTypes.string,
+    }),
+  ).isRequired,
+  investGetSpec: PropTypes.func.isRequired,
+  loadState: PropTypes.func.isRequired,
+  recentSessions: PropTypes.array.isRequired,
+};
 
-
+/**
+ * Renders a button for each recent invest job.
+ */
 class RecentInvestJobs extends React.PureComponent {
-  /** Renders a button for each recent invest job. Also displays job metadata.
-  *
-  * Recent job metadata is passed here via props, originally loaded from
-  * a persistent file when the app is launched.
-  */
-  
-  constructor(props) {
-    super(props);
-  }
-
   render() {
-
     // Buttons to load each recently saved state
-    let recentButtons = [];
-    this.props.recentSessions.forEach(session => {
-
+    const recentButtons = [];
+    const { recentSessions } = this.props;
+    recentSessions.forEach((session) => {
       // These properties are required, if they don't exist,
       // the session data was corrupted and should be skipped
-      let name, model, workspaceDir;
+      let name;
+      let metadata;
+      let model;
+      let workspaceDir;
       try {
-        name = session[0];
-        model = session[1].model;
-        workspaceDir = session[1].workspace.directory;
-      } catch(error) {
-        return
+        [name, metadata] = session;
+        model = metadata.model;
+        workspaceDir = metadata.workspace.directory;
+      } catch (error) {
+        return;
       }
-      
+
       // These are optional and the rest of the render method
       // should be robust to undefined values
-      const suffix = session[1].workspace.suffix;
-      const status = session[1]['status'];
-      const description = session[1]['description'];
-      const datetime = session[1]['humanTime'];
+      const { suffix } = metadata.workspace;
+      const { status, description, humanTime } = metadata;
 
       const headerStyle = {
         backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
       }
       recentButtons.push(
-        <Card className="text-left session-card"
+        <Card
+          className="text-left session-card"
           as="button"
           key={name}
-          onClick={() => this.props.loadState(session[1]['statefile'])}>
+          onClick={() => this.props.loadState(metadata.statefile)}
+        >
           <Card.Body>
             <Card.Header as="h4" style={headerStyle}>
               {model}
-              {status === 'running' && 
-                <Spinner as='span' animation='border' size='sm' role='status' aria-hidden='true'/>
+              {status === 'running'
+                && (
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                  />
+                )
               }
             </Card.Header>
             <Card.Title>
@@ -145,7 +155,7 @@ class RecentInvestJobs extends React.PureComponent {
               <span className='text-mono'>{suffix}</span>
             </Card.Title>
             <Card.Text>{description || <em>no description</em>}</Card.Text>
-          <Card.Footer className="text-muted">{datetime}</Card.Footer>
+            <Card.Footer className="text-muted">{humanTime}</Card.Footer>
           </Card.Body>
         </Card>
       );
@@ -157,22 +167,26 @@ class RecentInvestJobs extends React.PureComponent {
           <h4>Recent Sessions:</h4>
         </label>
         {recentButtons.length
-          ? <CardGroup
+          ? (
+            <CardGroup
               id='session-card-group'
               className='session-card-group'>
               {recentButtons}
             </CardGroup>
-          : <div>
-              No recent sessions yet.<br></br> 
+          )
+          : (
+            <div>
+              No recent sessions yet.
+              <br />
               Try the <b>Load</b> button to load a sample data json file
             </div>
-        }
+          )}
       </Container>
     );
   }
 }
 
 RecentInvestJobs.propTypes = {
-  loadState: HomeTab.propTypes.loadState,
-  recentSessions: HomeTab.propTypes.recentSessions
-}
+  loadState: HomeTab.propTypes.loadState.isRequired,
+  recentSessions: HomeTab.propTypes.recentSessions.isRequired,
+};

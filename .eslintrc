@@ -29,6 +29,7 @@
         },
     },
     "rules": {
-        "object-shorthand": ["error", "never"]
+        "object-shorthand": ["error", "never"],
+        "max-classes-per-file": ["error", 2],
     }
 }
