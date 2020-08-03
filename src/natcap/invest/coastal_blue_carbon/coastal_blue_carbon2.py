@@ -482,25 +482,32 @@ def _sum_n_rasters(raster_path_list, target_raster_path):
     for block_info in pygeoprocessing.iterblocks(
             (raster_path_list[0], 1), offset_only=True):
 
-        sum_array = None  # reset the sum array on each block in iteration
+        sum_array = numpy.empty(
+            (block_info['win_ysize'], block_info['win_xsize']),
+            dtype=numpy.float32)
+        sum_array[:] = 0.0
+
+        # Assume everything is valid until proven otherwise
+        valid_pixels = numpy.ones(sum_array.shape, dtype=numpy.bool)
         for raster_path in raster_path_list:
             raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
             band = raster.GetRasterBand(1)
             band_nodata = band.GetNoDataValue()
 
-            array = band.ReadAsArray(**block_info)
-            if sum_array is None:
-                sum_array = numpy.empty(array.shape, dtype=numpy.float32)
-                sum_array[:] = NODATA_FLOAT32
+            array = band.ReadAsArray(**block_info).astype(numpy.float32)
 
-            valid_pixels = ~numpy.isclose(sum_array, NODATA_FLOAT32)
             if band_nodata is not None:
                 valid_pixels &= (~numpy.isclose(array, band_nodata))
 
             sum_array[valid_pixels] += array[valid_pixels]
 
+        sum_array[~valid_pixels] = NODATA_FLOAT32
+
         target_band.WriteArray(
             sum_array, block_info['xoff'], block_info['yoff'])
+
+    target_band = None
+    target_raster = None
 
 
 def _read_transition_matrix(transition_csv_path, biophysical_dict):
