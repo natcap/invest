@@ -12,8 +12,9 @@ if (!fs.existsSync(BUILD_DIR)) {
   fs.mkdirSync(BUILD_DIR);
 }
 
-// transpile jsx and es6 files to javasciprt
-const cmdArgs = [SRC_DIR, '-d', BUILD_DIR];
+// transpile all jsx and es6 files to javascript
+// excluding ResultsTab jsx because we've temporarily removed that feature
+const cmdArgs = [SRC_DIR, '-d', BUILD_DIR, '--ignore', '**/ResultsTab/*'];
 const runBabel = spawnSync('npx babel', cmdArgs, {
   shell: true,
 });

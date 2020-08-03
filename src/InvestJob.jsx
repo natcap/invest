@@ -15,7 +15,6 @@ import Spinner from 'react-bootstrap/Spinner';
 import { HomeTab } from './components/HomeTab';
 import { SetupTab } from './components/SetupTab';
 import { LogTab } from './components/LogTab';
-import { ResultsTab } from './components/ResultsTab'
 import { ResourcesTab } from './components/ResourcesTab';
 import { LoadButton } from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
@@ -26,12 +25,6 @@ import { argsDictFromObject, findMostRecentLogfile,
 import { fileRegistry } from './constants';
 import { getLogger } from './logger'
 const logger = getLogger(__filename.split('/').slice(-1)[0])
-
-// TODO see issue #12
-import { createStore } from 'redux';
-import { Provider } from 'react-redux';
-import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
-const store = createStore(rootReducer)
 
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {
@@ -343,7 +336,6 @@ export class InvestJob extends React.Component {
     const activeTab = this.state.activeTab;
     const setupDisabled = !(this.state.argsSpec); // enable once modelSpec has loaded
     const logDisabled = (this.state.jobStatus == null);  // enable during and after execution
-    const resultsDisabled = (this.state.jobStatus !== 'success');  // enable only on complete execute with no errors
     
     return(
       <TabContainer activeKey={activeTab}>
@@ -363,9 +355,6 @@ export class InvestJob extends React.Component {
                  <Spinner animation='border' size='sm' role='status' aria-hidden='true'/>
                 } Log
               </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="results" disabled={resultsDisabled}>Results</Nav.Link>
             </Nav.Item>
             <Nav.Item>
               <Nav.Link eventKey="resources">Resources</Nav.Link>
@@ -407,15 +396,6 @@ export class InvestJob extends React.Component {
               logfile={this.state.logfile}
               logStdErr={this.state.logStdErr}
             />
-          </TabPane>
-          <TabPane eventKey="results" title="Results">
-          <Provider store={store}>
-            <ResultsTab
-              model={this.state.modelName}
-              workspace={this.state.workspace}
-              sessionID={this.state.sessionID}
-              activeTab={activeTab}/> 
-          </Provider>
           </TabPane>
           <TabPane eventKey="resources" title="Resources">
             <ResourcesTab 
