@@ -50,7 +50,6 @@ def execute(args):
     transition_years = set()
     try:
         baseline_lulc_year = int(args['baseline_lulc_year'])
-        transition_years.add(baseline_lulc_year)
     except (KeyError, ValueError, TypeError):
         LOGGER.error('The baseline_lulc_year is required but not provided.')
         raise ValueError('Baseline lulc year is required.')
@@ -118,7 +117,9 @@ def execute(args):
     if analysis_year:
         final_timestep = analysis_year
     else:
-        final_timestep = max(transition_years)
+        final_timestep = max(max(transition_years), analysis_year)
+
+    first_transition_year = min(transition_years)
 
     years_with_lulc_rasters = set(aligned_lulc_paths.keys())
 
@@ -128,16 +129,24 @@ def execute(args):
     prior_stock_tasks = None
     prior_net_sequestration_tasks = None
 
+    current_accumulation_tasks = {}
+    current_halflife_tasks = {}
+    current_stock_tasks = {}
+    current_year_of_disturbance_tasks = {}
+    current_disturbance_tasks = {}
+    current_net_sequestration_tasks = {}
+    current_emissions_tasks = {}
+
     current_transition_year = baseline_lulc_year
     prior_transition_year = None
     for year in range(baseline_lulc_year, final_timestep+1):
-        current_accumulation_tasks = {}
-        current_halflife_tasks = {}
-        current_stock_tasks = {}
-        current_year_of_disturbance_tasks = {}
-        current_disturbance_tasks = {}
-        current_net_sequestration_tasks = {}
-        current_emissions_tasks = {}
+        stock_rasters[year] = {}
+        halflife_rasters[year] = {}
+        yearly_accum_rasters[year] = {}
+        net_sequestration_rasters[year] = {}
+        year_of_disturbance_rasters[year] = {}
+        emissions_rasters[year] = {}
+        total_carbon_rasters[year] = {}
 
         if year in transition_years:
             prior_transition_year = current_transition_year
@@ -147,7 +156,7 @@ def execute(args):
         # In all other years, stocks are based on the previous year's
         # calculations.
         if year == baseline_lulc_year:
-            for pool in ('soil', 'biomass', 'litter'):
+            for pool in ('soil', 'biomass'):
                 stock_rasters[year][pool] = os.path.join(
                     intermediate_dir, f'stocks-{pool}-{year}{suffix}.tif')
                 current_stock_tasks[pool] = task_graph.add_task(
@@ -166,7 +175,7 @@ def execute(args):
             # In every year after the baseline, stocks are calculated as
             # Stock[pool][thisyear] = stock[pool][lastyear] +
             #       netsequestration[pool][lastyear]
-            for pool in ('soil', 'biomass', 'litter'):
+            for pool in ('soil', 'biomass'):
                 stock_rasters[year][pool] = os.path.join(
                     intermediate_dir, f'stocks-{pool}-{year}{suffix}.tif')
                 current_stock_tasks[pool] = task_graph.add_task(
@@ -182,12 +191,12 @@ def execute(args):
 
         # These variables happen on ALL transition years, including baseline.
         if year in years_with_lulc_rasters:
-            for pool in ('soil', 'biomass', 'litter'):
+            disturbance_rasters[current_transition_year] = {}
+            for pool in ('soil', 'biomass'):
                 yearly_accum_rasters[year][pool] = os.path.join(
                     intermediate_dir,
                     f'accumulation-{pool}-{year}{suffix}.tif')
                 current_accumulation_tasks[pool] = task_graph.add_task(
-                    task_graph.add_task(
                         func=pygeoprocessing.reclassify_raster,
                         args=(
                             (aligned_lulc_paths[year], 1),
@@ -201,7 +210,7 @@ def execute(args):
                         target_path_list=[
                             yearly_accum_rasters[year][pool]],
                         task_name=(
-                            f'Mapping {pool} carbon accumulation for {year}')))
+                            f'Mapping {pool} carbon accumulation for {year}'))
 
                 halflife_rasters[year][pool] = os.path.join(
                     intermediate_dir,
@@ -224,13 +233,16 @@ def execute(args):
                 # the baseline year.
                 # disturbances only affect soil and biomass carbon, not litter.
                 if year != baseline_lulc_year and pool != 'litter':
-                    # Need to enforce that the alignment task is complete
-                    # before we fetch nodata values.
+                    # Need to enforce that the alignment and prior stocks tasks
+                    # are complete before we fetch nodata values.
                     alignment_task.join()
+                    prior_stock_tasks[pool].join()
                     prior_transition_nodata = pygeoprocessing.get_raster_info(
                         aligned_lulc_paths[prior_transition_year])['nodata'][0]
                     current_transition_nodata = pygeoprocessing.get_raster_info(
                         aligned_lulc_paths[current_transition_year])['nodata'][0]
+                    stock_nodata = pygeoprocessing.get_raster_info(
+                        stock_rasters[year-1][pool])['nodata'][0]
 
                     disturbance_rasters[current_transition_year][pool] = os.path.join(
                         intermediate_dir,
@@ -243,7 +255,8 @@ def execute(args):
                              (stock_rasters[year-1][pool], 1),
                              (disturbance_matrices[pool], 'raw'),
                              (prior_transition_nodata, 'raw'),
-                             (current_transition_nodata, 'raw')],
+                             (current_transition_nodata, 'raw'),
+                             (stock_nodata, 'raw')],
                             _reclassify_transition,
                             disturbance_rasters[current_transition_year][pool],
                             gdal.GDT_Float32,
@@ -255,20 +268,30 @@ def execute(args):
                         task_name=(
                             f'Mapping {pool} carbon volume disturbed in {year}'))
 
-                    year_of_disturbance_rasters[year][pool] = os.path.join(
+                    year_of_disturbance_rasters[current_transition_year][pool] = os.path.join(
                         intermediate_dir,
                         (f'year-of-latest-disturbance-{pool}-'
                             f'{current_transition_year}{suffix}.tif'))
+
+                    # If there's a prior disturbance, use that raster.
+                    # Otherwise, pass None to indicate no disturbance
+                    # available.
+                    if prior_transition_year not in transitions:
+                        prior_year_of_disturbance_raster_tuple = (
+                            None, 'raw')
+                    else:
+                        prior_year_of_disturbance_raster_tuple = (
+                            year_of_disturbance_rasters[
+                                prior_transition_year][pool], 1)
                     current_year_of_disturbance_tasks[pool] = (
                         task_graph.add_task(
                             func=pygeoprocessing.raster_calculator,
                             args=(
-                                [(disturbance_rasters[current_transition_year][pool],
-                                    1),
-                                 (year_of_disturbance_rasters[prior_transition_year][pool], 1),
+                                [(disturbance_rasters[current_transition_year][pool], 1),
+                                 prior_year_of_disturbance_raster_tuple,
                                  (current_transition_year, 'raw'),
-                                 (year_of_disturbance_rasters[current_transition_year][pool], 1)
-                                ],
+                                 (NODATA_FLOAT32, 'raw'),
+                                 (NODATA_UINT16, 'raw')],
                                 _track_latest_transition_year,
                                 year_of_disturbance_rasters[current_transition_year][pool],
                                 gdal.GDT_UInt16,
@@ -281,43 +304,52 @@ def execute(args):
                                 f'disturbance as of {current_transition_year}')))
 
         for pool in ('soil', 'biomass'):
-            # calculate emissions for this year
-            emissions_rasters[year][pool] = os.path.join(
-                intermediate_dir, 'emissions-{pool}-{year}.tif')
-            current_emissions_tasks[pool] = task_graph.add_task(
-                func=pygeoprocessing.raster_calculator,
-                args=(
-                    [(disturbance_rasters[current_transition_year][pool], 1),
-                     (year_of_disturbance_rasters[current_transition_year], 1),  # TODO
-                     (halflife_rasters[current_transition_year][pool], 1),
-                     (year, 'raw')],
-                    _calculate_emissions,
-                    emissions_rasters[year][pool],
-                    gdal.GDT_Float32,
-                    NODATA_FLOAT32),
-                dependent_task_list=[
-                    current_disturbance_tasks[pool],
-                    current_year_of_disturbance_tasks[pool],
-                    current_halflife_tasks[pool]],
-                target_path_list=[emissions_rasters[year][pool]],
-                task_name=f'Mapping {pool} carbon emissions in {year}')
+            if year >= first_transition_year:
+                # calculate emissions for this year
+                emissions_rasters[year][pool] = os.path.join(
+                    intermediate_dir, f'emissions-{pool}-{year}.tif')
+                current_emissions_tasks[pool] = task_graph.add_task(
+                    func=pygeoprocessing.raster_calculator,
+                    args=(
+                        [(disturbance_rasters[current_transition_year][pool], 1),
+                         (year_of_disturbance_rasters[current_transition_year][pool], 1),  # TODO
+                         (halflife_rasters[current_transition_year][pool], 1),
+                         (year, 'raw')],
+                        _calculate_emissions,
+                        emissions_rasters[year][pool],
+                        gdal.GDT_Float32,
+                        NODATA_FLOAT32),
+                    dependent_task_list=[
+                        current_disturbance_tasks[pool],
+                        current_year_of_disturbance_tasks[pool],
+                        current_halflife_tasks[pool]],
+                    target_path_list=[emissions_rasters[year][pool]],
+                    task_name=f'Mapping {pool} carbon emissions in {year}')
 
-            # calculate net sequestration for this timestep
-            # Net sequestration = A - E per pool
-            net_sequestration_rasters[year][pool] = os.path.join(
-                intermediate_dir,
-                f'net-sequestration-{pool}-{year}{suffix}.tif')
-            current_net_sequestration_tasks[pool] = task_graph.add_task(
-                func=_subtract_rasters,
-                args=(yearly_accum_rasters[current_transition_year][pool],
-                      emissions_rasters[year][pool],
-                      net_sequestration_rasters[year][pool]),
-                dependent_task_list=[
-                    current_accumulation_tasks[pool],
-                    current_emissions_tasks[pool]],
-                target_path_list=[net_sequestration_rasters[year][pool]],
-                task_name=(
-                    f'Calculating net sequestration for {pool} in {year}'))
+                # calculate net sequestration for this timestep
+                # Net sequestration = A - E per pool
+                net_sequestration_rasters[year][pool] = os.path.join(
+                    intermediate_dir,
+                    f'net-sequestration-{pool}-{year}{suffix}.tif')
+                current_net_sequestration_tasks[pool] = task_graph.add_task(
+                    func=_subtract_rasters,
+                    args=(yearly_accum_rasters[current_transition_year][pool],
+                          emissions_rasters[year][pool],
+                          net_sequestration_rasters[year][pool]),
+                    dependent_task_list=[
+                        current_accumulation_tasks[pool],
+                        current_emissions_tasks[pool]],
+                    target_path_list=[net_sequestration_rasters[year][pool]],
+                    task_name=(
+                        f'Calculating net sequestration for {pool} in {year}'))
+            else:
+                # There are no emissions until the first timestep.  Therefore,
+                # since net sequestration = accumulation - emissions, net
+                # sequestration is equal to accumulation.
+                net_sequestration_rasters[year][pool] = (
+                    yearly_accum_rasters[current_transition_year][pool])
+                current_net_sequestration_tasks[pool] = (
+                    current_accumulation_tasks[pool])
 
         # Calculate total carbon stocks, T
         total_carbon_rasters[year] = os.path.join(
@@ -335,20 +367,22 @@ def execute(args):
 
         # If we're doing valuation, calculate the value of net sequestered
         # carbon.
-        if args['do_economic_analysis']:
+        if ('do_economic_analysis' in args and
+                args['do_economic_analysis'] not in (None, '')):
             # Need to verify the math on this, I'm unsure if the current
             # implementation is correct or makes sense:
             #    (N_biomass + N_soil[baseline]) * price[this year]
             # TODO!!!
             pass
 
+        # These are the few sets of tasks that we care about referring to from the
+        # prior year.
+        prior_stock_tasks = current_stock_tasks
+        prior_net_sequestration_tasks = current_net_sequestration_tasks
+
     # Final phase:
     # Sum timeseries rasters (A, E, N, T currently summed in the model)
 
-    # These are the few sets of tasks that we care about referring to from the
-    # prior year.
-    prior_stock_tasks = current_stock_tasks
-    prior_net_sequestration_tasks = current_net_sequestration_tasks
 
 
 def _track_latest_transition_year(
@@ -360,11 +394,12 @@ def _track_latest_transition_year(
         current_disturbance_volume_matrix.shape, dtype=numpy.uint16)
     target_matrix[:] = NODATA_UINT16
 
-    # Keep any years that are already known to be disturbed.
-    pixels_previously_disturbed = ~numpy.isclose(
-        known_transition_years_matrix, known_transition_years_nodata)
-    target_matrix[pixels_previously_disturbed] = (
-        known_transition_years_matrix[pixels_previously_disturbed])
+    if known_transition_years_matrix is not None:
+        # Keep any years that are already known to be disturbed.
+        pixels_previously_disturbed = ~numpy.isclose(
+            known_transition_years_matrix, known_transition_years_nodata)
+        target_matrix[pixels_previously_disturbed] = (
+            known_transition_years_matrix[pixels_previously_disturbed])
 
     # Track any pixels that are known to be disturbed in this current
     # transition year.
@@ -439,13 +474,13 @@ def _sum_n_rasters(raster_path_list, target_raster_path):
                 target_raster_path)
     pygeoprocessing.new_raster_from_base(
         raster_path_list[0], target_raster_path, gdal.GDT_Float32,
-        NODATA_FLOAT32)
+        [NODATA_FLOAT32])
 
     target_raster = gdal.OpenEx(
         target_raster_path, gdal.GA_Update | gdal.OF_RASTER)
     target_band = target_raster.GetRasterBand(1)
     for block_info in pygeoprocessing.iterblocks(
-            raster_path_list[0], offset_only=True):
+            (raster_path_list[0], 1), offset_only=True):
 
         sum_array = None  # reset the sum array on each block in iteration
         for raster_path in raster_path_list:
