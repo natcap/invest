@@ -27,11 +27,10 @@ def assert_expected_results_in_vector(expected_results, vector_path):
     watershed_results_layer = None
     watershed_results_feature = None
     for key in expected_results:
-        numpy.testing.assert_approx_equal(
-            actual_results[key], expected_results[key], significant=6,
-            err_msg=(
-                f'actual_results: {actual_results}, '
-                f'expected_results: {expected_results}'))
+        # Using relative tolerance here because results with different
+        # orders of magnitude are tested
+        numpy.testing.assert_allclose(
+            actual_results[key], expected_results[key], rtol=0.000001, atol=0)
 
 
 class SDRTests(unittest.TestCase):

@@ -811,10 +811,10 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                 fid, vri_sum, qb_val = [float(x) for x in line.split(',')]
                 feature = result_layer.GetFeature(int(fid))
                 for field, value in [('vri_sum', vri_sum), ('qb', qb_val)]:
-                    numpy.testing.assert_almost_equal(
+                    numpy.testing.assert_allclose(
                         feature.GetField(field),
                         value,
-                        decimal=tolerance_places)
+                        rtol=0, atol=10**-tolerance_places)
                 ogr.Feature.__swig_destroy__(feature)
                 feature = None
 
