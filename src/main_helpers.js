@@ -8,6 +8,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 /**
  * Find paths to local invest binaries under dev or production environments.
  *
+ * @param {boolean} isDevMode - a boolean designating dev mode or not.
  * @returns {Promise} Resolves object with filepaths to invest binaries
  */
 export function findInvestBinaries(isDevMode) {
@@ -31,10 +32,8 @@ export function findInvestBinaries(isDevMode) {
     } else if (isDevMode) {
       // If no dotenv vars are set, default to where this project's
       // build process places the binaries.
-      console.log(process.env.SERVER);
       serverExe = `${process.env.SERVER || 'build/invest/server'}${ext}`;
       investExe = `${process.env.INVEST || 'build/invest/invest'}${ext}`;
-      console.log(serverExe);
 
     // C) point to binaries included in this app's installation.
     } else {
@@ -44,6 +43,7 @@ export function findInvestBinaries(isDevMode) {
       serverExe = path.join(binaryPath, `server${ext}`);
       investExe = path.join(binaryPath, `invest${ext}`);
     }
+    logger.info(`Found invest binaries ${investExe} and ${serverExe}`)
     resolve({ invest: investExe, server: serverExe });
   });
 }
@@ -52,6 +52,8 @@ export function findInvestBinaries(isDevMode) {
  * Spawn a child process running the Python Flask app.
  *
  * @param  {string} serverExe - path to executeable that launches flask app.
+ * @param {boolean} isDevMode - a boolean designating dev mode or not.
+ * @returns {undefined}
  */
 export function createPythonFlaskProcess(serverExe, isDevMode) {
   if (serverExe) {
