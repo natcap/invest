@@ -12,8 +12,8 @@
 
 Cython
 virtualenv>=12.0.1
-nose
-nose-timer
+pytest
+pytest-cov
 wheel>=0.27.0
 pypiwin32; sys_platform == 'win32'  # pip-only
 setuptools>=8.0
