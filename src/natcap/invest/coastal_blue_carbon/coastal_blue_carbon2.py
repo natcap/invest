@@ -219,7 +219,7 @@ def execute(args):
                         func=pygeoprocessing.reclassify_raster,
                         args=(
                             (aligned_lulc_paths[year], 1),
-                            {lucode: values[f'{pool}-initial']
+                            {lucode: values[f'{pool}-half-life']
                                 for (lucode, values)
                                 in biophysical_parameters.items()},
                             halflife_rasters[year][pool],
