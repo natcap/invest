@@ -16,7 +16,7 @@ import HomeTab from './components/HomeTab';
 import { SetupTab } from './components/SetupTab';
 import { LogTab } from './components/LogTab';
 import { ResourcesTab } from './components/ResourcesTab';
-import { LoadButton } from './components/LoadButton';
+import LoadButton from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, fetchDatastackFromFile,
          writeParametersToFile } from './server_requests';

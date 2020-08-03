@@ -31,5 +31,6 @@
     "rules": {
         "object-shorthand": ["error", "never"],
         "max-classes-per-file": ["error", 2],
+        "react/destructuring-assignment": ["warn", "always"]
     }
 }

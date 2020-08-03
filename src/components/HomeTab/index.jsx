@@ -147,12 +147,12 @@ class RecentInvestJobs extends React.PureComponent {
               }
             </Card.Header>
             <Card.Title>
-              <span className='text-heading'>{'Workspace: '}</span>
-              <span className='text-mono'>{workspaceDir}</span>
+              <span className="text-heading">{'Workspace: '}</span>
+              <span className="text-mono">{workspaceDir}</span>
             </Card.Title>
             <Card.Title>
-              <span className='text-heading'>{ suffix && 'Suffix: ' }</span>
-              <span className='text-mono'>{suffix}</span>
+              <span className="text-heading">{ suffix && 'Suffix: ' }</span>
+              <span className="text-mono">{suffix}</span>
             </Card.Title>
             <Card.Text>{description || <em>no description</em>}</Card.Text>
             <Card.Footer className="text-muted">{humanTime}</Card.Footer>
@@ -163,14 +163,15 @@ class RecentInvestJobs extends React.PureComponent {
 
     return (
       <Container>
-        <label htmlFor='session-card-group'>
+        <label htmlFor="session-card-group">
           <h4>Recent Sessions:</h4>
         </label>
         {recentButtons.length
           ? (
             <CardGroup
-              id='session-card-group'
-              className='session-card-group'>
+              id="session-card-group"
+              className="session-card-group"
+            >
               {recentButtons}
             </CardGroup>
           )
