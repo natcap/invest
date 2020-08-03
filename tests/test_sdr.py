@@ -27,8 +27,6 @@ def assert_expected_results_in_vector(expected_results, vector_path):
     watershed_results_layer = None
     watershed_results_feature = None
     for key in expected_results:
-        # numpy.testing.assert_almost_equal(
-        #     expected_results[key], actual_results[key], decimal=6)
 
         # In order to pass with GDAL<2.3 and GDAL>2.3:
         # asserting equality to 5 significant figures instead of 6 decimal
