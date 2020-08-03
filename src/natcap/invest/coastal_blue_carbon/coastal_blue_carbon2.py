@@ -312,7 +312,7 @@ def execute(args):
                     func=pygeoprocessing.raster_calculator,
                     args=(
                         [(disturbance_rasters[current_transition_year][pool], 1),
-                         (year_of_disturbance_rasters[current_transition_year][pool], 1),  # TODO
+                         (year_of_disturbance_rasters[current_transition_year][pool], 1),
                          (halflife_rasters[current_transition_year][pool], 1),
                          (year, 'raw')],
                         _calculate_emissions,

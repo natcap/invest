@@ -1189,3 +1189,23 @@ class TestCBC2(unittest.TestCase):
             [5, 11]], dtype=numpy.uint16)
         numpy.testing.assert_allclose(
             latest_disturbance_year_matrix, expected_array)
+
+    def test_emissions(self):
+        """CBC: Check emissions calculations."""
+        volume_disturbed_carbon = numpy.array(
+            [[5.5, coastal_blue_carbon2.NODATA_FLOAT32]], dtype=numpy.float32)
+        year_last_disturbed = numpy.array(
+            [[10, coastal_blue_carbon2.NODATA_UINT16]], dtype=numpy.uint16)
+        half_life = numpy.array([[7.5, 7.5]], dtype=numpy.float32)
+        current_year = 15
+
+        result_matrix = coastal_blue_carbon2._calculate_emissions(
+            volume_disturbed_carbon, year_last_disturbed, half_life,
+            current_year)
+
+        # Calculated by hand.
+        expected_array = numpy.array([
+            [0.3354775, coastal_blue_carbon2.NODATA_FLOAT32]],
+            dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            result_matrix, expected_array, rtol=1E-6)
