@@ -153,7 +153,8 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	@echo -e "[run]\nomit = */invest/ui/*" > .coveragerc
+	@echo "[run]" > .coveragerc
+	@echo "omit = */invest/ui/*" >> .coveragerc
 	-$(TESTRUNNER) tests/test_validation.py
 	rm .coveragerc
 
