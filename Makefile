@@ -100,7 +100,7 @@ endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
 
-TESTRUNNER := $(PYTHON) -m pytest -vs --cov-config=.coveragerc --cov=natcap.invest --cov-report='term' --cov-report='html' --cov-report='xml' --durations=0 tests
+TESTRUNNER := $(PYTHON) -m pytest -vs --cov=natcap.invest --cov-report='term' --cov-report='html' --cov-report='xml' --durations=0
 
 DATAVALIDATOR := $(PYTHON) scripts/invest-autovalidate.py $(GIT_SAMPLE_DATA_REPO_PATH)
 TEST_DATAVALIDATOR := $(PYTHON) -m nose -vsP scripts/invest-autovalidate.py
@@ -153,7 +153,9 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	$(TESTRUNNER) tests
+	@echo -e "[run]\nomit = */invest/ui/*" > .coveragerc
+	-$(TESTRUNNER) tests/test_validation.py
+	rm .coveragerc
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) ui_tests
