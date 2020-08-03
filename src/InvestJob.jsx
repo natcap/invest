@@ -14,7 +14,7 @@ import Spinner from 'react-bootstrap/Spinner';
 
 import HomeTab from './components/HomeTab';
 import { SetupTab } from './components/SetupTab';
-import { LogTab } from './components/LogTab';
+import LogTab from './components/LogTab';
 import { ResourcesTab } from './components/ResourcesTab';
 import LoadButton from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';

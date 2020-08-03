@@ -10,8 +10,8 @@ import Container from 'react-bootstrap/Container';
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 
-import { getLogger } from '../../logger'
-const logger = getLogger(__filename.split('/').slice(-2).join('/'))
+import { getLogger } from '../../logger';
+const logger = getLogger(__filename.split('/').slice(-2).join('/'));
 
 const logStyle = {
   whiteSpace: 'pre-line',
@@ -20,7 +20,6 @@ const logStyle = {
 };
 
 class LogDisplay extends React.Component {
-
   constructor(props) {
     super(props);
     this.content = React.createRef();
@@ -35,21 +34,20 @@ class LogDisplay extends React.Component {
       <Col ref={this.content} style={logStyle}>
         {this.props.logdata}
       </Col>
-      );
+    );
   }
 }
 
 LogDisplay.propTypes = {
-  logdata: PropTypes.string
-}
+  logdata: PropTypes.string,
+};
 
-export class LogTab extends React.Component {
-
+export default class LogTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      logdata: ''
-    }
+      logdata: '',
+    };
     this.tail = null;
     this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
   }
@@ -63,64 +61,70 @@ export class LogTab extends React.Component {
         });
         let logdata = Object.assign('', this.state.logdata);
         this.tail.on('line', (data) => {
-          logdata += `${data}` + os.EOL
-          this.setState({ logdata: logdata })
-        })
-      } catch(error) {
+          logdata += `${data}${os.EOL}`;
+          this.setState({ logdata: logdata });
+        });
+      } catch (error) {
         // in case a recent session was loaded but the logfile
-        // no longer exists 
-        this.setState({logdata: `Logfile is missing: ${os.EOL}${this.props.logfile}`})
-        logger.error(`Not able to read ${this.props.logfile}`)
-        logger.error(error.stack)
+        // no longer exists
+        this.setState({
+          logdata: `Logfile is missing: ${os.EOL}${this.props.logfile}`
+        });
+        logger.error(`Not able to read ${this.props.logfile}`);
+        logger.error(error.stack);
       }
 
     // No new logfile. No existing logdata.
     } else if (this.state.logdata === '') {
-      this.setState({logdata: 'Starting...'})
+      this.setState({ logdata: 'Starting...' });
 
-    // No new logfile. Existing logdata. Invest process exited. 
+    // No new logfile. Existing logdata. Invest process exited.
     } else if (['success', 'error'].includes(this.props.jobStatus)) {
       try {
-        this.tail.unwatch()
-      }
-      catch(error) {
-        logger.error(error.stack)
+        this.tail.unwatch();
+      } catch (error) {
+        logger.error(error.stack);
       }
     }
   }
 
   handleOpenWorkspace() {
-    shell.showItemInFolder(this.props.logfile)
+    shell.showItemInFolder(this.props.logfile);
   }
 
-  render() {    
+  render() {
     let RenderedAlert;
-    const WorkspaceButton = <Button className='float-right float-bottom'
-      variant='outline-dark'
-      onClick={this.handleOpenWorkspace}
-      disabled={this.props.jobStatus === 'running'}>
-      Open Workspace
-    </Button>
+    const WorkspaceButton = (
+      <Button
+        className="float-right float-bottom"
+        variant="outline-dark"
+        onClick={this.handleOpenWorkspace}
+        disabled={this.props.jobStatus === 'running'}
+      >
+        Open Workspace
+      </Button>
+    );
 
     if (this.props.jobStatus === 'error') {
-      RenderedAlert = <Alert className='py-4 mt-3'
-        variant={'danger'}>
-        {this.props.logStdErr}
-        {WorkspaceButton}
-      </Alert>
+      RenderedAlert = (
+        <Alert className="py-4 mt-3" variant="danger">
+          {this.props.logStdErr}
+          {WorkspaceButton}
+        </Alert>
+      );
     } else if (this.props.jobStatus === 'success') {
-      RenderedAlert = <Alert className='py-4 mt-3'
-        variant={'success'}>
-        <span>Model Completed</span>
-        {WorkspaceButton}
-      </Alert>
+      RenderedAlert = (
+        <Alert className="py-4 mt-3" variant="success">
+          <span>Model Completed</span>
+          {WorkspaceButton}
+        </Alert>
+      );
     }
-
 
     return (
       <Container>
         <Row>
-          <LogDisplay logdata={this.state.logdata}/>
+          <LogDisplay logdata={this.state.logdata} />
         </Row>
         <Row>
           <Col>
