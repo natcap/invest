@@ -34,7 +34,7 @@ ifeq ($(OS),Windows_NT)
 	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
 	/ := '\'
-	WRITE_COVERAGERC_COMMAND := @echo "[run]`nomit = */invest/ui/*" | out-file .coveragerc -encoding utf-8
+	WRITE_COVERAGERC_COMMAND := @echo "[run]`nomit = */invest/ui/*" | out-file .coveragerc -encoding utf8
 	ESCAPE_CHAR := `
 	TRAP_COMMAND := trap {rm .coveragerc; ls -a}
 else
