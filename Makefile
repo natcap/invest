@@ -155,7 +155,8 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 test: $(GIT_TEST_DATA_REPO_PATH)
 	@echo "[run]" > .coveragerc
 	@echo "omit = */invest/ui/*" >> .coveragerc
-	-$(TESTRUNNER) tests/test_validation.py
+	file --mime-encoding .coveragerc
+	-$(TESTRUNNER) tests
 	rm .coveragerc
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
