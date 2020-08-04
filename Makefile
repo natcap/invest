@@ -34,9 +34,6 @@ ifeq ($(OS),Windows_NT)
 	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
 	/ := '\'
-	WRITE_COVERAGERC_COMMAND := (Get-Host).Version#@echo "[run]`nomit = */invest/ui/*" | out-file .coveragerc -encoding utf8NoBOM
-	ESCAPE_CHAR := `
-	TRAP_COMMAND := trap {rm .coveragerc; ls -a}
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -48,7 +45,6 @@ else
 	RM := rm -r
 	RMDIR := $(RM)
 	/ := /
-	ESCAPE_CHAR := \
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python3
 	RM_DATA_DIR := yes | rm -r $(DATA_DIR)
@@ -60,8 +56,6 @@ else
 		.DEFAULT_GOAL := binaries
 		JENKINS_BUILD_SCRIPT := @echo "NOTE: There is not currently a linux jenkins build."; exit 1
 	endif
-	WRITE_COVERAGERC_COMMAND := @echo -e "[run]\nomit = */invest/ui/*" > .coveragerc
-	TRAP_COMMAND := trap "rm .coveragerc; ls -a" EXIT
 endif
 
 REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs
@@ -159,10 +153,7 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	$(WRITE_COVERAGERC_COMMAND)
-	file --mime-encoding .coveragerc
-	# always delete this file when exiting
-	$(TRAP_COMMAND); $(TESTRUNNER) tests/test_validation.py
+	$(TESTRUNNER) tests
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) ui_tests
