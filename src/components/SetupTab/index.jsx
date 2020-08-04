@@ -10,7 +10,7 @@ import Form from 'react-bootstrap/Form';
 import DropdownButton from 'react-bootstrap/DropdownButton';
 
 import { ArgInput } from './ArgInput';
-import { SaveParametersButton, SavePythonButton } from '../SaveDropdown'
+import SaveFileButton from '../SaveFileButton';
 import { fetchDatastackFromFile, fetchValidation, 
          saveToPython } from '../../server_requests';
 import { argsDictFromObject, boolStringToBoolean } from '../../utils';
@@ -345,10 +345,16 @@ export class SetupTab extends React.Component {
                 title="Save Parameters"
                 renderMenuOnMount={true}  // w/o this, items inaccessible in jsdom test env
                 className="mx-3 float-right">
-                <SaveParametersButton
-                  wrapArgsToJsonFile={this.wrapArgsToJsonFile}/>
-                <SavePythonButton
-                  savePythonScript={this.savePythonScript}/>
+                <SaveFileButton
+                  title="Save parameters to JSON"
+                  defaultTargetPath="invest_args.json"
+                  func={this.wrapArgsToJsonFile}
+                />
+                <SaveFileButton
+                  title="Save to Python script"
+                  defaultTargetPath="execute_invest.python"
+                  func={this.savePythonScript}
+                />
               </DropdownButton>
             </Col>
           </Row>
