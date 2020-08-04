@@ -7,7 +7,7 @@ if (isDevMode) {
   dotenv.config();
 }
 
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, screen } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const { getFlaskIsReady, shutdownPythonProcess } = require('./server_requests');
 const { findInvestBinaries, createPythonFlaskProcess } = require('./main_helpers');
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { remote } from 'electron'
+import { remote } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';

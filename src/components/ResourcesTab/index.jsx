@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import Electron from 'electron';
+import Electron from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest/'
 const FORUM_ROOT = 'https://community.naturalcapitalproject.org/'

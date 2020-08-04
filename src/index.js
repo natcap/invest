@@ -1,7 +1,7 @@
 "use strict";
 const fs = require('fs');
 const path = require('path');
-const { remote, ipcRenderer } = require('electron');
+const { remote, ipcRenderer } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const { getLogger } = require('./logger')
 
 const logger = getLogger(__filename.split('/').slice(-1)[0])

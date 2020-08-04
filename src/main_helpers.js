@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { app } = require('electron');
+const { app } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const { getLogger } = require('./logger');
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);

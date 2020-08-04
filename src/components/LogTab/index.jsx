@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Tail } from 'tail';
 import os from 'os';
-import { shell } from 'electron';
+import { shell } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -142,4 +142,4 @@ LogTab.propTypes = {
   jobStatus: PropTypes.string.isRequired,
   logfile: PropTypes.string.isRequired,
   logStdErr: PropTypes.string.isRequired,
-}
+};
