@@ -156,8 +156,8 @@ test: $(GIT_TEST_DATA_REPO_PATH)
 	@echo "[run]" > .coveragerc
 	@echo "omit = */invest/ui/*" >> .coveragerc
 	file --mime-encoding .coveragerc
-	-$(TESTRUNNER) tests
-	rm .coveragerc
+	# always delete this file when exiting
+	trap 'rm .coveragerc' EXIT; $(TESTRUNNER) tests/test_validation.py
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) ui_tests
