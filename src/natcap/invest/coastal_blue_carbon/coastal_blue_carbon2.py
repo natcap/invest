@@ -1,5 +1,6 @@
 import os
 import logging
+import itertools
 
 from osgeo import gdal
 import taskgraph
@@ -254,21 +255,21 @@ def execute(args):
                 else:
                     halflife_source_year = prior_transition_year
                 current_halflife_tasks[pool] = task_graph.add_task(
-                        func=pygeoprocessing.reclassify_raster,
-                        args=(
-                            # TODO: can we guarantee that we won't have a
-                            # different half-life in this current transition
-                            # year?
-                            (aligned_lulc_paths[halflife_source_year], 1),
-                            {lucode: values[f'{pool}-half-life']
-                                for (lucode, values)
-                                in biophysical_parameters.items()},
-                            halflife_rasters[year][pool],
-                            gdal.GDT_Float32,
-                            NODATA_FLOAT32),
-                        dependent_task_list=[alignment_task],
-                        target_path_list=[halflife_rasters[year][pool]],
-                        task_name=f'Mapping {pool} half-life for {year}')
+                    func=pygeoprocessing.reclassify_raster,
+                    args=(
+                        # TODO: can we guarantee that we won't have a
+                        # different half-life in this current transition
+                        # year?
+                        (aligned_lulc_paths[halflife_source_year], 1),
+                        {lucode: values[f'{pool}-half-life']
+                            for (lucode, values)
+                            in biophysical_parameters.items()},
+                        halflife_rasters[year][pool],
+                        gdal.GDT_Float32,
+                        NODATA_FLOAT32),
+                    dependent_task_list=[alignment_task],
+                    target_path_list=[halflife_rasters[year][pool]],
+                    task_name=f'Mapping {pool} half-life for {year}')
 
                 # Disturbances only happen during transition years, not during
                 # the baseline year.
@@ -436,67 +437,73 @@ def execute(args):
         if year+1 in transition_years.union(set([final_timestep])):
             years_since_last_transition = list(
                 range(current_transition_year, year+1))
-            timestep_accumulation_rasters = []
-            timestep_emissions_rasters = []
-            timestep_net_sequestration_rasters = []
-            timestep_total_carbon_rasters = []
 
-            for target_year in years_since_last_transition:
-                timestep_total_carbon_rasters.append(
-                    total_carbon_rasters[target_year])
+            timestep_net_sequestration_rasters = list(itertools.chain(
+                *[list(net_sequestration_rasters[target_year].values())
+                  for target_year in years_since_last_transition]))
 
-                for pool in ('soil', 'biomass'):
-                    timestep_accumulation_rasters.append(
-                        yearly_accum_rasters[current_transition_year][pool])
-                    timestep_net_sequestration_rasters.append(
-                        net_sequestration_rasters[target_year][pool])
+            # Emissions is only calculated after the first transition.
+            if current_transition_year != baseline_lulc_year:
+                timestep_emissions_rasters = list(itertools.chain(
+                    *[list(emissions_rasters[target_year].values())
+                      for target_year in years_since_last_transition]))
 
-                    # Emissions is only calculated after the first transition.
-                    if (target_year in emissions_rasters and
-                            pool in emissions_rasters[target_year]):
-                        timestep_emissions_rasters.append(
-                            emissions_rasters[target_year][pool])
+                emissions_since_last_transition = os.path.join(
+                    output_dir, (
+                        f'carbon_emissions_between_'
+                        f'{current_transition_year}_and_{year+1}{suffix}.tif'))
+
+                _ = task_graph.add_task(
+                    func=_sum_n_rasters,
+                    args=(timestep_emissions_rasters,
+                          emissions_since_last_transition),
+                    dependent_task_list=list(
+                        current_accumulation_tasks.values()),
+                    target_path_list=[emissions_since_last_transition],
+                    task_name=(
+                        f'Summing emissions between {current_transition_year} '
+                        f'and {year}'))
 
             accumulation_since_last_transition = os.path.join(
                 output_dir, (
                     f'carbon_accumulation_between_'
                     f'{current_transition_year}_and_{year+1}{suffix}.tif'))
-            emissions_since_last_transition = os.path.join(
-                output_dir, (
-                    f'carbon_emissions_between_'
-                    f'{current_transition_year}_and_{year+1}{suffix}.tif'))
+            _ = task_graph.add_task(
+                func=pygeoprocessing.raster_calculator,
+                args=(
+                    [(yearly_accum_rasters[
+                        current_transition_year]['soil'], 1),
+                     (yearly_accum_rasters[
+                         current_transition_year]['biomass'], 1),
+                     (len(years_since_last_transition), 'raw')],
+                    _calculate_accumulation_over_time,
+                    accumulation_since_last_transition,
+                    gdal.GDT_Float32,
+                    NODATA_FLOAT32),
+                dependent_task_list=[
+                    current_accumulation_tasks['biomass'],
+                    current_accumulation_tasks['soil']],
+                target_path_list=[accumulation_since_last_transition],
+                task_name=(
+                    f'Summing accumulation between {current_transition_year} '
+                    f'and {year}'))
+
             net_carbon_sequestration_since_last_transition = os.path.join(
                 output_dir, (
                     f'total_net_carbon_sequestration_between_'
                     f'{current_transition_year}_and_{year+1}{suffix}.tif'))
-
-            for title, source_path_list, target_raster_path in (
-                    ('accumulation', timestep_accumulation_rasters,
-                        accumulation_since_last_transition),
-                    ('emissions', timestep_emissions_rasters,
-                        emissions_since_last_transition),
-                    ('net carbon sequestration',
-                        timestep_net_sequestration_rasters,
-                        net_carbon_sequestration_since_last_transition)):
-
-                # We expect no emissions before the first transition.
-                if title == 'emissions' and not source_path_list:
-                    continue
-
-                task = task_graph.add_task(
-                    func=_sum_n_rasters,
-                    args=(source_path_list, target_raster_path),
-                    dependent_task_list=list(
-                        current_accumulation_tasks.values()),
-                    target_path_list=[accumulation_since_last_transition],
-                    task_name=(
-                        f'Summing {title} between {current_transition_year} '
-                        f'and {year}'))
-
-                if title == 'net carbon sequestration':
-                    summary_net_sequestration_tasks.append(task)
-                    summary_net_sequestration_raster_paths.append(
-                        target_raster_path)
+            summary_net_sequestration_tasks.append(task_graph.add_task(
+                func=_sum_n_rasters,
+                args=(timestep_net_sequestration_rasters,
+                      net_carbon_sequestration_since_last_transition),
+                dependent_task_list=list(
+                    current_accumulation_tasks.values()),
+                target_path_list=[net_carbon_sequestration_since_last_transition],
+                task_name=(
+                    f'Summing sequestration between {current_transition_year} '
+                    f'and {year}')))
+            summary_net_sequestration_raster_paths.append(
+                net_carbon_sequestration_since_last_transition)
 
         # These are the few sets of tasks that we care about referring to from
         # the prior year.
@@ -516,6 +523,22 @@ def execute(args):
             target_path_list=[total_net_sequestration_raster_path],
             task_name=(
                 'Calculate total net carbon sequestration across all years'))
+
+
+def _calculate_accumulation_over_time(
+        annual_biomass_matrix, annual_soil_matrix, n_years):
+    target_matrix = numpy.empty(annual_biomass_matrix.shape,
+                                dtype=numpy.float32)
+    target_matrix[:] = NODATA_FLOAT32
+
+    valid_pixels = (
+        ~numpy.isclose(annual_biomass_matrix, NODATA_FLOAT32) &
+        ~numpy.isclose(annual_soil_matrix, NODATA_FLOAT32))
+
+    target_matrix[valid_pixels] = (
+        (annual_biomass_matrix[valid_pixels] +
+            annual_soil_matrix[valid_pixels]) * n_years)
+    return target_matrix
 
 
 def _calculate_valuation(
