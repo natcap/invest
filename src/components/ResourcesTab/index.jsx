@@ -2,8 +2,8 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Electron from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
-const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest/'
-const FORUM_ROOT = 'https://community.naturalcapitalproject.org/'
+const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest/';
+const FORUM_ROOT = 'https://community.naturalcapitalproject.org/';
 
 // map model names to forum tags:
 const FORUM_TAGS = {
@@ -28,60 +28,55 @@ const FORUM_TAGS = {
   wind_energy: 'wind-energy',
   scenario_generator_proximity: 'scenario-generator',
   wave_energy: 'wave-energy',
-}
+};
 
+/**
+ * Open the target href in the default web browser.
+ */
 function handleClick(event) {
-  /** Open the target href in the default web browser */
   event.preventDefault();
   Electron.shell.openExternal(event.target.href);
 }
 
-export class ResourcesTab extends React.Component {
-  /** Render model-relevant links to the User's Guide and Forum.
-  *
-  * This should be a link to the model's User's Guide chapter and
-  * and a link to list of topics with the model's tag on the forum,
-  * e.g. https://community.naturalcapitalproject.org/tag/carbon
-  */
+/** Render model-relevant links to the User's Guide and Forum.
+*
+* This should be a link to the model's User's Guide chapter and
+* and a link to list of topics with the model's tag on the forum,
+* e.g. https://community.naturalcapitalproject.org/tag/carbon
+*/
+export default function ResourcesTab(props) {
+  let userGuideURL;
+  let forumURL;
+  let name;
 
-  constructor(props) {
-    super(props);
+  if (props.docs && props.modelName) {
+    userGuideURL = UG_ROOT + props.docs;
+    forumURL = `${FORUM_ROOT}tags/${FORUM_TAGS[props.modelName]}`;
+    name = props.modelName;
+  } else {
+    // No model has been selected yet, but general resources are useful
+    userGuideURL = UG_ROOT;
+    forumURL = FORUM_ROOT;
+    name = 'InVEST';
   }
-
-  render () {
-    let userGuideURL;
-    let forumURL;
-    let name;
-
-    if (this.props.docs && this.props.modelName) {
-      userGuideURL = UG_ROOT + this.props.docs
-      forumURL = FORUM_ROOT + 'tags/' + FORUM_TAGS[this.props.modelName]
-      name = this.props.modelName
-    } else {
-      userGuideURL = UG_ROOT
-      forumURL = FORUM_ROOT
-      name = 'InVEST'
-    }
-    return(
-
-        <div>
-          <h2>
-          <a href={userGuideURL} onClick={handleClick}>
-            {"User's Guide: " + name}
-          </a>
-          </h2>
-          <br></br>
-          <h2>
-          <a href={forumURL} onClick={handleClick}>
-            {"FAQ: " + name}
-          </a>
-          </h2>
-        </div>
-      );
-  }
+  return (
+    <div>
+      <h2>
+        <a href={userGuideURL} onClick={handleClick}>
+          {`User's Guide: ${name}`}
+        </a>
+      </h2>
+      <br />
+      <h2>
+        <a href={forumURL} onClick={handleClick}>
+          {`FAQ: ${name}`}
+        </a>
+      </h2>
+    </div>
+  );
 }
 
 ResourcesTab.propTypes = {
-  modelName: PropTypes.string,
-  docs: PropTypes.string
-}
+  modelName: PropTypes.string.isRequired,
+  docs: PropTypes.string.isRequired,
+};
