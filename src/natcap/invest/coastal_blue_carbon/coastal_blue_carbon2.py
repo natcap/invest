@@ -212,24 +212,23 @@ def execute(args):
                         task_name=(
                             f'Mapping {pool} carbon accumulation for {year}'))
 
-                # TODO: make halflife reflect last transition's state
+                # Halflife reflect last transition's state
                 # Emissions happen when we're transitioning AWAY from CBC
                 # landcovers.
                 halflife_rasters[year][pool] = os.path.join(
                     intermediate_dir,
                     f'halflife-{pool}-{year}{suffix}.tif')
                 if prior_transition_year is None:
-                    halflife_source_lulc = aligned_lulc_paths[year]
+                    halflife_source_year = year
                 else:
-                    halflife_source_lulc = aligned_lulc_paths[
-                        prior_transition_year]
+                    halflife_source_year = prior_transition_year
                 current_halflife_tasks[pool] = task_graph.add_task(
                         func=pygeoprocessing.reclassify_raster,
                         args=(
                             # TODO: can we guarantee that we won't have a
                             # different half-life in this current transition
                             # year?
-                            (halflife_source_lulc, 1),
+                            (aligned_lulc_paths[halflife_source_year], 1),
                             {lucode: values[f'{pool}-half-life']
                                 for (lucode, values)
                                 in biophysical_parameters.items()},

@@ -17,6 +17,7 @@ ARGS = {
     'baseline_lulc_year': 2010,
     'analysis_year': 2060,
     'biophysical_table_path': 'rebuilt_cbc_biophysical_table.csv',
+    'n_workers': 4,
 }
 
 if __name__ == '__main__':
