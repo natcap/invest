@@ -34,6 +34,7 @@ ifeq ($(OS),Windows_NT)
 	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
 	/ := '\'
+	TRAP_COMMAND := trap {rm .coveragerc}
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -56,6 +57,7 @@ else
 		.DEFAULT_GOAL := binaries
 		JENKINS_BUILD_SCRIPT := @echo "NOTE: There is not currently a linux jenkins build."; exit 1
 	endif
+	TRAP_COMMAND := trap "rm .coveragerc" EXIT
 endif
 
 REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs
@@ -157,7 +159,8 @@ test: $(GIT_TEST_DATA_REPO_PATH)
 	@echo "omit = */invest/ui/*" >> .coveragerc
 	file --mime-encoding .coveragerc
 	# always delete this file when exiting
-	trap 'rm .coveragerc' EXIT; $(TESTRUNNER) tests/test_validation.py
+	$(TRAP_COMMAND); $(TESTRUNNER) tests/test_validation.py
+
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) ui_tests
