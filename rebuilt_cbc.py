@@ -17,7 +17,7 @@ ARGS = {
     'baseline_lulc_year': 2010,
     #'analysis_year': 2060,
     'biophysical_table_path': 'rebuilt_cbc_biophysical_table.csv',
-#    'n_workers': 4,
+    'n_workers': 6,
     'do_economic_analysis': True,  # when True, remove analysis year.
     'do_price_table': True,
     'price_table':

@@ -147,6 +147,7 @@ def execute(args):
         final_timestep = max(transition_years)
 
     first_transition_year = min(transition_years)
+    LOGGER.info('Transition years: %s', sorted(transition_years))
 
     years_with_lulc_rasters = set(aligned_lulc_paths.keys())
 
@@ -167,6 +168,10 @@ def execute(args):
     summary_net_sequestration_tasks = []
     summary_net_sequestration_raster_paths = []
 
+    emissions_tasks_since_transition = []
+    net_sequestration_tasks_since_transition = []
+    accumulation_tasks_since_transition = []
+
     current_transition_year = baseline_lulc_year
     prior_transition_year = None
     for year in range(baseline_lulc_year, final_timestep+1):
@@ -181,6 +186,10 @@ def execute(args):
         if year in transition_years:
             prior_transition_year = current_transition_year
             current_transition_year = year
+
+            emissions_tasks_since_transition = []
+            net_sequestration_tasks_since_transition = []
+            accumulation_tasks_since_transition = []
 
         # Stocks are only reclassified from inputs in the baseline year.
         # In all other years, stocks are based on the previous year's
@@ -243,6 +252,8 @@ def execute(args):
                             yearly_accum_rasters[year][pool]],
                         task_name=(
                             f'Mapping {pool} carbon accumulation for {year}'))
+                accumulation_tasks_since_transition.append(
+                    current_accumulation_tasks[pool])
 
                 # Halflife reflect last transition's state
                 # Emissions happen when we're transitioning AWAY from CBC
@@ -367,6 +378,8 @@ def execute(args):
                         current_halflife_tasks[pool]],
                     target_path_list=[emissions_rasters[year][pool]],
                     task_name=f'Mapping {pool} carbon emissions in {year}')
+                emissions_tasks_since_transition.append(
+                    current_emissions_tasks[pool])
 
                 # calculate net sequestration for this timestep
                 # Net sequestration = A - E per pool
@@ -392,6 +405,9 @@ def execute(args):
                     yearly_accum_rasters[current_transition_year][pool])
                 current_net_sequestration_tasks[pool] = (
                     current_accumulation_tasks[pool])
+
+            net_sequestration_tasks_since_transition.append(
+                current_net_sequestration_tasks[pool])
 
         # Calculate total carbon stocks, T
         total_carbon_rasters[year] = os.path.join(
@@ -457,8 +473,7 @@ def execute(args):
                     func=_sum_n_rasters,
                     args=(timestep_emissions_rasters,
                           emissions_since_last_transition),
-                    dependent_task_list=list(
-                        current_accumulation_tasks.values()),
+                    dependent_task_list=emissions_tasks_since_transition,
                     target_path_list=[emissions_since_last_transition],
                     task_name=(
                         f'Summing emissions between {current_transition_year} '
@@ -480,9 +495,7 @@ def execute(args):
                     accumulation_since_last_transition,
                     gdal.GDT_Float32,
                     NODATA_FLOAT32),
-                dependent_task_list=[
-                    current_accumulation_tasks['biomass'],
-                    current_accumulation_tasks['soil']],
+                dependent_task_list=accumulation_tasks_since_transition,
                 target_path_list=[accumulation_since_last_transition],
                 task_name=(
                     f'Summing accumulation between {current_transition_year} '
@@ -496,9 +509,9 @@ def execute(args):
                 func=_sum_n_rasters,
                 args=(timestep_net_sequestration_rasters,
                       net_carbon_sequestration_since_last_transition),
-                dependent_task_list=list(
-                    current_accumulation_tasks.values()),
-                target_path_list=[net_carbon_sequestration_since_last_transition],
+                dependent_task_list=net_sequestration_tasks_since_transition,
+                target_path_list=[
+                    net_carbon_sequestration_since_last_transition],
                 task_name=(
                     f'Summing sequestration between {current_transition_year} '
                     f'and {year}')))
@@ -510,9 +523,6 @@ def execute(args):
         prior_stock_tasks = current_stock_tasks
         prior_net_sequestration_tasks = current_net_sequestration_tasks
 
-    # Final phase:
-    # Sum timeseries rasters (A, E, N, T currently summed in the model)
-
     total_net_sequestration_raster_path = os.path.join(
         output_dir, f'total_net_carbon_sequestration{suffix}.tif')
     _ = task_graph.add_task(
@@ -523,6 +533,9 @@ def execute(args):
             target_path_list=[total_net_sequestration_raster_path],
             task_name=(
                 'Calculate total net carbon sequestration across all years'))
+
+    task_graph.close()
+    task_graph.join()
 
 
 def _calculate_accumulation_over_time(
