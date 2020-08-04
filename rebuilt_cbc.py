@@ -15,9 +15,14 @@ ARGS = {
         'data', 'invest-sample-data', 'CoastalBlueCarbon', 'inputs',
         'GBJC_2010_mean_Resample.tif'),
     'baseline_lulc_year': 2010,
-    'analysis_year': 2060,
+    #'analysis_year': 2060,
     'biophysical_table_path': 'rebuilt_cbc_biophysical_table.csv',
-    'n_workers': 4,
+#    'n_workers': 4,
+    'do_economic_analysis': True,  # when True, remove analysis year.
+    'do_price_table': True,
+    'price_table':
+        'data/invest-sample-data/CoastalBlueCarbon/inputs/Price_table_SCC3.csv',
+    'discount_rate': 6.0,
 }
 
 if __name__ == '__main__':

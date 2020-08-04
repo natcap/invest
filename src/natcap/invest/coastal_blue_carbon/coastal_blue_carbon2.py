@@ -60,6 +60,32 @@ def execute(args):
     except (KeyError, ValueError, TypeError):
         analysis_year = None
 
+    # TODO: check that the years in the price table match the years in the
+    # range of the timesteps we're running.
+    if ('do_economic_analysis' in args and
+            args['do_economic_analysis'] not in ('', None)):
+        if args.get('do_price_table', False):
+            prices = {
+                year: values['price'] for (year, values) in
+                utils.build_lookup_from_csv(
+                    args['price_table'], 'year').items()}
+        else:
+            inflation_rate = float(args['inflation_rate']) * 0.01
+            annual_price = float(args['price'])
+            max_year = max(transition_years.keys()).union(set([analysis_year]))
+
+            prices = {}
+            for timestep_index, year in enumerate(
+                    range(baseline_lulc_year, max_year + 1)):
+                prices[year] = (
+                    ((1 + inflation_rate) ** timestep_index) *
+                    annual_price)
+
+        discount_rate = float(args['discount_rate']) * 0.01
+        for year, price in prices.items():
+            n_years_elapsed = year - baseline_lulc_year
+            prices[year] /= (1 + discount_rate) ** n_years_elapsed
+
     base_paths = [args['baseline_lulc_path']]
     aligned_lulc_paths = {}
     aligned_paths = [os.path.join(
@@ -117,7 +143,7 @@ def execute(args):
     if analysis_year:
         final_timestep = analysis_year
     else:
-        final_timestep = max(max(transition_years), analysis_year)
+        final_timestep = max(transition_years)
 
     first_transition_year = min(transition_years)
 
@@ -382,8 +408,23 @@ def execute(args):
             # Need to verify the math on this, I'm unsure if the current
             # implementation is correct or makes sense:
             #    (N_biomass + N_soil[baseline]) * price[this year]
-            # TODO!!!
-            pass
+            valuation_raster = os.path.join(
+                intermediate_dir, f'valuation-{year}{suffix}.tif')
+            _ = task_graph.add_task(
+                    func=pygeoprocessing.raster_calculator,
+                    args=([(net_sequestration_rasters[year]['biomass'], 1),
+                           (net_sequestration_rasters[year]['soil'], 1),
+                           (prices[year], 'raw')],
+                          _calculate_valuation,
+                          valuation_raster,
+                          gdal.GDT_Float32,
+                          NODATA_FLOAT32),
+                    dependent_task_list=[
+                        current_net_sequestration_tasks['biomass'],
+                        current_net_sequestration_tasks['soil']],
+                    target_path_list=[valuation_raster],
+                    task_name=f'Calculating the value of carbon for {year}')
+
 
         # These are the few sets of tasks that we care about referring to from the
         # prior year.
@@ -393,6 +434,22 @@ def execute(args):
     # Final phase:
     # Sum timeseries rasters (A, E, N, T currently summed in the model)
 
+
+def _calculate_valuation(
+        biomass_sequestration_matrix, soil_sequestration_matrix,
+        price):
+    value_matrix = numpy.empty(
+        biomass_sequestration_matrix.shape, dtype=numpy.float32)
+    value_matrix[:] = NODATA_FLOAT32
+
+    valid_pixels = (
+        ~numpy.isclose(biomass_sequestration_matrix, NODATA_FLOAT32) &
+        ~numpy.isclose(soil_sequestration_matrix, NODATA_FLOAT32))
+    value_matrix[valid_pixels] = (
+        (biomass_sequestration_matrix[valid_pixels] +
+            soil_sequestration_matrix[valid_pixels]) * price)
+
+    return value_matrix
 
 
 def _track_latest_transition_year(
