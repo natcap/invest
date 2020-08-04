@@ -34,7 +34,7 @@ ifeq ($(OS),Windows_NT)
 	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
 	/ := '\'
-	TRAP_COMMAND := trap {rm .coveragerc}
+	TRAP_COMMAND := trap {rm .coveragerc; ls}
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -57,7 +57,7 @@ else
 		.DEFAULT_GOAL := binaries
 		JENKINS_BUILD_SCRIPT := @echo "NOTE: There is not currently a linux jenkins build."; exit 1
 	endif
-	TRAP_COMMAND := trap "rm .coveragerc" EXIT
+	TRAP_COMMAND := trap "rm .coveragerc; ls" EXIT
 endif
 
 REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs
