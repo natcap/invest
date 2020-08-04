@@ -131,7 +131,7 @@ jobs:
                   conda env update --file requirements-all.yml
 
             - name: Run model tests
-              shell: bash -l {0}
+              # shell: bash -l {0}
               run: |
                   pip install $(find dist -name "natcap.invest*.whl")
                   make test
