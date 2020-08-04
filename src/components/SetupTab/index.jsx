@@ -9,7 +9,7 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import DropdownButton from 'react-bootstrap/DropdownButton';
 
-import { ArgInput } from './ArgInput';
+import ArgInput from './ArgInput';
 import SaveFileButton from '../SaveFileButton';
 import { fetchDatastackFromFile, fetchValidation, 
          saveToPython } from '../../server_requests';
