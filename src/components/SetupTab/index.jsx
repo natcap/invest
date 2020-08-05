@@ -131,17 +131,16 @@ export default class SetupTab extends React.Component {
           argTree[group] = [subArg];
         }
       });
-      // sort the groups by the group number
+      // sort the groups by the group number at index [0]
       const sortedGroups = Object.entries(argTree).sort((a, b) => a[0] - b[0]);
       // sort args within the groups
       const sortedArgs = [];
       sortedGroups.forEach((group) => {
         if (group.length > 1) {
-          // In a group array, [0] is the group number
           // [1] is the array of objects keyed by their order number
-          sortedArgs.push([group[0], group[1].sort(
+          sortedArgs.push(group[1].sort(
             (a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0])
-          )]);
+          ));
         }
       });
 
@@ -189,16 +188,17 @@ export default class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
-    let argsValues = Object.assign({}, this.state.argsValues);
-    argsValues[key]['value'] = value;
-    argsValues[key]['touched'] = true;
-
+    // let { argsValues } = this.state;
+    let argsValues = Object.assign({}, this.state.argsValues)
+    argsValues[key].value = value;
+    argsValues[key].touched = true;
     if (this.props.argsSpec[key].ui_control) {
       const updatedArgsValues = toggleDependentInputs(
-        this.props.argsSpec, argsValues, key)
+        this.props.argsSpec, argsValues, key
+      );
       argsValues = updatedArgsValues;
     }
-    this.setState({argsValues: argsValues})
+    this.setState({ argsValues: argsValues }, () => console.log(this.state.argsValues) );
     this.investValidate(argsValues)
   }
 
@@ -423,7 +423,7 @@ class ArgsForm extends React.PureComponent {
   async onDragDrop(event) {
     /** Handle drag-drop of datastack JSON files and InVEST logfiles */
     event.preventDefault();
-    
+
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
       throw alert('only drop one file at a time.')
@@ -438,10 +438,10 @@ class ArgsForm extends React.PureComponent {
   }
 
   render() {
-    let formItems = [];
-    for (const group of this.props.sortedArgTree) {
-      const groupKey = group[0]
-      const groupArray = group[1] // the array of argkey objects
+    const formItems = [];
+    let k = 0;
+    for (const groupArray of this.props.sortedArgTree) {
+      k += 1;
       const groupItems = [];
       for (const item of groupArray) {
         const argkey = Object.values(item)[0]
@@ -459,7 +459,7 @@ class ArgsForm extends React.PureComponent {
             selectFile={this.selectFile}/>)
       }
       formItems.push(
-        <div className="arg-group" key={groupKey}>
+        <div className="arg-group" key={k}>
           {groupItems}
         </div>)
     }

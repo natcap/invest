@@ -50,6 +50,7 @@ export default class ArgInput extends React.Component {
       validationMessage,
       value,
     } = this.props;
+    console.log(value)
     let Input;
 
     // These types need a text input, and some also need a file browse button
