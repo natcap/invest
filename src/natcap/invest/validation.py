@@ -833,9 +833,18 @@ def invest_validator(validate_func):
             assert isinstance(key, str), (
                 'All args keys must be strings.')
 
+        # Pytest in importlib mode makes it impossible for test modules to 
+        # import one another. When this is called from test_validation.py,
+        # ``import_module`` tries to import test_validation.py, which
+        # fails with a ModuleNotFoundError.
+        # So, only try to import non-test modules.
+        if validate_func.__module__ == 'test_validation':
+            model_module = None
+        else:
+            model_module = importlib.import_module(validate_func.__module__)
+
         # If the module has an ARGS_SPEC defined, validate against that.
-        model_module = importlib.import_module(validate_func.__module__)
-        if hasattr(model_module, 'ARGS_SPEC'):
+        if model_module and hasattr(model_module, 'ARGS_SPEC'):
             LOGGER.debug('Using ARG_SPEC for validation')
             args_spec = getattr(model_module, 'ARGS_SPEC')['args']
 
