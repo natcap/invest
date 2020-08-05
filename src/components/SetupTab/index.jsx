@@ -198,7 +198,7 @@ export default class SetupTab extends React.Component {
       );
       argsValues = updatedArgsValues;
     }
-    this.setState({ argsValues: argsValues }, () => console.log(this.state.argsValues) );
+    this.setState({ argsValues: argsValues });
     this.investValidate(argsValues)
   }
 
@@ -207,21 +207,20 @@ export default class SetupTab extends React.Component {
     *
     * @params {object} argsDict - key: value pairs of InVEST arguments.
     */
-    let { argsValues, argsValidation } = initializeArgValues(
-      this.props.argsSpec, argsDict)
-    Object.keys(this.props.argsSpec).forEach((argkey) => {
-      if (argkey === 'n_workers') { return }
-      const argSpec = Object.assign({}, this.props.argsSpec[argkey])
-      if (argSpec.ui_control) {
-        argsValues = toggleDependentInputs(this.props.argsSpec, argsValues, argkey)
+    const { argsSpec } = this.props;
+    let { argsValues, argsValidation } = initializeArgValues(argsSpec, argsDict)
+    Object.keys(argsSpec).forEach((argkey) => {
+      if (argkey === 'n_workers') { return; }
+      const argumentSpec = Object.assign({}, argsSpec[argkey]);
+      if (argumentSpec.ui_control) {
+        argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
       }
-    })
-    
+    });
+
     this.setState({
       argsValues: argsValues,
-      argsValidation: argsValidation},
-      () => this.investValidate(this.state.argsValues)
-    )
+      argsValidation: argsValidation,
+    }, () => this.investValidate(this.state.argsValues));
   }
 
   async investValidate(argsValues) {
