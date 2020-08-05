@@ -4,7 +4,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import { InvestJob } from '../src/InvestJob';
-import { SetupTab } from '../src/components/SetupTab';
+import SetupTab from '../src/components/SetupTab';
 import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation, fetchDatastackFromFile } from '../src/server_requests';
 jest.mock('../src/server_requests');

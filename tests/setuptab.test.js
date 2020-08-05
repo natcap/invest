@@ -130,7 +130,7 @@ test('SetupTab: expect an input form for a raster', async () => {
   })
 })
 
-test('SetupTab: expect an input form for a freestyle_string', async () => {
+test.only('SetupTab: expect an input form for a freestyle_string', async () => {
   const spec = { args: { arg: { name: 'foo', type: 'freestyle_string' } } }
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)

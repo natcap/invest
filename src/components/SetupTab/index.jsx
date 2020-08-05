@@ -11,79 +11,77 @@ import DropdownButton from 'react-bootstrap/DropdownButton';
 
 import ArgInput from './ArgInput';
 import SaveFileButton from '../SaveFileButton';
-import { fetchDatastackFromFile, fetchValidation, 
-         saveToPython } from '../../server_requests';
+import {
+  fetchDatastackFromFile, fetchValidation, saveToPython,
+} from '../../server_requests';
 import { argsDictFromObject, boolStringToBoolean } from '../../utils';
 
-
+/** Toggle properties that control the display of argument inputs.
+ *
+ * This function returns a copy of the SetupTab argsValues object
+ * after updating the 'ui_option' property of any arguments listed
+ * in the 'ui_control' array of `argsSpec[argkey]`.
+ *
+ * @param {object} argsSpec - merge of an InVEST model's ARGS_SPEC and UI Spec.
+ * @param {object} argsValues - of the shape returned by `initializeArgValues`.
+ * @param {string} argkey - a key of the argsSpec and argsValues objects
+ *    that contains a 'ui_control' property.
+ *
+ * @returns {object} a copy of `argsValues`
+ */
 function toggleDependentInputs(argsSpec, argsValues, argkey) {
-  /** Toggle properties that control the display of argument inputs.
-  *
-  * This function returns a copy of the SetupTab argsValues object
-  * after updating the 'ui_option' property of any arguments listed
-  * in the 'ui_control' array of `argsSpec[argkey]`.
-  *
-  * @params {object} argsSpec - merge of an InVEST model's ARGS_SPEC and UI Spec.
-  * @params {object} argsValues - of the shape returned by `initializeArgValues`.
-  * @params {string} argkey - a key of the argsSpec and argsValues objects
-  *    that contains a 'ui_control' property.
-  * 
-  * @return {object} a copy of `argsValues`
-  */
-  let updatedValues = Object.assign({}, argsValues)
-  argsSpec[argkey].ui_control.forEach(dependentKey => {
+  const updatedValues = { ...argsValues };
+  argsSpec[argkey].ui_control.forEach((dependentKey) => {
     if (!updatedValues[argkey].value) {
       // apply the display option specified in the UI spec
-      updatedValues[dependentKey]['ui_option'] = argsSpec[dependentKey].ui_option
+      updatedValues[dependentKey].ui_option = argsSpec[dependentKey].ui_option;
     } else {
-      updatedValues[dependentKey]['ui_option'] = undefined
+      updatedValues[dependentKey].ui_option = undefined;
     }
   });
-  return(updatedValues)
+  return updatedValues;
 }
 
+/** Setup the objects that store InVEST argument values in SetupTab state.
+ *
+ * One object will store input form values and track if the input has been
+ * touched. The other object stores data returned by invest validation.
+ *
+ * @param {object} argsSpec - merge of an InVEST model's ARGS_SPEC.args and UI Spec.
+ * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
+ *
+ * @returns {object} to destructure into two args,
+ *   each with the same keys as argsSpec:
+ *     {object} argsValues - stores properties that update in response to
+ *       user interaction
+ *     {object} argsValidation - stores properties that update in response to
+ *       validation.
+ */
 function initializeArgValues(argsSpec, argsDict) {
-  /** Setup the objects that store InVEST argument values in SetupTab state.
-  *
-  * One object will store input form values and track if the input has been
-  * touched. The other object stores data returned by invest validation.
-  * 
-  * 
-  * @params {object} argsSpec - merge of an InVEST model's ARGS_SPEC.args and UI Spec.
-  * @params {object} argsDict - key: value pairs of InVEST model arguments, or {}.
-  * 
-  * @return {object} to destructure into two args, 
-  *   each with the same keys as argsSpec:
-  *     {object} argsValues - stores properties that update in response to
-  *       user interaction
-  *     {object} argsValidation - stores properties that update in response to
-  *       validation.
-  */
-  const initIsEmpty = Object.keys(argsDict).length === 0
-  let argsValidation = {};
-  let argsValues = {};
+  const initIsEmpty = Object.keys(argsDict).length === 0;
+  const argsValidation = {};
+  const argsValues = {};
   Object.keys(argsSpec).forEach((argkey) => {
-    argsValidation[argkey] = {}
-    if (argkey === 'n_workers') { return }
+    argsValidation[argkey] = {};
+    if (argkey === 'n_workers') { return; }
     argsValues[argkey] = {
       value: argsDict[argkey],
-      touched: !initIsEmpty  // touch them only if initializing with values
-    }
+      touched: !initIsEmpty, // touch them only if initializing with values
+    };
   });
-  return({ argsValues: argsValues, argsValidation: argsValidation })
+  return ({ argsValues: argsValues, argsValidation: argsValidation });
 }
 
-export class SetupTab extends React.Component {
-  /** Renders an arguments form, execute button, and save button.
-  */
+/** Renders an arguments form, execute button, and save button. */
+export default class SetupTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       argsValues: null,
       argsValidation: {},
       argsValid: false,
-      sortedArgTree: null
-    }
+      sortedArgTree: null,
+    };
 
     this.savePythonScript = this.savePythonScript.bind(this);
     this.wrapArgsToJsonFile = this.wrapArgsToJsonFile.bind(this);
@@ -94,101 +92,103 @@ export class SetupTab extends React.Component {
   }
 
   componentDidMount() {
-    /* 
-    * Including the `key` property on SetupTab tells React to 
+    /*
+    * Including the `key` property on SetupTab tells React to
     * re-mount (rather than update & re-render) this component when
     * the key changes. This function does some useful initialization
     * that only needs to compute when this.props.argsSpec changes,
     * not on every re-render.
     */
-    if (this.props.argsInitValues) {
-      let argTree = {}
-      let { argsValues, argsValidation } = initializeArgValues(
-        this.props.argsSpec, this.props.argsInitValues)
-      
-      Object.keys(this.props.argsSpec).forEach((argkey) => {
-        if (argkey === 'n_workers' || 
-          this.props.argsSpec[argkey].order === 'hidden') { return }
-        const argSpec = Object.assign({}, this.props.argsSpec[argkey])
+    const { argsInitValues, argsSpec } = this.props;
+    if (argsInitValues) {
+      const argTree = {};
+      let {
+        argsValues, argsValidation
+      } = initializeArgValues(argsSpec, argsInitValues);
+
+      Object.keys(argsSpec).forEach((argkey) => {
+        if (argkey === 'n_workers'
+          || argsSpec[argkey].order === 'hidden') { return; }
+        const argSpec = { ...argsSpec[argkey] };
         if (argSpec.ui_control) {
-          argsValues = toggleDependentInputs(this.props.argsSpec, argsValues, argkey)
+          argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
         }
 
-        // This grouping and sorting does not fail if order is undefined 
-        // (i.e. it is missing from the UI spec) for one or more args. 
+        // This grouping and sorting does not fail if order is undefined
+        // (i.e. it is missing from the UI spec) for one or more args.
         // Nevertheless, feels better to fill in a float here.
-        if (typeof argSpec.order !== 'number') { argSpec.order = 100.0 }
+        if (typeof argSpec.order !== 'number') { argSpec.order = 100.0; }
 
         // Fill in a tree-like object where each item is an array of the args
         // that share a major (Math.floor) order number and should be grouped.
         // Within each array representing a group, items are objects like:
         //  { <precise order number> : <argkey> }
-        const group = Math.floor(argSpec.order)
-        let subArg = {}
-        if (argTree[group]) {  // already have arg(s) in this group
-          subArg[argSpec.order] = argkey
-          argTree[group].push(subArg)
+        const group = Math.floor(argSpec.order);
+        const subArg = { [argSpec.order]: argkey };
+        if (argTree[group]) { // already have arg(s) in this group
+          argTree[group].push(subArg);
         } else {
-          subArg[argSpec.order] = argkey
-          argTree[group] = [subArg]
+          argTree[group] = [subArg];
         }
       });
       // sort the groups by the group number
-      const sortedArgs = Object.entries(argTree).sort((a, b) => a[0] - b[0])
-      // sort items within the groups
-      for (const group in sortedArgs) {
-        if (sortedArgs[group].length > 1) {
-          // In a group array, first element is the group number
-          // Second element is the array of objects keyed by their order number
-          sortedArgs[group][1] = sortedArgs[group][1].sort(
-            (a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0]))
+      const sortedGroups = Object.entries(argTree).sort((a, b) => a[0] - b[0]);
+      // sort args within the groups
+      const sortedArgs = [];
+      sortedGroups.forEach((group) => {
+        if (group.length > 1) {
+          // In a group array, [0] is the group number
+          // [1] is the array of objects keyed by their order number
+          sortedArgs.push([group[0], group[1].sort(
+            (a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0])
+          )]);
         }
-      }
+      });
 
       this.setState({
         argsValues: argsValues,
         argsValidation: argsValidation,
-        sortedArgTree: sortedArgs },
-        () => this.investValidate(this.state.argsValues)
-      )
+        sortedArgTree: sortedArgs,
+      }, () => this.investValidate(this.state.argsValues));
     }
   }
 
+  /** Save the current invest arguments to a python script via datastack.py API.
+   *
+   * @param {string} filepath - desired path to the python script
+   * @returns {undefined}
+   */
   savePythonScript(filepath) {
-    /** Save the current invest arguments to a python script via datastack.py API.
-    *
-    * @params {string} filepath - desired path to the python script
-    */
-    const args_dict_string = argsDictFromObject(this.state.argsValues)
-    const payload = { 
+    const argsDictString = argsDictFromObject(this.state.argsValues);
+    const payload = {
       filepath: filepath,
       modelname: this.props.modelName,
       pyname: this.props.pyModuleName,
-      args: args_dict_string
-    }
+      args: argsDictString,
+    };
     saveToPython(payload);
   }
 
   wrapArgsToJsonFile(datastackPath) {
-    this.props.argsToJsonFile(datastackPath, this.state.argsValues)
+    this.props.argsToJsonFile(datastackPath, this.state.argsValues);
   }
 
   wrapInvestExecute() {
-    this.props.investExecute(this.state.argsValues)
+    this.props.investExecute(this.state.argsValues);
   }
 
+  /** Update state with arg values as they change. And validate the args.
+   *
+   * Updating means:
+   * 1) setting the value
+   * 2) 'touching' the arg - implications for display of validation warnings
+   * 3) toggling the enabled/disabled/hidden state of any dependent args
+   *
+   * @param {string} key - the invest argument key
+   * @param {string} value - the invest argument value
+   * @returns {undefined}
+   */
   updateArgValues(key, value) {
-    /** Update state with arg values as they change, and validate the args. 
-    *
-    * Updating means 
-    * 1) setting the value
-    * 2) 'touching' the arg - implications for display of validation warnings
-    * 3) toggling the enabled/disabled/hidden state of any dependent args
-    *
-    * @param {string} key - the invest argument key
-    * @param {string} value - the invest argument value
-    */
-
     let argsValues = Object.assign({}, this.state.argsValues);
     argsValues[key]['value'] = value;
     argsValues[key]['touched'] = true;
