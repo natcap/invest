@@ -139,7 +139,12 @@ export default class LogTab extends React.Component {
 }
 
 LogTab.propTypes = {
-  jobStatus: PropTypes.string.isRequired,
-  logfile: PropTypes.string.isRequired,
-  logStdErr: PropTypes.string.isRequired,
+  jobStatus: PropTypes.string,
+  logfile: PropTypes.string,
+  logStdErr: PropTypes.string,
+};
+LogTab.defaultProps = {
+  jobStatus: undefined,
+  logfile: undefined,
+  logStdErr: undefined,
 };

@@ -39,11 +39,11 @@ function handleClick(event) {
 }
 
 /** Render model-relevant links to the User's Guide and Forum.
-*
-* This should be a link to the model's User's Guide chapter and
-* and a link to list of topics with the model's tag on the forum,
-* e.g. https://community.naturalcapitalproject.org/tag/carbon
-*/
+ *
+ * This should be a link to the model's User's Guide chapter and
+ * and a link to list of topics with the model's tag on the forum,
+ * e.g. https://community.naturalcapitalproject.org/tag/carbon
+ */
 export default function ResourcesTab(props) {
   let userGuideURL;
   let forumURL;
@@ -77,6 +77,10 @@ export default function ResourcesTab(props) {
 }
 
 ResourcesTab.propTypes = {
-  modelName: PropTypes.string.isRequired,
-  docs: PropTypes.string.isRequired,
+  modelName: PropTypes.string,
+  docs: PropTypes.string,
+};
+ResourcesTab.defaultProps = {
+  modelName: undefined,
+  docs: '',
 };

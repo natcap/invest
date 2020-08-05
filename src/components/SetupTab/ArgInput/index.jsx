@@ -50,7 +50,6 @@ export default class ArgInput extends React.Component {
       validationMessage,
       value,
     } = this.props;
-    console.log(value)
     let Input;
 
     // These types need a text input, and some also need a file browse button
@@ -116,7 +115,7 @@ export default class ArgInput extends React.Component {
       Input = (
         <Form.Group as={Row} key={argkey} data-testid={`group-${argkey}`}>
           <FormLabel argkey={argkey}>
-            {argSpec.name}
+            <span>{argSpec.name}</span>
           </FormLabel>
           <Col sm="8">
             <AboutModal argument={argSpec} />
@@ -149,7 +148,7 @@ export default class ArgInput extends React.Component {
       Input = (
         <Form.Group as={Row} key={argkey} className={`arg-${ui_option}`} data-testid={`group-${argkey}`}>
           <FormLabel argkey={argkey}>
-            {argSpec.name}
+            <span>{argSpec.name}</span>
           </FormLabel>
           <Col sm="4">
             <InputGroup>
