@@ -844,7 +844,7 @@ def invest_validator(validate_func):
             model_module = importlib.import_module(validate_func.__module__)
 
         # If the module has an ARGS_SPEC defined, validate against that.
-        if model_module and hasattr(model_module, 'ARGS_SPEC'):
+        if hasattr(model_module, 'ARGS_SPEC'):
             LOGGER.debug('Using ARG_SPEC for validation')
             args_spec = getattr(model_module, 'ARGS_SPEC')['args']
 
