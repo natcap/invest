@@ -224,13 +224,11 @@ export default class SetupTab extends React.Component {
     )
   }
 
-  async investValidate(argsValues, limit_to) {
+  async investValidate(argsValues) {
     /** Validate an arguments dictionary using the InVEST model's validate function.
     *
     * @param {object} args_dict_string - a JSON.stringify'ed object of model argument
     *    keys and values.
-    * @param {string} limit_to - an argument key if validation should be limited only
-    *    to that argument.
     */
     let argsSpec = JSON.parse(JSON.stringify(this.props.argsSpec));
     let argsValidation = Object.assign({}, this.state.argsValidation);
@@ -239,79 +237,47 @@ export default class SetupTab extends React.Component {
       model_module: this.props.pyModuleName,
       args: argsDictFromObject(argsValues)
     };
-
-    // TODO: is there a use-case for `limit_to`? 
-    // Right now we're never calling validate with a limit_to,
-    // but we have an awful lot of logic here to cover it.
-    if (limit_to) {
-      payload['limit_to'] = limit_to
-    }
-
     const results = await fetchValidation(payload);
 
     // A) At least one arg was invalid:
-    if (results.length) { 
-
-      results.forEach(result => {
+    if (results.length) {
+      results.forEach((result) => {
         // Each result is an array of two elements
         // 0: array of arg keys
         // 1: string message that pertains to those args
         const argkeys = result[0];
         const message = result[1];
-        argkeys.forEach(key => {
+        argkeys.forEach((key) => {
           argsValidation[key]['validationMessage'] = message
           argsValidation[key]['valid'] = false
           keyset.delete(key);
-        })
+        });
       });
-      if (!limit_to) {  // validated all, so ones left in keyset are valid
-        keyset.forEach(k => {
-          argsValidation[k]['valid'] = true
-          argsValidation[k]['validationMessage'] = ''
-        })
-      }
+      // validated all, so ones left in keyset are valid
+      keyset.forEach(k => {
+        argsValidation[k]['valid'] = true
+        argsValidation[k]['validationMessage'] = ''
+      });
       this.setState({
         argsValidation: argsValidation,
         argsValid: false
       });
 
     // B) All args were validated and none were invalid:
-    } else if (!limit_to) {
-      
+    } else {
       keyset.forEach(k => {
         argsValidation[k]['valid'] = true
         argsValidation[k]['validationMessage'] = ''
-      })
+      });
       // It's possible all args were already valid, in which case
-      // it's nice to avoid the re-render that this setState call
-      // triggers. Although only the Viz app components re-render 
-      // in a noticeable way. Due to use of redux there?
+      // no validation state has changed and this setState call can
+      // be avoided entirely.
       if (!this.state.argsValid) {
         this.setState({
           argsValidation: argsValidation,
-          argsValid: true
-        })
+          argsValid: true,
+        });
       }
-
-    // C) Limited args were validated and none were invalid
-    } else if (limit_to) {
-
-      argsValidation[limit_to]['valid'] = true
-      // TODO: this defeats the purpose of using limit_to in the first place:
-      // This could be the last arg that needed to go valid,
-      // in which case we can trigger a full args_dict validation
-      // without any `limit_to`, in order to properly set state.argsValid
-      this.setState({ argsValidation: argsValidation },
-        () => {
-          let argIsValidArray = [];
-          for (const key in argsValidation) {
-            argIsValidArray.push(argsValidation[key]['valid'])
-          }
-          if (argIsValidArray.every(Boolean)) {
-            this.investValidate(argsValues);
-          }
-        }
-      );
     }
   }
 
