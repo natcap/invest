@@ -78,7 +78,7 @@ export default class ArgInput extends React.Component {
                 onChange={handleChange}
                 isValid={touched && isValid}
                 isInvalid={touched && validationMessage}
-                disabled={ui_option === 'disable' || false}
+                disabled={ui_option === 'disable'}
               />
               {
                 ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type)
@@ -159,7 +159,7 @@ export default class ArgInput extends React.Component {
                 name={argkey}
                 value={value}
                 onChange={handleChange}
-                disabled={ui_option === 'disable' || false}
+                disabled={ui_option === 'disable'}
               >
                 {argSpec.validation_options.options.map((opt) =>
                   <option value={opt} key={opt}>{opt}</option>
@@ -187,35 +187,44 @@ ArgInput.propTypes = {
   ui_option: PropTypes.string,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
-  handleChange: PropTypes.func,
-  handleBoolChange: PropTypes.func,
-  selectFile: PropTypes.func
-}
+  handleChange: PropTypes.func.isRequired,
+  handleBoolChange: PropTypes.func.isRequired,
+  selectFile: PropTypes.func.isRequired,
+};
+ArgInput.defaultProps = {
+  value: undefined,
+  touched: false,
+  ui_option: undefined,
+  isValid: undefined,
+  validationMessage: '',
+};
 
 class AboutModal extends React.PureComponent {
   constructor(props) {
-    super(props)
+    super(props);
     this.state = {
       aboutShow: false
-    }
+    };
     this.handleAboutOpen = this.handleAboutOpen.bind(this);
     this.handleAboutClose = this.handleAboutClose.bind(this);
   }
 
   handleAboutClose() {
-    this.setState({aboutShow: false});
+    this.setState({ aboutShow: false });
   }
 
   handleAboutOpen() {
-    this.setState({aboutShow: true});
+    this.setState({ aboutShow: true });
   }
 
   render() {
-    return(
+    return (
       <React.Fragment>
-        <Button  className="mr-3"
+        <Button
+          className="mr-3"
           onClick={this.handleAboutOpen}
-          variant="outline-info">
+          variant="outline-info"
+        >
           i
         </Button>
         <Modal show={this.state.aboutShow} onHide={this.handleAboutClose}>
@@ -232,6 +241,6 @@ class AboutModal extends React.PureComponent {
 AboutModal.propTypes = {
   argument: PropTypes.shape({
     name: PropTypes.string,
-    about: PropTypes.string
-  })
-}
+    about: PropTypes.string,
+  }).isRequired,
+};

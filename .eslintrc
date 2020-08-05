@@ -31,6 +31,8 @@
     "rules": {
         "object-shorthand": ["error", "never"],
         "max-classes-per-file": ["error", 2],
-        "react/destructuring-assignment": ["warn", "always"]
+        "react/destructuring-assignment": ["warn", "always"],
+        "react/jsx-fragments": ["off", "syntax"],
+        "camelcase": ["warn", ]
     }
 }
