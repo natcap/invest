@@ -106,7 +106,6 @@ def _collect_spatial_files(filepath, data_dir):
                 LOGGER.info('Manually copying raster files to %s', new_path)
                 new_files = []
                 for filename in raster.GetFileList():
-                    print('copying file ', filename)
                     if os.path.isdir(filename):
                         # ESRI Arc/Binary grids include the parent folder in
                         # the list of all files in the dataset.
@@ -164,20 +163,17 @@ def _collect_filepath(path, data_dir):
         The path to the new filename within ``data_dir``.
     """
     # initialize the return_path
-    print('path:', path)
     multi_part_folder = _collect_spatial_files(path, data_dir)
     if multi_part_folder is not None:
         return multi_part_folder
 
     elif os.path.isfile(path):
-        print('is a file')
         new_filename = os.path.join(data_dir,
                                     os.path.basename(path))
         shutil.copyfile(path, new_filename)
         return new_filename
 
     elif os.path.isdir(path):
-        print('is a directory')
         # path is a folder, so we want to copy the folder and all
         # its contents to the data dir.
         new_foldername = tempfile.mkdtemp(
