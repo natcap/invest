@@ -133,11 +133,18 @@ def execute(args):
     # 'accum' values from the table.  This should then be used when creating
     # the accumulation raster, and only those pixel values with an 'accum'
     # transition should actually accumulate.
-    biomass_disturb_matrix, soil_disturb_matrix = _read_transition_matrix(
+    (biomass_disturb_matrix, soil_disturb_matrix,
+        biomass_accum_matrix, soil_accum_matrix) = _read_transition_matrix(
         args['landcover_transitions_table'], biophysical_parameters)
-    disturbance_matrices = {}
-    disturbance_matrices['soil'] = soil_disturb_matrix
-    disturbance_matrices['biomass'] = biomass_disturb_matrix
+    disturbance_matrices = {
+        'soil': soil_disturb_matrix,
+        'biomass': biomass_disturb_matrix
+    }
+    accumulation_matrices = {
+        'soil': soil_accum_matrix,
+        'biomass': biomass_accum_matrix,
+    }
+
 
     # Phase 2: do the timeseries analysis, with a few special cases when we're
     # at a transition year.
@@ -210,6 +217,29 @@ def execute(args):
                     dependent_task_list=[alignment_task],
                     target_path_list=[stock_rasters[year][pool]],
                     task_name=f'Mapping initial {pool} carbon stocks')
+
+                # Initial accumulation values are a simple reclassification
+                # rather than a mapping by the transition.
+                yearly_accum_rasters[year][pool] = os.path.join(
+                    intermediate_dir,
+                    f'accumulation-{pool}-{year}{suffix}.tif')
+                current_accumulation_tasks[pool] = task_graph.add_task(
+                        func=pygeoprocessing.reclassify_raster,
+                        args=(
+                            (aligned_lulc_paths[year], 1),
+                            {lucode: values[f'{pool}-yearly-accumulation']
+                                for (lucode, values)
+                                in biophysical_parameters.items()},
+                            yearly_accum_rasters[year][pool],
+                            gdal.GDT_Float32,
+                            NODATA_FLOAT32),
+                        dependent_task_list=[alignment_task],
+                        target_path_list=[
+                            yearly_accum_rasters[year][pool]],
+                        task_name=(
+                            f'Mapping {pool} carbon accumulation for {year}'))
+                accumulation_tasks_since_transition.append(
+                    current_accumulation_tasks[pool])
         else:
             # In every year after the baseline, stocks are calculated as
             # Stock[pool][thisyear] = stock[pool][lastyear] +
@@ -232,21 +262,19 @@ def execute(args):
         # TODO: allow accumulation to be spatially defined and not just
         # classified.
         if year in years_with_lulc_rasters:
+            if prior_transition_year is None:
+                prior_transition_year = baseline_lulc_year
             disturbance_rasters[current_transition_year] = {}
             for pool in ('soil', 'biomass'):
                 yearly_accum_rasters[year][pool] = os.path.join(
                     intermediate_dir,
                     f'accumulation-{pool}-{year}{suffix}.tif')
                 current_accumulation_tasks[pool] = task_graph.add_task(
-                        func=pygeoprocessing.reclassify_raster,
-                        args=(
-                            (aligned_lulc_paths[year], 1),
-                            {lucode: values[f'{pool}-yearly-accumulation']
-                                for (lucode, values)
-                                in biophysical_parameters.items()},
-                            yearly_accum_rasters[year][pool],
-                            gdal.GDT_Float32,
-                            NODATA_FLOAT32),
+                        func=_reclassify_accumulation_transition,
+                        args=(aligned_lulc_paths[prior_transition_year],
+                              aligned_lulc_paths[current_transition_year],
+                              accumulation_matrices[pool],
+                              yearly_accum_rasters[year][pool]),
                         dependent_task_list=[alignment_task],
                         target_path_list=[
                             yearly_accum_rasters[year][pool]],
@@ -310,7 +338,7 @@ def execute(args):
                              (prior_transition_nodata, 'raw'),
                              (current_transition_nodata, 'raw'),
                              (stock_nodata, 'raw')],
-                            _reclassify_transition,
+                            _reclassify_disturbance,
                             disturbance_rasters[current_transition_year][pool],
                             gdal.GDT_Float32,
                             NODATA_FLOAT32),
@@ -643,9 +671,6 @@ def _calculate_emissions(
         (year_of_last_disturbance_matrix != NODATA_UINT16) &
         ~numpy.isclose(carbon_half_life_matrix, 0.0))
 
-    #if current_year == 2031:
-    #    import pdb; pdb.set_trace()
-
     n_years_elapsed = (
         current_year - year_of_last_disturbance_matrix[valid_pixels])
     valid_half_life_pixels = carbon_half_life_matrix[valid_pixels]
@@ -719,6 +744,10 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
         (n_rows, n_rows), dtype=numpy.float32)
     biomass_disturbance_matrix = scipy.sparse.dok_matrix(
         (n_rows, n_rows), dtype=numpy.float32)
+    soil_accumulation_matrix = scipy.sparse.dok_matrix(
+        (n_rows, n_rows), dtype=numpy.float32)
+    biomass_accumulation_matrix = scipy.sparse.dok_matrix(
+        (n_rows, n_rows), dtype=numpy.float32)
 
     # TODO: I don't actually know if this is any better than the dict-based
     # approach we had before since that, too, was basically sparse.
@@ -753,11 +782,56 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
                     biophysical_dict[from_lucode][f'soil-{field_value}'])
                 biomass_disturbance_matrix[from_lucode, to_lucode] = (
                     biophysical_dict[from_lucode][f'biomass-{field_value}'])
+            elif field_value == 'accum':
+                soil_accumulation_matrix[from_lucode, to_lucode] = (
+                    biophysical_dict[from_lucode][
+                        f'soil-yearly-accumulation'])
+                biomass_accumulation_matrix[from_lucode, to_lucode] = (
+                    biophysical_dict[from_lucode][
+                        f'biomass-yearly-accumulation'])
 
-    return biomass_disturbance_matrix, soil_disturbance_matrix
+    return (biomass_disturbance_matrix, soil_disturbance_matrix,
+            biomass_accumulation_matrix, soil_accumulation_matrix)
 
 
-def _reclassify_transition(
+def _reclassify_accumulation_transition(
+        landuse_transition_from_raster, landuse_transition_to_raster,
+        accumulation_rate_matrix, target_raster_path):
+
+    from_nodata = pygeoprocessing.get_raster_info(
+        landuse_transition_from_raster)['nodata'][0]
+    to_nodata = pygeoprocessing.get_raster_info(
+        landuse_transition_to_raster)['nodata'][0]
+
+    def _reclassify_accumulation(
+            landuse_transition_from_matrix, landuse_transition_to_matrix,
+            accumulation_rate_matrix):
+        output_matrix = numpy.empty(landuse_transition_from_matrix.shape,
+                                    dtype=numpy.float32)
+        output_matrix[:] = NODATA_FLOAT32
+
+        valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
+                                  dtype=numpy.bool)
+        if from_nodata is not None:
+            valid_pixels &= (landuse_transition_from_matrix != from_nodata)
+
+        if to_nodata is not None:
+            valid_pixels &= (landuse_transition_to_matrix != to_nodata)
+
+        output_matrix[valid_pixels] = accumulation_rate_matrix[
+                landuse_transition_from_matrix[valid_pixels],
+                landuse_transition_to_matrix[valid_pixels]].toarray().flatten()
+        return output_matrix
+
+    pygeoprocessing.raster_calculator(
+        [(landuse_transition_from_raster, 1),
+            (landuse_transition_to_raster, 1),
+            (accumulation_rate_matrix, 'raw')],
+        _reclassify_accumulation, target_raster_path, gdal.GDT_Float32,
+        NODATA_FLOAT32)
+
+
+def _reclassify_disturbance(
         landuse_transition_from_matrix, landuse_transition_to_matrix,
         carbon_storage_matrix, disturbance_magnitude_matrix, from_nodata,
         to_nodata, storage_nodata):
