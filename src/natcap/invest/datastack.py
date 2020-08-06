@@ -61,12 +61,13 @@ def _collect_spatial_files(filepath, data_dir):
     """Collect spatial files into the data directory of an archive.
 
     This function detects whether a filepath is a raster or vector
-    recignizeable by GDAL/OGR and does what is needed to copy the dataset
+    recognizable by GDAL/OGR and does what is needed to copy the dataset
     into the datastack's archive folder.
 
     Rasters copied into the archive will be stored in a new folder with the
-    ``raster_`` prefix.  Vectors will be stored in a new folder with the
-    ``vector_`` prefix.
+    ``<file name>_raster_`` prefix.  Vectors will be stored in a new folder
+    with the ``<file name>_vector_`` prefix. Both will have a random unique
+    suffix to prevent name conflicts.
 
     .. Note :: CSV files are not handled by this function.
 
@@ -94,7 +95,7 @@ def _collect_spatial_files(filepath, data_dir):
             # give the folder a descriptive name with a unique
             # random suffix to avoid name conflicts
             new_path = tempfile.mkdtemp(
-                prefix='%s_raster_' % filename, 
+                prefix='{}_raster_'.format(filename), 
                 dir=data_dir)
             driver = gdal.GetDriverByName('GTiff')
             LOGGER.info('[%s] Saving new raster to %s',
@@ -131,7 +132,7 @@ def _collect_spatial_files(filepath, data_dir):
                 return None
 
             new_path = tempfile.mkdtemp(
-                prefix='%s_vector_' % filename, 
+                prefix='{}_vector_'.format(filename), 
                 dir=data_dir)
             driver = gdal.GetDriverByName('ESRI Shapefile')
             LOGGER.info('[%s] Saving new vector to %s',
