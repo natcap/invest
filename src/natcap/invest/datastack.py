@@ -177,8 +177,9 @@ def _collect_filepath(path, data_dir):
     elif os.path.isdir(path):
         # path is a folder, so we want to copy the folder and all
         # its contents to the data dir.
+        filename = os.path.basename(os.path.splitext(path)[0])
         new_foldername = tempfile.mkdtemp(
-            prefix='%s_data_' % os.path.basename(os.path.splitext(path)[0]),
+            prefix='{}_data_'.format(filename),
             dir=data_dir)
         for filename in os.listdir(path):
             src_path = os.path.join(path, filename)
