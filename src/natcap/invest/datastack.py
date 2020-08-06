@@ -57,7 +57,7 @@ ParameterSet = collections.namedtuple('ParameterSet',
                                       'args model_name invest_version')
 
 
-def _collect_spatial_files(filepath, data_dir):
+def _collect_spatial_files(filepath, data_dir, folder_prefix):
     """Collect spatial files into the data directory of an archive.
 
     This function detects whether a filepath is a raster or vector
@@ -78,6 +78,9 @@ def _collect_spatial_files(filepath, data_dir):
     Parameters:
         filepath (string): The filepath to analyze.
         data_dir (string): The path to the data directory.
+        folder_prefix (string): A descriptive prefix for the folder name, 
+            derived from the nested key for which ``filepath`` is a value,
+            e.g. ``dem_path``
 
     Returns:
         ``None`` If the file is not a spatial file, or the ``path`` to the new
@@ -86,16 +89,13 @@ def _collect_spatial_files(filepath, data_dir):
     # If the user provides a mutli-part file, wrap it into a folder and grab
     # that instead of the individual file.
 
-    # get just the name of the file without the extension
-    filename = os.path.basename(os.path.splitext(filepath)[0])
-
     with utils.capture_gdal_logging():
         raster = gdal.OpenEx(filepath, gdal.OF_RASTER)
         if raster is not None:
             # give the folder a descriptive name with a unique
             # random suffix to avoid name conflicts
             new_path = tempfile.mkdtemp(
-                prefix='{}_raster_'.format(filename), 
+                prefix=f'{folder_prefix}_raster_', 
                 dir=data_dir)
             driver = gdal.GetDriverByName('GTiff')
             LOGGER.info('[%s] Saving new raster to %s',
@@ -132,7 +132,7 @@ def _collect_spatial_files(filepath, data_dir):
                 return None
 
             new_path = tempfile.mkdtemp(
-                prefix='{}_vector_'.format(filename), 
+                prefix=f'{folder_prefix}_vector_', 
                 dir=data_dir)
             driver = gdal.GetDriverByName('ESRI Shapefile')
             LOGGER.info('[%s] Saving new vector to %s',
@@ -152,19 +152,22 @@ def _collect_spatial_files(filepath, data_dir):
     return None
 
 
-def _collect_filepath(path, data_dir):
+def _collect_filepath(path, data_dir, folder_prefix):
     """Collect files on disk into the data directory of an archive.
 
     Parameters:
         path (string): The path to examine.  Must exist on disk.
         data_dir (string): The path to the data directory, where any data
             files will be stored.
+        folder_prefix (string): A descriptive prefix for the folder name, 
+            derived from the nested key for which ``filepath`` is a value,
+            e.g. ``dem_path``
 
     Returns:
         The path to the new filename within ``data_dir``.
     """
     # initialize the return_path
-    multi_part_folder = _collect_spatial_files(path, data_dir)
+    multi_part_folder = _collect_spatial_files(path, data_dir, folder_prefix)
     if multi_part_folder is not None:
         return multi_part_folder
 
@@ -177,9 +180,8 @@ def _collect_filepath(path, data_dir):
     elif os.path.isdir(path):
         # path is a folder, so we want to copy the folder and all
         # its contents to the data dir.
-        filename = os.path.basename(os.path.splitext(path)[0])
         new_foldername = tempfile.mkdtemp(
-            prefix='{}_data_'.format(filename),
+            prefix=f'{folder_prefix}_data_',
             dir=data_dir)
         for filename in os.listdir(path):
             src_path = os.path.join(path, filename)
@@ -353,8 +355,12 @@ def build_datastack_archive(args, model_name, datastack_path):
                                  possible_path, filepath)
                     return filepath
                 except KeyError:
+                    # turn the nested key into a nice name for a folder
+                    # e.g. args['category']['data_path'] --> category_data_path
+                    folder_prefix = nested_key[6 : -2].replace('\'][\'', '_')
                     found_filepath = _collect_filepath(possible_path,
-                                                       data_dir)
+                                                       data_dir,
+                                                       folder_prefix)
 
                     # Store only linux-style filepaths.
                     relative_filepath = os.path.relpath(
