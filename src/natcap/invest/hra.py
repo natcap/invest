@@ -2457,10 +2457,11 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
         raise ValueError('Info table %s is not a CSV nor an Excel file.' %
                          base_info_table_path)
 
-    # Convert column names to upper case, and encode it to strings if it's not
-    # a string (e.g. unicode)
+    # Convert column names to upper case, strip whitespace, and encode it 
+    # to strings if it's not a string (e.g. unicode)
     info_df.columns = [
-        col.upper() if isinstance(col, str) else col.encode('utf-8').upper()
+        col.strip().upper() if isinstance(col, str) 
+        else col.encode('utf-8').strip().upper()
         for col in info_df.columns]
 
     missing_columns = list(
@@ -2605,8 +2606,9 @@ def _get_criteria_dataframe(base_criteria_table_path):
                          list(missing_indexes))
 
     # Validate the column header, which should have 'criteria type'
+    # and strip any leading/trailing whitespace
     criteria_df.columns = [
-        x if isinstance(x, str) else None for x in
+        x.strip() if isinstance(x, str) else None for x in
         criteria_df.loc[_HABITAT_NAME_HEADER].values]
     if _CRITERIA_TYPE_HEADER not in criteria_df.columns.values:
         raise ValueError('The Criteria table is missing the column header'

@@ -529,7 +529,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
                     "File must be encoded as a UTF-8 CSV.")
 
     if required_fields:
-        fields_in_table = set([name.upper() for name in dataframe.columns])
+        fields_in_table = set([name.strip().upper() for name in dataframe.columns])
         missing_fields = (
             set(field.upper() for field in required_fields) - fields_in_table)
 

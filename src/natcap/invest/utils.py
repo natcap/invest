@@ -485,6 +485,9 @@ def build_lookup_from_csv(
     table = pandas.read_csv(
         table_path, sep=None, index_col=False, engine='python', 
         encoding=encoding)
+    # strip column names to prevent indexing errors
+    # when users accidentally include leading/trailing whitespace
+    table.columns = table.columns.str.strip()
 
     # if 'to_lower`, case handling is done before trying to access the data.
     if to_lower:

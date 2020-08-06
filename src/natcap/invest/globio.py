@@ -657,6 +657,8 @@ def load_msa_parameter_table(
     """
     msa_table = pandas.read_csv(
         msa_parameter_table_filename, sep=None, engine='python')
+    # strip any leading/trailing whitespace in column names
+    msa_table.columns = msa_table.columns.str.strip()
     msa_dict = collections.defaultdict(dict)
     for _, row in msa_table.iterrows():
         if row['Value'][0] in ['<', '>']:

@@ -284,7 +284,8 @@ def execute(args):
     # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
-    machine_perf_data = pandas.read_csv(args['machine_perf_path'])
+    machine_perf_data = pandas.read_csv(args['machine_perf_path']).rename(
+        columns=lambda col: col.strip())
     # Get the wave period fields, starting from the second column of the table
     machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
     # Build up the height field by taking the first column of the table
@@ -317,7 +318,8 @@ def execute(args):
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
-        grid_land_data = pandas.read_csv(args['land_gridPts_path'])
+        grid_land_data = pandas.read_csv(args['land_gridPts_path']).rename(
+            columns=lambda col: col.strip())
         required_col_names = ['ID', 'TYPE', 'LAT', 'LONG', 'LOCATION']
         grid_land_data, missing_grid_land_fields = _get_validated_dataframe(
             args['land_gridPts_path'], required_col_names)
@@ -961,7 +963,7 @@ def _get_validated_dataframe(csv_path, field_list):
         missing_fields (list): missing fields as string format in dataframe.
 
     """
-    dataframe = pandas.read_csv(csv_path)
+    dataframe = pandas.read_csv(csv_path).rename(columns=lambda col: col.strip())
     field_list = [field.upper() for field in field_list]
     dataframe.columns = [col_name.upper() for col_name in dataframe.columns]
     missing_fields = []
@@ -1207,7 +1209,8 @@ def _machine_csv_to_dict(machine_csv_path):
     """
     machine_dict = {}
     machine_data = pandas.read_csv(machine_csv_path, index_col=0)
-    # make columns and indexes lowercased
+    # make columns and indexes lowercased and strip whitespace
+    machine_data.columns = machine_data.columns.str.strip()
     machine_data.columns = machine_data.columns.str.lower()
     # remove underscore from the keys
     machine_data.index = machine_data.index.str.strip()
