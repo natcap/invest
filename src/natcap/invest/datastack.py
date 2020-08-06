@@ -85,10 +85,17 @@ def _collect_spatial_files(filepath, data_dir):
     # If the user provides a mutli-part file, wrap it into a folder and grab
     # that instead of the individual file.
 
+    # get just the name of the file without the extension
+    filename = os.path.basename(os.path.splitext(filepath)[0])
+
     with utils.capture_gdal_logging():
         raster = gdal.OpenEx(filepath, gdal.OF_RASTER)
         if raster is not None:
-            new_path = tempfile.mkdtemp(prefix='raster_', dir=data_dir)
+            # give the folder a descriptive name with a unique
+            # random suffix to avoid name conflicts
+            new_path = tempfile.mkdtemp(
+                prefix='%s_raster_' % filename, 
+                dir=data_dir)
             driver = gdal.GetDriverByName('GTiff')
             LOGGER.info('[%s] Saving new raster to %s',
                         driver.LongName, new_path)
@@ -123,7 +130,9 @@ def _collect_spatial_files(filepath, data_dir):
                 vector = None
                 return None
 
-            new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
+            new_path = tempfile.mkdtemp(
+                prefix='%s_vector_' % filename, 
+                dir=data_dir)
             driver = gdal.GetDriverByName('ESRI Shapefile')
             LOGGER.info('[%s] Saving new vector to %s',
                         driver.ShortName, new_path)
@@ -168,7 +177,8 @@ def _collect_filepath(path, data_dir):
         # path is a folder, so we want to copy the folder and all
         # its contents to the data dir.
         new_foldername = tempfile.mkdtemp(
-            prefix='data_', dir=data_dir)
+            prefix='%s_data_' % os.path.basename(os.path.splitext(filepath)),
+            dir=data_dir)
         for filename in os.listdir(path):
             src_path = os.path.join(path, filename)
             dest_path = os.path.join(new_foldername, filename)
