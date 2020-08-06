@@ -100,11 +100,10 @@ endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
 
-
-TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --with-timer
+TESTRUNNER := pytest -vs --import-mode=importlib --durations=0
 
 DATAVALIDATOR := $(PYTHON) scripts/invest-autovalidate.py $(GIT_SAMPLE_DATA_REPO_PATH)
-TEST_DATAVALIDATOR := $(PYTHON) -m nose -vsP scripts/invest-autovalidate.py
+TEST_DATAVALIDATOR := $(PYTHON) -m pytest -vs scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
@@ -144,8 +143,8 @@ help:
 	@echo "  mac_installer     to build a disk image for distribution"
 	@echo "  sampledata        to build sample data zipfiles"
 	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
-	@echo "  test              to run nosetests on the tests directory"
-	@echo "  test_ui           to run nosetests on the ui_tests directory"
+	@echo "  test              to run pytest on the tests directory"
+	@echo "  test_ui           to run pytest on the ui_tests directory"
 	@echo "  clean             to remove temporary directories and files (but not dist/)"
 	@echo "  purge             to remove temporary directories, cloned repositories and the built environment."
 	@echo "  help              to print this help and exit"
@@ -154,10 +153,16 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	$(TESTRUNNER) tests
+	coverage run -m --omit=*/invest/ui/* $(TESTRUNNER) tests
+	coverage report
+	coverage html
+	coverage xml
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
-	$(TESTRUNNER) ui_tests
+	coverage run -m --include=*/invest/ui/* $(TESTRUNNER) ui_tests
+	coverage report
+	coverage html
+	coverage xml
 
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
