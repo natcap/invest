@@ -841,8 +841,8 @@ def invest_validator(validate_func):
         try:
             model_module = importlib.import_module(validate_func.__module__)
         except:
-            LOGGER.warning('Unable to import module %s: assuming no ARGS_SPEC.'
-                            % validate_func.__module__)
+            LOGGER.warning('Unable to import module %s: assuming no ARGS_SPEC.',
+                            validate_func.__module__)
             model_module = None
 
         # If the module has an ARGS_SPEC defined, validate against that.
