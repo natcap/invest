@@ -191,6 +191,6 @@ class RecentInvestJobs extends React.PureComponent {
 }
 
 RecentInvestJobs.propTypes = {
-  loadState: HomeTab.propTypes.loadState.isRequired,
-  recentSessions: HomeTab.propTypes.recentSessions.isRequired,
+  loadState: PropTypes.func.isRequired,
+  recentSessions: PropTypes.array.isRequired,
 };
