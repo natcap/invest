@@ -225,16 +225,18 @@ export default class SetupTab extends React.Component {
 
   async investValidate(argsValues) {
     /** Validate an arguments dictionary using the InVEST model's validate function.
-    *
-    * @param {object} args_dict_string - a JSON.stringify'ed object of model argument
-    *    keys and values.
-    */
-    let argsSpec = JSON.parse(JSON.stringify(this.props.argsSpec));
-    let argsValidation = Object.assign({}, this.state.argsValidation);
-    let keyset = new Set(Object.keys(argsSpec));
-    let payload = { 
-      model_module: this.props.pyModuleName,
-      args: argsDictFromObject(argsValues)
+     *
+     * @param {object} args_dict_string - a JSON.stringify'ed object of model argument
+     *    keys and values.
+     */
+    const { argsSpec, pyModuleName } = this.props;
+    // const { argsValidation } = this.state;
+    const argsValidation = Object.assign({}, this.state.argsValidation);
+    // const argsValid = Object.assign({}, this.state.argsValid);
+    const keyset = new Set(Object.keys(argsSpec));
+    const payload = {
+      model_module: pyModuleName,
+      args: argsDictFromObject(argsValues),
     };
     const results = await fetchValidation(payload);
 
@@ -247,26 +249,26 @@ export default class SetupTab extends React.Component {
         const argkeys = result[0];
         const message = result[1];
         argkeys.forEach((key) => {
-          argsValidation[key]['validationMessage'] = message
-          argsValidation[key]['valid'] = false
+          argsValidation[key].validationMessage = message;
+          argsValidation[key].valid = false;
           keyset.delete(key);
         });
       });
       // validated all, so ones left in keyset are valid
-      keyset.forEach(k => {
-        argsValidation[k]['valid'] = true
-        argsValidation[k]['validationMessage'] = ''
+      keyset.forEach((k) => {
+        argsValidation[k].valid = true;
+        argsValidation[k].validationMessage = '';
       });
       this.setState({
         argsValidation: argsValidation,
-        argsValid: false
+        argsValid: false,
       });
 
     // B) All args were validated and none were invalid:
     } else {
-      keyset.forEach(k => {
-        argsValidation[k]['valid'] = true
-        argsValidation[k]['validationMessage'] = ''
+      keyset.forEach((k) => {
+        argsValidation[k].valid = true;
+        argsValidation[k].validationMessage = '';
       });
       // It's possible all args were already valid, in which case
       // no validation state has changed and this setState call can
