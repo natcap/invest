@@ -65,8 +65,8 @@ def _collect_spatial_files(filepath, data_dir, folder_prefix):
     into the datastack's archive folder.
 
     Rasters copied into the archive will be stored in a new folder with the
-    ``<file name>_raster_`` prefix.  Vectors will be stored in a new folder
-    with the ``<file name>_vector_`` prefix. Both will have a random unique
+    "``folder_prefix``_raster_" prefix.  Vectors will be stored in a new folder
+    with the "``folder_prefix``_vector_" prefix. Both will have a random unique
     suffix to prevent name conflicts.
 
     .. Note :: CSV files are not handled by this function.
