@@ -322,7 +322,6 @@ def build_datastack_archive(args, model_name, datastack_path):
     LOGGER.debug('Keys: %s', sorted(args.keys()))
 
     def _recurse(args_param, handler, nested_key=None):
-        print('nested_key:', nested_key)
         if isinstance(args_param, dict):
             new_dict = {}
             for args_key, args_value in args_param.items():
