@@ -6,7 +6,7 @@ import { createEvent, fireEvent, render,
          waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
-import { InvestJob } from '../src/InvestJob';
+import InvestJob from '../src/InvestJob';
 import { getSpec, fetchDatastackFromFile, fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants'

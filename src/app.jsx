@@ -2,7 +2,7 @@ import fs from 'fs';
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import { InvestJob } from './InvestJob';
+import InvestJob from './InvestJob';
 import { getInvestList, getFlaskIsReady } from './server_requests';
 import { updateRecentSessions, loadRecentSessions } from './utils';
 

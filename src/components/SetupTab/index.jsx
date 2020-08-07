@@ -162,12 +162,12 @@ export default class SetupTab extends React.Component {
    * @returns {undefined}
    */
   savePythonScript(filepath) {
-    const argsDictString = argsDictFromObject(this.state.argsValues);
+    const argsDict = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: filepath,
       modelname: this.props.modelName,
       pyname: this.props.pyModuleName,
-      args: argsDictString,
+      args: JSON.stringify(argsDict),
     };
     saveToPython(payload);
   }
@@ -177,7 +177,7 @@ export default class SetupTab extends React.Component {
   }
 
   wrapInvestExecute() {
-    this.props.investExecute(this.state.argsValues);
+    this.props.investExecute(argsDictFromObject(this.state.argsValues));
   }
 
   /** Update state with arg values as they change. And validate the args.
@@ -239,7 +239,7 @@ export default class SetupTab extends React.Component {
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
       model_module: pyModuleName,
-      args: argsDictFromObject(argsValues),
+      args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await fetchValidation(payload);
 

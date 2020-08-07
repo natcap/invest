@@ -18,37 +18,36 @@ import LogTab from './components/LogTab';
 import ResourcesTab from './components/ResourcesTab';
 import LoadButton from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
-import { getSpec, fetchDatastackFromFile,
-         writeParametersToFile } from './server_requests';
-import { argsDictFromObject, findMostRecentLogfile,
-         cleanupDir } from './utils';
+import {
+  getSpec, fetchDatastackFromFile, writeParametersToFile
+} from './server_requests';
+import {
+  findMostRecentLogfile, cleanupDir
+} from './utils';
 import { fileRegistry } from './constants';
-import { getLogger } from './logger'
-const logger = getLogger(__filename.split('/').slice(-1)[0])
+import { getLogger } from './logger';
+
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {
-  'DEBUG':   '--debug',
-  'INFO':    '-vvv',
-  'WARNING': '-vv',
-  'ERROR':   '-v',
-}
+  DEBUG: '--debug',
+  INFO: '-vvv',
+  WARNING: '-vv',
+  ERROR: '-v',
+};
 
 function changeSetupKey(int) {
-  /* Return a value different from the input value.
-  *
-  * Used for generating a new unique `key` for SetupTab component.
-  */
-  return(int + 1)
+  // Used for generating a new unique `key` for SetupTab component.
+  return (int + 1);
 }
 
-export class InvestJob extends React.Component {
-  /** This component and it's children render all the visible parts of the app.
-  *
-  * This component's state includes all the data needed to represent one invest
-  * job.
-  */
-
+/** This component and it's children render all the visible parts of the app.
+ *
+ * This component's state includes all the data needed to represent one invest
+ * job.
+ */
+export default class InvestJob extends React.Component {
   constructor(props) {
     super(props);
 
@@ -68,74 +67,70 @@ export class InvestJob extends React.Component {
       jobStatus: null,                 // 'running', 'error', 'success'
       activeTab: 'home',               // controls which tab is currently visible
     };
-    
+
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
     this.investGetSpec = this.investGetSpec.bind(this);
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.saveState = this.saveState.bind(this);
     this.loadState = this.loadState.bind(this);
-    this.setSessionID = this.setSessionID.bind(this);
   }
 
   componentDidMount() {
-    fs.mkdir(fileRegistry.CACHE_DIR, (err) => {})
-    fs.mkdir(fileRegistry.TEMP_DIR, (err) => {})
+    // If these dirs already exist, this will err and pass
+    fs.mkdir(fileRegistry.CACHE_DIR, (err) => {});
+    fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
   }
 
+  /** Save the state of this component (1) and the current InVEST job (2).
+   * 1. Save the state object of this component to a JSON file .
+   * 2. Append metadata of the invest job to a persistent database/file.
+   * This triggers automatically when the invest subprocess starts and again
+   * when it exits.
+   */
   saveState() {
-    /** Save the state of this component (1) and the current InVEST job (2).
-    * 1. Save the state object of this component to a JSON file .
-    * 2. Append metadata of the invest job to a persistent database/file.
-    * This triggers automatically when the invest subprocess starts and again
-    * when it exits.
-    */
+    const {
+      sessionID,
+      modelName,
+      workspace,
+      jobStatus,
+    } = this.state;
     const jsonContent = JSON.stringify(this.state, null, 2);
-    const filepath = path.join(
-      fileRegistry.CACHE_DIR, this.state.sessionID + '.json');
-    fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
+    const filepath = path.join(fileRegistry.CACHE_DIR, `${sessionID}.json`);
+    fs.writeFile(filepath, jsonContent, 'utf8', (err) => {
       if (err) {
-        logger.error("An error occured while writing JSON Object to File.");
+        logger.error('An error occured while writing JSON Object to File.');
         return logger.error(err.stack);
       }
     });
-    let job = {};
-    job[this.state.sessionID] = {
-      model: this.state.modelName,
-      workspace: this.state.workspace,
+    const jobMetadata = {};
+    jobMetadata[sessionID] = {
+      model: modelName,
+      workspace: workspace,
       statefile: filepath,
-      status: this.state.jobStatus,
+      status: jobStatus,
       humanTime: new Date().toLocaleString(),
       systemTime: new Date().getTime(),
-    }
-    this.props.updateRecentSessions(job, this.props.jobDatabase);
-  }
-  
-  setSessionID(event) {
-    // TODO: this functionality might be deprecated - probably no need to set custom
-    // session names. But the same function could be repurposed for a job description.
-    event.preventDefault();
-    const value = event.target.value;
-    this.setState(
-      {sessionID: value});
+    };
+    this.props.updateRecentSessions(jobMetadata, this.props.jobDatabase);
   }
 
+  /** Set this component's state to the object parsed from a JSON file.
+   *
+   * @param {string} sessionFilename - path to a JSON file.
+   */
   async loadState(sessionFilename) {
-    /** Set this component's state to the object parsed from a JSON file.
-    *
-    * @params {string} sessionFilename - path to a JSON file.
-    */
-
     if (fs.existsSync(sessionFilename)) {
       const loadedState = JSON.parse(fs.readFileSync(sessionFilename, 'utf8'));
-      
-      // Right now saveState is only called w/in investExecute and only
-      // after invest has created a logfile, which means an invest logfile
-      // should always exist and can be used to get args values and initialize SetupTab.
+      // saveState is only called w/in investExecute and only after invest
+      // has created a logfile, which means an invest logfile should always
+      // exist and can be used to get args values and initialize SetupTab.
       const datastack = await fetchDatastackFromFile(loadedState.logfile);
       if (datastack) {
-        loadedState['argsInitDict'] = datastack['args']
-        Object.assign(loadedState, {setupKey: changeSetupKey(this.state.setupKey)})
+        loadedState.argsInitDict = datastack.args;
+        Object.assign(
+          loadedState, { setupKey: changeSetupKey(this.state.setupKey) }
+        );
         this.setState(loadedState,
           () => {
             this.switchTabs(loadedState.sessionProgress);
@@ -144,75 +139,86 @@ export class InvestJob extends React.Component {
         alert('Cannot load this session because data is missing')
       }
     } else {
-      logger.error('state file not found: ' + sessionFilename);
+      logger.error(`state file not found: ${sessionFilename}`);
     }
   }
 
+  /** Write an invest args JSON file for passing to invest cli.
+   *
+   * Outsourcing this to natcap.invest.datastack via flask ensures
+   * a compliant json with an invest version string.
+   *
+   * @param {string} datastackPath - path to a JSON file.
+   * @param {object} argsValues - the invest "args dictionary"
+   *   as a javascript object
+   */
   async argsToJsonFile(datastackPath, argsValues) {
-    /** Write an invest args JSON file for passing to invest cli.
-    *
-    * Outsourcing this to natcap.invest.datastack via flask ensures
-    * a compliant json with an invest version string.
-    *
-    * @params {string} datastackPath - path to a JSON file.
-    */
-
     // The n_workers value always needs to be inserted into args
-    argsValues['n_workers'] = this.props.investSettings.nWorkers;
-    
+    const argsValuesCopy = {
+      ...argsValues, n_workers: this.props.investSettings.nWorkers
+    };
+
     const payload = {
-      parameterSetPath: datastackPath, 
+      parameterSetPath: datastackPath,
       moduleName: this.state.modelSpec.module,
       relativePaths: false,
-      args: argsDictFromObject(argsValues)
-    }
+      args: argsValuesCopy,
+    };
     await writeParametersToFile(payload);
   }
 
+  /** Spawn a child process to run an invest model via the invest CLI.
+   *
+   * e.g. `invest -vvv run <model> --headless -d <datastack path>`
+   *
+   * When the process starts (on first stdout callback), job metadata is saved
+   * and local state is updated to display the invest log.
+   * When the process exits, job metadata is updated with final status of run.
+   *
+   * @param {object} argsValues - the invest "args dictionary"
+   *   as a javascript object
+   */
   async investExecute(argsValues) {
-    /** Spawn a child process to run an invest model via the invest CLI:
-    * `invest -vvv run <model> --headless -d <datastack path>`
-    *
-    * When the process starts (on first stdout callback), job metadata is saved
-    * and local state is updated to display the log.
+    const { investExe, investSettings } = this.props;
 
-    * When the process exits, job metadata is saved again (overwriting previous)
-    * with the final status of the invest run.
-    */
     const workspace = {
-      directory: path.resolve(argsValues.workspace_dir.value),
-      suffix: argsValues.results_suffix.value
-    }
+      directory: path.resolve(argsValues.workspace_dir),
+      suffix: argsValues.results_suffix,
+    };
     // If the same model, workspace, and suffix are executed, invest
     // will overwrite the previous outputs. So our recent session
     // catalogue should overwite as well, and that's assured by this
     // non-unique sessionID.
     const sessionID = crypto.createHash('sha1').update(
-      this.state.modelName + JSON.stringify(workspace)).digest('hex')
+      `${this.state.modelName}${JSON.stringify(workspace)}`
+    ).digest('hex');
 
-    // Write a temporary datastack json for passing as a command-line arg
-    const temp_dir = fs.mkdtempSync(path.join(
-      fileRegistry.TEMP_DIR, 'data-'))
-    const datastackPath = path.join(temp_dir, 'datastack.json')
-    const _ = await this.argsToJsonFile(datastackPath, argsValues);
+    // Write a temporary datastack json for passing to invest CLI
+    const tempDir = fs.mkdtempSync(path.join(
+      fileRegistry.TEMP_DIR, 'data-'
+    ));
+    const datastackPath = path.join(tempDir, 'datastack.json');
+    await this.argsToJsonFile(datastackPath, argsValues);
 
-    // Get verbosity level from the app's settings
-    const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
-    
-    const cmdArgs = [verbosity, 'run', this.state.modelName,
-                     '--headless', '-d ' + datastackPath]
-    const investRun = spawn(path.basename(this.props.investExe), cmdArgs, {
-        env: { PATH: path.dirname(this.props.investExe) },
-        shell: true // without true, IOError when datastack.py loads json
-      });
+    const verbosity = LOGLEVELMAP[investSettings.loggingLevel];
+    const cmdArgs = [
+      verbosity,
+      'run',
+      this.state.modelName,
+      '--headless',
+      `-d ${datastackPath}`,
+    ];
+    const investRun = spawn(path.basename(investExe), cmdArgs, {
+      env: { PATH: path.dirname(investExe) },
+      shell: true, // without true, IOError when datastack.py loads json
+    });
 
-    
     // There's no general way to know that a spawned process started,
     // so this logic when listening for stdout seems like the way.
-    let logfilename = ''
-    investRun.stdout.on('data', async (data) => {
+    let logfilename = '';
+    investRun.stdout.on('data', async () => {
       if (!logfilename) {
-        logfilename = await findMostRecentLogfile(workspace.directory)
+        logfilename = await findMostRecentLogfile(workspace.directory);
         // TODO: handle case when logfilename is undefined? It seems like
         // sometimes there is some stdout emitted before a logfile exists.
         this.setState(
@@ -221,23 +227,23 @@ export class InvestJob extends React.Component {
             sessionID: sessionID,
             sessionProgress: 'log',
             workspace: workspace,
-            jobStatus: 'running'
+            jobStatus: 'running',
           }, () => {
-            this.switchTabs('log')
-            this.saveState()
+            this.switchTabs('log');
+            this.saveState();
           }
         );
       }
     });
 
     // Capture stderr to a string separate from the invest log
-    // so that it can be displayed separately when invest exits,
-    // and because it could actually be stderr emitted from the 
+    // so that it can be displayed separately when invest exits.
+    // And because it could actually be stderr emitted from the
     // invest CLI or even the shell, rather than the invest model,
     // in which case it's useful to logger.debug too.
     let stderr = Object.assign('', this.state.logStdErr);
     investRun.stderr.on('data', (data) => {
-      stderr += `${data}`
+      stderr += `${data}`;
       this.setState({
         logStdErr: stderr,
       });
@@ -250,12 +256,12 @@ export class InvestJob extends React.Component {
       // differently from one-another, but right now they are all exit code 1.
       // E.g. this callback is designed with a model crash in mind, but not a fail to 
       // launch, in which case the saveState call will probably crash.
-      const status = (code === 0 ? 'success' : 'error')
+      const status = (code === 0 ? 'success' : 'error');
       this.setState({
         jobStatus: status,
       }, () => {
         this.saveState();
-        cleanupDir(temp_dir)
+        cleanupDir(tempDir);
       });
     });
   }

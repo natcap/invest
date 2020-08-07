@@ -113,8 +113,8 @@ export function boolStringToBoolean(val) {
  *
  * @param {object} args - object keyed by invest argument keys and
  *   with each item including a `value` property.
- * @returns {string} - JSON.stringify'd key: value pairs as expected
- * by the natcap.invest API.
+ * @returns {object} - invest argument key: value pairs as expected
+ * by invest model `execute` and `validate` functions
  */
 export function argsDictFromObject(args) {
   const argsDict = {};
@@ -123,7 +123,7 @@ export function argsDictFromObject(args) {
   Object.keys(args).forEach((argname) => {
     argsDict[argname] = args[argname].value;
   });
-  return JSON.stringify(argsDict);
+  return argsDict;
 }
 
 /** Convenience function to recursively remove a directory.
