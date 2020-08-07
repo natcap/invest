@@ -397,7 +397,7 @@ def execute(args):
             if year >= first_transition_year and pool != POOL_LITTER:
                 # calculate emissions for this year
                 emissions_rasters[year][pool] = os.path.join(
-                    intermediate_dir, f'emissions-{pool}-{year}.tif')
+                    intermediate_dir, f'emissions-{pool}-{year}{suffix}.tif')
                 current_emissions_tasks[pool] = task_graph.add_task(
                     func=pygeoprocessing.raster_calculator,
                     args=(
