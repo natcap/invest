@@ -1250,12 +1250,12 @@ class TestCBC2(unittest.TestCase):
                 'soil-half-life', 'soil-low-impact-disturb',
                 'soil-med-impact-disturb', 'soil-high-impact-disturb',
                 'soil-yearly-accumulation', 'litter-yearly-accumulation'],
-            [0, 'mangrove',
+            [1, 'mangrove',
                 64, 313, 3,  # initial
-                15, 0.5, 0.5, 1, 2, # biomass
+                15, 0.5, 0.5, 1, 2,  # biomass
                 7.5, 0.3, 0.5, 0.66, 5.35,  # soil
                 0],  # litter accum.
-            [1, 'parking lot',
+            [2, 'parking lot',
                 0, 0, 0,  # initial
                 0, 0, 0, 0, 0,  # biomass
                 0, 0, 0, 0, 0,  # soil
@@ -1282,16 +1282,16 @@ class TestCBC2(unittest.TestCase):
 
         baseline_landcover_raster_path = os.path.join(
             self.workspace_dir, 'baseline_lulc.tif')
-        baseline_matrix = numpy.array([[0, 1]], dtype=numpy.uint8)
+        baseline_matrix = numpy.array([[1, 2]], dtype=numpy.uint8)
         pygeoprocessing.numpy_array_to_raster(
-            baseline_matrix, 255, (2, -2), (2, -2), wkt,
+            baseline_matrix, 25, (2, -2), (2, -2), wkt,
             baseline_landcover_raster_path)
 
         transition_2010_raster_path = os.path.join(
             self.workspace_dir, 'transition_2010.tif')
-        transition_2010_matrix = numpy.array([[1, 0]], dtype=numpy.uint8)
+        transition_2010_matrix = numpy.array([[2, 1]], dtype=numpy.uint8)
         pygeoprocessing.numpy_array_to_raster(
-            transition_2010_matrix, 255, (2, -2), (2, -2), wkt,
+            transition_2010_matrix, 25, (2, -2), (2, -2), wkt,
             transition_2010_raster_path)
 
         transition_rasters_csv_path = os.path.join(
@@ -1312,5 +1312,18 @@ class TestCBC2(unittest.TestCase):
         }
 
         coastal_blue_carbon2.execute(args)
+
+        # TODO: pixel 1 is ending up nodata when it should definitely have a
+        # value.
+        expected_array = numpy.array(
+            [[132.1434,
+              20]], dtype=numpy.float32)
+
+        numpy.testing.assert_allclose(
+            gdal.OpenEx(os.path.join(
+                args['workspace_dir'], 'output',
+                'total_net_carbon_sequestration.tif')).ReadAsArray(),
+            expected_array)
+
 
 

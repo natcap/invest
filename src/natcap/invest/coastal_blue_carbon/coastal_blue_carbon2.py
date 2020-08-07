@@ -23,7 +23,7 @@ NODATA_UINT16 = int(numpy.iinfo(numpy.uint16).max)
 
 def execute(args):
     suffix = utils.make_suffix_string(args, 'results_suffix')
-    output_dir = os.path.join(args['workspace_dir'], 'outputs')
+    output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     taskgraph_cache_dir = os.path.join(intermediate_dir, 'task_cache')
 
