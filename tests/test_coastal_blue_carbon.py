@@ -1141,30 +1141,56 @@ class TestCBC2(unittest.TestCase):
 
     def test_reclassify_transition(self):
         """CBC: Reclassify a landcover transition in terms of disturbance."""
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31 S
+        wkt = srs.ExportToWkt()
+
         transition_magnitude_matrix = scipy.sparse.dok_matrix([
             [0.0, 1.1],
             [2.2, 3.3]], dtype=numpy.float32)
 
+        landuse_from_raster_path = os.path.join(
+            self.workspace_dir, 'from.tif')
         landuse_from_matrix = numpy.array([
             [0, 1],
             [0, 1]], dtype=numpy.int8)
+        pygeoprocessing.numpy_array_to_raster(
+            landuse_from_matrix, 255, (2, -2), (2, -2), wkt,
+            landuse_from_raster_path)
 
+        landuse_to_raster_path = os.path.join(self.workspace_dir, 'to.tif')
         landuse_to_matrix = numpy.array([
             [0, 1],
             [1, 0]], dtype=numpy.int8)
+        pygeoprocessing.numpy_array_to_raster(
+            landuse_to_matrix, 255, (2, -2), (2, -2), wkt,
+            landuse_to_raster_path)
 
+        carbon_storage_raster_path = os.path.join(self.workspace_dir, 'c.tif')
         carbon_storage_matrix = numpy.array([
             [2., 2.],
             [2., 2.]], dtype=numpy.float32)
+        pygeoprocessing.numpy_array_to_raster(
+            carbon_storage_matrix, 255, (2, -2), (2, -2), wkt,
+            carbon_storage_raster_path)
 
-        returned_matrix = coastal_blue_carbon2._reclassify_transition(
-            landuse_from_matrix, landuse_to_matrix, carbon_storage_matrix,
-            transition_magnitude_matrix, None, None, None)
+        target_raster_path = os.path.join(self.workspace_dir, 'target.tif')
+        coastal_blue_carbon2._reclassify_disturbance_transition(
+            landuse_from_raster_path, landuse_to_raster_path,
+            carbon_storage_raster_path, transition_magnitude_matrix,
+            target_raster_path)
+
+        expected_raster_path = os.path.join(
+            self.workspace_dir, 'expected.tif')
         expected_matrix = numpy.array([
             [0.0, 6.6],
             [2.2, 4.4]], dtype=numpy.float32)
-        numpy.testing.assert_almost_equal(
-            returned_matrix, expected_matrix)
+        pygeoprocessing.numpy_array_to_raster(
+            expected_matrix, 255, (2, -2), (2, -2), wkt, expected_raster_path)
+
+        numpy.testing.assert_allclose(
+            gdal.OpenEx(target_raster_path).ReadAsArray(),
+            gdal.OpenEx(expected_raster_path).ReadAsArray())
 
     def test_track_latest_transition_year(self):
         """CBC: Track the latest disturbance year."""
@@ -1209,3 +1235,8 @@ class TestCBC2(unittest.TestCase):
             dtype=numpy.float32)
         numpy.testing.assert_allclose(
             result_matrix, expected_array, rtol=1E-6)
+
+    def test_model(self):
+        """CBC: Test the model's execution."""
+
+        pass
