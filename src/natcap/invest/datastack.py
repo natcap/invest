@@ -324,7 +324,6 @@ def build_datastack_archive(args, model_name, datastack_path):
     def _recurse(args_param, handler, nested_key=None):
         print('nested_key:', nested_key)
         if isinstance(args_param, dict):
-            print('dict')
             new_dict = {}
             for args_key, args_value in args_param.items():
                 # log the key via a filter installed to the handler.
@@ -340,15 +339,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                                                   nested_key=args_key_label)
                 handler.removeFilter(args_key_filter)
             return new_dict
-        elif isinstance(args_param, list):
-            print('list')
-            return [_recurse(
-                        list_item, 
-                        handler, 
-                        nested_key=f'{nested_key}[{str(i)}]'
-                    ) for i, list_item in enumerate(args_param)]
         elif isinstance(args_param, str):
-            print('str')
             # If the parameter string is blank, return an empty string.
             if args_param.strip() == '':
                 return ''
@@ -363,12 +354,9 @@ def build_datastack_archive(args, model_name, datastack_path):
                                  possible_path, filepath)
                     return filepath
                 except KeyError:
-                    # turn the nested key into a nice name for a folder, e.g.:
-                    # args['category'][1]['data_path'] --> category_1_data_path
-
-                    folder_prefix = nested_key.replace(
-                        '\'', '')[5 : -1].replace('][', '_')
-                    print(folder_prefix)
+                    # turn the nested key into a nice name for a folder
+                    # e.g. args['category']['data_path'] --> category_data_path
+                    folder_prefix = nested_key[6 : -2].replace('\'][\'', '_')
                     found_filepath = _collect_filepath(possible_path,
                                                        data_dir,
                                                        folder_prefix)
