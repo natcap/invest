@@ -312,9 +312,9 @@ def execute(args):
                     task_name=f'Mapping {pool} half-life for {year}')
 
                 # Disturbances only happen during transition years, not during
-                # the baseline year.
-                # disturbances only affect soil and biomass carbon, not litter.
-                if year != baseline_lulc_year and pool != 'litter':
+                # the baseline year.  Disturbances only affect soil, biomass
+                # pools.
+                if year != baseline_lulc_year:
                     disturbance_rasters[current_transition_year][pool] = os.path.join(
                         intermediate_dir,
                         f'disturbance-{pool}-{current_transition_year}{suffix}.tif')
@@ -426,12 +426,12 @@ def execute(args):
             intermediate_dir, f'total-carbon-stocks-{year}{suffix}.tif')
         _ = task_graph.add_task(
             func=_sum_n_rasters,
-            args=([stock_rasters[year]['soil'],
-                   stock_rasters[year]['biomass']],
+            args=([stock_rasters[year][POOL_SOIL],
+                   stock_rasters[year][POOL_BIOMASS]],
                   total_carbon_rasters[year]),
             dependent_task_list=[
-                current_stock_tasks['soil'],
-                current_stock_tasks['biomass']],
+                current_stock_tasks[POOL_SOIL],
+                current_stock_tasks[POOL_BIOMASS]],
             target_path_list=[total_carbon_rasters[year]],
             task_name=f'Calculating total carbon stocks in {year}')
 
@@ -447,16 +447,16 @@ def execute(args):
                 intermediate_dir, f'valuation-{year}{suffix}.tif')
             _ = task_graph.add_task(
                 func=pygeoprocessing.raster_calculator,
-                args=([(net_sequestration_rasters[year]['biomass'], 1),
-                       (net_sequestration_rasters[year]['soil'], 1),
+                args=([(net_sequestration_rasters[year][POOL_BIOMASS], 1),
+                       (net_sequestration_rasters[year][POOL_SOIL], 1),
                        (prices[year], 'raw')],
                       _calculate_valuation,
                       valuation_raster,
                       gdal.GDT_Float32,
                       NODATA_FLOAT32),
                 dependent_task_list=[
-                    current_net_sequestration_tasks['biomass'],
-                    current_net_sequestration_tasks['soil']],
+                    current_net_sequestration_tasks[POOL_BIOMASS],
+                    current_net_sequestration_tasks[POOL_SOIL]],
                 target_path_list=[valuation_raster],
                 task_name=f'Calculating the value of carbon for {year}')
 
@@ -499,9 +499,9 @@ def execute(args):
                 func=pygeoprocessing.raster_calculator,
                 args=(
                     [(yearly_accum_rasters[
-                        current_transition_year]['soil'], 1),
+                        current_transition_year][POOL_SOIL], 1),
                      (yearly_accum_rasters[
-                         current_transition_year]['biomass'], 1),
+                         current_transition_year][POOL_BIOMASS], 1),
                      (len(years_since_last_transition), 'raw')],
                     _calculate_accumulation_over_time,
                     accumulation_since_last_transition,
