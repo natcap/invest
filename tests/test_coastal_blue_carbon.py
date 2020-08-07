@@ -1238,5 +1238,79 @@ class TestCBC2(unittest.TestCase):
 
     def test_model(self):
         """CBC: Test the model's execution."""
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31 S
+        wkt = srs.ExportToWkt()
 
-        pass
+        biophysical_table = [
+            ['code', 'lulc-class', 'biomass-initial', 'soil-initial',
+                'litter-initial', 'biomass-half-life',
+                'biomass-low-impact-disturb', 'biomass-med-impact-disturb',
+                'biomass-high-impact-disturb', 'biomass-yearly-accumulation',
+                'soil-half-life', 'soil-low-impact-disturb',
+                'soil-med-impact-disturb', 'soil-high-impact-disturb',
+                'soil-yearly-accumulation', 'litter-yearly-accumulation'],
+            [0, 'mangrove',
+                64, 313, 3,  # initial
+                15, 0.5, 0.5, 1, 2, # biomass
+                7.5, 0.3, 0.5, 0.66, 5.35,  # soil
+                0],  # litter accum.
+            [1, 'parking lot',
+                0, 0, 0,  # initial
+                0, 0, 0, 0, 0,  # biomass
+                0, 0, 0, 0, 0,  # soil
+                0],  # litter accum.
+        ]
+        biophysical_table_path = os.path.join(
+            self.workspace_dir, 'biophysical.csv')
+        with open(biophysical_table_path, 'w') as bio_table:
+            for line_list in biophysical_table:
+                line = ','.join(str(field) for field in line_list)
+                bio_table.write(f'{line}\n')
+
+        transition_matrix = [
+            ['lulc-class', 'mangrove', 'parking lot'],
+            ['mangrove', 'NCC', 'high-impact-disturb'],
+            ['parking lot', 'accum', 'NCC']
+        ]
+        transition_matrix_path = os.path.join(
+            self.workspace_dir, 'transitions.csv')
+        with open(transition_matrix_path, 'w') as transition_table:
+            for line_list in transition_matrix:
+                line = ','.join(line_list)
+                transition_table.write(f'{line}\n')
+
+        baseline_landcover_raster_path = os.path.join(
+            self.workspace_dir, 'baseline_lulc.tif')
+        baseline_matrix = numpy.array([[0, 1]], dtype=numpy.uint8)
+        pygeoprocessing.numpy_array_to_raster(
+            baseline_matrix, 255, (2, -2), (2, -2), wkt,
+            baseline_landcover_raster_path)
+
+        transition_2010_raster_path = os.path.join(
+            self.workspace_dir, 'transition_2010.tif')
+        transition_2010_matrix = numpy.array([[1, 0]], dtype=numpy.uint8)
+        pygeoprocessing.numpy_array_to_raster(
+            transition_2010_matrix, 255, (2, -2), (2, -2), wkt,
+            transition_2010_raster_path)
+
+        transition_rasters_csv_path = os.path.join(
+            self.workspace_dir, 'transition_rasters.csv')
+        with open(transition_rasters_csv_path, 'w') as transition_rasters_csv:
+            transition_rasters_csv.write('transition_year,raster_path\n')
+            transition_rasters_csv.write(
+                f'2010,{transition_2010_raster_path}\n')
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'landcover_transitions_table': transition_matrix_path,
+            'transitions_csv': transition_rasters_csv_path,
+            'biophysical_table_path': biophysical_table_path,
+            'baseline_lulc_path': baseline_landcover_raster_path,
+            'baseline_lulc_year': 2000,
+            'analysis_year': 2020,
+        }
+
+        coastal_blue_carbon2.execute(args)
+
+
