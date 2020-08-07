@@ -205,7 +205,7 @@ def execute(args):
         # Stocks are only reclassified from inputs in the baseline year.
         # In all other years, stocks are based on the previous year's
         # calculations.
-        for pool in (POOL_SOIL, POOL_BIOMASS):
+        for pool in (POOL_SOIL, POOL_BIOMASS, POOL_LITTER):
             if year == baseline_lulc_year:
                 stock_rasters[year][pool] = os.path.join(
                     intermediate_dir, f'stocks-{pool}-{year}{suffix}.tif')
@@ -261,7 +261,8 @@ def execute(args):
                     target_path_list=[stock_rasters[year][pool]],
                     task_name=f'Calculating {pool} carbon stock for {year}')
 
-            # These variables happen on ALL transition years, including baseline.
+            # These variables happen on ALL transition years, including
+            # baseline.
             # TODO: allow accumulation to be spatially defined and not just
             # classified.
             if year in years_with_lulc_rasters:
@@ -270,7 +271,21 @@ def execute(args):
                 yearly_accum_rasters[year][pool] = os.path.join(
                     intermediate_dir,
                     f'accumulation-{pool}-{year}{suffix}.tif')
-                current_accumulation_tasks[pool] = task_graph.add_task(
+                if pool == POOL_LITTER:
+                    current_accumulation_tasks[pool] = task_graph.add_task(
+                        func=pygeoprocessing.reclassify_raster,
+                        args=((aligned_lulc_paths[year], 1),
+                              {lucode: values[f'{pool}-yearly-accumulation']
+                               for (lucode, values) in
+                               biophysical_parameters.items()},
+                              yearly_accum_rasters[year][pool],
+                              gdal.GDT_Float32,
+                              NODATA_FLOAT32),
+                        dependent_task_list=[alignment_task],
+                        target_path_list=[yearly_accum_rasters[year][pool]],
+                        task_name=f'Mapping litter accumulation for {year}')
+                else:
+                    current_accumulation_tasks[pool] = task_graph.add_task(
                         func=_reclassify_accumulation_transition,
                         args=(aligned_lulc_paths[prior_transition_year],
                               aligned_lulc_paths[current_transition_year],
@@ -284,9 +299,10 @@ def execute(args):
                 accumulation_tasks_since_transition.append(
                     current_accumulation_tasks[pool])
 
+            if year in years_with_lulc_rasters and pool != POOL_LITTER:
                 # Halflife reflect last transition's state
                 # Emissions happen when we're transitioning AWAY from CBC
-                # landcovers.
+                # landcovers, and only in the soil and biomass pools.
                 halflife_rasters[year][pool] = os.path.join(
                     intermediate_dir,
                     f'halflife-{pool}-{year}{suffix}.tif')
@@ -369,7 +385,7 @@ def execute(args):
                                 f'disturbance as of {current_transition_year}')))
 
 
-            if year >= first_transition_year:
+            if year >= first_transition_year and pool != POOL_LITTER:
                 # calculate emissions for this year
                 emissions_rasters[year][pool] = os.path.join(
                     intermediate_dir, f'emissions-{pool}-{year}.tif')
@@ -413,6 +429,9 @@ def execute(args):
                 # There are no emissions until the first timestep.  Therefore,
                 # since net sequestration = accumulation - emissions, net
                 # sequestration is equal to accumulation.
+                # The litter pool never has any disturbances, only no more
+                # accumulation.  Therefore, net sequestration for litter is
+                # just the rate of accumulation.
                 net_sequestration_rasters[year][pool] = (
                     yearly_accum_rasters[current_transition_year][pool])
                 current_net_sequestration_tasks[pool] = (
@@ -427,14 +446,14 @@ def execute(args):
         _ = task_graph.add_task(
             func=_sum_n_rasters,
             args=([stock_rasters[year][POOL_SOIL],
-                   stock_rasters[year][POOL_BIOMASS]],
+                   stock_rasters[year][POOL_BIOMASS],
+                   stock_rasters[year][POOL_LITTER]],
                   total_carbon_rasters[year]),
             dependent_task_list=[
                 current_stock_tasks[POOL_SOIL],
                 current_stock_tasks[POOL_BIOMASS]],
             target_path_list=[total_carbon_rasters[year]],
             task_name=f'Calculating total carbon stocks in {year}')
-
 
         # If we're doing valuation, calculate the value of net sequestered
         # carbon.
