@@ -14,7 +14,7 @@ function dragoverHandler(event) {
 }
 
 /** Renders a form with a list of input components. */
-export default class ArgsForm extends React.PureComponent {
+export default class ArgsForm extends React.Component {
   constructor(props) {
     super(props);
     this.handleChange = this.handleChange.bind(this);

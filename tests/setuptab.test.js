@@ -141,6 +141,12 @@ test('SetupTab: expect an input form for a raster', async () => {
 })
 
 test('SetupTab: expect an input form for a freestyle_string', async () => {
+  // This turned out to be an important test that caught an unrelated bug
+  // that all other tests missed -- changing only the `value` of the input
+  // while not changing the validation state revealed the problem of using
+  // a PureComponent for ArgsForm. PureComponents check for shallow-equality
+  // of props and avoid re-rendering if equal. This test alone maintained
+  // shallow-equality in a case where we definitely do need to re-render. 
   const spec = { args: { arg: { name: 'foo', type: 'freestyle_string' } } }
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)

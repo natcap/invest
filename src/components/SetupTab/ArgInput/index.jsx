@@ -36,7 +36,7 @@ Feedback.defaultProps = {
   message: '',
 };
 
-export default class ArgInput extends React.Component {
+export default class ArgInput extends React.PureComponent {
   render() {
     const {
       argkey,
