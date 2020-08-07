@@ -76,7 +76,7 @@ export default class SetupTab extends React.Component {
       argsValues: null,
       argsValidation: {},
       argsValid: false,
-      sortedArgTree: null,
+      sortedArgKeys: null,
     };
 
     this.savePythonScript = this.savePythonScript.bind(this);
@@ -97,53 +97,61 @@ export default class SetupTab extends React.Component {
     */
     const { argsInitValues, argsSpec } = this.props;
     if (argsInitValues) {
-      const argTree = {};
+      const argGroups = {};
       let {
         argsValues, argsValidation
       } = initializeArgValues(argsSpec, argsInitValues);
 
       Object.keys(argsSpec).forEach((argkey) => {
+        // these argkeys do not get rendered inputs
         if (argkey === 'n_workers'
           || argsSpec[argkey].order === 'hidden') { return; }
-        const argSpec = { ...argsSpec[argkey] };
-        if (argSpec.ui_control) {
+
+        // Update any dependent args in response to this arg's value
+        const argumentSpec = { ...argsSpec[argkey] };
+        if (argumentSpec.ui_control) {
           argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
         }
 
-        // This grouping and sorting does not fail if order is undefined
-        // (i.e. it is missing from the UI spec) for one or more args.
-        // Nevertheless, feels better to fill in a float here.
-        if (typeof argSpec.order !== 'number') { argSpec.order = 100.0; }
-
-        // Fill in a tree-like object where each item is an array of the args
-        // that share a major (Math.floor) order number and should be grouped.
-        // Within each array representing a group, items are objects like:
-        //  { <precise order number> : <argkey> }
-        const group = Math.floor(argSpec.order);
-        const subArg = { [argSpec.order]: argkey };
-        if (argTree[group]) { // already have arg(s) in this group
-          argTree[group].push(subArg);
+        /** Sort the arg into it's input group */
+        // order is optional in the spec, but to be exlplicit about
+        // what happens with sorting, defaulting to 100.0.
+        if (typeof argumentSpec.order !== 'number') {
+          argumentSpec.order = 100.0;
+        }
+        // Groups are defined by the whole number digits
+        const g = Math.floor(argumentSpec.order);
+        const orderArgPair = { [argumentSpec.order]: argkey };
+        if (argGroups[g]) {
+          argGroups[g].push(orderArgPair);
         } else {
-          argTree[group] = [subArg];
+          argGroups[g] = [orderArgPair];
         }
       });
-      // sort the groups by the group number at index [0]
-      const sortedGroups = Object.entries(argTree).sort((a, b) => a[0] - b[0]);
+
+      // sort the groups by the group number (keys of argGroups)
+      const sortedGroups = Object.entries(argGroups).sort(
+        (a, b) => a[0] - b[0]
+      );
       // sort args within the groups
-      const sortedArgs = [];
-      sortedGroups.forEach((group) => {
-        if (group.length > 1) {
+      const sortedArgKeys = [];
+      sortedGroups.forEach((groupArray) => {
+        if (groupArray.length > 1) {
           // [1] is the array of objects keyed by their order number
-          sortedArgs.push(group[1].sort(
+          const sortedGroup = groupArray[1].sort(
             (a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0])
-          ));
+          );
+          sortedArgKeys.push(
+            // drop the order numbers now that argkeys are sorted
+            sortedGroup.map((item) => Object.values(item)[0])
+          );
         }
       });
 
       this.setState({
         argsValues: argsValues,
         argsValidation: argsValidation,
-        sortedArgTree: sortedArgs,
+        sortedArgKeys: sortedArgKeys,
       }, () => this.investValidate(this.state.argsValues));
     }
   }
@@ -287,7 +295,7 @@ export default class SetupTab extends React.Component {
             argsSpec={argsSpec}
             argsValues={this.state.argsValues}
             argsValidation={this.state.argsValidation}
-            sortedArgTree={this.state.sortedArgTree}
+            sortedArgKeys={this.state.sortedArgKeys}
             pyModuleName={pyModuleName}
             updateArgValues={this.updateArgValues}
             batchUpdateArgs={this.batchUpdateArgs}

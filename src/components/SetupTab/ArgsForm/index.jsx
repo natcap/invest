@@ -66,18 +66,18 @@ export default class ArgsForm extends React.PureComponent {
 
   render() {
     const {
-      sortedArgTree,
+      sortedArgKeys,
       argsSpec,
       argsValues,
       argsValidation,
     } = this.props;
     const formItems = [];
     let k = 0;
-    sortedArgTree.forEach((groupArray) => {
+
+    sortedArgKeys.forEach((groupArray) => {
       k += 1;
       const groupItems = [];
-      groupArray.forEach((item) => {
-        const argkey = Object.values(item)[0];
+      groupArray.forEach((argkey) => {
         groupItems.push(
           <ArgInput
             key={argkey}
@@ -134,10 +134,8 @@ ArgsForm.propTypes = {
       type: PropTypes.string,
     }),
   ).isRequired,
-  sortedArgTree: PropTypes.arrayOf(
-    PropTypes.arrayOf(
-      PropTypes.objectOf(PropTypes.string),
-    ),
+  sortedArgKeys: PropTypes.arrayOf(
+    PropTypes.arrayOf(PropTypes.string),
   ).isRequired,
   updateArgValues: PropTypes.func.isRequired,
   batchUpdateArgs: PropTypes.func.isRequired,
