@@ -339,7 +339,11 @@ def build_datastack_archive(args, model_name, datastack_path):
                 handler.removeFilter(args_key_filter)
             return new_dict
         elif isinstance(args_param, list):
-            return [_recurse(list_item, handler, nested_key=nested_key) for list_item in args_param]
+            return [_recurse(
+                        list_item, 
+                        handler, 
+                        nested_key=f'{nested_key}['{str(i)}']'
+                    ) for i, list_item in enumerate(args_param)]
         elif isinstance(args_param, str):
             # If the parameter string is blank, return an empty string.
             if args_param.strip() == '':
