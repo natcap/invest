@@ -541,6 +541,37 @@ def build_lookup_from_csv(
     return lookup_dict 
 
 
+def read_csv_to_dataframe(path, **kwargs, to_lower=True, strip=True):
+    """
+    Wrapper around ``pandas.read_csv`` that standardizes the column names by
+    stripping leading/trailing whitespace and making all lowercase.
+    This helps avoid common errors caused by user-supplied CSV files with
+    column names that don't exactly match the specification.
+
+    Args:
+        path (string): path to a CSV file
+        to_lower (bool): if True, convert all column names to lowercase
+        strip (bool): if True, strip leading/trailing whitespace from all
+            column names
+        **kwargs: any kwargs that are valid for ``pandas.read_csv``
+    """
+    # Read file with pandas based on its type
+    file_ext = os.path.splitext(path)[1].lower()
+    if file_ext == '.csv':
+        dataframe = pandas.read_csv(path, **kwargs)
+    elif file_ext in ['.xlsx', '.xls']:
+        dataframe = pandas.read_excel(path, **kwargs)
+    else:
+        raise ValueError('Info table %s is not a CSV nor an Excel file.' %
+                         base_info_table_path)
+    
+    if to_lower:
+        dataframe.columns = dataframe.columns.str.lower()
+    if strip:
+        dataframe.columns = dataframe.columns.str.strip()
+    return dataframe
+
+
 def make_directories(directory_list):
     """Create directories in `directory_list` if they do not already exist."""
     if not isinstance(directory_list, list):

@@ -551,8 +551,7 @@ def execute(args):
         # If Price Table provided use that for price of energy, validate inputs
         time = int(val_parameters_dict['time_period'])
         if args["price_table"]:
-            wind_price_df = pandas.read_csv(args["wind_schedule"])
-            wind_price_df.columns = wind_price_df.columns.str.strip().lower()
+            wind_price_df = utils.read_csv_to_dataframe(args["wind_schedule"])
 
             year_count = len(wind_price_df['year'])
             if year_count != time + 1:
@@ -929,11 +928,11 @@ def execute(args):
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
         # Read the grid points csv, and convert it to land and grid dictionary
-        grid_land_df = pandas.read_csv(args['grid_points_path'])
+        grid_land_df = utils.read_csv_to_dataframe(args['grid_points_path'])
         # Convert column fields to upper cased to conform to the user's guide
         # and strip any leading/trailing whitespace
         grid_land_df.columns = [
-            field.strip().upper() for field in grid_land_df.columns
+            field.upper() for field in grid_land_df.columns
         ]
 
         # Make separate dataframes based on 'TYPE'
@@ -1655,9 +1654,7 @@ def _read_csv_wind_parameters(csv_path, parameter_list):
 
     """
     # use the parameters in the first column as indeces for the dataframe
-    wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0)
-    wind_param_df.columns = wind_param_df.columns.strip()
-    wind_param_df.index = wind_param_df.index.str.lower()
+    wind_param_df = utils.read_csv_to_dataframe(csv_path, header=None, index_col=0)
     # only get the required parameters and leave out the rest
     wind_param_df = wind_param_df[wind_param_df.index.isin(parameter_list)]
     wind_dict = wind_param_df.to_dict()[1]
@@ -1771,8 +1768,7 @@ def _read_csv_wind_data(wind_data_path, hub_height):
             to dictionaries that hold wind data at that location.
 
     """
-    wind_point_df = pandas.read_csv(wind_data_path)
-    wind_point_df.columns = wind_point_df.columns.strip()
+    wind_point_df = utils.read_csv_to_dataframe(wind_data_path, to_lower=False)
 
     # Calculate scale value at new hub height given reference values.
     # See equation 3 in users guide
