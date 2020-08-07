@@ -14,6 +14,9 @@ from .. import utils
 LOGGER = logging.getLogger(__name__)
 
 
+POOL_SOIL = 'soil'
+POOL_BIOMASS = 'biomass'
+POOL_LITTER = 'litter'
 NODATA_FLOAT32 = float(numpy.finfo(numpy.float32).min)
 NODATA_UINT16 = int(numpy.iinfo(numpy.uint16).max)
 
@@ -194,6 +197,7 @@ def execute(args):
             prior_transition_year = current_transition_year
             current_transition_year = year
 
+            disturbance_rasters[current_transition_year] = {}
             emissions_tasks_since_transition = []
             net_sequestration_tasks_since_transition = []
             accumulation_tasks_since_transition = []
@@ -201,8 +205,8 @@ def execute(args):
         # Stocks are only reclassified from inputs in the baseline year.
         # In all other years, stocks are based on the previous year's
         # calculations.
-        if year == baseline_lulc_year:
-            for pool in ('soil', 'biomass'):
+        for pool in (POOL_SOIL, POOL_BIOMASS):
+            if year == baseline_lulc_year:
                 stock_rasters[year][pool] = os.path.join(
                     intermediate_dir, f'stocks-{pool}-{year}{suffix}.tif')
                 current_stock_tasks[pool] = task_graph.add_task(
@@ -240,11 +244,10 @@ def execute(args):
                             f'Mapping {pool} carbon accumulation for {year}'))
                 accumulation_tasks_since_transition.append(
                     current_accumulation_tasks[pool])
-        else:
-            # In every year after the baseline, stocks are calculated as
-            # Stock[pool][thisyear] = stock[pool][lastyear] +
-            #       netsequestration[pool][lastyear]
-            for pool in ('soil', 'biomass'):
+            else:
+                # In every year after the baseline, stocks are calculated as
+                # Stock[pool][thisyear] = stock[pool][lastyear] +
+                #       netsequestration[pool][lastyear]
                 stock_rasters[year][pool] = os.path.join(
                     intermediate_dir, f'stocks-{pool}-{year}{suffix}.tif')
                 current_stock_tasks[pool] = task_graph.add_task(
@@ -258,14 +261,12 @@ def execute(args):
                     target_path_list=[stock_rasters[year][pool]],
                     task_name=f'Calculating {pool} carbon stock for {year}')
 
-        # These variables happen on ALL transition years, including baseline.
-        # TODO: allow accumulation to be spatially defined and not just
-        # classified.
-        if year in years_with_lulc_rasters:
-            if prior_transition_year is None:
-                prior_transition_year = baseline_lulc_year
-            disturbance_rasters[current_transition_year] = {}
-            for pool in ('soil', 'biomass'):
+            # These variables happen on ALL transition years, including baseline.
+            # TODO: allow accumulation to be spatially defined and not just
+            # classified.
+            if year in years_with_lulc_rasters:
+                if prior_transition_year is None:
+                    prior_transition_year = baseline_lulc_year
                 yearly_accum_rasters[year][pool] = os.path.join(
                     intermediate_dir,
                     f'accumulation-{pool}-{year}{suffix}.tif')
@@ -368,7 +369,6 @@ def execute(args):
                                 f'disturbance as of {current_transition_year}')))
 
 
-        for pool in ('soil', 'biomass'):
             if year >= first_transition_year:
                 # calculate emissions for this year
                 emissions_rasters[year][pool] = os.path.join(
