@@ -266,46 +266,41 @@ export default class InvestJob extends React.Component {
     });
   }
 
-  async investGetSpec(modelName, argsInitDict={}) {
-    /** Get an invest model's ARGS_SPEC when a model button is clicked.
-    *  
-    * Also get the model's UI spec if it exists.
-    * Then reset much of this component's state in case a prior job's 
-    * state exists. This includes setting a new setupKey, which is passed
-    * as a key to the SetupTab component, triggering it to re-mount
-    * rather than just re-render, allowing one-time initilization of
-    * arg grouping and ordering.
-    *
-    * @param {string} - as in a model name appearing in `invest list`
-    * @param {object} - empty, or a JSON representation of an invest model's
-    *                   agruments dictionary
-    */
-
+  /** Get an invest model's ARGS_SPEC when a model button is clicked.
+   *
+   * Also get the model's UI spec if it exists.
+   * Then reset much of this component's state in case a prior job's
+   * state exists. This includes setting a new setupKey, which is passed
+   * as a key to the SetupTab component, triggering it to re-mount
+   * rather than just re-render, allowing one-time initilization of
+   * arg grouping and ordering.
+   *
+   * @param {string} modelName - as in a model name appearing in `invest list`
+   * @param {object} argsInitDict - empty, or a JSON representation of an
+   *   invest model's agruments dictionary
+   */
+  async investGetSpec(modelName, argsInitDict = {}) {
     const spec = await getSpec(modelName);
     if (spec) {
-      // This "destructuring" captures spec.args into args and leaves 
-      // the rest of spec in modelSpec.
-      const {args, ...modelSpec} = spec;
-      
-      // Even if UI spec doesn't exist for a model, a minimum viable input
-      // form can still be generated, so log errors but don't throw.
+      const { args, ...modelSpec } = spec;
+      // A model's UI Spec is optional and may not exist
       let uiSpec = {};
       try {
         uiSpec = JSON.parse(fs.readFileSync(
-          path.join(fileRegistry.INVEST_UI_DATA, spec.module + '.json')))
+          path.join(fileRegistry.INVEST_UI_DATA, `${spec.module}.json`)
+        ));
       } catch (err) {
         if (err.code === 'ENOENT') {
-          logger.warn(err)
-          logger.warn(`No UI spec exists for ${spec.module}`)
+          logger.warn(err);
+          logger.warn(`No UI spec exists for ${spec.module}`);
         } else {
-          logger.error(err.stack)
+          logger.error(err.stack);
         }
       }
-      
       // extend the args spec with the UI spec
-      for (const key in args) {
-        Object.assign(args[key], uiSpec[key])
-      }
+      Object.keys(args).forEach((key) => {
+        Object.assign(args[key], uiSpec[key]);
+      });
       // This event represents a user selecting a model,
       // and so some existing state should be reset.
       this.setState({
@@ -320,93 +315,125 @@ export default class InvestJob extends React.Component {
         sessionID: null,
         workspace: null,
         setupKey: changeSetupKey(this.state.setupKey),
-        activeTab: 'setup'
+        activeTab: 'setup',
       });
     } else {
-      logger.error(`no spec found for ${modelName}`)
-      return new Promise((resolve) => resolve(false))
+      logger.error(`no spec found for ${modelName}`);
     }
-    return new Promise((resolve) => resolve(true))
   }
 
+  /** Change the tab that is currently visible.
+   * @param {string} key - the value of one of the Nav.Link eventKey.
+   */
   switchTabs(key) {
-    /** Change the tab that is currently visible.
-    * @param {string} key - the value of one of the Nav.Link eventKey.
-    */
     this.setState(
-      {activeTab: key}
+      { activeTab: key }
     );
   }
 
-  render () {
-    const activeTab = this.state.activeTab;
+  render() {
+    const {
+      activeTab,
+      modelSpec,
+      modelName,
+      setupKey,
+      argsSpec,
+      argsInitDict,
+      jobStatus,
+      logfile,
+      logStdErr,
+    } = this.state;
+    const {
+      saveSettings,
+      investSettings,
+      investList,
+      recentSessions,
+    } = this.props;
     const setupDisabled = !(this.state.argsSpec); // enable once modelSpec has loaded
-    const logDisabled = (this.state.jobStatus == null);  // enable during and after execution
-    
-    return(
+    const logDisabled = (this.state.jobStatus == null); // enable during and after execution
+
+    return (
       <TabContainer activeKey={activeTab}>
         <Navbar bg="light" expand="lg">
-          <Nav variant="tabs" id="controlled-tab-example" className="mr-auto"
+          <Nav
+            variant="tabs"
+            id="controlled-tab-example"
+            className="mr-auto"
             activeKey={activeTab}
-            onSelect={this.switchTabs}>
+            onSelect={this.switchTabs}
+          >
             <Nav.Item>
-              <Nav.Link eventKey="home">Home</Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="setup" disabled={setupDisabled}>Setup</Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="log" disabled={logDisabled}>
-                {this.state.jobStatus === 'running' && 
-                 <Spinner animation='border' size='sm' role='status' aria-hidden='true'/>
-                } Log
+              <Nav.Link eventKey="home">
+                Home
               </Nav.Link>
             </Nav.Item>
             <Nav.Item>
-              <Nav.Link eventKey="resources">Resources</Nav.Link>
+              <Nav.Link eventKey="setup" disabled={setupDisabled}>
+                Setup
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="log" disabled={logDisabled}>
+                { this.state.jobStatus === 'running'
+                && (
+                  <Spinner
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                  />
+                )}
+                Log
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="resources">
+                Resources
+              </Nav.Link>
             </Nav.Item>
           </Nav>
-          <Navbar.Brand>{this.state.modelSpec.model_name}</Navbar.Brand>
+          <Navbar.Brand>{modelSpec.model_name}</Navbar.Brand>
           <LoadButton
             investGetSpec={this.investGetSpec}
             batchUpdateArgs={this.batchUpdateArgs}
           />
-          <SettingsModal className="mx-3"
-            saveSettings={this.props.saveSettings}
-            investSettings={this.props.investSettings}
+          <SettingsModal
+            className="mx-3"
+            saveSettings={saveSettings}
+            investSettings={investSettings}
           />
         </Navbar>
         <TabContent className="mt-3">
           <TabPane eventKey="home" title="Home">
             <HomeTab
-              investList={this.props.investList}
+              investList={investList}
               investGetSpec={this.investGetSpec}
               saveState={this.saveState}
               loadState={this.loadState}
-              recentSessions={this.props.recentSessions}
+              recentSessions={recentSessions}
             />
           </TabPane>
           <TabPane eventKey="setup" title="Setup">
-            <SetupTab key={this.state.setupKey}
-              pyModuleName={this.state.modelSpec.module}
-              modelName={this.state.modelName}
-              argsSpec={this.state.argsSpec}
-              argsInitValues={this.state.argsInitDict}
+            <SetupTab key={setupKey}
+              pyModuleName={modelSpec.module}
+              modelName={modelName}
+              argsSpec={argsSpec}
+              argsInitValues={argsInitDict}
               investExecute={this.investExecute}
               argsToJsonFile={this.argsToJsonFile}
             />
           </TabPane>
           <TabPane eventKey="log" title="Log">
             <LogTab
-              jobStatus={this.state.jobStatus}
-              logfile={this.state.logfile}
-              logStdErr={this.state.logStdErr}
+              jobStatus={jobStatus}
+              logfile={logfile}
+              logStdErr={logStdErr}
             />
           </TabPane>
           <TabPane eventKey="resources" title="Resources">
             <ResourcesTab 
-              modelName={this.state.modelSpec.model_name}
-              docs={this.state.modelSpec.userguide_html}
+              modelName={modelSpec.model_name}
+              docs={modelSpec.userguide_html}
             />
           </TabPane>
         </TabContent>

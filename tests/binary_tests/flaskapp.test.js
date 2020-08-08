@@ -46,7 +46,7 @@ test('fetch invest validation', async () => {
   const argsDict = argsDictFromObject(spec.args)
   const payload = { 
     model_module: spec.module,
-    args: argsDict
+    args: JSON.stringify(argsDict)
   };
   
   const results = await server_requests.fetchValidation(payload);
@@ -62,7 +62,7 @@ test('write parameters to file and parse them from file', async () => {
   const payload = { 
     parameterSetPath: filepath,
     moduleName: spec.module,
-    args: argsDict,
+    args: JSON.stringify(argsDict),
     relativePaths: true
   };
   
@@ -103,7 +103,7 @@ test('write parameters to python script', async () => {
     filepath: filepath,
     modelname: modelName,
     pyname: spec.module,
-    args: argsDict,
+    args: JSON.stringify(argsDict),
   };
   const _ = await server_requests.saveToPython(payload);
   
