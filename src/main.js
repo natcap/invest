@@ -7,21 +7,24 @@ if (isDevMode) {
   dotenv.config();
 }
 
-const { app, BrowserWindow, ipcMain, screen } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
-const { getFlaskIsReady, shutdownPythonProcess } = require('./server_requests');
-const { findInvestBinaries, createPythonFlaskProcess } = require('./main_helpers');
+const {
+  app, BrowserWindow, ipcMain, screen
+} = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
+const {
+  getFlaskIsReady, shutdownPythonProcess
+} = require('./server_requests');
+const {
+  findInvestBinaries, createPythonFlaskProcess
+} = require('./main_helpers');
 
 const PORT = (process.env.PORT || '5000').trim();
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
-/**
- * Create an Electron browser window and start the flask application.
- *
- */
+/** Create an Electron browser window and start the flask application. */
 const createWindow = async () => {
-  // The main process needs to know the location of the invest server binary
+  // The main process needs to know the location of the invest server binary.
   // The renderer process needs the invest cli binary. We can find them
   // together here and pass data to the renderer upon request.
   const binaries = await findInvestBinaries(isDevMode);
@@ -32,7 +35,7 @@ const createWindow = async () => {
 
   createPythonFlaskProcess(binaries.server, isDevMode);
   // Wait for a response from the server before loading the app
-  const _ = await getFlaskIsReady();
+  await getFlaskIsReady();
 
   // Create the browser window.
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -51,7 +54,9 @@ const createWindow = async () => {
   // Open the DevTools.
   mainWindow.webContents.on('did-frame-finish-load', async () => {
     if (isDevMode) {
-      const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
+      const {
+        default: installExtension, REACT_DEVELOPER_TOOLS
+      } = require('electron-devtools-installer');
       await installExtension(REACT_DEVELOPER_TOOLS);
       // enableLiveReload({ strategy: 'react-hmr' });
       mainWindow.webContents.openDevTools();

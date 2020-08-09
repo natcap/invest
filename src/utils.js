@@ -19,7 +19,7 @@ export function loadRecentSessions(jobDatabasePath) {
   return new Promise((resolve) => {
     const db = JSON.parse(fs.readFileSync(jobDatabasePath, 'utf8'));
     const sortedJobs = Object.entries(db).sort(
-      (a, b) => b[1]['systemTime'] - a[1]['systemTime']
+      (a, b) => b[1].systemTime - a[1].systemTime
     );
     resolve(sortedJobs);
   });
@@ -112,14 +112,12 @@ export function boolStringToBoolean(val) {
 /** Create a JSON string with invest argument keys and values.
  *
  * @param {object} args - object keyed by invest argument keys and
- *   with each item including a `value` property.
+ *   with each item including a `value` property, among others.
  * @returns {object} - invest argument key: value pairs as expected
  * by invest model `execute` and `validate` functions
  */
 export function argsDictFromObject(args) {
   const argsDict = {};
-  // The args parameter has many properties other than `value`
-  // and they should not be included in the returned string.
   Object.keys(args).forEach((argname) => {
     argsDict[argname] = args[argname].value;
   });
