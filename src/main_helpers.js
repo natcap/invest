@@ -44,8 +44,6 @@ export function findInvestBinaries(isDevMode) {
       investExe = path.join(binaryPath, `invest${ext}`);
     }
     logger.info(`Found invest binaries ${investExe} and ${serverExe}`)
-    console.log(fs.existsSync(investExe))
-    console.log(fs.existsSync(serverExe))
     resolve({ invest: investExe, server: serverExe });
   });
 }
@@ -68,10 +66,8 @@ export function createPythonFlaskProcess(serverExe, isDevMode) {
       // The most reliable, cross-platform way to make sure spawn
       // can find the exe is to pass only the command name while
       // also putting it's location on the PATH:
-      console.log(path.basename(serverExe));
-      console.log(path.resolve(path.dirname(serverExe)));
       pythonServerProcess = spawn(path.basename(serverExe), {
-        env: { PATH: path.resolve(path.dirname(serverExe)) }
+        env: { PATH: path.dirname(serverExe) }
       });
     }
 
