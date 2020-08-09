@@ -58,7 +58,6 @@ const createWindow = async () => {
         default: installExtension, REACT_DEVELOPER_TOOLS
       } = require('electron-devtools-installer');
       await installExtension(REACT_DEVELOPER_TOOLS);
-      // enableLiveReload({ strategy: 'react-hmr' });
       mainWindow.webContents.openDevTools();
     }
   });

@@ -14,7 +14,7 @@ const HOSTNAME = 'http://localhost';
  * @param {number} retries - number of recursive calls this function is allowed.
  * @returns { Promise } resolves text indicating success.
  */
-export function getFlaskIsReady(i = 0, retries = 11) {
+export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
   return (
     fetch(`${HOSTNAME}:${PORT}/ready`, {
       method: 'get',
@@ -24,11 +24,10 @@ export function getFlaskIsReady(i = 0, retries = 11) {
         if (error.code === 'ECONNREFUSED') {
           while (i < retries) {
             i++;
-            // Try again after a short pause. 500ms works well in the
-            // context of flaskapp.test.js. Requiring 1 or 2 retries.
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            // Try every 100ms, usually takes about 1 second to startup.
+            await new Promise((resolve) => setTimeout(resolve, 100));
             logger.debug(`retry # ${i}`);
-            return await getFlaskIsReady(i);
+            return await getFlaskIsReady({ i: i, retries: retries });
           }
           logger.error(`Not able to connect to server after ${retries} tries.`);
           logger.error(error.stack);
