@@ -66,6 +66,8 @@ export function createPythonFlaskProcess(serverExe, isDevMode) {
       // The most reliable, cross-platform way to make sure spawn
       // can find the exe is to pass only the command name while
       // also putting it's location on the PATH:
+      console.log(path.basename(serverExe));
+      console.log(path.dirname(serverExe));
       pythonServerProcess = spawn(path.basename(serverExe), {
         env: { PATH: path.dirname(serverExe) }
       });

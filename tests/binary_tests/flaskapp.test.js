@@ -10,10 +10,7 @@ dotenv.config();
 
 // These won't run in the same CI as the rest of our tests
 // because we don't have the python env available.
-// we can have the python env available during the build & dist CI,
-// at which point we want to run these tests in production mode, not devMode.
-// Or we can fetch prebuilt binaries in the Actions test-runner
-// and setup a .env config in order to run in devMode
+// We can have the python env available during the build & dist CI.
 
 beforeAll(async () => {
 	const binaries = await findInvestBinaries(true); // trues force devMode
