@@ -553,18 +553,11 @@ def read_csv_to_dataframe(path, **kwargs, to_lower=True, strip=True):
         to_lower (bool): if True, convert all column names to lowercase
         strip (bool): if True, strip leading/trailing whitespace from all
             column names
-        **kwargs: any kwargs that are valid for ``pandas.read_csv``
+        **kwargs: any kwargs that are valid for ``pandas.read_csv`` or
+            ``pandas.read_excel``
     """
-    # Read file with pandas based on its type
-    file_ext = os.path.splitext(path)[1].lower()
-    if file_ext == '.csv':
-        dataframe = pandas.read_csv(path, **kwargs)
-    elif file_ext in ['.xlsx', '.xls']:
-        dataframe = pandas.read_excel(path, **kwargs)
-    else:
-        raise ValueError('Info table %s is not a CSV nor an Excel file.' %
-                         base_info_table_path)
-    
+    dataframe = pandas.read_csv(path, **kwargs)
+
     if to_lower:
         dataframe.columns = dataframe.columns.str.lower()
     if strip:

@@ -656,24 +656,23 @@ def load_msa_parameter_table(
 
     """
     msa_table = utils.read_csv_to_dataframe(
-        msa_parameter_table_filename, 
-        to_lower=False, 
+        msa_parameter_table_filename,
         sep=None, 
         engine='python')
     msa_dict = collections.defaultdict(dict)
     for _, row in msa_table.iterrows():
-        if row['Value'][0] in ['<', '>']:
+        if row['value'][0] in ['<', '>']:
             # put the limit and the MSA value in a tub
-            value = row['Value'][0]
+            value = row['value'][0]
             # take 1: because it starts with a < or >
-            msa_dict[row['MSA_type']][value] = (
-                float(row['Value'][1:]), float(row['MSA_x']))
+            msa_dict[row['msa_type']][value] = (
+                float(row['value'][1:]), float(row['msa_x']))
             continue
-        elif '-' in row['Value']:
-            value = float(row['Value'].split('-')[1])
+        elif '-' in row['value']:
+            value = float(row['value'].split('-')[1])
         else:
-            value = float(row['Value'])
-        msa_dict[row['MSA_type']][value] = float(row['MSA_x'])
+            value = float(row['value'])
+        msa_dict[row['msa_type']][value] = float(row['msa_x'])
     # landcover ID 12 is a linear interpolation between 8 and 9
     msa_dict['msa_lu'][12] = (
         msa_dict['msa_lu'][8] * (1.0 - intensification_fraction) +

@@ -550,8 +550,8 @@ def execute(args):
 
         # If Price Table provided use that for price of energy, validate inputs
         time = int(val_parameters_dict['time_period'])
-        if args["price_table"]:
-            wind_price_df = utils.read_csv_to_dataframe(args["wind_schedule"])
+        if args['price_table']:
+            wind_price_df = utils.read_csv_to_dataframe(args['wind_schedule'])
 
             year_count = len(wind_price_df['year'])
             if year_count != time + 1:
@@ -929,22 +929,17 @@ def execute(args):
 
         # Read the grid points csv, and convert it to land and grid dictionary
         grid_land_df = utils.read_csv_to_dataframe(args['grid_points_path'])
-        # Convert column fields to upper cased to conform to the user's guide
-        # and strip any leading/trailing whitespace
-        grid_land_df.columns = [
-            field.upper() for field in grid_land_df.columns
-        ]
 
         # Make separate dataframes based on 'TYPE'
         grid_df = grid_land_df.loc[(
-            grid_land_df['TYPE'].str.upper() == 'GRID')]
+            grid_land_df['type'].str.upper() == 'GRID')]
         land_df = grid_land_df.loc[(
-            grid_land_df['TYPE'].str.upper() == 'LAND')]
+            grid_land_df['type'].str.upper() == 'LAND')]
 
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
-        grid_df.set_index('ID', inplace=True)
+        grid_df.set_index('id', inplace=True)
         grid_dict = grid_df.to_dict('index')
-        land_df.set_index('ID', inplace=True)
+        land_df.set_index('id', inplace=True)
         land_dict = land_df.to_dict('index')
 
         grid_vector_path = os.path.join(inter_dir,

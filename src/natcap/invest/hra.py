@@ -2447,9 +2447,23 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     required_types = [_HABITAT_TYPE, _STRESSOR_TYPE]
     required_buffer_type = _STRESSOR_TYPE
 
-    info_df = utils.read_csv_to_dataframe(base_info_table_path)
-    # Convert column names to upper case
-    info_df.columns = info_df.columns.str.to_upper()
+    # Read file with pandas based on its type
+    file_ext = os.path.splitext(base_info_table_path)[1].lower()
+    if file_ext == '.csv':
+        info_df = pandas.read_csv(base_info_table_path)
+    elif file_ext in ['.xlsx', '.xls']:
+        info_df = pandas.read_excel(base_info_table_path)
+    else:
+        raise ValueError('Info table %s is not a CSV nor an Excel file.' %
+                         base_info_table_path)
+
+    # Convert column names to upper case, strip whitespace,
+    # and encode it to strings if it's not a string (e.g. unicode)
+    info_df.columns = [
+        col.strip().upper() if isinstance(col, str) 
+        else col.encode('utf-8').upper()
+        for col in info_df.columns]
+
     missing_columns = list(
         set(required_column_headers) - set(info_df.columns.values))
 
@@ -2592,7 +2606,6 @@ def _get_criteria_dataframe(base_criteria_table_path):
                          list(missing_indexes))
 
     # Validate the column header, which should have 'criteria type'
-    # and strip any leading/trailing whitespace
     criteria_df.columns = [
         x.strip() if isinstance(x, str) else None for x in
         criteria_df.loc[_HABITAT_NAME_HEADER].values]
