@@ -690,6 +690,7 @@ def _calculate_emissions(
     # Current timestep (integer), the current timestep year.
     #
     # Returns: A float32 matrix with the volume of carbon emissions THIS YEAR.
+
     emissions_matrix = numpy.empty(
         carbon_disturbed_matrix.shape, dtype=numpy.float32)
     emissions_matrix[:] = NODATA_FLOAT32
