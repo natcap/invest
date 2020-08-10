@@ -21,6 +21,19 @@ NODATA_FLOAT32 = float(numpy.finfo(numpy.float32).min)
 NODATA_UINT16 = int(numpy.iinfo(numpy.uint16).max)
 
 
+def execute_spatially_explicit(args):
+    # If a graph already exists, use that.  Otherwise, create one.
+    try:
+        task_graph = args['task_graph']
+    except KeyError:
+        taskgraph_cache_dir = os.path.join(args['workspace_dir'], 'task_cache')
+        task_graph = taskgraph.TaskGraph(
+            taskgraph_cache_dir,
+            int(args['n_workers']))
+
+    pass
+
+
 def execute(args):
     suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'], 'output')
