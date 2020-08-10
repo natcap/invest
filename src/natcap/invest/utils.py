@@ -541,7 +541,7 @@ def build_lookup_from_csv(
     return lookup_dict 
 
 
-def read_csv_to_dataframe(path, **kwargs, to_lower=True, strip=True):
+def read_csv_to_dataframe(path, to_lower=True, strip=True, **kwargs):
     """
     Wrapper around ``pandas.read_csv`` that standardizes the column names by
     stripping leading/trailing whitespace and making all lowercase.
