@@ -765,12 +765,16 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
         transition_csv_path, sep=None, index_col=False, engine='python',
         encoding=encoding)
 
-    lulc_class_to_lucode = {
-        values['lulc-class']: lucode for (lucode, values) in
-        biophysical_dict.items()}
+    lulc_class_to_lucode = {}
+    max_lucode = 0
+    for (lucode, values) in biophysical_dict.items():
+        lulc_class_to_lucode[values['lulc-class']] = lucode
+        max_lucode = max(max_lucode, lucode)
 
     # Load up a sparse matrix with the transitions to save on memory usage.
-    n_rows = len(table.index)
+    # The number of possible rows/cols is the value of the maximum possible
+    # lucode we're indexing with plus 1 (to account for 1-based counting).
+    n_rows = max_lucode + 1
     soil_disturbance_matrix = scipy.sparse.dok_matrix(
         (n_rows, n_rows), dtype=numpy.float32)
     biomass_disturbance_matrix = scipy.sparse.dok_matrix(

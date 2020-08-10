@@ -1145,9 +1145,12 @@ class TestCBC2(unittest.TestCase):
         srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31 S
         wkt = srs.ExportToWkt()
 
-        transition_magnitude_matrix = scipy.sparse.dok_matrix([
-            [0.0, 1.1],
-            [2.2, 3.3]], dtype=numpy.float32)
+        transition_magnitude_matrix = scipy.sparse.dok_matrix(
+            (2, 2), dtype=numpy.float32)
+        transition_magnitude_matrix[0, 0] = 0.0
+        transition_magnitude_matrix[0, 1] = 1.1
+        transition_magnitude_matrix[1, 0] = 2.2
+        transition_magnitude_matrix[1, 1] = 3.3
 
         landuse_from_raster_path = os.path.join(
             self.workspace_dir, 'from.tif')
