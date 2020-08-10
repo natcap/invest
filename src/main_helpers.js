@@ -43,7 +43,7 @@ export function findInvestBinaries(isDevMode) {
       serverExe = path.join(binaryPath, `server${ext}`);
       investExe = path.join(binaryPath, `invest${ext}`);
     }
-    logger.info(`Found invest binaries ${investExe} and ${serverExe}`)
+    logger.info(`Found invest binaries ${investExe} and ${serverExe}`);
     resolve({ invest: investExe, server: serverExe });
   });
 }
@@ -67,7 +67,7 @@ export function createPythonFlaskProcess(serverExe, isDevMode) {
       // can find the exe is to pass only the command name while
       // also putting it's location on the PATH:
       pythonServerProcess = spawn(path.basename(serverExe), {
-        env: { PATH: path.dirname(serverExe) }
+        env: { PATH: path.dirname(serverExe) },
       });
     }
 

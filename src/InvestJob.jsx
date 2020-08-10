@@ -414,7 +414,8 @@ export default class InvestJob extends React.Component {
             />
           </TabPane>
           <TabPane eventKey="setup" title="Setup">
-            <SetupTab key={setupKey}
+            <SetupTab
+              key={setupKey}
               pyModuleName={modelSpec.module}
               modelName={modelName}
               argsSpec={argsSpec}
@@ -443,21 +444,20 @@ export default class InvestJob extends React.Component {
 }
 
 InvestJob.propTypes = {
-  investExe: PropTypes.string,
-  investList: PropTypes.object,
+  investExe: PropTypes.string.isRequired,
+  investList: PropTypes.objectOf(
+    PropTypes.shape({
+      internal_name: PropTypes.string,
+    })
+  ).isRequired,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
-  }),
-  recentSessions: PropTypes.array,
+  }).isRequired,
+  recentSessions: PropTypes.arrayOf(
+    PropTypes.array
+  ),
   jobDatabase: PropTypes.string,
-  directoryConstants: PropTypes.shape({
-    CACHE_DIR: PropTypes.string,
-    TEMP_DIR: PropTypes.string,
-    INVEST_UI_DATA: PropTypes.string
-  }),
-  updateRecentSessions: PropTypes.func,
-  saveSettings: PropTypes.func
+  updateRecentSessions: PropTypes.func.isRequired,
+  saveSettings: PropTypes.func.isRequired,
 }
-
-
