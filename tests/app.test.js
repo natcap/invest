@@ -129,13 +129,20 @@ test('Settings dialog interactions: n workers', async () => {
 })
 
 describe('InVEST subprocess testing', () => {
-  const spec = { args: {
-    workspace_dir: { 
-      name: 'Workspace', 
-      type: 'directory'},
-    results_suffix: {
-      name: 'Suffix',
-      type: 'freestyle_string'} } }
+  const spec = {
+    args: {
+      workspace_dir: { 
+        name: 'Workspace', 
+        type: 'directory',
+      },
+      results_suffix: {
+        name: 'Suffix',
+        type: 'freestyle_string',
+      }
+    },
+    model_name: 'Eco Model',
+    module: 'natcap.invest.dot',
+  }
 
   const dummyTextToLog = JSON.stringify(spec.args)
   const logfileName = 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt'
@@ -143,7 +150,6 @@ describe('InVEST subprocess testing', () => {
   let mockInvestProc;
 
   beforeEach(() => {
-    // const fakeWorkspace = 'tests/data'
     fakeWorkspace = fs.mkdtempSync(path.join(
       'tests/data', 'data-'))
     const logfilePath = path.join(fakeWorkspace, logfileName)

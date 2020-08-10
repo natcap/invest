@@ -53,19 +53,20 @@ export default class InvestJob extends React.Component {
 
     this.state = {
       setupKey: 0,
-      sessionID: null,                 // hash of modelName + workspace generated at model execution
-      modelName: '',                   // as appearing in `invest list`
-      modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
-      argsSpec: null,                  // ARGS_SPEC.args, the immutable args stuff
-      argsInitDict: null,              // 
-      workspace: { 
-        directory: null, suffix: null
-      },                               // only set values when execute starts the subprocess
-      logfile: null,                   // path to the invest logfile associated with invest job
-      logStdErr: null,                 // stderr data from the invest subprocess
-      sessionProgress: 'home',         // 'home', 'setup', 'log' - used on loadState to decide which tab to activate
-      jobStatus: null,                 // 'running', 'error', 'success'
-      activeTab: 'home',               // controls which tab is currently visible
+      sessionID: null, // hash of modelName + workspace generated at model execution
+      modelName: '', // as appearing in `invest list`
+      modelSpec: {}, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
+      argsSpec: {}, // ARGS_SPEC.args, the immutable args stuff
+      argsInitDict: null,
+      workspace: { // only set values when execute starts the subprocess
+        directory: null,
+        suffix: null,
+      },
+      logfile: null, // path to the invest logfile associated with invest job
+      logStdErr: null, // stderr data from the invest subprocess
+      sessionProgress: 'home', // 'home', 'setup', 'log' - used on loadState to decide which tab to activate
+      jobStatus: null, // 'running', 'error', 'success'
+      activeTab: 'home', // controls which tab is currently visible
     };
 
     this.argsToJsonFile = this.argsToJsonFile.bind(this);

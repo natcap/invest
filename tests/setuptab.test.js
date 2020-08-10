@@ -31,7 +31,7 @@ function renderSetupFromSpec(spec) {
     <InvestJob
       investExe = ''
       investList={INVEST_LIST}
-      investSettings={null}
+      investSettings={{nWorkers: '-1', loggingLevel: 'INFO'}}
       recentSessions={[]}
       jobDatabase={fileRegistry.JOBS_DATABASE}
       updateRecentSessions={() => {}}

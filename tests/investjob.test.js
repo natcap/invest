@@ -32,7 +32,7 @@ function renderInvestJob() {
     <InvestJob
       investExe=''
       investList={{Carbon: {internal_name: 'carbon'}}}
-      investSettings={{nWorkers: '-1'}}
+      investSettings={{nWorkers: '-1', loggingLevel: 'INFO'}}
       recentSessions={MOCK_RECENT_SESSIONS_VALUE}
       jobDatabase={fileRegistry.JOBS_DATABASE}
       updateRecentSessions={() => {}}
@@ -76,6 +76,7 @@ test('Clicking a recent session renders SetupTab', async () => {
       workspace_dir: "carbon-sample", 
     }
   }
+  getSpec.mockResolvedValue(SAMPLE_SPEC)
   fetchDatastackFromFile.mockResolvedValue(mockDatastack)
 
   const { getByText, getByLabelText, utils } = renderInvestJob()
@@ -97,6 +98,7 @@ test('Loading a recent session when the invest logfile is missing', async () => 
   /* We should get an alert saying nothing can be loaded. */
   const spy = jest.spyOn(window, 'alert').mockImplementation(() => {});
   fetchDatastackFromFile.mockResolvedValue(undefined)
+  getSpec.mockResolvedValue(SAMPLE_SPEC);
 
   const { getByText, getByLabelText, utils } = renderInvestJob()
 
