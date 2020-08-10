@@ -33,6 +33,13 @@
         "max-classes-per-file": ["error", 2],
         "react/destructuring-assignment": ["warn", "always"],
         "react/jsx-fragments": ["off", "syntax"],
-        "camelcase": ["warn", ]
+        "camelcase": ["warn", ],
+        "comma-dangle": ["warn", {
+            "arrays": "always-multiline",
+            "objects": "always-multiline",
+            "imports": "never",
+            "exports": "never",
+            "functions": "never"
+        }]
     }
 }
