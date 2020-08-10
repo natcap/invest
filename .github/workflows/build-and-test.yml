@@ -93,7 +93,7 @@ jobs:
 
             - name: Set up MacOS python
               if: matrix.os != 'windows-latest'
-              uses: goanpeca/setup-miniconda@v1.1.2
+              uses: goanpeca/setup-miniconda@v1.6.0
               with:
                   activate-environment: mac-env
                   auto-update-conda: true
@@ -179,7 +179,7 @@ jobs:
               run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Set up python
-              uses: goanpeca/setup-miniconda@v1.1.2
+              uses: goanpeca/setup-miniconda@v1.6.0
               with:
                   activate-environment: conda-env
                   auto-update-conda: true
