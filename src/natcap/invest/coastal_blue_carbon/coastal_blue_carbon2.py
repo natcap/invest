@@ -21,6 +21,20 @@ NODATA_FLOAT32 = float(numpy.finfo(numpy.float32).min)
 NODATA_UINT16 = int(numpy.iinfo(numpy.uint16).max)
 
 
+# TODO: restructure to separate initial from baseline from transitions.
+#  Phase 0: Table reading and raster alignment.
+#  Phase 1: Map initial variables (reclassify initial biomass, soil, litter)
+#  Phase 2: Accumulate everything up to the first transition or analysis year.
+#  Phase 3: Do the transition timeseries analysis.
+#
+# This structure should nicely separate things out so that the looping logic is
+# substantially simpler and easier to maintain in the long run.
+#
+# Besides, net sequestration until the first transition is always just a
+# multiple of the accumulation per pool, then summed.  So why loop over piles
+# of rasters when we can just multiply?
+
+
 def execute_spatially_explicit(args):
     # If a graph already exists, use that.  Otherwise, create one.
     try:
@@ -277,7 +291,7 @@ def execute(args):
             # baseline.
             # TODO: allow accumulation to be spatially defined and not just
             # classified.
-            if year in years_with_lulc_rasters:
+            if year in years_with_lulc_rasters and year != baseline_lulc_year:
                 if prior_transition_year is None:
                     prior_transition_year = baseline_lulc_year
                 yearly_accum_rasters[year][pool] = os.path.join(
@@ -585,11 +599,15 @@ def execute(args):
             func=_sum_n_rasters,
             args=(summary_net_sequestration_raster_paths,
                   total_net_sequestration_raster_path),
+            kwargs={
+                'allow_pixel_stacks_with_nodata': True,
+            },
             dependent_task_list=summary_net_sequestration_tasks,
             target_path_list=[total_net_sequestration_raster_path],
             task_name=(
                 'Calculate total net carbon sequestration across all years'))
 
+    import pdb; pdb.set_trace()
     task_graph.close()
     task_graph.join()
 
@@ -690,15 +708,18 @@ def _calculate_emissions(
     # Current timestep (integer), the current timestep year.
     #
     # Returns: A float32 matrix with the volume of carbon emissions THIS YEAR.
-
     emissions_matrix = numpy.empty(
         carbon_disturbed_matrix.shape, dtype=numpy.float32)
     emissions_matrix[:] = NODATA_FLOAT32
 
+    # Landcovers with a carbon half-life of 0 will be assumed to have no
+    # emissions.
+    zero_half_life = numpy.isclose(carbon_half_life_matrix, 0.0)
+
     valid_pixels = (
-        ~numpy.isclose(carbon_disturbed_matrix, NODATA_FLOAT32) &
+        (~numpy.isclose(carbon_disturbed_matrix, NODATA_FLOAT32)) &
         (year_of_last_disturbance_matrix != NODATA_UINT16) &
-        ~numpy.isclose(carbon_half_life_matrix, 0.0))
+        (~zero_half_life))
 
     n_years_elapsed = (
         current_year - year_of_last_disturbance_matrix[valid_pixels])
@@ -710,10 +731,14 @@ def _calculate_emissions(
             0.5**((n_years_elapsed-1) / valid_half_life_pixels) -
             0.5**(n_years_elapsed / valid_half_life_pixels)))
 
+    # See note above about a half-life of 0.0 representing no emissions.
+    emissions_matrix[zero_half_life] = 0.0
+
     return emissions_matrix
 
 
-def _sum_n_rasters(raster_path_list, target_raster_path):
+def _sum_n_rasters(raster_path_list, target_raster_path,
+        allow_pixel_stacks_with_nodata=False):
     LOGGER.info('Summing %s rasters to %s', len(raster_path_list),
                 target_raster_path)
     pygeoprocessing.new_raster_from_base(
@@ -733,6 +758,7 @@ def _sum_n_rasters(raster_path_list, target_raster_path):
 
         # Assume everything is valid until proven otherwise
         valid_pixels = numpy.ones(sum_array.shape, dtype=numpy.bool)
+        pixels_touched = numpy.zeros(sum_array.shape, dtype=numpy.bool)
         for raster_path in raster_path_list:
             raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
             if raster is None:
@@ -747,8 +773,15 @@ def _sum_n_rasters(raster_path_list, target_raster_path):
                 valid_pixels &= (~numpy.isclose(array, band_nodata))
 
             sum_array[valid_pixels] += array[valid_pixels]
+            pixels_touched[valid_pixels] = 1
 
-        sum_array[~valid_pixels] = NODATA_FLOAT32
+        if allow_pixel_stacks_with_nodata:
+            sum_array[~pixels_touched] = NODATA_FLOAT32
+        else:
+            sum_array[~valid_pixels] = NODATA_FLOAT32
+
+        if NODATA_FLOAT32 in sum_array:
+            import pdb; pdb.set_trace()
 
         target_band.WriteArray(
             sum_array, block_info['xoff'], block_info['yoff'])

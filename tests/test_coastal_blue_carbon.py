@@ -1307,7 +1307,7 @@ class TestCBC2(unittest.TestCase):
                 64, 313, 3,  # initial
                 15, 0.5, 0.5, 1, 2,  # biomass
                 7.5, 0.3, 0.5, 0.66, 5.35,  # soil
-                0],  # litter accum.
+                1],  # litter accum.
             [2, 'parking lot',
                 0, 0, 0,  # initial
                 0, 0, 0, 0, 0,  # biomass
@@ -1337,14 +1337,14 @@ class TestCBC2(unittest.TestCase):
             self.workspace_dir, 'baseline_lulc.tif')
         baseline_matrix = numpy.array([[1, 2]], dtype=numpy.uint8)
         pygeoprocessing.numpy_array_to_raster(
-            baseline_matrix, 25, (2, -2), (2, -2), wkt,
+            baseline_matrix, 255, (2, -2), (2, -2), wkt,
             baseline_landcover_raster_path)
 
         transition_2010_raster_path = os.path.join(
             self.workspace_dir, 'transition_2010.tif')
         transition_2010_matrix = numpy.array([[2, 1]], dtype=numpy.uint8)
         pygeoprocessing.numpy_array_to_raster(
-            transition_2010_matrix, 25, (2, -2), (2, -2), wkt,
+            transition_2010_matrix, 255, (2, -2), (2, -2), wkt,
             transition_2010_raster_path)
 
         transition_rasters_csv_path = os.path.join(
@@ -1366,17 +1366,36 @@ class TestCBC2(unittest.TestCase):
 
         coastal_blue_carbon2.execute(args)
 
-        # TODO: pixel 1 is ending up nodata when it should definitely have a
-        # value.
+        # Sample values calculated by hand.  Pixel 0 only accumulates.  Pixel 1
+        # has no accumulation (per the biophysical table) and also has no
+        # emissions.
+        expected_sequestration_2000_to_2010 = numpy.array(
+            [[83.5, 0]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            (gdal.OpenEx(os.path.join(
+                args['workspace_dir'], 'output',
+                ('total_net_carbon_sequestration_between_'
+                    '2000_and_2010.tif')))).ReadAsArray(),
+            expected_sequestration_2000_to_2010)
+
+        # TODO: calculate expected emissions by hand.
+        expected_sequestration_2010_to_2020 = numpy.array(
+            [[1,
+              0]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            gdal.OpenEx(os.path.join(
+                args['workspace_dir'], 'output',
+                ('total_net_carbon_sequestration_between_'
+                    '2010_and_2020.tif'))).ReadAsArray(),
+            expected_sequestration_2010_to_2020)
+
         expected_array = numpy.array(
-            [[132.1434,
+            [[132.14343,
               20]], dtype=numpy.float32)
 
+        import pdb; pdb.set_trace()
         numpy.testing.assert_allclose(
             gdal.OpenEx(os.path.join(
                 args['workspace_dir'], 'output',
                 'total_net_carbon_sequestration.tif')).ReadAsArray(),
             expected_array)
-
-
-
