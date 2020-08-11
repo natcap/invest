@@ -434,9 +434,17 @@ def _generate_carbon_map(
         (lulcid, stock * pixel_area / 10**4)
         for lulcid, stock in carbon_pool_by_type.items()])
 
-    pygeoprocessing.reclassify_raster(
-        (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
-        gdal.GDT_Float32, _CARBON_NODATA, values_required=True)
+    try:
+        pygeoprocessing.reclassify_raster(
+            (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
+            gdal.GDT_Float32, _CARBON_NODATA, values_required=True)
+    except pygeoprocessing.ReclassificationMissingValuesError as err:
+        error_message = ("Values in the LULC raster were found that are not"
+                         " represented under the 'lucode' column of the"
+                         " Carbon Pools table. The missing values found in the"
+                         f" LULC but not the table are: {err.missing_values}.")
+        raise ValueError(error_message)
+
 
 
 def _sum_rasters(storage_path_list, output_sum_path):
