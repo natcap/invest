@@ -20,6 +20,16 @@ POOL_LITTER = 'litter'
 NODATA_FLOAT32 = float(numpy.finfo(numpy.float32).min)
 NODATA_UINT16 = int(numpy.iinfo(numpy.uint16).max)
 
+STOCKS_RASTER_PATTERN = 'stocks-{pool}-{year}{suffix}.tif'
+DISTURBANCE_VOL_RASTER_PATTERN = 'disturbance-volume-{pool}-{year}{suffix}.tif'
+DISTURBANCE_MAGNITUDE_RASTER_PATTERN = (
+    'disturbance-magnitude-{pool}-{year}{suffix}.tif')
+
+INTERMEDIATE_DIR_NAME = 'intermediate'
+TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
+OUTPUT_DIR_NAME = 'output'
+
+
 
 # TODO: restructure to separate initial from baseline from transitions.
 #  Phase 0: Table reading and raster alignment.
@@ -35,17 +45,106 @@ NODATA_UINT16 = int(numpy.iinfo(numpy.uint16).max)
 # of rasters when we can just multiply?
 
 
-def execute_spatially_explicit(args):
+def execute_transition_analysis(args):
     # If a graph already exists, use that.  Otherwise, create one.
     try:
         task_graph = args['task_graph']
     except KeyError:
-        taskgraph_cache_dir = os.path.join(args['workspace_dir'], 'task_cache')
+        taskgraph_cache_dir = os.path.join(
+            args['workspace_dir'], TASKGRAPH_CACHE_DIR_NAME)
         task_graph = taskgraph.TaskGraph(
             taskgraph_cache_dir,
             int(args['n_workers']))
 
-    pass
+    suffix = args.get('suffix', '')
+    intermediate_dir = os.path.join(
+        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
+    output_dir = os.path.join(
+        args['workspace_dir'], OUTPUT_DIR_NAME)
+
+    transition_years = set(args['transition_years'])
+
+    # ASSUMPTIONS
+    #
+    # This rebuild assumes that this timeseries analysis is ONLY taking place
+    # for the transitions at hand.  Everything that happens between the
+    # baseline year and the first transition isn't all that interesting since
+    # the only thing that can happen is accumulation. That can be modeled with
+    # a few raster calculator operations.  Everything within this loop is way
+    # more interesting and tricky to get right, hence the need for an extra
+    # function.
+    stock_rasters = {}
+    net_sequestration_rasters = {}
+    disturbance_rasters = {}
+    for year in range(args['first_transition_year'], args['final_year']+1):
+        current_stock_tasks = {}
+        net_sequestration_rasters[year] = {}
+        stock_rasters[year] = {}
+        disturbance_rasters[year] = {}
+
+        current_disturbance_tasks = {}
+
+        for pool in (POOL_SOIL, POOL_BIOMASS, POOL_LITTER):
+            # Calculate stocks from last year's stock plus last year's net
+            # sequestration.
+            stock_rasters[year][pool] = os.path.join(
+                intermediate_dir,
+                STOCKS_RASTER_PATTERN.format(
+                    year=year, pool=pool, suffix=suffix))
+            current_stock_tasks[pool] = task_graph.add_task(
+                func=_sum_n_rasters,
+                args=([stock_rasters[year-1][pool],
+                       net_sequestration_rasters[year-1][pool]],
+                      stock_rasters[year][pool]),
+                dependent_task_list=[
+                    prior_stock_tasks[pool],
+                    prior_net_sequestration_tasks[pool]],
+                target_path_list=[stock_rasters[year][pool]],
+                task_name=f'Calculating {pool} carbon stock for {year}')
+
+            # Calculate disturbance volume if we're at a transition year.
+            #    TODO: provide disturbance magnitude as a raster input
+            # Create a year-of-disturbance raster if we're at a transition year
+            if year in transition_years:
+                disturbance_rasters[year][pool] = os.path.join(
+                    intermediate_dir,
+                    DISTURBANCE_VOL_RASTER_PATTERN.format(
+                        pool=pool, year=year, suffix=suffix))
+                current_disturbance_vol_tasks[pool] = task_graph.add_task(
+                    func=pygeoprocessing.raster_calculator)
+
+
+                current_disturbance_tasks[pool] = task_graph.add_task(
+                    func=_reclassify_disturbance_transition,
+                    args=(aligned_lulc_paths[prior_transition_year],
+                          aligned_lulc_paths[current_transition_year],
+                          stock_rasters[year-1][pool],
+                          disturbance_matrices[pool],
+                          disturbance_rasters[
+                            current_transition_year][pool]),
+                    dependent_task_list=[
+                        prior_stock_tasks[pool], alignment_task],
+                    target_path_list=[
+                        disturbance_rasters[
+                            current_transition_year][pool]],
+                    task_name=(f'Mapping {pool} carbon volume disturbed '
+                               f'in {year}'))
+
+
+            # Calculate emissions (all years after 1st transition)
+
+            # Calculate net sequestration (all years after 1st transition)
+
+        # Calculate total carbon stocks (sum stocks across all 3 pools)
+
+        # Calculate valuation if we're doing valuation (requires Net Seq.)
+
+        # If in the last year before a transition:
+        #  * sum emissions since last transition
+        #  * sum accumulation since last transition
+        #  * sum net sequestration since last transition
+
+    # Calculate total net sequestration.
 
 
 def execute(args):
@@ -610,6 +709,34 @@ def execute(args):
     task_graph.close()
     task_graph.join()
 
+
+def _calculate_disturbance_volume(
+        disturbance_magnitude_raster_path, prior_stocks_raster_path,
+        target_raster_path):
+    disturbance_magnitude_nodata = pygeoprocessing.get_raster_info(
+        disturbance_magnitude_raster_path)['nodata'][0]
+    prior_stocks_nodata = pygeoprocessing.get_raster_info(
+        prior_stocks_raster_path)['nodata'][0]
+
+    def _calculate(disturbance_magnitude_matrix, prior_stocks_matrix):
+        target_matrix = numpy.empty(disturbance_magnitude_matrix.shape,
+                                    dtype=numpy.float32)
+        target_matrix[:] = NODATA_FLOAT32
+
+        valid_pixels = (
+            (~numpy.isclose(disturbance_magnitude_matrix,
+                            disturbance_magnitude_nodata)) &
+            (~numpy.isclose(prior_stocks_matrix, prior_stocks_nodata)))
+
+        target_matrix[valid_pixels] = (
+            disturbance_magnitude_matrix[valid_pixels] *
+            prior_stocks_matrix[valid_pixels])
+        return target_matrix
+
+    pygeoprocessing.raster_calculator(
+        [(disturbance_magnitude_raster_path, 1),
+         (prior_stocks_matrix, 1)], _calculate, target_raster_path,
+        gdal.GDT_Float32, NODATA_FLOAT32)
 
 
 def _calculate_accumulation_over_time(
