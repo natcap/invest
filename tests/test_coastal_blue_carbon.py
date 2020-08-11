@@ -1379,6 +1379,11 @@ class TestCBC2(unittest.TestCase):
             expected_sequestration_2000_to_2010)
 
         # TODO: calculate expected emissions by hand.
+        import pdb; pdb.set_trace()
+        # Stocks in 2010 = 83.5 + initial(soil) + initial(biomass) +
+        #       initial(litter) = 463.5.
+        # Expected sequestration will be negative, calculated as a function of
+        # the carbon stocks, 463.5
         expected_sequestration_2010_to_2020 = numpy.array(
             [[1,
               0]], dtype=numpy.float32)
