@@ -8,16 +8,14 @@ import PropTypes from 'prop-types';
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
-import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
 
-import HomeTab from './components/HomeTab';
 import SetupTab from './components/SetupTab';
 import LogTab from './components/LogTab';
 import ResourcesTab from './components/ResourcesTab';
-import LoadButton from './components/LoadButton';
-import { SettingsModal } from './components/SettingsModal';
 import {
   getSpec, fetchDatastackFromFile, writeParametersToFile
 } from './server_requests';
@@ -52,6 +50,7 @@ export default class InvestJob extends React.Component {
     super(props);
 
     this.state = {
+      activeTab: 'setup',
       setupKey: 0,
       sessionID: null, // hash of modelName + workspace generated at model execution
       modelName: '', // as appearing in `invest list`
@@ -66,21 +65,23 @@ export default class InvestJob extends React.Component {
       logStdErr: null, // stderr data from the invest subprocess
       sessionProgress: 'home', // 'home', 'setup', 'log' - used on loadState to decide which tab to activate
       jobStatus: null, // 'running', 'error', 'success'
-      activeTab: 'home', // controls which tab is currently visible
     };
 
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
     this.investGetSpec = this.investGetSpec.bind(this);
     this.investExecute = this.investExecute.bind(this);
-    this.switchTabs = this.switchTabs.bind(this);
     this.saveState = this.saveState.bind(this);
     this.loadState = this.loadState.bind(this);
+    this.switchTabs = this.switchTabs.bind(this);
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     // If these dirs already exist, this will err and pass
     fs.mkdir(fileRegistry.CACHE_DIR, (err) => {});
     fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
+
+    await this.investGetSpec(
+      this.props.modelRunName, this.props.argsInitDict)
   }
 
   /** Save the state of this component (1) and the current InVEST job (2).
@@ -316,7 +317,7 @@ export default class InvestJob extends React.Component {
         sessionID: null,
         workspace: null,
         setupKey: changeSetupKey(this.state.setupKey),
-        activeTab: 'setup',
+        // activeTab: 'setup',
       });
     } else {
       logger.error(`no spec found for ${modelName}`);
@@ -355,90 +356,70 @@ export default class InvestJob extends React.Component {
 
     return (
       <TabContainer activeKey={activeTab}>
-        <Navbar bg="light" expand="lg">
-          <Nav
-            variant="tabs"
-            id="controlled-tab-example"
-            className="mr-auto"
-            activeKey={activeTab}
-            onSelect={this.switchTabs}
-          >
-            <Nav.Item>
-              <Nav.Link eventKey="home">
-                Home
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="setup" disabled={setupDisabled}>
-                Setup
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="log" disabled={logDisabled}>
-                { this.state.jobStatus === 'running'
-                && (
-                  <Spinner
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                  />
-                )}
-                Log
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="resources">
-                Resources
-              </Nav.Link>
-            </Nav.Item>
-          </Nav>
-          <Navbar.Brand>{modelSpec.model_name}</Navbar.Brand>
-          <LoadButton
-            investGetSpec={this.investGetSpec}
-            batchUpdateArgs={this.batchUpdateArgs}
-          />
-          <SettingsModal
-            className="mx-3"
-            saveSettings={saveSettings}
-            investSettings={investSettings}
-          />
-        </Navbar>
-        <TabContent className="mt-3">
-          <TabPane eventKey="home" title="Home">
-            <HomeTab
-              investList={investList}
-              investGetSpec={this.investGetSpec}
-              saveState={this.saveState}
-              loadState={this.loadState}
-              recentSessions={recentSessions}
-            />
-          </TabPane>
-          <TabPane eventKey="setup" title="Setup">
-            <SetupTab
-              key={setupKey}
-              pyModuleName={modelSpec.module}
-              modelName={modelName}
-              argsSpec={argsSpec}
-              argsInitValues={argsInitDict}
-              investExecute={this.investExecute}
-              argsToJsonFile={this.argsToJsonFile}
-            />
-          </TabPane>
-          <TabPane eventKey="log" title="Log">
-            <LogTab
-              jobStatus={jobStatus}
-              logfile={logfile}
-              logStdErr={logStdErr}
-            />
-          </TabPane>
-          <TabPane eventKey="resources" title="Resources">
-            <ResourcesTab 
-              modelName={modelSpec.model_name}
-              docs={modelSpec.userguide_html}
-            />
-          </TabPane>
-        </TabContent>
+        <Row>
+          <Col sm={3}>
+            <Nav
+              variant="pills"
+              id="vertical tabs"
+              className="flex-column"
+              activeKey={activeTab}
+              onSelect={this.switchTabs}
+            >
+              <Nav.Item>
+                <Nav.Link eventKey="setup" disabled={setupDisabled}>
+                  Setup
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="log" disabled={logDisabled}>
+                  { this.state.jobStatus === 'running'
+                  && (
+                    <Spinner
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                    />
+                  )}
+                  Log
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="resources">
+                  Resources
+                </Nav.Link>
+              </Nav.Item>
+            </Nav>
+          </Col>
+          <Col sm={9}>
+            <TabContent className="mt-3">
+              <TabPane eventKey="setup" title="Setup">
+                <SetupTab
+                  key={setupKey}
+                  pyModuleName={modelSpec.module}
+                  modelName={modelName}
+                  argsSpec={argsSpec}
+                  argsInitValues={argsInitDict}
+                  investExecute={this.investExecute}
+                  argsToJsonFile={this.argsToJsonFile}
+                />
+              </TabPane>
+              <TabPane eventKey="log" title="Log">
+                <LogTab
+                  jobStatus={jobStatus}
+                  logfile={logfile}
+                  logStdErr={logStdErr}
+                />
+              </TabPane>
+              <TabPane eventKey="resources" title="Resources">
+                <ResourcesTab 
+                  modelName={modelSpec.model_name}
+                  docs={modelSpec.userguide_html}
+                />
+              </TabPane>
+            </TabContent>
+          </Col>
+        </Row>
       </TabContainer>
     );
   }

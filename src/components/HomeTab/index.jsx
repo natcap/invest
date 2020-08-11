@@ -35,8 +35,8 @@ export default class HomeTab extends React.PureComponent {
   }
 
   handleClick(event) {
-    const modelName = event.target.value;
-    this.props.investGetSpec(modelName);
+    const modelRunName = event.target.value;
+    this.props.openInvestModel(modelRunName);
   }
 
   render() {
@@ -88,7 +88,7 @@ HomeTab.propTypes = {
       internal_name: PropTypes.string,
     }),
   ).isRequired,
-  investGetSpec: PropTypes.func.isRequired,
+  openInvestModel: PropTypes.func.isRequired,
   loadState: PropTypes.func.isRequired,
   recentSessions: PropTypes.array,
 };
