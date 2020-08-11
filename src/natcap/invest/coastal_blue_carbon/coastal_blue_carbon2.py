@@ -724,26 +724,22 @@ def _calculate_emissions(
         (year_of_last_disturbance_matrix != NODATA_UINT16) &
         (~zero_half_life))
 
-    # We only have emissions where some time has passed.  There are no
-    # emissions in the year where the transition is taking place.
     n_years_elapsed = (
         current_year - year_of_last_disturbance_matrix[valid_pixels])
-    zero_years_elapsed = (n_years_elapsed > 0)
-    valid_pixels &= zero_years_elapsed
 
     valid_half_life_pixels = carbon_half_life_matrix[valid_pixels]
 
     # TODO: Verify this math is correct based on what's in the UG!
+    # Note that `n_years_elapsed` can be 0, which maybe doesn't make sense, but
+    # I'll need to check with someone to make sure of this.
+    # TODO: should we be emitting carbon in the transition year?
     emissions_matrix[valid_pixels] = (
         carbon_disturbed_matrix[valid_pixels] * (
-            0.5**((n_years_elapsed-1)  / valid_half_life_pixels) -
+            0.5**((n_years_elapsed-1) / valid_half_life_pixels) -
             0.5**(n_years_elapsed / valid_half_life_pixels)))
 
     # See note above about a half-life of 0.0 representing no emissions.
     emissions_matrix[zero_half_life] = 0.0
-
-    # See note above about when no time has elapsed.
-    emissions_matrix[zero_years_elapsed] = 0.0
 
     return emissions_matrix
 
