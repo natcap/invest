@@ -468,12 +468,6 @@ def build_lookup_from_csv(
         KeyError
             If ``key_field`` is not present during ``set_index`` call.
     """
-    # Check if the file encoding is UTF-8 BOM first
-    encoding = None
-    with open(table_path, 'rb') as file_obj:
-        first_line = file_obj.readline()
-        if first_line.startswith(codecs.BOM_UTF8):
-            encoding = 'utf-8-sig'
   
     # Reassign to avoid mutation
     col_list = column_list
@@ -482,9 +476,10 @@ def build_lookup_from_csv(
     if col_list and key_field not in col_list:
         col_list.append(key_field)
    
+   # utf-8-sig will work whether or not there is a BOM
     table = pandas.read_csv(
         table_path, sep=None, index_col=False, engine='python', 
-        encoding=encoding)
+        encoding='utf-8-sig')
     # strip column names to prevent indexing errors
     # when users accidentally include leading/trailing whitespace
     table.columns = table.columns.str.strip()
@@ -541,27 +536,24 @@ def build_lookup_from_csv(
     return lookup_dict 
 
 
-def read_csv_to_dataframe(path, to_lower=True, strip=True, **kwargs):
+def read_csv_to_dataframe(path, to_lower=False, encoding='utf-8-sig', **kwargs):
     """
     Wrapper around ``pandas.read_csv`` that standardizes the column names by
-    stripping leading/trailing whitespace and making all lowercase.
+    stripping leading/trailing whitespace and optionally making all lowercase.
     This helps avoid common errors caused by user-supplied CSV files with
     column names that don't exactly match the specification.
 
     Args:
         path (string): path to a CSV file
         to_lower (bool): if True, convert all column names to lowercase
-        strip (bool): if True, strip leading/trailing whitespace from all
-            column names
-        **kwargs: any kwargs that are valid for ``pandas.read_csv`` or
-            ``pandas.read_excel``
+        encoding (string): name of encoding codec to pass to `read_csv`. 
+            Defaults to 'utf-8-sig' which will skip the BOM if it exists.
+        **kwargs: any kwargs that are valid for ``pandas.read_csv``
     """
-    dataframe = pandas.read_csv(path, **kwargs)
-
+    dataframe = pandas.read_csv(path, encoding=encoding, **kwargs)
+    dataframe.columns = dataframe.columns.str.strip()
     if to_lower:
-        dataframe.columns = dataframe.columns.str.lower()
-    if strip:
-        dataframe.columns = dataframe.columns.str.strip()
+        dataframe.columns = dataframe.columns.str.lower() 
     return dataframe
 
 
