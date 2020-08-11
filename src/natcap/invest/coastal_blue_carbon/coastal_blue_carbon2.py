@@ -453,7 +453,7 @@ def execute(args):
                     intermediate_dir,
                     f'net-sequestration-{pool}-{year}{suffix}.tif')
                 current_net_sequestration_tasks[pool] = task_graph.add_task(
-                    func=_subtract_rasters,
+                    func=_calculate_net_sequestration,
                     args=(yearly_accum_rasters[current_transition_year][pool],
                           emissions_rasters[year][pool],
                           net_sequestration_rasters[year][pool]),
@@ -607,9 +607,9 @@ def execute(args):
             task_name=(
                 'Calculate total net carbon sequestration across all years'))
 
-    import pdb; pdb.set_trace()
     task_graph.close()
     task_graph.join()
+
 
 
 def _calculate_accumulation_over_time(
@@ -670,27 +670,30 @@ def _track_latest_transition_year(
     return target_matrix
 
 
-def _subtract_rasters(raster_a_path, raster_b_path, target_raster_path):
-    raster_a_nodata = pygeoprocessing.get_raster_info(
-        raster_a_path)['nodata'][0]
-    raster_b_nodata = pygeoprocessing.get_raster_info(
-        raster_b_path)['nodata'][0]
+def _calculate_net_sequestration(
+        accumulation_raster_path, emissions_raster_path, target_raster_path):
+    accumulation_nodata = pygeoprocessing.get_raster_info(
+        accumulation_raster_path)['nodata'][0]
+    emissions_nodata = pygeoprocessing.get_raster_info(
+        emissions_raster_path)['nodata'][0]
 
-    def _subtract(matrix_a, matrix_b):
-        target_matrix = numpy.empty(matrix_a.shape, dtype=numpy.float32)
-        target_matrix[:] = NODATA_FLOAT32
+    def _subtract(accumulation_matrix, emissions_matrix):
+        target_matrix = numpy.zeros(
+            accumulation_matrix.shape, dtype=numpy.float32)
 
+        # The only invalid pixels are the ones where BOTH matrices are nodata.
         valid_pixels = (
-            ~numpy.isclose(matrix_a, raster_a_nodata) &
-            ~numpy.isclose(matrix_b, raster_b_nodata))
+            ~numpy.isclose(accumulation_matrix, accumulation_nodata) |
+            ~numpy.isclose(emissions_matrix, emissions_nodata))
 
         target_matrix[valid_pixels] = (
-            matrix_a[valid_pixels] - matrix_b[valid_pixels])
+            accumulation_matrix[valid_pixels] - emissions_matrix[valid_pixels])
+        target_matrix[~valid_pixels] = NODATA_FLOAT32
         return target_matrix
 
     pygeoprocessing.raster_calculator(
-        [(raster_a_path, 1), (raster_b_path, 1)], _subtract,
-        target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32)
+        [(accumulation_raster_path, 1), (emissions_raster_path, 1)],
+        _subtract, target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32)
 
 
 def _calculate_emissions(
@@ -721,18 +724,26 @@ def _calculate_emissions(
         (year_of_last_disturbance_matrix != NODATA_UINT16) &
         (~zero_half_life))
 
+    # We only have emissions where some time has passed.  There are no
+    # emissions in the year where the transition is taking place.
     n_years_elapsed = (
         current_year - year_of_last_disturbance_matrix[valid_pixels])
+    zero_years_elapsed = (n_years_elapsed > 0)
+    valid_pixels &= zero_years_elapsed
+
     valid_half_life_pixels = carbon_half_life_matrix[valid_pixels]
 
     # TODO: Verify this math is correct based on what's in the UG!
     emissions_matrix[valid_pixels] = (
         carbon_disturbed_matrix[valid_pixels] * (
-            0.5**((n_years_elapsed-1) / valid_half_life_pixels) -
+            0.5**((n_years_elapsed-1)  / valid_half_life_pixels) -
             0.5**(n_years_elapsed / valid_half_life_pixels)))
 
     # See note above about a half-life of 0.0 representing no emissions.
     emissions_matrix[zero_half_life] = 0.0
+
+    # See note above about when no time has elapsed.
+    emissions_matrix[zero_years_elapsed] = 0.0
 
     return emissions_matrix
 
@@ -779,9 +790,6 @@ def _sum_n_rasters(raster_path_list, target_raster_path,
             sum_array[~pixels_touched] = NODATA_FLOAT32
         else:
             sum_array[~valid_pixels] = NODATA_FLOAT32
-
-        if NODATA_FLOAT32 in sum_array:
-            import pdb; pdb.set_trace()
 
         target_band.WriteArray(
             sum_array, block_info['xoff'], block_info['yoff'])

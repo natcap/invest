@@ -1385,7 +1385,7 @@ class TestCBC2(unittest.TestCase):
         # Expected sequestration will be negative, calculated as a function of
         # the carbon stocks, 463.5
         expected_sequestration_2010_to_2020 = numpy.array(
-            [[1,
+            [[-1,
               0]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
             gdal.OpenEx(os.path.join(
