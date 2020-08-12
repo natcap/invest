@@ -317,6 +317,7 @@ def execute(args):
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
+        grid_land_data = pandas.read_csv(args['land_gridPts_path'])
         required_col_names = ['id', 'type', 'lat', 'long', 'location']
         grid_land_data, missing_grid_land_fields = _get_validated_dataframe(
             args['land_gridPts_path'], required_col_names)
@@ -618,9 +619,9 @@ def execute(args):
         output_dir, 'GridPts_prj%s.shp' % file_suffix)
 
     grid_data = grid_land_data.loc[
-        grid_land_data['type'].str.lower() == 'grid']
+        grid_land_data['type'].str.upper() == 'GRID']
     land_data = grid_land_data.loc[
-        grid_land_data['type'].str.lower() == 'land']
+        grid_land_data['type'].str.upper() == 'LAND']
 
     grid_dict = grid_data.to_dict('index')
     land_dict = land_data.to_dict('index')
@@ -953,14 +954,14 @@ def _get_validated_dataframe(csv_path, field_list):
 
     Parameters:
         csv_path (str): path to the csv to be converted to a dataframe.
-        field_list (list): a list of fields in lowercase string format.
+        field_list (list): a list of fields in string format.
 
     Returns:
-        dataframe (pandas.DataFrame): from csv with lower-cased fields.
+        dataframe (pandas.DataFrame): from csv with upper-cased fields.
         missing_fields (list): missing fields as string format in dataframe.
 
     """
-    dataframe = utils.read_csv_to_dataframe(csv_path)
+    dataframe = utils.read_csv_to_dataframe(csv_path, to_lower=True)
     missing_fields = []
     for field in field_list:
         if field not in dataframe.columns:
@@ -1203,8 +1204,9 @@ def _machine_csv_to_dict(machine_csv_path):
 
     """
     machine_dict = {}
-    machine_data = utils.read_csv_to_dataframe(machine_csv_path, index_col=0)
-    # remove underscore from the keys
+    # make columns and indexes lowercased and strip whitespace
+    machine_data = utils.read_csv_to_dataframe(
+        machine_csv_path, to_lower=True, index_col=0)
     machine_data.index = machine_data.index.str.strip()
     machine_data.index = machine_data.index.str.lower()
 
