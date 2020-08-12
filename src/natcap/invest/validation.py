@@ -829,8 +829,19 @@ def invest_validator(validate_func):
             assert isinstance(key, str), (
                 'All args keys must be strings.')
 
+        # Pytest in importlib mode makes it impossible for test modules to 
+        # import one another. This causes a problem in test_validation.py,
+        # which gets imported into itself here and fails.
+        # Since this decorator might not be needed in the future,
+        # just ignore failed imports; assume they have no ARGS_SPEC.
+        try:
+            model_module = importlib.import_module(validate_func.__module__)
+        except:
+            LOGGER.warning('Unable to import module %s: assuming no ARGS_SPEC.',
+                            validate_func.__module__)
+            model_module = None
+
         # If the module has an ARGS_SPEC defined, validate against that.
-        model_module = importlib.import_module(validate_func.__module__)
         if hasattr(model_module, 'ARGS_SPEC'):
             LOGGER.debug('Using ARG_SPEC for validation')
             args_spec = getattr(model_module, 'ARGS_SPEC')['args']

@@ -28,7 +28,6 @@ __pycache__/
 ^\.coverage
 ^cover/
 ^\.cache
-^nosetests\.xml$
 ^coverage\.xml$
 
 # Sphinx documentation
