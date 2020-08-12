@@ -1264,3 +1264,76 @@ class AssertVectorsEqualTests(unittest.TestCase):
             utils._assert_vectors_equal(shape_path, shape_diff_path)
 
         self.assertTrue("Vector geometry assertion fail." in str(cm.exception))
+
+
+class RasterDictValuesTests(unittest.TestCase):
+    """Tests for natcap.invest.utils.raster_values_missing_from_dict_map."""
+    def setUp(self):
+        """Setup workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+        # set spatial reference used for this class of tests 
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        self.projection_wkt = srs.ExportToWkt()
+        self.origin = (443723.1273, 4956546.9059)
+
+        self.nodata = -1
+        self.pixel_size = (1, -1)
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+    
+    def test_raster_values_subset_of_dict(self):
+        """Utils: test raster values are a valid subset of dictionary."""
+        from natcap.invest import utils
+        
+        raster_array = numpy.array([[1, 2, 3, 4], [4, 3, 2, 1], [1, 2, 2, 1]])
+        raster_tmp_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array, self.nodata, self.pixel_size, self.origin, 
+            self.projection_wkt, raster_tmp_path)
+        dict_map = {1: '', 2: '', 3: '', 4: ''}
+
+        missing_values = utils.raster_values_missing_from_dict_map(
+            (raster_tmp_path, 1), dict_map)
+
+        self.assertFalse(
+            missing_values, 
+            "The returned missing value list should be empty but is not.")
+    
+    def test_raster_values_not_subset_of_dict(self):
+        """Utils: test missing raster values are returned."""
+        from natcap.invest import utils
+        
+        raster_array = numpy.array([[1, 2, 3, 4], [4, 3, 2, 1], [1, 9, 2, 1]])
+        raster_tmp_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array, self.nodata, self.pixel_size, self.origin, 
+            self.projection_wkt, raster_tmp_path)
+        dict_map = {1: '', 2: '', 3: '', 4: ''}
+
+        missing_values = utils.raster_values_missing_from_dict_map(
+            (raster_tmp_path, 1), dict_map)
+
+        self.assertEqual(
+            missing_values, {9}, 
+            "The returned missing value list should be {9} but is not.")
+    
+    def test_raster_multipl_values_not_subset_of_dict(self):
+        """Utils: test multiple missing raster values are returned."""
+        from natcap.invest import utils
+        
+        raster_array = numpy.array([[1, 11, 3, 4], [4, 3, 2, 1], [1, 9, 2, 1]])
+        raster_tmp_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            raster_array, self.nodata, self.pixel_size, self.origin, 
+            self.projection_wkt, raster_tmp_path)
+        dict_map = {1: '', 2: '', 3: '', 4: ''}
+
+        missing_values = utils.raster_values_missing_from_dict_map(
+            (raster_tmp_path, 1), dict_map)
+
+        self.assertEqual(
+            missing_values, {9, 11}, 
+            "The returned missing value list should be {9, 11} but is not.")
