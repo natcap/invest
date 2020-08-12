@@ -551,7 +551,8 @@ def execute(args):
         # If Price Table provided use that for price of energy, validate inputs
         time = int(val_parameters_dict['time_period'])
         if args['price_table']:
-            wind_price_df = utils.read_csv_to_dataframe(args['wind_schedule'])
+            wind_price_df = utils.read_csv_to_dataframe(
+                args['wind_schedule'], to_lower=True)
 
             year_count = len(wind_price_df['year'])
             if year_count != time + 1:
@@ -928,7 +929,8 @@ def execute(args):
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
         # Read the grid points csv, and convert it to land and grid dictionary
-        grid_land_df = utils.read_csv_to_dataframe(args['grid_points_path'])
+        grid_land_df = utils.read_csv_to_dataframe(
+            args['grid_points_path'], to_lower=True)
 
         # Make separate dataframes based on 'TYPE'
         grid_df = grid_land_df.loc[(
