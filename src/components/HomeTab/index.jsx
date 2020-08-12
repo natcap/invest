@@ -90,7 +90,9 @@ HomeTab.propTypes = {
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
   loadState: PropTypes.func.isRequired,
-  recentSessions: PropTypes.array,
+  recentSessions: PropTypes.arrayOf(
+    PropTypes.array
+  ),
 };
 HomeTab.defaultProps = {
   recentSessions: [],

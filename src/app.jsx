@@ -89,7 +89,7 @@ export default class App extends React.Component {
   openInvestModel(modelRunName) {
     this.setState((state) => ({
       openModels: [...state.openModels, modelRunName],
-    }), () => this.switchTabs('invest'));
+    }), () => this.switchTabs(modelRunName));
   }
 
   render() {
@@ -108,7 +108,7 @@ export default class App extends React.Component {
     openModels.forEach((modelRunName) => {
       investNavItems.push(
         <Nav.Item>
-          <Nav.Link eventKey={modelRunName} disabled={false}>
+          <Nav.Link eventKey={modelRunName}>
             {modelRunName}
           </Nav.Link>
         </Nav.Item>
@@ -159,7 +159,6 @@ export default class App extends React.Component {
             <HomeTab
               investList={investList}
               openInvestModel={this.openInvestModel}
-              saveState={this.saveState}
               loadState={this.loadState}
               recentSessions={recentSessions}
             />

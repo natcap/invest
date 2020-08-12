@@ -81,7 +81,9 @@ export default class InvestJob extends React.Component {
     fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
 
     await this.investGetSpec(
-      this.props.modelRunName, this.props.argsInitDict)
+      this.props.modelRunName, this.props.argsInitDict
+    );
+    this.switchTabs('setup');
   }
 
   /** Save the state of this component (1) and the current InVEST job (2).
@@ -317,7 +319,6 @@ export default class InvestJob extends React.Component {
         sessionID: null,
         workspace: null,
         setupKey: changeSetupKey(this.state.setupKey),
-        // activeTab: 'setup',
       });
     } else {
       logger.error(`no spec found for ${modelName}`);
@@ -345,12 +346,6 @@ export default class InvestJob extends React.Component {
       logfile,
       logStdErr,
     } = this.state;
-    const {
-      saveSettings,
-      investSettings,
-      investList,
-      recentSessions,
-    } = this.props;
     const setupDisabled = !(this.state.argsSpec); // enable once modelSpec has loaded
     const logDisabled = (this.state.jobStatus == null); // enable during and after execution
 
@@ -427,19 +422,10 @@ export default class InvestJob extends React.Component {
 
 InvestJob.propTypes = {
   investExe: PropTypes.string.isRequired,
-  investList: PropTypes.objectOf(
-    PropTypes.shape({
-      internal_name: PropTypes.string,
-    })
-  ).isRequired,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
   }).isRequired,
-  recentSessions: PropTypes.arrayOf(
-    PropTypes.array
-  ),
   jobDatabase: PropTypes.string,
   updateRecentSessions: PropTypes.func.isRequired,
-  saveSettings: PropTypes.func.isRequired,
-}
+};
