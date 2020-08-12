@@ -561,9 +561,16 @@ def _calculate_lulc_carbon_map(
                      biophysical_table[lucode][carbon_pool_type]))
 
     # map aboveground carbon from table to lulc that is not forest
-    pygeoprocessing.reclassify_raster(
-        (lulc_raster_path, 1), lucode_to_per_cell_carbon,
-        carbon_map_path, gdal.GDT_Float32, CARBON_MAP_NODATA)
+    try:
+        pygeoprocessing.reclassify_raster(
+            (lulc_raster_path, 1), lucode_to_per_cell_carbon,
+            carbon_map_path, gdal.GDT_Float32, CARBON_MAP_NODATA)
+    except pygeoprocessing.ReclassificationMissingValuesError as err:
+        error_message = ("Values in the LULC raster were found that are not"
+                         " represented under the 'lucode' column of the"
+                         " Biophysical table. The missing values found in the"
+                         f" LULC but not the table are: {err.missing_values}.")
+        raise ValueError(error_message)
 
 
 def _map_distance_from_tropical_forest_edge(
