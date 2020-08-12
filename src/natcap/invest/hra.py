@@ -2457,12 +2457,8 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
         raise ValueError('Info table %s is not a CSV nor an Excel file.' %
                          base_info_table_path)
 
-    # Convert column names to upper case, strip whitespace,
-    # and encode it to strings if it's not a string (e.g. unicode)
-    info_df.columns = [
-        col.strip().upper() if isinstance(col, str) 
-        else col.encode('utf-8').upper()
-        for col in info_df.columns]
+    # Convert column names to upper case and strip whitespace
+    info_df.columns = [col.strip().upper() for col in info_df.columns]
 
     missing_columns = list(
         set(required_column_headers) - set(info_df.columns.values))
