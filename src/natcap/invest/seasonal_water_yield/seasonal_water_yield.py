@@ -400,6 +400,25 @@ def _execute(args):
     biophysical_table = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode')
 
+    # fail early if biophysical table is missing raster lulc codes
+    missing_lucodes = utils.raster_values_missing_from_dict_map(
+        (args['lulc_raster_path'], 1), biophysical_table)
+    if missing_lucodes:
+        raise ValueError("Values in the LULC raster were found that are not"
+                         " represented under the 'lucode' column of the"
+                         " Biophysical table. The missing values found in the"
+                         f" LULC but not the table are: {missing_lucodes}.")
+
+    # fail early if soil group raster has values other than 1-4
+    missing_soil_groups = utils.raster_values_missing_from_dict_map(
+            (args['soil_group_path'], 1), {1: '', 2: '', 3: '', 4: ''})
+    if missing_soil_groups:
+        raise ValueError("Values in the Soil Group raster were found that are"
+                         " not {1, 2, 3, 4} which correspond to soil groups"
+                         " A, B, C, and D, respectively. The other values"
+                         " found in the soil group raster were:"
+                         f" {missing_soil_groups}.")
+
     bad_value_list = []
     for lucode, value in biophysical_table.items():
         for biophysical_id in ['cn_a', 'cn_b', 'cn_c', 'cn_d'] + [

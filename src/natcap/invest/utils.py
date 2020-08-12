@@ -746,3 +746,32 @@ def _assert_vectors_equal(
         expected_vector = None
 
     return None
+
+def raster_values_missing_from_dict_map(raster_path_band, dict_map):
+    """Return raster values not found as dictionary keys.
+
+    Args:
+        raster_path_band (tuple): a 2 tuple of the form
+            (filepath to raster, band index).
+        dict_map (dict): a dictionary with numerical keys that should match
+            values from ``raster_path_band``.
+
+    Returns:
+        A set of raster values not found as keys in ``dict_map``
+    """
+
+    raster_path = raster_path_band[0]
+    # declare a set to store unique values from raster
+    raster_unique_values = set()
+
+    for _, raster_block in pygeoprocessing.iterblocks(raster_path_band):
+        raster_unique_values.update(numpy.unique(raster_block))
+
+    # Remove the nodata value from the set of values. 
+    nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
+    raster_unique_values.discard(nodata)
+
+    table_unique_values = set(dict_map.keys())
+    missing_values = raster_unique_values.difference(table_unique_values)
+
+    return missing_values
