@@ -510,7 +510,14 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         return file_warning
 
     try:
-        dataframe = pandas.read_csv(filepath, sep=None, engine='python')
+        # Check if the file encoding is UTF-8 BOM first
+        encoding = None
+        with open(filepath, 'rb') as file_obj:
+            first_line = file_obj.readline()
+            if first_line.startswith(codecs.BOM_UTF8):
+                encoding = 'utf-8-sig'
+        dataframe = pandas.read_csv(
+            filepath, sep=None, engine='python', encoding=encoding)
     except Exception:
         if excel_ok:
             try:

@@ -468,6 +468,12 @@ def build_lookup_from_csv(
         KeyError
             If ``key_field`` is not present during ``set_index`` call.
     """
+    # Check if the file encoding is UTF-8 BOM first
+    encoding = None
+    with open(table_path, 'rb') as file_obj:
+        first_line = file_obj.readline()
+        if first_line.startswith(codecs.BOM_UTF8):
+            encoding = 'utf-8-sig'
   
     # Reassign to avoid mutation
     col_list = column_list
@@ -475,10 +481,10 @@ def build_lookup_from_csv(
     # 'key_field' is one of them. 
     if col_list and key_field not in col_list:
         col_list.append(key_field)
-   
-   # will work whether or not there is a BOM
+
     table = pandas.read_csv(
-        table_path, sep=None, index_col=False, engine='python')
+        table_path, sep=None, index_col=False, engine='python', 
+        encoding=encoding)
     # strip column names to prevent indexing errors
     # when users accidentally include leading/trailing whitespace
     table.columns = table.columns.str.strip()
@@ -549,6 +555,13 @@ def read_csv_to_dataframe(path, to_lower=False, encoding=None, **kwargs):
             Defaults to None.
         **kwargs: any kwargs that are valid for ``pandas.read_csv``
     """
+    # Check if the file encoding is UTF-8 BOM first
+    # allow encoding kwarg to override this if it's provided
+    if not encoding:
+        with open(table_path, 'rb') as file_obj:
+            first_line = file_obj.readline()
+            if first_line.startswith(codecs.BOM_UTF8):
+                encoding = 'utf-8-sig'
     dataframe = pandas.read_csv(path, encoding=encoding, **kwargs)
     # this won't work on non-string types
     try:
