@@ -551,9 +551,13 @@ def read_csv_to_dataframe(path, to_lower=False, encoding='utf-8-sig', **kwargs):
         **kwargs: any kwargs that are valid for ``pandas.read_csv``
     """
     dataframe = pandas.read_csv(path, encoding=encoding, **kwargs)
-    dataframe.columns = dataframe.columns.str.strip()
-    if to_lower:
-        dataframe.columns = dataframe.columns.str.lower() 
+    # this won't work on non-string types
+    try:
+        dataframe.columns = dataframe.columns.str.strip()
+        if to_lower:
+            dataframe.columns = dataframe.columns.str.lower()
+    except:
+        pass
     return dataframe
 
 

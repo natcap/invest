@@ -1459,7 +1459,7 @@ def _validate_same_projection(base_vector_path, table_path):
     # This will load the table as a list paths which we can iterate through 
     # without bothering the rest of the table structure
     data_paths = utils.read_csv_to_dataframe(
-        table_path, to_lower=True, squeeze=True)[['path']].tolist()
+        table_path, to_lower=True, squeeze=True)['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()

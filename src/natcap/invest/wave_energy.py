@@ -317,7 +317,8 @@ def execute(args):
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
-        grid_land_data = pandas.read_csv(args['land_gridPts_path'])
+        grid_land_data = utils.read_csv_to_dataframe(
+            args['land_gridPts_path'], to_lower=True)
         required_col_names = ['id', 'type', 'lat', 'long', 'location']
         grid_land_data, missing_grid_land_fields = _get_validated_dataframe(
             args['land_gridPts_path'], required_col_names)
@@ -1027,8 +1028,8 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
     for point_dict in base_dict_data.values():
-        latitude = float(point_dict['LAT'])
-        longitude = float(point_dict['LONG'])
+        latitude = float(point_dict['lat'])
+        longitude = float(point_dict['long'])
         # When projecting to WGS84, extents -180 to 180 are used for longitude.
         # In case input longitude is from -360 to 0 convert
         if longitude < -180:

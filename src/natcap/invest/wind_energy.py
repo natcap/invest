@@ -1651,7 +1651,9 @@ def _read_csv_wind_parameters(csv_path, parameter_list):
 
     """
     # use the parameters in the first column as indeces for the dataframe
-    wind_param_df = utils.read_csv_to_dataframe(csv_path, header=None, index_col=0)
+    # this doesn't benefit from `utils.read_csv_to_dataframe` because there
+    # is no header to strip whitespace
+    wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0)
     # only get the required parameters and leave out the rest
     wind_param_df = wind_param_df[wind_param_df.index.isin(parameter_list)]
     wind_dict = wind_param_df.to_dict()[1]
@@ -2000,8 +2002,8 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     # For each inner dictionary (for each point) create a point and set its
     # fields
     for point_dict in base_dict_data.values():
-        latitude = float(point_dict['LATI'])
-        longitude = float(point_dict['LONG'])
+        latitude = float(point_dict['lati'])
+        longitude = float(point_dict['long'])
 
         geom = ogr.Geometry(ogr.wkbPoint)
         geom.AddPoint_2D(longitude, latitude)

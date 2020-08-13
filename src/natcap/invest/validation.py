@@ -510,9 +510,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         return file_warning
 
     try:
-        # utf-8-sig decoding will work whether or not there is a BOM
-        dataframe = pandas.read_csv(
-            filepath, sep=None, engine='python', encoding='utf-8-sig')
+        dataframe = pandas.read_csv(filepath, sep=None, engine='python')
     except Exception:
         if excel_ok:
             try:
