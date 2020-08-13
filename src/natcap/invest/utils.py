@@ -476,10 +476,9 @@ def build_lookup_from_csv(
     if col_list and key_field not in col_list:
         col_list.append(key_field)
    
-   # utf-8-sig will work whether or not there is a BOM
+   # will work whether or not there is a BOM
     table = pandas.read_csv(
-        table_path, sep=None, index_col=False, engine='python', 
-        encoding='utf-8-sig')
+        table_path, sep=None, index_col=False, engine='python')
     # strip column names to prevent indexing errors
     # when users accidentally include leading/trailing whitespace
     table.columns = table.columns.str.strip()
@@ -536,7 +535,7 @@ def build_lookup_from_csv(
     return lookup_dict 
 
 
-def read_csv_to_dataframe(path, to_lower=False, encoding='utf-8-sig', **kwargs):
+def read_csv_to_dataframe(path, to_lower=False, encoding=None, **kwargs):
     """
     Wrapper around ``pandas.read_csv`` that standardizes the column names by
     stripping leading/trailing whitespace and optionally making all lowercase.
@@ -547,7 +546,7 @@ def read_csv_to_dataframe(path, to_lower=False, encoding='utf-8-sig', **kwargs):
         path (string): path to a CSV file
         to_lower (bool): if True, convert all column names to lowercase
         encoding (string): name of encoding codec to pass to `read_csv`. 
-            Defaults to 'utf-8-sig' which will skip the BOM if it exists.
+            Defaults to None.
         **kwargs: any kwargs that are valid for ``pandas.read_csv``
     """
     dataframe = pandas.read_csv(path, encoding=encoding, **kwargs)
