@@ -992,6 +992,16 @@ def _parse_scenario_variables(args):
 
     landcover_biophysical_table = utils.build_lookup_from_csv(
         landcover_biophysical_table_path, 'lucode', to_lower=True)
+
+    # fail early if biophysical table is missing raster lulc codes
+    missing_lucodes = utils.raster_values_missing_from_dict_map(
+        (args['landcover_raster_path'], 1), landcover_biophysical_table)
+    if missing_lucodes:
+        raise ValueError("Values in the Land Cover Map were found that are not"
+                         " represented under the 'lucode' column of the"
+                         " Biophysical table. The missing values found in the"
+                         f" LULC but not the table are: {missing_lucodes}.")
+
     biophysical_table_headers = (
         list(landcover_biophysical_table.values())[0].keys())
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:
