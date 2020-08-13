@@ -301,6 +301,15 @@ def execute(args):
     biophysical_lucode_map = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode', to_lower=True)
 
+    # fail early if biophysical table is missing raster lulc codes
+    missing_lucodes = utils.raster_values_missing_from_dict_map(
+        (args['lulc_raster_path'], 1), biophysical_lucode_map)
+    if missing_lucodes:
+        raise ValueError("Values in the LULC raster were found that are not"
+                         " represented under the 'lucode' column of the"
+                         " Biophysical table. The missing values found in the"
+                         f" LULC but not the table are: {missing_lucodes}.")
+
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
     # weights.
