@@ -558,7 +558,7 @@ def read_csv_to_dataframe(path, to_lower=False, encoding=None, **kwargs):
     # Check if the file encoding is UTF-8 BOM first
     # allow encoding kwarg to override this if it's provided
     if not encoding:
-        with open(table_path, 'rb') as file_obj:
+        with open(path, 'rb') as file_obj:
             first_line = file_obj.readline()
             if first_line.startswith(codecs.BOM_UTF8):
                 encoding = 'utf-8-sig'
