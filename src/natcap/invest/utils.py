@@ -746,3 +746,65 @@ def _assert_vectors_equal(
         expected_vector = None
 
     return None
+
+def _reclassify_raster_op(
+        raster_path_band, value_map, target_raster_path, target_datatype,
+        target_nodata, error_details=None, values_required=True):
+    """A wrapper function for calling ``pygeoprocessing.reclassify_raster``.
+
+    This wrapper function is helpful when added as a ``TaskGraph.task`` so
+    a better error message can be provided to the users if an exception
+    occurs.
+
+    Args:
+        raster_path_band (tuple): a tuple including file path to a raster
+            and the band index to operate over. ex: (path, band_index)
+        value_map (dictionary): a dictionary of values of
+            {source_value: dest_value, ...} where source_value's type is the
+            same as the values in ``base_raster_path`` at band ``band_index``.
+            Must contain at least one value.
+        target_raster_path (string): target raster output path; overwritten if
+            it exists
+        target_datatype (gdal type): the numerical type for the target raster
+        target_nodata (numerical type): the nodata value for the target raster
+            Must be the same type as target_datatype
+        error_details (dict): a dictionary with key value pairs that provide 
+            more context for a raised
+            ``pygeoprocessing.ReclassificationMissingValuesError``.
+            keys must be {'raster_name', 'column_name', 'table_name'}. Values 
+            each key represent:
+                'raster_name' - string for the raster name being reclassified
+                'column_name' - column name from table with which ``value_map``
+                    keys came from. 
+                'table_name' - table name that ``value_map`` came from.
+        values_required (bool): If True, raise a ValueError if there is a
+            value in the raster that is not found in ``value_map``.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError if ``values_required`` is ``True`` and a pixel value from
+        ``raster_path_band`` is not a key in ``value_map``.
+    """
+    try:
+        pygeoprocessing.reclassify_raster(
+            raster_path_band, value_map, target_raster_path, target_datatype,
+            target_nodata, values_required=values_required)
+    except pygeoprocessing.ReclassificationMissingValuesError as err:
+        if error_details is None:
+            raster_name = ''
+            column_name = ''
+            table_name = ''
+        else:
+            raster_name = error_details.get('raster_name', '') 
+            column_name = error_details.get('column_name', '') 
+            table_name = error_details.get('table_name', '') 
+
+        error_message = (
+                f"Values in the {raster_name} raster were found that are"
+                f" not represented under the '{column_name}' key column"
+                f" of the {table_name} table. The missing values found in"
+                f" the {raster_name} raster but not the table are:"
+                f" {err.missing_values}.")
+        raise ValueError(error_message)

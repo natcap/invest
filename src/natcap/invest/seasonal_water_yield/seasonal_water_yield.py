@@ -598,13 +598,18 @@ def _execute(args):
                     cz_id in cz_rain_events_lookup])
                 n_events_nodata = -1
                 n_events_task = task_graph.add_task(
-                    func=pygeoprocessing.reclassify_raster,
+                    func=utils._reclassify_raster_op,
                     args=(
                         (file_registry['cz_aligned_raster_path'], 1),
                         climate_zone_rain_events_month,
                         file_registry['n_events_path_list'][month_id],
                         gdal.GDT_Float32, n_events_nodata),
-                    kwargs={'values_required': True},
+                    kwargs={
+                        'values_required': True,
+                        'error_details': {
+                            'raster_name': 'Climate Zone', 
+                            'column_name': 'cz_id', 
+                            'table_name': 'Climate Zone'}},
                     target_path_list=[
                         file_registry['n_events_path_list'][month_id]],
                     dependent_task_list=[align_task],
@@ -1157,7 +1162,6 @@ def _calculate_l_avail(l_path, gamma, target_l_avail_path):
     pygeoprocessing.raster_calculator(
         [(l_path, 1)], l_avail_op, target_l_avail_path, gdal.GDT_Float32,
         li_nodata)
-
 
 @validation.invest_validator
 def validate(args, limit_to=None):

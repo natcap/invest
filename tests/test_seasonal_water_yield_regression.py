@@ -702,14 +702,15 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
-    def test_climate_zones_regression(self):
-        """SWY climate zone regression test on sample data.
+    def test_climate_zones_missing_cz_id(self):
+        """SWY climate zone regression test fails on bad cz table data.
 
-        Executes SWY in climate zones mode and checks that the output files are
-        generated and that the aggregate shapefile fields are the same as the
-        regression case.
+        Executes SWY in climate zones mode and checks that the test fails 
+        when a climate zone raster value is not present in the climate 
+        zone table.
         """
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        import pandas
 
         # use predefined directory so test can clean up files during teardown
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
@@ -723,22 +724,27 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         cz_ras_path = os.path.join(args['workspace_dir'], 'dem.tif')
         make_gradient_raster(cz_ras_path)
         args['climate_zone_raster_path'] = cz_ras_path
+        
+        # remove row from the climate zone table so cz raster value is missing
+        bad_cz_table_path = os.path.join(
+            self.workspace_dir, 'bad_climate_zone_table.csv')
+
+        cz_df = pandas.read_csv(args['climate_zone_table_path'])
+        cz_df = cz_df[cz_df['cz_id'] != 1]
+        cz_df.to_csv(bad_cz_table_path)
+        cz_df = None
+        args['climate_zone_table_path'] = bad_cz_table_path
 
         args['user_defined_climate_zones'] = True
         args['user_defined_local_recharge'] = False
         args['monthly_alpha'] = False
         args['results_suffix'] = 'cz'
-
-        seasonal_water_yield.execute(args)
-
-        # generate aggregated results csv table for assertion
-        agg_results_csv_path = os.path.join(args['workspace_dir'],
-                                            'agg_results_cz.csv')
-        make_agg_results_csv(agg_results_csv_path, climate_zones=True)
-
-        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results_swy_cz.shp'),
-            agg_results_csv_path)
+        
+        with self.assertRaises(ValueError) as context:
+            seasonal_water_yield.execute(args)
+        self.assertTrue(
+            ("The missing values found in the Climate Zone raster but not the"
+            " table are: [1]") in str(context.exception))
 
     def test_user_recharge(self):
         """SWY user recharge regression test on sample data.
