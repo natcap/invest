@@ -24,6 +24,7 @@ STOCKS_RASTER_PATTERN = 'stocks-{pool}-{year}{suffix}.tif'
 DISTURBANCE_VOL_RASTER_PATTERN = 'disturbance-volume-{pool}-{year}{suffix}.tif'
 DISTURBANCE_MAGNITUDE_RASTER_PATTERN = (
     'disturbance-magnitude-{pool}-{year}{suffix}.tif')
+EMISSIONS_RASTER_PATTERN = 'emissions-{pool}-{year}{suffix}.tif'
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -76,11 +77,13 @@ def execute_transition_analysis(args):
     stock_rasters = {}
     net_sequestration_rasters = {}
     disturbance_rasters = {}
+    emissions_rasters = {}
     for year in range(args['first_transition_year'], args['final_year']+1):
         current_stock_tasks = {}
         net_sequestration_rasters[year] = {}
         stock_rasters[year] = {}
         disturbance_rasters[year] = {}
+        emissions_rasters[year] = {}
 
         current_disturbance_tasks = {}
 
@@ -113,7 +116,6 @@ def execute_transition_analysis(args):
                 current_disturbance_vol_tasks[pool] = task_graph.add_task(
                     func=pygeoprocessing.raster_calculator)
 
-
                 current_disturbance_tasks[pool] = task_graph.add_task(
                     func=_reclassify_disturbance_transition,
                     args=(aligned_lulc_paths[prior_transition_year],
@@ -130,10 +132,42 @@ def execute_transition_analysis(args):
                     task_name=(f'Mapping {pool} carbon volume disturbed '
                                f'in {year}'))
 
+                # TODO: calculate year-of-disturbance rasters here.
+                # This is something that's derived from the incoming landcover
+                # rasters and used only for internal calculations.
 
             # Calculate emissions (all years after 1st transition)
+            # Emissions in this context are a function of:
+            #  * stocks at the disturbance year
+            #  * disturbance magnitude
+            #  * halflife
+            emissions_rasters[year][pool] = os.path.join(
+                intermediate_dir, EMISSIONS_RASTER_PATTERN.format(
+                    pool=pool, year=year, suffix=suffix))
+            current_emissions_tasks[pool] = task_graph.add_task(
+                func=pygeoprocessing.raster_calculator,
+                args=(
+                    [(disturbance_volume_rasters[pool], 1),
+                     (year_of_disturbance_rasters[
+                          current_disturbance_year][pool], 1),
+                     (half_life_rasters[current_disturbance_year][pool], 1),
+                     (year, 'raw')],
+                    _calculate_emissions,
+                    emissions_rasters[year][pool],
+                    gdal.GDT_Float32,
+                    NODATA_FLOAT32),
+                dependent_task_list=[
+                    current_disturbance_vol_tasks[pool],
+                    current_year_of_disturbance_tasks[pool]],
+                target_path_list=[
+                    emissions_rasters[year][pool]],
+                task_name=f'Mapping {pool} carbon emissions in {year}')
+
+
 
             # Calculate net sequestration (all years after 1st transition)
+            # Where pixels are accumulating, accumulate.
+            # Where pixels are emitting, emit.
 
         # Calculate total carbon stocks (sum stocks across all 3 pools)
 
