@@ -32,6 +32,8 @@ NET_SEQUESTRATION_RASTER_PATTERN = (
     'net-sequestration-{pool}-{year}{suffix}.tif')
 TOTAL_STOCKS_RASTER_PATTERN = 'total-carbon-stocks-{year}{suffix}.tif'
 VALUE_RASTER_PATTERN = 'valuation-{year}{suffix}.tif'
+EMISSIONS_SINCE_TRANSITION_RASTER_PATTERN = (
+    'carbon-emissions-between-{start_year}-and-{end_year}{suffix}.tif')
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -263,8 +265,27 @@ def execute_transition_analysis(args):
         #  * sum accumulation since last transition
         #  * sum net sequestration since last transition
         if (year + 1) in transition_years:
-            emissions_since_last_transition = 0
+            emissions_rasters_since_transition = []
+            net_seq_rasters_since_transition = []
+            for _year in range(current_transition_year, year + 1):
+                emissions_rasters_since_transition.extend(
+                    list(emissions_rasters[year].values()))
+                net_seq_rasters_since_transition.extend(
+                    list(net_sequestration_rasters[year].values()))
 
+            emissions_since_last_transition_raster = os.path.join(
+                output_dir, EMISSIONS_SINCE_TRANSITION_RASTER_PATTERN.format(
+                    start_year=current_transition_year, end_year=(year + 1),
+                    suffix=suffix))
+            _ = task_graph.add_task(
+                func=_sum_n_rasters,
+                args=(emissions_rasters_since_transition,
+                      emissions_since_last_transition_raster),
+                dependent_task_list=[current_emissions_tasks[year]],
+                target_path_list=[emissions_since_last_transition_raster],
+                task_name=(
+                    f'Sum emissions between {current_transition_year} '
+                    f'and {year}'))
 
     # Calculate total net sequestration.
 
