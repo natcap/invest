@@ -1,3 +1,4 @@
+import fs from 'fs';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -40,7 +41,7 @@ export default class HomeTab extends React.PureComponent {
   }
 
   render() {
-    const { investList, loadState, recentSessions } = this.props;
+    const { investList, recentSessions } = this.props;
     // A button in a table row for each model
     const investButtons = [];
     Object.keys(investList).forEach((model) => {
@@ -73,7 +74,7 @@ export default class HomeTab extends React.PureComponent {
         </Col>
         <Col md={7}>
           <RecentInvestJobs
-            loadState={loadState}
+            openInvestModel={this.props.openInvestModel}
             recentSessions={recentSessions}
           />
         </Col>
@@ -102,6 +103,23 @@ HomeTab.defaultProps = {
  * Renders a button for each recent invest job.
  */
 class RecentInvestJobs extends React.PureComponent {
+  constructor(props) {
+    super(props);
+    this.handleClick = this.handleClick.bind(this);
+  }
+
+  handleClick(event) {
+    const sessionDataPath = event.target.value;
+    const sessionData = JSON.parse(
+      fs.readFileSync(sessionDataPath, 'utf8')
+    );
+    this.props.openInvestModel(
+      sessionData.modelRunName,
+      sessionData.argsValues,
+      sessionData.logfile
+    );
+  }
+
   render() {
     // Buttons to load each recently saved state
     const recentButtons = [];
@@ -109,12 +127,12 @@ class RecentInvestJobs extends React.PureComponent {
     recentSessions.forEach((session) => {
       // These properties are required, if they don't exist,
       // the session data was corrupted and should be skipped
-      let name;
+      let sessionID;
       let metadata;
       let model;
       let workspaceDir;
       try {
-        [name, metadata] = session;
+        [sessionID, metadata] = session;
         model = metadata.model;
         workspaceDir = metadata.workspace.directory;
       } catch (error) {
@@ -128,13 +146,13 @@ class RecentInvestJobs extends React.PureComponent {
 
       const headerStyle = {
         backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
-      }
+      };
       recentButtons.push(
         <Card
           className="text-left session-card"
           as="button"
-          key={name}
-          onClick={() => this.props.loadState(metadata.statefile)}
+          key={sessionID}
+          onClick={() => this.handleClick(metadata.sessionDataPath)}
         >
           <Card.Body>
             <Card.Header as="h4" style={headerStyle}>
@@ -193,6 +211,5 @@ class RecentInvestJobs extends React.PureComponent {
 }
 
 RecentInvestJobs.propTypes = {
-  loadState: PropTypes.func.isRequired,
   recentSessions: PropTypes.array.isRequired,
 };

@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -14,6 +15,10 @@ import LoadButton from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
 import { getInvestList } from './server_requests';
 import { updateRecentSessions, loadRecentSessions } from './utils';
+import { fileRegistry } from './constants';
+import { getLogger } from './logger';
+
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -23,8 +28,7 @@ export default class App extends React.Component {
     super(props);
     this.state = {
       activeTab: 'home',
-      openModels: [],
-      argsInitDict: undefined,
+      openJobs: [],
       investList: {},
       recentSessions: [],
       investSettings: {},
@@ -86,10 +90,50 @@ export default class App extends React.Component {
     });
   }
 
-  openInvestModel(modelRunName) {
+  openInvestModel(modelRunName, argsValues, logfile, sessionID) {
+    const navID = sessionID || modelRunName;
     this.setState((state) => ({
-      openModels: [...state.openModels, modelRunName],
-    }), () => this.switchTabs(modelRunName));
+      openJobs: [
+        ...state.openJobs,
+        {
+          modelRunName: modelRunName,
+          argsValues: argsValues,
+          logfile: logfile,
+          navID: navID,
+        },
+      ],
+    }), () => this.switchTabs(navID));
+  }
+
+  /** Save the state of this component (1) and the current InVEST job (2).
+   * 1. Save the state object of this component to a JSON file .
+   * 2. Append metadata of the invest job to a persistent database/file.
+   * This triggers automatically when the invest subprocess starts and again
+   * when it exits.
+   */
+  saveJob(sessionID, modelRunName, argsValues, logfile, workspace) {
+    const jsonContent = JSON.stringify({
+      modelRunName: modelRunName,
+      argsValues: argsValues,
+      logfile: logfile,
+      workspace: workspace,
+    });
+    const filepath = path.join(fileRegistry.CACHE_DIR, `${sessionID}.json`);
+    fs.writeFile(filepath, jsonContent, 'utf8', (err) => {
+      if (err) {
+        logger.error('An error occured while writing JSON Object to File.');
+        return logger.error(err.stack);
+      }
+    });
+    const jobMetadata = {};
+    jobMetadata[sessionID] = {
+      model: modelRunName,
+      workspace: workspace,
+      humanTime: new Date().toLocaleString(),
+      systemTime: new Date().getTime(),
+      sessionDataPath: filepath,
+    };
+    this.updateRecentSessions(jobMetadata, this.props.jobDatabase);
   }
 
   render() {
@@ -98,30 +142,29 @@ export default class App extends React.Component {
       investList,
       investSettings,
       recentSessions,
-      openModels,
-      argsInitDict,
+      openJobs,
       activeTab,
     } = this.state;
 
     const investNavItems = [];
     const investTabPanes = [];
-    openModels.forEach((modelRunName) => {
+    openJobs.forEach((job) => {
       investNavItems.push(
         <Nav.Item>
-          <Nav.Link eventKey={modelRunName}>
-            {modelRunName}
+          <Nav.Link eventKey={job.navID}>
+            {job.modelRunName}
           </Nav.Link>
         </Nav.Item>
       );
       investTabPanes.push(
-        <TabPane eventKey={modelRunName} title={modelRunName}>
+        <TabPane eventKey={job.navID} title={job.modelRunName}>
           <InvestJob
             investExe={investExe}
-            modelRunName={modelRunName}
-            argsInitDict={argsInitDict}
+            modelRunName={job.modelRunName}
+            argsInitValues={job.argsValues}
+            logfile={job.logfile}
             investSettings={investSettings}
-            jobDatabase={jobDatabase}
-            updateRecentSessions={this.setRecentSessions}
+            saveJob={this.saveJob}
           />
         </TabPane>
       );
@@ -159,7 +202,6 @@ export default class App extends React.Component {
             <HomeTab
               investList={investList}
               openInvestModel={this.openInvestModel}
-              loadState={this.loadState}
               recentSessions={recentSessions}
             />
           </TabPane>
