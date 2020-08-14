@@ -1,14 +1,14 @@
-import os
-import logging
 import itertools
+import logging
+import os
 
-from osgeo import gdal
-import taskgraph
-import pygeoprocessing
-from pygeoprocessing.symbolic import evaluate_raster_calculator_expression
-import pandas
 import numpy
+import pandas
+import pygeoprocessing
 import scipy.sparse
+import taskgraph
+from osgeo import gdal
+from pygeoprocessing.symbolic import evaluate_raster_calculator_expression
 
 from .. import utils
 
@@ -36,7 +36,6 @@ VALUE_RASTER_PATTERN = 'valuation-{year}{suffix}.tif'
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
 OUTPUT_DIR_NAME = 'output'
-
 
 
 # TODO: restructure to separate initial from baseline from transitions.
@@ -73,6 +72,8 @@ def execute_transition_analysis(args):
     transition_years = set(args['transition_years'])
     disturbance_magnitude_rasters = args['disturbance_magnitude_rasters']
     half_life_rasters = args['half_life_rasters']
+    yearly_accum_rasters = args['annual_rate_of_accumulation_rasters']
+    prices = args['carbon_prices_per_year']
 
     # ASSUMPTIONS
     #
@@ -88,8 +89,18 @@ def execute_transition_analysis(args):
     disturbance_vol_rasters = {}
     emissions_rasters = {}
     year_of_disturbance_rasters = {}
+    total_carbon_rasters = {}
     prior_transition_year = None
     current_transition_year = None
+
+    current_disturbance_vol_tasks = {}
+    prior_stock_tasks = {}
+    current_year_of_disturbance_tasks = {}
+    current_emissions_tasks = {}
+    prior_net_sequestration_tasks = {}
+    current_net_sequestration_tasks = {}
+    current_accumulation_tasks = {}
+
     for year in range(args['first_transition_year'], args['final_year']+1):
         current_stock_tasks = {}
         net_sequestration_rasters[year] = {}
@@ -97,12 +108,6 @@ def execute_transition_analysis(args):
         disturbance_vol_rasters[year] = {}
         emissions_rasters[year] = {}
         year_of_disturbance_rasters[year] = {}
-
-        current_disturbance_vol_tasks = {}
-        prior_stock_tasks = {}
-        current_year_of_disturbance_tasks = {}
-        current_emissions_tasks = {}
-        prior_net_sequestration_tasks = {}
 
         for pool in (POOL_SOIL, POOL_BIOMASS, POOL_LITTER):
             # Calculate stocks from last year's stock plus last year's net
@@ -199,7 +204,7 @@ def execute_transition_analysis(args):
             #   * Where pixels are emitting, emit.
             net_sequestration_rasters[year][pool] = os.path.join(
                 intermediate_dir, NET_SEQUESTRATION_RASTER_PATTERN.format(
-                    pool=pool, year=year, suffix=suffix)
+                    pool=pool, year=year, suffix=suffix))
             current_net_sequestration_tasks[pool] = task_graph.add_task(
                 func=_calculate_net_sequestration,
                 args=(yearly_accum_rasters[current_transition_year][pool],
@@ -257,6 +262,9 @@ def execute_transition_analysis(args):
         #  * sum emissions since last transition
         #  * sum accumulation since last transition
         #  * sum net sequestration since last transition
+        if (year + 1) in transition_years:
+            emissions_since_last_transition = 0
+
 
     # Calculate total net sequestration.
 
@@ -966,8 +974,8 @@ def _calculate_net_sequestration(
         if emissions_nodata is not None:
             valid_emissions_pixels &= (
                 ~numpy.isclose(emissions_matrix, emissions_nodata))
-        target_matrix[valid_emissions_pixels] = (
-            emissions_matrix[valid_emissions_pixels])
+        target_matrix[valid_emissions_pixels] = emissions_matrix[
+            valid_emissions_pixels]
 
         valid_pixels = ~(valid_accumulation_pixels | valid_emissions_pixels)
         target_matrix[valid_pixels] = NODATA_FLOAT32
