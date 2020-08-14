@@ -388,7 +388,7 @@ def execute(args):
         prop_raster_path = os.path.join(
             intermediate_dir, '%s%s.tif' % (prop, file_suffix))
         prop_task = task_graph.add_task(
-            func=pygeoprocessing.reclassify_raster,
+            func=_reclassify_raster_op,
             args=(
                 (aligned_lulc_raster_path, 1), prop_map, prop_raster_path,
                 gdal.GDT_Float32, TARGET_NODATA),
@@ -1389,6 +1389,48 @@ def convolve_2d_by_exponential(
         ignore_nodata_and_edges=True)
     shutil.rmtree(temporary_working_dir)
 
+def _reclassify_raster_op(
+        raster_path_band, value_map, target_raster_path, target_datatype,
+        target_nodata, values_required=True):
+    """A wrapper function for calling ``pygeoprocessing.reclassify_raster``.
+
+    This wrapper function is helpful when added as a ``TaskGraph.task`` so
+    a better error message can be provided to the users if an exception
+    occurs.
+
+    Args:
+        raster_path_band (tuple): a tuple including file path to a raster
+            and the band index to operate over. ex: (path, band_index)
+        value_map (dictionary): a dictionary of values of
+            {source_value: dest_value, ...} where source_value's type is the
+            same as the values in ``base_raster_path`` at band ``band_index``.
+            Must contain at least one value.
+        target_raster_path (string): target raster output path; overwritten if
+            it exists
+        target_datatype (gdal type): the numerical type for the target raster
+        target_nodata (numerical type): the nodata value for the target raster
+            Must be the same type as target_datatype
+        values_required (bool): If True, raise a ValueError if there is a
+            value in the raster that is not found in ``value_map``.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError if ``values_required`` is ``True`` and a pixel value from
+        ``raster_path_band`` is not a key in ``value_map``.
+    """
+    try:
+        pygeoprocessing.reclassify_raster(
+            raster_path_band, value_map, target_raster_path, target_datatype,
+            target_nodata, values_required=values_required)
+    except pygeoprocessing.ReclassificationMissingValuesError as err:
+        error_message = (
+                "Values in the LULC Map were found that are not"
+                " represented under the 'lucode' column of the"
+                " Biophysical table. The missing values found in the"
+                f" LULC but not the table are: {err.missing_values}.")
+        raise ValueError(error_message)
 
 @validation.invest_validator
 def validate(args, limit_to=None):
