@@ -25,6 +25,8 @@ DISTURBANCE_VOL_RASTER_PATTERN = 'disturbance-volume-{pool}-{year}{suffix}.tif'
 DISTURBANCE_MAGNITUDE_RASTER_PATTERN = (
     'disturbance-magnitude-{pool}-{year}{suffix}.tif')
 EMISSIONS_RASTER_PATTERN = 'emissions-{pool}-{year}{suffix}.tif'
+YEAR_OF_DIST_RASTER_PATTERN = (
+    'year-of-latest-disturbance-{pool}-{year}{suffix}.tif')
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -132,9 +134,50 @@ def execute_transition_analysis(args):
                     task_name=(f'Mapping {pool} carbon volume disturbed '
                                f'in {year}'))
 
-                # TODO: calculate year-of-disturbance rasters here.
-                # This is something that's derived from the incoming landcover
-                # rasters and used only for internal calculations.
+                # Year-of-disturbance rasters track the year of the most recent
+                # disturbance.  This is important because a disturbance could
+                # span multiple transition years.  This raster is derived from
+                # the incoming landcover rasters and is not something that is
+                # defined by the user.
+                year_of_disturbance_rasters[
+                    current_transition_year][pool] = os.path.join(
+                        intermediate_dir,
+                        YEAR_OF_DIST_RASTER_PATTERN.format(
+                            pool=pool, year=current_transition_year,
+                            suffix=suffix))
+                try:
+                    prior_year_of_disturbance_raster_tuple = (
+                        year_of_disturbance_rasters[prior_transition_year][pool],
+                        1)
+                except KeyError:
+                    # If we don't have any prior disturbance years, then
+                    # we pass None to indicate as much.
+                    prior_year_of_disturbance_raster_tuple = (None, 'raw')
+
+                current_year_of_disturbance_tasks[pool] = (
+                    task_graph.add_task(
+                        func=pygeoprocessing.raster_calculator,
+                        args=(
+                            [(disturbance_rasters[
+                                current_transition_year][pool], 1),
+                             prior_year_of_disturbance_raster_tuple,
+                             (current_transition_year, 'raw'),
+                             (NODATA_FLOAT32, 'raw'),
+                             (NODATA_UINT16, 'raw')],
+                            _track_latest_transition_year,
+                            year_of_disturbance_rasters[
+                                current_transition_year][pool],
+                            gdal.GDT_UInt16,
+                            NODATA_UINT16),
+                        dependent_task_list=[
+                            current_disturbance_tasks[pool]],
+                        target_path_list=[
+                            year_of_disturbance_rasters[
+                                current_transition_year][pool]],
+                        task_name=(
+                            f'Tracking the year of latest {pool} carbon '
+                            f'disturbance as of {current_transition_year}')
+                    ))
 
             # Calculate emissions (all years after 1st transition)
             # Emissions in this context are a function of:
