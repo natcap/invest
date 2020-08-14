@@ -1653,7 +1653,8 @@ def _read_csv_wind_parameters(csv_path, parameter_list):
     # use the parameters in the first column as indeces for the dataframe
     # this doesn't benefit from `utils.read_csv_to_dataframe` because there
     # is no header to strip whitespace
-    wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0)
+    wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0, 
+        engine='python')
     # only get the required parameters and leave out the rest
     wind_param_df = wind_param_df[wind_param_df.index.isin(parameter_list)]
     wind_dict = wind_param_df.to_dict()[1]

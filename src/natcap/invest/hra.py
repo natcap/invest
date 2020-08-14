@@ -2450,9 +2450,9 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     # Read file with pandas based on its type
     file_ext = os.path.splitext(base_info_table_path)[1].lower()
     if file_ext == '.csv':
-        info_df = pandas.read_csv(base_info_table_path)
+        info_df = pandas.read_csv(base_info_table_path, engine='python')
     elif file_ext in ['.xlsx', '.xls']:
-        info_df = pandas.read_excel(base_info_table_path)
+        info_df = pandas.read_excel(base_info_table_path, engine='python')
     else:
         raise ValueError('Info table %s is not a CSV nor an Excel file.' %
                          base_info_table_path)
@@ -2572,11 +2572,11 @@ def _get_criteria_dataframe(base_criteria_table_path):
     # index. Column names are auto-generated ordinal values
     file_ext = os.path.splitext(base_criteria_table_path)[1].lower()
     if file_ext == '.csv':
-        criteria_df = pandas.read_csv(
-            base_criteria_table_path, index_col=0, header=None)
+        criteria_df = pandas.read_csv(base_criteria_table_path, 
+            index_col=0, header=None, engine='python')
     elif file_ext in ['.xlsx', '.xls']:
-        criteria_df = pandas.read_excel(
-            base_criteria_table_path, index_col=0, header=None)
+        criteria_df = pandas.read_excel(base_criteria_table_path, 
+            index_col=0, header=None, engine='python')
     else:
         raise ValueError('Criteria table %s is not a CSV or an Excel file.' %
                          base_criteria_table_path)
