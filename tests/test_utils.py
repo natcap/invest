@@ -859,8 +859,9 @@ class ReadCSVToDataframeTests(unittest.TestCase):
             ).strip())
         df = utils.read_csv_to_dataframe(csv_file)
         # the default engine='python' should replace the unknown characters
-        self.assertEqual(df['header'][0], 
-                         'f\N{REPLACEMENT CHARACTER}\N{REPLACEMENT CHARACTER}')
+        # different encodings of replacement character depending on the system
+        self.assertTrue(df['header'][0] in ['f\xce\xce', 
+            'f\N{REPLACEMENT CHARACTER}\N{REPLACEMENT CHARACTER}'])
         self.assertEqual(df['header'][1], 'bar')
 
     def test_override_default_encoding(self):
