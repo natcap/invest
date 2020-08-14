@@ -276,58 +276,6 @@ class UCMTests(unittest.TestCase):
             "Encountered a building 'type' of:" in
             str(context.exception))
 
-    def test_missing_lulc_value_in_table(self):
-        """UCM: error on missing lulc value in biophysical table."""
-        import natcap.invest.urban_cooling_model
-        import pandas
-
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'results_suffix': 'test_suffix',
-            't_ref': 35.0,
-            't_obs_raster_path': os.path.join(
-                REGRESSION_DATA, "Tair_Sept.tif"),
-            'lulc_raster_path': os.path.join(
-                REGRESSION_DATA, "LULC_SFBA.tif"),
-            'ref_eto_raster_path': os.path.join(
-                REGRESSION_DATA, "ETo_SFBA.tif"),
-            'aoi_vector_path': os.path.join(
-                REGRESSION_DATA,
-                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(
-                REGRESSION_DATA, "biophysical_table_ucm.csv"),
-            'green_area_cooling_distance': 1000.0,
-            'uhi_max': 3,
-            'cc_method': 'factors',
-            'do_valuation': True,
-            't_air_average_radius': "1000.0",
-            'building_vector_path': os.path.join(
-                REGRESSION_DATA, "buildings_clip.gpkg"),
-            'energy_consumption_table_path': os.path.join(
-                REGRESSION_DATA, "Energy.csv"),
-            'avg_rel_humidity': '30.0',
-            'cc_weight_shade': '0.6',
-            'cc_weight_albedo': '0.2',
-            'cc_weight_eti': '0.2',
-            'n_workers': -1,
-            }
-
-        # remove a row from the biophysical table so that lulc value is missing
-        bad_biophysical_path = os.path.join(
-            self.workspace_dir, 'bad_biophysical_table.csv')
-
-        bio_df = pandas.read_csv(args['biophysical_table_path'])
-        bio_df = bio_df[bio_df['lucode'] != 10]
-        bio_df.to_csv(bad_biophysical_path)
-        bio_df = None
-
-        args['biophysical_table_path'] = bad_biophysical_path
-        with self.assertRaises(ValueError) as context:
-            natcap.invest.urban_cooling_model.execute(args)
-        self.assertTrue(
-            "The missing values found in the LULC but not the table are: {10}"
-            in str(context.exception))
-
     def test_bad_args(self):
         """UCM: test validation of bad arguments."""
         import natcap.invest.urban_cooling_model
