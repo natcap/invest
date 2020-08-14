@@ -1197,27 +1197,42 @@ class TestCBC2(unittest.TestCase):
 
     def test_track_latest_transition_year(self):
         """CBC: Track the latest disturbance year."""
-        current_disturbance_volume_matrix = numpy.array([
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31 S
+        wkt = srs.ExportToWkt()
+
+        current_disturbance_vol_raster = os.path.join(
+            self.workspace_dir, 'cur_disturbance.tif')
+        current_disturbance_vol_matrix = numpy.array([
             [5.0, 1.0],
             [-1, 3.0]], dtype=numpy.float32)
+        pygeoprocessing.numpy_array_to_raster(
+            current_disturbance_vol_matrix, -1, (2, -2), (2, -2), wkt,
+            current_disturbance_vol_raster)
 
+        known_transition_years_raster = os.path.join(
+            self.workspace_dir, 'known_transition_years.tif')
         known_transition_years_matrix = numpy.array([
             [100, 100],
             [5, 6]], dtype=numpy.uint16)
+        pygeoprocessing.numpy_array_to_raster(
+            known_transition_years_matrix, 100, (2, -2), (2, -2), wkt,
+            known_transition_years_raster)
 
+        target_raster_path = os.path.join(
+            self.workspace_dir, 'new_tracked_years.tif')
         latest_disturbance_year_matrix = (
             coastal_blue_carbon2._track_latest_transition_year(
-                current_disturbance_volume_matrix,
-                known_transition_years_matrix,
-                current_transition_year=11,
-                current_disturbance_nodata=-1,
-                known_transition_years_nodata=100))
+                current_disturbance_vol_raster,
+                known_transition_years_raster,
+                target_raster_path)
 
         expected_array = numpy.array([
             [11, 11],
             [5, 11]], dtype=numpy.uint16)
         numpy.testing.assert_allclose(
-            latest_disturbance_year_matrix, expected_array)
+            gdal.OpenEx(target_raster_path, gdal.OF_RASTER).ReadAsArray(),
+            expected_array)
 
     def test_emissions(self):
         """CBC: Check emissions calculations."""

@@ -5,6 +5,7 @@ import itertools
 from osgeo import gdal
 import taskgraph
 import pygeoprocessing
+from pygeoprocessing.symbolic import evaluate_raster_calculator_expression
 import pandas
 import numpy
 import scipy.sparse
@@ -66,6 +67,7 @@ def execute_transition_analysis(args):
         args['workspace_dir'], OUTPUT_DIR_NAME)
 
     transition_years = set(args['transition_years'])
+    disturbance_magnitude_rasters = args['disturbance_magnitude_rasters']
 
     # ASSUMPTIONS
     #
@@ -78,16 +80,19 @@ def execute_transition_analysis(args):
     # function.
     stock_rasters = {}
     net_sequestration_rasters = {}
-    disturbance_rasters = {}
+    disturbance_vol_rasters = {}
     emissions_rasters = {}
+    year_of_disturbance_rasters = {}
     for year in range(args['first_transition_year'], args['final_year']+1):
         current_stock_tasks = {}
         net_sequestration_rasters[year] = {}
         stock_rasters[year] = {}
-        disturbance_rasters[year] = {}
+        disturbance_vol_rasters[year] = {}
         emissions_rasters[year] = {}
+        year_of_disturbance_rasters[year] = {}
 
-        current_disturbance_tasks = {}
+        current_disturbance_vol_tasks = {}
+        prior_stocks_tasks = {}
 
         for pool in (POOL_SOIL, POOL_BIOMASS, POOL_LITTER):
             # Calculate stocks from last year's stock plus last year's net
@@ -109,75 +114,47 @@ def execute_transition_analysis(args):
 
             # Calculate disturbance volume if we're at a transition year.
             #    TODO: provide disturbance magnitude as a raster input
-            # Create a year-of-disturbance raster if we're at a transition year
             if year in transition_years:
-                disturbance_rasters[year][pool] = os.path.join(
+                disturbance_vol_rasters[year][pool] = os.path.join(
                     intermediate_dir,
                     DISTURBANCE_VOL_RASTER_PATTERN.format(
                         pool=pool, year=year, suffix=suffix))
                 current_disturbance_vol_tasks[pool] = task_graph.add_task(
-                    func=pygeoprocessing.raster_calculator)
-
-                current_disturbance_tasks[pool] = task_graph.add_task(
-                    func=_reclassify_disturbance_transition,
-                    args=(aligned_lulc_paths[prior_transition_year],
-                          aligned_lulc_paths[current_transition_year],
-                          stock_rasters[year-1][pool],
-                          disturbance_matrices[pool],
-                          disturbance_rasters[
-                            current_transition_year][pool]),
-                    dependent_task_list=[
-                        prior_stock_tasks[pool], alignment_task],
+                    func=evaluate_raster_calculator_expression,
+                    args=("magnitude*stocks",
+                          {"magnitude": (
+                              disturbance_magnitude_rasters[year][pool]),
+                           "stocks": stock_rasters[year-1][pool]},
+                          NODATA_FLOAT32,
+                          disturbance_vol_rasters[year][pool]),
+                    dependent_task_list=[prior_stocks_tasks[pool]],
                     target_path_list=[
-                        disturbance_rasters[
-                            current_transition_year][pool]],
-                    task_name=(f'Mapping {pool} carbon volume disturbed '
-                               f'in {year}'))
+                        disturbance_vol_rasters[year][pool]],
+                    task_name=(
+                        f'Mapping {pool} carbon volume disturbed in {year}'))
 
                 # Year-of-disturbance rasters track the year of the most recent
                 # disturbance.  This is important because a disturbance could
                 # span multiple transition years.  This raster is derived from
                 # the incoming landcover rasters and is not something that is
                 # defined by the user.
-                year_of_disturbance_rasters[
-                    current_transition_year][pool] = os.path.join(
-                        intermediate_dir,
-                        YEAR_OF_DIST_RASTER_PATTERN.format(
-                            pool=pool, year=current_transition_year,
-                            suffix=suffix))
-                try:
-                    prior_year_of_disturbance_raster_tuple = (
-                        year_of_disturbance_rasters[prior_transition_year][pool],
-                        1)
-                except KeyError:
-                    # If we don't have any prior disturbance years, then
-                    # we pass None to indicate as much.
-                    prior_year_of_disturbance_raster_tuple = (None, 'raw')
-
-                current_year_of_disturbance_tasks[pool] = (
-                    task_graph.add_task(
-                        func=pygeoprocessing.raster_calculator,
-                        args=(
-                            [(disturbance_rasters[
-                                current_transition_year][pool], 1),
-                             prior_year_of_disturbance_raster_tuple,
-                             (current_transition_year, 'raw'),
-                             (NODATA_FLOAT32, 'raw'),
-                             (NODATA_UINT16, 'raw')],
-                            _track_latest_transition_year,
-                            year_of_disturbance_rasters[
-                                current_transition_year][pool],
-                            gdal.GDT_UInt16,
-                            NODATA_UINT16),
-                        dependent_task_list=[
-                            current_disturbance_tasks[pool]],
-                        target_path_list=[
-                            year_of_disturbance_rasters[
-                                current_transition_year][pool]],
-                        task_name=(
-                            f'Tracking the year of latest {pool} carbon '
-                            f'disturbance as of {current_transition_year}')
-                    ))
+                year_of_disturbance_rasters[year][pool] = os.path.join(
+                    intermediate_dir, YEAR_OF_DIST_RASTER_PATTERN.format(
+                        pool=pool, year=current_transition_year,
+                        suffix=suffix))
+                current_year_of_disturbance_tasks[pool] = task_graph.add_task(
+                    func=_track_latest_transition_year,
+                    args=(disturbance_vol_rasters[year][pool],
+                          year_of_disturbance_rasters.get(
+                              prior_transition_year, None),
+                          year_of_disturbance_rasters[year][pool])
+                    dependent_task_list=[
+                        current_disturbance_tasks[pool]]],
+                    target_path_list=[
+                        year_of_disturbance_rasters[year][pool]],
+                    task_name=(
+                        f'Track year of latest {pool} carbon disturbance as '
+                        f'of {current_transition_year}'))
 
             # Calculate emissions (all years after 1st transition)
             # Emissions in this context are a function of:
@@ -850,28 +827,53 @@ def _calculate_valuation(
 
 
 def _track_latest_transition_year(
-        current_disturbance_volume_matrix, known_transition_years_matrix,
-        current_transition_year, current_disturbance_nodata,
-        known_transition_years_nodata):
+        current_disturbance_vol_raster_path,
+        known_transition_years_raster_path,
+        current_transition_year, target_path):
+    current_disturbance_vol_nodata = pygeoprocessing.get_raster_info(
+        current_disturbance_vol_raster_path)['nodata'][0]
 
-    target_matrix = numpy.empty(
-        current_disturbance_volume_matrix.shape, dtype=numpy.uint16)
-    target_matrix[:] = NODATA_UINT16
+    if known_transition_years_raster_path:
+        known_transition_years_nodata = pygeoprocessing.get_raster_info(
+            known_transition_years_raster_path)['nodata'][0]
+        known_transition_years_tuple = (
+            known_transition_years_raster_path, 1)
+    else:
+        known_transition_years_tuple = (None, 'raw')
 
-    if known_transition_years_matrix is not None:
-        # Keep any years that are already known to be disturbed.
-        pixels_previously_disturbed = ~numpy.isclose(
-            known_transition_years_matrix, known_transition_years_nodata)
-        target_matrix[pixels_previously_disturbed] = (
-            known_transition_years_matrix[pixels_previously_disturbed])
+    def _track_transition_year(
+            current_disturbance_vol_matrix, known_transition_years_matrix):
 
-    # Track any pixels that are known to be disturbed in this current
-    # transition year.
-    newly_disturbed_pixels = ~numpy.isclose(
-        current_disturbance_volume_matrix, current_disturbance_nodata)
-    target_matrix[newly_disturbed_pixels] = current_transition_year
+        target_matrix = numpy.empty(
+            current_disturbance_vol_matrix.shape, dtype=numpy.uint16)
+        target_matrix[:] = NODATA_UINT16
 
-    return target_matrix
+        # If this is None, then we don't have any previously disturbed pixels
+        # and everything disturbed in this timestep is newly disturbed.
+        if known_transition_years_raster_path:
+            # Keep any years that are already known to be disturbed.
+            pixels_previously_disturbed = ~numpy.isclose(
+                known_transition_years_matrix, known_transition_years_nodata)
+            target_matrix[pixels_previously_disturbed] = (
+                known_transition_years_matrix[pixels_previously_disturbed])
+
+        # Track any pixels that are known to be disturbed in this current
+        # transition year.
+        # Exclude pixels that are nodata or effectively 0.
+        newly_disturbed_pixels = (
+            (~numpy.isclose(
+                current_disturbance_vol_matrix,
+                current_disturbance_vol_nodata)) &
+            (~numpy.isclose(current_disturbance_vol_matrix, 0.0)))
+
+        target_matrix[newly_disturbed_pixels] = current_transition_year
+
+        return target_matrix
+
+    pygeoprocessing.raster_calculator(
+        [(current_disturbance_vol_raster_path, 1),
+         known_transition_years_tuple], _track_transition_year, target_path,
+        gdal.GDT_UInt16, NODATA_UINT16)
 
 
 def _calculate_net_sequestration(
