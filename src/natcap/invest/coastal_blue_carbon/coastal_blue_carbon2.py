@@ -68,6 +68,7 @@ def execute_transition_analysis(args):
 
     transition_years = set(args['transition_years'])
     disturbance_magnitude_rasters = args['disturbance_magnitude_rasters']
+    half_life_rasters = args['half_life_rasters']
 
     # ASSUMPTIONS
     #
@@ -96,6 +97,7 @@ def execute_transition_analysis(args):
         current_disturbance_vol_tasks = {}
         prior_stocks_tasks = {}
         current_year_of_disturbance_tasks = {}
+        current_emissions_tasks = {}
 
         for pool in (POOL_SOIL, POOL_BIOMASS, POOL_LITTER):
             # Calculate stocks from last year's stock plus last year's net
@@ -171,10 +173,10 @@ def execute_transition_analysis(args):
             current_emissions_tasks[pool] = task_graph.add_task(
                 func=pygeoprocessing.raster_calculator,
                 args=(
-                    [(disturbance_volume_rasters[pool], 1),
+                    [(disturbance_vol_rasters[pool], 1),
                      (year_of_disturbance_rasters[
-                          current_disturbance_year][pool], 1),
-                     (half_life_rasters[current_disturbance_year][pool], 1),
+                          current_transition_year][pool], 1),
+                     (half_life_rasters[current_transition_year][pool], 1),
                      (year, 'raw')],
                     _calculate_emissions,
                     emissions_rasters[year][pool],
@@ -186,8 +188,6 @@ def execute_transition_analysis(args):
                 target_path_list=[
                     emissions_rasters[year][pool]],
                 task_name=f'Mapping {pool} carbon emissions in {year}')
-
-
 
             # Calculate net sequestration (all years after 1st transition)
             # Where pixels are accumulating, accumulate.
