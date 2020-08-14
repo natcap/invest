@@ -534,6 +534,7 @@ class HraUnitTests(unittest.TestCase):
         _make_criteria_csv(
             criteria_csv_path, self.workspace_dir, rel_path=True)
         expected_df = _get_criteria_dataframe(criteria_csv_path).astype(str)
+
         # Since we don't have openpyxl library, use the existing excel file
         # from TEST_DATA folder, and copy it to self.workspace_dir so
         # the function won't raise exceptions about vector or raster files
@@ -544,6 +545,7 @@ class HraUnitTests(unittest.TestCase):
         shutil.copyfile(criteria_excel_path, copied_criteria_excel_path)
         out_df = _get_criteria_dataframe(
                     copied_criteria_excel_path).astype(str)
+        
         self.assertTrue(
             out_df.equals(expected_df),
             'The dataframes from criteria CSV and excel files are different.')
