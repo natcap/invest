@@ -28,6 +28,8 @@ DISTURBANCE_MAGNITUDE_RASTER_PATTERN = (
 EMISSIONS_RASTER_PATTERN = 'emissions-{pool}-{year}{suffix}.tif'
 YEAR_OF_DIST_RASTER_PATTERN = (
     'year-of-latest-disturbance-{pool}-{year}{suffix}.tif')
+NET_SEQUESTRATION_RASTER_PATTERN = (
+    'net-sequestration-{pool}-{year}{suffix}.tif')
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -95,9 +97,10 @@ def execute_transition_analysis(args):
         year_of_disturbance_rasters[year] = {}
 
         current_disturbance_vol_tasks = {}
-        prior_stocks_tasks = {}
+        prior_stock_tasks = {}
         current_year_of_disturbance_tasks = {}
         current_emissions_tasks = {}
+        prior_net_sequestration_tasks = {}
 
         for pool in (POOL_SOIL, POOL_BIOMASS, POOL_LITTER):
             # Calculate stocks from last year's stock plus last year's net
@@ -134,7 +137,7 @@ def execute_transition_analysis(args):
                            "stocks": stock_rasters[year-1][pool]},
                           NODATA_FLOAT32,
                           disturbance_vol_rasters[year][pool]),
-                    dependent_task_list=[prior_stocks_tasks[pool]],
+                    dependent_task_list=[prior_stock_tasks[pool]],
                     target_path_list=[
                         disturbance_vol_rasters[year][pool]],
                     task_name=(
@@ -190,8 +193,22 @@ def execute_transition_analysis(args):
                 task_name=f'Mapping {pool} carbon emissions in {year}')
 
             # Calculate net sequestration (all years after 1st transition)
-            # Where pixels are accumulating, accumulate.
-            # Where pixels are emitting, emit.
+            #   * Where pixels are accumulating, accumulate.
+            #   * Where pixels are emitting, emit.
+            net_sequestration_rasters[year][pool] = os.path.join(
+                intermediate_dir, NET_SEQUESTRATION_RASTER_PATTERN.format(
+                    pool=pool, year=year, suffix=suffix)
+            current_net_sequestration_tasks[pool] = task_graph.add_task(
+                func=_calculate_net_sequestration,
+                args=(yearly_accum_rasters[current_transition_year][pool],
+                      emissions_rasters[year][pool],
+                      net_sequestration_rasters[year][pool]),
+                dependent_task_list=[
+                    current_accumulation_tasks[pool],
+                    current_emissions_tasks[pool]],
+                target_path_list=[net_sequestration_rasters[year][pool]],
+                task_name=(
+                    f'Calculating net sequestration for {pool} in {year}'))
 
         # Calculate total carbon stocks (sum stocks across all 3 pools)
 
@@ -887,23 +904,40 @@ def _calculate_net_sequestration(
     emissions_nodata = pygeoprocessing.get_raster_info(
         emissions_raster_path)['nodata'][0]
 
-    def _subtract(accumulation_matrix, emissions_matrix):
+    def _record_sequestration(accumulation_matrix, emissions_matrix):
         target_matrix = numpy.zeros(
             accumulation_matrix.shape, dtype=numpy.float32)
 
-        # The only invalid pixels are the ones where BOTH matrices are nodata.
-        valid_pixels = (
-            ~numpy.isclose(accumulation_matrix, accumulation_nodata) |
-            ~numpy.isclose(emissions_matrix, emissions_nodata))
+        # A given cell can have either accumulation OR emissions, not both.
+        # If there are pixel values on both matrices, emissions will take
+        # precedent.  This is an arbitrary choice, but it'll be easier for the
+        # user to provide a raster filled with some blanket accumulation value
+        # and then assume that the Emissions raster has the extra spatial
+        # nuances of the landscape (like nodata holes).
+        valid_accumulation_pixels = numpy.ones(accumulation_matrix.shape,
+                                               dtype=numpy.bool)
+        if accumulation_nodata is not None:
+            valid_accumulation_pixels &= (
+                ~numpy.isclose(accumulation_matrix, accumulation_nodata))
+        target_matrix[valid_accumulation_pixels] += (
+            accumulation_matrix[valid_accumulation_pixels])
 
-        target_matrix[valid_pixels] = (
-            accumulation_matrix[valid_pixels] - emissions_matrix[valid_pixels])
-        target_matrix[~valid_pixels] = NODATA_FLOAT32
+        valid_emissions_pixels = numpy.ones(emissions_matrix.shape,
+                                            dtype=numpy.bool)
+        if emissions_nodata is not None:
+            valid_emissions_pixels &= (
+                ~numpy.isclose(emissions_matrix, emissions_nodata))
+        target_matrix[valid_emissions_pixels] = (
+            emissions_matrix[valid_emissions_pixels])
+
+        valid_pixels = ~(valid_accumulation_pixels | valid_emissions_pixels)
+        target_matrix[valid_pixels] = NODATA_FLOAT32
         return target_matrix
 
     pygeoprocessing.raster_calculator(
         [(accumulation_raster_path, 1), (emissions_raster_path, 1)],
-        _subtract, target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32)
+        _record_sequestration, target_raster_path, gdal.GDT_Float32,
+        NODATA_FLOAT32)
 
 
 def _calculate_emissions(
