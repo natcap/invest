@@ -30,6 +30,7 @@ YEAR_OF_DIST_RASTER_PATTERN = (
     'year-of-latest-disturbance-{pool}-{year}{suffix}.tif')
 NET_SEQUESTRATION_RASTER_PATTERN = (
     'net-sequestration-{pool}-{year}{suffix}.tif')
+TOTAL_STOCKS_RASTER_PATTERN = 'total-carbon-stocks-{year}{suffix}.tif'
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -211,6 +212,21 @@ def execute_transition_analysis(args):
                     f'Calculating net sequestration for {pool} in {year}'))
 
         # Calculate total carbon stocks (sum stocks across all 3 pools)
+        total_carbon_rasters[year] = os.path.join(
+            intermediate_dir, TOTAL_STOCKS_RASTER_PATTERN.format(
+                year=year, suffix=suffix))
+        _ = task_graph.add_task(
+            func=_sum_n_rasters,
+            args=([stock_rasters[year][POOL_SOIL],
+                   stock_rasters[year][POOL_BIOMASS],
+                   stock_rasters[year][POOL_LITTER]],
+                  total_carbon_rasters[year]),
+            dependent_task_list=[
+                current_stock_tasks[POOL_SOIL],
+                current_stock_tasks[POOL_BIOMASS],
+                current_stock_tasks[POOL_LITTER]],
+            target_path_list=[total_carbon_rasters[year]],
+            task_name=f'Calculating total carbon stocks in {year}')
 
         # Calculate valuation if we're doing valuation (requires Net Seq.)
 
