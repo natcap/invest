@@ -37,6 +37,7 @@ export default class App extends React.Component {
     this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
+    this.saveJob = this.saveJob.bind(this);
   }
 
   /** Initialize the list of available invest models and recent invest jobs. */
@@ -133,7 +134,7 @@ export default class App extends React.Component {
       systemTime: new Date().getTime(),
       sessionDataPath: filepath,
     };
-    this.updateRecentSessions(jobMetadata, this.props.jobDatabase);
+    this.setRecentSessions(jobMetadata, this.props.jobDatabase);
   }
 
   render() {
@@ -150,14 +151,18 @@ export default class App extends React.Component {
     const investTabPanes = [];
     openJobs.forEach((job) => {
       investNavItems.push(
-        <Nav.Item>
+        <Nav.Item key={job.navID}>
           <Nav.Link eventKey={job.navID}>
             {job.modelRunName}
           </Nav.Link>
         </Nav.Item>
       );
       investTabPanes.push(
-        <TabPane eventKey={job.navID} title={job.modelRunName}>
+        <TabPane
+          key={job.navID}
+          eventKey={job.navID}
+          title={job.modelRunName}
+        >
           <InvestJob
             investExe={investExe}
             modelRunName={job.modelRunName}
@@ -188,7 +193,7 @@ export default class App extends React.Component {
           </Nav>
           <Navbar.Brand>InVEST</Navbar.Brand>
           <LoadButton
-            investGetSpec={this.investGetSpec}
+            openInvestModel={this.openInvestModel}
             batchUpdateArgs={this.batchUpdateArgs}
           />
           <SettingsModal

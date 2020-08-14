@@ -95,7 +95,7 @@ export default class InvestJob extends React.Component {
       parameterSetPath: datastackPath,
       moduleName: this.state.modelSpec.module,
       relativePaths: false,
-      args: argsValuesCopy,
+      args: JSON.stringify(argsValuesCopy),
     };
     await writeParametersToFile(payload);
   }
@@ -160,7 +160,7 @@ export default class InvestJob extends React.Component {
             jobStatus: 'running',
           }, () => {
             this.switchTabs('log');
-            this.saveJob(
+            this.props.saveJob(
               sessionID, this.props.modelRunName, argsValues, logfilename, workspace
             );
           }
@@ -231,6 +231,7 @@ export default class InvestJob extends React.Component {
       return { modelSpec: modelSpec, argsSpec: args };
     }
     logger.error(`no spec found for ${modelName}`);
+    return;
   }
 
   /** Change the tab that is currently visible.
@@ -336,6 +337,4 @@ InvestJob.propTypes = {
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
   }).isRequired,
-  jobDatabase: PropTypes.string,
-  updateRecentSessions: PropTypes.func.isRequired,
 };
