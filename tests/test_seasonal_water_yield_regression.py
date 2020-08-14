@@ -79,6 +79,27 @@ def make_raster_from_array(base_array, base_raster_path):
         base_array, -1, (1, -1), (1180000, 690000), project_wkt,
         base_raster_path)
 
+def make_raster_undefined_nodata_value(base_array, base_raster_path):
+    """Make a raster with an undefined nodata value from an array.
+
+    Args:
+        array (numpy.ndarray): the 2D array for making the raster.
+        raster_path (str): path to the raster to be created.
+
+    Returns:
+        None.
+
+    """
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)  # UTM Zone 10N
+    project_wkt = srs.ExportToWkt()
+
+    # Each pixel is 1x1 m
+    # Set nodata value to None
+    pygeoprocessing.numpy_array_to_raster(
+        base_array, None, (1, -1), (1180000, 690000), project_wkt,
+        base_raster_path)
+
 
 def make_lulc_raster(lulc_ras_path):
     """Make a 100x100 LULC raster with two LULC codes on the raster path.
