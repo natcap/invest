@@ -83,6 +83,8 @@ def execute_transition_analysis(args):
     disturbance_vol_rasters = {}
     emissions_rasters = {}
     year_of_disturbance_rasters = {}
+    prior_transition_year = None
+    current_transition_year = None
     for year in range(args['first_transition_year'], args['final_year']+1):
         current_stock_tasks = {}
         net_sequestration_rasters[year] = {}
@@ -93,6 +95,7 @@ def execute_transition_analysis(args):
 
         current_disturbance_vol_tasks = {}
         prior_stocks_tasks = {}
+        current_year_of_disturbance_tasks = {}
 
         for pool in (POOL_SOIL, POOL_BIOMASS, POOL_LITTER):
             # Calculate stocks from last year's stock plus last year's net
@@ -115,6 +118,8 @@ def execute_transition_analysis(args):
             # Calculate disturbance volume if we're at a transition year.
             #    TODO: provide disturbance magnitude as a raster input
             if year in transition_years:
+                prior_transition_year = current_transition_year
+                current_transition_year = year
                 disturbance_vol_rasters[year][pool] = os.path.join(
                     intermediate_dir,
                     DISTURBANCE_VOL_RASTER_PATTERN.format(
@@ -140,21 +145,20 @@ def execute_transition_analysis(args):
                 # defined by the user.
                 year_of_disturbance_rasters[year][pool] = os.path.join(
                     intermediate_dir, YEAR_OF_DIST_RASTER_PATTERN.format(
-                        pool=pool, year=current_transition_year,
-                        suffix=suffix))
+                        pool=pool, year=year, suffix=suffix))
                 current_year_of_disturbance_tasks[pool] = task_graph.add_task(
                     func=_track_latest_transition_year,
                     args=(disturbance_vol_rasters[year][pool],
                           year_of_disturbance_rasters.get(
                               prior_transition_year, None),
-                          year_of_disturbance_rasters[year][pool])
+                          year_of_disturbance_rasters[year][pool]),
                     dependent_task_list=[
-                        current_disturbance_tasks[pool]]],
+                        current_disturbance_vol_tasks[pool]],
                     target_path_list=[
                         year_of_disturbance_rasters[year][pool]],
                     task_name=(
                         f'Track year of latest {pool} carbon disturbance as '
-                        f'of {current_transition_year}'))
+                        f'of {year}'))
 
             # Calculate emissions (all years after 1st transition)
             # Emissions in this context are a function of:
