@@ -31,6 +31,7 @@ YEAR_OF_DIST_RASTER_PATTERN = (
 NET_SEQUESTRATION_RASTER_PATTERN = (
     'net-sequestration-{pool}-{year}{suffix}.tif')
 TOTAL_STOCKS_RASTER_PATTERN = 'total-carbon-stocks-{year}{suffix}.tif'
+VALUE_RASTER_PATTERN = 'valuation-{year}{suffix}.tif'
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -229,6 +230,28 @@ def execute_transition_analysis(args):
             task_name=f'Calculating total carbon stocks in {year}')
 
         # Calculate valuation if we're doing valuation (requires Net Seq.)
+        if ('do_economic_analysis' in args and
+                args['do_economic_analysis'] not in (None, '')):
+            # TODO: Need to verify the math on this, I'm unsure if the current
+            # implementation is correct or makes sense:
+            #    (N_biomass + N_soil[baseline]) * price[this year]
+            valuation_raster = os.path.join(
+                intermediate_dir, VALUE_RASTER_PATTERN.format(
+                    year=year, suffix=suffix))
+            _ = task_graph.add_task(
+                func=pygeoprocessing.raster_calculator,
+                args=([(net_sequestration_rasters[year][POOL_BIOMASS], 1),
+                       (net_sequestration_rasters[year][POOL_SOIL], 1),
+                       (prices[year], 'raw')],
+                      _calculate_valuation,
+                      valuation_raster,
+                      gdal.GDT_Float32,
+                      NODATA_FLOAT32),
+                dependent_task_list=[
+                    current_net_sequestration_tasks[POOL_BIOMASS],
+                    current_net_sequestration_tasks[POOL_SOIL]],
+                target_path_list=[valuation_raster],
+                task_name=f'Calculating the value of carbon for {year}')
 
         # If in the last year before a transition:
         #  * sum emissions since last transition
