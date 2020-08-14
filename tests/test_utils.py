@@ -765,3 +765,165 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         self.assertEqual(lookup_dict[4]['header 2'], 5)
         self.assertEqual(lookup_dict[4]['header 3'], 'foo')
         self.assertEqual(lookup_dict[1]['header 1'], 1)
+
+
+class ReadCSVToDataframeTests(unittest.TestCase):
+    """Tests for natcap.invest.utils.read_csv_to_dataframe."""
+
+    def setUp(self):
+        """Make temporary directory for workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_read_csv_to_dataframe(self):
+        """Test the default behavior"""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                HEADER,
+                A,
+                b
+                """
+            ).strip())
+        df = utils.read_csv_to_dataframe(csv_file)
+        # case of header and table values shouldn't change
+        self.assertEqual(df.columns[0], 'HEADER')
+        self.assertEqual(df['HEADER'][0], 'A')
+        self.assertEqual(df['HEADER'][1], 'b')
+
+    def test_to_lower(self):
+        """Test that to_lower=True makes headers lowercase"""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                HEADER,
+                A,
+                b
+                """
+            ).strip())
+        df = utils.read_csv_to_dataframe(csv_file, to_lower=True)
+        # header should be lowercase
+        self.assertEqual(df.columns[0], 'header')
+        # case of table values shouldn't change
+        self.assertEqual(df['header'][0], 'A')
+        self.assertEqual(df['header'][1], 'b')
+
+    def test_utf8_bom_encoding(self):
+        """Test that CSV read correctly with UTF-8 BOM encoding."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        # writing with utf-8-sig will prepend the BOM
+        with open(csv_file, 'w', encoding='utf-8-sig') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header1,HEADER2,header3
+                1,2,bar
+                4,5,FOO
+                """
+            ).strip())
+        # confirm that the file has the BOM prefix
+        with open(csv_file, 'rb') as file_obj:
+            self.assertTrue(file_obj.read().startswith(codecs.BOM_UTF8))
+
+        df = utils.read_csv_to_dataframe(csv_file)
+        # assert the BOM prefix was correctly parsed and skipped
+        self.assertEqual(df.columns[0], 'header1')
+        self.assertEqual(df['HEADER2'][1], 5)
+
+    def test_non_utf8_encoding(self):
+        """Test that non-UTF8 encoding doesn't raise an error"""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        # encode with ISO Cyrillic, include a non-ASCII character
+        with open(csv_file, 'w', encoding='iso8859_5') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header,
+                fЮЮ,
+                bar
+                """
+            ).strip())
+        df = utils.read_csv_to_dataframe(csv_file)
+        # the default engine='python' should replace the unknown characters
+        self.assertEqual(df['header'][0], 
+                         'f\N{REPLACEMENT CHARACTER}\N{REPLACEMENT CHARACTER}')
+        self.assertEqual(df['header'][1], 'bar')
+
+    def test_override_default_encoding(self):
+        """Test that you can override the default encoding kwarg"""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        # encode with ISO Cyrillic, include a non-ASCII character
+        with open(csv_file, 'w', encoding='iso8859_5') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header,
+                fЮЮ,
+                bar
+                """
+            ).strip())
+        df = utils.read_csv_to_dataframe(csv_file, encoding='iso8859_5')
+        # with the encoding specified, special characters should work
+        self.assertEqual(df['header'][0], 'fЮЮ')
+        self.assertEqual(df['header'][1], 'bar')
+
+    def test_other_kwarg(self):
+        """Any other kwarg should be passed to pandas.read_csv"""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                h1;h2;h3
+                a;b;c
+                d;e;f
+                """
+            ).strip())
+        # using sep=None with the default engine='python',
+        # it should infer what the separator is
+        df = utils.read_csv_to_dataframe(csv_file, sep=None)
+
+        self.assertEqual(df.columns[0], 'h1')
+        self.assertEqual(df['h2'][1], 'e')
+
+    def test_csv_with_integer_headers(self):
+        """
+        CSV with integer headers should be read into strings.
+        
+        This shouldn't matter for any of the models, but if a user inputs a CSV
+        with extra columns that are labeled with numbers, it should still work.
+        """
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                1,2,3
+                a,b,c
+                d,e,f
+                """
+            ).strip())
+        df = utils.read_csv_to_dataframe(csv_file)
+        # expect headers to be strings
+        self.assertEqual(df.columns[0], '1')
+        self.assertEqual(df['1'][0], 'a')

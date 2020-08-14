@@ -483,7 +483,8 @@ def build_lookup_from_csv(
         col_list.append(key_field)
 
     table = pandas.read_csv(
-        table_path, sep=None, index_col=False, encoding=encoding)
+        table_path, sep=None, index_col=False, engine='python', 
+        encoding=encoding)
     # strip column names to prevent indexing errors
     # when users accidentally include leading/trailing whitespace
     table.columns = table.columns.str.strip()
@@ -562,14 +563,14 @@ def read_csv_to_dataframe(path, to_lower=False, encoding=None, engine='python', 
             first_line = file_obj.readline()
             if first_line.startswith(codecs.BOM_UTF8):
                 encoding = 'utf-8-sig'
-    dataframe = pandas.read_csv(path, encoding=encoding, engine=engine, **kwargs)
-    # this won't work on non-string types
-    try:
-        dataframe.columns = dataframe.columns.str.strip()
-        if to_lower:
-            dataframe.columns = dataframe.columns.str.lower()
-    except:
-        pass
+    dataframe = pandas.read_csv(path, engine=engine, encoding=encoding,
+                                **kwargs)
+    # this won't work on integer types, which happens if you set header=None
+    # however, there's little reason to use this function if there's no header
+    dataframe.columns = dataframe.columns.str.strip()
+    if to_lower:
+        dataframe.columns = dataframe.columns.str.lower()
+
     return dataframe
 
 
