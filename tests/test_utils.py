@@ -779,7 +779,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_read_csv_to_dataframe(self):
-        """Test the default behavior"""
+        """utils: test the default behavior"""
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
@@ -799,7 +799,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         self.assertEqual(df['HEADER'][1], 'b')
 
     def test_to_lower(self):
-        """Test that to_lower=True makes headers lowercase"""
+        """utils: test that to_lower=True makes headers lowercase"""
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
@@ -820,7 +820,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         self.assertEqual(df['header'][1], 'b')
 
     def test_utf8_bom_encoding(self):
-        """Test that CSV read correctly with UTF-8 BOM encoding."""
+        """utils: test that CSV read correctly with UTF-8 BOM encoding."""
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
@@ -843,7 +843,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         self.assertEqual(df['HEADER2'][1], 5)
 
     def test_non_utf8_encoding(self):
-        """Test that non-UTF8 encoding doesn't raise an error"""
+        """utils: test that non-UTF8 encoding doesn't raise an error"""
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
@@ -865,7 +865,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         self.assertEqual(df['header'][1], 'bar')
 
     def test_override_default_encoding(self):
-        """Test that you can override the default encoding kwarg"""
+        """utils: test that you can override the default encoding kwarg"""
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
@@ -885,7 +885,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         self.assertEqual(df['header'][1], 'bar')
 
     def test_other_kwarg(self):
-        """Any other kwarg should be passed to pandas.read_csv"""
+        """utils: any other kwarg should be passed to pandas.read_csv"""
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
@@ -907,7 +907,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
 
     def test_csv_with_integer_headers(self):
         """
-        CSV with integer headers should be read into strings.
+        utils: CSV with integer headers should be read into strings.
         
         This shouldn't matter for any of the models, but if a user inputs a CSV
         with extra columns that are labeled with numbers, it should still work.

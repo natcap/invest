@@ -541,8 +541,9 @@ def build_lookup_from_csv(
     return lookup_dict 
 
 
-def read_csv_to_dataframe(path, to_lower=False, encoding=None, engine='python', **kwargs):
-    """
+def read_csv_to_dataframe(path, to_lower=False, sep=None, encoding=None, engine='python', **kwargs):
+    """Return a dataframe representation of the CSV.
+
     Wrapper around ``pandas.read_csv`` that standardizes the column names by
     stripping leading/trailing whitespace and optionally making all lowercase.
     This helps avoid common errors caused by user-supplied CSV files with
@@ -551,10 +552,20 @@ def read_csv_to_dataframe(path, to_lower=False, encoding=None, engine='python', 
     Args:
         path (string): path to a CSV file
         to_lower (bool): if True, convert all column names to lowercase
-        encoding (string): name of encoding codec to pass to `read_csv`. 
-            Defaults to None.
-        engine (string):
+        sep: separator to pass to pandas.read_csv. Defaults to None, which
+            lets the Python engine infer the separator (if engine='python').
+        encoding (string): name of encoding codec to pass to `pandas.read_csv`. 
+            Defaults to None. Setting engine='python' when encoding=None allows
+            a lot of non-UTF8 encodings to be read without raising an error.
+            Any special characters in other encodings may get replaced with the
+            replacement character.
+        engine (string): kwarg for pandas.read_csv: 'c', 'python', or None.
+            Defaults to 'python' (see note about encoding).
         **kwargs: any kwargs that are valid for ``pandas.read_csv``
+
+    Returns:
+        pandas.DataFrame with the contents of the given CSV
+
     """
     # Check if the file encoding is UTF-8 BOM first
     # allow encoding kwarg to override this if it's provided
@@ -564,7 +575,7 @@ def read_csv_to_dataframe(path, to_lower=False, encoding=None, engine='python', 
             if first_line.startswith(codecs.BOM_UTF8):
                 encoding = 'utf-8-sig'
     dataframe = pandas.read_csv(path, engine=engine, encoding=encoding,
-                                **kwargs)
+                                sep=sep, **kwargs)
     # this won't work on integer types, which happens if you set header=None
     # however, there's little reason to use this function if there's no header
     dataframe.columns = dataframe.columns.str.strip()
