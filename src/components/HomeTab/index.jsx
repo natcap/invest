@@ -107,8 +107,7 @@ class RecentInvestJobs extends React.PureComponent {
     this.handleClick = this.handleClick.bind(this);
   }
 
-  handleClick(event) {
-    const sessionDataPath = event.target.value;
+  handleClick(sessionDataPath) {
     const sessionData = JSON.parse(
       fs.readFileSync(sessionDataPath, 'utf8')
     );
@@ -130,10 +129,12 @@ class RecentInvestJobs extends React.PureComponent {
       let metadata;
       let model;
       let workspaceDir;
+      let sessionDataPath;
       try {
         [sessionID, metadata] = session;
         model = metadata.model;
         workspaceDir = metadata.workspace.directory;
+        sessionDataPath = metadata.sessionDataPath;
       } catch (error) {
         return;
       }
@@ -151,7 +152,7 @@ class RecentInvestJobs extends React.PureComponent {
           className="text-left session-card"
           as="button"
           key={sessionID}
-          onClick={() => this.handleClick(metadata.sessionDataPath)}
+          onClick={() => this.handleClick(sessionDataPath)}
         >
           <Card.Body>
             <Card.Header as="h4" style={headerStyle}>

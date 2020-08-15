@@ -47,46 +47,53 @@ export default class LogTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      logdata: '',
+      logdata: null,
     };
     this.tail = null;
     this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
+    this.tailLogfile = this.tailLogfile.bind(this);
+  }
+
+  componentDidMount() {
+    const { logfile } = this.props;
+    if (logfile) {
+      this.tailLogfile(logfile);
+    }
   }
 
   componentDidUpdate(prevProps) {
+    // Re-executing a model will generate a new logfile
+    // so need to update to tail the new file.
     const { logfile } = this.props;
-    // if there is a logfile and it's new, start tailing the file.
     if (logfile && (prevProps.logfile !== logfile)) {
-      try {
-        this.tail = new Tail(logfile, {
-          fromBeginning: true
-        });
-        let logdata = Object.assign('', this.state.logdata);
-        this.tail.on('line', (data) => {
-          logdata += `${data}${os.EOL}`;
-          this.setState({ logdata: logdata });
-        });
-      } catch (error) {
-        // in case a recent session was loaded but the logfile
-        // no longer exists
-        this.setState({
-          logdata: `Logfile is missing: ${os.EOL}${logfile}`
-        });
-        logger.error(`Not able to read ${logfile}`);
-        logger.error(error.stack);
-      }
+      this.tailLogfile(logfile);
+    }
+  }
 
-    // No new logfile. No existing logdata.
-    } else if (this.state.logdata === '') {
-      this.setState({ logdata: 'Starting...' });
+  componentWillUnmount() {
+    try {
+      this.tail.unwatch();
+    } catch (error) {
+      logger.error(error.stack);
+    }
+  }
 
-    // No new logfile. Existing logdata. Invest process exited.
-    } else if (['success', 'error'].includes(this.props.jobStatus)) {
-      try {
-        this.tail.unwatch();
-      } catch (error) {
-        logger.error(error.stack);
-      }
+  tailLogfile(logfile) {
+    try {
+      this.tail = new Tail(logfile, {
+        fromBeginning: true,
+      });
+      let logdata = Object.assign('', this.state.logdata);
+      this.tail.on('line', (data) => {
+        logdata += `${data}${os.EOL}`;
+        this.setState({ logdata: logdata });
+      });
+    } catch (error) {
+      this.setState({
+        logdata: `Logfile is missing: ${os.EOL}${logfile}`
+      });
+      logger.error(`Not able to read ${logfile}`);
+      logger.error(error.stack);
     }
   }
 
@@ -95,7 +102,7 @@ export default class LogTab extends React.Component {
   }
 
   render() {
-    let RenderedAlert;
+    let ModelStatusAlert;
     const WorkspaceButton = (
       <Button
         className="float-right float-bottom"
@@ -108,14 +115,14 @@ export default class LogTab extends React.Component {
     );
 
     if (this.props.jobStatus === 'error') {
-      RenderedAlert = (
+      ModelStatusAlert = (
         <Alert className="py-4 mt-3" variant="danger">
           {this.props.logStdErr}
           {WorkspaceButton}
         </Alert>
       );
     } else if (this.props.jobStatus === 'success') {
-      RenderedAlert = (
+      ModelStatusAlert = (
         <Alert className="py-4 mt-3" variant="success">
           <span>Model Completed</span>
           {WorkspaceButton}
@@ -130,7 +137,7 @@ export default class LogTab extends React.Component {
         </Row>
         <Row>
           <Col>
-            {RenderedAlert}
+            {ModelStatusAlert}
           </Col>
         </Row>
       </Container>
