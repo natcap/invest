@@ -2450,7 +2450,9 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     # Read file with pandas based on its type
     file_ext = os.path.splitext(base_info_table_path)[1].lower()
     if file_ext == '.csv':
-        info_df = pandas.read_csv(base_info_table_path, engine='python')
+        # use sep=None, engine='python' to infer what the separator is
+        info_df = pandas.read_csv(base_info_table_path, sep=None, 
+            engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         info_df = pandas.read_excel(base_info_table_path)
     else:
@@ -2572,8 +2574,9 @@ def _get_criteria_dataframe(base_criteria_table_path):
     # index. Column names are auto-generated ordinal values
     file_ext = os.path.splitext(base_criteria_table_path)[1].lower()
     if file_ext == '.csv':
+        # use sep=None, engine='python' to infer what the separator is
         criteria_df = pandas.read_csv(base_criteria_table_path, 
-            index_col=0, header=None, engine='python')
+            index_col=0, header=None, sep=None, engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         criteria_df = pandas.read_excel(base_criteria_table_path, 
             index_col=0, header=None)

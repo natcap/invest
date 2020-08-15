@@ -1650,11 +1650,12 @@ def _read_csv_wind_parameters(csv_path, parameter_list):
             keys that have values pulled from 'csv_path'
 
     """
-    # use the parameters in the first column as indeces for the dataframe
+    # use the parameters in the first column as indices for the dataframe
     # this doesn't benefit from `utils.read_csv_to_dataframe` because there
     # is no header to strip whitespace
+    # use sep=None, engine='python' to infer what the separator is
     wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0, 
-        engine='python')
+        sep=None, engine='python')
     # only get the required parameters and leave out the rest
     wind_param_df = wind_param_df[wind_param_df.index.isin(parameter_list)]
     wind_dict = wind_param_df.to_dict()[1]

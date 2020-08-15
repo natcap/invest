@@ -519,6 +519,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
 
         # engine=python handles unknown characters by replacing them with a
         # replacement character, instead of raising an error
+        # use sep=None, engine='python' to infer what the separator is
         dataframe = pandas.read_csv(
             filepath, sep=None, engine='python', encoding=encoding)
     except Exception:
