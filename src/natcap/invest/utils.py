@@ -559,6 +559,8 @@ def read_csv_to_dataframe(path, to_lower=False, sep=None, encoding=None, engine=
             a lot of non-UTF8 encodings to be read without raising an error.
             Any special characters in other encodings may get replaced with the
             replacement character.
+            If encoding=None, and the file begins with a BOM, the encoding gets
+            set to 'utf-8-sig'; otherwise the BOM causes an error.
         engine (string): kwarg for pandas.read_csv: 'c', 'python', or None.
             Defaults to 'python' (see note about encoding).
         **kwargs: any kwargs that are valid for ``pandas.read_csv``
