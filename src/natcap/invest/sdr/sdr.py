@@ -769,7 +769,7 @@ def _calculate_ls_factor(
 
         """
         valid_mask = (
-            (~numpy.isclose(avg_aspect, avg_aspect_nodata)) &
+            utils.is_valid(avg_aspect, avg_aspect_nodata) &
             (percent_slope != slope_nodata) &
             (flow_accumulation != flow_accumulation_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
@@ -876,10 +876,8 @@ def _calculate_rkls(
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
             (ls_factor != _TARGET_NODATA) & (stream != stream_nodata))
-        if erosivity_nodata is not None:
-            nodata_mask &= ~numpy.isclose(erosivity, erosivity_nodata)
-        if erodibility_nodata is not None:
-            nodata_mask &= ~numpy.isclose(erodibility, erodibility_nodata)
+        nodata_mask &= utils.is_valid(erosivity, erosivity_nodata)
+        nodata_mask &= utils.is_valid(erodibility, erodibility_nodata)
 
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
@@ -1089,8 +1087,8 @@ def _calculate_bar_factor(
         """Aggregate accumulation from base divided by the flow accum."""
         result = numpy.empty(base_accumulation.shape, dtype=numpy.float32)
         valid_mask = (
-            ~numpy.isclose(base_accumulation, _TARGET_NODATA) &
-            ~numpy.isclose(flow_accumulation, flow_accumulation_nodata))
+            utils.is_valid(base_accumulation, _TARGET_NODATA) &
+            utils.is_valid(flow_accumulation, flow_accumulation_nodata))
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
             base_accumulation[valid_mask] / flow_accumulation[valid_mask])

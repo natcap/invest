@@ -993,8 +993,8 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     def _mask_zeros(valuation_matrix):
         """Assign zeros to nodata, excluding them from percentile calc."""
         nonzero = ~numpy.isclose(valuation_matrix, 0.0)
-        nodata = numpy.isclose(valuation_matrix, raster_nodata)
-        valid_indexes = (~nodata & nonzero)
+        has_data = utils.is_valid(valuation_matrix, raster_nodata)
+        valid_indexes = (has_data & nonzero)
         visual_quality = numpy.empty(valuation_matrix.shape,
                                      dtype=numpy.float64)
         visual_quality[:] = _VALUATION_NODATA

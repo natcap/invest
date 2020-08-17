@@ -651,8 +651,8 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
     reclass_array = v[index].reshape(array.shape)
 
     if nodata_mask and numpy.issubdtype(reclass_array.dtype, numpy.floating):
-        reclass_array[numpy.isclose(array, nodata_mask)] = numpy.nan
-        reclass_array[numpy.isclose(array, ndata)] = numpy.nan
+        reclass_array[~utils.is_valid(array, nodata_mask)] = numpy.nan
+        reclass_array[~utils.is_valid(array, ndata)] = numpy.nan
 
         # If the user's nodata value is incorrectly configured for the datatype
         # of the landcover raster, some pixels will still have the 'ndata'
@@ -660,7 +660,7 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
         # everything left over with that value back to numpy.nan, where it will
         # be converted into the raster's nodata value later in the model's
         # execution.
-        reclass_array[numpy.isclose(reclass_array, ndata)] = numpy.nan
+        reclass_array[~utils.is_valid(reclass_array, ndata)] = numpy.nan
 
     return reclass_array
 

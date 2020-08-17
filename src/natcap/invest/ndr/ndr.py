@@ -864,7 +864,7 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
         base_raster_path_band[0])['nodata'][base_raster_path_band[1]-1]
     for _, raster_block in pygeoprocessing.iterblocks(
             base_raster_path_band):
-        valid_block = raster_block[~numpy.isclose(raster_block, base_nodata)]
+        valid_block = raster_block[utils.is_valid(raster_block, base_nodata)]
         value_sum += numpy.sum(valid_block)
         value_count += valid_block.size
 
@@ -876,7 +876,7 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
         """Divide values by mean."""
         result = numpy.empty(array.shape, dtype=numpy.float32)
         result[:] = numpy.float32(base_nodata)
-        valid_mask = ~numpy.isclose(array, base_nodata)
+        valid_mask = utils.is_valid(array, base_nodata)
         result[valid_mask] = array[valid_mask]
         if value_mean != 0:
             result[valid_mask] /= value_mean
@@ -954,10 +954,10 @@ def _multiply_rasters(raster_path_list, target_nodata, target_result_path):
         """Multiply non-nodata stacks."""
         result = numpy.empty(array_nodata_list[0].shape)
         result[:] = target_nodata
-        valid_mask = ~numpy.isclose(
+        valid_mask = utils.is_valid(
             array_nodata_list[0], array_nodata_list[1])
         for array, nodata in zip(*[iter(array_nodata_list[2:])]*2):
-            valid_mask &= ~numpy.isclose(array, nodata)
+            valid_mask &= utils.is_valid(array, nodata)
         result[valid_mask] = array_nodata_list[0][valid_mask]
         for array in array_nodata_list[2::2]:
             result[valid_mask] *= array[valid_mask]
@@ -1188,7 +1188,7 @@ def invert_raster_values(base_raster_path, target_raster_path):
         """Calculate inverse of S factor."""
         result = numpy.empty(base_val.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
-        valid_mask = ~numpy.isclose(base_val, base_nodata)
+        valid_mask = utils.is_valid(base_val, base_nodata)
         zero_mask = base_val == 0.0
         result[valid_mask & ~zero_mask] = (
             1.0 / base_val[valid_mask & ~zero_mask])
@@ -1260,7 +1260,7 @@ def _calculate_sub_ndr(
 
     def _sub_ndr_op(dist_to_channel_array):
         """Calculate subsurface NDR."""
-        valid_mask = ~numpy.isclose(
+        valid_mask = utils.is_valid(
             dist_to_channel_array, dist_to_channel_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
@@ -1290,11 +1290,10 @@ def _calculate_export(
             modified_load_array, ndr_array, modified_sub_load_array,
             sub_ndr_array):
         """Combine NDR and subsurface NDR."""
-        valid_mask = (
-            ~numpy.isclose(modified_load_array, load_nodata) &
-            ~numpy.isclose(ndr_array, ndr_nodata) &
-            ~numpy.isclose(modified_sub_load_array, subsurface_load_nodata) &
-            ~numpy.isclose(sub_ndr_array, sub_ndr_nodata))
+        valid_mask = utils.is_valid(modified_load_array, load_nodata) &
+            utils.is_valid(ndr_array, ndr_nodata) &
+            utils.is_valid(modified_sub_load_array, subsurface_load_nodata) &
+            utils.is_valid(sub_ndr_array, sub_ndr_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
