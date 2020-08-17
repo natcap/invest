@@ -628,7 +628,7 @@ def tabulate_results(
                     (yield_block > 0.0))
                 yield_sum += numpy.sum(
                     yield_block[
-                        utils.is_valid(observed_yield_nodata, yield_block)])
+                        utils.is_valid(yield_block, observed_yield_nodata)])
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
             result_table.write(',%f' % production_area)

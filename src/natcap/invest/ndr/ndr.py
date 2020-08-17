@@ -1290,10 +1290,10 @@ def _calculate_export(
             modified_load_array, ndr_array, modified_sub_load_array,
             sub_ndr_array):
         """Combine NDR and subsurface NDR."""
-        valid_mask = utils.is_valid(modified_load_array, load_nodata) &
+        valid_mask = (utils.is_valid(modified_load_array, load_nodata) &
             utils.is_valid(ndr_array, ndr_nodata) &
             utils.is_valid(modified_sub_load_array, subsurface_load_nodata) &
-            utils.is_valid(sub_ndr_array, sub_ndr_nodata)
+            utils.is_valid(sub_ndr_array, sub_ndr_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
