@@ -59,12 +59,13 @@ def make_simple_shp(base_shp_path, origin):
     data_source = None
 
 
-def make_raster_from_array(base_array, base_raster_path):
+def make_raster_from_array(base_array, base_raster_path, nodata_value=-1):
     """Make a raster from an array on a designated path.
 
     Args:
         array (numpy.ndarray): the 2D array for making the raster.
         raster_path (str): path to the raster to be created.
+        nodata_value (numeric or None): nodata value to set for the raster
 
     Returns:
         None.
@@ -76,32 +77,11 @@ def make_raster_from_array(base_array, base_raster_path):
 
     # Each pixel is 1x1 m
     pygeoprocessing.numpy_array_to_raster(
-        base_array, -1, (1, -1), (1180000, 690000), project_wkt,
-        base_raster_path)
-
-def make_raster_undefined_nodata_value(base_array, base_raster_path):
-    """Make a raster with an undefined nodata value from an array.
-
-    Args:
-        array (numpy.ndarray): the 2D array for making the raster.
-        raster_path (str): path to the raster to be created.
-
-    Returns:
-        None.
-
-    """
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(26910)  # UTM Zone 10N
-    project_wkt = srs.ExportToWkt()
-
-    # Each pixel is 1x1 m
-    # Set nodata value to None
-    pygeoprocessing.numpy_array_to_raster(
-        base_array, None, (1, -1), (1180000, 690000), project_wkt,
+        base_array, nodata_value, (1, -1), (1180000, 690000), project_wkt,
         base_raster_path)
 
 
-def make_lulc_raster(lulc_ras_path):
+def make_lulc_raster(lulc_ras_path, nodata_value=-1):
     """Make a 100x100 LULC raster with two LULC codes on the raster path.
 
     Args:
@@ -113,10 +93,10 @@ def make_lulc_raster(lulc_ras_path):
     size = 100
     lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
     lulc_array[size // 2:, :] = 1
-    make_raster_from_array(lulc_array, lulc_ras_path)
+    make_raster_from_array(lulc_array, lulc_ras_path, nodata_value)
 
 
-def make_soil_raster(soil_ras_path):
+def make_soil_raster(soil_ras_path, nodata_value=-1):
     """Make a 100x100 soil group raster with four soil groups on th raster path.
 
     Args:
@@ -130,10 +110,10 @@ def make_soil_raster(soil_ras_path):
     soil_array = numpy.zeros((size, size), dtype=numpy.int32)
     for i, row in enumerate(soil_array):
         row[:] = i % soil_groups + 1
-    make_raster_from_array(soil_array, soil_ras_path)
+    make_raster_from_array(soil_array, soil_ras_path, nodata_value)
 
 
-def make_gradient_raster(grad_ras_path):
+def make_gradient_raster(grad_ras_path, nodata_value=-1):
     """Make a raster with different values on each row on the raster path.
 
     The raster values on each column are in an ascending order from 0 to the
@@ -149,10 +129,10 @@ def make_gradient_raster(grad_ras_path):
     size = 100
     grad_array = numpy.resize(
         numpy.arange(size, dtype=numpy.int32), (size, size))
-    make_raster_from_array(grad_array, grad_ras_path)
+    make_raster_from_array(grad_array, grad_ras_path, nodata_value)
 
 
-def make_eto_rasters(eto_dir_path):
+def make_eto_rasters(eto_dir_path, nodata_value=-1):
     """Make twelve 100x100 rasters of monthly evapotranspiration.
 
     Args:
@@ -166,10 +146,10 @@ def make_eto_rasters(eto_dir_path):
         eto_raster_path = os.path.join(eto_dir_path,
                                        'eto' + str(month) + '.tif')
         eto_array = numpy.full((size, size), month, dtype=numpy.int32)
-        make_raster_from_array(eto_array, eto_raster_path)
+        make_raster_from_array(eto_array, eto_raster_path, nodata_value)
 
 
-def make_precip_rasters(precip_dir_path):
+def make_precip_rasters(precip_dir_path, nodata_value=-1):
     """Make twelve 100x100 rasters of monthly precipitation.
 
     Args:
@@ -183,10 +163,11 @@ def make_precip_rasters(precip_dir_path):
         precip_raster_path = os.path.join(precip_dir_path,
                                           'precip_mm_' + str(month) + '.tif')
         precip_array = numpy.full((size, size), month + 10, dtype=numpy.int32)
-        make_raster_from_array(precip_array, precip_raster_path)
+        make_raster_from_array(precip_array, precip_raster_path, 
+                                           nodata_value)
 
 
-def make_recharge_raster(recharge_ras_path):
+def make_recharge_raster(recharge_ras_path, nodata_value=-1):
     """Make a 100x100 raster of user defined recharge.
 
     Args:
@@ -197,7 +178,7 @@ def make_recharge_raster(recharge_ras_path):
     """
     size = 100
     recharge_array = numpy.full((size, size), 200, dtype=numpy.int32)
-    make_raster_from_array(recharge_array, recharge_ras_path)
+    make_raster_from_array(recharge_array, recharge_ras_path, nodata_value)
 
 
 def make_rain_csv(rain_csv_path):
@@ -575,7 +556,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     @staticmethod
-    def generate_base_args(workspace_dir):
+    def generate_base_args(workspace_dir, nodata_value=-1):
         """Generate args list consistent across all three regression tests."""
         args = {
             'alpha_m': '1/12',
@@ -596,21 +577,21 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['biophysical_table_path'] = biophysical_csv_path
 
         dem_ras_path = os.path.join(workspace_dir, 'dem.tif')
-        make_gradient_raster(dem_ras_path)
+        make_gradient_raster(dem_ras_path, nodata_value)
         args['dem_raster_path'] = dem_ras_path
 
         eto_dir_path = os.path.join(workspace_dir, 'eto_dir')
         os.makedirs(eto_dir_path)
-        make_eto_rasters(eto_dir_path)
+        make_eto_rasters(eto_dir_path, nodata_value)
         args['et0_dir'] = eto_dir_path
 
         lulc_ras_path = os.path.join(workspace_dir, 'lulc.tif')
-        make_lulc_raster(lulc_ras_path)
+        make_lulc_raster(lulc_ras_path, nodata_value)
         args['lulc_raster_path'] = lulc_ras_path
 
         precip_dir_path = os.path.join(workspace_dir, 'precip_dir')
         os.makedirs(precip_dir_path)
-        make_precip_rasters(precip_dir_path)
+        make_precip_rasters(precip_dir_path, nodata_value)
         args['precip_dir'] = precip_dir_path
 
         rain_csv_path = os.path.join(workspace_dir, 'rain_events_table.csv')
@@ -618,7 +599,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['rain_events_table_path'] = rain_csv_path
 
         soil_ras_path = os.path.join(workspace_dir, 'soil_group.tif')
-        make_soil_raster(soil_ras_path)
+        make_soil_raster(soil_ras_path, nodata_value)
         args['soil_group_path'] = soil_ras_path
 
         return args
@@ -788,6 +769,36 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         agg_results_csv_path = os.path.join(args['workspace_dir'],
                                             'agg_results_l.csv')
         make_agg_results_csv(agg_results_csv_path, recharge=True)
+
+        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
+            agg_results_csv_path)
+
+    def test_undefined_nodata_values(self):
+        """Test that the input rasters can have a nodata value of None
+
+        Same as test_base_regression, but all rasters have an undefined
+        nodata value.
+        """
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # use predefined directory so test can clean up files during teardown
+        # give all rasters an undefined nodata value
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir, nodata_value=None)
+
+        # make args explicit that this is a base run of SWY
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = False
+        args['results_suffix'] = ''
+
+        seasonal_water_yield.execute(args)
+
+        # generate aggregated results csv table for assertion
+        agg_results_csv_path = os.path.join(
+            args['workspace_dir'], 'agg_results_base.csv')
+        make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),

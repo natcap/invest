@@ -29,8 +29,16 @@ cdef extern from "time.h" nogil:
     ctypedef int time_t
     time_t time(time_t*)
 
-cdef int is_close(double x, double y):
+cdef int double_is_close(double x, double y):
     return abs(x-y) <= (1e-8+1e-05*abs(y))
+
+def is_close(a, b):
+    """Compare values which may be numeric or None"""
+    if a and b:
+        return double_is_close(a, b)
+    else:
+        return 1 if a == b else 0
+
 
 cdef extern from "LRUCache.h":
     cdef cppclass LRUCache[KEY_T, VAL_T]:
@@ -418,7 +426,7 @@ cpdef calculate_local_recharge(
     cdef int win_xsize, win_ysize, n_dir
     cdef int raster_x_size, raster_y_size
     cdef float pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
-    cdef float et0_nodata, precip_nodata, qf_nodata, kc_nodata
+    # cdef float et0_nodata, precip_nodata, qf_nodata, kc_nodata
 
     cdef int j_neighbor_end_index, mfd_dir_sum
     cdef float mfd_direction_array[8]
@@ -605,7 +613,6 @@ cpdef calculate_local_recharge(
                     aet_i = 0
                     p_i = 0
                     qf_i = 0
-
                     for m_index in range(12):
                         precip_m_raster = (
                             <_ManagedRaster?>precip_m_raster_list[m_index])
@@ -625,6 +632,7 @@ cpdef calculate_local_recharge(
                         if not is_close(p_m, precip_nodata):
                             p_i += p_m
                         else:
+                            print("!!!is nodata")
                             p_m = 0
 
                         qf_m = qf_m_raster.get(xi, yi)
