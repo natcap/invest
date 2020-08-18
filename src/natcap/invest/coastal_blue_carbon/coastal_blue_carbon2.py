@@ -23,6 +23,7 @@ NODATA_UINT16 = int(numpy.iinfo(numpy.uint16).max)
 
 STOCKS_RASTER_PATTERN = 'stocks-{pool}-{year}{suffix}.tif'
 ACCUMULATION_RASTER_PATTERN = 'accumulation-{pool}-{year}{suffix}.tif'
+HALF_LIFE_RASTER_PATTERN = 'halflife-{pool}-{year}{suffix}.tif'
 DISTURBANCE_VOL_RASTER_PATTERN = 'disturbance-volume-{pool}-{year}{suffix}.tif'
 DISTURBANCE_MAGNITUDE_RASTER_PATTERN = (
     'disturbance-magnitude-{pool}-{year}{suffix}.tif')
@@ -529,6 +530,8 @@ def execute(args):
             task_name=(
                 f'Mapping {pool} carbon accumulation for {year}'))
 
+        # TODO: reclassify half-life here.
+
     # Reclassify transitions appropriately for each transition year.
     prior_transition_year = baseline_lulc_year
     for current_transition_year in transitions:
@@ -552,6 +555,12 @@ def execute(args):
                 task_name=(
                     f'Mapping {pool} carbon accumulation for {year}'))
 
+            # When carbon is emitted after a transition year, its halflife
+            # actually comes from the carbon stores from the prior transition.
+            # If Mangroves transition to a parking lot, we use the half-life of
+            # the stored carbon from the mangroves.
+            # TODO: reclassify half-life here.
+
         # Litter accumulation is a simple reclassification because it really
         # isn't affected by transitions as soil and biomass carbon are.
         yearly_accum_rasters[year][POOL_LITTER] = os.path.join(
@@ -569,6 +578,8 @@ def execute(args):
             dependent_task_list=[alignment_task],
             target_path_list=[yearly_accum_rasters[year][pool]],
             task_name=f'Mapping litter accumulation for {year}')
+
+
 
         prior_transition_year = current_transition_year
 
