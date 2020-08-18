@@ -36,6 +36,10 @@ EMISSIONS_SINCE_TRANSITION_RASTER_PATTERN = (
     'carbon-emissions-between-{start_year}-and-{end_year}{suffix}.tif')
 ACCUMULATION_SINCE_TRANSITION_RASTER_PATTERN = (
     'carbon-accumulation-between-{start_year}-and-{end_year}{suffix}.tif')
+TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN = (
+    'total-net-carbon-sequestration-between-{start_year}-and-'
+    '{end_year}{suffix}.tif')
+
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -104,6 +108,9 @@ def execute_transition_analysis(args):
     prior_net_sequestration_tasks = {}
     current_net_sequestration_tasks = {}
     current_accumulation_tasks = {}
+
+    summary_net_sequestration_tasks = []
+    summary_net_sequestration_raster_paths = []
 
     for year in range(args['first_transition_year'], args['final_year']+1):
         current_stock_tasks = {}
@@ -311,6 +318,25 @@ def execute_transition_analysis(args):
                 task_name=(
                     f'Summing accumulation between {current_transition_year} '
                     f'and {year+1}'))
+
+            net_carbon_sequestration_since_last_transition = os.path.join(
+                output_dir,
+                TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
+                    start_year=current_transition_year, end_year=(year + 1),
+                    suffix=suffix))
+            summary_net_sequestration_tasks.append(task_graph.add_task(
+                func=_sum_n_rasters,
+                args=(net_seq_rasters_since_transition,
+                      net_carbon_sequestration_since_last_transition),
+                dependent_task_list=list(
+                    current_net_sequestration_tasks.values()),
+                target_path_list=[
+                    net_carbon_sequestration_since_last_transition],
+                task_name=(
+                    f'Summing sequestration between {current_transition_year} '
+                    f'and {year}')))
+            summary_net_sequestration_raster_paths.append(
+                net_carbon_sequestration_since_last_transition)
 
     # Calculate total net sequestration.
 
