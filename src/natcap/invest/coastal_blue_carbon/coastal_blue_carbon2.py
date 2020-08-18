@@ -471,6 +471,27 @@ def execute(args):
     # There are no emissions, so net sequestration is only from accumulation.
     # Value can still be calculated from the net sequestration.
 
+    baseline_stock_rasters = {}
+    baseline_stock_tasks = {}
+    for pool in (POOL_BIOMASS, POOL_LITTER, POOL_SOIL):
+        baseline_stock_rasters[pool] = os.path.join(
+            intermediate_dir, STOCKS_RASTER_PATTERN.format(
+                pool=pool, year=baseline_lulc_year, suffix=suffix))
+        baseline_stock_tasks[pool] = task_graph.add_task(
+            func=pygeoprocessing.reclassify_raster,
+            args=(
+                (aligned_lulc_paths[year], 1),
+                {lucode: values[f'{pool}-initial'] for (lucode, values)
+                    in biophysical_parameters.items()},
+                baseline_stock_rasters[pool],
+                gdal.GDT_Float32,
+                NODATA_FLOAT32),
+            dependent_task_list=[alignment_task],
+            target_path_list=[baseline_stock_rasters[pool]],
+            task_name=f'Mapping initial {pool} carbon stocks')
+
+    task_graph.close()
+    task_graph.join()
 
 
 def execute_old(args):
