@@ -8,7 +8,7 @@ import numpy
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import pygeoprocessing
+import pygeoprocessing.testing
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -18,7 +18,7 @@ REGRESSION_DATA = os.path.join(
 def make_simple_shp(base_shp_path, origin):
     """Make a 100x100 ogr rectangular geometry shapefile.
 
-    Args:
+    Parameters:
         base_shp_path (str): path to the shapefile.
 
     Returns:
@@ -59,13 +59,12 @@ def make_simple_shp(base_shp_path, origin):
     data_source = None
 
 
-def make_raster_from_array(base_array, base_raster_path, nodata_value=-1):
+def make_raster_from_array(base_array, base_raster_path):
     """Make a raster from an array on a designated path.
 
-    Args:
+    Parameters:
         array (numpy.ndarray): the 2D array for making the raster.
         raster_path (str): path to the raster to be created.
-        nodata_value (numeric or None): nodata value to set for the raster
 
     Returns:
         None.
@@ -75,16 +74,19 @@ def make_raster_from_array(base_array, base_raster_path, nodata_value=-1):
     srs.ImportFromEPSG(26910)  # UTM Zone 10N
     project_wkt = srs.ExportToWkt()
 
-    # Each pixel is 1x1 m
-    pygeoprocessing.numpy_array_to_raster(
-        base_array, nodata_value, (1, -1), (1180000, 690000), project_wkt,
-        base_raster_path)
+    pygeoprocessing.testing.create_raster_on_disk(
+        [base_array],
+        (1180000, 690000),
+        project_wkt,
+        -1,
+        (1, -1),  # Each pixel is 1x1 m
+        filename=base_raster_path)
 
 
-def make_lulc_raster(lulc_ras_path, nodata_value=-1):
+def make_lulc_raster(lulc_ras_path):
     """Make a 100x100 LULC raster with two LULC codes on the raster path.
 
-    Args:
+    Parameters:
         lulc_raster_path (str): path to the LULC raster.
 
     Returns:
@@ -93,13 +95,13 @@ def make_lulc_raster(lulc_ras_path, nodata_value=-1):
     size = 100
     lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
     lulc_array[size // 2:, :] = 1
-    make_raster_from_array(lulc_array, lulc_ras_path, nodata_value)
+    make_raster_from_array(lulc_array, lulc_ras_path)
 
 
-def make_soil_raster(soil_ras_path, nodata_value=-1):
+def make_soil_raster(soil_ras_path):
     """Make a 100x100 soil group raster with four soil groups on th raster path.
 
-    Args:
+    Parameters:
         soil_ras_path (str): path to the soil group raster.
 
     Returns:
@@ -107,35 +109,34 @@ def make_soil_raster(soil_ras_path, nodata_value=-1):
     """
     size = 100
     soil_groups = 4
-    soil_array = numpy.zeros((size, size), dtype=numpy.int32)
+    soil_array = numpy.zeros((size, size))
     for i, row in enumerate(soil_array):
         row[:] = i % soil_groups + 1
-    make_raster_from_array(soil_array, soil_ras_path, nodata_value)
+    make_raster_from_array(soil_array, soil_ras_path)
 
 
-def make_gradient_raster(grad_ras_path, nodata_value=-1):
+def make_gradient_raster(grad_ras_path):
     """Make a raster with different values on each row on the raster path.
 
     The raster values on each column are in an ascending order from 0 to the
     nth column, based on the size of the array. This function can be used for
     making DEM or climate zone rasters.
 
-    Args:
+    Parameters:
         grad_ras_path (str): path to the gradient raster.
 
     Returns:
         None.
     """
     size = 100
-    grad_array = numpy.resize(
-        numpy.arange(size, dtype=numpy.int32), (size, size))
-    make_raster_from_array(grad_array, grad_ras_path, nodata_value)
+    grad_array = numpy.resize(numpy.arange(size), (size, size))
+    make_raster_from_array(grad_array, grad_ras_path)
 
 
-def make_eto_rasters(eto_dir_path, nodata_value=-1):
+def make_eto_rasters(eto_dir_path):
     """Make twelve 100x100 rasters of monthly evapotranspiration.
 
-    Args:
+    Parameters:
         eto_dir_path (str): path to the directory for saving the rasters.
 
     Returns:
@@ -145,14 +146,14 @@ def make_eto_rasters(eto_dir_path, nodata_value=-1):
     for month in range(1, 13):
         eto_raster_path = os.path.join(eto_dir_path,
                                        'eto' + str(month) + '.tif')
-        eto_array = numpy.full((size, size), month, dtype=numpy.int32)
-        make_raster_from_array(eto_array, eto_raster_path, nodata_value)
+        eto_array = numpy.full((size, size), month)
+        make_raster_from_array(eto_array, eto_raster_path)
 
 
-def make_precip_rasters(precip_dir_path, nodata_value=-1):
+def make_precip_rasters(precip_dir_path):
     """Make twelve 100x100 rasters of monthly precipitation.
 
-    Args:
+    Parameters:
         precip_dir_path (str): path to the directory for saving the rasters.
 
     Returns:
@@ -162,29 +163,28 @@ def make_precip_rasters(precip_dir_path, nodata_value=-1):
     for month in range(1, 13):
         precip_raster_path = os.path.join(precip_dir_path,
                                           'precip_mm_' + str(month) + '.tif')
-        precip_array = numpy.full((size, size), month + 10, dtype=numpy.int32)
-        make_raster_from_array(precip_array, precip_raster_path, 
-                                           nodata_value)
+        precip_array = numpy.full((size, size), month + 10)
+        make_raster_from_array(precip_array, precip_raster_path)
 
 
-def make_recharge_raster(recharge_ras_path, nodata_value=-1):
+def make_recharge_raster(recharge_ras_path):
     """Make a 100x100 raster of user defined recharge.
 
-    Args:
+    Parameters:
         recharge_ras_path (str): path to the directory for saving the rasters.
 
     Returns:
         None.
     """
     size = 100
-    recharge_array = numpy.full((size, size), 200, dtype=numpy.int32)
-    make_raster_from_array(recharge_array, recharge_ras_path, nodata_value)
+    recharge_array = numpy.full((size, size), 200)
+    make_raster_from_array(recharge_array, recharge_ras_path)
 
 
 def make_rain_csv(rain_csv_path):
     """Make a synthesized rain events csv on the designated csv path.
 
-    Args:
+    Parameters:
         rain_csv_path (str): path to the rain events csv.
 
     Returns:
@@ -199,7 +199,7 @@ def make_rain_csv(rain_csv_path):
 def make_biophysical_csv(biophysical_csv_path):
     """Make a synthesized biophysical csv on the designated path.
 
-    Args:
+    Parameters:
         biophysical_csv (str): path to the biophysical csv.
 
     Returns:
@@ -220,7 +220,7 @@ def make_biophysical_csv(biophysical_csv_path):
 def make_bad_biophysical_csv(biophysical_csv_path):
     """Make a bad biophysical csv with bad values to test error handling.
 
-    Args:
+    Parameters:
         biophysical_csv (str): path to the corrupted biophysical csv.
 
     Returns:
@@ -241,7 +241,7 @@ def make_bad_biophysical_csv(biophysical_csv_path):
 def make_alpha_csv(alpha_csv_path):
     """Make a monthly alpha csv on the designated path.
 
-    Args:
+    Parameters:
         alpha_csv_path (str): path to the alpha csv.
 
     Returns:
@@ -256,7 +256,7 @@ def make_alpha_csv(alpha_csv_path):
 def make_climate_zone_csv(cz_csv_path):
     """Make a climate zone csv with number of rain events per months and CZs.
 
-    Args:
+    Parameters:
         cz_csv_path (str): path to the climate zone csv.
 
     Returns:
@@ -266,8 +266,7 @@ def make_climate_zone_csv(cz_csv_path):
     # Random rain events for each month
     rain_events = [14, 17, 14, 15, 20, 18, 4, 6, 5, 16, 16, 20]
     with open(cz_csv_path, 'w') as open_table:
-        open_table.write(
-            'cz_id,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec\n')
+        open_table.write('cz_id,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec\n')
 
         for cz in range(climate_zones):
             rain_events = [x + 1 for x in rain_events]
@@ -284,7 +283,7 @@ def make_agg_results_csv(result_csv_path,
 
     The csv table is in the form of fid,vri_sum,qb_val per line.
 
-    Args:
+    Parameters:
         csv_path (str): path to the aggregated results csv file.
         climate_zones (bool): True if model is executed in climate zone mode.
         recharge (bool): True if user inputs recharge zone shapefile.
@@ -305,11 +304,8 @@ def make_agg_results_csv(result_csv_path,
 
 
 class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
-    """Tests for InVEST Seasonal Water Yield model.
-
-    These are tests that cover cases where input data are in an unusual
-    corner case.
-    """
+    """Tests for InVEST Seasonal Water Yield model that cover cases where
+    input data are in an unusual corner case"""
 
     def setUp(self):
         """Make tmp workspace."""
@@ -320,7 +316,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     def test_ambiguous_precip_data(self):
-        """SWY test case where there are more than 12 precipitation files."""
+        """SWY test case where there are more than 12 precipitation files"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         precip_dir_path = os.path.join(self.workspace_dir, 'precip_dir')
@@ -383,7 +379,8 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             seasonal_water_yield.execute(args)
 
     def test_precip_data_missing(self):
-        """SWY test case where there is a missing precipitation file."""
+        """SWY test case where there is a missing precipitation file"""
+
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         precip_dir_path = os.path.join(self.workspace_dir, 'precip_dir')
@@ -444,7 +441,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             seasonal_water_yield.execute(args)
 
     def test_aggregate_vector_preexists(self):
-        """SWY test model deletes a preexisting aggregate output result."""
+        """SWY test that model deletes a preexisting aggregate output result"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # Set up data so there is enough code to do an aggregate over the
@@ -489,7 +486,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             raise AssertionError('\n' + '\n'.join(incorrect_value_list))
 
     def test_duplicate_aoi_assertion(self):
-        """SWY ensure model halts when AOI path identical to output vector."""
+        """SWY ensure model halts when AOI path identical to output vector"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # A placeholder args that has the property that the aoi_path will be
@@ -545,19 +542,20 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
 
 
 class SeasonalWaterYieldRegressionTests(unittest.TestCase):
-    """Regression tests for InVEST Seasonal Water Yield model."""
+    """Regression tests for InVEST Seasonal Water Yield model"""
 
     def setUp(self):
-        """Create temporary workspace."""
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
-        """Remove temporary workspace."""
         shutil.rmtree(self.workspace_dir)
 
     @staticmethod
-    def generate_base_args(workspace_dir, nodata_value=-1):
-        """Generate args list consistent across all three regression tests."""
+    def generate_base_args(workspace_dir):
+        """Generate an args list that is consistent across all three regression
+        tests"""
         args = {
             'alpha_m': '1/12',
             'beta_i': '1.0',
@@ -577,21 +575,21 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['biophysical_table_path'] = biophysical_csv_path
 
         dem_ras_path = os.path.join(workspace_dir, 'dem.tif')
-        make_gradient_raster(dem_ras_path, nodata_value)
+        make_gradient_raster(dem_ras_path)
         args['dem_raster_path'] = dem_ras_path
 
         eto_dir_path = os.path.join(workspace_dir, 'eto_dir')
         os.makedirs(eto_dir_path)
-        make_eto_rasters(eto_dir_path, nodata_value)
+        make_eto_rasters(eto_dir_path)
         args['et0_dir'] = eto_dir_path
 
         lulc_ras_path = os.path.join(workspace_dir, 'lulc.tif')
-        make_lulc_raster(lulc_ras_path, nodata_value)
+        make_lulc_raster(lulc_ras_path)
         args['lulc_raster_path'] = lulc_ras_path
 
         precip_dir_path = os.path.join(workspace_dir, 'precip_dir')
         os.makedirs(precip_dir_path)
-        make_precip_rasters(precip_dir_path, nodata_value)
+        make_precip_rasters(precip_dir_path)
         args['precip_dir'] = precip_dir_path
 
         rain_csv_path = os.path.join(workspace_dir, 'rain_events_table.csv')
@@ -599,18 +597,17 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['rain_events_table_path'] = rain_csv_path
 
         soil_ras_path = os.path.join(workspace_dir, 'soil_group.tif')
-        make_soil_raster(soil_ras_path, nodata_value)
+        make_soil_raster(soil_ras_path)
         args['soil_group_path'] = soil_ras_path
 
         return args
 
     def test_base_regression(self):
-        """SWY base regression test on sample data.
+        """SWY base regression test on sample data
 
         Executes SWY in default mode and checks that the output files are
         generated and that the aggregate shapefile fields are the same as the
-        regression case.
-        """
+        regression case."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # use predefined directory so test can clean up files during teardown
@@ -618,6 +615,10 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             self.workspace_dir)
 
         # Ensure the model can pass when a nodata value is not defined.
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+
         size = 100
         lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
         lulc_array[size // 2:, :] = 1
@@ -671,12 +672,11 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             'expecting all floating point numbers' in str(context.exception))
 
     def test_monthly_alpha_regression(self):
-        """SWY monthly alpha values regression test on sample data.
+        """SWY monthly alpha values regression test on sample data
 
         Executes SWY using the monthly alpha table and checks that the output
         files are generated and that the aggregate shapefile fields are the
-        same as the regression case.
-        """
+        same as the regression case."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # use predefined directory so test can clean up files during teardown
@@ -705,12 +705,11 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             agg_results_csv_path)
 
     def test_climate_zones_regression(self):
-        """SWY climate zone regression test on sample data.
+        """SWY climate zone regression test on sample data
 
         Executes SWY in climate zones mode and checks that the output files are
         generated and that the aggregate shapefile fields are the same as the
-        regression case.
-        """
+        regression case."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # use predefined directory so test can clean up files during teardown
@@ -743,12 +742,11 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             agg_results_csv_path)
 
     def test_user_recharge(self):
-        """SWY user recharge regression test on sample data.
+        """SWY user recharge regression test on sample data
 
         Executes SWY in user defined local recharge mode and checks that the
         output files are generated and that the aggregate shapefile fields
-        are the same as the regression case.
-        """
+        are the same as the regression case."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # use predefined directory so test can clean up files during teardown
@@ -774,45 +772,13 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
-    def test_undefined_nodata_values(self):
-        """Test that the input rasters can have a nodata value of None
-
-        Same as test_base_regression, but all rasters have an undefined
-        nodata value.
-        """
-        from natcap.invest.seasonal_water_yield import seasonal_water_yield
-
-        # use predefined directory so test can clean up files during teardown
-        # give all rasters an undefined nodata value
-        args = SeasonalWaterYieldRegressionTests.generate_base_args(
-            self.workspace_dir, nodata_value=None)
-
-        # make args explicit that this is a base run of SWY
-        args['user_defined_climate_zones'] = False
-        args['user_defined_local_recharge'] = False
-        args['monthly_alpha'] = False
-        args['results_suffix'] = ''
-
-        seasonal_water_yield.execute(args)
-
-        # generate aggregated results csv table for assertion
-        agg_results_csv_path = os.path.join(
-            args['workspace_dir'], 'agg_results_base.csv')
-        make_agg_results_csv(agg_results_csv_path)
-
-        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
-            agg_results_csv_path)
-
     @staticmethod
     def _assert_regression_results_equal(
             result_vector_path, agg_results_path):
-        """Assert workspace results.
-
-        Test the state of the workspace against the expected list of files
+        """Test the state of the workspace against the expected list of files
         and aggregated results.
 
-        Args:
+        Parameters:
             result_vector_path (string): path to the summary shapefile
                 produced by the SWY model.
             agg_results_path (string): path to a csv file that has the
@@ -888,8 +854,7 @@ class SWYValidationTests(unittest.TestCase):
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
         from natcap.invest import validation
 
-        # empty args dict.
-        validation_errors = seasonal_water_yield.validate({})
+        validation_errors = seasonal_water_yield.validate({})  # empty args dict.
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(self.base_required_keys)
         self.assertEqual(invalid_keys, expected_missing_keys)

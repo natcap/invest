@@ -419,14 +419,13 @@ cpdef calculate_local_recharge(
             None.
 
     """
-    cdef int i_n, flow_dir_nodata, flow_dir_mfd
+    cdef int i_n, flow_dir_mfd
     cdef int peak_pixel
     cdef int xs, ys, xs_root, ys_root, xoff, yoff, flow_dir_s
     cdef int xi, yi, xj, yj, flow_dir_j, p_ij_base
     cdef int win_xsize, win_ysize, n_dir
     cdef int raster_x_size, raster_y_size
     cdef float pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
-    # cdef float et0_nodata, precip_nodata, qf_nodata, kc_nodata
 
     cdef int j_neighbor_end_index, mfd_dir_sum
     cdef float mfd_direction_array[8]
@@ -632,7 +631,6 @@ cpdef calculate_local_recharge(
                         if not is_close(p_m, precip_nodata):
                             p_i += p_m
                         else:
-                            print("!!!is nodata")
                             p_m = 0
 
                         qf_m = qf_m_raster.get(xi, yi)
