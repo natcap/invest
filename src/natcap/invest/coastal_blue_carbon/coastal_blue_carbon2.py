@@ -338,6 +338,11 @@ def execute_transition_analysis(args):
             summary_net_sequestration_raster_paths.append(
                 net_carbon_sequestration_since_last_transition)
 
+        # These are the few sets of tasks that we care about referring to from
+        # the prior year.
+        prior_stock_tasks = current_stock_tasks
+        prior_net_sequestration_tasks = current_net_sequestration_tasks
+
     # Calculate total net sequestration.
 
 
