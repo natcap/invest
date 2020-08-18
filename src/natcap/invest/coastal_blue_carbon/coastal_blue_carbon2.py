@@ -534,6 +534,9 @@ def execute(args):
     for current_transition_year in transitions:
         yearly_accum_rasters[year] = {}
         for pool in (POOL_BIOMASS, POOL_SOIL):
+            # Soil and biomass pools will only accumulate if the transition
+            # table for this transition specifies accumulation.  We
+            # can't assume that this will match a basic reclassification.
             _ = task_graph.add_task(
                 func=_reclassify_accumulation_transition,
                 args=(aligned_lulc_paths[prior_transition_year],
@@ -545,7 +548,21 @@ def execute(args):
                     yearly_accum_rasters[year][pool]],
                 task_name=(
                     f'Mapping {pool} carbon accumulation for {year}'))
-        # Reclassify the litter pool.
+
+        # Litter accumulation is a simple reclassification because it really
+        # isn't affected by transitions as soil and biomass carbon are.
+        _ = task_graph.add_task(
+            func=pygeoprocessing.reclassify_raster,
+            args=((aligned_lulc_paths[year], 1),
+                  {lucode: values['litter-yearly-accumulation']
+                   for (lucode, values) in
+                   biophysical_parameters.items()},
+                  yearly_accum_rasters[year][pool],
+                  gdal.GDT_Float32,
+                  NODATA_FLOAT32),
+            dependent_task_list=[alignment_task],
+            target_path_list=[yearly_accum_rasters[year][pool]],
+            task_name=f'Mapping litter accumulation for {year}')
 
         prior_transition_year = current_transition_year
 
