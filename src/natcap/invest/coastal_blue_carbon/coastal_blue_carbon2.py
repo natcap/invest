@@ -39,7 +39,8 @@ ACCUMULATION_SINCE_TRANSITION_RASTER_PATTERN = (
 TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN = (
     'total-net-carbon-sequestration-between-{start_year}-and-'
     '{end_year}{suffix}.tif')
-
+TOTAL_NET_SEQ_ALL_YEARS_RASTER_PATTERN = (
+    'total-net-carbon-sequestration{suffix}.tif')
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -344,6 +345,23 @@ def execute_transition_analysis(args):
         prior_net_sequestration_tasks = current_net_sequestration_tasks
 
     # Calculate total net sequestration.
+    total_net_sequestration_raster_path = os.path.join(
+        output_dir, TOTAL_NET_SEQ_ALL_YEARS_RASTER_PATTERN.format(
+            suffix=suffix))
+    _ = task_graph.add_task(
+            func=_sum_n_rasters,
+            args=(summary_net_sequestration_raster_paths,
+                  total_net_sequestration_raster_path),
+            kwargs={
+                'allow_pixel_stacks_with_nodata': True,
+            },
+            dependent_task_list=summary_net_sequestration_tasks,
+            target_path_list=[total_net_sequestration_raster_path],
+            task_name=(
+                'Calculate total net carbon sequestration across all years'))
+
+    task_graph.close()
+    task_graph.join()
 
 
 def execute(args):
