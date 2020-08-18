@@ -467,6 +467,22 @@ def execute(args):
     biophysical_parameters = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'code')
 
+    # TODO: make sure we're also returning a sparse matrix representing the
+    # 'accum' values from the table.  This should then be used when creating
+    # the accumulation raster, and only those pixel values with an 'accum'
+    # transition should actually accumulate.
+    (biomass_disturb_matrix, soil_disturb_matrix,
+        biomass_accum_matrix, soil_accum_matrix) = _read_transition_matrix(
+        args['landcover_transitions_table'], biophysical_parameters)
+    disturbance_matrices = {
+        'soil': soil_disturb_matrix,
+        'biomass': biomass_disturb_matrix
+    }
+    accumulation_matrices = {
+        'soil': soil_accum_matrix,
+        'biomass': biomass_accum_matrix,
+    }
+
     # Baseline stocks are simply reclassified.
     # Baseline accumulation are simply reclassified
     # There are no emissions, so net sequestration is only from accumulation.
@@ -474,8 +490,8 @@ def execute(args):
 
     baseline_stock_rasters = {}
     baseline_stock_tasks = {}
-    baseline_accum_rasters = {}
     baseline_accum_tasks = {}
+    yearly_accum_rasters = {}
     for pool in (POOL_BIOMASS, POOL_LITTER, POOL_SOIL):
         baseline_stock_rasters[pool] = os.path.join(
             intermediate_dir, STOCKS_RASTER_PATTERN.format(
@@ -495,7 +511,7 @@ def execute(args):
 
         # Initial accumulation values are a simple reclassification
         # rather than a mapping by the transition.
-        baseline_accum_rasters[pool] = os.path.join(
+        yearly_accum_rasters[pool] = os.path.join(
             intermediate_dir, ACCUMULATION_RASTER_PATTERN.format(
                 pool=pool, year=baseline_lulc_year, suffix=suffix))
         baseline_accum_tasks[pool] = task_graph.add_task(
@@ -505,14 +521,33 @@ def execute(args):
                 {lucode: values[f'{pool}-yearly-accumulation']
                     for (lucode, values)
                     in biophysical_parameters.items()},
-                baseline_accum_rasters[pool],
+                yearly_accum_rasters[pool],
                 gdal.GDT_Float32,
                 NODATA_FLOAT32),
             dependent_task_list=[alignment_task],
-            target_path_list=[baseline_accum_rasters[pool]],
+            target_path_list=[yearly_accum_rasters[pool]],
             task_name=(
                 f'Mapping {pool} carbon accumulation for {year}'))
 
+    # Reclassify transitions appropriately for each transition year.
+    prior_transition_year = baseline_lulc_year
+    for current_transition_year in transitions:
+        yearly_accum_rasters[year] = {}
+        for pool in (POOL_BIOMASS, POOL_SOIL):
+            _ = task_graph.add_task(
+                func=_reclassify_accumulation_transition,
+                args=(aligned_lulc_paths[prior_transition_year],
+                      aligned_lulc_paths[current_transition_year],
+                      accumulation_matrices[pool],
+                      yearly_accum_rasters[year][pool]),
+                dependent_task_list=[alignment_task],
+                target_path_list=[
+                    yearly_accum_rasters[year][pool]],
+                task_name=(
+                    f'Mapping {pool} carbon accumulation for {year}'))
+        # Reclassify the litter pool.
+
+        prior_transition_year = current_transition_year
 
     task_graph.close()
     task_graph.join()
