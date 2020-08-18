@@ -770,5 +770,3 @@ def is_valid(array, nodata):
         return ~numpy.isclose(array, nodata)
     else:
         return array != nodata
-
-

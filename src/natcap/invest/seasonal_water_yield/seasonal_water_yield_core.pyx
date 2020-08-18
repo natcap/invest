@@ -39,7 +39,6 @@ def is_close(a, b):
     else:
         return 1 if a == b else 0
 
-
 cdef extern from "LRUCache.h":
     cdef cppclass LRUCache[KEY_T, VAL_T]:
         LRUCache(int)
@@ -612,6 +611,7 @@ cpdef calculate_local_recharge(
                     aet_i = 0
                     p_i = 0
                     qf_i = 0
+                    
                     for m_index in range(12):
                         precip_m_raster = (
                             <_ManagedRaster?>precip_m_raster_list[m_index])

@@ -1348,3 +1348,4 @@ class IsValidTests(unittest.TestCase):
                 None),
             expected_result
         ))
+
