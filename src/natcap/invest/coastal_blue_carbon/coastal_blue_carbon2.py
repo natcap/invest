@@ -466,9 +466,11 @@ def execute(args):
     biophysical_parameters = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'code')
 
-    # The analysis between the baseline landcover raster and the first
-    # transition (or the analysis year, whichever comes first) is much simpler
-    # than the transition analysis.
+    # Baseline stocks are simply reclassified.
+    # Baseline accumulation are simply reclassified
+    # There are no emissions, so net sequestration is only from accumulation.
+    # Value can still be calculated from the net sequestration.
+
 
 
 def execute_old(args):
