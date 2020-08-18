@@ -752,6 +752,10 @@ def is_valid(array, nodata):
     """
     Return boolean array showing the valid elements of the array.
 
+    This is to be used for masking the nodata pixels of a raster. Assuming that
+    the input array is numeric and contains no None or numpy.nan elements.
+    If ``nodata=None``, that implies that all pixels are valid.
+
     Args:
         array (numpy.ndarray): Array for which to make boolean mask
         nodata: Nodata value to compare to. 
