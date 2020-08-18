@@ -22,6 +22,7 @@ NODATA_FLOAT32 = float(numpy.finfo(numpy.float32).min)
 NODATA_UINT16 = int(numpy.iinfo(numpy.uint16).max)
 
 STOCKS_RASTER_PATTERN = 'stocks-{pool}-{year}{suffix}.tif'
+ACCUMULATION_RASTER_PATTERN = 'accumulation-{pool}-{year}{suffix}.tif'
 DISTURBANCE_VOL_RASTER_PATTERN = 'disturbance-volume-{pool}-{year}{suffix}.tif'
 DISTURBANCE_MAGNITUDE_RASTER_PATTERN = (
     'disturbance-magnitude-{pool}-{year}{suffix}.tif')
@@ -473,6 +474,8 @@ def execute(args):
 
     baseline_stock_rasters = {}
     baseline_stock_tasks = {}
+    baseline_accum_rasters = {}
+    baseline_accum_tasks = {}
     for pool in (POOL_BIOMASS, POOL_LITTER, POOL_SOIL):
         baseline_stock_rasters[pool] = os.path.join(
             intermediate_dir, STOCKS_RASTER_PATTERN.format(
@@ -489,6 +492,27 @@ def execute(args):
             dependent_task_list=[alignment_task],
             target_path_list=[baseline_stock_rasters[pool]],
             task_name=f'Mapping initial {pool} carbon stocks')
+
+        # Initial accumulation values are a simple reclassification
+        # rather than a mapping by the transition.
+        baseline_accum_rasters[pool] = os.path.join(
+            intermediate_dir, ACCUMULATION_RASTER_PATTERN.format(
+                pool=pool, year=baseline_lulc_year, suffix=suffix))
+        baseline_accum_tasks[pool] = task_graph.add_task(
+            func=pygeoprocessing.reclassify_raster,
+            args=(
+                (aligned_lulc_paths[year], 1),
+                {lucode: values[f'{pool}-yearly-accumulation']
+                    for (lucode, values)
+                    in biophysical_parameters.items()},
+                baseline_accum_rasters[pool],
+                gdal.GDT_Float32,
+                NODATA_FLOAT32),
+            dependent_task_list=[alignment_task],
+            target_path_list=[baseline_accum_rasters[pool]],
+            task_name=(
+                f'Mapping {pool} carbon accumulation for {year}'))
+
 
     task_graph.close()
     task_graph.join()
