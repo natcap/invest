@@ -34,6 +34,8 @@ TOTAL_STOCKS_RASTER_PATTERN = 'total-carbon-stocks-{year}{suffix}.tif'
 VALUE_RASTER_PATTERN = 'valuation-{year}{suffix}.tif'
 EMISSIONS_SINCE_TRANSITION_RASTER_PATTERN = (
     'carbon-emissions-between-{start_year}-and-{end_year}{suffix}.tif')
+ACCUMULATION_SINCE_TRANSITION_RASTER_PATTERN = (
+    'carbon-accumulation-between-{start_year}-and-{end_year}{suffix}.tif')
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -286,6 +288,29 @@ def execute_transition_analysis(args):
                 task_name=(
                     f'Sum emissions between {current_transition_year} '
                     f'and {year}'))
+
+            accumulation_since_last_transition = os.path.join(
+                output_dir,
+                ACCUMULATION_SINCE_TRANSITION_RASTER_PATTERN.format(
+                    start_year=current_transition_year, end_year=(year + 1),
+                    suffix=suffix))
+            _ = task_graph.add_task(
+                func=pygeoprocessing.raster_calculator,
+                args=(
+                    [(yearly_accum_rasters[
+                        current_transition_year][POOL_SOIL], 1),
+                     (yearly_accum_rasters[
+                         current_transition_year][POOL_BIOMASS], 1),
+                     (((year + 1) - current_transition_year), 'raw')],
+                    _calculate_accumulation_over_time,
+                    accumulation_since_last_transition,
+                    gdal.GDT_Float32,
+                    NODATA_FLOAT32),
+                dependent_task_list=[current_accumulation_tasks],
+                target_path_list=[accumulation_since_last_transition],
+                task_name=(
+                    f'Summing accumulation between {current_transition_year} '
+                    f'and {year+1}'))
 
     # Calculate total net sequestration.
 
