@@ -530,13 +530,36 @@ def execute(args):
             task_name=(
                 f'Mapping {pool} carbon accumulation for {year}'))
 
-        # TODO: reclassify half-life here.
-
     # Reclassify transitions appropriately for each transition year.
+    halflife_rasters = {}
     prior_transition_year = baseline_lulc_year
-    for current_transition_year in transitions:
-        yearly_accum_rasters[year] = {}
+    for current_transition_year in sorted(transitions):
+        yearly_accum_rasters[current_transition_year] = {}
+        halflife_rasters[current_transition_year] = {}
+
         for pool in (POOL_BIOMASS, POOL_SOIL):
+            # When carbon is emitted after a transition year, its halflife
+            # actually comes from the carbon stores from the prior transition.
+            # If Mangroves transition to a parking lot, we use the half-life of
+            # the stored carbon from the mangroves.
+            halflife_rasters[current_transition_year][pool] = os.path.join(
+                intermediate_dir, HALF_LIFE_RASTER_PATTERN.format(
+                    pool=pool, year=current_transition_year, suffix=suffix))
+            _ = task_graph.add_task(
+                func=pygeoprocessing.reclassify_raster,
+                args=(
+                    (aligned_lulc_paths[prior_transition_year], 1),
+                    {lucode: values[f'{pool}-half-life']
+                        for (lucode, values)
+                        in biophysical_parameters.items()},
+                    halflife_rasters[year][pool],
+                    gdal.GDT_Float32,
+                    NODATA_FLOAT32),
+                dependent_task_list=[alignment_task],
+                target_path_list=[
+                    halflife_rasters[current_transition_year][pool]],
+                task_name=f'Mapping {pool} half-life for {year}')
+
             # Soil and biomass pools will only accumulate if the transition
             # table for this transition specifies accumulation.  We
             # can't assume that this will match a basic reclassification.
@@ -555,12 +578,6 @@ def execute(args):
                 task_name=(
                     f'Mapping {pool} carbon accumulation for {year}'))
 
-            # When carbon is emitted after a transition year, its halflife
-            # actually comes from the carbon stores from the prior transition.
-            # If Mangroves transition to a parking lot, we use the half-life of
-            # the stored carbon from the mangroves.
-            # TODO: reclassify half-life here.
-
         # Litter accumulation is a simple reclassification because it really
         # isn't affected by transitions as soil and biomass carbon are.
         yearly_accum_rasters[year][POOL_LITTER] = os.path.join(
@@ -578,8 +595,6 @@ def execute(args):
             dependent_task_list=[alignment_task],
             target_path_list=[yearly_accum_rasters[year][pool]],
             task_name=f'Mapping litter accumulation for {year}')
-
-
 
         prior_transition_year = current_transition_year
 
