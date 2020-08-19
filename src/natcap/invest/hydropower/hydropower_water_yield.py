@@ -415,15 +415,6 @@ def execute(args):
     else:
         demand_lucodes = None
 
-    valid_lulc_txt_path = os.path.join(intermediate_dir, 'valid_lulc_values.txt')
-    check_missing_lucodes_task = graph.add_task(
-        _check_missing_lucodes,
-        args=(clipped_lulc_path, demand_lucodes,
-              bio_lucodes, valid_lulc_txt_path),
-        target_path_list=[valid_lulc_txt_path],
-        dependent_task_list=[align_raster_stack_task],
-        task_name='check_missing_lucodes')
-
     # Break the bio_dict into three separate dictionaries based on
     # Kc, root_depth, and LULC_veg fields to use for reclassifying
     Kc_dict = {}
@@ -458,12 +449,16 @@ def execute(args):
     LOGGER.info("Reclassifying temp_Kc raster")
     tmp_Kc_raster_path = os.path.join(intermediate_dir, 'kc_raster.tif')
     create_Kc_raster_task = graph.add_task(
-        func=pygeoprocessing.reclassify_raster,
+        func=utils._reclassify_raster_op,
         args=((clipped_lulc_path, 1), Kc_dict, tmp_Kc_raster_path,
               gdal.GDT_Float32, nodata_dict['out_nodata']),
+        kwargs={'values_required': True,
+                'error_details': {
+                    'raster_name': 'LULC', 
+                    'column_name': 'lucode', 
+                    'table_name': 'Biophysical'}},
         target_path_list=[tmp_Kc_raster_path],
-        dependent_task_list=[
-            align_raster_stack_task, check_missing_lucodes_task],
+        dependent_task_list=[align_raster_stack_task],
         task_name='create_Kc_raster')
 
     # Create root raster from table values to use in future calculations
@@ -471,12 +466,16 @@ def execute(args):
     tmp_root_raster_path = os.path.join(
         intermediate_dir, 'root_depth.tif')
     create_root_raster_task = graph.add_task(
-        func=pygeoprocessing.reclassify_raster,
+        func=utils._reclassify_raster_op,
         args=((clipped_lulc_path, 1), root_dict, tmp_root_raster_path,
               gdal.GDT_Float32, nodata_dict['out_nodata']),
+        kwargs={'values_required': True,
+                'error_details': {
+                    'raster_name': 'LULC', 
+                    'column_name': 'lucode', 
+                    'table_name': 'Biophysical'}},
         target_path_list=[tmp_root_raster_path],
-        dependent_task_list=[
-            align_raster_stack_task, check_missing_lucodes_task],
+        dependent_task_list=[align_raster_stack_task],
         task_name='create_root_raster')
 
     # Create veg raster from table values to use in future calculations
@@ -484,12 +483,16 @@ def execute(args):
     LOGGER.info("Reclassifying tmp_veg raster")
     tmp_veg_raster_path = os.path.join(intermediate_dir, 'veg.tif')
     create_veg_raster_task = graph.add_task(
-        func=pygeoprocessing.reclassify_raster,
+        func=utils._reclassify_raster_op,
         args=((clipped_lulc_path, 1), vegetated_dict, tmp_veg_raster_path,
               gdal.GDT_Float32, nodata_dict['out_nodata']),
+        kwargs={'values_required': True,
+                'error_details': {
+                    'raster_name': 'LULC', 
+                    'column_name': 'lucode', 
+                    'table_name': 'Biophysical'}},
         target_path_list=[tmp_veg_raster_path],
-        dependent_task_list=[
-            align_raster_stack_task, check_missing_lucodes_task],
+        dependent_task_list=[align_raster_stack_task],
         task_name='create_veg_raster')
 
     dependent_tasks_for_watersheds_list = []
@@ -562,12 +565,16 @@ def execute(args):
     if 'demand_table_path' in args and args['demand_table_path'] != '':
         # Create demand raster from table values to use in future calculations
         create_demand_raster_task = graph.add_task(
-            func=pygeoprocessing.reclassify_raster,
+            func=utils._reclassify_raster_op,
             args=((clipped_lulc_path, 1), demand_reclassify_dict, demand_path,
                   gdal.GDT_Float32, nodata_dict['out_nodata']),
+        kwargs={'values_required': True,
+                'error_details': {
+                    'raster_name': 'LULC', 
+                    'column_name': 'lucode', 
+                    'table_name': 'Demand'}},
             target_path_list=[demand_path],
-            dependent_task_list=[
-                align_raster_stack_task, check_missing_lucodes_task],
+            dependent_task_list=[align_raster_stack_task],
             task_name='create_demand_raster')
         dependent_tasks_for_watersheds_list.append(create_demand_raster_task)
         raster_names_paths_list.append(('demand', demand_path))
@@ -875,64 +882,6 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
                   ~numpy.isclose(Kc_pix, output_nodata))
     result[valid_mask] = eto_pix[valid_mask] * Kc_pix[valid_mask]
     return result
-
-
-def _check_missing_lucodes(
-        clipped_lulc_path, demand_lucodes, bio_lucodes, valid_lulc_txt_path):
-    """Check for raster values that don't appear in lookup tables.
-
-    LULC raster values that are missing from the biophysical or demand tables
-    is a very common error.
-
-    Parameters:
-        clipped_lulc_path (string): file path to lulc raster
-        demand_lucodes (set): codes found in args['demand_table_path']
-        bio_lucodes (set): codes found in args['biophysical_table_path']
-        valid_lulc_txt_path (string): path to a file that gets created if
-            there are no missing values. serves as target_path_list for
-            taskgraph.
-
-    Returns:
-        None
-
-    Raises:
-        ValueError if any landcover codes are present in the raster but
-            not in both of the tables.
-
-    """
-    LOGGER.info(
-        'Checking that input tables have landcover codes for every value '
-        'in the landcover map.')
-
-    missing_bio_lucodes = set()
-    missing_demand_lucodes = set()
-    for _, lulc_block in pygeoprocessing.iterblocks((clipped_lulc_path, 1)):
-        unique_codes = set(numpy.unique(lulc_block))
-        missing_bio_lucodes.update(unique_codes.difference(bio_lucodes))
-        if demand_lucodes is not None:
-            missing_demand_lucodes.update(
-                unique_codes.difference(demand_lucodes))
-
-    missing_message = ''
-    if missing_bio_lucodes:
-        missing_message += (
-            'The following landcover codes were found in the landcover '
-            'raster but they did not have corresponding entries in the '
-            'biophysical table. Check your biophysical table to see if they '
-            'are missing. %s.\n\n' % ', '.join([str(x) for x in sorted(
-                missing_bio_lucodes)]))
-    if missing_demand_lucodes:
-        missing_message += (
-            'The following landcover codes were found in the landcover '
-            'raster but they did not have corresponding entries in the water '
-            'demand table. Check your demand table to see if they are '
-            'missing. "%s".\n\n' % ', '.join([str(x) for x in sorted(
-                missing_demand_lucodes)]))
-
-    if missing_message:
-        raise ValueError(missing_message)
-    with open(valid_lulc_txt_path, 'w') as txt_file:
-        txt_file.write('')
 
 
 def compute_watershed_valuation(watershed_results_vector_path, val_dict):
