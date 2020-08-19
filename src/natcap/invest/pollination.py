@@ -359,13 +359,17 @@ def execute(args):
 
         landcover_substrate_index_tasks[substrate] = task_graph.add_task(
             task_name='reclassify_to_substrate_%s' % substrate,
-            func=pygeoprocessing.reclassify_raster,
+            func=utils._reclassify_raster_op,
             args=(
                 (args['landcover_raster_path'], 1),
                 scenario_variables['landcover_substrate_index'][substrate],
                 nesting_substrate_index_path, gdal.GDT_Float32,
                 _INDEX_NODATA),
-            kwargs={'values_required': True},
+            kwargs={'values_required': True,
+                    'error_details': {
+                        'raster_name': 'LULC', 
+                        'column_name': 'lucode', 
+                        'table_name': 'Biophysical'}},
             target_path_list=[nesting_substrate_index_path])
 
     # calculate farm_nesting_substrate_index[substrate] substrate maps
@@ -439,13 +443,17 @@ def execute(args):
 
         relative_floral_abudance_task = task_graph.add_task(
             task_name='reclassify_to_floral_abundance_%s' % season,
-            func=pygeoprocessing.reclassify_raster,
+            func=utils._reclassify_raster_op,
             args=(
                 (args['landcover_raster_path'], 1),
                 scenario_variables['landcover_floral_resources'][season],
                 relative_floral_abundance_index_path, gdal.GDT_Float32,
                 _INDEX_NODATA),
-            kwargs={'values_required': True},
+            kwargs={'values_required': True,
+                    'error_details': {
+                        'raster_name': 'LULC', 
+                        'column_name': 'lucode', 
+                        'table_name': 'Biophysical'}},
             target_path_list=[relative_floral_abundance_index_path])
 
         # if there's a farm, rasterize floral resources over the top

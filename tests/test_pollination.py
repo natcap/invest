@@ -273,6 +273,43 @@ class PollinationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             pollination.execute(args)
 
+    def test_pollination_missing_lulc_values(self):
+        """Pollination: testing that model detects missing lulc values."""
+        from natcap.invest import pollination
+        import pandas
+
+        temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
+
+        args = {
+            'results_suffix': '',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
+            'guild_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'guild_table.csv'),
+            'landcover_biophysical_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv'),
+            'farm_vector_path': os.path.join(
+                REGRESSION_DATA, 'input', 'farms.shp'),
+        }
+
+        bad_biophysical_table_path = os.path.join(
+            temp_path, 'bad_biophysical_table.csv')
+
+        bio_df = pandas.read_csv(args['landcover_biophysical_table_path'])
+        bio_df = bio_df[bio_df['lucode'] != 1]
+        bio_df.to_csv(bad_biophysical_table_path)
+        bio_df = None
+
+        args['landcover_biophysical_table_path'] = bad_biophysical_table_path
+
+        with self.assertRaises(ValueError) as cm:
+            pollination.execute(args)
+
+        self.assertTrue(
+            "The missing values found in the LULC raster but not the table"
+            " are: [1]" in str(cm.exception))
+
     def test_pollination_bad_cross_table_headers(self):
         """Pollination: ensure detection of missing headers in one table."""
         from natcap.invest import pollination
