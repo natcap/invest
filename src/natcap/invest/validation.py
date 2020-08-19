@@ -633,6 +633,7 @@ def validate(args, spec, spatial_overlap_opts=None):
 
     """
     validation_warnings = []
+    print('validating args: ', args)
 
     # step 1: check absolute requirement
     missing_keys = set()
@@ -719,7 +720,7 @@ def validate(args, spec, spatial_overlap_opts=None):
                 key, args[key])
             validation_warnings.append(
                 ([key], 'An unexpected error occurred in validation'))
-
+    print('insufficient keys:', insufficient_keys)
     # step 3: check conditional requirement
     # Need to evaluate sufficiency of inputs first.
     sufficient_inputs = {}
@@ -738,8 +739,11 @@ def validate(args, spec, spatial_overlap_opts=None):
             else:
                 sufficient_inputs[key] = True
 
+    print('conditionally required keys', conditionally_required_keys)
     for key in conditionally_required_keys:
+        print(key)
         if key in invalid_keys:
+            print('is invalid. continuing...')
             continue
 
         # An input is conditionally required when the expression given
@@ -748,6 +752,7 @@ def validate(args, spec, spatial_overlap_opts=None):
             expression=spec[key]['required'],
             variable_map=sufficient_inputs)
 
+        print(key, 'is conditionally required:', is_conditionally_required)
         if is_conditionally_required:
             if key not in args:
                 validation_warnings.append(
@@ -785,6 +790,7 @@ def validate(args, spec, spatial_overlap_opts=None):
                 validation_warnings.append(
                     (checked_keys, spatial_overlap_error))
 
+    print(validation_warnings)
     return validation_warnings
 
 
