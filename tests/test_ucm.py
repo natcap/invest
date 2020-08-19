@@ -325,8 +325,8 @@ class UCMTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             natcap.invest.urban_cooling_model.execute(args)
         self.assertTrue(
-            "The missing values found in the LULC but not the table are: [10]"
-            in str(context.exception))
+            "The missing values found in the LULC raster but not the table"
+            " are: [10]" in str(context.exception))
 
     def test_bad_args(self):
         """UCM: test validation of bad arguments."""
