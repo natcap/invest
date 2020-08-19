@@ -691,11 +691,17 @@ def _execute(args):
                 for lucode in biophysical_table])
             kc_nodata = -1  # a reasonable nodata value
             kc_task = task_graph.add_task(
-                func=pygeoprocessing.reclassify_raster,
+                func=utils._reclassify_raster_op,
                 args=(
                     (file_registry['lulc_aligned_path'], 1), kc_lookup,
                     file_registry['kc_path_list'][month_index],
                     gdal.GDT_Float32, kc_nodata),
+                kwargs={
+                    'values_required': True,
+                    'error_details': {
+                        'raster_name': 'LULC', 
+                        'column_name': 'lucode', 
+                        'table_name': 'Biophysical'}},
                 target_path_list=[file_registry['kc_path_list'][month_index]],
                 dependent_task_list=[align_task],
                 hash_algorithm='md5',
@@ -1020,11 +1026,29 @@ def _calculate_curve_number_raster(
         lulc_to_soil[soil_id]['cn_values'] = (
             numpy.array(lulc_to_soil[soil_id]['cn_values'],
                         dtype=numpy.float32))
+    
+    # Use set of table lucodes in cn_op
+    lucodes_set = set(list(biophysical_table))
 
     def cn_op(lulc_array, soil_group_array):
         """Map lulc code and soil to a curve number."""
         cn_result = numpy.empty(lulc_array.shape)
         cn_result[:] = cn_nodata
+
+        # if lulc_array value not in lulc_to_soil[soil_group_id]['lulc_values']
+        # then numpy.digitize will not bin properly and cause an IndexError
+        # during the reshaping call
+        lulc_unique = set(numpy.unique(lulc_array))
+        if not lulc_unique.issubset(lucodes_set):
+            # cast to list to conform with similar error messages in InVEST
+            missing_lulc_values = list(lulc_unique.difference(lucodes_set))
+            error_message = (
+                "Values in the LULC raster were found that are not"
+                " represented under the 'lucode' key column of the"
+                " Biophysical table. The missing values found in the LULC"
+                f" raster but not the table are: {missing_lulc_values}.")
+            raise ValueError(error_message)
+
         for soil_group_id in numpy.unique(soil_group_array):
             if soil_group_id == soil_nodata:
                 continue
