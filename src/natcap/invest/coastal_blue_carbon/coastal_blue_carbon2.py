@@ -80,11 +80,15 @@ def execute_transition_analysis(args):
     output_dir = os.path.join(
         args['workspace_dir'], OUTPUT_DIR_NAME)
 
-    transition_years = set(args['transition_years'])
+    transition_years = set([int(year) for year in args['transition_years']])
     disturbance_magnitude_rasters = args['disturbance_magnitude_rasters']
     half_life_rasters = args['half_life_rasters']
     yearly_accum_rasters = args['annual_rate_of_accumulation_rasters']
-    prices = args['carbon_prices_per_year']
+
+    try:
+        prices = [float(price) for price in args['carbon_prices_per_year']]
+    except KeyError:
+        prices = None
 
     # ASSUMPTIONS
     #
@@ -115,7 +119,13 @@ def execute_transition_analysis(args):
     summary_net_sequestration_tasks = []
     summary_net_sequestration_raster_paths = []
 
-    for year in range(args['first_transition_year'], args['final_year']+1):
+    first_transition_year = min(transition_years)
+    try:
+        final_year = int(args['analysis_year'])
+    except (TypeError, KeyError, ValueError):
+        final_year = max(transition_years)
+
+    for year in range(first_transition_year, final_year+1):
         current_stock_tasks = {}
         net_sequestration_rasters[year] = {}
         stock_rasters[year] = {}
@@ -599,6 +609,23 @@ def execute(args):
             task_name=f'Mapping litter accumulation for {year}')
 
         prior_transition_year = current_transition_year
+
+    task_graph.join()
+
+    transition_analysis_args = {
+        'task_graph': task_graph,
+        'workspace_dir': args['workspace_dir'],
+        'suffix': suffix,
+        'n_workers': n_workers,
+        'transition_years': transition_years,
+        'disturbance_magnitude_rasters': None,  # TODO
+        'half_life_rasters': halflife_rasters,
+        'annual_rate_of_accumulation_rasters': yearly_accum_rasters,
+        'carbon_prices_per_year': prices,
+        'analysis_year': analysis_year,
+        'do_economic_analysis': args['do_economic_analysis'],
+    }
+    execute_transition_analysis(transition_analysis_args)
 
     task_graph.close()
     task_graph.join()
