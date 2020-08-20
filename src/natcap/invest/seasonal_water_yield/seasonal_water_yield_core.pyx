@@ -620,13 +620,13 @@ cpdef calculate_local_recharge(
                         qf_nodata = qf_m_nodata_list[m_index]
                         kc_nodata = kc_m_nodata_list[m_index]
 
+                        # make sure that user input nodata values are defined
+                        # precipitation and evapotranspiration data should 
+                        # always be non-negative
                         if precip_nodata is None:
                             precip_nodata = -1
-                        if qf_nodata is None:
-                            qf_nodata = IMPROBABLE_FLOAT_NOATA
-
-
-
+                        if et0_nodata is None:
+                            et0_nodata = -1
 
                         p_m = precip_m_raster.get(xi, yi)
                         if not is_close(p_m, precip_nodata):
