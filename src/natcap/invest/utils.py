@@ -746,27 +746,3 @@ def _assert_vectors_equal(
         expected_vector = None
 
     return None
-
-
-def is_valid(array, nodata):
-    """
-    Return boolean array showing the valid elements of the array.
-
-    This is to be used for masking the nodata pixels of a raster. Assuming that
-    the input array is numeric and contains no None or numpy.nan elements.
-    If ``nodata=None``, that implies that all pixels are valid.
-
-    Args:
-        array (numpy.ndarray): Array for which to make boolean mask
-        nodata: Nodata value to compare to. 
-
-    Returns:
-        boolean numpy.ndarray with the same shape as the input array. 
-        Each element is False if its value is close to the nodata value,
-        True otherwise.
-
-    """
-    if nodata:
-        return ~numpy.isclose(array, nodata)
-    else:
-        return array != nodata
