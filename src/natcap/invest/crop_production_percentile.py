@@ -531,8 +531,8 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result[:] = observed_yield_array[:]
 
     if observed_yield_nodata is not None:
-        valid_mask = numpy.isclose(observed_yield_array, observed_yield_nodata)
-        result[valid_mask] = 0.0
+        nodata_mask = numpy.isclose(observed_yield_array, observed_yield_nodata)
+        result[nodata_mask] = 0.0
     return result
 
 
