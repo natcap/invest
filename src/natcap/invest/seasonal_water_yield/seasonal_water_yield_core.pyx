@@ -29,15 +29,8 @@ cdef extern from "time.h" nogil:
     ctypedef int time_t
     time_t time(time_t*)
 
-cdef int double_is_close(double x, double y):
+cdef int is_close(double x, double y):
     return abs(x-y) <= (1e-8+1e-05*abs(y))
-
-def is_close(a, b):
-    """Compare values which may be numeric or None"""
-    if a and b:
-        return double_is_close(a, b)
-    else:
-        return 1 if a == b else 0
 
 cdef extern from "LRUCache.h":
     cdef cppclass LRUCache[KEY_T, VAL_T]:
@@ -623,9 +616,17 @@ cpdef calculate_local_recharge(
                             <_ManagedRaster?>kc_m_raster_list[m_index])
 
                         et0_nodata = et0_m_nodata_list[m_index]
-                        precip_nodata = precip_m_nodata_list[m_index]
+                        precip_nodata = precip_m_nodata_list[m_index] 
                         qf_nodata = qf_m_nodata_list[m_index]
                         kc_nodata = kc_m_nodata_list[m_index]
+
+                        if precip_nodata is None:
+                            precip_nodata = -1
+                        if qf_nodata is None:
+                            qf_nodata = IMPROBABLE_FLOAT_NOATA
+
+
+
 
                         p_m = precip_m_raster.get(xi, yi)
                         if not is_close(p_m, precip_nodata):
