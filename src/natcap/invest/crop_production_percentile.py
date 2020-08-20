@@ -505,7 +505,7 @@ def _crop_production_op(
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     if landcover_nodata is not None:
         result[:] = _NODATA_YIELD
-        valid_mask = utils.is_valid(lulc_array, landcover_nodata)
+        valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
         result[valid_mask] = 0.0
     else:
         result[:] = 0.0
@@ -528,9 +528,11 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     """
     result = numpy.empty(
         observed_yield_array.shape, dtype=numpy.float32)
-    result[:] = 0.0
-    valid_mask = utils.is_valid(observed_yield_array, observed_yield_nodata)
-    result[valid_mask] = observed_yield_array[valid_mask]
+    result[:] = observed_yield_array[:]
+
+    if observed_yield_nodata is not None:
+        valid_mask = numpy.isclose(observed_yield_array, observed_yield_nodata)
+        result[valid_mask] = 0.0
     return result
 
 
@@ -554,7 +556,7 @@ def _mask_observed_yield_op(
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
-        valid_mask = utils.is_valid(lulc_array, landcover_nodata)
+        valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
         result[valid_mask] = 0.0
     else:
         result[:] = 0.0
@@ -623,12 +625,16 @@ def tabulate_results(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
                     (observed_production_raster_path, 1)):
-                production_pixel_count += numpy.count_nonzero(
-                    utils.is_valid(yield_block, observed_yield_nodata) &
-                    (yield_block > 0.0))
-                yield_sum += numpy.sum(
-                    yield_block[
-                        utils.is_valid(yield_block, observed_yield_nodata)])
+
+                # make a valid mask showing which pixels are not nodata
+                # if nodata value undefined, assume all pixels are valid
+                if observed_yield_nodata is None:
+                    valid_mask = numpy.full(yield_block.shape, True)
+                else:
+                    valid_mask = ~numpy.isclose(yield_block, observed_yield_nodata)
+                production_pixel_count += numpy.count_nonzero(valid_mask & (
+                                                              yield_block > 0.0))
+                yield_sum += numpy.sum(yield_block[valid_mask])
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
             result_table.write(',%f' % production_area)
@@ -642,8 +648,9 @@ def tabulate_results(
                 yield_sum = 0.0
                 for _, yield_block in pygeoprocessing.iterblocks(
                         (yield_percentile_raster_path, 1)):
+                    # _NODATA_YIELD will always have a value (defined above)
                     yield_sum += numpy.sum(
-                        yield_block[utils.is_valid(yield_block, _NODATA_YIELD)])
+                        yield_block[~numpy.isclose(yield_block, _NODATA_YIELD)])
                 production_lookup[yield_percentile_id] = yield_sum
                 result_table.write(",%f" % yield_sum)
 
@@ -669,7 +676,7 @@ def tabulate_results(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
                 total_area += numpy.count_nonzero(
-                    utils.is_valid(band_values, landcover_nodata))
+                    ~numpy.isclose(band_values, landcover_nodata))
             else:
                 total_area += band_values.size
         result_table.write(
