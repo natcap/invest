@@ -335,7 +335,11 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     """
     out_matrix = numpy.empty(flow_accum.shape, dtype=numpy.uint8)
     out_matrix[:] = out_nodata
-    valid_pixels = utils.is_valid(flow_accum, src_nodata)
+    if src_nodata is None:
+        valid_pixels = numpy.full(out_matrix.shape, True)
+    else:
+        valid_pixels = ~numpy.isclose(flow_accum, src_nodata)
+    
     over_threshold = flow_accum > threshold
     out_matrix[valid_pixels & over_threshold] = 1
     out_matrix[valid_pixels & ~over_threshold] = 0
