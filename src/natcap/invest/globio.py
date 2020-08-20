@@ -48,7 +48,9 @@ ARGS_SPEC = {
                 "projected": True,
             },
             "required": "not predefined_globio",
-            "about": "used in \"mode (a)\" path to a base landcover map with integer codes",
+            "about": (
+                "used in \"mode (a)\" path to a base landcover map with"
+                " integer codes"),
             "name": "Land Use/Cover (Raster)"
         },
         "lulc_to_globio_table_path": {
@@ -93,7 +95,8 @@ ARGS_SPEC = {
                 "projected": True,
             },
             "required": "not predefined_globio",
-            "about": "used in \"mode (a)\" path to potential vegetation raster",
+            "about": (
+                "used in \"mode (a)\" path to potential vegetation raster"),
             "name": "Potential Vegetation (Raster)"
         },
         "pasture_threshold": {
@@ -198,7 +201,8 @@ def execute(args):
             to a folder containing maps of either gdal compatible rasters or
             OGR compatible shapefiles.  These data will be used in the
             infrastructure to calculation of MSA.
-        args['pasture_path'] (string): used in "mode (a)" path to pasture raster
+        args['pasture_path'] (string): used in "mode (a)" path to pasture
+            raster
         args['potential_vegetation_path'] (string): used in "mode (a)" path to
             potential vegetation raster
         args['pasture_threshold'] (float): used in "mode (a)"
@@ -208,10 +212,10 @@ def execute(args):
         args['primary_threshold'] (float): used in "mode (a)"
         args['msa_parameters_path'] (string): path to MSA classification
             parameters
-        args['aoi_path'] (string): (optional) if it exists then final MSA raster
-            is summarized by AOI
-        args['globio_lulc_path'] (string): used in "mode (b)" path to predefined
-            globio raster.
+        args['aoi_path'] (string): (optional) if it exists then final MSA
+            raster is summarized by AOI
+        args['globio_lulc_path'] (string): used in "mode (b)" path to
+            predefined globio raster.
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process.
@@ -281,8 +285,8 @@ def execute(args):
         tmp_dir, 'combined_infrastructure%s.tif' % file_suffix)
     combine_infrastructure_task = task_graph.add_task(
         func=_collapse_infrastructure_layers,
-        args=(args['infrastructure_dir'], globio_lulc_path, infrastructure_path,
-              tmp_dir),
+        args=(args['infrastructure_dir'], globio_lulc_path,
+              infrastructure_path, tmp_dir),
         target_path_list=[infrastructure_path],
         dependent_task_list=calculate_globio_task_list,
         task_name='combine_infrastructure')
@@ -374,9 +378,14 @@ def execute(args):
         output_dir, 'msa_lu%s.tif' % file_suffix)
     LOGGER.info('calculate msa_lu')
     calculate_msa_lu_task = task_graph.add_task(
-        func=pygeoprocessing.reclassify_raster,
-        args=((globio_lulc_path, 1), msa_parameter_table['msa_lu'], msa_lu_path,
-              gdal.GDT_Float32, globio_nodata),
+        func=utils._reclassify_raster_op,
+        args=((globio_lulc_path, 1), msa_parameter_table['msa_lu'],
+               msa_lu_path, gdal.GDT_Float32, globio_nodata),
+        kwargs={'values_required': True,
+                'error_details': {
+                    'raster_name': 'GLOBIO LULC',
+                    'column_name': 'MSA_type-msa_lu',
+                    'table_name': 'MSA'}},
         target_path_list=[msa_lu_path],
         dependent_task_list=calculate_globio_task_list,
         task_name='calculate_msa_lu')
@@ -424,7 +433,8 @@ def _summarize_results_in_aoi(aoi_path, summary_aoi_path, msa_path):
 
     """
     # copy the aoi to an output shapefile
-    original_datasource = gdal.OpenEx(aoi_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
+    original_datasource = gdal.OpenEx(
+                            aoi_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
     # Delete if existing shapefile with the same name
     if os.path.isfile(summary_aoi_path):
         os.remove(summary_aoi_path)
@@ -729,9 +739,14 @@ def _calculate_globio_lulc_map(
     intermediate_globio_lulc_path = os.path.join(
         tmp_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
     reclass_lulc_to_globio_task = task_graph.add_task(
-        func=pygeoprocessing.reclassify_raster,
+        func=utils._reclassify_raster_op,
         args=((lulc_path, 1), lulc_to_globio, intermediate_globio_lulc_path,
               gdal.GDT_Int32, globio_nodata),
+        kwargs={'values_required': True,
+                'error_details': {
+                    'raster_name': 'LULC',
+                    'column_name': 'lucode',
+                    'table_name': 'Land Cover to GLOBIO Land Cover'}},
         target_path_list=[intermediate_globio_lulc_path],
         task_name='reclassify_lulc_to_globio')
 

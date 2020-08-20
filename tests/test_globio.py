@@ -130,12 +130,12 @@ class GLOBIOTests(unittest.TestCase):
         projection_wkt = base_raster.GetProjection()
         base_geotransform = base_raster.GetGeoTransform()
         base_raster = None
-        
+
         # Create a temporary infrastructure directory with one raster
         tmp_infra_dir = os.path.join(self.workspace_dir, "single_infra")
         os.mkdir(tmp_infra_dir)
         tmp_roads_path = os.path.join(tmp_infra_dir, "roads.tif")
-        
+
         tmp_roads_array = numpy.array([
             [0, 0, 0, 0], [0.5, 1, 1, 13.0], [1, 0, 1, 13.0], [1, 1, 0, 0]])
         tmp_roads_nodata = 13.0
@@ -158,8 +158,8 @@ class GLOBIOTests(unittest.TestCase):
 
         result_path = os.path.join(
             self.workspace_dir, 'combined_infrastructure.tif')
-       
-        # No need to run the whole model so call infrastructure combining 
+
+        # No need to run the whole model so call infrastructure combining
         # function directly
         globio._collapse_infrastructure_layers(
             tmp_infra_dir, tmp_roads_path, result_path, temp_dir)
@@ -216,6 +216,100 @@ class GLOBIOTests(unittest.TestCase):
 
         # Infer an explicit 'pass'
         self.assertTrue(True)
+
+    def test_globio_missing_lulc_value(self):
+        """GLOBIO: test error is raised when missing LULC value from table.
+
+        This test is when an LULC value is not represented in the Land Cover
+        to GLOBIO Land Cover table.
+        """
+        from natcap.invest import globio
+        import pandas
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'sub_aoi.shp'),
+            'globio_lulc_path': '',
+            'infrastructure_dir': os.path.join(
+                SAMPLE_DATA, 'infrastructure_dir'),
+            'intensification_fraction': '0.46',
+            'lulc_to_globio_table_path': os.path.join(
+                SAMPLE_DATA, 'lulc_conversion_table.csv'),
+            'lulc_path': os.path.join(SAMPLE_DATA, 'lulc_2008.tif'),
+            'msa_parameters_path': os.path.join(
+                SAMPLE_DATA, 'msa_parameters.csv'),
+            'pasture_threshold': '0.5',
+            'pasture_path': os.path.join(SAMPLE_DATA, 'pasture.tif'),
+            'potential_vegetation_path': os.path.join(
+                SAMPLE_DATA, 'potential_vegetation.tif'),
+            'predefined_globio': False,
+            'primary_threshold': 0.66,
+            'workspace_dir': self.workspace_dir,
+            'n_workers': '-1',
+        }
+
+        # remove a row from the lulc table so that lulc value is missing
+        bad_lulc_to_globio_path = os.path.join(
+            self.workspace_dir, 'bad_lulc_to_globio_table_path.csv')
+
+        table_df = pandas.read_csv(args['lulc_to_globio_table_path'])
+        table_df = table_df.loc[table_df['lucode'] != 2]
+        table_df.to_csv(bad_lulc_to_globio_path)
+        table_df = None
+
+        args['lulc_to_globio_table_path'] = bad_lulc_to_globio_path
+        with self.assertRaises(ValueError) as context:
+            globio.execute(args)
+        # Note the '2.' here, since the lulc_2008.tif is a Float32
+        self.assertTrue(
+            "The missing values found in the LULC raster but not the table"
+            " are: [2.]" in str(context.exception))
+
+    def test_globio_missing_globio_lulc_value(self):
+        """GLOBIO: test error raised when missing GLOBIO LULC value from table.
+
+        This test is when a GLOBIO LULC value is not represented in the
+        MSA parameter table under the msa_lu rows.
+        """
+        from natcap.invest import globio
+        import pandas
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'sub_aoi.shp'),
+            'globio_lulc_path': os.path.join(
+                SAMPLE_DATA, 'globio_lulc_small.tif'),
+            'infrastructure_dir': os.path.join(
+                SAMPLE_DATA, 'infrastructure_dir'),
+            'intensification_fraction': '0.46',
+            'lulc_to_globio_table_path': os.path.join(
+                SAMPLE_DATA, 'lulc_conversion_table.csv'),
+            'msa_parameters_path': os.path.join(
+                SAMPLE_DATA, 'msa_parameters.csv'),
+            'pasture_threshold': '0.5',
+            'pasture_path': os.path.join(SAMPLE_DATA, 'pasture.tif'),
+            'potential_vegetation_path': os.path.join(
+                SAMPLE_DATA, 'potential_vegetation.tif'),
+            'predefined_globio': True,
+            'primary_threshold': 0.66,
+            'workspace_dir': self.workspace_dir,
+            'n_workers': '-1',
+        }
+
+        # remove a row from the msa table so that a msa_lu value is missing
+        bad_msa_param_path = os.path.join(
+            self.workspace_dir, 'bad_msa_param_table_path.csv')
+
+        table_df = pandas.read_csv(args['msa_parameters_path'])
+        # Using '3' here because Value column is of mix type and will be string
+        table_df = table_df.loc[table_df['Value'] != '3']
+        table_df.to_csv(bad_msa_param_path)
+        table_df = None
+
+        args['msa_parameters_path'] = bad_msa_param_path
+        with self.assertRaises(ValueError) as context:
+            globio.execute(args)
+        self.assertTrue(
+            "The missing values found in the GLOBIO LULC raster but not the"
+            " table are: [3]" in str(context.exception))
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
