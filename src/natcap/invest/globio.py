@@ -456,10 +456,6 @@ def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
     """Masking out natural areas."""
     # lulc_array and nodata could conceivably be a float here,
     # if it's the user-provided globio dataset
-    valid_mask = None
-    if globio_nodata is None:
-        valid_mask = numpy.full()
-        
     # landcover type 1 in the GLOBIO schema represents primary vegetation
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
     result = lulc_array == 1
@@ -498,7 +494,6 @@ def _msa_f_op(
         Array with float values. One component of final MSA score.
 
     """
-
     msa_f = numpy.empty(primary_veg_smooth.shape)
 
     less_than = msa_f_table.pop('<', None)
@@ -582,7 +577,6 @@ def _msa_op(msa_f, msa_lu, msa_i, globio_nodata):
         """Calculate the MSA which is the product of the sub MSAs."""
         result = numpy.empty_like(msa_f, dtype=numpy.float32)
         result[:] = globio_nodata
-
         if globio_nodata is None:
             valid_mask = numpy.full(result.shape, True)
         else:
@@ -822,7 +816,7 @@ def _calculate_globio_lulc_map(
 def _forest_area_mask_op(lulc_array, globio_nodata, forest_areas_nodata):
     """Masking out forest areas."""
     # comparing integers, numpy.isclose not needed
-    valid_mask = lulc_array == globio_nodata 
+    valid_mask = lulc_array != globio_nodata 
     # landcover code 130 represents all MODIS forest codes which originate
     # as 1-5
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
@@ -956,7 +950,7 @@ def _collapse_infrastructure_layers(
         # necessarily nodata
         infrastructure_result = numpy.zeros(
             infrastructure_array_list[0].shape, dtype=numpy.uint8)
-
+        
         nodata_mask = numpy.full(infrastructure_array_list[0].shape, True)
         infrastructure_mask = numpy.full(infrastructure_array_list[0].shape, False)
 
@@ -971,7 +965,7 @@ def _collapse_infrastructure_layers(
             # so the nodata_mask should be all False
             else:
                 nodata_mask &= False
-            
+
         infrastructure_result[infrastructure_mask] = 1
         infrastructure_result[nodata_mask] = infrastructure_nodata
         return infrastructure_result
