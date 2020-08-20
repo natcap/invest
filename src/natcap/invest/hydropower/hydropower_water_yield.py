@@ -738,7 +738,9 @@ def aet_op(fractp, precip, precip_nodata, output_nodata):
     result[:] = output_nodata
     # checking if fractp >= 0 because it's a value that's between 0 and 1
     # and the nodata value is a large negative number.
-    valid_mask = (fractp >= 0) & utils.is_valid(precip, precip_nodata)
+    valid_mask = fractp >= 0
+    if precip_nodata is not None:
+        valid_mask &= ~numpy.isclose(precip, precip_nodata)
     result[valid_mask] = fractp[valid_mask] * precip[valid_mask]
     return result
 
@@ -759,8 +761,10 @@ def wyield_op(fractp, precip, precip_nodata, output_nodata):
     """
     result = numpy.empty_like(fractp)
     result[:] = output_nodata
-    valid_mask = (utils.is_valid(fractp, output_nodata) &
-                  utils.is_valid(precip, precip_nodata))
+    # output_nodata is defined above, should never be None
+    valid_mask = ~numpy.isclose(fractp, output_nodata)
+    if precip_nodata is not None:
+        valid_mask &= ~numpy.isclose(precip, precip_nodata)
     result[valid_mask] = (1.0 - fractp[valid_mask]) * precip[valid_mask]
     return result
 
@@ -799,16 +803,21 @@ def fractp_op(
     # Kc, root, & veg were created by reclassify_raster, which set nodata
     # to out_nodata. All others are products of align_and_resize_raster_stack
     # and retain their original nodata values.
+    # out_nodata is defined above and should never be None.
     valid_mask = (
-        utils.is_valid(Kc, nodata_dict['out_nodata']) &
-        utils.is_valid(eto, nodata_dict['eto']) &
-        utils.is_valid(precip, nodata_dict['precip']) &
-        utils.is_valid(root, nodata_dict['out_nodata']) &
-        utils.is_valid(soil, nodata_dict['depth_root']) &
-        utils.is_valid(pawc, nodata_dict['pawc']) &
-        utils.is_valid(veg, nodata_dict['out_nodata']) &
-        utils.is_valid(precip, 0.0))
-
+        ~numpy.isclose(Kc, nodata_dict['out_nodata']) &
+        ~numpy.isclose(root, nodata_dict['out_nodata']) &
+        ~numpy.isclose(veg, nodata_dict['out_nodata']) &
+        ~numpy.isclose(precip, 0.0))
+    if nodata_dict['eto'] is not None:
+        valid_mask &= ~numpy.isclose(eto, nodata_dict['eto'])
+    if nodata_dict['precip'] is not None:
+        valid_mask &= ~numpy.isclose(precip, nodata_dict['precip'])
+    if nodata_dict['depth_root'] is not None:
+        valid_mask &= ~numpy.isclose(soil, nodata_dict['depth_root'])
+    if nodata_dict['pawc'] is not None:
+        valid_mask &= ~numpy.isclose(pawc, nodata_dict['pawc'])
+        
     # Compute Budyko Dryness index
     # Use the original AET equation if the land cover type is vegetation
     # If not vegetation (wetlands, urban, water, etc...) use
@@ -871,8 +880,10 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
     """
     result = numpy.empty(eto_pix.shape, dtype=numpy.float32)
     result[:] = output_nodata
-    valid_mask = (utils.is_valid(eto_pix, eto_nodata) &
-                  utils.is_valid(Kc_pix, output_nodata))
+
+    valid_mask = ~numpy.isclose(Kc_pix, output_nodata)
+    if eto_nodata is not None:
+        valid_mask &= ~numpy.isclose(eto_pix, eto_nodata)
     result[valid_mask] = eto_pix[valid_mask] * Kc_pix[valid_mask]
     return result
 
