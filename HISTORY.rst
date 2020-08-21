@@ -21,6 +21,9 @@ Unreleased Changes
       for consistency with NDR and SDR
 * Datastack
     * Saved datastack archives now use helpful identifying names for spatial input folders
+* Validation
+    * Fixed bug that caused fields activated by a checkbox to make validation fail, 
+      even when the checkbox was unchecked.
 
 3.8.7 (2020-07-17)
 ------------------
