@@ -411,7 +411,7 @@ cpdef calculate_local_recharge(
             None.
 
     """
-    cdef int i_n, flow_dir_mfd
+    cdef int i_n, flow_dir_nodata, flow_dir_mfd
     cdef int peak_pixel
     cdef int xs, ys, xs_root, ys_root, xoff, yoff, flow_dir_s
     cdef int xi, yi, xj, yj, flow_dir_j, p_ij_base
