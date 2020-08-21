@@ -550,9 +550,9 @@ def execute(args):
 
         # If Price Table provided use that for price of energy, validate inputs
         time = int(val_parameters_dict['time_period'])
-        if args["price_table"]:
-            wind_price_df = pandas.read_csv(args["wind_schedule"])
-            wind_price_df.columns = wind_price_df.columns.str.lower()
+        if args['price_table']:
+            wind_price_df = utils.read_csv_to_dataframe(
+                args['wind_schedule'], to_lower=True)
 
             year_count = len(wind_price_df['year'])
             if year_count != time + 1:
@@ -929,22 +929,19 @@ def execute(args):
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
         # Read the grid points csv, and convert it to land and grid dictionary
-        grid_land_df = pandas.read_csv(args['grid_points_path'])
-        # Convert column fields to upper cased to conform to the user's guide
-        grid_land_df.columns = [
-            field.upper() for field in grid_land_df.columns
-        ]
+        grid_land_df = utils.read_csv_to_dataframe(
+            args['grid_points_path'], to_lower=True)
 
         # Make separate dataframes based on 'TYPE'
         grid_df = grid_land_df.loc[(
-            grid_land_df['TYPE'].str.upper() == 'GRID')]
+            grid_land_df['type'].str.upper() == 'GRID')]
         land_df = grid_land_df.loc[(
-            grid_land_df['TYPE'].str.upper() == 'LAND')]
+            grid_land_df['type'].str.upper() == 'LAND')]
 
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
-        grid_df.set_index('ID', inplace=True)
+        grid_df.set_index('id', inplace=True)
         grid_dict = grid_df.to_dict('index')
-        land_df.set_index('ID', inplace=True)
+        land_df.set_index('id', inplace=True)
         land_dict = land_df.to_dict('index')
 
         grid_vector_path = os.path.join(inter_dir,
@@ -1653,9 +1650,12 @@ def _read_csv_wind_parameters(csv_path, parameter_list):
             keys that have values pulled from 'csv_path'
 
     """
-    # use the parameters in the first column as indeces for the dataframe
-    wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0)
-    wind_param_df.index = wind_param_df.index.str.lower()
+    # use the parameters in the first column as indices for the dataframe
+    # this doesn't benefit from `utils.read_csv_to_dataframe` because there
+    # is no header to strip whitespace
+    # use sep=None, engine='python' to infer what the separator is
+    wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0, 
+        sep=None, engine='python')
     # only get the required parameters and leave out the rest
     wind_param_df = wind_param_df[wind_param_df.index.isin(parameter_list)]
     wind_dict = wind_param_df.to_dict()[1]
@@ -1769,7 +1769,7 @@ def _read_csv_wind_data(wind_data_path, hub_height):
             to dictionaries that hold wind data at that location.
 
     """
-    wind_point_df = pandas.read_csv(wind_data_path)
+    wind_point_df = utils.read_csv_to_dataframe(wind_data_path, to_lower=False)
 
     # Calculate scale value at new hub height given reference values.
     # See equation 3 in users guide
@@ -2004,8 +2004,8 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     # For each inner dictionary (for each point) create a point and set its
     # fields
     for point_dict in base_dict_data.values():
-        latitude = float(point_dict['LATI'])
-        longitude = float(point_dict['LONG'])
+        latitude = float(point_dict['lati'])
+        longitude = float(point_dict['long'])
 
         geom = ogr.Geometry(ogr.wkbPoint)
         geom.AddPoint_2D(longitude, latitude)

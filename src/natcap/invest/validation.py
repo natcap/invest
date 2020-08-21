@@ -516,6 +516,10 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
             first_line = file_obj.readline()
             if first_line.startswith(codecs.BOM_UTF8):
                 encoding = 'utf-8-sig'
+
+        # engine=python handles unknown characters by replacing them with a
+        # replacement character, instead of raising an error
+        # use sep=None, engine='python' to infer what the separator is
         dataframe = pandas.read_csv(
             filepath, sep=None, engine='python', encoding=encoding)
     except Exception:
@@ -529,6 +533,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
                     "File must be encoded as a UTF-8 CSV.")
 
     if required_fields:
+        dataframe.columns = dataframe.columns.str.strip()
         fields_in_table = set([name.upper() for name in dataframe.columns])
         missing_fields = (
             set(field.upper() for field in required_fields) - fields_in_table)

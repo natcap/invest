@@ -24,6 +24,9 @@ Unreleased Changes
 * Validation
     * Fixed bug that caused fields activated by a checkbox to make validation fail, 
       even when the checkbox was unchecked.
+* General
+    * Input table column headers are now insensitive to leading/trailing whitespace in 
+      most places.
 
 3.8.7 (2020-07-17)
 ------------------
