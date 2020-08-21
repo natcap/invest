@@ -418,6 +418,7 @@ cpdef calculate_local_recharge(
     cdef int win_xsize, win_ysize, n_dir
     cdef int raster_x_size, raster_y_size
     cdef float pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
+    cdef float qf_nodata, kc_nodata
 
     cdef int j_neighbor_end_index, mfd_dir_sum
     cdef float mfd_direction_array[8]
@@ -604,7 +605,7 @@ cpdef calculate_local_recharge(
                     aet_i = 0
                     p_i = 0
                     qf_i = 0
-                    
+
                     for m_index in range(12):
                         precip_m_raster = (
                             <_ManagedRaster?>precip_m_raster_list[m_index])
@@ -616,7 +617,7 @@ cpdef calculate_local_recharge(
                             <_ManagedRaster?>kc_m_raster_list[m_index])
 
                         et0_nodata = et0_m_nodata_list[m_index]
-                        precip_nodata = precip_m_nodata_list[m_index] 
+                        precip_nodata = precip_m_nodata_list[m_index]
                         qf_nodata = qf_m_nodata_list[m_index]
                         kc_nodata = kc_m_nodata_list[m_index]
 
