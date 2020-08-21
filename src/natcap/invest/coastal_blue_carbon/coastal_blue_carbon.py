@@ -613,7 +613,7 @@ def get_num_blocks(raster_uri):
     return n_col_blocks * n_row_blocks
 
 
-def reclass(array, d, out_dtype=None, nodata_value=None):
+def reclass(array, d, out_dtype=None, nodata_mask=None):
     """Reclassify values in array.
 
     If a nodata value is not provided, the function will return an array with
@@ -623,7 +623,7 @@ def reclass(array, d, out_dtype=None, nodata_value=None):
         array (numpy.array): input data
         d (dict): reclassification map
         out_dtype (numpy.dtype): a numpy datatype for the reclass_array
-        nodata_value (number): for floats, a nodata value that is set to 
+        nodata_mask (number): for floats, a nodata value that is set to 
             numpy.nan if provided to make reclass_array nodata values 
             consistent
 
@@ -651,9 +651,9 @@ def reclass(array, d, out_dtype=None, nodata_value=None):
         raise
     reclass_array = v[index].reshape(array.shape)
 
-    if nodata_value is not None and numpy.issubdtype(reclass_array.dtype, 
+    if nodata_mask is not None and numpy.issubdtype(reclass_array.dtype, 
                                                      numpy.floating):
-        reclass_array[numpy.isclose(array, nodata_value)] = numpy.nan
+        reclass_array[numpy.isclose(array, nodata_mask)] = numpy.nan
         reclass_array[numpy.isclose(array, ndata)] = numpy.nan
 
         # If the user's nodata value is incorrectly configured for the datatype
