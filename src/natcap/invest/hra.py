@@ -2450,18 +2450,17 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     # Read file with pandas based on its type
     file_ext = os.path.splitext(base_info_table_path)[1].lower()
     if file_ext == '.csv':
-        info_df = pandas.read_csv(base_info_table_path)
+        # use sep=None, engine='python' to infer what the separator is
+        info_df = pandas.read_csv(base_info_table_path, sep=None, 
+            engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         info_df = pandas.read_excel(base_info_table_path)
     else:
         raise ValueError('Info table %s is not a CSV nor an Excel file.' %
                          base_info_table_path)
 
-    # Convert column names to upper case, and encode it to strings if it's not
-    # a string (e.g. unicode)
-    info_df.columns = [
-        col.upper() if isinstance(col, str) else col.encode('utf-8').upper()
-        for col in info_df.columns]
+    # Convert column names to upper case and strip whitespace
+    info_df.columns = [col.strip().upper() for col in info_df.columns]
 
     missing_columns = list(
         set(required_column_headers) - set(info_df.columns.values))
@@ -2575,11 +2574,12 @@ def _get_criteria_dataframe(base_criteria_table_path):
     # index. Column names are auto-generated ordinal values
     file_ext = os.path.splitext(base_criteria_table_path)[1].lower()
     if file_ext == '.csv':
-        criteria_df = pandas.read_csv(
-            base_criteria_table_path, index_col=0, header=None)
+        # use sep=None, engine='python' to infer what the separator is
+        criteria_df = pandas.read_csv(base_criteria_table_path, 
+            index_col=0, header=None, sep=None, engine='python')
     elif file_ext in ['.xlsx', '.xls']:
-        criteria_df = pandas.read_excel(
-            base_criteria_table_path, index_col=0, header=None)
+        criteria_df = pandas.read_excel(base_criteria_table_path, 
+            index_col=0, header=None)
     else:
         raise ValueError('Criteria table %s is not a CSV or an Excel file.' %
                          base_criteria_table_path)
@@ -2606,7 +2606,7 @@ def _get_criteria_dataframe(base_criteria_table_path):
 
     # Validate the column header, which should have 'criteria type'
     criteria_df.columns = [
-        x if isinstance(x, str) else None for x in
+        x.strip() if isinstance(x, str) else None for x in
         criteria_df.loc[_HABITAT_NAME_HEADER].values]
     if _CRITERIA_TYPE_HEADER not in criteria_df.columns.values:
         raise ValueError('The Criteria table is missing the column header'

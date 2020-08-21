@@ -11,14 +11,9 @@ import re
 import glob
 import textwrap
 
-import numpy
+from pygeoprocessing.testing import scm
+import pygeoprocessing.testing
 from osgeo import gdal
-from osgeo import ogr
-from osgeo import osr
-from shapely.geometry import Polygon
-from shapely.geometry import Point
-
-import pygeoprocessing
 
 
 class SuffixUtilsTests(unittest.TestCase):
@@ -192,6 +187,7 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir)
 
+    @scm.skip_if_data_missing(_REGRESSION_PATH)
     def test_exp_decay_kernel_raster(self):
         """Utils: test exponential_decay_kernel_raster."""
         from natcap.invest import utils
@@ -200,17 +196,13 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
         utils.exponential_decay_kernel_raster(
             expected_distance, kernel_filepath)
 
-        model_array = pygeoprocessing.raster_to_numpy_array(
-            kernel_filepath)
-        reg_array = pygeoprocessing.raster_to_numpy_array(
+        pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(
                 ExponentialDecayUtilsTests._REGRESSION_PATH,
-                'kernel_100.tif'))
-        numpy.testing.assert_allclose(model_array, reg_array, atol=1e-6)
+                'kernel_100.tif'), kernel_filepath, abs_tol=1e-6)
 
 
 class SandboxTempdirTests(unittest.TestCase):
-    """Test Sandbox Tempdir."""
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -220,7 +212,6 @@ class SandboxTempdirTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_sandbox_manager(self):
-        """Test sandbox manager."""
         from natcap.invest import utils
 
         with utils.sandbox_tempdir(suffix='foo',
@@ -236,23 +227,19 @@ class SandboxTempdirTests(unittest.TestCase):
 
 
 class TimeFormattingTests(unittest.TestCase):
-    """Test Time Formatting."""
     def test_format_time_hours(self):
-        """Test format time hours."""
         from natcap.invest.utils import _format_time
 
         seconds = 3667
         self.assertEqual(_format_time(seconds), '1h 1m 7s')
 
     def test_format_time_minutes(self):
-        """Test format time minutes."""
         from natcap.invest.utils import _format_time
 
         seconds = 67
         self.assertEqual(_format_time(seconds), '1m 7s')
 
     def test_format_time_seconds(self):
-        """Test format time seconds."""
         from natcap.invest.utils import _format_time
 
         seconds = 7
@@ -260,13 +247,10 @@ class TimeFormattingTests(unittest.TestCase):
 
 
 class LogToFileTests(unittest.TestCase):
-    """Test Log To File."""
     def setUp(self):
-        """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
 
     def tearDown(self):
-        """Remove temporary workspace."""
         shutil.rmtree(self.workspace)
 
     def test_log_to_file_all_threads(self):
@@ -276,7 +260,6 @@ class LogToFileTests(unittest.TestCase):
         logfile = os.path.join(self.workspace, 'logfile.txt')
 
         def _log_from_other_thread():
-            """Log from other thead."""
             thread_logger = logging.getLogger()
             thread_logger.info('this is from a thread')
 
@@ -308,7 +291,6 @@ class LogToFileTests(unittest.TestCase):
         logfile = os.path.join(self.workspace, 'logfile.txt')
 
         def _log_from_other_thread():
-            """Log from other thread."""
             thread_logger = logging.getLogger()
             thread_logger.info('this should not be logged')
             thread_logger.info('neither should this message')
@@ -331,9 +313,7 @@ class LogToFileTests(unittest.TestCase):
 
 
 class ThreadFilterTests(unittest.TestCase):
-    """Test Thread Filter."""
     def test_thread_filter_same_thread(self):
-        """Test threat filter same thread."""
         from natcap.invest.utils import ThreadFilter
 
         # name, level, pathname, lineno, msg, args, exc_info, func=None
@@ -352,7 +332,6 @@ class ThreadFilterTests(unittest.TestCase):
         self.assertEqual(filterer.filter(record), False)
 
     def test_thread_filter_different_thread(self):
-        """Test thread filter different thread."""
         from natcap.invest.utils import ThreadFilter
 
         # name, level, pathname, lineno, msg, args, exc_info, func=None
@@ -419,13 +398,10 @@ class MakeDirectoryTests(unittest.TestCase):
 
 
 class GDALWarningsLoggingTests(unittest.TestCase):
-    """Test GDAL Warnings Logging."""
     def setUp(self):
-        """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
 
     def tearDown(self):
-        """Remove temporary workspace."""
         shutil.rmtree(self.workspace)
 
     def test_log_warnings(self):
@@ -454,13 +430,10 @@ class GDALWarningsLoggingTests(unittest.TestCase):
 
 
 class PrepareWorkspaceTests(unittest.TestCase):
-    """Test Prepare Workspace."""
     def setUp(self):
-        """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
 
     def tearDown(self):
-        """Remove temporary workspace."""
         shutil.rmtree(self.workspace)
 
     def test_prepare_workspace(self):
@@ -484,16 +457,15 @@ class PrepareWorkspaceTests(unittest.TestCase):
         with open(logfile_glob[0]) as logfile:
             logfile_text = logfile.read()
             # all the following strings should be in the logfile.
-            expected_string = (
-                'file should not exist: No such file or directory')
-            self.assertTrue(
-                expected_string in logfile_text)  # gdal error captured
+            expected_string = 'file should not exist: No such file or directory'
+            self.assertTrue(expected_string in logfile_text)  # gdal error captured
             self.assertEqual(len(re.findall('WARNING', logfile_text)), 1)
             self.assertTrue('Elapsed time:' in logfile_text)
 
 
 class BuildLookupFromCSVTests(unittest.TestCase):
     """Tests for natcap.invest.utils.build_lookup_from_csv."""
+
     def setUp(self):
         """Make temporary directory for workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -521,7 +493,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 },
             }
         self.assertDictEqual(result, expected_dict)
-
+    
     def test_unique_key_not_first_column(self):
         """utils: test success when key field is not first column."""
         from natcap.invest import utils
@@ -543,7 +515,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
-
+    
     def test_non_unique_keys(self):
         """utils: test error is raised if keys are not unique."""
         from natcap.invest import utils
@@ -558,7 +530,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             utils.build_lookup_from_csv(table_path, 'lucode', to_lower=True)
-
+    
     def test_missing_key_field(self):
         """utils: test error is raised when missing key field."""
         from natcap.invest import utils
@@ -573,7 +545,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
 
         with self.assertRaises(KeyError):
             utils.build_lookup_from_csv(table_path, 'lucode', to_lower=True)
-
+    
     def test_nan_holes(self):
         """utils: test empty strings returned when missing data is present."""
         from natcap.invest import utils
@@ -595,7 +567,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4: {'desc': 'butter', 'val1': '', 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
-
+    
     def test_nan_row(self):
         """utils: test NaN row is dropped."""
         from natcap.invest import utils
@@ -616,7 +588,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4.0: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4.0}}
 
         self.assertDictEqual(result, expected_result)
-
+    
     def test_column_subset(self):
         """utils: test column subset is properly returned."""
         from natcap.invest import utils
@@ -631,7 +603,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
 
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True, column_list=['val1', 'val2'])
-
+        
         expected_result = {
                 1: {'val1': 0.5, 'val2': 2, 'lucode': 1},
                 2: {'val1': 1, 'val2': 4, 'lucode': 2},
@@ -639,7 +611,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4: {'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
-
+    
     def test_trailing_comma(self):
         """utils: test a trailing comma on first line is handled properly."""
         from natcap.invest import utils
@@ -654,7 +626,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
 
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
-
+        
         expected_result = {
                 1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
                 2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
@@ -662,7 +634,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
-
+    
     def test_trailing_comma_second_line(self):
         """utils: test a trailing comma on second line is handled properly."""
         from natcap.invest import utils
@@ -677,7 +649,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
 
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
-
+        
         expected_result = {
                 1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
                 2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
@@ -793,6 +765,169 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         self.assertEqual(lookup_dict[4]['header 2'], 5)
         self.assertEqual(lookup_dict[4]['header 3'], 'foo')
         self.assertEqual(lookup_dict[1]['header 1'], 1)
+
+
+class ReadCSVToDataframeTests(unittest.TestCase):
+    """Tests for natcap.invest.utils.read_csv_to_dataframe."""
+
+    def setUp(self):
+        """Make temporary directory for workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_read_csv_to_dataframe(self):
+        """utils: test the default behavior"""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                HEADER,
+                A,
+                b
+                """
+            ).strip())
+        df = utils.read_csv_to_dataframe(csv_file)
+        # case of header and table values shouldn't change
+        self.assertEqual(df.columns[0], 'HEADER')
+        self.assertEqual(df['HEADER'][0], 'A')
+        self.assertEqual(df['HEADER'][1], 'b')
+
+    def test_to_lower(self):
+        """utils: test that to_lower=True makes headers lowercase"""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                HEADER,
+                A,
+                b
+                """
+            ).strip())
+        df = utils.read_csv_to_dataframe(csv_file, to_lower=True)
+        # header should be lowercase
+        self.assertEqual(df.columns[0], 'header')
+        # case of table values shouldn't change
+        self.assertEqual(df['header'][0], 'A')
+        self.assertEqual(df['header'][1], 'b')
+
+    def test_utf8_bom_encoding(self):
+        """utils: test that CSV read correctly with UTF-8 BOM encoding."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        # writing with utf-8-sig will prepend the BOM
+        with open(csv_file, 'w', encoding='utf-8-sig') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header1,HEADER2,header3
+                1,2,bar
+                4,5,FOO
+                """
+            ).strip())
+        # confirm that the file has the BOM prefix
+        with open(csv_file, 'rb') as file_obj:
+            self.assertTrue(file_obj.read().startswith(codecs.BOM_UTF8))
+
+        df = utils.read_csv_to_dataframe(csv_file)
+        # assert the BOM prefix was correctly parsed and skipped
+        self.assertEqual(df.columns[0], 'header1')
+        self.assertEqual(df['HEADER2'][1], 5)
+
+    def test_non_utf8_encoding(self):
+        """utils: test that non-UTF8 encoding doesn't raise an error"""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        # encode with ISO Cyrillic, include a non-ASCII character
+        with open(csv_file, 'w', encoding='iso8859_5') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header,
+                fЮЮ,
+                bar
+                """
+            ).strip())
+        df = utils.read_csv_to_dataframe(csv_file)
+        # the default engine='python' should replace the unknown characters
+        # different encodings of replacement character depending on the system
+        self.assertTrue(df['header'][0] in ['f\xce\xce', 
+            'f\N{REPLACEMENT CHARACTER}\N{REPLACEMENT CHARACTER}'])
+        self.assertEqual(df['header'][1], 'bar')
+
+    def test_override_default_encoding(self):
+        """utils: test that you can override the default encoding kwarg"""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        # encode with ISO Cyrillic, include a non-ASCII character
+        with open(csv_file, 'w', encoding='iso8859_5') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header,
+                fЮЮ,
+                bar
+                """
+            ).strip())
+        df = utils.read_csv_to_dataframe(csv_file, encoding='iso8859_5')
+        # with the encoding specified, special characters should work
+        self.assertEqual(df['header'][0], 'fЮЮ')
+        self.assertEqual(df['header'][1], 'bar')
+
+    def test_other_kwarg(self):
+        """utils: any other kwarg should be passed to pandas.read_csv"""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                h1;h2;h3
+                a;b;c
+                d;e;f
+                """
+            ).strip())
+        # using sep=None with the default engine='python',
+        # it should infer what the separator is
+        df = utils.read_csv_to_dataframe(csv_file, sep=None)
+
+        self.assertEqual(df.columns[0], 'h1')
+        self.assertEqual(df['h2'][1], 'e')
+
+    def test_csv_with_integer_headers(self):
+        """
+        utils: CSV with integer headers should be read into strings.
+        
+        This shouldn't matter for any of the models, but if a user inputs a CSV
+        with extra columns that are labeled with numbers, it should still work.
+        """
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                1,2,3
+                a,b,c
+                d,e,f
+                """
+            ).strip())
+        df = utils.read_csv_to_dataframe(csv_file)
+        # expect headers to be strings
+        self.assertEqual(df.columns[0], '1')
+        self.assertEqual(df['1'][0], 'a')
 
 
 class CreateCoordinateTransformationTests(unittest.TestCase):

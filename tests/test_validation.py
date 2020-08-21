@@ -633,6 +633,10 @@ class CSVValidation(unittest.TestCase):
         # https://en.wikipedia.org/wiki/ISO/IEC_8859-5
         df.to_csv(target_file, encoding='iso8859_5')
 
+        # Note that non-UTF8 encodings should pass this check, but aren't
+        # actually being read correctly. Characters outside the ASCII set may 
+        # be replaced with a replacement character.
+        # UTF16, UTF32, etc. will still raise an error.
         error_msg = validation.check_csv(target_file)
         self.assertEquals(error_msg, None)
 
