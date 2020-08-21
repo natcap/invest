@@ -213,12 +213,18 @@ class CLIHeadlessTests(unittest.TestCase):
             parameter_set_file.write(
                 json.dumps(datastack_dict, indent=4, sort_keys=True))
 
+        cli.main([
+                'validate',
+                new_parameter_set_path,
+                ])
+
         with redirect_stdout() as stdout_stream:
             with self.assertRaises(SystemExit) as exit_cm:
                 cli.main([
                     'validate',
                     new_parameter_set_path,
                 ])
+
         self.assertTrue(len(stdout_stream.getvalue()) > 0)
         self.assertEqual(exit_cm.exception.code, 0)
 
