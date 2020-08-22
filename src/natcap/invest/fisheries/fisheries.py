@@ -517,5 +517,4 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    print("in fisheries validate")
     return validation.validate(args, ARGS_SPEC['args'])

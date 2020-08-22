@@ -430,7 +430,6 @@ def main(user_args=None):
         parser.exit(launcher.main())
 
     if args.subcommand == 'validate':
-        print('validating!')
         try:
             parsed_datastack = datastack.extract_parameter_set(args.datastack)
         except Exception as error:

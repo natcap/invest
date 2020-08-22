@@ -633,7 +633,7 @@ def validate(args, spec, spatial_overlap_opts=None):
 
     """
     validation_warnings = []
-    print('validating args:', args)
+
     # step 1: check absolute requirement
     missing_keys = set()
     keys_with_no_value = set()
@@ -665,8 +665,6 @@ def validate(args, spec, spatial_overlap_opts=None):
         validation_warnings.append(
             (sorted(keys_with_no_value),
              "Input is required but has no value"))
-    print('missing keys:', missing_keys)
-    print('keys_with_no_value:', keys_with_no_value)
 
     # step 2: evaluate sufficiency of keys/inputs
     # Sufficiency: An input is sufficient when its key is present in args and
@@ -793,7 +791,6 @@ def validate(args, spec, spatial_overlap_opts=None):
                 validation_warnings.append(
                     (checked_keys, spatial_overlap_error))
 
-    print(validation_warnings)
     return validation_warnings
 
 

@@ -213,11 +213,6 @@ class CLIHeadlessTests(unittest.TestCase):
             parameter_set_file.write(
                 json.dumps(datastack_dict, indent=4, sort_keys=True))
 
-        cli.main([
-                'validate',
-                new_parameter_set_path,
-                ])
-
         with redirect_stdout() as stdout_stream:
             with self.assertRaises(SystemExit) as exit_cm:
                 cli.main([
@@ -324,7 +319,10 @@ class CLIHeadlessTests(unittest.TestCase):
         stdout = stdout_stream.getvalue()
         stdout_json = json.loads(stdout)
         self.assertEqual(len(stdout_json), 1)
-        self.assertEqual(len(stdout_json['validation_results']), 4)
+        # migration path, aoi_vector_path, population_csv_path not found
+        # population_csv_dir is also incorrect, but shouldn't be marked
+        # invalid because do_batch is False
+        self.assertEqual(len(stdout_json['validation_results']), 3)
 
         # Validation returned successfully, so error code 0 even though there
         # are warnings.
