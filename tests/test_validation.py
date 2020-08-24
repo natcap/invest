@@ -824,7 +824,6 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEqual(validation_warnings, [])
 
 
-
     def test_requirement_missing(self):
         """Validation: verify absolute requirement on missing key."""
         from natcap.invest import validation

@@ -796,6 +796,7 @@ def validate(args, spec, spatial_overlap_opts=None):
                 validation_warnings.append(
                     (checked_keys, spatial_overlap_error))
 
+    # sort warnings alphabetically by key name
     return sorted(validation_warnings, key=lambda w: w[0][0])
 
 

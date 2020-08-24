@@ -219,7 +219,6 @@ class CLIHeadlessTests(unittest.TestCase):
                     'validate',
                     new_parameter_set_path,
                 ])
-
         self.assertTrue(len(stdout_stream.getvalue()) > 0)
         self.assertEqual(exit_cm.exception.code, 0)
 
