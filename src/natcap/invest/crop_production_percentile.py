@@ -321,11 +321,17 @@ def execute(args):
                 _COARSE_YIELD_PERCENTILE_FILE_PATTERN % (
                     crop_name, yield_percentile_id, file_suffix))
             create_coarse_yield_percentile_task = task_graph.add_task(
-                func=pygeoprocessing.reclassify_raster,
+                func=utils._reclassify_raster_op,
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_percentile_yield,
                       coarse_yield_percentile_raster_path, gdal.GDT_Float32,
                       _NODATA_YIELD),
+                kwargs={'values_required': True,
+                        'error_details': {
+                            'raster_name': f'{crop_name} Climate Bin',
+                            'column_name': 'climate_bin',
+                            'table_name': (
+                                f'Climate {crop_name} Percentile Yield')}},
                 target_path_list=[coarse_yield_percentile_raster_path],
                 dependent_task_list=[crop_climate_bin_task],
                 task_name='create_coarse_yield_percentile_%s_%s' % (
