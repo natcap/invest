@@ -1173,19 +1173,30 @@ class RecreationValidationTests(unittest.TestCase):
             file.write('a,b,c\n')
 
         expected_message = "Fields are missing from this table: ['ID', 'PATH', 'TYPE']"
-        validation_warnings = recmodel_client.validate(
-            {'predictor_table_path': table_path})
-        actual_messages = set()
-        for keys, error_strings in validation_warnings:
-            actual_messages.add(error_strings)
-        self.assertTrue(expected_message in actual_messages)
+        validation_warnings = recmodel_client.validate({
+            'compute_regression': True,
+            'predictor_table_path': table_path,
+            'start_year': '2012',
+            'end_year': '2016',
+            'workspace_dir': self.workspace_dir,
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
 
-        validation_warnings = recmodel_client.validate(
-            {'scenario_predictor_table_path': table_path})
-        actual_messages = set()
-        for keys, error_strings in validation_warnings:
-            actual_messages.add(error_strings)
-        self.assertTrue(expected_message in actual_messages)
+        self.assertEqual(validation_warnings, [(['predictor_table_path'], 
+            "Fields are missing from this table: ['ID', 'PATH', 'TYPE']")])
+
+        validation_warnings = recmodel_client.validate({
+            'compute_regression': True,
+            'predictor_table_path': table_path,
+            'scenario_predictor_table_path': table_path,
+            'start_year': '2012',
+            'end_year': '2016',
+            'workspace_dir': self.workspace_dir,
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
+        
+        self.assertEqual(validation_warnings, [(['predictor_table_path'], 
+            "Fields are missing from this table: ['ID', 'PATH', 'TYPE']"), 
+            (['scenario_predictor_table_path'], 
+              "Fields are missing from this table: ['ID', 'PATH', 'TYPE']")])
 
 
 def _assert_vector_attributes_eq(

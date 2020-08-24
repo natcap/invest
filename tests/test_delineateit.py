@@ -117,9 +117,9 @@ class DelineateItTests(unittest.TestCase):
         self.assertEqual(
             validation_warnings,
             [(['dem_path'], 'File could not be opened as a GDAL raster'),
+             (['flow_threshold'], 'Value does not meet condition value > 0'),
              (['outlet_vector_path'], (
                  'File could not be opened as a GDAL vector')),
-             (['flow_threshold'], 'Value does not meet condition value > 0'),
              (['snap_distance'], (
                 "Value 'fooooo' could not be interpreted as a number"))])
 
