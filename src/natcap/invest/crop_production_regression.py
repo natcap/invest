@@ -386,11 +386,17 @@ def execute(args):
                 _COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN % (
                     crop_name, yield_regression_id, file_suffix))
             create_coarse_regression_parameter_task = task_graph.add_task(
-                func=pygeoprocessing.reclassify_raster,
+                func=utils._reclassify_raster_op,
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_regression_value,
                       coarse_regression_parameter_raster_path, gdal.GDT_Float32,
                       _NODATA_YIELD),
+                kwargs={'values_required': True,
+                        'error_details': {
+                            'raster_name': f'{crop_name} Climate Bin',
+                            'column_name': 'climate_bin',
+                            'table_name': (
+                                f'Climate {crop_name} Regression Yield')}},
                 target_path_list=[coarse_regression_parameter_raster_path],
                 dependent_task_list=[crop_climate_bin_task],
                 task_name='create_coarse_regression_parameter_%s_%s' % (
