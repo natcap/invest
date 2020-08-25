@@ -57,16 +57,17 @@ ParameterSet = collections.namedtuple('ParameterSet',
                                       'args model_name invest_version')
 
 
-def _collect_spatial_files(filepath, data_dir):
+def _collect_spatial_files(filepath, data_dir, folder_prefix):
     """Collect spatial files into the data directory of an archive.
 
     This function detects whether a filepath is a raster or vector
-    recignizeable by GDAL/OGR and does what is needed to copy the dataset
+    recognizable by GDAL/OGR and does what is needed to copy the dataset
     into the datastack's archive folder.
 
     Rasters copied into the archive will be stored in a new folder with the
-    ``raster_`` prefix.  Vectors will be stored in a new folder with the
-    ``vector_`` prefix.
+    "``folder_prefix``_raster_" prefix.  Vectors will be stored in a new folder
+    with the "``folder_prefix``_vector_" prefix. Both will have a random unique
+    suffix to prevent name conflicts.
 
     .. Note :: CSV files are not handled by this function.
 
@@ -77,6 +78,9 @@ def _collect_spatial_files(filepath, data_dir):
     Parameters:
         filepath (string): The filepath to analyze.
         data_dir (string): The path to the data directory.
+        folder_prefix (string): A descriptive prefix for the folder name, 
+            derived from the nested key for which ``filepath`` is a value,
+            e.g. ``dem_path``
 
     Returns:
         ``None`` If the file is not a spatial file, or the ``path`` to the new
@@ -88,7 +92,11 @@ def _collect_spatial_files(filepath, data_dir):
     with utils.capture_gdal_logging():
         raster = gdal.OpenEx(filepath, gdal.OF_RASTER)
         if raster is not None:
-            new_path = tempfile.mkdtemp(prefix='raster_', dir=data_dir)
+            # give the folder a descriptive name with a unique
+            # random suffix to avoid name conflicts
+            new_path = tempfile.mkdtemp(
+                prefix=f'{folder_prefix}_raster_', 
+                dir=data_dir)
             driver = gdal.GetDriverByName('GTiff')
             LOGGER.info('[%s] Saving new raster to %s',
                         driver.LongName, new_path)
@@ -123,7 +131,9 @@ def _collect_spatial_files(filepath, data_dir):
                 vector = None
                 return None
 
-            new_path = tempfile.mkdtemp(prefix='vector_', dir=data_dir)
+            new_path = tempfile.mkdtemp(
+                prefix=f'{folder_prefix}_vector_', 
+                dir=data_dir)
             driver = gdal.GetDriverByName('ESRI Shapefile')
             LOGGER.info('[%s] Saving new vector to %s',
                         driver.ShortName, new_path)
@@ -142,19 +152,22 @@ def _collect_spatial_files(filepath, data_dir):
     return None
 
 
-def _collect_filepath(path, data_dir):
+def _collect_filepath(path, data_dir, folder_prefix):
     """Collect files on disk into the data directory of an archive.
 
     Parameters:
         path (string): The path to examine.  Must exist on disk.
         data_dir (string): The path to the data directory, where any data
             files will be stored.
+        folder_prefix (string): A descriptive prefix for the folder name, 
+            derived from the nested key for which ``filepath`` is a value,
+            e.g. ``dem_path``
 
     Returns:
         The path to the new filename within ``data_dir``.
     """
     # initialize the return_path
-    multi_part_folder = _collect_spatial_files(path, data_dir)
+    multi_part_folder = _collect_spatial_files(path, data_dir, folder_prefix)
     if multi_part_folder is not None:
         return multi_part_folder
 
@@ -168,7 +181,8 @@ def _collect_filepath(path, data_dir):
         # path is a folder, so we want to copy the folder and all
         # its contents to the data dir.
         new_foldername = tempfile.mkdtemp(
-            prefix='data_', dir=data_dir)
+            prefix=f'{folder_prefix}_data_',
+            dir=data_dir)
         for filename in os.listdir(path):
             src_path = os.path.join(path, filename)
             dest_path = os.path.join(new_foldername, filename)
@@ -324,8 +338,6 @@ def build_datastack_archive(args, model_name, datastack_path):
                                                   nested_key=args_key_label)
                 handler.removeFilter(args_key_filter)
             return new_dict
-        elif isinstance(args_param, list):
-            return [_recurse(list_item, handler) for list_item in args_param]
         elif isinstance(args_param, str):
             # If the parameter string is blank, return an empty string.
             if args_param.strip() == '':
@@ -341,8 +353,12 @@ def build_datastack_archive(args, model_name, datastack_path):
                                  possible_path, filepath)
                     return filepath
                 except KeyError:
+                    # turn the nested key into a nice name for a folder
+                    # e.g. args['category']['data_path'] --> category_data_path
+                    folder_prefix = nested_key[6 : -2].replace('\'][\'', '_')
                     found_filepath = _collect_filepath(possible_path,
-                                                       data_dir)
+                                                       data_dir,
+                                                       folder_prefix)
 
                     # Store only linux-style filepaths.
                     relative_filepath = os.path.relpath(

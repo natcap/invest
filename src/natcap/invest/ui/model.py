@@ -9,7 +9,7 @@ import collections
 import json
 import requests
 import textwrap
-import cgi
+import html
 import tarfile
 import contextlib
 import functools
@@ -1069,7 +1069,7 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.warnings = validation_warnings
 
         if validation_warnings:
-            # cgi.escape handles escaping of characters <, >, &, " for HTML.
+            # html.escape handles escaping of characters <, >, &, " for HTML.
             self.title_label.setText(
                 '<h2>Validation warnings found</h2>'
                 '<h4>To ensure the model works as expected, please fix these '
@@ -1077,7 +1077,7 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
             self.label.setText(
                 '<ul>%s</ul>' % ''.join(
                     ['<li><b>%s</b>: %s</li>' % (
-                        ', '.join(labels), cgi.escape(warning_, quote=True))
+                        ', '.join(labels), html.escape(warning_))
                      for labels, warning_ in validation_warnings]))
             self.label.repaint()
             self.label.setVisible(True)
