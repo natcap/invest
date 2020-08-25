@@ -461,8 +461,8 @@ def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
     result = lulc_array == 1
     valid_mask = slice(None)
     if globio_nodata is not None:
-        valid = ~numpy.isclose(lulc_array, globio_nodata)
-    result[valid_mask] = lulc[valid_mask] == 1
+        valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
+    result[valid_mask] = lulc_array[valid_mask] == 1
     return result
 
 
@@ -509,7 +509,7 @@ def _msa_f_op(
             less_than[1])
 
     if msa_nodata is not None:
-        valid_mask = ~numpy.isclose(primary_veg_smooth, 
+        nodata_mask = numpy.isclose(primary_veg_smooth, 
                                     primary_veg_mask_nodata)
         msa_f[nodata_mask] = msa_nodata
 
