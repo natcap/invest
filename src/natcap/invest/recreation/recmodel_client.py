@@ -1502,6 +1502,31 @@ def _validate_same_projection(base_vector_path, table_path):
             "projection of the base vector")
 
 
+def _validate_predictor_types(table_path):
+    """Validate the type values in a predictor table.
+
+    Args:
+        table_path (string): path to a csv table that has at least
+            the field 'type' 
+
+    Returns:
+        None
+
+    Raises:
+        ValueError if any value in the ``type`` column does not match a valid
+        type, ignoring leading/trailing whitespace.
+    """
+    df = utils.read_csv_to_dataframe(table_path, to_lower=True)
+    type_list = df['type'].tolist()
+    valid_types = ['raster_mean', 'raster_sum', 'point_count', 
+                      'point_nearest_distance', 'line_intersect_length',
+                      'polygon_area_coverage', 'polygon_percent_coverage']
+    for type_value in type_list:
+        if type_value.strip() not in valid_types:
+            raise ValueError(f'The table contains an invalid type value: \
+                {type_value}. The allowed types are: {", ".join(valid_types)}')
+
+
 def delay_op(last_time, time_delay, func):
     """Execute ``func`` if last_time + time_delay >= current time.
 

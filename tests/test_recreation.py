@@ -1187,6 +1187,24 @@ class RecreationValidationTests(unittest.TestCase):
             actual_messages.add(error_strings)
         self.assertTrue(expected_message in actual_messages)
 
+    def test_validate_predictor_types(self):
+        """Recreation Validate: assert error on invalid type value"""
+        from natcap.invest.recreation import recmodel_client
+
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as file:
+            file.write('id,path,type\n')
+            file.write('1,a,raster_mean \n')  # include trailing whitespace
+
+        bad_table_path = os.path.join(self.workspace_dir, 'bad_table.csv')
+        with open(bad_table_path, 'w') as file:
+            file.write('id,path,type\n')
+            file.write('1,a,raster?mean\n')  # include a typo in the type
+
+        
+
+
+
 
 def _assert_vector_attributes_eq(
         actual_vector_path, expected_vector_path, tolerance_places=3):
