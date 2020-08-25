@@ -1191,18 +1191,19 @@ class RecreationValidationTests(unittest.TestCase):
         """Recreation Validate: assert error on invalid type value"""
         from natcap.invest.recreation import recmodel_client
 
+        predictor_id = 'dem90m'
         # include trailing whitespace in the type, this should pass
-        raster_path = os.path.join(SAMPLE_DATA, 'nodata_raster.tif')
+        raster_path = os.path.join(SAMPLE_DATA, 'predictors/dem90m_coarse.tif')
         table_path = os.path.join(self.workspace_dir, 'table.csv')
         with open(table_path, 'w') as file:
             file.write('id,path,type\n')
-            file.write(f'a,{raster_path},raster_mean \n')
+            file.write(f'{predictor_id},{raster_path},raster_mean \n')
 
         # include a typo in the type, this should fail
         bad_table_path = os.path.join(self.workspace_dir, 'bad_table.csv')
         with open(bad_table_path, 'w') as file:
             file.write('id,path,type\n')
-            file.write(f'a,{raster_path},raster?mean\n')  
+            file.write(f'{predictor_id},{raster_path},raster?mean\n')
 
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
@@ -1217,6 +1218,13 @@ class RecreationValidationTests(unittest.TestCase):
 
         # there should be no error when the type has trailing whitespace
         recmodel_client.execute(args)
+        output_path = os.path.join(self.workspace_dir, 'regression_coefficients.txt')
+        print('regression_coefficients.txt:')
+
+        # the regression_coefficients.txt output file should contain the
+        # predictor id, meaning it wasn't dropped from the regression
+        with open(output_path, 'r') as output_file:
+            self.assertTrue(predictor_id in ''.join(output_file.readlines()))
 
         # try it again with the table that has a misspelled type
         # it should raise an error
