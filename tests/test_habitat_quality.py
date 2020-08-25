@@ -840,10 +840,10 @@ class HabitatQualityTests(unittest.TestCase):
         try:
             habitat_quality.execute(args)
             self.assertTrue(True)
-        except:
+        except Exception as e:
             self.fail("HQ failed when using threat data CSV missing BASE_PATH"
-                      " column.")
-    
+                      f" column. \n {str(e)}")
+
     def test_habitat_quality_no_fut_column(self):
         """Habitat Quality: no future LULC and no column should pass."""
         from natcap.invest import habitat_quality
@@ -890,10 +890,10 @@ class HabitatQualityTests(unittest.TestCase):
         try:
             habitat_quality.execute(args)
             self.assertTrue(True)
-        except:
+        except Exception as e:
             self.fail("HQ failed when using threat data CSV missing FUT_PATH"
-                      " column.")
-    
+                      f" column. \n {str(e)}")
+
     def test_habitat_quality_bad_rasters(self):
         """Habitat Quality: raise error on threats that aren't real rasters."""
         from natcap.invest import habitat_quality
@@ -1139,13 +1139,11 @@ class HabitatQualityTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             habitat_quality.execute(args)
 
-        actual_message = str(cm.exception)
-        self.assertTrue(
-            'The following land cover codes were found in ' in
-            actual_message, actual_message)
-        # 2, 3 are the missing landcover codes.
+        # 2 is the missing landcover codes.
         # Raster nodata is 255 and should NOT appear in this list.
-        self.assertTrue('{2, 3}' in actual_message, actual_message)
+        self.assertTrue(
+            "The missing values found in the LULC raster but not the table"
+            " are: [2]" in str(cm.exception))
 
     def test_habitat_quality_validate(self):
         """Habitat Quality: validate raise exception as expected."""
@@ -2052,7 +2050,7 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             "Fields are missing from this table: ['DECAY']" in
             validate_result[0][1], validate_result[0][1])
-    
+
     def test_habitat_quality_validate_missing_base_column(self):
         """Habitat Quality: test validate for a missing base column."""
         from natcap.invest import habitat_quality
@@ -2104,7 +2102,7 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             "The column 'base_path' was not found" in
             validate_result[0][1], validate_result[0][1])
-    
+
     def test_habitat_quality_validate_missing_fut_column(self):
         """Habitat Quality: test validate for a missing fut column."""
         from natcap.invest import habitat_quality
