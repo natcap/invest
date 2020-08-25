@@ -1264,3 +1264,78 @@ class AssertVectorsEqualTests(unittest.TestCase):
             utils._assert_vectors_equal(shape_path, shape_diff_path)
 
         self.assertTrue("Vector geometry assertion fail." in str(cm.exception))
+
+class ReclassifyRasterOpTests(unittest.TestCase):
+    """Tests for natcap.invest.utils._reclassify_raster_op."""
+    
+    def setUp(self):
+        """Setup workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_exception_raised_no_details(self):
+        """Utils: test message w/ no details is raised on missing value."""
+        from natcap.invest import utils
+
+        srs_copy = osr.SpatialReference()
+        srs_copy.ImportFromEPSG(26910)  # UTM Zone 10N
+        projection_wkt = srs_copy.ExportToWkt()
+        origin = (1180000, 690000)
+        raster_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
+        
+        array = numpy.array([[1,1,1], [2,2,2], [3,3,3]])
+
+        pygeoprocessing.numpy_array_to_raster(
+            array, -1, (1, -1), origin, projection_wkt, raster_path)
+
+        value_map = {1: 10, 2: 20}
+        target_raster_path = os.path.join(
+            self.workspace_dir, 'tmp_raster_out.tif')
+
+        with self.assertRaises(ValueError) as context:
+            utils._reclassify_raster_op(
+                (raster_path, 1), value_map, target_raster_path, 
+                gdal.GDT_Int32, -1, error_details=None, 
+                values_required=True)
+        self.assertTrue(
+            "The missing values found in the raster but not the table"
+            " are: [3]" in str(context.exception), str(context.exception))
+    
+    def test_exception_raised_with_details(self):
+        """Utils: test message w/ details is raised on missing value."""
+        from natcap.invest import utils
+
+        srs_copy = osr.SpatialReference()
+        srs_copy.ImportFromEPSG(26910)  # UTM Zone 10N
+        projection_wkt = srs_copy.ExportToWkt()
+        origin = (1180000, 690000)
+        raster_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
+        
+        array = numpy.array([[1,1,1], [2,2,2], [3,3,3]])
+
+        pygeoprocessing.numpy_array_to_raster(
+            array, -1, (1, -1), origin, projection_wkt, raster_path)
+
+        value_map = {1: 10, 2: 20}
+        target_raster_path = os.path.join(
+            self.workspace_dir, 'tmp_raster_out.tif')
+
+        message_details = {
+            'raster_name': 'LULC', 'column_name': 'lucode', 
+            'table_name': 'Biophysical'}
+
+        with self.assertRaises(ValueError) as context:
+            utils._reclassify_raster_op(
+                (raster_path, 1), value_map, target_raster_path, 
+                gdal.GDT_Int32, -1, error_details=message_details, 
+                values_required=True)
+        expected_message = (
+                "Values in the LULC raster were found that are"
+                " not represented under the 'lucode' key column"
+                " of the Biophysical table. The missing values found in"
+                " the LULC raster but not the table are: [3].")
+        self.assertTrue(
+            expected_message in str(context.exception), str(context.exception))

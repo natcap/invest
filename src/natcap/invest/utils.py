@@ -793,18 +793,18 @@ def _reclassify_raster_op(
             target_nodata, values_required=values_required)
     except pygeoprocessing.ReclassificationMissingValuesError as err:
         if error_details is None:
-            raster_name = ''
-            column_name = ''
-            table_name = ''
+            raster_name = ' '
+            column_name = ' '
+            table_name = ' '
         else:
-            raster_name = error_details.get('raster_name', '') 
-            column_name = error_details.get('column_name', '') 
-            table_name = error_details.get('table_name', '') 
+            raster_name = ' ' + error_details.get('raster_name') + ' '
+            column_name = " '" + error_details.get('column_name') + "' " 
+            table_name = ' ' + error_details.get('table_name') + ' '  
 
         error_message = (
-                f"Values in the {raster_name} raster were found that are"
-                f" not represented under the '{column_name}' key column"
-                f" of the {table_name} table. The missing values found in"
-                f" the {raster_name} raster but not the table are:"
+                f"Values in the{raster_name}raster were found that are"
+                f" not represented under the{column_name}key column"
+                f" of the{table_name}table. The missing values found in"
+                f" the{raster_name}raster but not the table are:"
                 f" {err.missing_values}.")
         raise ValueError(error_message)
