@@ -1191,19 +1191,38 @@ class RecreationValidationTests(unittest.TestCase):
         """Recreation Validate: assert error on invalid type value"""
         from natcap.invest.recreation import recmodel_client
 
+        # include trailing whitespace in the type, this should pass
+        raster_path = os.path.join(SAMPLE_DATA, 'nodata_raster.tif')
         table_path = os.path.join(self.workspace_dir, 'table.csv')
         with open(table_path, 'w') as file:
             file.write('id,path,type\n')
-            file.write('1,a,raster_mean \n')  # include trailing whitespace
+            file.write(f'a,{raster_path},raster_mean \n')
 
+        # include a typo in the type, this should fail
         bad_table_path = os.path.join(self.workspace_dir, 'bad_table.csv')
         with open(bad_table_path, 'w') as file:
             file.write('id,path,type\n')
-            file.write('1,a,raster?mean\n')  # include a typo in the type
+            file.write(f'a,{raster_path},raster?mean\n')  
 
-        
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 40000.0,
+            'compute_regression': True,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': False,
+            'predictor_table_path': table_path,
+            'workspace_dir': self.workspace_dir,
+        }
 
+        # there should be no error when the type has trailing whitespace
+        recmodel_client.execute(args)
 
+        # try it again with the table that has a misspelled type
+        # it should raise an error
+        args['predictor_table_path'] = bad_table_path
+        with self.assertRaises(ValueError):
+            recmodel_client.execute(args)
 
 
 def _assert_vector_attributes_eq(

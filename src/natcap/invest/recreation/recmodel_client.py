@@ -270,6 +270,8 @@ def execute(args):
         _validate_same_id_lengths(args['predictor_table_path'])
         _validate_same_projection(
             args['aoi_path'], args['predictor_table_path'])
+        _validate_predictor_types(args['predictor_table_path'])
+
     if ('predictor_table_path' in args and
             'scenario_predictor_table_path' in args and
             args['predictor_table_path'] != '' and
@@ -279,6 +281,7 @@ def execute(args):
             args['scenario_predictor_table_path'])
         _validate_same_projection(
             args['aoi_path'], args['scenario_predictor_table_path'])
+        _validate_predictor_types(args['scenario_predictor_table_path'])
 
     if int(args['end_year']) < int(args['start_year']):
         raise ValueError(
@@ -697,7 +700,7 @@ def _schedule_predictor_data_processing(
 
         predictor_path = _sanitize_path(
             predictor_table_path, predictor_table[predictor_id]['path'])
-        predictor_type = predictor_table[predictor_id]['type']
+        predictor_type = predictor_table[predictor_id]['type'].strip()
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
             raster_op_mode = predictor_type.split('_')[1]
@@ -1428,9 +1431,9 @@ def _validate_same_ids_and_types(
         scenario_predictor_table_path, 'id')
 
     predictor_table_pairs = set([
-        (p_id, predictor_table[p_id]['type']) for p_id in predictor_table])
+        (p_id, predictor_table[p_id]['type'].strip()) for p_id in predictor_table])
     scenario_predictor_table_pairs = set([
-        (p_id, scenario_predictor_table[p_id]['type']) for p_id in
+        (p_id, scenario_predictor_table[p_id]['type'].strip()) for p_id in
         scenario_predictor_table])
     if predictor_table_pairs != scenario_predictor_table_pairs:
         raise ValueError(
@@ -1519,9 +1522,11 @@ def _validate_predictor_types(table_path):
     df = utils.read_csv_to_dataframe(table_path, to_lower=True)
     type_list = df['type'].tolist()
     valid_types = ['raster_mean', 'raster_sum', 'point_count', 
-                      'point_nearest_distance', 'line_intersect_length',
-                      'polygon_area_coverage', 'polygon_percent_coverage']
+                   'point_nearest_distance', 'line_intersect_length',
+                   'polygon_area_coverage', 'polygon_percent_coverage']
     for type_value in type_list:
+        # ignore leading/trailing whitespace because it will be removed
+        # when the type values are used
         if type_value.strip() not in valid_types:
             raise ValueError(f'The table contains an invalid type value: \
                 {type_value}. The allowed types are: {", ".join(valid_types)}')
