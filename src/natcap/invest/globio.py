@@ -459,9 +459,10 @@ def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
     # landcover type 1 in the GLOBIO schema represents primary vegetation
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
     result = lulc_array == 1
+    valid_mask = slice(None)
     if globio_nodata is not None:
-        nodata_mask = numpy.isclose(lulc_array, globio_nodata)
-        result[nodata_mask] = globio_nodata
+        valid = ~numpy.isclose(lulc_array, globio_nodata)
+    result[valid_mask] = lulc[valid_mask] == 1
     return result
 
 
@@ -508,7 +509,7 @@ def _msa_f_op(
             less_than[1])
 
     if msa_nodata is not None:
-        nodata_mask = numpy.isclose(primary_veg_smooth, 
+        valid_mask = ~numpy.isclose(primary_veg_smooth, 
                                     primary_veg_mask_nodata)
         msa_f[nodata_mask] = msa_nodata
 
@@ -577,9 +578,8 @@ def _msa_op(msa_f, msa_lu, msa_i, globio_nodata):
         """Calculate the MSA which is the product of the sub MSAs."""
         result = numpy.empty_like(msa_f, dtype=numpy.float32)
         result[:] = globio_nodata
-        if globio_nodata is None:
-            valid_mask = numpy.full(result.shape, True)
-        else:
+        valid_mask = slice(None)
+        if globio_nodata is not None:
             valid_mask = ~numpy.isclose(msa_f, globio_nodata)
         result[valid_mask] = msa_f[valid_mask] * msa_lu[valid_mask] * msa_i[valid_mask]
         return result

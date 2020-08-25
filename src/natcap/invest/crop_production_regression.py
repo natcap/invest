@@ -654,11 +654,11 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     """
     result = numpy.empty(
         observed_yield_array.shape, dtype=numpy.float32)
-    result[:] = observed_yield_array[:]
-
+    result[:] = 0.0
+    valid_mask = slice(None)
     if observed_yield_nodata is not None:
-        nodata_mask = numpy.isclose(observed_yield_array, observed_yield_nodata)
-        result[nodata_mask] = 0.0
+        valid_mask = ~numpy.isclose(observed_yield_array, observed_yield_nodata)
+    result[valid_mask] = observed_yield_array[valid_mask]
     return result
 
 
@@ -742,9 +742,8 @@ def tabulate_regression_results(
 
                 # make a valid mask showing which pixels are not nodata
                 # if nodata value undefined, assume all pixels are valid
-                if observed_yield_nodata is None:
-                    valid_mask = numpy.full(yield_block.shape, True)
-                else:
+                valid_mask = slice(None)
+                if observed_yield_nodata is not None:
                     valid_mask = ~numpy.isclose(yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
                                           valid_mask & (yield_block > 0.0))

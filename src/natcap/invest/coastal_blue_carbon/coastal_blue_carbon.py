@@ -623,9 +623,8 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
         array (numpy.array): input data
         d (dict): reclassification map
         out_dtype (numpy.dtype): a numpy datatype for the reclass_array
-        nodata_mask (number): for floats, a nodata value that is set to 
-            numpy.nan if provided to make reclass_array nodata values 
-            consistent
+        nodata_mask (number): for floats, a nodata value that is set to numpy.nan
+            if provided to make reclass_array nodata values consistent
 
     Returns:
         reclass_array (numpy.array): reclassified array

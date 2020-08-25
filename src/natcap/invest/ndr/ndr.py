@@ -864,9 +864,8 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
         base_raster_path_band[0])['nodata'][base_raster_path_band[1]-1]
     for _, raster_block in pygeoprocessing.iterblocks(
             base_raster_path_band):
-        if base_nodata is None:
-            valid_mask = numpy.full[raster_block.shape, True]
-        else:
+        valid_mask = slice(None)
+        if base_nodata is not None:
             valid_mask = ~numpy.isclose(raster_block, base_nodata)
 
         valid_block = raster_block[valid_mask]
@@ -882,9 +881,8 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
         result = numpy.empty(array.shape, dtype=numpy.float32)
         result[:] = numpy.float32(base_nodata)
 
-        if base_nodata is None:
-            valid_mask = numpy.full[raster_block.shape, True]
-        else:
+        valid_mask = slice(None)
+        if base_nodata is not None:
             valid_mask = ~numpy.isclose(raster_block, base_nodata)
         result[valid_mask] = array[valid_mask]
         if value_mean != 0:
@@ -1197,10 +1195,8 @@ def invert_raster_values(base_raster_path, target_raster_path):
         """Calculate inverse of S factor."""
         result = numpy.empty(base_val.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
-
-        if base_nodata is None:
-            valid_mask = numpy.full[base_val.shape, True]
-        else:
+        valid_mask = slice(None)
+        if base_nodata is not None:
             valid_mask = ~numpy.isclose(base_val, base_nodata)
 
         zero_mask = base_val == 0.0
