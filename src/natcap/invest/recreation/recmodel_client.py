@@ -252,6 +252,8 @@ def execute(args):
                       with the response polygon in projected units of AOI
                     * 'polygon_area': area of the polygon contained within
                       response polygon in projected units of AOI
+                    * 'polygon_percent_coverage': percent (0-100) of area of 
+                      overlap between the predictor and each AOI grid cell.
 
         args['scenario_predictor_table_path'] (string): (optional) if
             present runs the scenario mode of the recreation model with the
@@ -1520,16 +1522,16 @@ def _validate_predictor_types(table_path):
         type, ignoring leading/trailing whitespace.
     """
     df = utils.read_csv_to_dataframe(table_path, to_lower=True)
-    type_list = df['type'].tolist()
-    valid_types = ['raster_mean', 'raster_sum', 'point_count', 
+    # ignore leading/trailing whitespace because it will be removed
+    # when the type values are used
+    type_list = set([type.strip() for type in df['type']])
+    valid_types = set({'raster_mean', 'raster_sum', 'point_count', 
                    'point_nearest_distance', 'line_intersect_length',
-                   'polygon_area_coverage', 'polygon_percent_coverage']
-    for type_value in type_list:
-        # ignore leading/trailing whitespace because it will be removed
-        # when the type values are used
-        if type_value.strip() not in valid_types:
-            raise ValueError(f'The table contains an invalid type value: \
-                {type_value}. The allowed types are: {", ".join(valid_types)}')
+                   'polygon_area_coverage', 'polygon_percent_coverage'})
+    difference = type_list.difference(valid_types)
+    if difference:
+        raise ValueError('The table contains invalid type value(s): '
+            f'{difference}. The allowed types are: {valid_types}')
 
 
 def delay_op(last_time, time_delay, func):
