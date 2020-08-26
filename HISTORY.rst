@@ -41,6 +41,8 @@ Unreleased Changes (3.9)
     * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
     * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to
       ``projection_wkt``.
+  * Provide better error messages when an input raster has values not found
+    in a required corresponding table input column.
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under 
