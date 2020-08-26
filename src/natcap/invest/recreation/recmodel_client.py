@@ -253,7 +253,7 @@ def execute(args):
                     * 'polygon_area': area of the polygon contained within
                       response polygon in projected units of AOI
                     * 'polygon_percent_coverage': percent (0-100) of area of 
-                      overlap between the predictor and each AOI grid cell.
+                      overlap between the predictor and each AOI grid cell
 
         args['scenario_predictor_table_path'] (string): (optional) if
             present runs the scenario mode of the recreation model with the
