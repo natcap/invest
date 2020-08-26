@@ -121,18 +121,10 @@ def execute_transition_analysis(args):
     current_transition_year = None
 
     current_disturbance_vol_tasks = {}
-    prior_stock_tasks = {
-        POOL_SOIL: None,
-        POOL_BIOMASS: None,
-        POOL_LITTER: None,
-    }
+    prior_stock_tasks = {}
     current_year_of_disturbance_tasks = {}
     current_emissions_tasks = {}
-    prior_net_sequestration_tasks = {
-        POOL_SOIL: None,
-        POOL_BIOMASS: None,
-        POOL_LITTER: None,
-    }
+    prior_net_sequestration_tasks = {}
     current_net_sequestration_tasks = {}
     current_accumulation_tasks = {}
 
@@ -160,14 +152,22 @@ def execute_transition_analysis(args):
                 intermediate_dir,
                 STOCKS_RASTER_PATTERN.format(
                     year=year, pool=pool, suffix=suffix))
+            if year == first_transition_year:
+                current_stock_dependent_tasks = []
+                current_disturbance_vol_dependent_tasks = []
+            else:
+                current_stock_dependent_tasks = [
+                    prior_stock_tasks[pool],
+                    prior_net_sequestration_tasks[pool]]
+                current_disturbance_vol_dependent_tasks = [
+                    prior_stock_tasks[pool]]
+
             current_stock_tasks[pool] = task_graph.add_task(
                 func=_sum_n_rasters,
                 args=([stock_rasters[year-1][pool],
                        net_sequestration_rasters[year-1][pool]],
                       stock_rasters[year][pool]),
-                dependent_task_list=[
-                    prior_stock_tasks[pool],
-                    prior_net_sequestration_tasks[pool]],
+                dependent_task_list=current_stock_dependent_tasks,
                 target_path_list=[stock_rasters[year][pool]],
                 task_name=f'Calculating {pool} carbon stock for {year}')
 
@@ -188,7 +188,7 @@ def execute_transition_analysis(args):
                            "stocks": stock_rasters[year-1][pool]},
                           NODATA_FLOAT32,
                           disturbance_vol_rasters[year][pool]),
-                    dependent_task_list=[prior_stock_tasks[pool]],
+                    dependent_task_list=current_disturbance_vol_dependent_tasks,
                     target_path_list=[
                         disturbance_vol_rasters[year][pool]],
                     task_name=(
