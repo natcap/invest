@@ -1244,7 +1244,7 @@ class RecreationValidationTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             recmodel_client.execute(args)
-        self.assertTrue('The table contains an invalid type value' in 
+        self.assertTrue('The table contains invalid type value(s)' in 
                         str(cm.exception))
 
 
