@@ -719,7 +719,6 @@ def validate(args, spec, spatial_overlap_opts=None):
         is_conditionally_required = _evaluate_expression(
             expression=spec[key]['required'],
             variable_map=sufficient_inputs)
-
         if is_conditionally_required:
             if key not in args:
                 validation_warnings.append(
@@ -747,7 +746,6 @@ def validate(args, spec, spatial_overlap_opts=None):
             validation_options = parameter_spec['validation_options']
         except KeyError:
             validation_options = {}
-
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
@@ -766,7 +764,6 @@ def validate(args, spec, spatial_overlap_opts=None):
                 key, args[key])
             validation_warnings.append(
                 ([key], 'An unexpected error occurred in validation'))
-
     # step 5: check spatial overlap if applicable
     if spatial_overlap_opts:
         spatial_keys = set(spatial_overlap_opts['spatial_keys'])
