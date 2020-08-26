@@ -4,6 +4,12 @@ import logging
 from natcap.invest.coastal_blue_carbon import coastal_blue_carbon2
 
 logging.basicConfig(level=logging.INFO)
+
+
+#"transition_year","raster_path"
+#2030,"data/invest-sample-data/CoastalBlueCarbon/inputs/GBJC_2030_mean_Resample.tif"
+#2050,"data/invest-sample-data/CoastalBlueCarbon/inputs/GBJC_2050_mean_Resample.tif"
+
 ARGS = {
     'workspace_dir': 'rebuilt_cbc',
     'results_suffix': '',
@@ -17,7 +23,8 @@ ARGS = {
     'baseline_lulc_year': 2010,
     #'analysis_year': 2060,
     'biophysical_table_path': 'rebuilt_cbc_biophysical_table.csv',
-    'n_workers': 6,
+    #'n_workers': 6,
+    'n_workers': -1,
     'do_economic_analysis': True,  # when True, remove analysis year.
     'do_price_table': True,
     'price_table':

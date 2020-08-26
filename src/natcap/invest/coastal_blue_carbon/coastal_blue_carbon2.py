@@ -99,8 +99,20 @@ def execute_transition_analysis(args):
     # a few raster calculator operations.  Everything within this loop is way
     # more interesting and tricky to get right, hence the need for an extra
     # function.
-    stock_rasters = {}
-    net_sequestration_rasters = {}
+    stock_rasters = {
+        (min(transition_years) - 1): {
+            POOL_SOIL: args['stocks_at_first_transition'][POOL_SOIL],
+            POOL_BIOMASS: args['stocks_at_first_transition'][POOL_BIOMASS],
+            POOL_LITTER: args['stocks_at_first_transition'][POOL_LITTER],
+        }
+    }
+    net_sequestration_rasters = {
+        (min(transition_years) - 1): {
+            POOL_SOIL: args['annual_rate_of_accumulation_rasters'][POOL_SOIL],
+            POOL_BIOMASS: args['annual_rate_of_accumulation_rasters'][POOL_BIOMASS],
+            POOL_LITTER: args['annual_rate_of_accumulation_rasters'][POOL_LITTER],
+        }
+    }
     disturbance_vol_rasters = {}
     emissions_rasters = {}
     year_of_disturbance_rasters = {}
@@ -109,10 +121,18 @@ def execute_transition_analysis(args):
     current_transition_year = None
 
     current_disturbance_vol_tasks = {}
-    prior_stock_tasks = {}
+    prior_stock_tasks = {
+        POOL_SOIL: None,
+        POOL_BIOMASS: None,
+        POOL_LITTER: None,
+    }
     current_year_of_disturbance_tasks = {}
     current_emissions_tasks = {}
-    prior_net_sequestration_tasks = {}
+    prior_net_sequestration_tasks = {
+        POOL_SOIL: None,
+        POOL_BIOMASS: None,
+        POOL_LITTER: None,
+    }
     current_net_sequestration_tasks = {}
     current_accumulation_tasks = {}
 
@@ -419,6 +439,21 @@ def execute(args):
     except (KeyError, ValueError, TypeError):
         analysis_year = None
 
+    base_paths = [args['baseline_lulc_path']]
+    aligned_lulc_paths = {}
+    aligned_paths = [os.path.join(
+        intermediate_dir,
+        f'aligned_lulc_baseline_{baseline_lulc_year}{suffix}.tif')]
+    aligned_lulc_paths[int(args['baseline_lulc_year'])] = aligned_paths[0]
+    for transition_year in transitions:
+        base_paths.append(transitions[transition_year])
+        transition_years.add(transition_year)
+        aligned_paths.append(
+            os.path.join(
+                intermediate_dir,
+                f'aligned_lulc_transition_{transition_year}{suffix}.tif'))
+        aligned_lulc_paths[transition_year] = aligned_paths[-1]
+
     # TODO: check that the years in the price table match the years in the
     # range of the timesteps we're running.
     if ('do_economic_analysis' in args and
@@ -444,21 +479,6 @@ def execute(args):
         for year, price in prices.items():
             n_years_elapsed = year - baseline_lulc_year
             prices[year] /= (1 + discount_rate) ** n_years_elapsed
-
-    base_paths = [args['baseline_lulc_path']]
-    aligned_lulc_paths = {}
-    aligned_paths = [os.path.join(
-        intermediate_dir,
-        f'aligned_lulc_baseline_{baseline_lulc_year}{suffix}.tif')]
-    aligned_lulc_paths[int(args['baseline_lulc_year'])] = aligned_paths[0]
-    for transition_year in transitions:
-        base_paths.append(transitions[transition_year])
-        transition_years.add(transition_year)
-        aligned_paths.append(
-            os.path.join(
-                intermediate_dir,
-                f'aligned_lulc_transition_{transition_year}{suffix}.tif'))
-        aligned_lulc_paths[transition_year] = aligned_paths[-1]
 
     alignment_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
@@ -499,25 +519,35 @@ def execute(args):
     # There are no emissions, so net sequestration is only from accumulation.
     # Value can still be calculated from the net sequestration.
 
-    baseline_stock_rasters = {}
+
+    end_of_baseline_period = baseline_lulc_year
+    if transition_years:
+        end_of_baseline_period = min(transition_years)
+    elif analysis_year:
+        end_of_baseline_period = analysis_year
+
+    stock_rasters = {
+        baseline_lulc_year: {},
+        end_of_baseline_period-1: {},
+    }
     baseline_stock_tasks = {}
     baseline_accum_tasks = {}
     yearly_accum_rasters = {}
     for pool in (POOL_BIOMASS, POOL_LITTER, POOL_SOIL):
-        baseline_stock_rasters[pool] = os.path.join(
+        stock_rasters[baseline_lulc_year][pool] = os.path.join(
             intermediate_dir, STOCKS_RASTER_PATTERN.format(
                 pool=pool, year=baseline_lulc_year, suffix=suffix))
-        baseline_stock_tasks[pool] = task_graph.add_task(
+        pool_stock_task = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=(
-                (aligned_lulc_paths[year], 1),
+                (aligned_lulc_paths[baseline_lulc_year], 1),
                 {lucode: values[f'{pool}-initial'] for (lucode, values)
                     in biophysical_parameters.items()},
-                baseline_stock_rasters[pool],
+                stock_rasters[baseline_lulc_year][pool],
                 gdal.GDT_Float32,
                 NODATA_FLOAT32),
             dependent_task_list=[alignment_task],
-            target_path_list=[baseline_stock_rasters[pool]],
+            target_path_list=[stock_rasters[baseline_lulc_year][pool]],
             task_name=f'Mapping initial {pool} carbon stocks')
 
         # Initial accumulation values are a simple reclassification
@@ -539,6 +569,26 @@ def execute(args):
             target_path_list=[yearly_accum_rasters[pool]],
             task_name=(
                 f'Mapping {pool} carbon accumulation for {year}'))
+
+        if end_of_baseline_period != baseline_lulc_year:
+            # The total stocks between baseline and the first year of interest is
+            # just a sum-and-multiply for each pool.
+            stock_rasters[end_of_baseline_period-1][pool] = os.path.join(
+                STOCKS_RASTER_PATTERN.format(
+                    pool=pool, year=end_of_baseline_period-1, suffix=suffix))
+            baseline_stock_tasks[pool] = task_graph.add_task(
+                func=_calculate_accumulation_from_baseline,
+                args=(stock_rasters[baseline_lulc_year][pool],
+                      yearly_accum_rasters[pool],
+                      (end_of_baseline_period - baseline_lulc_year),
+                      stock_rasters[end_of_baseline_period-1][pool]),
+                dependent_task_list=[
+                    baseline_accum_tasks[pool], pool_stock_task],
+                target_path_list=[
+                    stock_rasters[end_of_baseline_period-1][pool]],
+                task_name=(
+                    f'Calculating {pool} stocks before the first transition or '
+                    'the analysis year'))
 
     # Reclassify transitions appropriately for each transition year.
     halflife_rasters = {}
@@ -624,11 +674,47 @@ def execute(args):
         'carbon_prices_per_year': prices,
         'analysis_year': analysis_year,
         'do_economic_analysis': args['do_economic_analysis'],
+        'stocks_at_first_transition': {
+            POOL_SOIL: stock_rasters[end_of_baseline_period-1][POOL_SOIL],
+            POOL_BIOMASS: stock_rasters[
+                end_of_baseline_period-1][POOL_BIOMASS],
+            POOL_LITTER: stock_rasters[end_of_baseline_period-1][POOL_LITTER],
+        }
     }
     execute_transition_analysis(transition_analysis_args)
 
     task_graph.close()
     task_graph.join()
+
+
+def _calculate_accumulation_from_baseline(
+        baseline_stock_raster_path, yearly_accumulation_raster_path, n_years,
+        target_raster_path):
+    # Both of these values are assumed to be defined from earlier in the
+    # model's execution.
+    baseline_nodata = pygeoprocessing.get_raster_info(
+        baseline_stock_raster_path)['nodata'][0]
+    accum_nodata = pygeoprocessing.get_raster_info(
+        yearly_accumulation_raster_path)['nodata'][0]
+
+    def _calculate_accumulation_over_years(baseline_matrix, accum_matrix):
+        target_matrix = numpy.empty(baseline_matrix.shape, dtype=numpy.float32)
+        target_matrix[:] = NODATA_FLOAT32
+
+        valid_pixels = (~numpy.isclose(baseline_matrix, baseline_nodata) &
+                       (~numpy.isclose(accum_matrix, accum_nodata)))
+
+        target_matrix[valid_pixels] = (
+            baseline_matrix[valid_pixels] + (
+                accum_matrix[valid_pixels] * n_years))
+
+        return target_matrix
+
+    pygeoprocessing.raster_calculator(
+        [(baseline_stock_raster_path, 1),
+         (yearly_accumulation_raster_path, 1)],
+        _calculate_accumulation_over_years, target_raster_path,
+        gdal.GDT_Float32, NODATA_FLOAT32)
 
 
 def execute_old(args):
