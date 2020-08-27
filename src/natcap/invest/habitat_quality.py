@@ -539,7 +539,7 @@ def execute(args):
                       filtered_threat_raster_path),
                 kwargs={
                     'target_nodata': _OUT_NODATA,
-                    'ignore_nodata_and_edges': True,
+                    'ignore_nodata_and_edges': False,
                     'mask_nodata': False
                     },
                 target_path_list=[filtered_threat_raster_path],
