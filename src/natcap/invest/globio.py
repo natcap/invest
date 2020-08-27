@@ -458,7 +458,7 @@ def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
     # if it's the user-provided globio dataset
     # landcover type 1 in the GLOBIO schema represents primary vegetation
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
-    result = lulc_array == 1
+    result[:] = primary_veg_mask_nodata
     valid_mask = slice(None)
     if globio_nodata is not None:
         valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
