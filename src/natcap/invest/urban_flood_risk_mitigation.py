@@ -334,8 +334,7 @@ def execute(args):
             (flood_vol_raster_path, 1),
             reprojected_aoi_path),
         dependent_task_list=[flood_vol_task, reprojected_aoi_task],
-        task_name='zonal_statistics over the flood_volume raster',
-        store_result=True)
+        task_name='zonal_statistics over the flood_volume raster')
 
     runoff_retention_stats_task = task_graph.add_task(
         func=pygeoprocessing.zonal_statistics,
@@ -343,8 +342,7 @@ def execute(args):
             (runoff_retention_raster_path, 1),
             reprojected_aoi_path),
         dependent_task_list=[runoff_retention_task],
-        task_name='zonal_statistics over runoff_retention raster',
-        store_result=True)
+        task_name='zonal_statistics over runoff_retention raster')
 
     runoff_retention_volume_stats_task = task_graph.add_task(
         func=pygeoprocessing.zonal_statistics,
@@ -352,8 +350,7 @@ def execute(args):
             (runoff_retention_vol_raster_path, 1),
             reprojected_aoi_path),
         dependent_task_list=[runoff_retention_vol_task],
-        task_name='zonal_statistics over runoff_retention_volume raster',
-        store_result=True)
+        task_name='zonal_statistics over runoff_retention_volume raster')
 
     damage_per_aoi_stats = None
     flood_volume_stats = flood_volume_in_aoi_task.get()
@@ -384,8 +381,7 @@ def execute(args):
             dependent_task_list=[
                 reprojected_aoi_task,
                 reproject_built_infrastructure_task],
-            task_name='calculate damage to infrastructure in aoi',
-            store_result=True)
+            task_name='calculate damage to infrastructure in aoi')
 
         damage_per_aoi_stats = damage_to_infrastructure_in_aoi_task.get()
 

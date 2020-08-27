@@ -301,8 +301,7 @@ def execute(args):
         args=(file_registry['clipped_dem'],
               file_registry['structures_clipped']),
         dependent_task_list=[clipped_viewpoints_task, clipped_dem_task],
-        task_name='determine_valid_viewpoints',
-        store_result=True)
+        task_name='determine_valid_viewpoints')
 
     viewpoint_tuples = valid_viewpoints_task.get()
     if not viewpoint_tuples:
