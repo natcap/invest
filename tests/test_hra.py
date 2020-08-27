@@ -722,6 +722,24 @@ class HraUnitTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
+    def test_to_abspath_change_separators(self):
+        """HRA: should replace backslashes with forward slashes on posix"""
+        from natcap.invest.hra import _to_abspath
+
+        relative_path = 'folder\\file.txt'
+        dir_path = self.workspace_dir
+        # separators are not changed on windows
+        if os.name == 'posix':
+            expected_path = os.path.join(dir_path, 'folder/file.txt')
+        else:
+            expected_path = os.path.join(dir_path, relative_path)
+        # create the file
+        os.mkdir(os.path.join(dir_path, 'folder'))
+        with open(expected_path, 'w') as file:
+            file.write('text')
+        # _to_abspath should find the file and return the modified path
+        self.assertEqual(_to_abspath(relative_path, dir_path), expected_path)
+
     def test_simplify_geometry(self):
         """HRA: test _simplify_geometry function."""
         from natcap.invest.hra import _simplify_geometry
