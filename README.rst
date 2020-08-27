@@ -228,12 +228,12 @@ To run tests for user interface functionality::
 Changing how GNU make runs tests
 ++++++++++++++++++++++++++++++++
 
-The InVEST Makefile setup depends on ``nosetests`` and takes advantage of its
-plugins for line coverage and xunit reports.  You can force ``make`` to use a
-different test runner by setting a parameter at the command line.  For example,
-to run the tests with ``pytest``::
+The InVEST Makefile setup depends on ``pytest`` and ``coverage`` to display 
+line coverage and produce HTML and XML reports.  You can force ``make`` to use
+``coverage`` with a different test runner by setting a parameter at the 
+command line.  For example, to run the tests with ``nose``::
 
-    $ make TESTRUNNER=pytest test
+    $ make TESTRUNNER=nose test
 
 
 Running tests on installed binaries
