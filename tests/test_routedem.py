@@ -98,9 +98,10 @@ class RouteDEMTests(unittest.TestCase):
         # So, the filled band should match the source band.
         expected_filled_array = gdal.OpenEx(args['dem_path']).ReadAsArray()[0]
         filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()
-        numpy.testing.assert_almost_equal(
+        numpy.testing.assert_allclose(
             expected_filled_array,
-            filled_array)
+            filled_array,
+            rtol=0, atol=1e-6)
 
     def test_routedem_no_options(self):
         """RouteDEM: assert pitfilling when no other options given."""
@@ -127,9 +128,10 @@ class RouteDEMTests(unittest.TestCase):
         # Filled rasters are copies of only the desired band of the input DEM,
         # and then with pixels filled.
         filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()
-        numpy.testing.assert_almost_equal(
+        numpy.testing.assert_allclose(
             expected_filled_array,
-            filled_array)
+            filled_array,
+            rtol=0, atol=1e-6)
 
     def test_routedem_slope(self):
         """RouteDEM: assert slope option."""
@@ -158,10 +160,12 @@ class RouteDEMTests(unittest.TestCase):
              13.235317, 45.017357, 48.226353, 48.75, 49.56845,
              50.249374, 50.24938, 50.249382, 55.17727, 63.18101],
             dtype=numpy.float32).reshape((15,))
-        numpy.testing.assert_almost_equal(
-            expected_unique_values,
-            numpy.unique(slope_array))
-        numpy.testing.assert_almost_equal(numpy.sum(slope_array), 4088.7358, decimal=4)
+        numpy.testing.assert_allclose(
+            expected_unique_values, 
+            numpy.unique(slope_array), 
+            rtol=0, atol=1e-6)
+        numpy.testing.assert_allclose(
+            numpy.sum(slope_array), 4088.7358, rtol=0, atol=1e-4)
 
     def test_routedem_d8(self):
         """RouteDEM: test d8 routing."""
@@ -207,10 +211,11 @@ class RouteDEMTests(unittest.TestCase):
             [0, 0, 0, 0, 1, 0, 0, 0, 0],
             [0, 0, 0, 0, 1, 0, 0, 0, 0],
         ])
-        numpy.testing.assert_almost_equal(
+        numpy.testing.assert_allclose(
             expected_stream_mask,
             gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 'stream_mask_foo.tif')).ReadAsArray())
+                args['workspace_dir'], 'stream_mask_foo.tif')).ReadAsArray(),
+            rtol=0, atol=1e-6)
 
         expected_flow_accum = numpy.empty((10, 9), dtype=numpy.float64)
         expected_flow_accum[:, 0:4] = numpy.arange(1, 5)
@@ -220,10 +225,11 @@ class RouteDEMTests(unittest.TestCase):
         expected_flow_accum[1, 5] = 1
         expected_flow_accum[0, 5] = 8
 
-        numpy.testing.assert_almost_equal(
+        numpy.testing.assert_allclose(
             expected_flow_accum,
             gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 'flow_accumulation_foo.tif')).ReadAsArray())
+                args['workspace_dir'], 'flow_accumulation_foo.tif')).ReadAsArray(),
+            rtol=0, atol=1e-6)
 
         expected_flow_direction = numpy.empty((10, 9), dtype=numpy.uint8)
         expected_flow_direction[:, 0:4] = 0
@@ -232,10 +238,11 @@ class RouteDEMTests(unittest.TestCase):
         expected_flow_direction[0:2, 5] = 2
         expected_flow_direction[1, 6] = 3
 
-        numpy.testing.assert_almost_equal(
+        numpy.testing.assert_allclose(
             expected_flow_direction,
             gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 'flow_direction_foo.tif')).ReadAsArray())
+                args['workspace_dir'], 'flow_direction_foo.tif')).ReadAsArray(),
+            rtol=0, atol=1e-6)
 
         expected_downstream_distance = numpy.empty((10, 9), dtype=numpy.float64)
         expected_downstream_distance[:, 0:5] = numpy.flipud(numpy.arange(5))
@@ -244,10 +251,11 @@ class RouteDEMTests(unittest.TestCase):
         expected_downstream_distance[1, 5] = 1
         expected_downstream_distance[1, 6:] = numpy.arange(1, 4) + 0.41421356
 
-        numpy.testing.assert_almost_equal(
+        numpy.testing.assert_allclose(
             expected_downstream_distance,
             gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 'downstream_distance_foo.tif')).ReadAsArray())
+                args['workspace_dir'], 'downstream_distance_foo.tif')).ReadAsArray(),
+            rtol=0, atol=1e-6)
 
     def test_routedem_mfd(self):
         """RouteDEM: test mfd routing."""
@@ -281,10 +289,11 @@ class RouteDEMTests(unittest.TestCase):
             [0, 0, 0, 1, 1, 1, 0, 0, 0],
             [0, 0, 0, 0, 1, 0, 0, 0, 0],
         ])
-        numpy.testing.assert_almost_equal(
+        numpy.testing.assert_allclose(
             expected_stream_mask,
             gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 'stream_mask_foo.tif')).ReadAsArray())
+                args['workspace_dir'], 'stream_mask_foo.tif')).ReadAsArray(),
+            rtol=0, atol=1e-6)
 
         # Raster sums are from manually-inspected outputs.
         for filename, expected_sum in (
@@ -300,7 +309,8 @@ class RouteDEMTests(unittest.TestCase):
             self.assertEqual(raster.RasterXSize, expected_stream_mask.shape[1])
 
             raster_sum = numpy.sum(raster.ReadAsArray(), dtype=numpy.float64)
-            numpy.testing.assert_almost_equal(raster_sum, expected_sum)
+            numpy.testing.assert_allclose(
+                raster_sum, expected_sum, rtol=0, atol=1e-6)
 
     def test_validation_required_args(self):
         """RouteDEM: test required args in validation."""

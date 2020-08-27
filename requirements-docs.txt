@@ -15,7 +15,6 @@
 
 sphinx
 sphinx-rtd-theme
-nose
 Cython
 numpy
 scipy

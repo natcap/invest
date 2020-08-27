@@ -284,7 +284,7 @@ def execute(args):
     # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
-    machine_perf_data = pandas.read_csv(args['machine_perf_path'])
+    machine_perf_data = utils.read_csv_to_dataframe(args['machine_perf_path'])
     # Get the wave period fields, starting from the second column of the table
     machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
     # Build up the height field by taking the first column of the table
@@ -317,8 +317,9 @@ def execute(args):
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
-        grid_land_data = pandas.read_csv(args['land_gridPts_path'])
-        required_col_names = ['ID', 'TYPE', 'LAT', 'LONG', 'LOCATION']
+        grid_land_data = utils.read_csv_to_dataframe(
+            args['land_gridPts_path'], to_lower=True)
+        required_col_names = ['id', 'type', 'lat', 'long', 'location']
         grid_land_data, missing_grid_land_fields = _get_validated_dataframe(
             args['land_gridPts_path'], required_col_names)
         if missing_grid_land_fields:
@@ -619,9 +620,9 @@ def execute(args):
         output_dir, 'GridPts_prj%s.shp' % file_suffix)
 
     grid_data = grid_land_data.loc[
-        grid_land_data['TYPE'].str.lower() == 'grid']
+        grid_land_data['type'].str.upper() == 'GRID']
     land_data = grid_land_data.loc[
-        grid_land_data['TYPE'].str.lower() == 'land']
+        grid_land_data['type'].str.upper() == 'LAND']
 
     grid_dict = grid_data.to_dict('index')
     land_dict = land_data.to_dict('index')
@@ -961,9 +962,7 @@ def _get_validated_dataframe(csv_path, field_list):
         missing_fields (list): missing fields as string format in dataframe.
 
     """
-    dataframe = pandas.read_csv(csv_path)
-    field_list = [field.upper() for field in field_list]
-    dataframe.columns = [col_name.upper() for col_name in dataframe.columns]
+    dataframe = utils.read_csv_to_dataframe(csv_path, to_lower=True)
     missing_fields = []
     for field in field_list:
         if field not in dataframe.columns:
@@ -1029,8 +1028,8 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
     for point_dict in base_dict_data.values():
-        latitude = float(point_dict['LAT'])
-        longitude = float(point_dict['LONG'])
+        latitude = float(point_dict['lat'])
+        longitude = float(point_dict['long'])
         # When projecting to WGS84, extents -180 to 180 are used for longitude.
         # In case input longitude is from -360 to 0 convert
         if longitude < -180:
@@ -1206,10 +1205,9 @@ def _machine_csv_to_dict(machine_csv_path):
 
     """
     machine_dict = {}
-    machine_data = pandas.read_csv(machine_csv_path, index_col=0)
-    # make columns and indexes lowercased
-    machine_data.columns = machine_data.columns.str.lower()
-    # remove underscore from the keys
+    # make columns and indexes lowercased and strip whitespace
+    machine_data = utils.read_csv_to_dataframe(
+        machine_csv_path, to_lower=True, index_col=0)
     machine_data.index = machine_data.index.str.strip()
     machine_data.index = machine_data.index.str.lower()
 

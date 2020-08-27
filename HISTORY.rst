@@ -1,8 +1,29 @@
 .. :changelog:
 
 ..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* Coastal Vulnerability
+    * Improved handling of invalid AOI geometries to avoid crashing and instead
+      fix the geometry when possible and skip it otherwise.
+* Urban Cooling
+    * Energy units are now (correctly) expressed in kWh.  They were previously
+      (incorrectly) expressed in kW.
+    * Energy savings calculations now require that consumption is in units of
+      kWh/degree C/m^2 for each building class.
+    * Fixing an issue where blank values of the Cooling Coefficient weights
+      (shade, albedo, ETI) would raise an error.  Now, a default value for the
+      coefficient is assumed if any single value is left blank.
+* HRA
+    * Raise ValueError if habitat or stressor inputs are not projected.
+* Seasonal Water Yield
+    * Updated output file name from aggregated_results.shp to aggregated_results_swy.shp
+      for consistency with NDR and SDR
+* Datastack
+    * Saved datastack archives now use helpful identifying names for spatial input folders
+* General
+    * Input table column headers are now insensitive to leading/trailing whitespace in 
+      most places.
 
 3.8.7 (2020-07-17)
 ------------------

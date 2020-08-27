@@ -36,8 +36,13 @@ def assert_expected_results_in_vector(expected_results, vector_path):
         # pixel values when also using a smoothing interpolation method.
         # Surprisingly, these differences are not washed out by an
         # aggregation such as zonal statistics.
-        numpy.testing.assert_approx_equal(
-            actual_results[key], expected_results[key], significant=2)
+
+        # Following numpy recommendation to use alternatives to
+        # assert_approx_equal, this has been replaced with assert_allclose,
+        # using a relative tolerance of 0.1, which scales similarly
+        # to a tolerance of 2 significant figures.
+        numpy.testing.assert_allclose(
+            actual_results[key], expected_results[key], rtol=0.1, atol=0)
 
 
 class SDRTests(unittest.TestCase):

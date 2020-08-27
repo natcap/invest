@@ -516,6 +516,10 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
             first_line = file_obj.readline()
             if first_line.startswith(codecs.BOM_UTF8):
                 encoding = 'utf-8-sig'
+
+        # engine=python handles unknown characters by replacing them with a
+        # replacement character, instead of raising an error
+        # use sep=None, engine='python' to infer what the separator is
         dataframe = pandas.read_csv(
             filepath, sep=None, engine='python', encoding=encoding)
     except Exception:
@@ -529,6 +533,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
                     "File must be encoded as a UTF-8 CSV.")
 
     if required_fields:
+        dataframe.columns = dataframe.columns.str.strip()
         fields_in_table = set([name.upper() for name in dataframe.columns])
         missing_fields = (
             set(field.upper() for field in required_fields) - fields_in_table)
@@ -833,8 +838,19 @@ def invest_validator(validate_func):
             assert isinstance(key, str), (
                 'All args keys must be strings.')
 
+        # Pytest in importlib mode makes it impossible for test modules to 
+        # import one another. This causes a problem in test_validation.py,
+        # which gets imported into itself here and fails.
+        # Since this decorator might not be needed in the future,
+        # just ignore failed imports; assume they have no ARGS_SPEC.
+        try:
+            model_module = importlib.import_module(validate_func.__module__)
+        except:
+            LOGGER.warning('Unable to import module %s: assuming no ARGS_SPEC.',
+                            validate_func.__module__)
+            model_module = None
+
         # If the module has an ARGS_SPEC defined, validate against that.
-        model_module = importlib.import_module(validate_func.__module__)
         if hasattr(model_module, 'ARGS_SPEC'):
             LOGGER.debug('Using ARG_SPEC for validation')
             args_spec = getattr(model_module, 'ARGS_SPEC')['args']

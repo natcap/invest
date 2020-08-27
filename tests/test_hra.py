@@ -23,7 +23,7 @@ EPSG_CODE = 26910
 def _make_simple_vector(target_vector_path, projected=True):
     """Make a 10x10 ogr rectangular geometry shapefile.
 
-    Parameters:
+    Args:
         target_vector_path (str): path to the output shapefile.
 
         projected (bool): if true, define projection information for the vector
@@ -71,7 +71,7 @@ def _make_simple_vector(target_vector_path, projected=True):
 def _make_rating_vector(target_vector_path):
     """Make a 10x10 ogr rectangular geometry shapefile with `rating` field.
 
-    Parameters:
+    Args:
         target_vector_path (str): path to the output shapefile.
 
     Returns:
@@ -121,7 +121,7 @@ def _make_rating_vector(target_vector_path):
 def _make_aoi_vector(target_vector_path, projected=True, subregion_field=True):
     """Make a 20x20 ogr rectangular geometry shapefile with `rating` field.
 
-    Parameters:
+    Args:
         target_vector_path (str): path to the output shapefile.
 
         projected (bool): if true, define projection information for the vector
@@ -179,7 +179,7 @@ def _make_aoi_vector(target_vector_path, projected=True, subregion_field=True):
 def _make_raster_from_array(base_array, target_raster_path, projected=True):
     """Make a raster from an array on a designated path.
 
-    Parameters:
+    Args:
         array (numpy.ndarray): the 2D array for making the raster.
 
         raster_path (str): path to the output raster.
@@ -210,7 +210,7 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
                    projected=True, rel_path=False):
     """Make a synthesized information csv on the designated path.
 
-    Parameters:
+    Args:
         info_table_path (str): path to the csv with information on habitats and
             stressors.
 
@@ -218,8 +218,8 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
 
         missing_columns (bool): if true, write wrong column headers to the CSV.
 
-        wrong_layer_type (bool): if true, write a type different from `habitat` or
-            `stressor`.
+        wrong_layer_type (bool): if true, write a type different from
+            ``habitat`` or ``stressor``.
 
         wrong_buffer_value (bool): if true, write a string to the buffer column
 
@@ -283,7 +283,8 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
             if projected:
                 _make_raster_from_array(array, abs_raster_path, projected=True)
             else:
-                _make_raster_from_array(array, abs_raster_path, projected=False)
+                _make_raster_from_array(
+                    array, abs_raster_path, projected=False)
 
             if rel_path:
                 rel_raster_path = os.path.relpath(
@@ -311,7 +312,7 @@ def _make_criteria_csv(
         rel_path=False):
     """Make a synthesized information CSV on the designated path.
 
-    Parameters:
+    Args:
 
         info_table_path (str): path to the CSV or Excel file with information
             on habitats and stressors.
@@ -380,15 +381,17 @@ def _make_criteria_csv(
         if rel_path:
             rel_rating_raster_path = os.path.relpath(
                 abs_rating_raster_path, workspace_dir)
-            table.write('"criteria 1",'+rel_rating_raster_path+',2,2,3,2,2,C\n')
+            table.write(
+                '"criteria 1",'+rel_rating_raster_path+',2,2,3,2,2,C\n')
         else:
-            table.write('"criteria 1",'+abs_rating_raster_path+',2,2,3,2,2,C\n')
+            table.write(
+                '"criteria 1",'+abs_rating_raster_path+',2,2,3,2,2,C\n')
         table.write('"criteria 2",0,2,2,1,2,2,C\n')
 
         if missing_index:
-            table.write('missing index\n')
+            table.write('missing index,,,,,,,\n')
         else:
-            table.write('HABITAT STRESSOR OVERLAP PROPERTIES\n')
+            table.write('HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,\n')
 
         if unknown_criteria:
             table.write('"extra criteria",1,2,2,0,2,2,E\n')
@@ -397,9 +400,11 @@ def _make_criteria_csv(
         if rel_path:
             rel_rating_vector_path = os.path.relpath(
                 abs_rating_vector_path, workspace_dir)
-            table.write('"criteria 3",2,2,2,'+rel_rating_vector_path+',2,2,C\n')
+            table.write(
+                '"criteria 3",2,2,2,'+rel_rating_vector_path+',2,2,C\n')
         else:
-            table.write('"criteria 3",2,2,2,'+abs_rating_vector_path+',2,2,C\n')
+            table.write(
+                '"criteria 3",2,2,2,'+abs_rating_vector_path+',2,2,C\n')
         table.write('"criteria 4",1,2,2,0,2,2,E\n')
 
         if missing_layer_names:
@@ -428,7 +433,7 @@ class HraUnitTests(unittest.TestCase):
     """Unit tests for the Wind Energy module."""
 
     def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
+        """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
@@ -439,7 +444,8 @@ class HraUnitTests(unittest.TestCase):
 
     def test_missing_criteria_header(self):
         """HRA: exception raised when missing criteria from criteria CSV."""
-        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe
+        from natcap.invest.hra import _get_overlap_dataframe
 
         # Create a criteria CSV that misses a criteria type
         bad_criteria_table_path = os.path.join(
@@ -461,7 +467,8 @@ class HraUnitTests(unittest.TestCase):
 
     def test_unknown_criteria_from_criteria_csv(self):
         """HRA: exception raised with unknown criteria from criteria CSV."""
-        from natcap.invest.hra import _get_criteria_dataframe, _get_attributes_from_df
+        from natcap.invest.hra import _get_criteria_dataframe
+        from natcap.invest.hra import _get_attributes_from_df
 
         # Create a criteria CSV that has a criteria row that shows up before
         # any stressors
@@ -480,7 +487,7 @@ class HraUnitTests(unittest.TestCase):
         self.assertTrue(expected_message in actual_message, actual_message)
 
     def test_missing_index_from_criteria_csv(self):
-        """HRA: correct error message when missing indexes from criteria CSV."""
+        """HRA: correct error msg when missing indexes from criteria CSV."""
         from natcap.invest.hra import _get_criteria_dataframe
 
         # Use a criteria CSV that misses two indexes
@@ -500,7 +507,7 @@ class HraUnitTests(unittest.TestCase):
             expected_message in actual_message, actual_message)
 
     def test_missing_criteria_header_from_criteria_csv(self):
-        """HRA: correct error message when missing indexes from criteria CSV."""
+        """HRA: correct error msg when missing indexes from criteria CSV."""
         from natcap.invest.hra import _get_criteria_dataframe
 
         # Use a criteria CSV that misses two indexes
@@ -536,8 +543,9 @@ class HraUnitTests(unittest.TestCase):
         copied_criteria_excel_path = os.path.join(
             self.workspace_dir, 'criteria_excel.xlsx')
         shutil.copyfile(criteria_excel_path, copied_criteria_excel_path)
-        out_df = _get_criteria_dataframe(copied_criteria_excel_path).astype(str)
-
+        out_df = _get_criteria_dataframe(
+                    copied_criteria_excel_path).astype(str)
+        
         self.assertTrue(
             out_df.equals(expected_df),
             'The dataframes from criteria CSV and excel files are different.')
@@ -634,7 +642,8 @@ class HraUnitTests(unittest.TestCase):
 
     def test_wrong_criteria_type_type(self):
         """HRA: exception raised when type is not C or E from criteria CSV."""
-        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe
+        from natcap.invest.hra import _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
         bad_criteria_table_path = os.path.join(
@@ -657,7 +666,8 @@ class HraUnitTests(unittest.TestCase):
 
     def test_wrong_weight_from_criteria_csv(self):
         """HRA: exception raised when weight is not a number from CSV."""
-        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe
+        from natcap.invest.hra import _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
         bad_criteria_table_path = os.path.join(
@@ -680,7 +690,8 @@ class HraUnitTests(unittest.TestCase):
 
     def test_large_rating_from_criteria_csv(self):
         """HRA: exception raised when rating is larger than maximum rating."""
-        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe
+        from natcap.invest.hra import _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
         bad_criteria_table_path = os.path.join(
@@ -733,7 +744,7 @@ class HraUnitTests(unittest.TestCase):
             1E-6)
 
     def test_simplify_geometry_points(self):
-        """HRA: test _simplify_geometry does not alter geometry given points."""
+        """HRA: test _simplify_geometry does not alter point geometries."""
         from natcap.invest.hra import _simplify_geometry
 
         srs = osr.SpatialReference()
@@ -794,7 +805,7 @@ class HraRegressionTests(unittest.TestCase):
 
     @staticmethod
     def generate_base_args(workspace_dir):
-        """Generate args dict that is consistent across all regression tests."""
+        """Generate args dict that's consistent across all regression tests."""
         args = {
             'workspace_dir': workspace_dir,
             'results_suffix': '',
@@ -812,7 +823,7 @@ class HraRegressionTests(unittest.TestCase):
         return args
 
     def test_hra_regression_euclidean_linear(self):
-        """HRA: regression testing synthetic data with linear, euclidean eqn."""
+        """HRA: regression testing synthetic data w/ linear, euclidean eqn."""
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
@@ -840,7 +851,8 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert rasters are equal
         output_raster_paths = [
-            os.path.join(args['workspace_dir'], 'outputs', raster_name + '.tif')
+            os.path.join(
+                args['workspace_dir'], 'outputs', raster_name + '.tif')
             for raster_name in output_rasters]
         expected_raster_paths = [os.path.join(
             TEST_DATA, raster_name + '_euc_lin.tif') for raster_name in
@@ -953,8 +965,8 @@ class HraRegressionTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
-    def test_layer_no_projection(self):
-        """HRA: testing habitats and stressors without projection."""
+    def test_layer_without_spatial_ref(self):
+        """HRA: test habitats and stressors w/out spatial references."""
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
@@ -963,13 +975,56 @@ class HraRegressionTests(unittest.TestCase):
 
         # Make unprojected files and write their filepaths to info csv.
         bad_info_table_path = os.path.join(self.workspace_dir, 'bad_info.csv')
-        _make_info_csv(bad_info_table_path, self.workspace_dir, projected=False)
+        _make_info_csv(
+            bad_info_table_path, self.workspace_dir, projected=False)
         args['info_table_path'] = bad_info_table_path
 
         with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
 
-        expected_message = 'The following layer does not have a projection'
+        expected_message = "The following layer does not have a spatial"
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
+
+    def test_non_projected_layers(self):
+        """HRA: test habitat and stressor layers that are not projected."""
+        import natcap.invest.hra
+
+        args = HraRegressionTests.generate_base_args(self.workspace_dir)
+        _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
+        _make_aoi_vector(args['aoi_vector_path'])
+
+        # Make projected files and write their filepaths to info csv.
+        info_table_path = os.path.join(self.workspace_dir, 'info.csv')
+        _make_info_csv(
+            info_table_path, self.workspace_dir, projected=True,
+            rel_path=False)
+
+        # create geographic spatial reference
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        wgs84_wkt = wgs84_srs.ExportToWkt()
+        # move created habitat vector to a sub directory so the reprojected
+        # file can be saved where the csv PATH expects it
+        tmp_out = os.path.join(self.workspace_dir, 'tmp_move')
+        os.mkdir(tmp_out)
+        for filename in os.listdir(self.workspace_dir):
+            if filename.startswith("habitat_0"):
+                shutil.move(
+                    os.path.join(self.workspace_dir, filename),
+                    os.path.join(tmp_out, filename))
+        habitat_path = os.path.join(tmp_out, 'habitat_0.shp')
+        habitat_wgs84_path = os.path.join(self.workspace_dir, 'habitat_0.shp')
+        # reproject habitat layer to geographic
+        pygeoprocessing.reproject_vector(
+            habitat_path, wgs84_wkt, habitat_wgs84_path)
+
+        args['info_table_path'] = info_table_path
+
+        with self.assertRaises(ValueError) as cm:
+            natcap.invest.hra.execute(args)
+
+        expected_message = "The following layer does not have a spatial"
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
@@ -1079,7 +1134,7 @@ class HraRegressionTests(unittest.TestCase):
         self.assertTrue(expected_error in validation_error_list)
 
     def test_validate_negative_resolution(self):
-        """HRA: testing validation with negative value in resolution in args."""
+        """HRA: testing validation w/ negative value in resolution in args."""
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
@@ -1094,7 +1149,7 @@ class HraRegressionTests(unittest.TestCase):
     def _assert_vectors_equal(a_vector_path, b_vector_path, precision=6):
         """Assert that geometries in two vectors are equal, order-insensitive.
 
-        Parameters:
+        Args:
             a_vector_path (str): a path to a valid OGR vector.
             b_vector_path (str): a path to a valid OGR vector.
 
@@ -1125,8 +1180,8 @@ class HraRegressionTests(unittest.TestCase):
             b_geom_list = [float(x) for x in b_geom_list]
 
             try:
-                numpy.testing.assert_array_almost_equal(
-                    a_geom_list, b_geom_list, decimal=precision)
+                numpy.testing.assert_allclose(
+                    a_geom_list, b_geom_list, rtol=0, atol=10**-precision)
             except AssertionError:
                 a_feature_fid = a_feat.GetFID()
                 b_feature_fid = b_feat.GetFID()
