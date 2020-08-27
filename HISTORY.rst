@@ -22,8 +22,11 @@ Unreleased Changes
 * Datastack
     * Saved datastack archives now use helpful identifying names for spatial input folders
 * General
-    * Input table column headers are now insensitive to leading/trailing whitespace in 
+    * Input table column headers are now insensitive to leading/trailing whitespace in
       most places.
+    * Modified the script that produces a conda environment file from InVEST's python
+      requirements file so that it includes the ``conda-forge`` channel in the file
+      itself.
 
 3.8.7 (2020-07-17)
 ------------------
