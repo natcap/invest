@@ -22,8 +22,11 @@ Unreleased Changes
 * Datastack
     * Saved datastack archives now use helpful identifying names for spatial input folders
 * General
-    * Input table column headers are now insensitive to leading/trailing whitespace in 
+    * Input table column headers are now insensitive to leading/trailing whitespace in
       most places.
+    * Modified the script that produces a conda environment file from InVEST's python
+      requirements file so that it includes the ``conda-forge`` channel in the file
+      itself.
 * Recreation
     * Validate values in the type column of predictor tables early in execution. Raise
       a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
