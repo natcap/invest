@@ -27,6 +27,9 @@ Unreleased Changes
     * Modified the script that produces a conda environment file from InVEST's python
       requirements file so that it includes the ``conda-forge`` channel in the file
       itself.
+* Recreation
+    * Validate values in the type column of predictor tables early in execution. Raise
+      a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
 
 3.8.7 (2020-07-17)
 ------------------
