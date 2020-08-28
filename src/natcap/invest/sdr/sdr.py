@@ -987,17 +987,15 @@ def _calculate_w(
             lulc_to_c = lulc_to_c.copy()
             lulc_to_c[0] = 0.0
 
-    try:
-        pygeoprocessing.reclassify_raster(
-            (lulc_path, 1), lulc_to_c, w_factor_path, gdal.GDT_Float32,
-            _TARGET_NODATA, values_required=True)
-    except pygeoprocessing.ReclassificationMissingValuesError as err:
-        error_message = ("Values in the LULC raster were found that are not"
-                         " represented under the 'lucode' column of the"
-                         " Biophysical table. The missing values found in the"
-                         f" LULC but not the table are: {err.missing_values}.")
-        raise ValueError(error_message)
+    reclass_error_details = {
+        'raster_name': 'LULC',
+        'column_name': 'lucode',
+        'table_name': 'Biophysical'}
 
+    utils._reclassify_raster_op(
+        (lulc_path, 1), lulc_to_c, w_factor_path, gdal.GDT_Float32,
+        _TARGET_NODATA, values_required=True,
+        error_details=reclass_error_details)
 
     def threshold_w(w_val):
         """Threshold w to 0.001."""
@@ -1035,16 +1033,16 @@ def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
         # replace so 0 is used by default. Ensure this exists in lookup.
         if 0 not in lulc_to_cp:
             lulc_to_cp[0] = 0.0
-    try:
-        pygeoprocessing.reclassify_raster(
-            (lulc_path, 1), lulc_to_cp, cp_factor_path, gdal.GDT_Float32,
-            _TARGET_NODATA, values_required=True)
-    except pygeoprocessing.ReclassificationMissingValuesError as err:
-        error_message = ("Values in the LULC raster were found that are not"
-                         " represented under the 'lucode' column of the"
-                         " Biophysical table. The missing values found in the"
-                         f" LULC but not the table are: {err.missing_values}.")
-        raise ValueError(error_message)
+
+    reclass_error_details = {
+        'raster_name': 'LULC',
+        'column_name': 'lucode',
+        'table_name': 'Biophysical'}
+
+    utils._reclassify_raster_op(
+        (lulc_path, 1), lulc_to_cp, cp_factor_path, gdal.GDT_Float32,
+        _TARGET_NODATA, values_required=True, 
+        error_details=reclass_error_details)
 
 
 def _calculate_usle(
