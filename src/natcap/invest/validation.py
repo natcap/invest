@@ -292,6 +292,7 @@ def check_raster(filepath, projected=False, projection_units=None):
         A string error message if an error was found.  ``None`` otherwise.
 
     """
+    print('starting check_raster...')
     file_warning = check_file(filepath, permissions='r')
     if file_warning:
         return file_warning
@@ -312,6 +313,7 @@ def check_raster(filepath, projected=False, projection_units=None):
         return projection_warning
 
     gdal_dataset = None
+    print('check_raster finished.')
     return None
 
 

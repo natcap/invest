@@ -1836,7 +1836,9 @@ class InVESTModel(QtWidgets.QMainWindow):
             # We want to validate the whole form; discard the individual value
             self.validate(block=False)
 
+        print('validating...')
         self.validate(block=False)
+        print('done validating.')
         for input_obj in self.inputs:
             input_obj.value_changed.connect(_validate)
             try:
@@ -1888,6 +1890,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         if not self.window_title.filename:
             self.load_lastrun()
 
+        
         self.show()
         self.raise_()  # raise window to top of stack.
         self.validate(block=False)  # initial validation for the model
