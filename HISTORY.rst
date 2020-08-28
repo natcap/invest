@@ -88,6 +88,9 @@ Unreleased Changes
 * General
     * Input table column headers are now insensitive to leading/trailing whitespace in 
       most places.
+* Recreation
+    * Validate values in the type column of predictor tables early in execution. Raise
+      a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
 
 3.8.7 (2020-07-17)
 ------------------
