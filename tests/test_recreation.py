@@ -1182,7 +1182,7 @@ class RecreationValidationTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
 
         self.assertEqual(validation_warnings, [(['predictor_table_path'], 
-            "Fields are missing from this table: ['ID', 'PATH', 'TYPE']")])
+                                                 expected_message)])
 
         validation_warnings = recmodel_client.validate({
             'compute_regression': True,
@@ -1194,9 +1194,9 @@ class RecreationValidationTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
         
         self.assertEqual(validation_warnings, [(['predictor_table_path'], 
-            "Fields are missing from this table: ['ID', 'PATH', 'TYPE']"), 
-            (['scenario_predictor_table_path'], 
-              "Fields are missing from this table: ['ID', 'PATH', 'TYPE']")])
+                                                 expected_message), 
+                                               (['scenario_predictor_table_path'], 
+                                                 expected_message)])
 
 
 def _assert_vector_attributes_eq(
