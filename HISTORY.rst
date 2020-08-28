@@ -61,6 +61,11 @@ Unreleased Changes (3.9)
       than 1 to 1.
     * Fixing bug that was setting Threat raster values to 1 even if they were 
       floats between 0 and 1.
+    * Updating how threats are decayed across distance. Before, nodata edges 
+      were ignored causing values on the edges to maintain a higher threat
+      value. Now, the decay does not ignore those nodata edges causing values
+      on the edges to decay more quickly. The area of study should have 
+      adequate boundaries to account for these edge effects.
 * SDR:
   * Fixing an issue where the LS factor should be capped to an upstream area of
     333^2 m^2. In previous versions the LS factor was erroniously capped to
