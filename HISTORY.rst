@@ -85,6 +85,14 @@ Unreleased Changes
 * Seasonal Water Yield
     * Updated output file name from aggregated_results.shp to aggregated_results_swy.shp
       for consistency with NDR and SDR
+* Datastack
+    * Saved datastack archives now use helpful identifying names for spatial input folders
+* General
+    * Input table column headers are now insensitive to leading/trailing whitespace in 
+      most places.
+* Recreation
+    * Validate values in the type column of predictor tables early in execution. Raise
+      a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
 
 3.8.7 (2020-07-17)
 ------------------

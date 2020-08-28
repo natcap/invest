@@ -252,6 +252,8 @@ def execute(args):
                       with the response polygon in projected units of AOI
                     * 'polygon_area': area of the polygon contained within
                       response polygon in projected units of AOI
+                    * 'polygon_percent_coverage': percent (0-100) of area of 
+                      overlap between the predictor and each AOI grid cell
 
         args['scenario_predictor_table_path'] (string): (optional) if
             present runs the scenario mode of the recreation model with the
@@ -270,6 +272,8 @@ def execute(args):
         _validate_same_id_lengths(args['predictor_table_path'])
         _validate_same_projection(
             args['aoi_path'], args['predictor_table_path'])
+        _validate_predictor_types(args['predictor_table_path'])
+
     if ('predictor_table_path' in args and
             'scenario_predictor_table_path' in args and
             args['predictor_table_path'] != '' and
@@ -279,6 +283,7 @@ def execute(args):
             args['scenario_predictor_table_path'])
         _validate_same_projection(
             args['aoi_path'], args['scenario_predictor_table_path'])
+        _validate_predictor_types(args['scenario_predictor_table_path'])
 
     if int(args['end_year']) < int(args['start_year']):
         raise ValueError(
@@ -697,7 +702,7 @@ def _schedule_predictor_data_processing(
 
         predictor_path = _sanitize_path(
             predictor_table_path, predictor_table[predictor_id]['path'])
-        predictor_type = predictor_table[predictor_id]['type']
+        predictor_type = predictor_table[predictor_id]['type'].strip()
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
             raster_op_mode = predictor_type.split('_')[1]
@@ -1428,9 +1433,9 @@ def _validate_same_ids_and_types(
         scenario_predictor_table_path, 'id')
 
     predictor_table_pairs = set([
-        (p_id, predictor_table[p_id]['type']) for p_id in predictor_table])
+        (p_id, predictor_table[p_id]['type'].strip()) for p_id in predictor_table])
     scenario_predictor_table_pairs = set([
-        (p_id, scenario_predictor_table[p_id]['type']) for p_id in
+        (p_id, scenario_predictor_table[p_id]['type'].strip()) for p_id in
         scenario_predictor_table])
     if predictor_table_pairs != scenario_predictor_table_pairs:
         raise ValueError(
@@ -1458,8 +1463,8 @@ def _validate_same_projection(base_vector_path, table_path):
     """
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
-    data_paths = pandas.read_csv(
-        table_path, squeeze=True, usecols=['path']).tolist()
+    data_paths = utils.read_csv_to_dataframe(
+        table_path, to_lower=True, squeeze=True)['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
@@ -1500,6 +1505,33 @@ def _validate_same_projection(base_vector_path, table_path):
         raise ValueError(
             "One or more of the projections in the table did not match the "
             "projection of the base vector")
+
+
+def _validate_predictor_types(table_path):
+    """Validate the type values in a predictor table.
+
+    Args:
+        table_path (string): path to a csv table that has at least
+            the field 'type' 
+
+    Returns:
+        None
+
+    Raises:
+        ValueError if any value in the ``type`` column does not match a valid
+        type, ignoring leading/trailing whitespace.
+    """
+    df = utils.read_csv_to_dataframe(table_path, to_lower=True)
+    # ignore leading/trailing whitespace because it will be removed
+    # when the type values are used
+    type_list = set([type.strip() for type in df['type']])
+    valid_types = set({'raster_mean', 'raster_sum', 'point_count', 
+                   'point_nearest_distance', 'line_intersect_length',
+                   'polygon_area_coverage', 'polygon_percent_coverage'})
+    difference = type_list.difference(valid_types)
+    if difference:
+        raise ValueError('The table contains invalid type value(s): '
+            f'{difference}. The allowed types are: {valid_types}')
 
 
 def delay_op(last_time, time_delay, func):
