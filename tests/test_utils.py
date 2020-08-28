@@ -1449,7 +1449,7 @@ class ReclassifyRasterOpTests(unittest.TestCase):
         origin = (1180000, 690000)
         raster_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
         
-        array = numpy.array([[1,1,1], [2,2,2], [3,3,3]])
+        array = numpy.array([[1,1,1], [2,2,2], [3,3,3]], dtype=numpy.int32)
 
         pygeoprocessing.numpy_array_to_raster(
             array, -1, (1, -1), origin, projection_wkt, raster_path)
@@ -1477,7 +1477,7 @@ class ReclassifyRasterOpTests(unittest.TestCase):
         origin = (1180000, 690000)
         raster_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
         
-        array = numpy.array([[1,1,1], [2,2,2], [3,3,3]])
+        array = numpy.array([[1,1,1], [2,2,2], [3,3,3]], dtype=numpy.int32)
 
         pygeoprocessing.numpy_array_to_raster(
             array, -1, (1, -1), origin, projection_wkt, raster_path)
