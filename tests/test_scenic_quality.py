@@ -776,6 +776,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
             'max_valuation_radius': None,  # covers missing value.
             'structure_path': 'vector/missing',
             'valuation_function': 'bad function',
+            'do_valuation': True
         }
 
         validation_errors = scenic_quality.validate(args)

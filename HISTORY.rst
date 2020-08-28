@@ -21,6 +21,9 @@ Unreleased Changes
       for consistency with NDR and SDR
 * Datastack
     * Saved datastack archives now use helpful identifying names for spatial input folders
+* Validation
+    * Fixed bug that caused fields activated by a checkbox to make validation fail, 
+      even when the checkbox was unchecked.
 * General
     * Input table column headers are now insensitive to leading/trailing whitespace in
       most places.

@@ -622,7 +622,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'price_table': True,
             'wind_schedule': os.path.join(
                 SAMPLE_DATA, 'price_table_example.csv'),
-            'suffix': '_test'
+            'results_suffix': '_test'
         }
 
         # creating a stand in global wind params table that has a different
@@ -678,7 +678,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'price_table': True,
             'wind_schedule': os.path.join(
                 SAMPLE_DATA, 'price_table_example.csv'),
-            'suffix': '_test'
+            'results_suffix': '_test'
         }
 
         # creating a stand in turbine parameter csv file that is missing
