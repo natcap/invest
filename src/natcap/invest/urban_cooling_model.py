@@ -1169,7 +1169,10 @@ def calculate_wbgt(
 
     def wbgt_op(avg_rel_humidity, t_air_array):
         wbgt = numpy.empty(t_air_array.shape, dtype=numpy.float32)
-        valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
+        
+        valid_mask = slice(None)
+        if t_air_nodata is not None:
+            valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
         wbgt[:] = TARGET_NODATA
         t_air_valid = t_air_array[valid_mask]
         e_i = (
