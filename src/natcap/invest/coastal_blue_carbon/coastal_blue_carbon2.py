@@ -592,10 +592,12 @@ def execute(args):
 
     # Reclassify transitions appropriately for each transition year.
     halflife_rasters = {}
+    disturbance_magnitude_rasters = {}
     prior_transition_year = baseline_lulc_year
     for current_transition_year in sorted(transitions):
         yearly_accum_rasters[current_transition_year] = {}
         halflife_rasters[current_transition_year] = {}
+        disturbance_magnitude_rasters[current_transition_year] = {}
 
         for pool in (POOL_BIOMASS, POOL_SOIL):
             # When carbon is emitted after a transition year, its halflife
@@ -638,6 +640,26 @@ def execute(args):
                 task_name=(
                     f'Mapping {pool} carbon accumulation for {year}'))
 
+            disturbance_magnitude_rasters[
+                current_transition_year][pool] = os.path.join(
+                    intermediate_dir, DISTURBANCE_VOL_RASTER_PATTERN.format(
+                        pool=pool, year=current_transition_year,
+                        suffix=suffix))
+            # this is _actually_ the magnitude, not the magnitude multiplied by
+            # the stocks.
+            disturbance_magnitude_task = task_graph.add_task(
+                func=_reclassify_disturbance_magnitude,
+                args=(aligned_lulc_paths[prior_transition_year],
+                      aligned_lulc_paths[current_transition_year],
+                      disturbance_matrices[pool],
+                      disturbance_magnitude_rasters[current_transition_year][pool]),
+                dependent_task_list=[alignment_task],
+                target_path_list=[
+                    disturbance_magnitude_rasters[current_transition_year][pool]],
+                task_name=(
+                    f'map {pool} carbon disturbance {prior_transition_year} '
+                    f'to {current_transition_year}'))
+
         # Litter accumulation is a simple reclassification because it really
         # isn't affected by transitions as soil and biomass carbon are.
         yearly_accum_rasters[
@@ -668,7 +690,7 @@ def execute(args):
         'suffix': suffix,
         'n_workers': n_workers,
         'transition_years': transition_years,
-        'disturbance_magnitude_rasters': None,  # TODO
+        'disturbance_magnitude_rasters': disturbance_magnitude_rasters,
         'half_life_rasters': halflife_rasters,
         'annual_rate_of_accumulation_rasters': yearly_accum_rasters,
         'carbon_prices_per_year': prices,
@@ -1714,6 +1736,65 @@ def _reclassify_disturbance_transition(
         [(landuse_transition_from_raster, 1),
             (landuse_transition_to_raster, 1),
             (carbon_storage_raster, 1)], _reclassify_disturbance,
+        target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32)
+
+
+def _reclassify_disturbance_magnitude(
+        landuse_transition_from_raster, landuse_transition_to_raster,
+        disturbance_magnitude_matrix, target_raster_path):
+    """Calculate the volume of carbon disturbed in a transition.
+
+    This function calculates the magnitude of disturbed carbon for each
+    landcover transitioning from one landcover type to a disturbance type.
+    The magnitude of the disturbance is in ``disturbance_magnitude_matrix``.
+
+    Args:
+        landuse_transition_from_raster (string): An integer landcover
+            raster representing landcover codes that we are transitioning FROM.
+        landuse_transition_to_raster (string): An integer landcover
+            raster representing landcover codes that we are transitioning TO.
+        disturbance_magnitude_matrix (scipy.sparse.dok_matrix): A sparse matrix
+            where axis 0 represents the integer landcover codes being
+            transitioned from and axis 1 represents the integer landcover codes
+            being transitioned to.  The values at the intersection of these
+            coordinate pairs are ``numpy.float32`` values representing the
+            magnitude of the disturbance in a given carbon stock during this
+            transition.
+        target_raster_path (string): The path to where the output raster should
+            be stored on disk.
+
+    Returns:
+        ``None``
+    """
+    from_nodata = pygeoprocessing.get_raster_info(
+        landuse_transition_from_raster)['nodata'][0]
+    to_nodata = pygeoprocessing.get_raster_info(
+        landuse_transition_to_raster)['nodata'][0]
+
+    def _reclassify_disturbance(
+            landuse_transition_from_matrix, landuse_transition_to_matrix):
+        output_matrix = numpy.empty(landuse_transition_from_matrix.shape,
+                                    dtype=numpy.float32)
+        output_matrix[:] = NODATA_FLOAT32
+
+        valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
+                                  dtype=numpy.bool)
+        if from_nodata is not None:
+            valid_pixels &= (landuse_transition_from_matrix != from_nodata)
+
+        if to_nodata is not None:
+            valid_pixels &= (landuse_transition_to_matrix != to_nodata)
+
+        disturbance_magnitude = disturbance_magnitude_matrix[
+            landuse_transition_from_matrix[valid_pixels],
+            landuse_transition_to_matrix[valid_pixels]].toarray().flatten()
+
+        output_matrix[valid_pixels] = disturbance_magnitude
+        return output_matrix
+
+    pygeoprocessing.raster_calculator(
+        [(landuse_transition_from_raster, 1),
+            (landuse_transition_to_raster, 1)], _reclassify_disturbance,
         target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32)
 
 
