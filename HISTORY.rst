@@ -16,14 +16,22 @@ Unreleased Changes
       coefficient is assumed if any single value is left blank.
 * HRA
     * Raise ValueError if habitat or stressor inputs are not projected.
+    * Make sample data rating filepaths work on Mac. If not on Windows and a rating
+      filepath isn't found, try replacing all backslashes with forward slashes.
 * Seasonal Water Yield
     * Updated output file name from aggregated_results.shp to aggregated_results_swy.shp
       for consistency with NDR and SDR
 * Datastack
     * Saved datastack archives now use helpful identifying names for spatial input folders
+* Validation
+    * Fixed bug that caused fields activated by a checkbox to make validation fail, 
+      even when the checkbox was unchecked.
 * General
-    * Input table column headers are now insensitive to leading/trailing whitespace in 
+    * Input table column headers are now insensitive to leading/trailing whitespace in
       most places.
+    * Modified the script that produces a conda environment file from InVEST's python
+      requirements file so that it includes the ``conda-forge`` channel in the file
+      itself.
 * Recreation
     * Validate values in the type column of predictor tables early in execution. Raise
       a ValueError if a type value isn't valid (leading/trailing whitespace is okay).

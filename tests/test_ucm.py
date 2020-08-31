@@ -282,8 +282,6 @@ class UCMTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
             'results_suffix': 'test_suffix',
             't_ref': 35.0,
-            't_obs_raster_path': os.path.join(
-                REGRESSION_DATA, "Tair_Sept.tif"),
             'lulc_raster_path': os.path.join(
                 REGRESSION_DATA, "LULC_SFBA.tif"),
             'ref_eto_raster_path': os.path.join(
