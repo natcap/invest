@@ -5,6 +5,7 @@ from unittest.mock import Mock
 import os
 import shutil
 import string
+import time
 
 from osgeo import gdal, osr, ogr
 import pandas
@@ -198,6 +199,30 @@ class ValidatorTest(unittest.TestCase):
         self.assertTrue(validation_errors[0][0] == ['n_workers'])
         self.assertTrue('could not be interpreted as a number'
                         in validation_errors[0][1])
+
+    def test_timeout_succeed(self):
+        from natcap.invest import validation
+
+        # both args and the kwarg should be passed to the function
+        def func(arg1, arg2, kwarg=None):
+            self.assertEqual(kwarg, 'kwarg')
+            time.sleep(1)
+
+        # this will raise an error if the timeout is exceeded
+        # timeout defaults to 5 seconds so this should pass
+        validation.timeout(func, 'arg1', 'arg2', kwarg='kwarg')
+
+    def test_timeout_fail(self):
+        from natcap.invest import validation
+
+        # both args and the kwarg should be passed to the function
+        def func():
+            time.sleep(10)
+
+        # this will raise an error if the timeout is exceeded
+        # timeout defaults to 5 seconds so this should fail
+        with self.assertRaises(RuntimeError):
+            validation.timeout(func)
 
 
 class DirectoryValidation(unittest.TestCase):

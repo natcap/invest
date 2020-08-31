@@ -6,6 +6,8 @@ import logging
 import pprint
 import os
 import re
+import threading
+import functools
 import importlib
 
 import pygeoprocessing
@@ -292,7 +294,6 @@ def check_raster(filepath, projected=False, projection_units=None):
         A string error message if an error was found.  ``None`` otherwise.
 
     """
-    print('starting check_raster...')
     file_warning = check_file(filepath, permissions='r')
     if file_warning:
         return file_warning
@@ -313,7 +314,6 @@ def check_raster(filepath, projected=False, projection_units=None):
         return projection_warning
 
     gdal_dataset = None
-    print('check_raster finished.')
     return None
 
 
@@ -598,17 +598,45 @@ def check_spatial_overlap(spatial_filepaths_list,
     return None
 
 
+def timeout(func, *args, timeout=5, **kwargs):
+    """Stop a function after a given amount of time.
+
+    Args:
+        func (function): function to apply the timeout to
+        args: arguments to pass to the function
+        timeout (number): how many seconds to allow the function to run.
+            Defaults to 5.
+
+    Returns:
+        None
+
+    Raises:
+    """
+    thread = threading.Thread(target=func, args=args, kwargs=kwargs)
+    LOGGER.info(f'Starting file checking thread with timeout={timeout}')
+    thread.start()
+    thread.join(timeout=float(timeout))
+    if thread.is_alive():
+        LOGGER.error('File checking thread timed out.')
+        raise RuntimeError('Thread timed out.')
+    else:
+        LOGGER.info('File checking thread completed.')
+
+
+# checks that open a file could potentially take a long time
+# to prevent the UI from hanging due to slow validation,
+# set a timeout for these functions.
 _VALIDATION_FUNCS = {
     'boolean': check_boolean,
-    'csv': check_csv,
+    'csv': functools.partial(timeout, check_csv),
     'file': check_file,
     'folder': check_directory,
     'directory': check_directory,
     'freestyle_string': check_freestyle_string,
     'number': check_number,
     'option_string': check_option_string,
-    'raster': check_raster,
-    'vector': check_vector,
+    'raster': functools.partial(timeout, check_raster),
+    'vector': functools.partial(timeout, check_vector),
     'other': None,  # Up to the user to define their validate()
 }
 
@@ -639,6 +667,7 @@ def validate(args, spec, spatial_overlap_opts=None):
         found, an empty list is returned.
 
     """
+    print('in validation.validate')
     validation_warnings = []
 
     # step 1: check absolute requirement
