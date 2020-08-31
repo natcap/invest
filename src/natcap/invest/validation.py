@@ -667,7 +667,6 @@ def validate(args, spec, spatial_overlap_opts=None):
         found, an empty list is returned.
 
     """
-    print('in validation.validate')
     validation_warnings = []
 
     # step 1: check absolute requirement

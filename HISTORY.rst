@@ -27,6 +27,10 @@ Unreleased Changes
 * Recreation
     * Validate values in the type column of predictor tables early in execution. Raise
       a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
+* Validation
+    * Set a timeout on validation functions that open a file. This will raise an error to
+      prevent the UI from hanging if a file has to be downloaded from Google Drive File
+      Stream or a similar service.
 
 3.8.7 (2020-07-17)
 ------------------
