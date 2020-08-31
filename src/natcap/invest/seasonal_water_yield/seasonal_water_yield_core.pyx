@@ -441,19 +441,23 @@ cpdef calculate_local_recharge(
     raster_x_size, raster_y_size = flow_dir_raster_info['raster_size']
     cdef _ManagedRaster flow_raster = _ManagedRaster(flow_dir_mfd_path, 1, 0)
 
+    # make sure that user input nodata values are defined
+    # set to -1 if not defined
+    # precipitation and evapotranspiration data should 
+    # always be non-negative
     et0_m_raster_list = []
     et0_m_nodata_list = []
     for et0_path in et0_path_list:
         et0_m_raster_list.append(_ManagedRaster(et0_path, 1, 0))
         et0_m_nodata_list.append(
-            pygeoprocessing.get_raster_info(et0_path)['nodata'][0])
+            pygeoprocessing.get_raster_info(et0_path)['nodata'][0] or -1)
 
     precip_m_raster_list = []
     precip_m_nodata_list = []
     for precip_m_path in precip_path_list:
         precip_m_raster_list.append(_ManagedRaster(precip_m_path, 1, 0))
         precip_m_nodata_list.append(
-            pygeoprocessing.get_raster_info(precip_m_path)['nodata'][0])
+            pygeoprocessing.get_raster_info(precip_m_path)['nodata'][0] or -1)
 
     qf_m_raster_list = []
     qf_m_nodata_list = []
@@ -620,14 +624,6 @@ cpdef calculate_local_recharge(
                         precip_nodata = precip_m_nodata_list[m_index]
                         qf_nodata = qf_m_nodata_list[m_index]
                         kc_nodata = kc_m_nodata_list[m_index]
-
-                        # make sure that user input nodata values are defined
-                        # precipitation and evapotranspiration data should 
-                        # always be non-negative
-                        if precip_nodata is None:
-                            precip_nodata = -1
-                        if et0_nodata is None:
-                            et0_nodata = -1
 
                         p_m = precip_m_raster.get(xi, yi)
                         if not is_close(p_m, precip_nodata):
