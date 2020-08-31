@@ -32,7 +32,7 @@ jobs:
         runs-on: windows-latest
         env:
             PYTHON_VERSION: 3.7
-            PYTHON_ARCH: x86
+            PYTHON_ARCH: x64
         steps:
             - uses: actions/checkout@v2
               with:
@@ -156,7 +156,7 @@ jobs:
         runs-on: macos-10.15
         env:
             PYTHON_VERSION: 3.7
-            PYTHON_ARCH: x86
+            PYTHON_ARCH: x64
         steps:
             - uses: actions/checkout@v2
               with:
