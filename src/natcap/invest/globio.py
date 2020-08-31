@@ -954,7 +954,7 @@ def _collapse_infrastructure_layers(
         nodata_mask = numpy.full(infrastructure_array_list[0].shape, True)
         infrastructure_mask = numpy.full(infrastructure_array_list[0].shape, False)
 
-        for index in range(0, len(infrastructure_array_list)):
+        for index in range(len(infrastructure_array_list)):
             # mark all pixels True that have infrastructure in this layer
             infrastructure_mask |= infrastructure_array_list[index] > 0
             if infrastructure_nodata_list[index] is not None:
