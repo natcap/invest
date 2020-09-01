@@ -690,6 +690,47 @@ class CSVValidation(unittest.TestCase):
             target_file, required_fields=['field_a'], excel_ok=False)
         self.assertTrue('could not be opened as a CSV' in error_msg)
 
+    def test_slow_to_open(self):
+        """Test timeout by mocking a CSV that is slow to open"""
+        from natcap.invest import validation
+
+        # make an actual file so that `check_file` will pass
+        path = os.path.join(self.workspace_dir, 'slow.csv')
+        with open(path, 'w') as file:
+            file.write('1,2,3')
+
+        # define a side effect for the mock that will sleep
+        # for longer than the allowed timeout
+        def delay(*args, **kwargs):
+            time.sleep(10)
+
+        # a fake spec with just one key
+        spec = {
+            "mock_csv_path": {
+                "type": "csv",
+                "required": True,
+                "about": "A CSV that will be mocked.",
+                "name": "CSV"
+            }
+        }
+
+        # validate a mocked CSV that will take 10 seconds to return a value
+        args = {"mock_csv_path": path}
+
+        # make a mock function to replace pandas.read_csv
+        # this will sleep for 10 seconds, then return a dataframe
+        mock_read_csv = unittest.mock.Mock(
+            side_effect=delay, 
+            return_value=pandas.DataFrame([['1','2','3']]))
+
+        # replace the copy of pandas.read_csv that's in the validation module
+        # with the mock function, and try to validate
+        with unittest.mock.patch('natcap.invest.validation.pandas.read_csv', mock_read_csv):
+            warning_messages = validation.validate(args, spec)
+            self.assertTrue(len(warning_messages) == 1)
+            self.assertTrue('Validation of this file timed out' in 
+                            warning_messages[0][1])
+
 
 class TestValidationFromSpec(unittest.TestCase):
     def setUp(self):

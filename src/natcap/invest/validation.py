@@ -526,7 +526,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         # use sep=None, engine='python' to infer what the separator is
         dataframe = pandas.read_csv(
             filepath, sep=None, engine='python', encoding=encoding)
-    except Exception:
+    except Exception as e:
         if excel_ok:
             try:
                 dataframe = pandas.read_excel(filepath)
@@ -628,10 +628,7 @@ def timeout(func, *args, timeout=5, **kwargs):
     thread.join(timeout=timeout)
 
     if thread.is_alive():
-        raise RuntimeError('File checking thread timed out. If your input '
-                           'files are stored in a file-streaming service, '
-                           'it may be taking too long to download. Try '
-                           'storing them locally.')
+        raise RuntimeError('File checking thread timed out.')
     else:
         LOGGER.info('File checking thread completed.')
         # get any warning messages returned from the thread
@@ -803,12 +800,18 @@ def validate(args, spec, spatial_overlap_opts=None):
             if warning_msg:
                 validation_warnings.append(([key], warning_msg))
                 invalid_keys.add(key)
-        except Exception:
+        except Exception as ex:
             LOGGER.exception(
                 'Error when validating key %s with value %s',
                 key, args[key])
+            if str(ex) == 'File checking thread timed out.':
+                warning_msg = ('Validation of this file timed out. If this '
+                    'file is stored in a file-streaming service, it may be '
+                    'taking too long to download. Try storing it locally.')
+            else:
+                warning_msg = 'An unexpected error occurred in validation'
             validation_warnings.append(
-                ([key], 'An unexpected error occurred in validation'))
+                ([key], warning_msg))
     # step 5: check spatial overlap if applicable
     if spatial_overlap_opts:
         spatial_keys = set(spatial_overlap_opts['spatial_keys'])
