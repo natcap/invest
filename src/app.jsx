@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -91,8 +92,8 @@ export default class App extends React.Component {
     });
   }
 
-  openInvestModel(modelRunName, argsValues, logfile, sessionID) {
-    const navID = sessionID || modelRunName;
+  openInvestModel(modelRunName, argsValues, logfile) {
+    const navID = crypto.randomBytes(16).toString('hex');
     this.setState((state) => ({
       openJobs: [
         ...state.openJobs,
