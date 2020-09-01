@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Tail } from 'tail';
 import os from 'os';
-import { shell } from 'electron';
+import { shell } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -10,8 +10,9 @@ import Container from 'react-bootstrap/Container';
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 
-import { getLogger } from '../../logger'
-const logger = getLogger(__filename.split('/').slice(-2).join('/'))
+import { getLogger } from '../../logger';
+
+const logger = getLogger(__filename.split('/').slice(-2).join('/'));
 
 const logStyle = {
   whiteSpace: 'pre-line',
@@ -20,7 +21,6 @@ const logStyle = {
 };
 
 class LogDisplay extends React.Component {
-
   constructor(props) {
     super(props);
     this.content = React.createRef();
@@ -35,92 +35,98 @@ class LogDisplay extends React.Component {
       <Col ref={this.content} style={logStyle}>
         {this.props.logdata}
       </Col>
-      );
+    );
   }
 }
 
 LogDisplay.propTypes = {
-  logdata: PropTypes.string
-}
+  logdata: PropTypes.string,
+};
 
-export class LogTab extends React.Component {
-
+export default class LogTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      logdata: ''
-    }
+      logdata: '',
+    };
     this.tail = null;
     this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
   }
 
   componentDidUpdate(prevProps) {
+    const { logfile } = this.props;
     // if there is a logfile and it's new, start tailing the file.
-    if (this.props.logfile && prevProps.logfile !== this.props.logfile) {
+    if (logfile && (prevProps.logfile !== logfile)) {
       try {
-        this.tail = new Tail(this.props.logfile, {
+        this.tail = new Tail(logfile, {
           fromBeginning: true
         });
         let logdata = Object.assign('', this.state.logdata);
         this.tail.on('line', (data) => {
-          logdata += `${data}` + os.EOL
-          this.setState({ logdata: logdata })
-        })
-      } catch(error) {
+          logdata += `${data}${os.EOL}`;
+          this.setState({ logdata: logdata });
+        });
+      } catch (error) {
         // in case a recent session was loaded but the logfile
-        // no longer exists 
-        this.setState({logdata: `Logfile is missing: ${os.EOL}${this.props.logfile}`})
-        logger.error(`Not able to read ${this.props.logfile}`)
-        logger.error(error.stack)
+        // no longer exists
+        this.setState({
+          logdata: `Logfile is missing: ${os.EOL}${logfile}`
+        });
+        logger.error(`Not able to read ${logfile}`);
+        logger.error(error.stack);
       }
 
     // No new logfile. No existing logdata.
     } else if (this.state.logdata === '') {
-      this.setState({logdata: 'Starting...'})
+      this.setState({ logdata: 'Starting...' });
 
-    // No new logfile. Existing logdata. Invest process exited. 
+    // No new logfile. Existing logdata. Invest process exited.
     } else if (['success', 'error'].includes(this.props.jobStatus)) {
       try {
-        this.tail.unwatch()
-      }
-      catch(error) {
-        logger.error(error.stack)
+        this.tail.unwatch();
+      } catch (error) {
+        logger.error(error.stack);
       }
     }
   }
 
   handleOpenWorkspace() {
-    shell.showItemInFolder(this.props.logfile)
+    shell.showItemInFolder(this.props.logfile);
   }
 
-  render() {    
+  render() {
     let RenderedAlert;
-    const WorkspaceButton = <Button className='float-right float-bottom'
-      variant='outline-dark'
-      onClick={this.handleOpenWorkspace}
-      disabled={this.props.jobStatus === 'running'}>
-      Open Workspace
-    </Button>
+    const WorkspaceButton = (
+      <Button
+        className="float-right float-bottom"
+        variant="outline-dark"
+        onClick={this.handleOpenWorkspace}
+        disabled={this.props.jobStatus === 'running'}
+      >
+        Open Workspace
+      </Button>
+    );
 
     if (this.props.jobStatus === 'error') {
-      RenderedAlert = <Alert className='py-4 mt-3'
-        variant={'danger'}>
-        {this.props.logStdErr}
-        {WorkspaceButton}
-      </Alert>
+      RenderedAlert = (
+        <Alert className="py-4 mt-3" variant="danger">
+          {this.props.logStdErr}
+          {WorkspaceButton}
+        </Alert>
+      );
     } else if (this.props.jobStatus === 'success') {
-      RenderedAlert = <Alert className='py-4 mt-3'
-        variant={'success'}>
-        <span>Model Completed</span>
-        {WorkspaceButton}
-      </Alert>
+      RenderedAlert = (
+        <Alert className="py-4 mt-3" variant="success">
+          <span>Model Completed</span>
+          {WorkspaceButton}
+        </Alert>
+      );
     }
-
 
     return (
       <Container>
         <Row>
-          <LogDisplay logdata={this.state.logdata}/>
+          <LogDisplay logdata={this.state.logdata} />
         </Row>
         <Row>
           <Col>
@@ -135,5 +141,10 @@ export class LogTab extends React.Component {
 LogTab.propTypes = {
   jobStatus: PropTypes.string,
   logfile: PropTypes.string,
-  logStdErr: PropTypes.string
-}
+  logStdErr: PropTypes.string,
+};
+LogTab.defaultProps = {
+  jobStatus: undefined,
+  logfile: undefined,
+  logStdErr: undefined,
+};

@@ -69,12 +69,6 @@ test('Test loadRecentSessions returns correct order', async() => {
   cleanupDir(dir)
 })
 
-test('Test loadRecentSessions: database is missing', async() => {
-  const jobdbPath = 'foo.json';
-  const jobs = await loadRecentSessions(jobdbPath);
-  expect(jobs).toEqual([])
-})
-
 test('Test updateRecentSessions returns correct order', async() => {
   const jobData = {
     "carbon_setup": {

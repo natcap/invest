@@ -2,15 +2,14 @@ import fs from 'fs';
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import { InvestJob } from './InvestJob';
-import { getInvestList, getFlaskIsReady } from './server_requests';
+import InvestJob from './InvestJob';
+import { getInvestList } from './server_requests';
 import { updateRecentSessions, loadRecentSessions } from './utils';
 
+/** This component manages any application state that should persist
+ * and be independent from properties of a single invest job.
+ */
 export default class App extends React.Component {
-  /** This component manages any application state that should persist
-  * and be independent from properties of a single invest job.
-  */
-
   constructor(props) {
     super(props);
     this.state = {
@@ -22,60 +21,57 @@ export default class App extends React.Component {
     this.saveSettings = this.saveSettings.bind(this);
   }
 
+  /** Initialize the list of available invest models and recent invest jobs. */
   async componentDidMount() {
-    /** Initialize the list of available invest models and recent invest jobs.*/
-
-    // Inexplicably, when getFlaskIsReady is immediately followed by getInvestList,
-    // ~50% of the time getInvestList is called but never returns, or even calls fetch.
-    // Adding even a 1ms pause between calls avoids that problem, as does not
-    // calling getFlaskIsReady. Unless we observe the app trying getInvestList
-    // before flask is ready, we don't need getFlaskIsReady anyway.
-    // const readydata = await getFlaskIsReady(); 
-    // await new Promise(resolve => setTimeout(resolve, 1));
+    const { jobDatabase } = this.props;
     const investList = await getInvestList();
-    const recentSessions = await loadRecentSessions(this.props.jobDatabase)
-    // TODO: also load and set investSettings from a cached state, instead 
+    let recentSessions = [];
+    if (fs.existsSync(jobDatabase)) {
+      recentSessions = await loadRecentSessions(jobDatabase);
+    }
+    // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?
 
-    // const version = this.props.investRegistry['active']
-    // const investEXE = this.props.investRegistry['registry'][version]['invest']
-    this.setState(
-      {
-        investList: investList,
-        recentSessions: recentSessions,
-        investSettings: {
-          nWorkers: '-1',
-          loggingLevel: 'INFO',
-        }
-      });
+    this.setState({
+      investList: investList,
+      recentSessions: recentSessions,
+      investSettings: {
+        nWorkers: '-1',
+        loggingLevel: 'INFO',
+      },
+    });
   }
 
+  /** Update the recent sessions list when a new invest job was saved.
+   * This triggers on InvestJob.saveState().
+   *
+   * @param {object} jobdata - the metadata describing an invest job.
+   */
   async setRecentSessions(jobdata) {
-    /** Update the recent sessions list when a new invest job was saved.
-    * This triggers on InvestJob.saveState().
-    * 
-    * @param {object} jobdata - the metadata describing an invest job.
-    */
-    const recentSessions = await updateRecentSessions(jobdata, this.props.jobDatabase);
+    const recentSessions = await updateRecentSessions(
+      jobdata, this.props.jobDatabase
+    );
     this.setState({
-      recentSessions: recentSessions
-    })
+      recentSessions: recentSessions,
+    });
   }
 
   saveSettings(settings) {
     this.setState({
-      investSettings: settings
+      investSettings: settings,
     });
   }
 
   render() {
+    const { investExe, jobDatabase } = this.props;
+    const { investList, investSettings, recentSessions } = this.state;
     return (
       <InvestJob
-        investExe={this.props.investExe} 
-        investList={this.state.investList}
-        investSettings={this.state.investSettings}
-        recentSessions={this.state.recentSessions}
-        jobDatabase={this.props.jobDatabase}
+        investExe={investExe}
+        investList={investList}
+        investSettings={investSettings}
+        recentSessions={recentSessions}
+        jobDatabase={jobDatabase}
         updateRecentSessions={this.setRecentSessions}
         saveSettings={this.saveSettings}
       />
@@ -84,5 +80,6 @@ export default class App extends React.Component {
 }
 
 App.propTypes = {
-  jobDatabase: PropTypes.string
-}
+  investExe: PropTypes.string.isRequired,
+  jobDatabase: PropTypes.string,
+};

@@ -7,6 +7,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 4
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         node-version: [12.x]
@@ -14,22 +15,103 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-    
+
     - name: Install Node.js
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-
-    - name: Download invest binaries
+    
+    - name: Set env var for invest version
       shell: bash
-      # "-- <arg>" in run passes the arg through to the script
+      run: echo ::set-env name=INVEST_VERSION::$(jq -r .invest.version package.json)
+
+    - name: Clone natcap/invest
+      uses: actions/checkout@v2
+      with:
+        repository: natcap/invest
+        ref: refs/tags/${{env.INVEST_VERSION}}
+        path: ./invest
+
+    - name: Set up conda for non-Windows
+      uses: goanpeca/setup-miniconda@v1.1.2
+      if: matrix.os != 'windows-latest'
+      with:
+        activate-environment: invest-env  # This is also hardcoded in Pyinstaller's invest.spec
+        auto-update-conda: true
+        python-version: 3.7
+        channels: conda-forge
+
+    - name: Install python dependencies for non-Windows
+      if: matrix.os != 'windows-latest'
+      shell: bash -l {0}
+      working-directory: ./invest
       run: |
-        npm run prebuilt-invest -- ${{ matrix.os }}
-        unzip ./build/binaries.zip -d ./build
-        rm ./build/binaries.zip
+          conda upgrade -y pip setuptools
+          conda install toml requests
+          conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+          python ./scripts/convert-requirements-to-conda-yml.py \
+                requirements.txt \
+                requirements-dev.txt > requirements-all.yml
+          conda env update --file requirements-all.yml
+
+          # Libtiff from conda defaults channel gets around issue with missing libwebp
+          conda install --yes libtiff
+
+          # The dependencies not required by natcap.invest
+          conda install flask
+
+    - name: Set up Windows python
+      if: matrix.os == 'windows-latest'
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+        architecture: x64
+
+    - name: Install python build dependencies for Windows
+      if: matrix.os == 'windows-latest'
+      working-directory: ./invest
+      shell: bash -l {0}
+      run: |
+          python -m pip install --upgrade pip nose setuptools toml twine ${{ matrix.numpy }}
+          pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+
+    - name: Install python runtime dependencies for Windows
+      if: matrix.os == 'windows-latest'
+      working-directory: ./invest
+      shell: bash -l {0}
+      env:
+        PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
+        PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
+        PIP_PREFER_BINARY: 1
+        SITE_PACKAGES: "C:/hostedtoolcache/windows/Python/3.7.8/x64/lib/site-packages"
+      run: |
+        python -m pip install -r requirements.txt -r requirements-dev.txt
+        pip install flask
+        cp ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos_c.dll ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos.dll
+    
+    - name: Install natcap.invest python package
+      shell: bash -l {0}
+      working-directory: ./invest
+      run: |
+          make install
+
+    - name: Freeze Python environment
+      shell: bash -l {0}
+      run: |
+        python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec
+
+    - name: NPM Install
+      run: npm install
+
+      # Also run all tests on the build dir code?
+
+    - name: Run tests that require binaries
+      shell: bash -l {0}
+      run: npm run test-binaries
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
+      if: ${{ always() }}
       with:
         build_script_name: build
         args: -c.extraMetadata.main=build/main.js
@@ -40,6 +122,8 @@ jobs:
     
     - name: Upload installer artifacts
       uses: actions/upload-artifact@v2-preview
+      if: ${{ always() }}
       with:
         name: invest-desktop-${{ matrix.os }}
         path: dist/invest-desktop_*
+

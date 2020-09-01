@@ -5,10 +5,10 @@ on: [push, pull_request]
 jobs:
   run-tests:
     name: "run jest tests"
-    runs-on: ubuntu-latest
-
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest]
         node-version: [12.x]
 
     steps:
@@ -19,6 +19,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - name: install environment
       run: npm install
+
     - name: run tests
       run: npm test
       env:

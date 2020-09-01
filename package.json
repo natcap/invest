@@ -8,12 +8,12 @@
   "scripts": {
     "start": "cross-env FLASK_APP=src/server.py npx electron . --dev",
     "lint": "eslint --cache --color --ext .jsx,.js src",
-    "test": "jest",
+    "test": "cross-env DEBUG_PRINT_LIMIT=10 jest --verbose tests/*.test.js",
+    "test-binaries": "jest tests/binary_tests/*",
     "postinstall": "electron-builder install-app-deps",
     "build": "npx ./build.js",
     "dist": "electron-builder -c.extraMetadata.main=build/main.js",
-    "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js",
-    "prebuilt-invest": "npx ./scripts/get_invest_binaries_gcs.js"
+    "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js"
   },
   "build": {
     "asarUnpack": [
@@ -48,10 +48,7 @@
     "testEnvironment": "jest-environment-jsdom-sixteen"
   },
   "invest": {
-    "hostname": "https://storage.googleapis.com/",
-    "bucket": "natcap-dev-build-artifacts",
-    "fork": "invest/davemfish",
-    "version": "3.8.0.post632+g7a58318e/"
+    "version": "3.8.7"
   },
   "keywords": [],
   "author": "dmf",
@@ -79,7 +76,9 @@
     "react-leaflet-choropleth": "^2.0.1",
     "react-redux": "^7.2.0",
     "redux": "^4.0.5",
-    "tail": "^2.0.3"
+    "tail": "^2.0.3",
+    "winston": "^3.3.3",
+    "winston-daily-rotate-file": "^4.5.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.10.1",
@@ -97,17 +96,24 @@
     "@testing-library/dom": "^7.5.3",
     "@testing-library/jest-dom": "^5.7.0",
     "@testing-library/react": "^10.0.4",
+    "babel-eslint": "^10.1.0",
     "dotenv": "^8.2.0",
     "electron": "^8.1.1",
     "electron-builder": "^22.4.1",
     "electron-devtools-installer": "^2.2.4",
+    "eslint": "^7.2.0",
+    "eslint-config-airbnb": "^18.2.0",
+    "eslint-plugin-import": "^2.22.0",
+    "eslint-plugin-jsdoc": "^29.2.0",
+    "eslint-plugin-jsx-a11y": "^6.3.1",
+    "eslint-plugin-react": "^7.20.3",
+    "eslint-plugin-react-hooks": "^4.0.0",
+    "fs-extra": "^9.0.1",
     "jest": "^26.0.1",
     "jest-environment-jsdom-sixteen": "^1.0.3",
     "react-test-renderer": "^16.12.0",
     "sinon": "^9.0.1",
-    "spectron": "^10.0.0",
-    "winston": "^3.3.3",
-    "winston-daily-rotate-file": "^4.5.0"
+    "spectron": "^10.0.0"
   },
   "browserslist": {
     "production": [

@@ -57,13 +57,12 @@ def get_invest_models():
 def get_invest_getspec():
     """Gets the ARGS_SPEC dict from an InVEST model.
 
-    Body (JSON string):
-        model: carbon
-    
+    Body (JSON string): "carbon"
+
     Returns:
         A JSON string.
     """
-    target_model = request.get_json()['model']
+    target_model = request.get_json()
     target_module = natcap.invest.cli._MODEL_UIS[target_model].pyname
     model_module = importlib.import_module(name=target_module)
     spec = model_module.ARGS_SPEC
@@ -100,13 +99,12 @@ def get_invest_validate():
 def post_datastack_file():
     """Extracts InVEST model args from json, logfiles, or datastacks.
 
-    Body (JSON string):
-        datastack_path: string
+    Body (JSON string): path to file
     
     Returns:
         A JSON string.
     """
-    filepath = request.get_json()['datastack_path']
+    filepath = request.get_json()
     stack_type, stack_info = natcap.invest.datastack.get_datastack_info(
         filepath)
     model_run_name = MODULE_MODELRUN_MAP[stack_info.model_name]

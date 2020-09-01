@@ -6,7 +6,7 @@ import { createEvent, fireEvent, render,
          waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
-import { InvestJob } from '../src/InvestJob';
+import InvestJob from '../src/InvestJob';
 import { getSpec, fetchDatastackFromFile, fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants'
@@ -15,13 +15,23 @@ beforeEach(() => {
   jest.resetAllMocks()
 })
 
+// TODO: refer to this obj
+const MODEL = 'Carbon'
+const MODULE = 'carbon'
+const INVEST_LIST = { [MODEL]: { internal_name: MODULE } };
+
 function renderSetupFromSpec(spec) {
+  // some ARGS_SPEC boilerplate that is not under test,
+  // but is required by PropType-checking
+  if (!spec.model_name) { spec.model_name = 'Eco Model' }
+  if (!spec.module) { spec.module = 'natcap.invest.dot' }
+
   getSpec.mockResolvedValue(spec);
   const { getByText, getByLabelText, ...utils } = render(
     <InvestJob
       investExe = ''
-      investList={{Carbon: {internal_name: 'carbon'}}}
-      investSettings={null}
+      investList={INVEST_LIST}
+      investSettings={{nWorkers: '-1', loggingLevel: 'INFO'}}
       recentSessions={[]}
       jobDatabase={fileRegistry.JOBS_DATABASE}
       updateRecentSessions={() => {}}
@@ -38,7 +48,7 @@ test('SetupTab: expect an input form for a directory', async () => {
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
@@ -61,7 +71,7 @@ test('SetupTab: expect an input form for a csv', async () => {
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   // Typing in a value
   fireEvent.change(input, { target: { value: 'foo' } })
@@ -101,7 +111,7 @@ test('SetupTab: expect an input form for a vector', async () => {
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
@@ -118,7 +128,7 @@ test('SetupTab: expect an input form for a raster', async () => {
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
@@ -131,10 +141,16 @@ test('SetupTab: expect an input form for a raster', async () => {
 })
 
 test('SetupTab: expect an input form for a freestyle_string', async () => {
+  // This turned out to be an important test that caught an unrelated bug
+  // that all other tests missed -- changing only the `value` of the input
+  // while not changing the validation state revealed the problem of using
+  // a PureComponent for ArgsForm. PureComponents check for shallow-equality
+  // of props and avoid re-rendering if equal. This test alone maintained
+  // shallow-equality in a case where we definitely do need to re-render. 
   const spec = { args: { arg: { name: 'foo', type: 'freestyle_string' } } }
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
@@ -150,7 +166,7 @@ test('SetupTab: expect an input form for a number', async () => {
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
@@ -165,7 +181,7 @@ test('SetupTab: expect an input form for a boolean', async () => {
   const spec = { args: { arg: { name: 'foo', type: 'boolean' } } }
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   await waitFor(() => {
     expect(input).toHaveAttribute('type', 'radio')
@@ -179,7 +195,7 @@ test('SetupTab: expect an input form for an option_string', async () => {
     validation_options: { options: ['a', 'b'] } } } }
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   await waitFor(() => {
     expect(input).toHaveValue('a');
@@ -224,7 +240,7 @@ test('SetupTab: test a UI spec with a boolean controller arg', async () => {
   
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
 
   const controller = await utils.findByLabelText(RegExp(`${spec.args.controller.name}`))
   const arg2 = await utils.findByLabelText(RegExp(`${spec.args.arg2.name}`))
@@ -280,7 +296,7 @@ test('SetupTab: expect non-boolean input can disable/hide optional inputs', asyn
   
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
 
   const controller = await utils.findByLabelText(RegExp(`${spec.args.controller.name}`))
   const arg2 = await utils.findByLabelText(RegExp(`${spec.args.arg2.name}`))
@@ -336,7 +352,7 @@ test('SetupTab: test grouping and sorting of args', async () => {
   
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
 
   const form = await utils.findByTestId('setup-form')
 
@@ -381,7 +397,7 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
   
   let invalidFeedback = 'is a required key'
   fetchValidation.mockResolvedValue([[['a', 'b'], invalidFeedback]])
-  fireEvent.click(getByText('Carbon')); // triggers validation
+  fireEvent.click(getByText(MODEL)); // triggers validation
   await waitFor(() => {
     expect(getByText('Execute')).toBeDisabled();
     // The inputs are invalid so the invalid feedback message is present.
@@ -428,6 +444,35 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
   })
 })
 
+test('SetupTab: test validation payload is well-formatted', async () => {
+  const spec = { args: {
+    a: { 
+      name: 'afoo', 
+      type: 'freestyle_string'},
+    b: {
+      name: 'bfoo', 
+      type: 'number'},
+    c: {
+      name: 'cfoo',
+      type: 'csv'} } }
+
+  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
+  
+  // Mocking to return the payload so we can assert we always send
+  // correct payload to this endpoint.
+  fetchValidation.mockImplementation((payload) => {
+    return payload
+  })
+  fireEvent.click(getByText(MODEL)); // triggers validation
+  await waitFor(() => {
+    const expectedKeys = ['model_module', 'args'];
+    const payload = fetchValidation.mock.results[0].value
+    expectedKeys.forEach((key) => {
+      expect(Object.keys(payload).includes(key)).toBe(true)
+    })
+  })
+})
+
 test('SetupTab: test dragover of a datastack/logfile', async () => {
   /** Fire a drop event and mock the resolved datastack.
   * This expects batchUpdateArgs to update form values after the drop.
@@ -437,7 +482,7 @@ test('SetupTab: test dragover of a datastack/logfile', async () => {
       arg1: { name: 'Workspace', type: 'directory' },
       arg2: { name: 'AOI', type: 'vector' }
     },
-    module: 'natcap.invest.carbon'
+    module: `natcap.invest.${MODULE}`
   }
   
   fetchValidation.mockResolvedValue(
@@ -450,7 +495,7 @@ test('SetupTab: test dragover of a datastack/logfile', async () => {
   fetchDatastackFromFile.mockResolvedValue(mock_datastack)
 
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText('Carbon'));
+  fireEvent.click(getByText(MODEL));
   const setupForm = await utils.findByTestId('setup-form')
 
   // This should work but doesn't due to lack of dataTransfer object in jsdom:

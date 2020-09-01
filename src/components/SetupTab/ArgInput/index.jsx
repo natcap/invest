@@ -8,77 +8,125 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 
+function FormLabel(props) {
+  return (
+    <Form.Label column sm="3" htmlFor={props.argkey}>
+      {props.children}
+    </Form.Label>
+  );
+}
+FormLabel.propTypes = {
+  argkey: PropTypes.string.isRequired,
+  children: PropTypes.element.isRequired,
+};
 
-export class ArgInput extends React.PureComponent {
-  constructor(props) {
-    super(props)
-  }
+function Feedback(props) {
+  return (
+    <Form.Control.Feedback type="invalid" id={`${props.argkey}-feedback`}>
+      {`${props.argtype} : ${(props.message)}`}
+    </Form.Control.Feedback>
+  );
+}
+Feedback.propTypes = {
+  argkey: PropTypes.string.isRequired,
+  argtype: PropTypes.string.isRequired,
+  message: PropTypes.string,
+};
+Feedback.defaultProps = {
+  message: '',
+};
 
+export default class ArgInput extends React.PureComponent {
   render() {
-    const argkey = this.props.argkey
-    const argSpec = this.props.argSpec
-    let ArgInput;
+    const {
+      argkey,
+      argSpec,
+      handleBoolChange,
+      handleChange,
+      isValid,
+      selectFile,
+      touched,
+      ui_option,
+      validationMessage,
+      value,
+    } = this.props;
+    let Input;
 
     // These types need a text input, and some also need a file browse button
     if (['csv', 'vector', 'raster', 'directory', 'freestyle_string', 'number'].includes(argSpec.type)) {
-      const typeLabel = argSpec.type !== 'freestyle_string' ? argSpec.type : 'string'
-      const labelText = <span>{argSpec.name} <em> ({typeLabel})</em></span>
-      ArgInput = 
-        <Form.Group as={Row} key={argkey} className={'arg-' + this.props.ui_option} data-testid={'group-' + argkey}>
-          <Form.Label column sm="3"  htmlFor={argkey}>
-            {labelText}
-          </Form.Label>
+      const typeLabel = argSpec.type !== 'freestyle_string' ? argSpec.type : 'string';
+      Input = (
+        <Form.Group
+          as={Row}
+          key={argkey}
+          className={`arg-${ui_option}`}
+          data-testid={`group-${argkey}`}
+        >
+          <FormLabel argkey={argkey}>
+            <span>
+              {argSpec.name} <em> ({typeLabel})</em>
+            </span>
+          </FormLabel>
           <Col sm="8">
             <InputGroup>
-              <AboutModal argument={argSpec}/>
+              <AboutModal argument={argSpec} />
               <Form.Control
                 id={argkey}
                 name={argkey}
-                type="text" 
-                value={this.props.value || ''} // empty string is handled better than `undefined`
-                onChange={this.props.handleChange}
-                isValid={this.props.touched && this.props.isValid}
-                isInvalid={this.props.touched && this.props.validationMessage}
-                disabled={this.props.ui_option === 'disable' || false}
+                type="text"
+                value={value || ''} // empty string is handled better than `undefined`
+                onChange={handleChange}
+                isValid={touched && isValid}
+                isInvalid={touched && validationMessage}
+                disabled={ui_option === 'disable'}
               />
               {
-                ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type) ?
-                <InputGroup.Append>
-                  <Button
-                    id={argkey}
-                    variant="outline-secondary"
-                    value={argSpec.type}  // dialog will limit options to files or dirs accordingly
-                    name={argkey}
-                    onClick={this.props.selectFile}>
-                    Browse
-                  </Button>
-                </InputGroup.Append> : <React.Fragment/>
+                ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type)
+                  ? (
+                    <InputGroup.Append>
+                      <Button
+                        id={argkey}
+                        variant="outline-secondary"
+                        value={argSpec.type} // dialog will limit options accordingly
+                        name={argkey}
+                        onClick={selectFile}
+                      >
+                        Browse
+                      </Button>
+                    </InputGroup.Append>
+                  )
+                  : <React.Fragment />
               }
-              <Form.Control.Feedback type='invalid' id={argkey + '-feedback'}>
-                {argSpec.type + ' : ' + (this.props.validationMessage || '')}
-              </Form.Control.Feedback>
+              <Feedback
+                argkey={argkey}
+                argtype={argSpec.type}
+                message={validationMessage}
+              />
             </InputGroup>
           </Col>
         </Form.Group>
-    
+      );
+
     // Radio select for boolean args
     } else if (argSpec.type === 'boolean') {
       // The `checked` property does not treat 'undefined' the same as false,
       // instead React avoids setting the property altogether. Hence, !! to
       // cast undefined to false.
-      ArgInput = 
-        <Form.Group as={Row} key={argkey} data-testid={'group-' + argkey}>
-          <Form.Label column sm="3" htmlFor={argkey}>{argSpec.name}</Form.Label>
+      Input = (
+        <Form.Group as={Row} key={argkey} data-testid={`group-${argkey}`}>
+          <FormLabel argkey={argkey}>
+            <span>{argSpec.name}</span>
+          </FormLabel>
           <Col sm="8">
-            <AboutModal argument={argSpec}/>
+            <AboutModal argument={argSpec} />
             <Form.Check
               id={argkey}
               inline
               type="radio"
               label="Yes"
-              value={"true"}
-              checked={!!this.props.value}  // double bang casts undefined to false
-              onChange={this.props.handleBoolChange}
+              value="true"
+              checked={!!value} // double bang casts undefined to false
+              onChange={handleBoolChange}
               name={argkey}
             />
             <Form.Check
@@ -86,81 +134,97 @@ export class ArgInput extends React.PureComponent {
               inline
               type="radio"
               label="No"
-              value={"false"}
-              checked={!this.props.value}  // undefined becomes true, that's okay
-              onChange={this.props.handleBoolChange}
+              value="false"
+              checked={!value} // undefined becomes true, that's okay
+              onChange={handleBoolChange}
               name={argkey}
             />
           </Col>
         </Form.Group>
+      );
 
     // Dropdown menus for args with options
     } else if (argSpec.type === 'option_string') {
-      ArgInput = 
-        <Form.Group as={Row} key={argkey} className={'arg-' + this.props.ui_option} data-testid={'group-' + argkey}>
-          <Form.Label column sm="3" htmlFor={argkey}>{argSpec.name}</Form.Label>
+      Input = (
+        <Form.Group as={Row} key={argkey} className={`arg-${ui_option}`} data-testid={`group-${argkey}`}>
+          <FormLabel argkey={argkey}>
+            <span>{argSpec.name}</span>
+          </FormLabel>
           <Col sm="4">
             <InputGroup>
-              <AboutModal argument={argSpec}/>
-              <Form.Control 
+              <AboutModal argument={argSpec} />
+              <Form.Control
                 id={argkey}
-                as='select'
+                as="select"
                 name={argkey}
-                value={this.props.value}
-                onChange={this.props.handleChange}
-                disabled={this.props.ui_option === 'disable' || false}>
-                {argSpec.validation_options.options.map(opt =>
+                value={value}
+                onChange={handleChange}
+                disabled={ui_option === 'disable'}
+              >
+                {argSpec.validation_options.options.map((opt) =>
                   <option value={opt} key={opt}>{opt}</option>
                 )}
               </Form.Control>
-              <Form.Control.Feedback type='invalid' id={argkey + '-feedback'}>
-                {argSpec.type + ' : ' + (this.props.validationMessage || '')}
-              </Form.Control.Feedback>
+              <Feedback
+                argkey={argkey}
+                argtype={argSpec.type}
+                message={validationMessage}
+              />
             </InputGroup>
           </Col>
         </Form.Group>
+      );
     }
-    return(ArgInput)
+    return Input;
   }
 }
 
 ArgInput.propTypes = {
-  argkey: PropTypes.string,
-  argSpec: PropTypes.object,
+  argkey: PropTypes.string.isRequired,
+  argSpec: PropTypes.object.isRequired,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
   touched: PropTypes.bool,
   ui_option: PropTypes.string,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
-  handleChange: PropTypes.func,
-  handleBoolChange: PropTypes.func,
-  selectFile: PropTypes.func
-}
+  handleChange: PropTypes.func.isRequired,
+  handleBoolChange: PropTypes.func.isRequired,
+  selectFile: PropTypes.func.isRequired,
+};
+ArgInput.defaultProps = {
+  value: undefined,
+  touched: false,
+  ui_option: undefined,
+  isValid: undefined,
+  validationMessage: '',
+};
 
 class AboutModal extends React.PureComponent {
   constructor(props) {
-    super(props)
+    super(props);
     this.state = {
       aboutShow: false
-    }
+    };
     this.handleAboutOpen = this.handleAboutOpen.bind(this);
     this.handleAboutClose = this.handleAboutClose.bind(this);
   }
 
   handleAboutClose() {
-    this.setState({aboutShow: false});
+    this.setState({ aboutShow: false });
   }
 
   handleAboutOpen() {
-    this.setState({aboutShow: true});
+    this.setState({ aboutShow: true });
   }
 
   render() {
-    return(
+    return (
       <React.Fragment>
-        <Button  className="mr-3"
+        <Button
+          className="mr-3"
           onClick={this.handleAboutOpen}
-          variant="outline-info">
+          variant="outline-info"
+        >
           i
         </Button>
         <Modal show={this.state.aboutShow} onHide={this.handleAboutClose}>
@@ -177,6 +241,6 @@ class AboutModal extends React.PureComponent {
 AboutModal.propTypes = {
   argument: PropTypes.shape({
     name: PropTypes.string,
-    about: PropTypes.string
-  })
-}
+    about: PropTypes.string,
+  }).isRequired,
+};

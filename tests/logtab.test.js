@@ -5,7 +5,7 @@ import React from 'react';
 import { render, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
-import { LogTab } from '../src/components/LogTab';
+import LogTab from '../src/components/LogTab';
 
 const TEMP_LOG_DIR = path.resolve('tests/data/tmp-log');
 
