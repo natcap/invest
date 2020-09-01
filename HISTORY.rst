@@ -80,6 +80,8 @@ Unreleased Changes
       coefficient is assumed if any single value is left blank.
 * HRA
     * Raise ValueError if habitat or stressor inputs are not projected.
+    * Make sample data rating filepaths work on Mac. If not on Windows and a rating
+      filepath isn't found, try replacing all backslashes with forward slashes.
 * Seasonal Water Yield
     * Updated output file name from aggregated_results.shp to aggregated_results_swy.shp
       for consistency with NDR and SDR
