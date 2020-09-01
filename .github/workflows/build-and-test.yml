@@ -48,6 +48,7 @@ jobs:
                 include:
                     - python-version: 3.7
                       numpy: "numpy~=1.15"
+
         steps:
             - uses: actions/checkout@v2
               with:
@@ -76,7 +77,7 @@ jobs:
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                 activate-environment: win-env
-                auto-update-cond: true
+                auto-update-conda: true
                 python-version: ${{ matrix.python-version }}
                 channels: conda-forge
 
