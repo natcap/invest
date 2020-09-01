@@ -174,8 +174,12 @@ def execute_transition_analysis(args):
             # Calculate disturbance volume if we're at a transition year.
             #    TODO: provide disturbance magnitude as a raster input
             if year in transition_years:
-                prior_transition_year = current_transition_year
-                current_transition_year = year
+                # We should only switch around the transition years the first
+                # time we encounter this, not for each pool.
+                if current_transition_year != year:
+                    prior_transition_year = current_transition_year
+                    current_transition_year = year
+
                 disturbance_vol_rasters[year][pool] = os.path.join(
                     intermediate_dir,
                     DISTURBANCE_VOL_RASTER_PATTERN.format(
@@ -272,12 +276,11 @@ def execute_transition_analysis(args):
             func=_sum_n_rasters,
             args=([stock_rasters[year][POOL_SOIL],
                    stock_rasters[year][POOL_BIOMASS],
-                   stock_rasters[year][POOL_LITTER]],
+                   yearly_accum_rasters[current_transition_year][POOL_LITTER]],
                   total_carbon_rasters[year]),
             dependent_task_list=[
                 current_stock_tasks[POOL_SOIL],
-                current_stock_tasks[POOL_BIOMASS],
-                current_stock_tasks[POOL_LITTER]],
+                current_stock_tasks[POOL_BIOMASS]],
             target_path_list=[total_carbon_rasters[year]],
             task_name=f'Calculating total carbon stocks in {year}')
 
@@ -325,7 +328,7 @@ def execute_transition_analysis(args):
                 func=_sum_n_rasters,
                 args=(emissions_rasters_since_transition,
                       emissions_since_last_transition_raster),
-                dependent_task_list=[current_emissions_tasks[year]],
+                dependent_task_list=[current_emissions_tasks[pool]],
                 target_path_list=[emissions_since_last_transition_raster],
                 task_name=(
                     f'Sum emissions between {current_transition_year} '
@@ -348,7 +351,6 @@ def execute_transition_analysis(args):
                     accumulation_since_last_transition,
                     gdal.GDT_Float32,
                     NODATA_FLOAT32),
-                dependent_task_list=[current_accumulation_tasks],
                 target_path_list=[accumulation_since_last_transition],
                 task_name=(
                     f'Summing accumulation between {current_transition_year} '
