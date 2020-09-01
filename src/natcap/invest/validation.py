@@ -9,6 +9,7 @@ import re
 import threading
 import functools
 import importlib
+import queue
 
 import pygeoprocessing
 import pandas
@@ -612,7 +613,11 @@ def timeout(func, *args, timeout=5, **kwargs):
 
     Raises:
     """
-    thread = threading.Thread(target=func, args=args, kwargs=kwargs)
+    # use a queue to share the return value from the file checking thread
+    # the target function puts the return value from `func` into shared memory
+    message_queue = queue.Queue()
+    thread = threading.Thread(target=message_queue.put(func(*args, **kwargs)))
+
     LOGGER.info(f'Starting file checking thread with timeout={timeout}')
     thread.start()
     thread.join(timeout=float(timeout))
@@ -621,6 +626,8 @@ def timeout(func, *args, timeout=5, **kwargs):
         raise RuntimeError('Thread timed out.')
     else:
         LOGGER.info('File checking thread completed.')
+        # get any warning messages returned from the thread
+        return message_queue.get()
 
 
 # checks that open a file could potentially take a long time
@@ -635,8 +642,8 @@ _VALIDATION_FUNCS = {
     'freestyle_string': check_freestyle_string,
     'number': check_number,
     'option_string': check_option_string,
-    'raster': functools.partial(timeout, check_raster),
-    'vector': functools.partial(timeout, check_vector),
+    'raster': check_raster, #functools.partial(timeout, check_raster),
+    'vector': check_vector, #functools.partial(timeout, check_vector),
     'other': None,  # Up to the user to define their validate()
 }
 
@@ -777,6 +784,7 @@ def validate(args, spec, spatial_overlap_opts=None):
         except KeyError:
             validation_options = {}
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
+        print('type validation func:', type_validation_func)
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
             continue
@@ -784,6 +792,7 @@ def validate(args, spec, spatial_overlap_opts=None):
         try:
             warning_msg = type_validation_func(
                 args[key], **validation_options)
+            print('warning message:', warning_msg)
 
             if warning_msg:
                 validation_warnings.append(([key], warning_msg))
