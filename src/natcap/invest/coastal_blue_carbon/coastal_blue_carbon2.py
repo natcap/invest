@@ -85,11 +85,10 @@ def execute_transition_analysis(args):
     half_life_rasters = args['half_life_rasters']
     yearly_accum_rasters = args['annual_rate_of_accumulation_rasters']
 
-    try:
+    prices = None
+    if 'carbon_prices_per_year' in args and args['carbon_prices_per_year']:
         prices = {int(year) : float(price)
                   for (year, price) in args['carbon_prices_per_year'].items()}
-    except KeyError:
-        prices = None
 
     # ASSUMPTIONS
     #
@@ -460,6 +459,7 @@ def execute(args):
 
     # TODO: check that the years in the price table match the years in the
     # range of the timesteps we're running.
+    prices = None
     if ('do_economic_analysis' in args and
             args['do_economic_analysis'] not in ('', None)):
         if args.get('do_price_table', False):
@@ -562,7 +562,7 @@ def execute(args):
         baseline_accum_tasks[pool] = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=(
-                (aligned_lulc_paths[year], 1),
+                (aligned_lulc_paths[baseline_lulc_year], 1),
                 {lucode: values[f'{pool}-yearly-accumulation']
                     for (lucode, values)
                     in biophysical_parameters.items()},
@@ -572,7 +572,7 @@ def execute(args):
             dependent_task_list=[alignment_task],
             target_path_list=[yearly_accum_rasters[pool]],
             task_name=(
-                f'Mapping {pool} carbon accumulation for {year}'))
+                f'Mapping {pool} carbon accumulation for {baseline_lulc_year}'))
 
         if end_of_baseline_period != baseline_lulc_year:
             # The total stocks between baseline and the first year of interest is
@@ -624,7 +624,8 @@ def execute(args):
                 dependent_task_list=[alignment_task],
                 target_path_list=[
                     halflife_rasters[current_transition_year][pool]],
-                task_name=f'Mapping {pool} half-life for {year}')
+                task_name=(
+                    f'Mapping {pool} half-life for {current_transition_year}'))
 
             # Soil and biomass pools will only accumulate if the transition
             # table for this transition specifies accumulation.  We
@@ -642,7 +643,8 @@ def execute(args):
                 target_path_list=[
                     yearly_accum_rasters[current_transition_year][pool]],
                 task_name=(
-                    f'Mapping {pool} carbon accumulation for {year}'))
+                    f'Mapping {pool} carbon accumulation for '
+                    f'{current_transition_year}'))
 
             disturbance_magnitude_rasters[
                 current_transition_year][pool] = os.path.join(
@@ -682,7 +684,8 @@ def execute(args):
             dependent_task_list=[alignment_task],
             target_path_list=[
                 yearly_accum_rasters[current_transition_year][pool]],
-            task_name=f'Mapping litter accumulation for {year}')
+            task_name=(
+                f'Mapping litter accumulation for {current_transition_year}'))
 
         prior_transition_year = current_transition_year
 
@@ -699,7 +702,7 @@ def execute(args):
         'annual_rate_of_accumulation_rasters': yearly_accum_rasters,
         'carbon_prices_per_year': prices,
         'analysis_year': analysis_year,
-        'do_economic_analysis': args['do_economic_analysis'],
+        'do_economic_analysis': args.get('do_economic_analysis', False),
         'baseline_lulc_raster': aligned_lulc_paths[baseline_lulc_year],
         'stocks_at_first_transition': {
             POOL_SOIL: stock_rasters[end_of_baseline_period-1][POOL_SOIL],
