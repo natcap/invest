@@ -1,7 +1,7 @@
 # encoding=UTF-8
 """Increment the User's Guide revision in Makefile.
 
-This script fetches the latest user's guide revision on the master branch from
+This script fetches the latest user's guide revision on the main branch from
 the github repository and updates it in the Makefile.
 
 To invoke:
@@ -14,13 +14,13 @@ import os
 import requests
 
 API_TARGET = (
-    'https://api.github.com/repos/natcap/invest.users-guide/commits/master')
+    'https://api.github.com/repos/natcap/invest.users-guide/commits/main')
 
 
 def update_userguide_rev_in_makefile():
     """Update the userguide revision in the Makefile.
 
-    Fetches the latest user's guide revision from the master branch and updates
+    Fetches the latest user's guide revision from the main branch and updates
     it in the Makefile.
 
     Returns:
