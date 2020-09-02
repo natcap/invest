@@ -346,6 +346,8 @@ def execute_transition_analysis(args):
                         current_transition_year][POOL_SOIL], 1),
                      (yearly_accum_rasters[
                          current_transition_year][POOL_BIOMASS], 1),
+                     (yearly_accum_rasters[
+                         current_transition_year][POOL_LITTER], 1),
                      (((year + 1) - current_transition_year), 'raw')],
                     _calculate_accumulation_over_time,
                     accumulation_since_last_transition,
@@ -595,6 +597,25 @@ def execute(args):
                     f'Calculating {pool} stocks before the first transition or '
                     'the analysis year'))
 
+    total_net_sequestration_for_baseline_period = (
+        os.path.join(
+            output_dir, TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
+                start_year=baseline_lulc_year, end_year=end_of_baseline_period,
+                suffix=suffix)))
+    _ = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(yearly_accum_rasters[POOL_BIOMASS], 1),
+               (yearly_accum_rasters[POOL_SOIL], 1),
+               (yearly_accum_rasters[POOL_LITTER], 1),
+               (end_of_baseline_period - baseline_lulc_year, 'raw')],
+              _calculate_accumulation_over_time,
+              total_net_sequestration_for_baseline_period,
+              gdal.GDT_Float32,
+              NODATA_FLOAT32),
+        target_path_list=[total_net_sequestration_for_baseline_period],
+        task_name=(
+            f'Calculate accumulation between baseline year and final year'))
+
     # Reclassify transitions appropriately for each transition year.
     halflife_rasters = {}
     disturbance_magnitude_rasters = {}
@@ -689,21 +710,6 @@ def execute(args):
                 f'Mapping litter accumulation for {current_transition_year}'))
 
         prior_transition_year = current_transition_year
-
-    # Calculate total sequestration across all years.  Merely the product of
-    # accumulation and the number of years, summed across all 3 pools.
-    total_net_sequestration_for_baseline_period = (
-        os.path.join(
-            output_dir, TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
-                start_year=baseline_lulc_year, end_year=end_of_baseline_period,
-                suffix=suffix)))
-    _ = task_graph.add_task(
-        func=_sum_n_rasters,
-        args=(list(stock_rasters[end_of_baseline_period-1].values()),
-              total_net_sequestration_for_baseline_period),
-        dependent_task_list=list(baseline_stock_tasks.values()),
-        target_path_list=[total_net_sequestration_for_baseline_period],
-        task_name='Calculating total net sequestration for baseline period')
 
     task_graph.join()
 
@@ -1356,18 +1362,21 @@ def _calculate_disturbance_volume(
 
 
 def _calculate_accumulation_over_time(
-        annual_biomass_matrix, annual_soil_matrix, n_years):
+        annual_biomass_matrix, annual_soil_matrix,
+        annual_litter_matrix, n_years):
     target_matrix = numpy.empty(annual_biomass_matrix.shape,
                                 dtype=numpy.float32)
     target_matrix[:] = NODATA_FLOAT32
 
     valid_pixels = (
         ~numpy.isclose(annual_biomass_matrix, NODATA_FLOAT32) &
-        ~numpy.isclose(annual_soil_matrix, NODATA_FLOAT32))
+        ~numpy.isclose(annual_soil_matrix, NODATA_FLOAT32) &
+        ~numpy.isclose(annual_litter_matrix, NODATA_FLOAT32))
 
     target_matrix[valid_pixels] = (
         (annual_biomass_matrix[valid_pixels] +
-            annual_soil_matrix[valid_pixels]) * n_years)
+            annual_soil_matrix[valid_pixels] +
+            annual_litter_matrix[valid_pixels]) * n_years)
     return target_matrix
 
 
