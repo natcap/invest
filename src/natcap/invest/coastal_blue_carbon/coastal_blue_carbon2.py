@@ -306,11 +306,12 @@ def execute_transition_analysis(args):
                 target_path_list=[valuation_raster],
                 task_name=f'Calculating the value of carbon for {year}')
 
-        # If in the last year before a transition:
+        # If in the last year before a transition of the last year before the
+        # final year of the analysis (which might not be a transition):
         #  * sum emissions since last transition
         #  * sum accumulation since last transition
         #  * sum net sequestration since last transition
-        if (year + 1) in transition_years:
+        if (year + 1) in transition_years or (year + 1) == final_year:
             emissions_rasters_since_transition = []
             net_seq_rasters_since_transition = []
             for _year in range(current_transition_year, year + 1):
@@ -688,6 +689,20 @@ def execute(args):
                 f'Mapping litter accumulation for {current_transition_year}'))
 
         prior_transition_year = current_transition_year
+
+    # Calculate total sequestration across all years.  Merely the product of
+    # accumulation and the number of years, summed across all 3 pools.
+    total_net_sequestration_for_baseline_period = (
+        TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
+            start_year=baseline_lulc_year, end_year=end_of_baseline_period,
+            suffix=suffix))
+    _ = task_graph.add_task(
+        func=_sum_n_rasters,
+        args=(list(stock_rasters[end_of_baseline_period-1].values()),
+              total_net_sequestration_for_baseline_period),
+        dependent_task_list=list(baseline_stock_tasks.values()),
+        target_path_list=[total_net_sequestration_for_baseline_period],
+        task_name='Calculating total net sequestration for baseline period')
 
     task_graph.join()
 

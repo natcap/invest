@@ -1361,11 +1361,12 @@ class TestCBC2(unittest.TestCase):
         # emissions.
         expected_sequestration_2000_to_2010 = numpy.array(
             [[83.5, 0]], dtype=numpy.float32)
+        print(os.listdir(os.path.join(args['workspace_dir'], 'output')))
         numpy.testing.assert_allclose(
             (gdal.OpenEx(os.path.join(
                 args['workspace_dir'], 'output',
-                ('total_net_carbon_sequestration_between_'
-                    '2000_and_2010.tif')))).ReadAsArray(),
+                ('total-net-carbon-sequestration-between-'
+                    '2000-and-2010.tif')))).ReadAsArray(),
             expected_sequestration_2000_to_2010)
 
         # TODO: calculate expected emissions by hand.
