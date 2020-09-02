@@ -772,35 +772,6 @@ def _calculate_accumulation_from_baseline(
         gdal.GDT_Float32, NODATA_FLOAT32)
 
 
-def _calculate_disturbance_volume(
-        disturbance_magnitude_raster_path, prior_stocks_raster_path,
-        target_raster_path):
-    disturbance_magnitude_nodata = pygeoprocessing.get_raster_info(
-        disturbance_magnitude_raster_path)['nodata'][0]
-    prior_stocks_nodata = pygeoprocessing.get_raster_info(
-        prior_stocks_raster_path)['nodata'][0]
-
-    def _calculate(disturbance_magnitude_matrix, prior_stocks_matrix):
-        target_matrix = numpy.empty(disturbance_magnitude_matrix.shape,
-                                    dtype=numpy.float32)
-        target_matrix[:] = NODATA_FLOAT32
-
-        valid_pixels = (
-            (~numpy.isclose(disturbance_magnitude_matrix,
-                            disturbance_magnitude_nodata)) &
-            (~numpy.isclose(prior_stocks_matrix, prior_stocks_nodata)))
-
-        target_matrix[valid_pixels] = (
-            disturbance_magnitude_matrix[valid_pixels] *
-            prior_stocks_matrix[valid_pixels])
-        return target_matrix
-
-    pygeoprocessing.raster_calculator(
-        [(disturbance_magnitude_raster_path, 1),
-         (prior_stocks_matrix, 1)], _calculate, target_raster_path,
-        gdal.GDT_Float32, NODATA_FLOAT32)
-
-
 def _calculate_accumulation_over_time(
         annual_biomass_matrix, annual_soil_matrix,
         annual_litter_matrix, n_years):
