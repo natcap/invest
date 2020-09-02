@@ -526,7 +526,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         # use sep=None, engine='python' to infer what the separator is
         dataframe = pandas.read_csv(
             filepath, sep=None, engine='python', encoding=encoding)
-    except Exception as e:
+    except Exception:
         if excel_ok:
             try:
                 dataframe = pandas.read_excel(filepath)
@@ -614,8 +614,6 @@ def timeout(func, *args, timeout=5, **kwargs):
 
     Raises:
     """
-
-
     # use a queue to share the return value from the file checking thread
     # the target function puts the return value from `func` into shared memory
     message_queue = queue.Queue()
@@ -638,7 +636,7 @@ def timeout(func, *args, timeout=5, **kwargs):
         return message_queue.get()
 
 
-# checks that open a file could potentially take a long time
+# opening a file could take a long time if it's in a file streaming service
 # to prevent the UI from hanging due to slow validation,
 # set a timeout for these functions.
 _VALIDATION_FUNCS = {
@@ -803,7 +801,7 @@ def validate(args, spec, spatial_overlap_opts=None):
             if warning_msg:
                 validation_warnings.append(([key], warning_msg))
                 invalid_keys.add(key)
-        except Exception as ex:
+        except Exception:
             LOGGER.exception(
                 'Error when validating key %s with value %s',
                 key, args[key])
