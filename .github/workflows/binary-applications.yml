@@ -48,20 +48,20 @@ jobs:
                   key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Set up python
-              uses: actions/setup-python@v1
+              if: matrix.os == 'windows-latest'
+              uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  python-version: ${{ env.PYTHON_VERSION }}
-                  architecture: ${{ env.PYTHON_ARCH }}
+                activate-environment: win-env
+                auto-update-conda: true
+                python-version: ${{ env.PYTHON_VERSION }}
+                channels: conda-forge
 
             - name: Install python dependencies
-              shell: powershell
-              env:
-                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
-                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
-                  PIP_PREFER_BINARY: 1
+              shell: bash -l {0}
               run: |
-                  python -m pip install --upgrade pip pytest setuptools
-                  python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt
+                  conda upgrade -y pip pytest setuptools
+                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
                   python -m pip install .
 
             - name: Install build dependencies

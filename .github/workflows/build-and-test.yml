@@ -261,19 +261,19 @@ jobs:
                   key: windows-py37-pipcache-sampledata-${{ hashfiles('requirements.txt') }}
 
             - name: Set up python
-              uses: actions/setup-python@v1
+              uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  python-version: 3.7
-                  architecture: x64
+                activate-environment: win-env
+                auto-update-conda: true
+                python-version: 3.7
+                channels: conda-forge
 
             - name: Install dependencies
-              env:
-                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
-                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
-                  PIP_PREFER_BINARY: 1
+              shell: bash -l {0}
               run: |
-                  python -m pip install --upgrade pip wheel pytest
-                  python -m pip install -r requirements.txt
+                  conda upgrade -y pip wheel pytest 
+                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
                   python setup.py install
 
             - name: Validate sample data
@@ -311,19 +311,19 @@ jobs:
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
             - name: Set up python
-              uses: actions/setup-python@v1
+              uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  python-version: ${{ matrix.python-version }}
-                  architecture: ${{ matrix.python-architecture }}
+                activate-environment: win-env
+                auto-update-conda: true
+                python-version: ${{ matrix.python-version }}
+                channels: conda-forge
 
             - name: Install dependencies
-              env:
-                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
-                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
-                  PIP_PREFER_BINARY: 1
+              shell: bash -l {0}
               run: |
-                  python -m pip install --upgrade pip pytest setuptools
-                  python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt
+                  conda upgrade -y pip pytest setuptools
+                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
                   python setup.py install
 
             - name: Run UI tests
