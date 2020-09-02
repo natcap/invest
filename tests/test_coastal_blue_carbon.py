@@ -1370,29 +1370,26 @@ class TestCBC2(unittest.TestCase):
             (gdal.OpenEx(raster_path)).ReadAsArray(),
             expected_sequestration_2000_to_2010)
 
-        # TODO: calculate expected emissions by hand.
         # Stocks in 2010 = 83.5 + initial(soil) + initial(biomass) +
         #       initial(litter) = 463.5.
         # Expected sequestration will be negative, calculated as a function of
         # the carbon stocks, 463.5
         expected_sequestration_2010_to_2020 = numpy.array(
-            [[-1,
-              0]], dtype=numpy.float32)
+            [[-128.1559, 0]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output',
-            ('total_net_carbon_sequestration_between_'
-                '2010_and_2020.tif'))
+            ('total-net-carbon-sequestration-between-'
+                '2010-and-2020.tif'))
         numpy.testing.assert_allclose(
             gdal.OpenEx(raster_path).ReadAsArray(),
             expected_sequestration_2010_to_2020)
 
-        expected_array = numpy.array(
-            [[132.14343,
-              20]], dtype=numpy.float32)
-
+        # Total sequestration is the sum of all the previous sequestration.
+        expected_total_sequestration = numpy.array(
+            [[-44.6559, 0]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output',
-            'total_net_carbon_sequestration.tif')
+            'total-net-carbon-sequestration.tif')
         numpy.testing.assert_allclose(
             gdal.OpenEx(raster_path).ReadAsArray(),
-            expected_array)
+            expected_total_sequestration)

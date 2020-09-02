@@ -128,7 +128,8 @@ def execute_transition_analysis(args):
     current_net_sequestration_tasks = {}
 
     summary_net_sequestration_tasks = []
-    summary_net_sequestration_raster_paths = []
+    summary_net_sequestration_raster_paths = [
+        args['sequestration_since_baseline_raster']]
 
     first_transition_year = min(transition_years)
     try:
@@ -726,6 +727,8 @@ def execute(args):
         'analysis_year': analysis_year,
         'do_economic_analysis': args.get('do_economic_analysis', False),
         'baseline_lulc_raster': aligned_lulc_paths[baseline_lulc_year],
+        'sequestration_since_baseline_raster': (
+            total_net_sequestration_for_baseline_period),
         'stocks_at_first_transition': {
             POOL_SOIL: stock_rasters[end_of_baseline_period-1][POOL_SOIL],
             POOL_BIOMASS: stock_rasters[
@@ -1478,8 +1481,11 @@ def _calculate_net_sequestration(
         if emissions_nodata is not None:
             valid_emissions_pixels &= (
                 ~numpy.isclose(emissions_matrix, emissions_nodata))
+
+        # Emissions are created as a positive value, but negatively affect
+        # sequestration.
         target_matrix[valid_emissions_pixels] = emissions_matrix[
-            valid_emissions_pixels]
+            valid_emissions_pixels] * -1
 
         valid_pixels = ~(valid_accumulation_pixels | valid_emissions_pixels)
         target_matrix[valid_pixels] = NODATA_FLOAT32
