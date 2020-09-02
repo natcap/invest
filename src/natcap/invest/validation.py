@@ -628,7 +628,10 @@ def timeout(func, *args, timeout=5, **kwargs):
     thread.join(timeout=timeout)
 
     if thread.is_alive():
-        raise RuntimeError('File checking thread timed out.')
+        return ('Validation of this file timed out. If this file is stored in '
+               'a file-streaming service, it may be taking too long to '
+               'download. Try storing it locally.')
+
     else:
         LOGGER.info('File checking thread completed.')
         # get any warning messages returned from the thread
@@ -804,14 +807,8 @@ def validate(args, spec, spatial_overlap_opts=None):
             LOGGER.exception(
                 'Error when validating key %s with value %s',
                 key, args[key])
-            if str(ex) == 'File checking thread timed out.':
-                warning_msg = ('Validation of this file timed out. If this '
-                    'file is stored in a file-streaming service, it may be '
-                    'taking too long to download. Try storing it locally.')
-            else:
-                warning_msg = 'An unexpected error occurred in validation'
             validation_warnings.append(
-                ([key], warning_msg))
+                ([key], 'An unexpected error occurred in validation'))
     # step 5: check spatial overlap if applicable
     if spatial_overlap_opts:
         spatial_keys = set(spatial_overlap_opts['spatial_keys'])
