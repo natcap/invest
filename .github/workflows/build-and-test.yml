@@ -76,16 +76,19 @@ jobs:
 
             - name: Set up Windows python
               if: matrix.os == 'windows-latest'
-              uses: actions/setup-python@v1
+              uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                python-version: ${{ matrix.python-version }}
-                architecture: ${{ matrix.python-architecture }}
+                  activate-environment: win-env
+                  auto-update-conda: true
+                  python-version: ${{ matrix.python-version }}
+                  channels: conda-forge
 
             - name: Install build dependencies Windows
               shell: bash -l {0}
               if: matrix.os == 'windows-latest'
               run: |
-                  python -m pip install --upgrade pip pytest setuptools toml twine ${{ matrix.numpy }}
+                  conda upgrade -y pip setuptools
+                  pip install toml twine ${{ matrix.numpy }}
                   pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Set up MacOS python
