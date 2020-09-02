@@ -117,11 +117,9 @@ jobs:
             - name: Install runtime dependencies Windows
               if: matrix.os == 'windows-latest'
               shell: bash -l {0}
-              env:
-                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
-                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
-                  PIP_PREFER_BINARY: 1
-              run: python -m pip install -r requirements.txt -r requirements-dev.txt
+              run: |
+                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
 
             - name: Install runtime dependencies MacOS
               if: matrix.os != 'windows-latest'
