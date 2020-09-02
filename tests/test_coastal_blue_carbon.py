@@ -1362,16 +1362,15 @@ class TestCBC2(unittest.TestCase):
         # emissions.
         expected_sequestration_2000_to_2010 = numpy.array(
             [[83.5, 0]], dtype=numpy.float32)
-        print(os.listdir(os.path.join(args['workspace_dir'], 'output')))
+        raster_path = os.path.join(
+            args['workspace_dir'], 'output',
+            ('total-net-carbon-sequestration-between-'
+                '2000-and-2010.tif'))
         numpy.testing.assert_allclose(
-            (gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 'output',
-                ('total-net-carbon-sequestration-between-'
-                    '2000-and-2010.tif')))).ReadAsArray(),
+            (gdal.OpenEx(raster_path)).ReadAsArray(),
             expected_sequestration_2000_to_2010)
 
         # TODO: calculate expected emissions by hand.
-        import pdb; pdb.set_trace()
         # Stocks in 2010 = 83.5 + initial(soil) + initial(biomass) +
         #       initial(litter) = 463.5.
         # Expected sequestration will be negative, calculated as a function of
@@ -1379,20 +1378,21 @@ class TestCBC2(unittest.TestCase):
         expected_sequestration_2010_to_2020 = numpy.array(
             [[-1,
               0]], dtype=numpy.float32)
+        raster_path = os.path.join(
+            args['workspace_dir'], 'output',
+            ('total_net_carbon_sequestration_between_'
+                '2010_and_2020.tif'))
         numpy.testing.assert_allclose(
-            gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 'output',
-                ('total_net_carbon_sequestration_between_'
-                    '2010_and_2020.tif'))).ReadAsArray(),
+            gdal.OpenEx(raster_path).ReadAsArray(),
             expected_sequestration_2010_to_2020)
 
         expected_array = numpy.array(
             [[132.14343,
               20]], dtype=numpy.float32)
 
-        import pdb; pdb.set_trace()
+        raster_path = os.path.join(
+            args['workspace_dir'], 'output',
+            'total_net_carbon_sequestration.tif')
         numpy.testing.assert_allclose(
-            gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 'output',
-                'total_net_carbon_sequestration.tif')).ReadAsArray(),
+            gdal.OpenEx(raster_path).ReadAsArray(),
             expected_array)

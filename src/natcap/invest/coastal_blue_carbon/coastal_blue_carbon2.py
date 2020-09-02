@@ -693,9 +693,10 @@ def execute(args):
     # Calculate total sequestration across all years.  Merely the product of
     # accumulation and the number of years, summed across all 3 pools.
     total_net_sequestration_for_baseline_period = (
-        TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
-            start_year=baseline_lulc_year, end_year=end_of_baseline_period,
-            suffix=suffix))
+        os.path.join(
+            output_dir, TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
+                start_year=baseline_lulc_year, end_year=end_of_baseline_period,
+                suffix=suffix)))
     _ = task_graph.add_task(
         func=_sum_n_rasters,
         args=(list(stock_rasters[end_of_baseline_period-1].values()),
