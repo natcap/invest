@@ -165,7 +165,7 @@ def assert_array_sum(base_raster_path, desired_sum, include_nodata=True):
         base_array = base_array[~numpy.isclose(base_array, nodata)]
 
     raster_sum = numpy.sum(base_array)
-    numpy.testing.assert_almost_equal(raster_sum, desired_sum, decimal=3)
+    numpy.testing.assert_allclose(raster_sum, desired_sum, rtol=0, atol=1e-3)
 
 
 class HabitatQualityTests(unittest.TestCase):
@@ -490,8 +490,8 @@ class HabitatQualityTests(unittest.TestCase):
             # LULC rasters.
             raster_info = pygeoprocessing.get_raster_info(raster_path)
             raster_bbox = raster_info['bounding_box']
-            numpy.testing.assert_array_almost_equal(
-                raster_bbox, base_lulc_bbox)
+            numpy.testing.assert_allclose(
+                raster_bbox, base_lulc_bbox, rtol=0, atol=1e-6)
 
     def test_habitat_quality_numeric_threats(self):
         """Habitat Quality: regression test on numeric threat names."""
@@ -1264,11 +1264,12 @@ class HabitatQualityTests(unittest.TestCase):
             args['access_vector_path'], args['lulc_cur_path'])
 
         validate_result = habitat_quality.validate(args, limit_to=None)
+        print(validate_result)
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any")
         for (validation_keys, error_msg), phrase in zip(
-                validate_result, ['GDAL raster', 'GDAL vector']):
+                validate_result, ['GDAL vector', 'GDAL raster']):
             self.assertTrue(phrase in error_msg)
 
     def test_habtitat_quality_validation_missing_sens_header(self):

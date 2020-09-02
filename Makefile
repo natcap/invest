@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 773090302924e0e46a39adca9fb49a354acfa8dc
+GIT_SAMPLE_DATA_REPO_REV    := 611f3d4da7562a903b3e09a826a3dc8884af2f97
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 9d40692e216605df65bbf2f5d2a0943ff40c6970
+GIT_TEST_DATA_REPO_REV      := f1600516ab5b5704901d6478cca830bdf2fdfb20
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := d5fbb6e46ac9b841672d5616ff0172de0f5834e7
+GIT_UG_REPO_REV              := 25732693ef4139d77bb2ae6847366208b0e16e87
 
 
 ENV = env
@@ -82,23 +82,28 @@ BUILD_DIR := build
 # a zipfile of the source code).
 FORKNAME := $(word 2, $(subst :,,$(subst github.com, ,$(shell git remote get-url origin))))
 FORKUSER := $(word 1, $(subst /, ,$(FORKNAME)))
+
+# We use these release buckets here in Makefile and also in our release scripts.
+# See scripts/release-3-publish.sh.
+RELEASES_BUCKET := gs://releases.naturalcapitalproject.org
+DEV_BUILD_BUCKET := gs://natcap-dev-build-artifacts
+
 ifeq ($(FORKUSER),natcap)
-	BUCKET := gs://releases.naturalcapitalproject.org
+	BUCKET := $(RELEASES_BUCKET)
 	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
 	INSTALLER_NAME_FORKUSER :=
 else
-	BUCKET := gs://natcap-dev-build-artifacts
+	BUCKET := $(DEV_BUILD_BUCKET)
 	DIST_URL_BASE := $(BUCKET)/invest/$(FORKUSER)/$(VERSION)
 	INSTALLER_NAME_FORKUSER := $(FORKUSER)
 endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
 
-
-TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --with-timer
+TESTRUNNER := pytest -vs --import-mode=importlib --durations=0
 
 DATAVALIDATOR := $(PYTHON) scripts/invest-autovalidate.py $(GIT_SAMPLE_DATA_REPO_PATH)
-TEST_DATAVALIDATOR := $(PYTHON) -m nose -vsP scripts/invest-autovalidate.py
+TEST_DATAVALIDATOR := $(PYTHON) -m pytest -vs scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
@@ -138,8 +143,8 @@ help:
 	@echo "  mac_installer     to build a disk image for distribution"
 	@echo "  sampledata        to build sample data zipfiles"
 	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
-	@echo "  test              to run nosetests on the tests directory"
-	@echo "  test_ui           to run nosetests on the ui_tests directory"
+	@echo "  test              to run pytest on the tests directory"
+	@echo "  test_ui           to run pytest on the ui_tests directory"
 	@echo "  clean             to remove temporary directories and files (but not dist/)"
 	@echo "  purge             to remove temporary directories, cloned repositories and the built environment."
 	@echo "  help              to print this help and exit"
@@ -148,10 +153,16 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	$(TESTRUNNER) tests
+	coverage run -m --omit=*/invest/ui/* $(TESTRUNNER) tests
+	coverage report
+	coverage html
+	coverage xml
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
-	$(TESTRUNNER) ui_tests
+	coverage run -m --include=*/invest/ui/* $(TESTRUNNER) ui_tests
+	coverage report
+	coverage html
+	coverage xml
 
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)

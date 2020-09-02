@@ -653,7 +653,8 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
         raise
     reclass_array = v[index].reshape(array.shape)
 
-    if nodata_mask and numpy.issubdtype(reclass_array.dtype, numpy.floating):
+    if nodata_mask is not None and numpy.issubdtype(reclass_array.dtype, 
+                                                     numpy.floating):
         reclass_array[numpy.isclose(array, nodata_mask)] = numpy.nan
         reclass_array[numpy.isclose(array, ndata)] = numpy.nan
 

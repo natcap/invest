@@ -456,10 +456,12 @@ def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
     """Masking out natural areas."""
     # lulc_array and nodata could conceivably be a float here,
     # if it's the user-provided globio dataset
-    valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
     # landcover type 1 in the GLOBIO schema represents primary vegetation
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
     result[:] = primary_veg_mask_nodata
+    valid_mask = slice(None)
+    if globio_nodata is not None:
+        valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
     result[valid_mask] = lulc_array[valid_mask] == 1
     return result
 
@@ -493,7 +495,6 @@ def _msa_f_op(
         Array with float values. One component of final MSA score.
 
     """
-    nodata_mask = numpy.isclose(primary_veg_mask_nodata, primary_veg_smooth)
     msa_f = numpy.empty(primary_veg_smooth.shape)
 
     less_than = msa_f_table.pop('<', None)
@@ -507,7 +508,10 @@ def _msa_f_op(
         msa_f[primary_veg_smooth < less_than[0]] = (
             less_than[1])
 
-    msa_f[nodata_mask] = msa_nodata
+    if msa_nodata is not None:
+        nodata_mask = numpy.isclose(primary_veg_smooth, 
+                                    primary_veg_mask_nodata)
+        msa_f[nodata_mask] = msa_nodata
 
     return msa_f
 
@@ -574,7 +578,9 @@ def _msa_op(msa_f, msa_lu, msa_i, globio_nodata):
         """Calculate the MSA which is the product of the sub MSAs."""
         result = numpy.empty_like(msa_f, dtype=numpy.float32)
         result[:] = globio_nodata
-        valid_mask = ~numpy.isclose(msa_f, globio_nodata)
+        valid_mask = slice(None)
+        if globio_nodata is not None:
+            valid_mask = ~numpy.isclose(msa_f, globio_nodata)
         result[valid_mask] = msa_f[valid_mask] * msa_lu[valid_mask] * msa_i[valid_mask]
         return result
 
@@ -655,8 +661,8 @@ def load_msa_parameter_table(
             }
 
     """
-    msa_table = pandas.read_csv(
-        msa_parameter_table_filename, sep=None, engine='python')
+    msa_table = utils.read_csv_to_dataframe(
+        msa_parameter_table_filename, sep=None)
     msa_dict = collections.defaultdict(dict)
     for _, row in msa_table.iterrows():
         if row['Value'][0] in ['<', '>']:
@@ -809,7 +815,8 @@ def _calculate_globio_lulc_map(
 
 def _forest_area_mask_op(lulc_array, globio_nodata, forest_areas_nodata):
     """Masking out forest areas."""
-    valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
+    # comparing integers, numpy.isclose not needed
+    valid_mask = lulc_array != globio_nodata 
     # landcover code 130 represents all MODIS forest codes which originate
     # as 1-5
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
@@ -943,22 +950,21 @@ def _collapse_infrastructure_layers(
         # necessarily nodata
         infrastructure_result = numpy.zeros(
             infrastructure_array_list[0].shape, dtype=numpy.uint8)
+        
+        nodata_mask = numpy.full(infrastructure_array_list[0].shape, True)
+        infrastructure_mask = numpy.full(infrastructure_array_list[0].shape, False)
 
-        nodata_mask = numpy.isclose(
-            infrastructure_array_list[0], infrastructure_nodata_list[0])
-
-        infrastructure_mask = (infrastructure_array_list[0] > 0) & ~nodata_mask
-
-        for index in range(1, len(infrastructure_array_list)):
-            current_nodata = numpy.isclose(
-                infrastructure_array_list[index],
-                infrastructure_nodata_list[index])
-
-            infrastructure_mask = (
-                infrastructure_mask |
-                ((infrastructure_array_list[index] > 0) & ~current_nodata))
-
-            nodata_mask = (nodata_mask & current_nodata)
+        for index in range(len(infrastructure_array_list)):
+            # mark all pixels True that have infrastructure in this layer
+            infrastructure_mask |= infrastructure_array_list[index] > 0
+            if infrastructure_nodata_list[index] is not None:
+                # update nodata mask: intersection with this layer
+                nodata_mask &= numpy.isclose(infrastructure_array_list[index],
+                                             infrastructure_nodata_list[index])
+            # if nodata is None, every pixel in this layer has data, 
+            # so the nodata_mask should be all False
+            else:
+                nodata_mask &= False
 
         infrastructure_result[infrastructure_mask] = 1
         infrastructure_result[nodata_mask] = infrastructure_nodata

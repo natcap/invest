@@ -497,6 +497,9 @@ def build_lookup_from_csv(
     table = pandas.read_csv(
         table_path, sep=None, index_col=False, engine='python',
         encoding=encoding)
+    # strip column names to prevent indexing errors
+    # when users accidentally include leading/trailing whitespace
+    table.columns = table.columns.str.strip()
 
     # if 'to_lower`, case handling is done before trying to access the data.
     if to_lower:
@@ -548,6 +551,52 @@ def build_lookup_from_csv(
         raise
 
     return lookup_dict
+
+
+def read_csv_to_dataframe(path, to_lower=False, sep=None, encoding=None, engine='python', **kwargs):
+    """Return a dataframe representation of the CSV.
+
+    Wrapper around ``pandas.read_csv`` that standardizes the column names by
+    stripping leading/trailing whitespace and optionally making all lowercase.
+    This helps avoid common errors caused by user-supplied CSV files with
+    column names that don't exactly match the specification.
+
+    Args:
+        path (string): path to a CSV file
+        to_lower (bool): if True, convert all column names to lowercase
+        sep: separator to pass to pandas.read_csv. Defaults to None, which
+            lets the Python engine infer the separator (if engine='python').
+        encoding (string): name of encoding codec to pass to `pandas.read_csv`. 
+            Defaults to None. Setting engine='python' when encoding=None allows
+            a lot of non-UTF8 encodings to be read without raising an error.
+            Any special characters in other encodings may get replaced with the
+            replacement character.
+            If encoding=None, and the file begins with a BOM, the encoding gets
+            set to 'utf-8-sig'; otherwise the BOM causes an error.
+        engine (string): kwarg for pandas.read_csv: 'c', 'python', or None.
+            Defaults to 'python' (see note about encoding).
+        **kwargs: any kwargs that are valid for ``pandas.read_csv``
+
+    Returns:
+        pandas.DataFrame with the contents of the given CSV
+
+    """
+    # Check if the file encoding is UTF-8 BOM first
+    # allow encoding kwarg to override this if it's provided
+    if not encoding:
+        with open(path, 'rb') as file_obj:
+            first_line = file_obj.readline()
+            if first_line.startswith(codecs.BOM_UTF8):
+                encoding = 'utf-8-sig'
+    dataframe = pandas.read_csv(path, engine=engine, encoding=encoding,
+                                sep=sep, **kwargs)
+    # this won't work on integer types, which happens if you set header=None
+    # however, there's little reason to use this function if there's no header
+    dataframe.columns = dataframe.columns.str.strip()
+    if to_lower:
+        dataframe.columns = dataframe.columns.str.lower()
+
+    return dataframe
 
 
 def make_directories(directory_list):

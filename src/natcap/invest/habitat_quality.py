@@ -700,8 +700,8 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
         # Both these rasters are Float32, so the actual pixel values written
         # might be *slightly* off of _OUT_NODATA but should still be
         # interpreted as nodata.
-        valid_pixels = ~(
-            numpy.isclose(degradation, _OUT_NODATA) |
+        # _OUT_NODATA (defined above) should never be None, so this is okay
+        valid_pixels = ~(numpy.isclose(degradation, _OUT_NODATA) |
             numpy.isclose(habitat, _OUT_NODATA))
 
         out_array[valid_pixels] = (

@@ -278,7 +278,7 @@ def make_agg_results_csv(result_csv_path,
                          climate_zones=False,
                          recharge=False,
                          vector_exists=False):
-    """Make csv file that has the expected aggregated_results.shp table.
+    """Make csv file that has the expected aggregated_results_swy.shp table.
 
     The csv table is in the form of fid,vri_sum,qb_val per line.
 
@@ -452,7 +452,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         l_path = os.path.join(self.workspace_dir, 'L.tif')
         make_recharge_raster(l_path)
         aggregate_vector_path = os.path.join(self.workspace_dir,
-                                             'aggregated_results.shp')
+                                             'aggregated_results_swy.shp')
         make_simple_shp(aggregate_vector_path, (1180000.0, 690000.0))
         seasonal_water_yield._aggregate_recharge(aoi_path, l_path, l_path,
                                                  aggregate_vector_path)
@@ -646,7 +646,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
     def test_bad_biophysical_table(self):
@@ -699,7 +699,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
     def test_climate_zones_regression(self):
@@ -737,7 +737,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path, climate_zones=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results_cz.shp'),
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy_cz.shp'),
             agg_results_csv_path)
 
     def test_user_recharge(self):
@@ -769,7 +769,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path, recharge=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
     @staticmethod
@@ -784,7 +784,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             result_vector_path (string): path to the summary shapefile
                 produced by the SWY model.
             agg_results_path (string): path to a csv file that has the
-                expected aggregated_results.shp table in the form of
+                expected aggregated_results_swy.shp table in the form of
                 fid,vri_sum,qb_val per line
 
         Returns:
@@ -794,7 +794,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             AssertionError if any files are missing or results are out of
             range by `tolerance_places`
         """
-        # we expect a file called 'aggregated_results.shp'
+        # we expect a file called 'aggregated_results_swy.shp'
         result_vector = gdal.OpenEx(result_vector_path, gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
 
@@ -811,15 +811,138 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                 fid, vri_sum, qb_val = [float(x) for x in line.split(',')]
                 feature = result_layer.GetFeature(int(fid))
                 for field, value in [('vri_sum', vri_sum), ('qb', qb_val)]:
-                    numpy.testing.assert_almost_equal(
+                    numpy.testing.assert_allclose(
                         feature.GetField(field),
                         value,
-                        decimal=tolerance_places)
+                        rtol=0, atol=10**-tolerance_places)
                 ogr.Feature.__swig_destroy__(feature)
                 feature = None
 
         result_layer = None
         result_vector = None
+
+    def test_monthly_quickflow_undefined_nodata(self):
+        """Test `_calculate_monthly_quick_flow` with undefined nodata values"""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # set up tiny raster arrays to test
+        precip_array = numpy.array([
+            [10, 10], 
+            [10, 10]], dtype=numpy.float32)
+        lulc_array = numpy.array([
+            [1, 1], 
+            [2, 2]], dtype=numpy.float32)
+        cn_array = numpy.array([
+            [40, 40],
+            [80, 80]], dtype=numpy.float32)
+        si_array = numpy.array([
+            [15, 15],
+            [2.5, 2.5]], dtype=numpy.float32)
+        n_events_array = numpy.array([
+            [10, 10], 
+            [1, 1]], dtype=numpy.float32)
+        stream_mask = numpy.array([
+            [0, 0], 
+            [0, 0]], dtype=numpy.float32)
+
+        expected_quickflow_array = numpy.array([
+            [-4.82284552e-36, -4.82284552e-36],
+            [ 6.19275831e-01,  6.19275831e-01]])
+
+        precip_path = os.path.join(self.workspace_dir, 'precip.tif')
+        lulc_path = os.path.join(self.workspace_dir, 'lulc.tif')
+        cn_path = os.path.join(self.workspace_dir, 'cn.tif')
+        si_path = os.path.join(self.workspace_dir, 'si.tif')
+        n_events_path = os.path.join(self.workspace_dir, 'n_events.tif')
+        stream_path = os.path.join(self.workspace_dir, 'stream.tif')
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+        output_path = os.path.join(self.workspace_dir, 'quickflow.tif')
+
+        # write all the test arrays to raster files
+        for array, path in [(precip_array, precip_path),
+                            (lulc_array, lulc_path),
+                            (n_events_array, n_events_path)]:
+            # make the nodata value undefined for user inputs
+            pygeoprocessing.numpy_array_to_raster(
+                array, None, (1, -1), (1180000, 690000), project_wkt, path)
+        for array, path in [(cn_array, cn_path),
+                            (si_array, si_path),
+                            (stream_mask, stream_path)]:
+            # define a nodata value for intermediate outputs
+            pygeoprocessing.numpy_array_to_raster(
+                array, -1, (1, -1), (1180000, 690000), project_wkt, path)
+
+        # save the quickflow results raster to quickflow.tif
+        seasonal_water_yield._calculate_monthly_quick_flow(
+            precip_path, lulc_path, cn_path, n_events_path, stream_path, 
+            si_path, output_path)
+        # read the raster output back in to a numpy array
+        quickflow_array = pygeoprocessing.raster_to_numpy_array(output_path)
+        # assert each element is close to the expected value
+        self.assertTrue(numpy.isclose(
+            quickflow_array, expected_quickflow_array).all())
+
+    def test_local_recharge_undefined_nodata(self):
+        """Test `calculate_local_recharge` with undefined nodata values"""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield_core
+
+        # set up tiny raster arrays to test
+        precip_array = numpy.array([
+            [10, 10], 
+            [10, 10]], dtype=numpy.float32)
+        et0_array = numpy.array([
+            [100, 100], 
+            [200, 200]], dtype=numpy.float32)
+        quickflow_array = numpy.array([
+            [-4.8e-36, -4.822e-36],
+            [ 6.1e-01,  6.1e-01]], dtype=numpy.float32)
+        flow_dir_array = numpy.array([
+            [15, 25],
+            [50, 50]], dtype=numpy.float32)
+        kc_array = numpy.array([
+            [1, 1],
+            [1, 1]], dtype=numpy.float32)
+        stream_mask = numpy.array([
+            [0, 0], 
+            [0, 0]], dtype=numpy.float32)
+
+        precip_path = os.path.join(self.workspace_dir, 'precip.tif')
+        et0_path = os.path.join(self.workspace_dir, 'et0.tif')
+        quickflow_path = os.path.join(self.workspace_dir, 'quickflow.tif')
+        flow_dir_path = os.path.join(self.workspace_dir, 'flow_dir.tif')
+        kc_path = os.path.join(self.workspace_dir, 'kc.tif')
+        stream_path = os.path.join(self.workspace_dir, 'stream.tif')
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+        output_path = os.path.join(self.workspace_dir, 'quickflow.tif')
+
+        # write all the test arrays to raster files
+        for array, path in [(precip_array, precip_path),
+                            (et0_array, et0_path)]:
+            # make the nodata value undefined for user inputs
+            pygeoprocessing.numpy_array_to_raster(
+                array, None, (1, -1), (1180000, 690000), project_wkt, path)
+        for array, path in [(quickflow_array, quickflow_path),
+                            (flow_dir_array, flow_dir_path),
+                            (kc_array, kc_path),
+                            (stream_mask, stream_path)]:
+            # define a nodata value for intermediate outputs
+            pygeoprocessing.numpy_array_to_raster(
+                array, -1, (1, -1), (1180000, 690000), project_wkt, path)
+
+        # arbitrary values for alpha, beta, gamma, etc.
+        # not verifying the output, just making sure there are no errors 
+        seasonal_water_yield_core.calculate_local_recharge(
+            [precip_path for i in range(12)], [et0_path for i in range(12)],
+            [quickflow_path for i in range(12)], flow_dir_path, 
+            [kc_path for i in range(12)], {i: 0.5 for i in range(12)}, 0.5, 
+            0.5, stream_path, 'target_li_path.tif', 'target_li_avail_path.tif',
+            'target_l_sum_avail_path.tif', 'target_aet_path.tif')
 
 
 class SWYValidationTests(unittest.TestCase):

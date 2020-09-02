@@ -9,7 +9,7 @@ import collections
 import json
 import requests
 import textwrap
-import cgi
+import html
 import tarfile
 import contextlib
 import functools
@@ -1069,7 +1069,7 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.warnings = validation_warnings
 
         if validation_warnings:
-            # cgi.escape handles escaping of characters <, >, &, " for HTML.
+            # html.escape handles escaping of characters <, >, &, " for HTML.
             self.title_label.setText(
                 '<h2>Validation warnings found</h2>'
                 '<h4>To ensure the model works as expected, please fix these '
@@ -1077,7 +1077,7 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
             self.label.setText(
                 '<ul>%s</ul>' % ''.join(
                     ['<li><b>%s</b>: %s</li>' % (
-                        ', '.join(labels), cgi.escape(warning_, quote=True))
+                        ', '.join(labels), html.escape(warning_))
                      for labels, warning_ in validation_warnings]))
             self.label.repaint()
             self.label.setVisible(True)
@@ -1143,8 +1143,7 @@ class InVESTModel(QtWidgets.QMainWindow):
     If any of these attributes are not overridden, a warning will be raised.
     """
 
-    def __init__(self, label, target, validator, localdoc,
-                 suffix_args_key='results_suffix'):
+    def __init__(self, label, target, validator, localdoc):
         """Initialize the Model.
 
         Parameters:
@@ -1155,8 +1154,6 @@ class InVESTModel(QtWidgets.QMainWindow):
                 function.
             localdoc (string): The filename of the user's guide chapter for
                 this model.
-            suffix_args_key='results_suffix' (string): The args key to use for
-                suffix input.  Defaults to ``results_suffix``.
         """
         QtWidgets.QMainWindow.__init__(self)
         self.label = label
@@ -1268,7 +1265,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                 model=modelname)))
 
         self.suffix = inputs.Text(
-            args_key=suffix_args_key,
+            args_key='results_suffix',
             helptext=(
                 'A string that will be added to the end of the output file '
                 'paths.'),

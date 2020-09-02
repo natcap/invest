@@ -633,6 +633,10 @@ class CSVValidation(unittest.TestCase):
         # https://en.wikipedia.org/wiki/ISO/IEC_8859-5
         df.to_csv(target_file, encoding='iso8859_5')
 
+        # Note that non-UTF8 encodings should pass this check, but aren't
+        # actually being read correctly. Characters outside the ASCII set may 
+        # be replaced with a replacement character.
+        # UTF16, UTF32, etc. will still raise an error.
         error_msg = validation.check_csv(target_file)
         self.assertEquals(error_msg, None)
 
@@ -786,6 +790,52 @@ class TestValidationFromSpec(unittest.TestCase):
         with self.assertRaises(AssertionError) as cm:
             validation_warnings = validation.validate(args, spec)
         self.assertTrue('some_var_not_in_args' in str(cm.exception))
+
+
+    def test_conditional_requirement_not_required(self):
+        """Validation: unrequired conditional requirement should always pass"""
+        from natcap.invest import validation
+
+        csv_a_path = os.path.join(self.workspace_dir, 'csv_a.csv')
+        csv_b_path = os.path.join(self.workspace_dir, 'csv_b.csv')
+        # initialize test CSV files
+        with open(csv_a_path, 'w') as csv:
+            csv.write('a,b,c')
+        with open(csv_b_path, 'w') as csv:
+            csv.write('1,2,3')
+
+        spec = {
+            "condition": {
+                "name": "A condition that determines requirements",
+                "about": "About the condition",
+                "type": "boolean",
+                "required": False,
+            },
+            "csv_a": {
+                "name": "Conditionally required CSV A",
+                "about": "About CSV A",
+                "type": "csv",
+                "required": "condition",
+            },
+            "csv_b": {
+                "name": "Conditonally required CSV B",
+                "about": "About CSV B",
+                "type": "csv",
+                "required": "not condition",
+            }
+        }
+
+        # because condition = True, it shouldn't matter that the
+        # csv_b parameter wouldn't pass validation
+        args = {
+            "condition": True,
+            "csv_a": csv_a_path,
+            "csv_b": 'x' + csv_b_path  # introduce a typo
+        }
+
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(validation_warnings, [])
+
 
     def test_requirement_missing(self):
         """Validation: verify absolute requirement on missing key."""

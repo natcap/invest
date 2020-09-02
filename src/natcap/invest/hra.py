@@ -179,17 +179,17 @@ ARGS_SPEC = {
 def execute(args):
     """InVEST Habitat Risk Assessment (HRA) Model.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (str): a path to the output workspace folder.
             It will overwrite any files that exist if the path already exists.
         args['results_suffix'] (str): a string appended to each output file
             path. (optional)
         args['info_table_path'] (str): a path to the CSV or Excel file that
-            contains the name of the habitat (H) or stressor (s) on the ``NAME``
-            column that matches the names in criteria_table_path. Each H/S has
-            its corresponding vector or raster path on the ``PATH`` column. The
-            ``STRESSOR BUFFER (meters)`` column should have a buffer value if
-            the ``TYPE`` column is a stressor.
+            contains the name of the habitat (H) or stressor (s) on the
+            ``NAME`` column that matches the names in criteria_table_path.
+            Each H/S has its corresponding vector or raster path on the
+            ``PATH`` column. The ``STRESSOR BUFFER (meters)`` column should
+            have a buffer value if the ``TYPE`` column is a stressor.
         args['criteria_table_path'] (str): a path to the CSV or Excel file that
             contains the set of criteria ranking of each stressor on each
             habitat.
@@ -214,7 +214,8 @@ def execute(args):
             place in the current process. (optional)
         args['visualize_outputs'] (bool): if True, create output GeoJSONs and
             save them in a visualization_outputs folder, so users can visualize
-            results on the web app. Default to True if not specified. (optional)
+            results on the web app. Default to True if not specified.
+            (optional)
 
     Returns:
         None.
@@ -284,7 +285,6 @@ def execute(args):
         target_sr = osr.SpatialReference()
         if target_sr_wkt:
             target_sr.ImportFromWkt(target_sr_wkt)
-
         if not target_sr.IsProjected():
             raise ValueError(
                 'The AOI vector file %s is provided but not projected.' %
@@ -425,7 +425,8 @@ def execute(args):
 
                 # If it's a spatial criteria vector, burn the values from the
                 # ``rating`` attribute
-                rasterize_kwargs['option_list'] = ["ATTRIBUTE=" + _RATING_FIELD]
+                rasterize_kwargs['option_list'] = [
+                    "ATTRIBUTE=" + _RATING_FIELD]
                 rasterize_nodata = _TARGET_NODATA_FLT
                 rasterize_pixel_type = _TARGET_PIXEL_FLT
 
@@ -531,7 +532,8 @@ def execute(args):
             task_graph.add_task(
                 func=_calc_habitat_recovery,
                 args=(habitat_raster_path, habitat_recovery_df, max_rating),
-                target_path_list=[recovery_raster_path, recovery_num_raster_path],
+                target_path_list=[
+                    recovery_raster_path, recovery_num_raster_path],
                 task_name='calculate_%s_recovery' % habitat,
                 dependent_task_list=[align_and_resize_rasters_task]))
 
@@ -601,7 +603,8 @@ def execute(args):
             pair_e_raster_path, pair_c_raster_path, \
                 target_pair_risk_raster_path = [
                     habitat_stressor_overlap_df.loc[path] for path in
-                    ['E_RASTER_PATH', 'C_RASTER_PATH', 'PAIR_RISK_RASTER_PATH']]
+                    ['E_RASTER_PATH', 'C_RASTER_PATH',
+                     'PAIR_RISK_RASTER_PATH']]
             pair_risk_calculation_list = [
                 (pair_e_raster_path, 1), (pair_c_raster_path, 1),
                 ((max_rating, 'raw')), (args['risk_eq'], 'raw')]
@@ -839,7 +842,8 @@ def execute(args):
 
     task_graph.add_task(
         func=_zonal_stats_to_csv,
-        args=(overlap_df, habitats_info_df, region_list, target_stats_csv_path),
+        args=(
+            overlap_df, habitats_info_df, region_list, target_stats_csv_path),
         target_path_list=[target_stats_csv_path],
         task_name='zonal_stats_to_csv',
         dependent_task_list=zonal_stats_dependent_tasks)
@@ -930,7 +934,7 @@ def _raster_to_geojson(
     So a GPKG serves as intermediate storage for the polygonized projected
     features.
 
-    Parameters:
+    Args:
         base_raster_path (str): the raster that needs to be turned into a
             GeoJSON file.
         target_geojson_path (str): the desired path for the new GeoJSON.
@@ -994,7 +998,7 @@ def _calc_and_pickle_zonal_stats(
     Clip the score raster with the bounding box of zonal raster first, so
     we only look at blocks that intersect.
 
-    Parameters:
+    Args:
         score_raster_path (str): a path to the E/C/risk score raster to be
             analyzed.
         zonal_raster_path (str): a path to the zonal raster with 1s
@@ -1115,7 +1119,7 @@ def _zonal_stats_to_csv(
         overlap_df, info_df, region_list, target_stats_csv_path):
     """Unpickle zonal stats from files and concatenate the dataframe into CSV.
 
-    Parameters:
+    Args:
         overlap_df (dataframe): a multi-index dataframe with exposure and
             consequence raster paths, as well as pickle path columns for
             getting zonal statistics dictionary from.
@@ -1218,7 +1222,7 @@ def _create_rasters_from_geometries(
     Pixel value of 1 on the target rasters indicates the existence of the
     geometry collection, and everywhere else is nodata.
 
-    Parameters:
+    Args:
         geom_pickle_path (str): a path to a tuple of pickled
             geom_sets_by_field, a list of shapely geometry objects in Well
             Known Binary (WKB) format, and target spatial reference in Well
@@ -1332,7 +1336,7 @@ def _get_vector_geometries_by_field(
         base_vector_path, field_name, target_geom_pickle_path):
     """Get a dictionary of field values with list of geometries from a vector.
 
-    Parameters:
+    Args:
         base_vector_path (str): a path to the vector the get geometry
             collections based on the given field name.
         field_name (str): the field name used to aggregate the geometries
@@ -1381,7 +1385,7 @@ def _get_vector_geometries_by_field(
 def _has_field_name(base_vector_path, field_name):
     """Check if the vector attribute table has the designated field name.
 
-    Parameters:
+    Args:
         base_vector_path (str): a path to the vector to check the field name
             with.
         field_name (str): the field name to be inspected.
@@ -1408,7 +1412,7 @@ def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
 
     Divide the total risk by the number of habitats on each pixel.
 
-    Parameters:
+    Args:
         habitat_count_arr (array): an integer array with each pixel indicating
             the number of habitats existing on that pixel.
         *hab_risk_arrays: a list of arrays representing reclassified risk
@@ -1448,7 +1452,7 @@ def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_rating):
     Note: If 3*(risk/max rating) == 0, it will remain 0, meaning that there's
     no stressor on the ecosystem.
 
-    Parameters:
+    Args:
         ecosystem_risk_arr (array): an average risk score calculated by
             dividing the cumulative habitat risks by the habitat count in
             that pixel.
@@ -1476,7 +1480,7 @@ def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_rating):
 def _count_habitats_op(*habitat_arrays):
     """Adding pixel values together from multiple arrays.
 
-    Parameters:
+    Args:
         *habitat_arrays: a list of arrays with 1s and 0s values.
 
     Returns:
@@ -1509,10 +1513,11 @@ def _reclassify_risk_op(risk_arr, max_rating):
     Note: If risk == 0, it will remain 0, meaning that there's no
     stressor on that habitat.
 
-    Parameters:
+    Args:
         risk_arr (array): an array of cumulative risk scores from all stressors
         max_rating (float): the maximum possible risk score used for
             reclassifying the risk score into 0 to 3 on each pixel.
+
     Returns:
         reclass_arr (array): an integer array of reclassified risk scores for a
             certain habitat. The values are discrete on the array.
@@ -1535,7 +1540,7 @@ def _tot_risk_op(habitat_arr, *pair_risk_arrays):
     The risk score is calculated by summing up all the risk scores on each
     valid pixel of the habitat.
 
-    Parameters:
+    Args:
         habitat_arr (array): an integer habitat array where 1's indicates
             habitat existence and 0's non-existence.
         *pair_risk_arrays: a list of individual risk float arrays from each
@@ -1569,7 +1574,7 @@ def _pair_risk_op(exposure_arr, consequence_arr, max_rating, risk_eq):
     Euclidean risk equation: R = sqrt((E-1)^2 + (C-1)^2)
     Multiplicative risk equation: R = E * C
 
-    Parameters:
+    Args:
         exosure_arr (array): a float array with total exposure scores.
         consequence_arr (array): a float array with total consequence scores.
         max_rating (float): a number representing the highest potential value
@@ -1630,7 +1635,7 @@ def _total_exposure_op(habitat_arr, *num_denom_list):
     the total numerator by the total denominator on habitat pixels, to get
     the final exposure or consequence score.
 
-    Parameters:
+    Args:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
         *num_denom_list (list): if exists, it's a list of numerator float
@@ -1688,7 +1693,7 @@ def _total_consequence_op(
     respectively, then divide the total numerator by the total denominator on
     habitat pixels, to get the final consequence score.
 
-    Parameters:
+    Args:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
         recov_num_arr (array): a float array of the numerator score from
@@ -1748,7 +1753,7 @@ def _pair_exposure_op(
     function will only calculate the score on pixels where both habitat
     and stressor (including buffer zone) exist.
 
-    Parameters:
+    Args:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
         stressor_dist_arr (array): a stressor distance float array where pixel
@@ -1800,7 +1805,7 @@ def _pair_consequence_op(
     function will only calculate the score on pixels where both habitat
     and stressor (including buffer zone) exist.
 
-    Parameters:
+    Args:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
         stressor_dist_arr (array): a stressor distance float array where pixel
@@ -1859,7 +1864,7 @@ def _pair_criteria_num_op(
     and stressor (including buffer zone) exist. A spatial criteria will be
     added if spatial_explicit_arr_const is provided.
 
-    Parameters:
+    Args:
         habitat_arr (array): a habitat integer array where 1s indicates habitat
             existence and 0s non-existence.
         stressor_dist_arr (array): a stressor distance float array where pixel
@@ -1936,7 +1941,7 @@ def _calc_pair_criteria_score(
         recov_params=None):
     """Calculate exposure or consequence scores for a habitat-stressor pair.
 
-    Parameters:
+    Args:
         habitat_stressor_overlap_df (dataframe): a dataframe that has
             information on stressor and habitat overlap property.
         habitat_raster_path (str): a path to the habitat raster where 0's
@@ -2026,7 +2031,7 @@ def _tot_recovery_op(habitat_arr, num_arr, denom, max_rating):
     If 1 < score <= 2, reclassify it to 2.
     If 2 < score <= 3, reclassify it to 3.
 
-    Parameters:
+    Args:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
         num_arr (array): a float array of the numerator score for recovery
@@ -2063,7 +2068,7 @@ def _recovery_num_op(habitat_arr, num, *spatial_explicit_arr_const):
     This function will only calculate the score on pixels where habitat exists,
     and use a spatial criteria if spatial_explicit_arr_const is provided.
 
-    Parameters:
+    Args:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
         num (float): a cumulative value pre-calculated based on the criteria
@@ -2106,7 +2111,7 @@ def _calc_habitat_recovery(
         habitat_raster_path, habitat_recovery_df, max_rating):
     """Calculate habitat raster recovery potential based on recovery scores.
 
-    Parameters:
+    Args:
         habitat_raster_path (str): a path to the habitat raster where 0's
             indicate no habitat and 1's indicate habitat existence. 1's will be
             used for calculating recovery potential output raster.
@@ -2164,7 +2169,7 @@ def _append_spatial_raster_row(info_df, recovery_df, overlap_df,
                                spatial_file_dir, output_dir, suffix_end):
     """Append spatial raster to NAME, PATH, and TYPE column of info_df.
 
-    Parameters:
+    Args:
         info_df (dataframe): the dataframe to append spatial raster information
             to.
         recovery_df (dataframe): the dataframe that has the spatial raster
@@ -2231,7 +2236,7 @@ def _append_spatial_raster_row(info_df, recovery_df, overlap_df,
 def _to_abspath(base_path, dir_path):
     """Return an absolute path within dir_path if the given path is relative.
 
-    Parameters:
+    Args:
         base_path (str): a path to the file to be examined.
         dir_path (str): a path to the directory which will be used to create
             absolute file paths.
@@ -2247,6 +2252,15 @@ def _to_abspath(base_path, dir_path):
         target_abs_path = os.path.join(dir_path, base_path)
 
         if not os.path.exists(target_abs_path):
+            # the sample data uses windows-style backslash directory separators
+            # if the file wasn't found, try converting to posix format,
+            # replacing backslashes with forward slashes
+            # note that if there's a space in the filename, this won't work
+            if os.name == 'posix':
+                target_abs_path = target_abs_path.replace('\\', '/')
+                if os.path.exists(target_abs_path):
+                    return target_abs_path
+
             raise ValueError(
                 'The file on %s does not exist.' % target_abs_path)
         else:
@@ -2260,7 +2274,7 @@ def _label_raster(path):
 
     If the provided path is a relative path, join it with the dir_path provide.
 
-    Parameters:
+    Args:
         path (str): a path to the file to be opened with GDAL.
 
     Returns:
@@ -2288,7 +2302,7 @@ def _label_raster(path):
 def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
     """Generate a raster file path with suffixes in dir_path.
 
-    Parameters:
+    Args:
         row (pandas.Series): a row on the dataframe to get path value from.
         dir_path (str): a path to the folder which raster paths will be
             created based on.
@@ -2321,7 +2335,7 @@ def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
 def _generate_vector_path(row, dir_path, suffix_front, suffix_end):
     """Generate a vector file path with suffixes in dir_path for vector types.
 
-    Parameters:
+    Args:
         row (pandas.Series): a row on the dataframe to get path value from.
         dir_path (str): a path to the folder which vector paths will be
             created based on.
@@ -2347,7 +2361,7 @@ def _generate_vector_path(row, dir_path, suffix_front, suffix_end):
 def _generate_pickle_path(row, dir_path, suffix_front, suffix_end):
     """Generate a pickle file path with suffixes in dir_path for habitat types.
 
-    Parameters:
+    Args:
         row (pandas.Series): a row on the dataframe to get path value from.
         dir_path (str): a path to the folder which raster paths will be
             created based on.
@@ -2372,7 +2386,7 @@ def _generate_pickle_path(row, dir_path, suffix_front, suffix_end):
 def _label_linear_unit(row):
     """Get linear unit from path, and keep track of paths w/o projection.
 
-    Parameters:
+    Args:
         row (pandas.Series): a row on the dataframe to get path value from.
 
     Returns:
@@ -2380,7 +2394,8 @@ def _label_linear_unit(row):
             to transform them to meters
 
     Raises:
-        ValueError if any of the file's spatial reference is missing.
+        ValueError if any of the file's spatial reference is missing or if 
+            any of the file's are not linearly projected.
 
     """
     if row['IS_RASTER']:
@@ -2396,9 +2411,10 @@ def _label_linear_unit(row):
         layer = None
         vector = None
 
-    if not spat_ref:
-        raise ValueError('The following layer does not have a projection: %s' %
-                         row['PATH'])
+    if not spat_ref or not spat_ref.IsProjected():
+        raise ValueError(
+            "The following layer does not have a spatial reference or is not"
+            f"projected (in linear units): {row['PATH']}")
     else:
         return float(spat_ref.GetLinearUnits())
 
@@ -2410,7 +2426,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     Add new columns that provide file information and target file paths of each
     given habitat or stressors to the dataframe.
 
-    Parameters:
+    Args:
         base_info_table_path (str): a path to the CSV or excel file that
             contains the path and buffer information.
         file_preprocessing_dir (str): a path to the folder where simplified
@@ -2443,18 +2459,17 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     # Read file with pandas based on its type
     file_ext = os.path.splitext(base_info_table_path)[1].lower()
     if file_ext == '.csv':
-        info_df = pandas.read_csv(base_info_table_path)
+        # use sep=None, engine='python' to infer what the separator is
+        info_df = pandas.read_csv(base_info_table_path, sep=None, 
+            engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         info_df = pandas.read_excel(base_info_table_path)
     else:
         raise ValueError('Info table %s is not a CSV nor an Excel file.' %
                          base_info_table_path)
 
-    # Convert column names to upper case, and encode it to strings if it's not
-    # a string (e.g. unicode)
-    info_df.columns = [
-        col.upper() if isinstance(col, str) else col.encode('utf-8').upper()
-        for col in info_df.columns]
+    # Convert column names to upper case and strip whitespace
+    info_df.columns = [col.strip().upper() for col in info_df.columns]
 
     missing_columns = list(
         set(required_column_headers) - set(info_df.columns.values))
@@ -2550,7 +2565,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
 def _get_criteria_dataframe(base_criteria_table_path):
     """Get validated criteria dataframe from a criteria table.
 
-    Parameters:
+    Args:
         base_criteria_table_path (str): a path to the CSV or Excel file with
             habitat and stressor criteria ratings.
 
@@ -2568,11 +2583,12 @@ def _get_criteria_dataframe(base_criteria_table_path):
     # index. Column names are auto-generated ordinal values
     file_ext = os.path.splitext(base_criteria_table_path)[1].lower()
     if file_ext == '.csv':
-        criteria_df = pandas.read_csv(
-            base_criteria_table_path, index_col=0, header=None)
+        # use sep=None, engine='python' to infer what the separator is
+        criteria_df = pandas.read_csv(base_criteria_table_path, 
+            index_col=0, header=None, sep=None, engine='python')
     elif file_ext in ['.xlsx', '.xls']:
-        criteria_df = pandas.read_excel(
-            base_criteria_table_path, index_col=0, header=None)
+        criteria_df = pandas.read_excel(base_criteria_table_path, 
+            index_col=0, header=None)
     else:
         raise ValueError('Criteria table %s is not a CSV or an Excel file.' %
                          base_criteria_table_path)
@@ -2599,7 +2615,7 @@ def _get_criteria_dataframe(base_criteria_table_path):
 
     # Validate the column header, which should have 'criteria type'
     criteria_df.columns = [
-        x if isinstance(x, str) else None for x in
+        x.strip() if isinstance(x, str) else None for x in
         criteria_df.loc[_HABITAT_NAME_HEADER].values]
     if _CRITERIA_TYPE_HEADER not in criteria_df.columns.values:
         raise ValueError('The Criteria table is missing the column header'
@@ -2615,7 +2631,7 @@ def _get_attributes_from_df(criteria_df, habitat_names, stressor_names):
 
     Get the info from the criteria dataframe.
 
-    Parameters:
+    Args:
         criteria_df (dataframe): a validated dataframe with required
             fields in it.
         habitat_names (list): a list of habitat names obtained from info table.
@@ -2710,7 +2726,7 @@ def _validate_rating(
         rating, max_rating, criteria_name, habitat, stressor=None):
     """Validate rating value, which should range between 1 to maximum rating.
 
-    Parameters:
+    Args:
         rating (str): a string of either digit or file path. If it's a digit,
             it should range between 1 to maximum rating.
         max_rating (float): a number representing the highest value that
@@ -2763,7 +2779,7 @@ def _validate_rating(
 def _validate_dq_weight(dq, weight, habitat, stressor=None):
     """Check if DQ and Weight column values are numbers.
 
-    Parameters:
+    Args:
         dq (str): a string representing the value of data quality score.
         weight (str): a string representing the value of weight score.
         habitat (str): the name of the habitat where the score is from.
@@ -2807,7 +2823,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     spatially explicit criteria scores will be added to the score calculation
     later on.
 
-    Parameters:
+    Args:
         criteria_df (dataframe): a validated dataframe with required fields.
         habitat_names (list): a list of habitat names used as dataframe index.
         stressor_attributes (dict): a dictionary with stressor names as keys,
@@ -2979,7 +2995,7 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
     numerator, denominator, spatially explicit criteria dict, score raster
     path, and numerator raster path.
 
-    Parameters:
+    Args:
         criteria_df (dataframe): a validated dataframe with required
             fields.
         habitat_names (list): a list of habitat names used as dataframe index.
@@ -3056,7 +3072,8 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
                         habitat + '_' + resilience_attr] = [rating, dq, weight]
 
                 # Add 1/(dq*w) to the denominator
-                recovery_df.loc[habitat, 'R_DENOM'] += 1/float(dq)/float(weight)
+                recovery_df.loc[habitat, 'R_DENOM'] += (
+                    1/float(dq)/float(weight))
 
             i += 3  # Jump to next habitat
         else:
@@ -3074,7 +3091,7 @@ def _simplify_geometry(
     See https://en.wikipedia.org/wiki/Nyquist%E2%80%93Shannon_sampling_theorem
     for the math prove.
 
-    Parameters:
+    Args:
         base_vector_path (string): path to base vector.
         tolerance (float): all new vertices in the geometry will be within
             this distance (in units of the vector's projection).
@@ -3140,7 +3157,7 @@ def _simplify_geometry(
 
         # If simplify doesn't work, fall back to the original geometry
         else:
-            # Still using the target_feature here because the preserve_field 
+            # Still using the target_feature here because the preserve_field
             # option altered the layer defn between base and target.
             target_feature.SetGeometry(base_geometry)
             target_simplified_layer.CreateFeature(target_feature)
@@ -3157,7 +3174,7 @@ def _simplify_geometry(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to ``execute``'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation

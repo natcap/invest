@@ -733,7 +733,8 @@ class RecreationRegressionTests(unittest.TestCase):
         with open(target_path, 'r') as file:
             predictor_results = json.load(file)
         # These constants were calculated by hand by Dave.
-        numpy.testing.assert_almost_equal(predictor_results['0'], 13.0)
+        numpy.testing.assert_allclose(
+            predictor_results['0'], 13.0, rtol=0, atol=1e-6)
 
     def test_raster_sum_mean_nodata(self):
         """Recreation test sum/mean if raster has no valid pixels.
@@ -1171,21 +1172,91 @@ class RecreationValidationTests(unittest.TestCase):
             file.write('foo,bar,baz\n')
             file.write('a,b,c\n')
 
-        expected_message = ("Fields are missing from this table: "
-                            "['ID', 'PATH', 'TYPE']")
-        validation_warnings = recmodel_client.validate(
-            {'predictor_table_path': table_path})
-        actual_messages = set()
-        for keys, error_strings in validation_warnings:
-            actual_messages.add(error_strings)
-        self.assertTrue(expected_message in actual_messages)
+        expected_message = "Fields are missing from this table: ['ID', 'PATH', 'TYPE']"
+        validation_warnings = recmodel_client.validate({
+            'compute_regression': True,
+            'predictor_table_path': table_path,
+            'start_year': '2012',
+            'end_year': '2016',
+            'workspace_dir': self.workspace_dir,
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
 
-        validation_warnings = recmodel_client.validate(
-            {'scenario_predictor_table_path': table_path})
-        actual_messages = set()
-        for keys, error_strings in validation_warnings:
-            actual_messages.add(error_strings)
-        self.assertTrue(expected_message in actual_messages)
+        self.assertEqual(validation_warnings, [(['predictor_table_path'], 
+                                                 expected_message)])
+
+        validation_warnings = recmodel_client.validate({
+            'compute_regression': True,
+            'predictor_table_path': table_path,
+            'scenario_predictor_table_path': table_path,
+            'start_year': '2012',
+            'end_year': '2016',
+            'workspace_dir': self.workspace_dir,
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
+        
+        self.assertEqual(validation_warnings, [(['predictor_table_path'], 
+                                                 expected_message), 
+                                               (['scenario_predictor_table_path'], 
+                                                 expected_message)])
+
+    def test_validate_predictor_types_whitespace(self):
+        """Recreation Validate: assert type validation ignores whitespace"""
+        from natcap.invest.recreation import recmodel_client
+
+        predictor_id = 'dem90m'
+        raster_path = os.path.join(SAMPLE_DATA, 'predictors/dem90m_coarse.tif')
+        # include trailing whitespace in the type, this should pass
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as file:
+            file.write('id,path,type\n')
+            file.write(f'{predictor_id},{raster_path},raster_mean \n')
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 40000.0,
+            'compute_regression': True,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': False,
+            'predictor_table_path': table_path,
+            'workspace_dir': self.workspace_dir,
+        }
+
+        # there should be no error when the type has trailing whitespace
+        recmodel_client.execute(args)
+        output_path = os.path.join(self.workspace_dir, 'regression_coefficients.txt')
+
+        # the regression_coefficients.txt output file should contain the
+        # predictor id, meaning it wasn't dropped from the regression
+        with open(output_path, 'r') as output_file:
+            self.assertTrue(predictor_id in ''.join(output_file.readlines()))
+
+    def test_validate_predictor_types_incorrect(self):
+        """Recreation Validate: assert error on incorrect type value"""
+        from natcap.invest.recreation import recmodel_client
+
+        predictor_id = 'dem90m'
+        raster_path = os.path.join(SAMPLE_DATA, 'predictors/dem90m_coarse.tif')
+        # include a typo in the type, this should fail
+        bad_table_path = os.path.join(self.workspace_dir, 'bad_table.csv')
+        with open(bad_table_path, 'w') as file:
+            file.write('id,path,type\n')
+            file.write(f'{predictor_id},{raster_path},raster?mean\n')
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 40000.0,
+            'compute_regression': True,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': False,
+            'predictor_table_path': bad_table_path,
+            'workspace_dir': self.workspace_dir,
+        }
+
+        with self.assertRaises(ValueError) as cm:
+            recmodel_client.execute(args)
+        self.assertTrue('The table contains invalid type value(s)' in 
+                        str(cm.exception))
 
 
 def _assert_regression_results_eq(
@@ -1231,8 +1302,8 @@ def _assert_regression_results_eq(
             expected_values = list(expected_results.iloc[fid])
             for v, ev in zip(values, expected_values):
                 if v is not None:
-                    numpy.testing.assert_almost_equal(
-                        v, ev, decimal=tolerance_places)
+                    numpy.testing.assert_allclose(
+                        v, ev, rtol=0, atol=10**-tolerance_places)
                 else:
                     # Could happen when a raster predictor is only nodata
                     assert(numpy.isnan(ev))

@@ -768,6 +768,8 @@ def _calculate_ls_factor(
             ls_factor
 
         """
+        # avg aspect intermediate output should always have a defined
+        # nodata value from pygeoprocessing
         valid_mask = (
             (~numpy.isclose(avg_aspect, avg_aspect_nodata)) &
             (percent_slope != slope_nodata) &
@@ -1088,9 +1090,11 @@ def _calculate_bar_factor(
     def bar_op(base_accumulation, flow_accumulation):
         """Aggregate accumulation from base divided by the flow accum."""
         result = numpy.empty(base_accumulation.shape, dtype=numpy.float32)
-        valid_mask = (
-            ~numpy.isclose(base_accumulation, _TARGET_NODATA) &
-            ~numpy.isclose(flow_accumulation, flow_accumulation_nodata))
+        # flow accumulation intermediate output should always have a defined
+        # nodata value from pygeoprocessing
+        valid_mask = ~(
+            numpy.isclose(base_accumulation, _TARGET_NODATA) |
+            numpy.isclose(flow_accumulation, flow_accumulation_nodata))
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
             base_accumulation[valid_mask] / flow_accumulation[valid_mask])

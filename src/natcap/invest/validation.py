@@ -515,6 +515,10 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         encoding = None
         if utils.has_utf8_bom(filepath):
             encoding = 'utf-8-sig'
+
+        # engine=python handles unknown characters by replacing them with a
+        # replacement character, instead of raising an error
+        # use sep=None, engine='python' to infer what the separator is
         dataframe = pandas.read_csv(
             filepath, sep=None, engine='python', encoding=encoding)
     except Exception:
@@ -528,6 +532,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
                     "File must be encoded as a UTF-8 CSV.")
 
     if required_fields:
+        dataframe.columns = dataframe.columns.str.strip()
         fields_in_table = set([name.upper() for name in dataframe.columns])
         missing_fields = (
             set(field.upper() for field in required_fields) - fields_in_table)
@@ -665,6 +670,7 @@ def validate(args, spec, spatial_overlap_opts=None):
             (sorted(keys_with_no_value),
              "Input is required but has no value"))
 
+    # step 2: evaluate sufficiency of keys/inputs
     # Sufficiency: An input is sufficient when its key is present in args and
     # it has a value.  A sufficient input need not be valid.  Sufficiency is
     # used by the conditional requirement phase (step 3 in this function) to
@@ -674,32 +680,71 @@ def validate(args, spec, spatial_overlap_opts=None):
     # is present in args but False is in sufficient.  A boolean input that is
     # present in args and True is sufficient.
     insufficient_keys = missing_keys.union(keys_with_no_value)
-
-    # step 2: check primitive validity
-    invalid_keys = set()
+    sufficient_inputs = {}
     for key, parameter_spec in spec.items():
-        if key in invalid_keys:
-            continue  # no need to validate a key we know is missing.
-
         # If the key isn't present, no need to validate.
         # If it's required and isn't present, we wouldn't have gotten to this
         # point in the function.
         if key not in args:
+            sufficient_inputs[key] = False
             insufficient_keys.add(key)
             continue
 
         # If the value is empty and it isn't required, then we don't need to
         # validate it.
         if args[key] in ('', None):
+            sufficient_inputs[key] = False
             insufficient_keys.add(key)
             continue
 
+        # Boolean values are special in that their T/F state is equivalent
+        # to their satisfaction.  If a checkbox is checked, it is
+        # considered satisfied.
+        if spec[key]['type'] == 'boolean':
+            sufficient_inputs[key] = args[key]
+
+        # Any other input type must be sufficient because it is in args and
+        # has a value.
+        else:
+            sufficient_inputs[key] = True
+
+    # step 3: evaluate required status of conditionally required keys
+    # keep track of keys that are explicity not required due to
+    # their condition being false
+    excluded_keys = set()
+    for key in conditionally_required_keys:
+        # An input is conditionally required when the expression given
+        # evaluates to True.
+        is_conditionally_required = _evaluate_expression(
+            expression=spec[key]['required'],
+            variable_map=sufficient_inputs)
+        if is_conditionally_required:
+            if key not in args:
+                validation_warnings.append(
+                    ([key], "Key is missing from the args dict"))
+            else:
+                if args[key] in ('', None):
+                    validation_warnings.append(
+                        ([key], "Key is required but has no value"))
+        else:
+            excluded_keys.add(key)
+
+    # step 4: validate keys, but not conditionally excluded ones.
+    # Making a distinction between keys which are optional (required=False),
+    # and keys which are conditionally not required
+    # (required="condition that evaluates to False")
+    # We want to do validation on optional keys, like `n_workers`,
+    # but not on conditionally excluded keys, like fields that are greyed out
+    # because a checkbox is unchecked.
+    invalid_keys = set()
+    sufficient_keys = set(args.keys()).difference(insufficient_keys)
+    for key in sufficient_keys.difference(excluded_keys):
+        parameter_spec = spec[key]
         # If no validation options specified, assume defaults.
         try:
             validation_options = parameter_spec['validation_options']
         except KeyError:
             validation_options = {}
-
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
@@ -718,44 +763,7 @@ def validate(args, spec, spatial_overlap_opts=None):
                 key, args[key])
             validation_warnings.append(
                 ([key], 'An unexpected error occurred in validation'))
-
-    # step 3: check conditional requirement
-    # Need to evaluate sufficiency of inputs first.
-    sufficient_inputs = {}
-    for key in spec.keys():
-        if key in insufficient_keys:
-            sufficient_inputs[key] = False
-        else:
-            # Boolean values are special in that their T/F state is equivalent
-            # to their satisfaction.  If a checkbox is checked, it is
-            # considered satisfied.
-            if spec[key]['type'] == 'boolean':
-                sufficient_inputs[key] = args[key]
-
-            # Any other input type must be sufficient because it is in args and
-            # has a value.
-            else:
-                sufficient_inputs[key] = True
-
-    for key in conditionally_required_keys:
-        if key in invalid_keys:
-            continue
-
-        # An input is conditionally required when the expression given
-        # evaluates to True.
-        is_conditionally_required = _evaluate_expression(
-            expression=spec[key]['required'],
-            variable_map=sufficient_inputs)
-
-        if is_conditionally_required:
-            if key not in args:
-                validation_warnings.append(
-                    ([key], "Key is missing from the args dict"))
-            else:
-                if args[key] in ('', None):
-                    validation_warnings.append(
-                        ([key], "Key is required but has no value"))
-
+    # step 5: check spatial overlap if applicable
     if spatial_overlap_opts:
         spatial_keys = set(spatial_overlap_opts['spatial_keys'])
 
@@ -784,7 +792,8 @@ def validate(args, spec, spatial_overlap_opts=None):
                 validation_warnings.append(
                     (checked_keys, spatial_overlap_error))
 
-    return validation_warnings
+    # sort warnings alphabetically by key name
+    return sorted(validation_warnings, key=lambda w: w[0][0])
 
 
 def invest_validator(validate_func):
@@ -832,8 +841,19 @@ def invest_validator(validate_func):
             assert isinstance(key, str), (
                 'All args keys must be strings.')
 
+        # Pytest in importlib mode makes it impossible for test modules to
+        # import one another. This causes a problem in test_validation.py,
+        # which gets imported into itself here and fails.
+        # Since this decorator might not be needed in the future,
+        # just ignore failed imports; assume they have no ARGS_SPEC.
+        try:
+            model_module = importlib.import_module(validate_func.__module__)
+        except:
+            LOGGER.warning('Unable to import module %s: assuming no ARGS_SPEC.',
+                            validate_func.__module__)
+            model_module = None
+
         # If the module has an ARGS_SPEC defined, validate against that.
-        model_module = importlib.import_module(validate_func.__module__)
         if hasattr(model_module, 'ARGS_SPEC'):
             LOGGER.debug('Using ARG_SPEC for validation')
             args_spec = getattr(model_module, 'ARGS_SPEC')['args']

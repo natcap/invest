@@ -102,7 +102,7 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": False,
             "about": (
-                "If true the polygon vector in `args['aoi_path']` should be "
+                "If true the polygon vector in ``args['aoi_path']`` should be "
                 "gridded into a new vector and the recreation model should "
                 "be executed on that"),
             "name": "Grid the AOI"
@@ -216,13 +216,13 @@ def execute(args):
             is the inclusive upper bound to consider points in the PUD and
             regression.
         args['grid_aoi'] (boolean): if true the polygon vector in
-            `args['aoi_path']` should be gridded into a new vector and the
+            ``args['aoi_path']`` should be gridded into a new vector and the
             recreation model should be executed on that
         args['grid_type'] (string): optional, but must exist if
             args['grid_aoi'] is True.  Is one of 'hexagon' or 'square' and
             indicates the style of gridding.
         args['cell_size'] (string/float): optional, but must exist if
-            `args['grid_aoi']` is True.  Indicates the cell size of square
+            ``args['grid_aoi']`` is True.  Indicates the cell size of square
             pixels and the width of the horizontal axis for the hexagonal
             cells.
         args['compute_regression'] (boolean): if True, then process the
@@ -252,11 +252,13 @@ def execute(args):
                       with the response polygon in projected units of AOI
                     * 'polygon_area': area of the polygon contained within
                       response polygon in projected units of AOI
+                    * 'polygon_percent_coverage': percent (0-100) of area of 
+                      overlap between the predictor and each AOI grid cell
 
         args['scenario_predictor_table_path'] (string): (optional) if
             present runs the scenario mode of the recreation model with the
             datasets described in the table on this path.  Field headers
-            are identical to `args['predictor_table_path']` and ids in the
+            are identical to ``args['predictor_table_path']`` and ids in the
             table are required to be identical to the predictor list.
         args['results_suffix'] (string): optional, if exists is appended to
             any output file paths.
@@ -270,6 +272,8 @@ def execute(args):
         _validate_same_id_lengths(args['predictor_table_path'])
         _validate_same_projection(
             args['aoi_path'], args['predictor_table_path'])
+        _validate_predictor_types(args['predictor_table_path'])
+
     if ('predictor_table_path' in args and
             'scenario_predictor_table_path' in args and
             args['predictor_table_path'] != '' and
@@ -279,6 +283,7 @@ def execute(args):
             args['scenario_predictor_table_path'])
         _validate_same_projection(
             args['aoi_path'], args['scenario_predictor_table_path'])
+        _validate_predictor_types(args['scenario_predictor_table_path'])
 
     if int(args['end_year']) < int(args['start_year']):
         raise ValueError(
@@ -531,10 +536,10 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
         vector_path (string): path to an OGR compatible polygon vector type
         grid_type (string): one of "square" or "hexagon"
         cell_size (float): dimensions of the grid cell in the projected units
-            of `vector_path`; if "square" then this indicates the side length,
+            of ``vector_path``; if "square" then this indicates the side length,
             if "hexagon" indicates the width of the horizontal axis.
         out_grid_vector_path (string): path to the output ESRI shapefile
-            vector that contains a gridded version of `vector_path`, this file
+            vector that contains a gridded version of ``vector_path``, this file
             should not exist before this call
 
     Returns:
@@ -639,7 +644,7 @@ def _schedule_predictor_data_processing(
 
     Build a shapefile with geometry from the response vector, and tabular
     data from aggregate metrics of spatial predictor datasets in
-    `predictor_table_path`.
+    ``predictor_table_path``.
 
     Parameters:
         response_vector_path (string): path to a single layer polygon vector.
@@ -650,7 +655,7 @@ def _schedule_predictor_data_processing(
         predictor_table_path (string): path to a CSV file with three columns
             'id', 'path' and 'type'.  'id' is the unique ID for that predictor
             and must be less than 10 characters long. 'path' indicates the
-            full or relative path to the `predictor_table_path` table for the
+            full or relative path to the ``predictor_table_path`` table for the
             spatial predictor dataset. 'type' is one of:
                 'point_count': count # of points per response polygon
                 'point_nearest_distance': distance from nearest point to the
@@ -666,7 +671,7 @@ def _schedule_predictor_data_processing(
                 'raster_mean': average of predictor raster under the
                     response polygon
         out_predictor_vector_path (string): path to a copy of
-            `response_vector_path` with a column for each id in
+            ``response_vector_path`` with a column for each id in
             predictor_table_path. Overwritten if exists.
         working_dir (string): path to an intermediate directory to store json
             files with geoprocessing results.
@@ -697,7 +702,7 @@ def _schedule_predictor_data_processing(
 
         predictor_path = _sanitize_path(
             predictor_table_path, predictor_table[predictor_id]['path'])
-        predictor_type = predictor_table[predictor_id]['type']
+        predictor_type = predictor_table[predictor_id]['type'].strip()
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
             raster_op_mode = predictor_type.split('_')[1]
@@ -770,7 +775,7 @@ def _json_to_shp_table(
     Parameters:
         response_vector_path (string): Path to the response vector polygon
             shapefile.
-        predictor_vector_path (string): a copy of `response_vector_path`.
+        predictor_vector_path (string): a copy of ``response_vector_path``.
             One field will be added for each json file, and all other
             fields will be deleted.
         predictor_json_list (list): list of json filenames, one for each
@@ -842,7 +847,7 @@ def _raster_sum_mean(
         op_mode (string): either 'mean' or 'sum'.
         response_vector_path (string): path to response polygons
         predictor_target_path (string): path to json file to store result,
-            which is a dictionary mapping feature IDs from `response_vector_path`
+            which is a dictionary mapping feature IDs from ``response_vector_path``
             to values of the raster under the polygon.
 
     Returns:
@@ -889,8 +894,8 @@ def _polygon_area(
         predictor_target_path):
     """Calculate polygon area overlap.
 
-    Calculates the amount of projected area overlap from `polygon_vector_path`
-    with `response_polygons_lookup`.
+    Calculates the amount of projected area overlap from ``polygon_vector_path``
+    with ``response_polygons_lookup``.
 
     Parameters:
         mode (string): one of 'area' or 'percent'.  How this is set affects
@@ -903,7 +908,7 @@ def _polygon_area(
             object.
         predictor_target_path (string): path to json file to store result,
             which is a dictionary mapping feature IDs from
-            `response_polygons_lookup` to polygon area coverage.
+            ``response_polygons_lookup`` to polygon area coverage.
 
     Returns:
         None
@@ -962,7 +967,7 @@ def _line_intersect_length(
             object.
         predictor_target_path (string): path to json file to store result,
             which is a dictionary mapping feature IDs from
-            `response_polygons_lookup` to line intersect length.
+            ``response_polygons_lookup`` to line intersect length.
 
     Returns:
         None
@@ -1012,7 +1017,7 @@ def _point_nearest_distance(
             object.
         predictor_target_path (string): path to json file to store result,
             which is a dictionary mapping feature IDs from
-            `response_polygons_lookup` to distance to nearest point.
+            ``response_polygons_lookup`` to distance to nearest point.
 
     Returns:
         None
@@ -1054,7 +1059,7 @@ def _point_count(
             object.
         predictor_target_path (string): path to json file to store result,
             which is a dictionary mapping feature IDs from
-            `response_polygons_lookup` to number of points in that polygon.
+            ``response_polygons_lookup`` to number of points in that polygon.
 
     Returns:
         None
@@ -1087,17 +1092,17 @@ def _point_count(
 def _ogr_to_geometry_list(vector_path):
     """Convert an OGR type with one layer to a list of shapely geometry.
 
-    Iterates through the features in the `vector_path`'s first layer and
-    converts them to `shapely` geometry objects.  if the objects are not
+    Iterates through the features in the ``vector_path``'s first layer and
+    converts them to ``shapely`` geometry objects.  if the objects are not
     valid geometry, an attempt is made to buffer the object by 0 units
     before adding to the list.
 
     Parameters:
-        vector_path (string): path to an OGR datasource
+        vector_path (string): path to an OGR vector
 
     Returns:
         list of shapely geometry objects representing the features in the
-        `vector_path` layer.
+        ``vector_path`` layer.
 
     """
     vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
@@ -1188,22 +1193,22 @@ def _build_regression(
     """Multiple least-squares regression with log-transformed response.
 
     The regression is built such that each feature in the single layer vector
-    pointed to by `predictor_vector_path` corresponds to one data point.
-    `response_id` is the response variable to be log-transformed, and is found
-    in `response_vector_path`. Predictor variables are found in
-    `predictor_vector_path` and are not transformed. Features with incomplete
+    pointed to by ``predictor_vector_path`` corresponds to one data point.
+    ``response_id`` is the response variable to be log-transformed, and is found
+    in ``response_vector_path``. Predictor variables are found in
+    ``predictor_vector_path`` and are not transformed. Features with incomplete
     data are dropped prior to computing the regression.
 
     Parameters:
         response_vector_path (string): path to polygon vector with PUD
-            results, in particular a field named with the `response_id`.
+            results, in particular a field named with the ``response_id``.
         predictor_vector_path (string): path to a shapefile that contains
             only the fields to be used as predictor variables.
-        response_id (string): field ID in `response_vector_path` whose
+        response_id (string): field ID in ``response_vector_path`` whose
             values correspond to the regression response variable.
 
     Asserts:
-        `response_vector_path` and `predictor_vector_path` have an equal
+        ``response_vector_path`` and ``predictor_vector_path`` have an equal
         number of features.
 
     Returns:
@@ -1428,9 +1433,9 @@ def _validate_same_ids_and_types(
         scenario_predictor_table_path, 'id')
 
     predictor_table_pairs = set([
-        (p_id, predictor_table[p_id]['type']) for p_id in predictor_table])
+        (p_id, predictor_table[p_id]['type'].strip()) for p_id in predictor_table])
     scenario_predictor_table_pairs = set([
-        (p_id, scenario_predictor_table[p_id]['type']) for p_id in
+        (p_id, scenario_predictor_table[p_id]['type'].strip()) for p_id in
         scenario_predictor_table])
     if predictor_table_pairs != scenario_predictor_table_pairs:
         raise ValueError(
@@ -1458,8 +1463,8 @@ def _validate_same_projection(base_vector_path, table_path):
     """
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
-    data_paths = pandas.read_csv(
-        table_path, squeeze=True, usecols=['path']).tolist()
+    data_paths = utils.read_csv_to_dataframe(
+        table_path, to_lower=True, squeeze=True)['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
@@ -1502,19 +1507,46 @@ def _validate_same_projection(base_vector_path, table_path):
             "projection of the base vector")
 
 
+def _validate_predictor_types(table_path):
+    """Validate the type values in a predictor table.
+
+    Args:
+        table_path (string): path to a csv table that has at least
+            the field 'type' 
+
+    Returns:
+        None
+
+    Raises:
+        ValueError if any value in the ``type`` column does not match a valid
+        type, ignoring leading/trailing whitespace.
+    """
+    df = utils.read_csv_to_dataframe(table_path, to_lower=True)
+    # ignore leading/trailing whitespace because it will be removed
+    # when the type values are used
+    type_list = set([type.strip() for type in df['type']])
+    valid_types = set({'raster_mean', 'raster_sum', 'point_count', 
+                   'point_nearest_distance', 'line_intersect_length',
+                   'polygon_area_coverage', 'polygon_percent_coverage'})
+    difference = type_list.difference(valid_types)
+    if difference:
+        raise ValueError('The table contains invalid type value(s): '
+            f'{difference}. The allowed types are: {valid_types}')
+
+
 def delay_op(last_time, time_delay, func):
-    """Execute `func` if last_time + time_delay >= current time.
+    """Execute ``func`` if last_time + time_delay >= current time.
 
     Parameters:
-        last_time (float): last time in seconds that `func` was triggered
+        last_time (float): last time in seconds that ``func`` was triggered
         time_delay (float): time to wait in seconds since last_time before
-            triggering `func`
+            triggering ``func``
         func (function): parameterless function to invoke if
          current_time >= last_time + time_delay
 
     Returns:
-        If `func` was triggered, return the time which it was triggered in
-        seconds, otherwise return `last_time`.
+        If ``func`` was triggered, return the time which it was triggered in
+        seconds, otherwise return ``last_time``.
 
     """
     if time.time() - last_time > time_delay:
@@ -1524,7 +1556,7 @@ def delay_op(last_time, time_delay, func):
 
 
 def _sanitize_path(base_path, raw_path):
-    """Return `path` if absolute, or make absolute local to `base_path`."""
+    """Return ``path`` if absolute, or make absolute local to ``base_path``."""
     if os.path.isabs(raw_path):
         return raw_path
     else:  # assume relative path w.r.t. the response table
@@ -1533,15 +1565,15 @@ def _sanitize_path(base_path, raw_path):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    """Validate args to ensure they conform to `execute`'s contract.
+    """Validate args to ensure they conform to ``execute``'s contract.
 
     Parameters:
         args (dict): dictionary of key(str)/value pairs where keys and
-            values are specified in `execute` docstring.
+            values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation
             should only occur on the args[limit_to] value. The intent that
             individual key validation could be significantly less expensive
-            than validating the entire `args` dictionary.
+            than validating the entire ``args`` dictionary.
 
     Returns:
         list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')

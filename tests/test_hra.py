@@ -383,9 +383,9 @@ def _make_criteria_csv(
         table.write('"criteria 2",0,2,2,1,2,2,C\n')
 
         if missing_index:
-            table.write('missing index\n')
+            table.write('missing index,,,,,,,\n')
         else:
-            table.write('HABITAT STRESSOR OVERLAP PROPERTIES\n')
+            table.write('HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,\n')
 
         if unknown_criteria:
             table.write('"extra criteria",1,2,2,0,2,2,E\n')
@@ -427,7 +427,7 @@ class HraUnitTests(unittest.TestCase):
     """Unit tests for the Wind Energy module."""
 
     def setUp(self):
-        """Overriding setUp func. to create temporary workspace directory."""
+        """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
@@ -481,7 +481,7 @@ class HraUnitTests(unittest.TestCase):
         self.assertTrue(expected_message in actual_message, actual_message)
 
     def test_missing_index_from_criteria_csv(self):
-        """HRA: correct err. message when missing indexes from criteria CSV."""
+        """HRA: correct error msg when missing indexes from criteria CSV."""
         from natcap.invest.hra import _get_criteria_dataframe
 
         # Use a criteria CSV that misses two indexes
@@ -501,7 +501,7 @@ class HraUnitTests(unittest.TestCase):
             expected_message in actual_message, actual_message)
 
     def test_missing_criteria_header_from_criteria_csv(self):
-        """HRA: correct err. message when missing indexes from criteria CSV."""
+        """HRA: correct error msg when missing indexes from criteria CSV."""
         from natcap.invest.hra import _get_criteria_dataframe
 
         # Use a criteria CSV that misses two indexes
@@ -538,8 +538,8 @@ class HraUnitTests(unittest.TestCase):
             self.workspace_dir, 'criteria_excel.xlsx')
         shutil.copyfile(criteria_excel_path, copied_criteria_excel_path)
         out_df = _get_criteria_dataframe(
-            copied_criteria_excel_path).astype(str)
-
+                    copied_criteria_excel_path).astype(str)
+        
         self.assertTrue(
             out_df.equals(expected_df),
             'The dataframes from criteria CSV and excel files are different.')
@@ -716,6 +716,24 @@ class HraUnitTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
+    def test_to_abspath_change_separators(self):
+        """HRA: should replace backslashes with forward slashes on posix"""
+        from natcap.invest.hra import _to_abspath
+
+        relative_path = 'folder\\file.txt'
+        dir_path = self.workspace_dir
+        # separators are not changed on windows
+        if os.name == 'posix':
+            expected_path = os.path.join(dir_path, 'folder/file.txt')
+        else:
+            expected_path = os.path.join(dir_path, relative_path)
+        # create the file
+        os.mkdir(os.path.join(dir_path, 'folder'))
+        with open(expected_path, 'w') as file:
+            file.write('text')
+        # _to_abspath should find the file and return the modified path
+        self.assertEqual(_to_abspath(relative_path, dir_path), expected_path)
+
     def test_simplify_geometry(self):
         """HRA: test _simplify_geometry function."""
         from natcap.invest.hra import _simplify_geometry
@@ -739,7 +757,7 @@ class HraUnitTests(unittest.TestCase):
             1E-6)
 
     def test_simplify_geometry_points(self):
-        """HRA: test _simplify_geometry does not alter geoms given points."""
+        """HRA: test _simplify_geometry does not alter point geometries."""
         from natcap.invest.hra import _simplify_geometry
         from natcap.invest.utils import _assert_vectors_equal
 
@@ -820,7 +838,7 @@ class HraRegressionTests(unittest.TestCase):
         return args
 
     def test_hra_regression_euclidean_linear(self):
-        """HRA: regression test synthetic data with linear, euclidean eqn."""
+        """HRA: regression testing synthetic data w/ linear, euclidean eqn."""
         import natcap.invest.hra
         from natcap.invest.utils import _assert_vectors_equal
 
@@ -967,8 +985,8 @@ class HraRegressionTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
-    def test_layer_no_projection(self):
-        """HRA: testing habitats and stressors without projection."""
+    def test_layer_without_spatial_ref(self):
+        """HRA: test habitats and stressors w/out spatial references."""
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
@@ -984,7 +1002,49 @@ class HraRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
 
-        expected_message = 'The following layer does not have a projection'
+        expected_message = "The following layer does not have a spatial"
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
+
+    def test_non_projected_layers(self):
+        """HRA: test habitat and stressor layers that are not projected."""
+        import natcap.invest.hra
+
+        args = HraRegressionTests.generate_base_args(self.workspace_dir)
+        _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
+        _make_aoi_vector(args['aoi_vector_path'])
+
+        # Make projected files and write their filepaths to info csv.
+        info_table_path = os.path.join(self.workspace_dir, 'info.csv')
+        _make_info_csv(
+            info_table_path, self.workspace_dir, projected=True,
+            rel_path=False)
+
+        # create geographic spatial reference
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        wgs84_wkt = wgs84_srs.ExportToWkt()
+        # move created habitat vector to a sub directory so the reprojected
+        # file can be saved where the csv PATH expects it
+        tmp_out = os.path.join(self.workspace_dir, 'tmp_move')
+        os.mkdir(tmp_out)
+        for filename in os.listdir(self.workspace_dir):
+            if filename.startswith("habitat_0"):
+                shutil.move(
+                    os.path.join(self.workspace_dir, filename),
+                    os.path.join(tmp_out, filename))
+        habitat_path = os.path.join(tmp_out, 'habitat_0.shp')
+        habitat_wgs84_path = os.path.join(self.workspace_dir, 'habitat_0.shp')
+        # reproject habitat layer to geographic
+        pygeoprocessing.reproject_vector(
+            habitat_path, wgs84_wkt, habitat_wgs84_path)
+
+        args['info_table_path'] = info_table_path
+
+        with self.assertRaises(ValueError) as cm:
+            natcap.invest.hra.execute(args)
+
+        expected_message = "The following layer does not have a spatial"
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 

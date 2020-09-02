@@ -22,8 +22,8 @@ https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
      5. Click the red "Delete" button to delete the release.
 3. PR whatever changes are needed into `$TARGET_BRANCH`.
    ```shell
-   $ git checkout master
-   $ git pull upstream master
+   $ git checkout main
+   $ git pull upstream main
    $ git checkout $TARGET_BRANCH
    < make and commit any needed changes >
    $ git push origin $TARGET_BRANCH

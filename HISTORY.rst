@@ -41,6 +41,8 @@ Unreleased Changes (3.9)
     * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
     * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to
       ``projection_wkt``.
+  * Fixed bug that was causing a TypeError when certain input rasters had an
+    undefined nodata value. Undefined nodata values should now work everywhere.
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under 
@@ -65,8 +67,40 @@ Unreleased Changes (3.9)
     "333" leading to high export spikes in some pixels.
 
 ..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* Coastal Vulnerability
+    * Improved handling of invalid AOI geometries to avoid crashing and instead
+      fix the geometry when possible and skip it otherwise.
+* Urban Cooling
+    * Energy units are now (correctly) expressed in kWh.  They were previously
+      (incorrectly) expressed in kW.
+    * Energy savings calculations now require that consumption is in units of
+      kWh/degree C/m^2 for each building class.
+    * Fixing an issue where blank values of the Cooling Coefficient weights
+      (shade, albedo, ETI) would raise an error.  Now, a default value for the
+      coefficient is assumed if any single value is left blank.
+* HRA
+    * Raise ValueError if habitat or stressor inputs are not projected.
+    * Make sample data rating filepaths work on Mac. If not on Windows and a rating
+      filepath isn't found, try replacing all backslashes with forward slashes.
+* Seasonal Water Yield
+    * Updated output file name from aggregated_results.shp to aggregated_results_swy.shp
+      for consistency with NDR and SDR
+* Datastack
+    * Saved datastack archives now use helpful identifying names for spatial input folders
+* Validation
+    * Fixed bug that caused fields activated by a checkbox to make validation fail, 
+      even when the checkbox was unchecked.
+* General
+    * Input table column headers are now insensitive to leading/trailing whitespace in
+      most places.
+    * Modified the script that produces a conda environment file from InVEST's python
+      requirements file so that it includes the ``conda-forge`` channel in the file
+      itself.
+* Recreation
+    * Validate values in the type column of predictor tables early in execution. Raise
+      a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
 
 3.8.7 (2020-07-17)
 ------------------
