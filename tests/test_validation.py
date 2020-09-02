@@ -6,6 +6,7 @@ import os
 import shutil
 import string
 import time
+import warnings
 
 from osgeo import gdal, osr, ogr
 import pandas
@@ -216,13 +217,17 @@ class ValidatorTest(unittest.TestCase):
         from natcap.invest import validation
 
         # both args and the kwarg should be passed to the function
-        def func():
+        def func(arg):
             time.sleep(10)
 
         # this will return a warning if the timeout is exceeded
         # timeout defaults to 5 seconds so this should fail
-        msg = 'Validation of this file timed out'
-        self.assertTrue(msg in validation.timeout(func))
+        with warnings.catch_warnings(record=True) as ws:
+            # cause all warnings to always be triggered
+            warnings.simplefilter("always")
+            validation.timeout(func, 'arg')
+            self.assertTrue(len(ws) == 1)
+            self.assertTrue('timed out' in str(ws[0].message))
 
 
 class DirectoryValidation(unittest.TestCase):
@@ -726,10 +731,12 @@ class CSVValidation(unittest.TestCase):
         # replace the copy of pandas.read_csv that's in the validation module
         # with the mock function, and try to validate
         with unittest.mock.patch('natcap.invest.validation.pandas.read_csv', mock_read_csv):
-            warning_messages = validation.validate(args, spec)
-            self.assertTrue(len(warning_messages) == 1)
-            self.assertTrue('Validation of this file timed out' in 
-                            warning_messages[0][1])
+            with warnings.catch_warnings(record=True) as ws:
+                # cause all warnings to always be triggered
+                warnings.simplefilter("always")
+                validation.validate(args, spec)
+                self.assertTrue(len(ws) == 1)
+                self.assertTrue('timed out' in str(ws[0].message))
 
 
 class TestValidationFromSpec(unittest.TestCase):

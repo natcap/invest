@@ -11,6 +11,7 @@ import functools
 import importlib
 import queue
 import signal
+import warnings
 
 import pygeoprocessing
 import pandas
@@ -610,9 +611,11 @@ def timeout(func, *args, timeout=5, **kwargs):
             Defaults to 5.
 
     Returns:
-        None
+        A string warning message if the thread completed in time and returned
+        warnings, ``None`` otherwise.
 
     Raises:
+        ``RuntimeWarning`` if the thread does not complete in time.
     """
     # use a queue to share the return value from the file checking thread
     # the target function puts the return value from `func` into shared memory
@@ -626,9 +629,11 @@ def timeout(func, *args, timeout=5, **kwargs):
     thread.join(timeout=timeout)
 
     if thread.is_alive():
-        return ('Validation of this file timed out. If this file is stored in '
-               'a file-streaming service, it may be taking too long to '
-               'download. Try storing it locally.')
+        # first arg to `check_csv`, `check_raster`, `check_vector` is the path
+        warnings.warn(f'Validation of file {args[0]} timed out. If this file '
+            'is stored in a file streaming service, it may be taking a long '
+            'time to download. Try storing it locally instead.')
+        return None
 
     else:
         LOGGER.info('File checking thread completed.')
