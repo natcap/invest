@@ -219,10 +219,10 @@ class ValidatorTest(unittest.TestCase):
         def func():
             time.sleep(10)
 
-        # this will raise an error if the timeout is exceeded
+        # this will return a warning if the timeout is exceeded
         # timeout defaults to 5 seconds so this should fail
-        with self.assertRaises(RuntimeError):
-            validation.timeout(func)
+        msg = 'Validation of this file timed out'
+        self.assertTrue(msg in validation.timeout(func))
 
 
 class DirectoryValidation(unittest.TestCase):
