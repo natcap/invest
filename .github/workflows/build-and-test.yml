@@ -42,13 +42,10 @@ jobs:
             fail-fast: false
             max-parallel: 4
             matrix:
-                python-version: [3.6, 3.7]
-                python-architecture: [x86, x64]
+                python-version: [3.7]
+                python-architecture: [x64]
                 os: [windows-latest, macos-latest]
                 include:
-                    - python-version: 3.6
-                      numpy: "numpy~=1.14"
-
                     - python-version: 3.7
                       numpy: "numpy~=1.15"
                 exclude:
@@ -169,7 +166,7 @@ jobs:
         needs: check-syntax-errors
         strategy:
             matrix:
-                python-version: [3.6, 3.7]
+                python-version: [3.7]
                 python-architecture: [x64]
                 os: [windows-latest, macos-latest]
         steps:
@@ -291,8 +288,8 @@ jobs:
             fail-fast: False
             max-parallel: 4
             matrix:
-                python-version: [3.6, 3.7]
-                python-architecture: [x86, x64]
+                python-version: [3.7]
+                python-architecture: [x64]
                 os: [windows-latest]
 
         steps:
