@@ -11,6 +11,7 @@ from osgeo import gdal
 from pygeoprocessing.symbolic import evaluate_raster_calculator_expression
 
 from .. import utils
+from .. import validation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,6 +48,170 @@ TOTAL_NET_SEQ_ALL_YEARS_RASTER_PATTERN = (
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
 OUTPUT_DIR_NAME = 'output'
+
+ARGS_SPEC = {
+    "model_name": "Coastal Blue Carbon",
+    "module": __name__,
+    "userguide_html": "coastal_blue_carbon.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "baseline_lulc_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "The path to a land use/land cover raster representing the "
+                "baseline scenario."),
+            "name": "Baseline Land-Use/Land-Cover",
+        },
+        "transitions_csv": {
+            "validation_options": {
+                "required_fields": ["transition_year", "raster_path"],
+            },
+            "type": "csv",
+            "required": False,
+            "about": (
+                "A CSV table where each row represents the year and path "
+                "to a raster file on disk representing the landcover raster "
+                "representing the state of the landscape in that year. "
+                "Landcover codes match those in the biophysical table and in "
+                "the landcover transitions table."
+            ),
+            "name": "Transitions Table",
+        },
+        "baseline_lulc_year": {
+            "type": "number",
+            "required": True,
+            "name": "Year of Baseline LULC",
+            "about": (
+                "The year of the Baseline LULC raster.  Must predate the "
+                "the first transition year."
+            ),
+        },
+        "analysis_year": {
+            "type": "number",
+            "required": True,
+            "name": "Analysis Year",
+            "about": (
+                "An analysis year extends the transient analysis "
+                "beyond the transition years."),
+        },
+        "biophysical_table_path": {
+            "name": "Biophysical Table",
+            "type": "csv",
+            "required": True,
+            "validation_options": {
+                "required_fields": [
+                    "code",
+                    "lulc-class",
+                    "biomass-initial",
+                    "soil-initial",
+                    "litter-initial",
+                    "biomass-half-life",
+                    "biomass-low-impact-disturb",
+                    "biomass-med-impact-disturb",
+                    "biomass-high-impact-disturb",
+                    "biomass-yearly-accumulation",
+                    "soil-half-life",
+                    "soil-low-impact-disturb",
+                    "soil-med-impact-disturb",
+                    "soil-high-impact-disturb",
+                    "soil-yearly-accumulation",
+                    "litter-yearly-accumulation",
+                ],
+            },
+            "about": (
+                "A table defining initial carbon stock values, low, medium "
+                "and high-impact disturbance magnitudes (values between 0-1), "
+                "and accumulation rates.  Initial values and accumulation "
+                "rates are defined for soil, biomass and litter. "
+                "Disturbance magnitudes are defined for soil and biomass only."
+            ),
+        },
+        "landcover_transitions_table": {
+            "name": "Landcover Transitions Table",
+            "type": "csv",
+            "validation_options": {
+                "required_fields": ['lulc-class'],
+            },
+            "about": (
+                "A transition matrix mapping the type of carbon action "
+                "undergone when one landcover type transitions to another. "
+                "The first column must have the fieldname 'lulc-class', and "
+                "the field values of this must match the landcover class "
+                "names in the biophysical table.  The remaining column "
+                "headers must also match the landcover class names in the "
+                "biophysical table.  The classes on the y axis represent "
+                "the class we're transitioning from, the classes on the x "
+                "axis represent the classes we're transitioning to. "
+                "Field values within the transition matrix must have one "
+                "of the following values: 'accum', representing a state of "
+                "carbon accumulation, 'high-impact-disturb', "
+                "'med-impact-disturb', 'low_impact_disturb', representing "
+                "appropriate states of carbon disturbance rates, or 'NCC', "
+                "representing no change to carbon.  Cells may also be empty, "
+                "but only if this transition never takes place. "
+                "The Coastal Blue Carbon preprocessor exists to help create "
+                "this table for you."
+            ),
+        },
+        "do_economic_analysis": {
+            "name": "Calculate Net Present Value of Sequestered Carbon",
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "A boolean value indicating whether the model should run an "
+                "economic analysis."),
+        },
+        "use_price_table": {
+            "name": "Use Price Table",
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "boolean value indicating whether a price table is included "
+                "in the arguments and to be used or a price and interest rate "
+                "is provided and to be used instead."),
+        },
+        "price": {
+            "name": "Price",
+            "type": "number",
+            "required": "do_economic_analysis and (not do_price_table)",
+            "about": "The price per Megatonne CO2e at the base year.",
+        },
+        "inflation_rate": {
+            "name": "Interest Rate (%)",
+            "type": "number",
+            "required": "do_economic_analysis and (not do_price_table)",
+            "about": "Annual change in the price per unit of carbon",
+        },
+        "price_table": {
+            "name": "Price Table",
+            "type": "csv",
+            "required": "do_price_table",
+            "validation_options": {
+                "required_fields": ["year", "price"],
+            },
+            "about": (
+                "Can be used in place of price and interest rate "
+                "inputs.  The provided CSV table contains the price "
+                "per Megatonne CO2e sequestered for a given year, for "
+                "all years from the original snapshot to the analysis "
+                "year, if provided."),
+        },
+        "discount_rate": {
+            "name": "Discount Rate (%)",
+            "type": "number",
+            "required": "do_economic_analysis",
+            "about": (
+                "The discount rate on future valuations of "
+                "sequestered carbon, compounded yearly."),
+        },
+    }
+}
 
 
 # TODO: restructure to separate initial from baseline from transitions.
@@ -466,7 +631,7 @@ def execute(args):
     prices = None
     if ('do_economic_analysis' in args and
             args['do_economic_analysis'] not in ('', None)):
-        if args.get('do_price_table', False):
+        if args.get('use_price_table', False):
             prices = {
                 year: values['price'] for (year, values) in
                 utils.build_lookup_from_csv(
