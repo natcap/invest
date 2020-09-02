@@ -1033,13 +1033,7 @@ def _sum_n_rasters(raster_path_list, target_raster_path,
 
 
 def _read_transition_matrix(transition_csv_path, biophysical_dict):
-    encoding = None
-    if utils.has_utf8_bom(transition_csv_path):
-        encoding = 'utf-8-sig'
-
-    table = pandas.read_csv(
-        transition_csv_path, sep=None, index_col=False, engine='python',
-        encoding=encoding)
+    table = utils.read_csv_to_dataframe(transition_csv_path, index_col=False)
 
     lulc_class_to_lucode = {}
     max_lucode = 0
@@ -1276,13 +1270,7 @@ def _reclassify_disturbance_magnitude(
 
 
 def _extract_transitions_from_table(csv_path):
-    encoding = None
-    if utils.has_utf8_bom(csv_path):
-        encoding = 'utf-8-sig'
-
-    table = pandas.read_csv(
-        csv_path, sep=None, index_col=False, engine='python',
-        encoding=encoding)
+    table = utils.read_csv_to_dataframe(csv_path, index_col=False)
     table.columns = table.columns.str.lower()
 
     output_dict = {}

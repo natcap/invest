@@ -566,7 +566,7 @@ def read_csv_to_dataframe(path, to_lower=False, sep=None, encoding=None, engine=
         to_lower (bool): if True, convert all column names to lowercase
         sep: separator to pass to pandas.read_csv. Defaults to None, which
             lets the Python engine infer the separator (if engine='python').
-        encoding (string): name of encoding codec to pass to `pandas.read_csv`. 
+        encoding (string): name of encoding codec to pass to `pandas.read_csv`.
             Defaults to None. Setting engine='python' when encoding=None allows
             a lot of non-UTF8 encodings to be read without raising an error.
             Any special characters in other encodings may get replaced with the
@@ -583,11 +583,8 @@ def read_csv_to_dataframe(path, to_lower=False, sep=None, encoding=None, engine=
     """
     # Check if the file encoding is UTF-8 BOM first
     # allow encoding kwarg to override this if it's provided
-    if not encoding:
-        with open(path, 'rb') as file_obj:
-            first_line = file_obj.readline()
-            if first_line.startswith(codecs.BOM_UTF8):
-                encoding = 'utf-8-sig'
+    if not encoding and has_utf8_bom(path):
+        encoding = 'utf-8-sig'
     dataframe = pandas.read_csv(path, engine=engine, encoding=encoding,
                                 sep=sep, **kwargs)
     # this won't work on integer types, which happens if you set header=None
