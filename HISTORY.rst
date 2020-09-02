@@ -6,6 +6,8 @@ Unreleased Changes
 * Coastal Vulnerability
     * Improved handling of invalid AOI geometries to avoid crashing and instead
       fix the geometry when possible and skip it otherwise.
+    * Added validation check that shows a warning if the SLR vector is not 
+      a point or multipoint geometry.
 * Urban Cooling
     * Energy units are now (correctly) expressed in kWh.  They were previously
       (incorrectly) expressed in kW.
