@@ -71,10 +71,12 @@ export default class LogTab extends React.Component {
   }
 
   componentWillUnmount() {
-    try {
-      this.tail.unwatch();
-    } catch (error) {
-      logger.error(error.stack);
+    if (this.tail) {
+      try {
+        this.tail.unwatch();
+      } catch (error) {
+        logger.error(error.stack);
+      }
     }
   }
 

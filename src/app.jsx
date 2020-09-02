@@ -9,6 +9,7 @@ import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
+import Button from 'react-bootstrap/Button';
 
 import HomeTab from './components/HomeTab';
 import InvestJob from './InvestJob';
@@ -38,6 +39,7 @@ export default class App extends React.Component {
     this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
+    this.closeInvestModel = this.closeInvestModel.bind(this);
     this.saveJob = this.saveJob.bind(this);
   }
 
@@ -92,6 +94,15 @@ export default class App extends React.Component {
     });
   }
 
+  /**
+   * Push data for a new InvestJob component to a new array.
+   * When this is called to load a "recent session", optional argsValues
+   * and logfile parameters will be defined, otherwise they can be undefined.
+   *
+   * @param  {string} modelRunName - invest model name as appears in `invest list`
+   * @param  {object} argsValues - an invest "args dictionary" with initial values
+   * @param  {string} logfile - path to an existing invest logfile
+   */
   openInvestModel(modelRunName, argsValues, logfile) {
     const navID = crypto.randomBytes(16).toString('hex');
     this.setState((state) => ({
@@ -105,6 +116,33 @@ export default class App extends React.Component {
         },
       ],
     }), () => this.switchTabs(navID));
+  }
+
+  /**
+   * Click handler for the close-tab button on an Invest model tab.
+   *
+   * @param  {string} navID - the eventKey of the tab containing the
+   *   InvestJob component that will be removed.
+   */
+  closeInvestModel(navID) {
+    let index;
+    const { openJobs } = this.state;
+    openJobs.forEach((job) => {
+      if (job.navID === navID) {
+        index = openJobs.indexOf(job);
+        openJobs.splice(index, 1);
+      }
+    });
+    // Switch to the next tab if there is one, or the previous, or home.
+    let switchTo = 'home';
+    if (openJobs[index]) {
+      switchTo = openJobs[index].navID;
+    } else if (openJobs[index - 1]) {
+      switchTo = openJobs[index - 1].navID;
+    }
+    this.setState({
+      openJobs: openJobs
+    }, () => this.switchTabs(switchTo));
   }
 
   /** Save the state of this component (1) and the current InVEST job (2).
@@ -154,7 +192,16 @@ export default class App extends React.Component {
       investNavItems.push(
         <Nav.Item key={job.navID}>
           <Nav.Link eventKey={job.navID}>
-            {job.modelRunName}
+            <React.Fragment>
+              {job.modelRunName}
+              <Button
+                className="close-tab"
+                variant="outline-secondary"
+                onClick={() => this.closeInvestModel(job.navID)}
+              >
+                x
+              </Button>
+            </React.Fragment>
           </Nav.Link>
         </Nav.Item>
       );

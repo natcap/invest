@@ -26,6 +26,14 @@
 	padding-right: 2rem;
 }
 
+.close-tab {
+	margin-left: 0.5rem;
+	border-color: transparent;
+}
+.close-tab:hover, .close-tab:focus, .close-tab:active {
+	border-color: #6c757d;
+}
+
 /* Default sized Radio buttons are too small */
 input[type=radio]{
   transform:scale(2.0);
