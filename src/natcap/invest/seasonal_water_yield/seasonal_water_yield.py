@@ -905,10 +905,17 @@ def _calculate_monthly_quick_flow(
             quick flow (numpy.array)
 
         """
-        valid_mask = (
-            (~numpy.isclose(p_im, p_nodata)) & (~numpy.isclose(s_i, si_nodata)) &
-            (p_im != 0.0) & (stream_array != 1) &
-            (~numpy.isclose(n_events, n_events_nodata)) & (n_events > 0))
+        # s_i is an intermediate output which will always have a defined
+        # nodata value
+        valid_mask = ((p_im != 0.0) & 
+                      (stream_array != 1) & 
+                      (n_events > 0) &
+                      ~numpy.isclose(s_i, si_nodata))
+        if p_nodata is not None:
+            valid_mask &= ~numpy.isclose(p_im, p_nodata)
+        if n_events_nodata is not None:
+            valid_mask &= ~numpy.isclose(n_events, n_events_nodata)
+  
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
@@ -940,14 +947,16 @@ def _calculate_monthly_quick_flow(
         # if precip is 0, then QF should be zero
         qf_im[(p_im == 0) | (n_events == 0)] = 0.0
         # if we're on a stream, set quickflow to the precipitation
-        valid_stream_precip_mask = (
-            (stream_array == 1) & (~numpy.isclose(p_im, p_nodata)))
+        valid_stream_precip_mask = stream_array == 1
+        if p_nodata is not None:
+            valid_stream_precip_mask &= ~numpy.isclose(p_im, p_nodata)
         qf_im[valid_stream_precip_mask] = p_im[valid_stream_precip_mask]
 
         # this handles some user cases where they don't have data defined on
-        # their landcover raster. It otherwise crashes later with some NaNs
+        # their landcover raster. It otherwise crashes later with some NaNs.
+        # more intermediate outputs with nodata values guaranteed to be defined
         qf_im[numpy.isclose(qf_im, qf_nodata) &
-              ~numpy.isclose(stream_array, stream_nodata)] = 0.0
+              (stream_array != stream_nodata)] = 0.0
         return qf_im
 
     pygeoprocessing.raster_calculator(

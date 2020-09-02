@@ -145,10 +145,14 @@ def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
     """
     out_matrix = numpy.empty(flow_accum_pixels.shape, dtype=numpy.uint8)
     out_matrix[:] = out_nodata
-    valid_pixels = ~numpy.isclose(flow_accum_pixels, in_nodata)
     stream_mask = (flow_accum_pixels > threshold)
-    out_matrix[valid_pixels & stream_mask] = 1
-    out_matrix[valid_pixels & ~stream_mask] = 0
+
+    valid_mask = slice(None)
+    if in_nodata is not None:
+        valid_mask = ~numpy.isclose(flow_accum_pixels, in_nodata)
+    
+    out_matrix[valid_mask & stream_mask] = 1
+    out_matrix[valid_mask & ~stream_mask] = 0
     return out_matrix
 
 

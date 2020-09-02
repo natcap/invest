@@ -1074,6 +1074,7 @@ def calc_t_air_nomix_op(t_ref_val, hm_array, uhi_max):
     """
     result = numpy.empty(hm_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
+    # TARGET_NODATA should never be None
     valid_mask = ~numpy.isclose(hm_array, TARGET_NODATA)
     result[valid_mask] = t_ref_val + (1-hm_array[valid_mask]) * uhi_max
     return result
@@ -1134,9 +1135,10 @@ def calc_eti_op(
     """Calculate ETI = (K_c * ET_0) / ET_max."""
     result = numpy.empty(kc_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = ~(
-        numpy.isclose(kc_array, kc_nodata) |
-        numpy.isclose(et0_array, et0_nodata))
+    # kc intermediate output should always have a nodata value defined
+    valid_mask = ~numpy.isclose(kc_array, kc_nodata)
+    if et0_nodata is not None:
+        valid_mask &= ~numpy.isclose(et0_array, et0_nodata)
     result[valid_mask] = (
         kc_array[valid_mask] * et0_array[valid_mask] / et_max)
     return result
@@ -1165,7 +1167,10 @@ def calculate_wbgt(
 
     def wbgt_op(avg_rel_humidity, t_air_array):
         wbgt = numpy.empty(t_air_array.shape, dtype=numpy.float32)
-        valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
+        
+        valid_mask = slice(None)
+        if t_air_nodata is not None:
+            valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
         wbgt[:] = TARGET_NODATA
         t_air_valid = t_air_array[valid_mask]
         e_i = (

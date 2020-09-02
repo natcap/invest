@@ -655,7 +655,9 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result = numpy.empty(
         observed_yield_array.shape, dtype=numpy.float32)
     result[:] = 0.0
-    valid_mask = ~numpy.isclose(observed_yield_array, observed_yield_nodata)
+    valid_mask = slice(None)
+    if observed_yield_nodata is not None:
+        valid_mask = ~numpy.isclose(observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
 
@@ -737,12 +739,15 @@ def tabulate_regression_results(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
                     (observed_production_raster_path, 1)):
+
+                # make a valid mask showing which pixels are not nodata
+                # if nodata value undefined, assume all pixels are valid
+                valid_mask = slice(None)
+                if observed_yield_nodata is not None:
+                    valid_mask = ~numpy.isclose(yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
-                    ~numpy.isclose(yield_block, observed_yield_nodata) &
-                    (yield_block > 0.0))
-                yield_sum += numpy.sum(
-                    yield_block[
-                        ~numpy.isclose(observed_yield_nodata, yield_block)])
+                                          valid_mask & (yield_block > 0.0))
+                yield_sum += numpy.sum(yield_block[valid_mask])
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
             result_table.write(',%f' % production_area)
@@ -755,6 +760,7 @@ def tabulate_regression_results(
             for _, yield_block in pygeoprocessing.iterblocks(
                     (crop_production_raster_path, 1)):
                 yield_sum += numpy.sum(
+                    # _NODATA_YIELD will always have a value (defined above)
                     yield_block[~numpy.isclose(yield_block, _NODATA_YIELD)])
             production_lookup['modeled'] = yield_sum
             result_table.write(",%f" % yield_sum)
