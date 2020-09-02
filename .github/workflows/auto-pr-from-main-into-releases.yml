@@ -1,21 +1,21 @@
-name: PR changes on master into release branches
+name: PR changes on main into release branches
 env:
-    SOURCE_BRANCH: master
+    SOURCE_BRANCH: main
 on:
-    # This workflow should trigger when changes are pushed to master.
-    # We expect this will happen when PRs into master are merged and also as
+    # This workflow should trigger when changes are pushed to main.
+    # We expect this will happen when PRs into main are merged and also as
     # part of the automated bugfix release process.
     push:
         branches:
             # The context variable ${{ env.SOURCE_BRANCH }} does not seem to work here.
-            - master
+            - main
 
 jobs:
     create-pr:
-        # Only create a PR from master into release branches if we're on the
+        # Only create a PR from main into release branches if we're on the
         # main invest repository.
         if: github.repository == 'natcap/invest'
-        name: PR master into release/**
+        name: PR main into release/**
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
@@ -34,14 +34,14 @@ jobs:
               run: |
                   set -x
 
-                  # Get the number of the last PR merged into master.
+                  # Get the number of the last PR merged into main.
                   # This assumes that the default PR message was used and includes
                   # the pattern #[1-9][0-9]*.
-                  PR_NUM=$(git log -1 --pretty=%B master | head -n1 | egrep -o '#[1-9][0-9]*' | sed 's|#||g')
+                  PR_NUM=$(git log -1 --pretty=%B main | head -n1 | egrep -o '#[1-9][0-9]*' | sed 's|#||g')
 
-                  # Get the username of the person who opened up the last PR into `master`.
+                  # Get the username of the person who opened up the last PR into `main`.
                   PR_USERNAME=$(hub pr show -f "%au" $PR_NUM)
-                  echo "Latest PR on master ($PR_NUM) was authored by $PR_USERNAME."
+                  echo "Latest PR on main ($PR_NUM) was authored by $PR_USERNAME."
 
                   if [ "$PR_USERNAME" = "github-actions" ]
                   then
@@ -58,7 +58,7 @@ jobs:
                   do
                       export RELEASE_BRANCH=$BRANCH  # needed for envsubst
                       PR_BODY_FILE=pr_body.txt
-                      cat ci/master-release-pr-body.md | envsubst > $PR_BODY_FILE
+                      cat ci/main-release-pr-body.md | envsubst > $PR_BODY_FILE
                       cat $PR_BODY_FILE  # for debugging
 
                       # This PR will be assigned to $GITHUB_ACTOR, which should be

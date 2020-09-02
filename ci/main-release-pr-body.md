@@ -1,6 +1,6 @@
 Merge $SOURCE_BRANCH into $RELEASE_BRANCH
 
-This PR was automatically generated in response to a push to `master`,
+This PR was automatically generated in response to a push to `main`,
 and is a chance to review any changes that will be included in the release
 branch before merging.  Under most circumstances, this PR will probably be
 a formality.  However, there are a few cases where we may need to do some
@@ -14,7 +14,7 @@ merge:
 3. Make a new `pr-resolution` branch off of `$RELEASE_BRANCH`:
    ```shell
    $ git checkout $SOURCE_BRANCH
-   $ git pull upstream $SOURCE_BRANCH  # Include the latest changes on the upstream master
+   $ git pull upstream $SOURCE_BRANCH  # Include the latest changes on the upstream main
    $ git checkout $RELEASE_BRANCH
    $ git pull upstream $RELEASE_BRANCH  # Include the latest changes on the upstream release
    $ git checkout -b pr-resolution
@@ -35,7 +35,7 @@ merge:
 3. Make a new `pr-resolution` branch off of `$RELEASE_BRANCH`:
    ```shell
    $ git checkout $SOURCE_BRANCH
-   $ git pull upstream $SOURCE_BRANCH  # Include the latest changes on the upstream master
+   $ git pull upstream $SOURCE_BRANCH  # Include the latest changes on the upstream main
    $ git checkout $RELEASE_BRANCH
    $ git pull upstream $RELEASE_BRANCH  # Include the latest changes on the upstream release
    $ git checkout -b pr-resolution
@@ -62,7 +62,7 @@ There are several possibilities for recovery if we get to such a state.
 ### Why was this PR created?
 
 The workflow defining this PR is located at
-`.github/workflows/auto-pr-from-master-into-releases.yml`.  In short, this PR
+`.github/workflows/auto-pr-from-main-into-releases.yml`.  In short, this PR
 was created because there was a push to `$SOURCE_BRANCH` that triggered this
 workflow.  Some events that can trigger this include:
 
