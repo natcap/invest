@@ -1225,6 +1225,7 @@ class TestCBC2(unittest.TestCase):
             coastal_blue_carbon2._track_latest_transition_year(
                 current_disturbance_vol_raster,
                 known_transition_years_raster,
+                11,  # current "year" being disturbed.
                 target_raster_path))
 
         expected_array = numpy.array([
