@@ -2252,6 +2252,15 @@ def _to_abspath(base_path, dir_path):
         target_abs_path = os.path.join(dir_path, base_path)
 
         if not os.path.exists(target_abs_path):
+            # the sample data uses windows-style backslash directory separators
+            # if the file wasn't found, try converting to posix format,
+            # replacing backslashes with forward slashes
+            # note that if there's a space in the filename, this won't work
+            if os.name == 'posix':
+                target_abs_path = target_abs_path.replace('\\', '/')
+                if os.path.exists(target_abs_path):
+                    return target_abs_path
+
             raise ValueError(
                 'The file on %s does not exist.' % target_abs_path)
         else:

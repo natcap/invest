@@ -40,11 +40,11 @@ PR_MSG_TEXT=build/pr_msg_text_$VERSION.txt
 # Explicitly setting the environment variables we need in envsubst.  The only
 # other alternative is to `export` them all, which then pollutes the shell as a
 # side effect.
-SOURCE_BRANCH="master" BUGFIX_VERSION="$VERSION" GITHUB_REPOSITORY="$GH_USER/invest" \
+SOURCE_BRANCH="main" BUGFIX_VERSION="$VERSION" GITHUB_REPOSITORY="$GH_USER/invest" \
     envsubst < ci/release/bugfix-autorelease-branch-pr-body.md > "$PR_MSG_TEXT"
 
 hub pull-request \
-    --base "natcap/invest:master" \
+    --base "natcap/invest:main" \
     --head "natcap/invest:autorelease/$VERSION" \
     --reviewer "$RELEASE_MANAGER" \
     --assign "$RELEASE_MANAGER" \

@@ -1262,11 +1262,12 @@ class HabitatQualityTests(unittest.TestCase):
             args['access_vector_path'], args['lulc_cur_path'])
 
         validate_result = habitat_quality.validate(args, limit_to=None)
+        print(validate_result)
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any")
         for (validation_keys, error_msg), phrase in zip(
-                validate_result, ['GDAL raster', 'GDAL vector']):
+                validate_result, ['GDAL vector', 'GDAL raster']):
             self.assertTrue(phrase in error_msg)
 
     def test_habtitat_quality_validation_missing_sens_header(self):
