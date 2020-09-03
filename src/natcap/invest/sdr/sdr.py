@@ -992,10 +992,9 @@ def _calculate_w(
         'column_name': 'lucode',
         'table_name': 'Biophysical'}
 
-    utils._reclassify_raster_op(
+    utils.reclassify_raster(
         (lulc_path, 1), lulc_to_c, w_factor_path, gdal.GDT_Float32,
-        _TARGET_NODATA, values_required=True,
-        error_details=reclass_error_details)
+        _TARGET_NODATA, error_details=reclass_error_details)
 
     def threshold_w(w_val):
         """Threshold w to 0.001."""
@@ -1039,10 +1038,9 @@ def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
         'column_name': 'lucode',
         'table_name': 'Biophysical'}
 
-    utils._reclassify_raster_op(
+    utils.reclassify_raster(
         (lulc_path, 1), lulc_to_cp, cp_factor_path, gdal.GDT_Float32,
-        _TARGET_NODATA, values_required=True, 
-        error_details=reclass_error_details)
+        _TARGET_NODATA, error_details=reclass_error_details)
 
 
 def _calculate_usle(

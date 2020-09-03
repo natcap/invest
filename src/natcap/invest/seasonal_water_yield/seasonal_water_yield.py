@@ -598,14 +598,13 @@ def _execute(args):
                     cz_id in cz_rain_events_lookup])
                 n_events_nodata = -1
                 n_events_task = task_graph.add_task(
-                    func=utils._reclassify_raster_op,
+                    func=utils.reclassify_raster,
                     args=(
                         (file_registry['cz_aligned_raster_path'], 1),
                         climate_zone_rain_events_month,
                         file_registry['n_events_path_list'][month_id],
                         gdal.GDT_Float32, n_events_nodata),
                     kwargs={
-                        'values_required': True,
                         'error_details': {
                             'raster_name': 'Climate Zone', 
                             'column_name': 'cz_id', 
@@ -691,13 +690,12 @@ def _execute(args):
                 for lucode in biophysical_table])
             kc_nodata = -1  # a reasonable nodata value
             kc_task = task_graph.add_task(
-                func=utils._reclassify_raster_op,
+                func=utils.reclassify_raster,
                 args=(
                     (file_registry['lulc_aligned_path'], 1), kc_lookup,
                     file_registry['kc_path_list'][month_index],
                     gdal.GDT_Float32, kc_nodata),
                 kwargs={
-                    'values_required': True,
                     'error_details': {
                         'raster_name': 'LULC', 
                         'column_name': 'lucode', 

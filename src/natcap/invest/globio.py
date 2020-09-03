@@ -381,8 +381,7 @@ def execute(args):
         func=utils.reclassify_raster,
         args=((globio_lulc_path, 1), msa_parameter_table['msa_lu'],
                msa_lu_path, gdal.GDT_Float32, globio_nodata),
-        kwargs={'values_required': True,
-                'error_details': {
+        kwargs={'error_details': {
                     'raster_name': 'GLOBIO LULC',
                     'column_name': 'MSA_type-msa_lu',
                     'table_name': 'MSA'}},
@@ -742,8 +741,7 @@ def _calculate_globio_lulc_map(
         func=utils.reclassify_raster,
         args=((lulc_path, 1), lulc_to_globio, intermediate_globio_lulc_path,
               gdal.GDT_Int32, globio_nodata),
-        kwargs={'values_required': True,
-                'error_details': {
+        kwargs={'error_details': {
                     'raster_name': 'LULC',
                     'column_name': 'lucode',
                     'table_name': 'Land Cover to GLOBIO Land Cover'}},

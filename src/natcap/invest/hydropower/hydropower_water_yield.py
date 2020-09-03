@@ -449,13 +449,12 @@ def execute(args):
     LOGGER.info("Reclassifying temp_Kc raster")
     tmp_Kc_raster_path = os.path.join(intermediate_dir, 'kc_raster.tif')
     create_Kc_raster_task = graph.add_task(
-        func=utils._reclassify_raster_op,
+        func=utils.reclassify_raster,
         args=((clipped_lulc_path, 1), Kc_dict, tmp_Kc_raster_path,
               gdal.GDT_Float32, nodata_dict['out_nodata']),
-        kwargs={'values_required': True,
-                'error_details': {
-                    'raster_name': 'LULC', 
-                    'column_name': 'lucode', 
+        kwargs={'error_details': {
+                    'raster_name': 'LULC',
+                    'column_name': 'lucode',
                     'table_name': 'Biophysical'}},
         target_path_list=[tmp_Kc_raster_path],
         dependent_task_list=[align_raster_stack_task],
@@ -466,13 +465,12 @@ def execute(args):
     tmp_root_raster_path = os.path.join(
         intermediate_dir, 'root_depth.tif')
     create_root_raster_task = graph.add_task(
-        func=utils._reclassify_raster_op,
+        func=utils.reclassify_raster,
         args=((clipped_lulc_path, 1), root_dict, tmp_root_raster_path,
               gdal.GDT_Float32, nodata_dict['out_nodata']),
-        kwargs={'values_required': True,
-                'error_details': {
-                    'raster_name': 'LULC', 
-                    'column_name': 'lucode', 
+        kwargs={'error_details': {
+                    'raster_name': 'LULC',
+                    'column_name': 'lucode',
                     'table_name': 'Biophysical'}},
         target_path_list=[tmp_root_raster_path],
         dependent_task_list=[align_raster_stack_task],
@@ -483,13 +481,12 @@ def execute(args):
     LOGGER.info("Reclassifying tmp_veg raster")
     tmp_veg_raster_path = os.path.join(intermediate_dir, 'veg.tif')
     create_veg_raster_task = graph.add_task(
-        func=utils._reclassify_raster_op,
+        func=utils.reclassify_raster,
         args=((clipped_lulc_path, 1), vegetated_dict, tmp_veg_raster_path,
               gdal.GDT_Float32, nodata_dict['out_nodata']),
-        kwargs={'values_required': True,
-                'error_details': {
-                    'raster_name': 'LULC', 
-                    'column_name': 'lucode', 
+        kwargs={'error_details': {
+                    'raster_name': 'LULC',
+                    'column_name': 'lucode',
                     'table_name': 'Biophysical'}},
         target_path_list=[tmp_veg_raster_path],
         dependent_task_list=[align_raster_stack_task],
@@ -565,13 +562,12 @@ def execute(args):
     if 'demand_table_path' in args and args['demand_table_path'] != '':
         # Create demand raster from table values to use in future calculations
         create_demand_raster_task = graph.add_task(
-            func=utils._reclassify_raster_op,
+            func=utils.reclassify_raster,
             args=((clipped_lulc_path, 1), demand_reclassify_dict, demand_path,
                   gdal.GDT_Float32, nodata_dict['out_nodata']),
-        kwargs={'values_required': True,
-                'error_details': {
-                    'raster_name': 'LULC', 
-                    'column_name': 'lucode', 
+        kwargs={'error_details': {
+                    'raster_name': 'LULC',
+                    'column_name': 'lucode',
                     'table_name': 'Demand'}},
             target_path_list=[demand_path],
             dependent_task_list=[align_raster_stack_task],

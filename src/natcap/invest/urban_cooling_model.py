@@ -392,8 +392,7 @@ def execute(args):
             args=(
                 (aligned_lulc_raster_path, 1), prop_map, prop_raster_path,
                 gdal.GDT_Float32, TARGET_NODATA),
-            kwargs={'values_required': True,
-                    'error_details': {
+            kwargs={'error_details': {
                         'raster_name': 'LULC', 
                         'column_name': 'lucode', 
                         'table_name': 'Biophysical'}},

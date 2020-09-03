@@ -326,8 +326,7 @@ def execute(args):
                       bin_to_percentile_yield,
                       coarse_yield_percentile_raster_path, gdal.GDT_Float32,
                       _NODATA_YIELD),
-                kwargs={'values_required': True,
-                        'error_details': {
+                kwargs={'error_details': {
                             'raster_name': f'{crop_name} Climate Bin',
                             'column_name': 'climate_bin',
                             'table_name': (

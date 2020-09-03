@@ -475,7 +475,6 @@ def execute(args):
             args=((lulc_path, 1), sensitivity_reclassify_habitat_dict,
                   habitat_raster_path, gdal.GDT_Float32, _OUT_NODATA),
             kwargs={
-                'values_required': True,
                 'error_details': {
                     'raster_name': 'LULC',
                     'column_name': 'lucode',
@@ -562,7 +561,6 @@ def execute(args):
                 args=((lulc_path, 1), sensitivity_reclassify_threat_dict,
                       sens_raster_path, gdal.GDT_Float32, _OUT_NODATA),
                 kwargs={
-                    'values_required': True,
                     'error_details': {
                         'raster_name': 'LULC',
                         'column_name': 'lucode',

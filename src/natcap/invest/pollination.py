@@ -365,8 +365,7 @@ def execute(args):
                 scenario_variables['landcover_substrate_index'][substrate],
                 nesting_substrate_index_path, gdal.GDT_Float32,
                 _INDEX_NODATA),
-            kwargs={'values_required': True,
-                    'error_details': {
+            kwargs={'error_details': {
                         'raster_name': 'LULC', 
                         'column_name': 'lucode', 
                         'table_name': 'Biophysical'}},
@@ -449,8 +448,7 @@ def execute(args):
                 scenario_variables['landcover_floral_resources'][season],
                 relative_floral_abundance_index_path, gdal.GDT_Float32,
                 _INDEX_NODATA),
-            kwargs={'values_required': True,
-                    'error_details': {
+            kwargs={'error_details': {
                         'raster_name': 'LULC', 
                         'column_name': 'lucode', 
                         'table_name': 'Biophysical'}},
