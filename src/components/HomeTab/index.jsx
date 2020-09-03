@@ -41,7 +41,7 @@ export default class HomeTab extends React.PureComponent {
   }
 
   render() {
-    const { investList, recentSessions } = this.props;
+    const { investList, recentJobs } = this.props;
     // A button in a table row for each model
     const investButtons = [];
     Object.keys(investList).forEach((model) => {
@@ -75,7 +75,7 @@ export default class HomeTab extends React.PureComponent {
         <Col md={7}>
           <RecentInvestJobs
             openInvestModel={this.props.openInvestModel}
-            recentSessions={recentSessions}
+            recentJobs={recentJobs}
           />
         </Col>
       </Row>
@@ -90,12 +90,12 @@ HomeTab.propTypes = {
     }),
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
-  recentSessions: PropTypes.arrayOf(
+  recentJobs: PropTypes.arrayOf(
     PropTypes.array
   ),
 };
 HomeTab.defaultProps = {
-  recentSessions: [],
+  recentJobs: [],
 };
 
 /**
@@ -107,34 +107,35 @@ class RecentInvestJobs extends React.PureComponent {
     this.handleClick = this.handleClick.bind(this);
   }
 
-  handleClick(sessionDataPath) {
-    const sessionData = JSON.parse(
-      fs.readFileSync(sessionDataPath, 'utf8')
+  handleClick(jobDataPath) {
+    const jobData = JSON.parse(
+      fs.readFileSync(jobDataPath, 'utf8')
     );
     this.props.openInvestModel(
-      sessionData.modelRunName,
-      sessionData.argsValues,
-      sessionData.logfile
+      jobData.modelRunName,
+      jobData.argsValues,
+      jobData.logfile,
+      jobData.status,
     );
   }
 
   render() {
     // Buttons to load each recently saved state
     const recentButtons = [];
-    const { recentSessions } = this.props;
-    recentSessions.forEach((session) => {
+    const { recentJobs } = this.props;
+    recentJobs.forEach((job) => {
       // These properties are required, if they don't exist,
-      // the session data was corrupted and should be skipped
-      let sessionID;
+      // the job's data was corrupted and should be skipped
+      let jobID;
       let metadata;
       let model;
       let workspaceDir;
-      let sessionDataPath;
+      let jobDataPath;
       try {
-        [sessionID, metadata] = session;
+        [jobID, metadata] = job;
         model = metadata.model;
         workspaceDir = metadata.workspace.directory;
-        sessionDataPath = metadata.sessionDataPath;
+        jobDataPath = metadata.jobDataPath;
       } catch (error) {
         return;
       }
@@ -149,10 +150,10 @@ class RecentInvestJobs extends React.PureComponent {
       };
       recentButtons.push(
         <Card
-          className="text-left session-card"
+          className="text-left recent-job-card"
           as="button"
-          key={sessionID}
-          onClick={() => this.handleClick(sessionDataPath)}
+          key={jobID}
+          onClick={() => this.handleClick(jobDataPath)}
         >
           <Card.Body>
             <Card.Header as="h4" style={headerStyle}>
@@ -186,21 +187,21 @@ class RecentInvestJobs extends React.PureComponent {
 
     return (
       <Container>
-        <label htmlFor="session-card-group">
-          <h4>Recent Sessions:</h4>
+        <label htmlFor="recent-job-card-group">
+          <h4>Recent InVEST Runs:</h4>
         </label>
         {recentButtons.length
           ? (
             <CardGroup
-              id="session-card-group"
-              className="session-card-group"
+              id="recent-job-card-group"
+              className="recent-job-card-group"
             >
               {recentButtons}
             </CardGroup>
           )
           : (
             <div>
-              No recent sessions yet.
+              No recent InVEST runs yet.
               <br />
               Try the <b>Load</b> button to load a sample data json file
             </div>
@@ -211,5 +212,5 @@ class RecentInvestJobs extends React.PureComponent {
 }
 
 RecentInvestJobs.propTypes = {
-  recentSessions: PropTypes.array.isRequired,
+  recentJobs: PropTypes.array.isRequired,
 };

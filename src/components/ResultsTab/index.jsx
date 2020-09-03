@@ -38,6 +38,6 @@ ResultsTab.propTypes = {
       directory: PropTypes.string,
       suffix: PropTypes.string
     }),
-  sessionID: PropTypes.string,
+  jobID: PropTypes.string,
   activeTab: PropTypes.string 
 }

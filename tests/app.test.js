@@ -255,5 +255,4 @@ describe('InVEST subprocess testing', () => {
     expect(cardText).toBeInTheDocument()
     unmount()
   })
-
 })

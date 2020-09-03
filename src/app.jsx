@@ -16,7 +16,7 @@ import InvestJob from './InvestJob';
 import LoadButton from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
 import { getInvestList } from './server_requests';
-import { updateRecentSessions, loadRecentSessions } from './utils';
+import { updateRecentJobs, loadRecentJobs } from './utils';
 import { fileRegistry } from './constants';
 import { getLogger } from './logger';
 
@@ -32,10 +32,10 @@ export default class App extends React.Component {
       activeTab: 'home',
       openJobs: [],
       investList: {},
-      recentSessions: [],
+      recentJobs: [],
       investSettings: {},
     };
-    this.setRecentSessions = this.setRecentSessions.bind(this);
+    this.setRecentJobs = this.setRecentJobs.bind(this);
     this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
@@ -47,16 +47,16 @@ export default class App extends React.Component {
   async componentDidMount() {
     const { jobDatabase } = this.props;
     const investList = await getInvestList();
-    let recentSessions = [];
+    let recentJobs = [];
     if (fs.existsSync(jobDatabase)) {
-      recentSessions = await loadRecentSessions(jobDatabase);
+      recentJobs = await loadRecentJobs(jobDatabase);
     }
     // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?
 
     this.setState({
       investList: investList,
-      recentSessions: recentSessions,
+      recentJobs: recentJobs,
       investSettings: {
         nWorkers: '-1',
         loggingLevel: 'INFO',
@@ -64,17 +64,17 @@ export default class App extends React.Component {
     });
   }
 
-  /** Update the recent sessions list when a new invest job was saved.
+  /** Update the recent jobs list when a new invest job was saved.
    * This triggers on InvestJob.saveState().
    *
    * @param {object} jobdata - the metadata describing an invest job.
    */
-  async setRecentSessions(jobdata) {
-    const recentSessions = await updateRecentSessions(
+  async setRecentJobs(jobdata) {
+    const recentJobs = await updateRecentJobs(
       jobdata, this.props.jobDatabase
     );
     this.setState({
-      recentSessions: recentSessions,
+      recentJobs: recentJobs,
     });
   }
 
@@ -96,14 +96,15 @@ export default class App extends React.Component {
 
   /**
    * Push data for a new InvestJob component to a new array.
-   * When this is called to load a "recent session", optional argsValues
-   * and logfile parameters will be defined, otherwise they can be undefined.
+   * When this is called to load a "recent job", optional argsValues, logfile,
+   * and jobStatus parameters will be defined, otherwise they can be undefined.
    *
    * @param  {string} modelRunName - invest model name as appears in `invest list`
    * @param  {object} argsValues - an invest "args dictionary" with initial values
    * @param  {string} logfile - path to an existing invest logfile
+   * @param  {string} status - indicates how the job exited, if it's a recent job.
    */
-  openInvestModel(modelRunName, argsValues, logfile) {
+  openInvestModel(modelRunName, argsValues, logfile, status) {
     const navID = crypto.randomBytes(16).toString('hex');
     this.setState((state) => ({
       openJobs: [
@@ -112,6 +113,7 @@ export default class App extends React.Component {
           modelRunName: modelRunName,
           argsValues: argsValues,
           logfile: logfile,
+          status: status,
           navID: navID,
         },
       ],
@@ -151,14 +153,11 @@ export default class App extends React.Component {
    * This triggers automatically when the invest subprocess starts and again
    * when it exits.
    */
-  saveJob(sessionID, modelRunName, argsValues, logfile, workspace) {
-    const jsonContent = JSON.stringify({
-      modelRunName: modelRunName,
-      argsValues: argsValues,
-      logfile: logfile,
-      workspace: workspace,
-    });
-    const filepath = path.join(fileRegistry.CACHE_DIR, `${sessionID}.json`);
+  saveJob(jobData) {
+    const jsonContent = JSON.stringify(jobData);
+    const filepath = path.join(
+      fileRegistry.CACHE_DIR, `${jobData.jobID}.json`
+    );
     fs.writeFile(filepath, jsonContent, 'utf8', (err) => {
       if (err) {
         logger.error('An error occured while writing JSON Object to File.');
@@ -166,14 +165,14 @@ export default class App extends React.Component {
       }
     });
     const jobMetadata = {};
-    jobMetadata[sessionID] = {
-      model: modelRunName,
-      workspace: workspace,
+    jobMetadata[jobData.jobID] = {
+      model: jobData.modelRunName,
+      workspace: jobData.workspace,
       humanTime: new Date().toLocaleString(),
       systemTime: new Date().getTime(),
-      sessionDataPath: filepath,
+      jobDataPath: filepath,
     };
-    this.setRecentSessions(jobMetadata, this.props.jobDatabase);
+    this.setRecentJobs(jobMetadata, this.props.jobDatabase);
   }
 
   render() {
@@ -181,7 +180,7 @@ export default class App extends React.Component {
     const {
       investList,
       investSettings,
-      recentSessions,
+      recentJobs,
       openJobs,
       activeTab,
     } = this.state;
@@ -216,6 +215,7 @@ export default class App extends React.Component {
             modelRunName={job.modelRunName}
             argsInitValues={job.argsValues}
             logfile={job.logfile}
+            jobStatus={job.status}
             investSettings={investSettings}
             saveJob={this.saveJob}
           />
@@ -255,7 +255,7 @@ export default class App extends React.Component {
             <HomeTab
               investList={investList}
               openInvestModel={this.openInvestModel}
-              recentSessions={recentSessions}
+              recentJobs={recentJobs}
             />
           </TabPane>
           {investTabPanes}

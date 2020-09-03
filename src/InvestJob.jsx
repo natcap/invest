@@ -46,7 +46,7 @@ export default class InvestJob extends React.Component {
 
     this.state = {
       activeTab: 'setup',
-      // sessionID: null, // hash of modelName + workspace generated at model execution
+      // jobID: null, // hash of modelName + workspace generated at model execution
       modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
       logfile: null, // path to the invest logfile associated with invest job
@@ -72,6 +72,7 @@ export default class InvestJob extends React.Component {
       modelSpec: modelSpec,
       argsSpec: argsSpec,
       logfile: this.props.logfile,
+      jobStatus: this.props.jobStatus,
     }, () => { this.switchTabs('setup'); });
   }
 
@@ -111,32 +112,46 @@ export default class InvestJob extends React.Component {
    *   as a javascript object
    */
   async investExecute(argsValues) {
-    const { investExe, investSettings } = this.props;
+    const {
+      investExe,
+      investSettings,
+      modelRunName,
+      saveJob,
+    } = this.props;
 
+    // If the same model, workspace, and suffix are executed, invest
+    // will overwrite the previous outputs. So our recent jobs
+    // catalogue should overwite as well, and that's assured by this
+    // non-unique jobID.
     const workspace = {
       directory: path.resolve(argsValues.workspace_dir),
       suffix: argsValues.results_suffix,
     };
-    // If the same model, workspace, and suffix are executed, invest
-    // will overwrite the previous outputs. So our recent session
-    // catalogue should overwite as well, and that's assured by this
-    // non-unique sessionID.
-    const sessionID = crypto.createHash('sha1').update(
-      `${this.props.modelRunName}${JSON.stringify(workspace)}`
+    const jobID = crypto.createHash('sha1').update(
+      `${modelRunName}${JSON.stringify(workspace)}`
     ).digest('hex');
+
+    const job = {
+      jobID: jobID,
+      modelRunName: modelRunName,
+      argsValues: argsValues,
+      workspace: workspace,
+      logfile: undefined,
+      status: undefined,
+    };
 
     // Write a temporary datastack json for passing to invest CLI
     const tempDir = fs.mkdtempSync(path.join(
       fileRegistry.TEMP_DIR, 'data-'
     ));
     const datastackPath = path.join(tempDir, 'datastack.json');
-    await this.argsToJsonFile(datastackPath, argsValues);
+    await this.argsToJsonFile(datastackPath, job.argsValues);
 
     const verbosity = LOGLEVELMAP[investSettings.loggingLevel];
     const cmdArgs = [
       verbosity,
       'run',
-      this.props.modelRunName,
+      job.modelRunName,
       '--headless',
       `-d ${datastackPath}`,
     ];
@@ -147,21 +162,20 @@ export default class InvestJob extends React.Component {
 
     // There's no general way to know that a spawned process started,
     // so this logic when listening for stdout seems like the way.
-    let logfilename = '';
+    // let logfilename = '';
     investRun.stdout.on('data', async () => {
-      if (!logfilename) {
-        logfilename = await findMostRecentLogfile(workspace.directory);
+      if (!job.logfile) {
+        job.logfile = await findMostRecentLogfile(job.workspace.directory);
         // TODO: handle case when logfilename is undefined? It seems like
         // sometimes there is some stdout emitted before a logfile exists.
+        job.status = 'running';
         this.setState(
           {
-            logfile: logfilename,
-            jobStatus: 'running',
+            logfile: job.logfile,
+            jobStatus: job.status,
           }, () => {
             this.switchTabs('log');
-            this.props.saveJob(
-              sessionID, this.props.modelRunName, argsValues, logfilename, workspace
-            );
+            saveJob(job);
           }
         );
       }
@@ -187,11 +201,11 @@ export default class InvestJob extends React.Component {
       // differently from one-another, but right now they are all exit code 1.
       // E.g. this callback is designed with a model crash in mind, but not a fail to 
       // launch, in which case the saveState call will probably crash.
-      const status = (code === 0 ? 'success' : 'error');
+      job.status = (code === 0 ? 'success' : 'error');
       this.setState({
-        jobStatus: status,
+        jobStatus: job.status,
       }, () => {
-        // this.saveState();
+        saveJob(job);
         cleanupDir(tempDir);
       });
     });

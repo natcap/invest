@@ -15,7 +15,7 @@ const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-
  * @param  {string} jobDatabasePath - path to a json file with jobs metadata.
  * @returns {Promise} - Resolves sorted array of jobs with metadata.
  */
-export function loadRecentSessions(jobDatabasePath) {
+export function loadRecentJobs(jobDatabasePath) {
   return new Promise((resolve) => {
     const db = JSON.parse(fs.readFileSync(jobDatabasePath, 'utf8'));
     const sortedJobs = Object.entries(db).sort(
@@ -32,7 +32,7 @@ export function loadRecentSessions(jobDatabasePath) {
  * @param  {string} jobDatabase - path to a json file with jobs metadata.
  * @returns {Array} - sorted array of jobs with metadata.
  */
-export async function updateRecentSessions(jobdata, jobDatabase) {
+export async function updateRecentJobs(jobdata, jobDatabase) {
   let jsonContent;
   if (fs.existsSync(jobDatabase)) {
     const db = JSON.parse(fs.readFileSync(jobDatabase, 'utf8'));
@@ -44,7 +44,7 @@ export async function updateRecentSessions(jobdata, jobDatabase) {
     jsonContent = JSON.stringify(jobdata, null, 2);
   }
   fs.writeFileSync(jobDatabase, jsonContent, 'utf8');
-  const updated = await loadRecentSessions(jobDatabase);
+  const updated = await loadRecentJobs(jobDatabase);
   return updated;
 }
 

@@ -54,7 +54,7 @@ input[type=radio]{
 	font-weight: 600;
 }
 
-.session-card-group {
+.recent-job-card-group {
 	display: flex;
 	flex-wrap: wrap;
 	flex-direction: row;
@@ -62,7 +62,7 @@ input[type=radio]{
 
 /* cards can expand to fill space, via flex,
    but need an explicit width so they are all uniform.*/
-.session-card {
+.recent-job-card {
 	flex: 1 0 auto!important;
 	flex-direction: row;
 	width: 400px; 
