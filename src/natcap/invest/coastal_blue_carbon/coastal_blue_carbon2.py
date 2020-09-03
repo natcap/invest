@@ -232,15 +232,18 @@ ARGS_SPEC = {
 
 
 def execute_transition_analysis(args):
-    # If a graph already exists, use that.  Otherwise, create one.
     try:
-        task_graph = args['task_graph']
-    except KeyError:
-        taskgraph_cache_dir = os.path.join(
-            args['workspace_dir'], TASKGRAPH_CACHE_DIR_NAME)
-        task_graph = taskgraph.TaskGraph(
-            taskgraph_cache_dir,
-            int(args['n_workers']))
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
+
+    taskgraph_cache_dir = os.path.join(
+        args['workspace_dir'], TASKGRAPH_CACHE_DIR_NAME)
+    task_graph = taskgraph.TaskGraph(
+        taskgraph_cache_dir, n_workers)
 
     suffix = args.get('suffix', '')
     intermediate_dir = os.path.join(
@@ -300,10 +303,7 @@ def execute_transition_analysis(args):
         args['sequestration_since_baseline_raster']]
 
     first_transition_year = min(transition_years)
-    try:
-        final_year = int(args['analysis_year'])
-    except (TypeError, KeyError, ValueError):
-        final_year = max(transition_years)
+    final_year = int(args['analysis_year'])
 
     for year in range(first_transition_year, final_year+1):
         current_stock_tasks = {}
@@ -602,17 +602,8 @@ def execute(args):
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
     transition_years = set()
-    try:
-        baseline_lulc_year = int(args['baseline_lulc_year'])
-    except (KeyError, ValueError, TypeError):
-        LOGGER.error('The baseline_lulc_year is required but not provided.')
-        raise ValueError('Baseline lulc year is required.')
-
-    try:
-        # TODO: validate that args['analysis_year'] > max(transition_years)
-        analysis_year = int(args['analysis_year'])
-    except (KeyError, ValueError, TypeError):
-        analysis_year = None
+    baseline_lulc_year = int(args['baseline_lulc_year'])
+    analysis_year = int(args['analysis_year'])
 
     base_paths = [args['baseline_lulc_path']]
     aligned_lulc_paths = {}
@@ -694,12 +685,10 @@ def execute(args):
     # Baseline accumulation are simply reclassified
     # There are no emissions, so net sequestration is only from accumulation.
     # Value can still be calculated from the net sequestration.
-
-
     end_of_baseline_period = baseline_lulc_year
     if transition_years:
         end_of_baseline_period = min(transition_years)
-    elif analysis_year:
+    else:
         end_of_baseline_period = analysis_year
 
     stock_rasters = {
