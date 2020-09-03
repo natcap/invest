@@ -41,8 +41,8 @@ Unreleased Changes (3.9)
     * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
     * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to
       ``projection_wkt``.
-  * Provide better error messages when an input raster has values not found
-    in a required corresponding table input column.
+  * Improve consistency and context for error messages when an input raster
+    has values not found in a required corresponding table input column.
   * Fixed bug that was causing a TypeError when certain input rasters had an
     undefined nodata value. Undefined nodata values should now work everywhere.
 * Habitat Quality:
