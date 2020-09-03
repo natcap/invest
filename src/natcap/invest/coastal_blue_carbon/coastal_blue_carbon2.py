@@ -1,6 +1,7 @@
 import itertools
 import logging
 import os
+import pprint
 
 import numpy
 import pandas
@@ -485,9 +486,9 @@ def execute_transition_analysis(args):
             net_seq_rasters_since_transition = []
             for _year in range(current_transition_year, year + 1):
                 emissions_rasters_since_transition.extend(
-                    list(emissions_rasters[year].values()))
+                    list(emissions_rasters[_year].values()))
                 net_seq_rasters_since_transition.extend(
-                    list(net_sequestration_rasters[year].values()))
+                    list(net_sequestration_rasters[_year].values()))
 
             emissions_since_last_transition_raster = os.path.join(
                 output_dir, EMISSIONS_SINCE_TRANSITION_RASTER_PATTERN.format(
@@ -1047,15 +1048,11 @@ def _calculate_net_sequestration(
             valid_emissions_pixels &= (
                 ~numpy.isclose(emissions_matrix, emissions_nodata))
 
-        # Emissions are created as a positive value, but negatively affect
-        # sequestration.
         target_matrix[valid_emissions_pixels] = emissions_matrix[
             valid_emissions_pixels] * -1
 
         valid_pixels = ~(valid_accumulation_pixels | valid_emissions_pixels)
         target_matrix[valid_pixels] = NODATA_FLOAT32
-        return target_matrix
-
     pygeoprocessing.raster_calculator(
         [(accumulation_raster_path, 1), (emissions_raster_path, 1)],
         _record_sequestration, target_raster_path, gdal.GDT_Float32,
@@ -1090,8 +1087,14 @@ def _calculate_emissions(
         (year_of_last_disturbance_matrix != NODATA_UINT16) &
         (~zero_half_life))
 
+    # Emissions happen immediately.
+    # This means that if the transition happens in year 2020, the emissions in
+    # 2020 will be that of the first year's worth of emissions.
+    # Think of this as though the transition happens instantaneously and
+    # completely at 12:01am on Jan. 1, 2020.  The year 2020 will have 1 full
+    # year of emissions.
     n_years_elapsed = (
-        current_year - year_of_last_disturbance_matrix[valid_pixels])
+        current_year - year_of_last_disturbance_matrix[valid_pixels]) + 1
 
     valid_half_life_pixels = carbon_half_life_matrix[valid_pixels]
 

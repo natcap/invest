@@ -1338,12 +1338,21 @@ class TestCBC2(unittest.TestCase):
             transition_2010_matrix, 255, (2, -2), (2, -2), wkt,
             transition_2010_raster_path)
 
+        transition_2020_raster_path = os.path.join(
+            self.workspace_dir, 'transition_2020.tif')
+        transition_2020_matrix = numpy.array([[1, 2]], dtype=numpy.uint8)
+        pygeoprocessing.numpy_array_to_raster(
+            transition_2020_matrix, 255, (2, -2), (2, -2), wkt,
+            transition_2020_raster_path)
+
         transition_rasters_csv_path = os.path.join(
             self.workspace_dir, 'transition_rasters.csv')
         with open(transition_rasters_csv_path, 'w') as transition_rasters_csv:
             transition_rasters_csv.write('transition_year,raster_path\n')
             transition_rasters_csv.write(
                 f'2010,{transition_2010_raster_path}\n')
+            transition_rasters_csv.write(
+                f'2020,{transition_2020_raster_path}\n')
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -1352,7 +1361,7 @@ class TestCBC2(unittest.TestCase):
             'biophysical_table_path': biophysical_table_path,
             'baseline_lulc_path': baseline_landcover_raster_path,
             'baseline_lulc_year': 2000,
-            'analysis_year': 2020,
+            'analysis_year': 2030,
         }
 
         coastal_blue_carbon2.execute(args)
@@ -1384,9 +1393,19 @@ class TestCBC2(unittest.TestCase):
             gdal.OpenEx(raster_path).ReadAsArray(),
             expected_sequestration_2010_to_2020)
 
+        expected_sequestration_2020_to_2030 = numpy.array(
+            [[83.5, 0]], dtype=numpy.float32)
+        raster_path = os.path.join(
+            args['workspace_dir'], 'output',
+            ('total-net-carbon-sequestration-between-'
+                '2020-and-2030.tif'))
+        numpy.testing.assert_allclose(
+            gdal.OpenEx(raster_path).ReadAsArray(),
+            expected_sequestration_2020_to_2030)
+
         # Total sequestration is the sum of all the previous sequestration.
         expected_total_sequestration = numpy.array(
-            [[-44.6559, 0]], dtype=numpy.float32)
+            [[40.8441, 0]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output',
             'total-net-carbon-sequestration.tif')
