@@ -388,7 +388,7 @@ def execute(args):
         prop_raster_path = os.path.join(
             intermediate_dir, '%s%s.tif' % (prop, file_suffix))
         prop_task = task_graph.add_task(
-            func=utils._reclassify_raster_op,
+            func=utils.reclassify_raster,
             args=(
                 (aligned_lulc_raster_path, 1), prop_map, prop_raster_path,
                 gdal.GDT_Float32, TARGET_NODATA),

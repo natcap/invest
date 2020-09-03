@@ -359,7 +359,7 @@ def execute(args):
 
         landcover_substrate_index_tasks[substrate] = task_graph.add_task(
             task_name='reclassify_to_substrate_%s' % substrate,
-            func=utils._reclassify_raster_op,
+            func=utils.reclassify_raster,
             args=(
                 (args['landcover_raster_path'], 1),
                 scenario_variables['landcover_substrate_index'][substrate],
@@ -443,7 +443,7 @@ def execute(args):
 
         relative_floral_abudance_task = task_graph.add_task(
             task_name='reclassify_to_floral_abundance_%s' % season,
-            func=utils._reclassify_raster_op,
+            func=utils.reclassify_raster,
             args=(
                 (args['landcover_raster_path'], 1),
                 scenario_variables['landcover_floral_resources'][season],

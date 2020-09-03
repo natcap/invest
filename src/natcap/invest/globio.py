@@ -378,7 +378,7 @@ def execute(args):
         output_dir, 'msa_lu%s.tif' % file_suffix)
     LOGGER.info('calculate msa_lu')
     calculate_msa_lu_task = task_graph.add_task(
-        func=utils._reclassify_raster_op,
+        func=utils.reclassify_raster,
         args=((globio_lulc_path, 1), msa_parameter_table['msa_lu'],
                msa_lu_path, gdal.GDT_Float32, globio_nodata),
         kwargs={'values_required': True,
@@ -739,7 +739,7 @@ def _calculate_globio_lulc_map(
     intermediate_globio_lulc_path = os.path.join(
         tmp_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
     reclass_lulc_to_globio_task = task_graph.add_task(
-        func=utils._reclassify_raster_op,
+        func=utils.reclassify_raster,
         args=((lulc_path, 1), lulc_to_globio, intermediate_globio_lulc_path,
               gdal.GDT_Int32, globio_nodata),
         kwargs={'values_required': True,

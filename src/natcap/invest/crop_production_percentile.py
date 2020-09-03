@@ -321,7 +321,7 @@ def execute(args):
                 _COARSE_YIELD_PERCENTILE_FILE_PATTERN % (
                     crop_name, yield_percentile_id, file_suffix))
             create_coarse_yield_percentile_task = task_graph.add_task(
-                func=utils._reclassify_raster_op,
+                func=utils.reclassify_raster,
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_percentile_yield,
                       coarse_yield_percentile_raster_path, gdal.GDT_Float32,

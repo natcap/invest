@@ -437,7 +437,7 @@ def _generate_carbon_map(
     reclass_error_details = {
         'raster_name': 'LULC', 'column_name': 'lucode', 
         'table_name': 'Carbon Pools'}
-    utils._reclassify_raster_op(
+    utils.reclassify_raster(
         (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
         gdal.GDT_Float32, _CARBON_NODATA, values_required=True, 
         error_details=reclass_error_details)

@@ -471,7 +471,7 @@ def execute(args):
             f'habitat{lulc_key}{file_suffix}.tif')
 
         habitat_raster_task = task_graph.add_task(
-            func=utils._reclassify_raster_op,
+            func=utils.reclassify_raster,
             args=((lulc_path, 1), sensitivity_reclassify_habitat_dict,
                   habitat_raster_path, gdal.GDT_Float32, _OUT_NODATA),
             kwargs={
@@ -558,7 +558,7 @@ def execute(args):
                 sensitivity_dict.items()}
 
             sens_threat_task = task_graph.add_task(
-                func=utils._reclassify_raster_op,
+                func=utils.reclassify_raster,
                 args=((lulc_path, 1), sensitivity_reclassify_threat_dict,
                       sens_raster_path, gdal.GDT_Float32, _OUT_NODATA),
                 kwargs={

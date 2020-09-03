@@ -386,7 +386,7 @@ def execute(args):
                 _COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN % (
                     crop_name, yield_regression_id, file_suffix))
             create_coarse_regression_parameter_task = task_graph.add_task(
-                func=utils._reclassify_raster_op,
+                func=utils.reclassify_raster,
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_regression_value,
                       coarse_regression_parameter_raster_path, gdal.GDT_Float32,
