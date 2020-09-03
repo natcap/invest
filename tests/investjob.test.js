@@ -12,7 +12,7 @@ import { fileRegistry } from '../src/constants';
 
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
-const MOCK_RECENT_SESSIONS_VALUE = 
+const MOCK_RECENT_JOBS_VALUE = 
   [ [ "job1",
       {
         "model": "carbon",
@@ -33,9 +33,9 @@ function renderInvestJob() {
       investExe=''
       investList={{Carbon: {internal_name: 'carbon'}}}
       investSettings={{nWorkers: '-1', loggingLevel: 'INFO'}}
-      recentSessions={MOCK_RECENT_SESSIONS_VALUE}
+      recentJobs={MOCK_RECENT_JOBS_VALUE}
       jobDatabase={fileRegistry.JOBS_DATABASE}
-      updateRecentSessions={() => {}}
+      updateRecentJobs={() => {}}
       saveSettings={() => {}}
     />);
   return { getByText, getByLabelText, utils }
@@ -68,7 +68,7 @@ test('Clicking an invest button renders SetupTab', async () => {
   expect(getSpec).toHaveBeenCalledTimes(1);  // the wrapper around fetch
 })
 
-test('Clicking a recent session renders SetupTab', async () => {
+test('Clicking a recent job renders SetupTab', async () => {
   fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
   const mockDatastack = {
     module_name: 'natcap.invest.carbon',
@@ -82,7 +82,7 @@ test('Clicking a recent session renders SetupTab', async () => {
   const { getByText, getByLabelText, utils } = renderInvestJob()
 
   const recent = getByText('carbon_setup');
-  fireEvent.click(recent);  // a recent session button
+  fireEvent.click(recent);  // a recent job button
   const execute = await utils.findByText('Execute');
   await waitFor(() => {
     // Expect a disabled Execute button and a visible SetupTab
@@ -94,7 +94,7 @@ test('Clicking a recent session renders SetupTab', async () => {
   });
 })
 
-test('Loading a recent session when the invest logfile is missing', async () => {
+test('Loading a recent job when the invest logfile is missing', async () => {
   /* We should get an alert saying nothing can be loaded. */
   const spy = jest.spyOn(window, 'alert').mockImplementation(() => {});
   fetchDatastackFromFile.mockResolvedValue(undefined)
@@ -103,7 +103,7 @@ test('Loading a recent session when the invest logfile is missing', async () => 
   const { getByText, getByLabelText, utils } = renderInvestJob()
 
   const recent = getByText('carbon_setup');
-  fireEvent.click(recent);  // a recent session button
+  fireEvent.click(recent);  // a recent job button
   await waitFor(() => {
     expect(spy).toHaveBeenCalledTimes(1)
   });
@@ -290,8 +290,8 @@ test('Test various ways for repeated re-renders of SetupTab', async () => {
 
   const { getByText, getByLabelText, utils } = renderInvestJob()
 
-  // 1. Loading from a recent session
-  fireEvent.click(getByText('carbon_setup'));  // a recent session button
+  // 1. Loading from a recent job
+  fireEvent.click(getByText('carbon_setup'));  // a recent job button
   const execute = await utils.findByText('Execute');
   await waitFor(() => {
     // Expect a disabled Execute button and a visible SetupTab

@@ -32,9 +32,9 @@ function renderSetupFromSpec(spec) {
       investExe = ''
       investList={INVEST_LIST}
       investSettings={{nWorkers: '-1', loggingLevel: 'INFO'}}
-      recentSessions={[]}
+      recentJobs={[]}
       jobDatabase={fileRegistry.JOBS_DATABASE}
-      updateRecentSessions={() => {}}
+      updateRecentJobs={() => {}}
       saveSettings={() => {}}
     />);
   return { getByText, getByLabelText, utils }

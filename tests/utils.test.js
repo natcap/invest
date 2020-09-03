@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { findMostRecentLogfile, loadRecentSessions,
-         updateRecentSessions, boolStringToBoolean,
+import { findMostRecentLogfile, loadRecentJobs,
+         updateRecentJobs, boolStringToBoolean,
          argsValuesFromSpec, cleanupDir } from '../src/utils';
 
 function setupDir() {
@@ -51,7 +51,7 @@ test('Test findMostRecentLogfile returns undefined when no logiles exist', async
   cleanupDir(dir)
 })
 
-test('Test loadRecentSessions returns correct order', async() => {
+test('Test loadRecentJobs returns correct order', async() => {
   const jobData = {
     "carbon_setup": {
       "systemTime": 2583259376573.759, // more recent
@@ -63,13 +63,13 @@ test('Test loadRecentSessions returns correct order', async() => {
   const dir = setupDir()
   const jobdbPath = path.join(dir, 'jobdb.json');
   fs.writeFileSync(jobdbPath, JSON.stringify(jobData))
-  const jobs = await loadRecentSessions(jobdbPath);
+  const jobs = await loadRecentJobs(jobdbPath);
   expect(jobs[0][0]).toEqual('carbon_setup')
   expect(jobs[1][0]).toEqual('duck')
   cleanupDir(dir)
 })
 
-test('Test updateRecentSessions returns correct order', async() => {
+test('Test updateRecentJobs returns correct order', async() => {
   const jobData = {
     "carbon_setup": {
       "systemTime": 2583259376573.759
@@ -87,14 +87,14 @@ test('Test updateRecentSessions returns correct order', async() => {
   const dir = setupDir()
   const jobdbPath = path.join(dir, 'jobdb.json');
   fs.writeFileSync(jobdbPath, JSON.stringify(jobData))
-  const jobs = await updateRecentSessions(newJob, jobdbPath);
+  const jobs = await updateRecentJobs(newJob, jobdbPath);
   expect(jobs[0][0]).toEqual('goose')
   expect(jobs[1][0]).toEqual('carbon_setup')
   expect(jobs[2][0]).toEqual('duck')
   cleanupDir(dir)
 })
 
-test('Test updateRecentSessions: database is missing', async() => {
+test('Test updateRecentJobs: database is missing', async() => {
   const dir = setupDir()
   const jobdbPath = path.join(dir, 'foo.json');
   const newJob = {
@@ -103,7 +103,7 @@ test('Test updateRecentSessions: database is missing', async() => {
     }
   }
   expect(fs.existsSync(jobdbPath)).toBeFalsy()
-  const jobs = await updateRecentSessions(newJob, jobdbPath);
+  const jobs = await updateRecentJobs(newJob, jobdbPath);
   expect(jobs[0][0]).toEqual('goose')
   expect(fs.existsSync(jobdbPath)).toBeTruthy()
   cleanupDir(dir)

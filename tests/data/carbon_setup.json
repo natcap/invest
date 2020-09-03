@@ -1,6 +1,6 @@
 {
   "setupKey": 1,
-  "sessionID": "carbon-carb-sample-willamette",
+  "jobID": "carbon-carb-sample-willamette",
   "modelName": "carbon",
   "modelSpec": {
     "model_name": "InVEST Carbon Model",

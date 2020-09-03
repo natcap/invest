@@ -25,7 +25,7 @@ afterAll(() => {
   jest.resetAllMocks()
 })
 
-test('Recent Sessions: each has a button', async () => {
+test('Recent Jobs: each has a button', async () => {
   getInvestList.mockResolvedValue({});
   // This is a special json containing data used for testing
   const testJobsDatabase = path.join(__dirname, './data/jobdb.json');
@@ -43,7 +43,7 @@ test('Recent Sessions: each has a button', async () => {
   })
 })
 
-test('Recent Sessions: database is missing', async () => {
+test('Recent Jobs: database is missing', async () => {
   getInvestList.mockResolvedValue({});
   const testJobsDatabase = 'foo.json';
   const { findByText } = render(
@@ -51,7 +51,7 @@ test('Recent Sessions: database is missing', async () => {
       jobDatabase={testJobsDatabase}
       investExe='foo'/>);
 
-  const node = await findByText(/No recent sessions/)
+  const node = await findByText(/No recent InVEST runs/)
   expect(node).toBeInTheDocument()
 })
 
@@ -208,8 +208,8 @@ describe('InVEST subprocess testing', () => {
     await waitFor(() => {
       expect(getByText('Model Completed')).toBeInTheDocument();
     })
-    // A recent session card should be rendered
-    const { findByText } = within(getByLabelText('Recent Sessions:'))
+    // A recent job card should be rendered
+    const { findByText } = within(getByLabelText('Recent InVEST Runs:'))
     const cardText = await findByText(`${path.resolve(fakeWorkspace)}`)
     expect(cardText).toBeInTheDocument()
     // Normally we don't explicitly unmount the rendered components,
@@ -249,8 +249,8 @@ describe('InVEST subprocess testing', () => {
       // stderr text should be rendered 
       expect(getByText(errorMessage)).toHaveClass('alert-danger');
     });
-    // A recent session card should be rendered
-    const { findByText } = within(getByLabelText('Recent Sessions:'))
+    // A recent job card should be rendered
+    const { findByText } = within(getByLabelText('Recent InVEST Runs:'))
     const cardText = await findByText(`${path.resolve(fakeWorkspace)}`)
     expect(cardText).toBeInTheDocument()
     unmount()
