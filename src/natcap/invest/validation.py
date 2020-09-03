@@ -640,15 +640,15 @@ def timeout(func, *args, timeout=5, **kwargs):
         return message_queue.get()
 
 
-# opening a file could take a long time if it's in a file streaming service
+# accessing a file could take a long time if it's in a file streaming service
 # to prevent the UI from hanging due to slow validation,
 # set a timeout for these functions.
 _VALIDATION_FUNCS = {
     'boolean': check_boolean,
     'csv': functools.partial(timeout, check_csv),
-    'file': check_file,
-    'folder': check_directory,
-    'directory': check_directory,
+    'file': functools.partial(timeout, check_file),
+    'folder': functools.partial(timeout, check_directory),
+    'directory': functools.partial(timeout, check_directory),
     'freestyle_string': check_freestyle_string,
     'number': check_number,
     'option_string': check_option_string,

@@ -36,9 +36,8 @@ Unreleased Changes
     * Validate values in the type column of predictor tables early in execution. Raise
       a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
 * Validation
-    * Set a timeout on validation functions that open a file. This will raise an error to
-      prevent the UI from hanging if a file has to be downloaded from Google Drive File
-      Stream or a similar service.
+    * Set a 5-second timeout on validation functions that access a file. This will raise 
+      a warning and prevent validation from slowing down the UI too much.
 
 3.8.7 (2020-07-17)
 ------------------
