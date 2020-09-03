@@ -4,7 +4,6 @@ import logging
 import collections
 import tempfile
 
-import pandas
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -174,7 +173,7 @@ def execute(args):
     map is generated.  These modes are used below to describe input
     parameters.
 
-    Parameters:
+    Args:
 
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
@@ -380,7 +379,7 @@ def execute(args):
     calculate_msa_lu_task = task_graph.add_task(
         func=utils.reclassify_raster,
         args=((globio_lulc_path, 1), msa_parameter_table['msa_lu'],
-               msa_lu_path, gdal.GDT_Float32, globio_nodata),
+              msa_lu_path, gdal.GDT_Float32, globio_nodata),
         kwargs={'error_details': {
                     'raster_name': 'GLOBIO LULC',
                     'column_name': 'MSA_type-msa_lu',
@@ -421,7 +420,7 @@ def execute(args):
 def _summarize_results_in_aoi(aoi_path, summary_aoi_path, msa_path):
     """Aggregate MSA results to AOI polygons with zonal statistics.
 
-    Parameters:
+    Args:
         aoi_path (string): path to aoi shapefile containing polygons.
         summary_aoi_path (string):
             path to copy of aoi shapefile with summary stats added.
@@ -433,7 +432,7 @@ def _summarize_results_in_aoi(aoi_path, summary_aoi_path, msa_path):
     """
     # copy the aoi to an output shapefile
     original_datasource = gdal.OpenEx(
-                            aoi_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
+        aoi_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
     # Delete if existing shapefile with the same name
     if os.path.isfile(summary_aoi_path):
         os.remove(summary_aoi_path)
@@ -493,7 +492,7 @@ def _msa_f_op(
 
     Bin ffqi values based on rules defined in msa_parameters.csv.
 
-    Parameters:
+    Args:
         primary_veg_smooth (array): float values representing ffqi.
         primary_veg_mask_nodata (int/float)
         msa_f_table (dict):
@@ -533,7 +532,7 @@ def _msa_i_op(
     Bin distance_to_infrastructure values according to rules defined
     in msa_parameters.csv.
 
-    Parameters:
+    Args:
         lulc_array (array): integer values representing globio landcover codes.
         distance_to_infrastructure (array):
             float values measuring distance from nearest infrastructure present
@@ -584,14 +583,16 @@ def _msa_i_op(
 
 
 def _msa_op(msa_f, msa_lu, msa_i, globio_nodata):
-        """Calculate the MSA which is the product of the sub MSAs."""
-        result = numpy.empty_like(msa_f, dtype=numpy.float32)
-        result[:] = globio_nodata
-        valid_mask = slice(None)
-        if globio_nodata is not None:
-            valid_mask = ~numpy.isclose(msa_f, globio_nodata)
-        result[valid_mask] = msa_f[valid_mask] * msa_lu[valid_mask] * msa_i[valid_mask]
-        return result
+    """Calculate the MSA which is the product of the sub MSAs."""
+    result = numpy.empty_like(msa_f, dtype=numpy.float32)
+    result[:] = globio_nodata
+    valid_mask = slice(None)
+    if globio_nodata is not None:
+        valid_mask = ~numpy.isclose(msa_f, globio_nodata)
+    result[valid_mask] = (
+        msa_f[valid_mask] * msa_lu[valid_mask] * msa_i[valid_mask])
+    return result
+
 
 def make_gaussian_kernel_path(sigma, kernel_path):
     """Create a gaussian kernel raster."""
@@ -636,7 +637,7 @@ def load_msa_parameter_table(
         msa_parameter_table_filename, intensification_fraction):
     """Load parameter table to a dict that to define the MSA ranges.
 
-    Parameters:
+    Args:
         msa_parameter_table_filename (string): path to msa csv table
         intensification_fraction (float): a number between 0 and 1 indicating
             what level between msa_lu 8 and 9 to define the general GLOBIO
@@ -700,7 +701,7 @@ def _calculate_globio_lulc_map(
         globio_lulc_path, globio_nodata, task_graph):
     """Translate a general landcover map into a GLOBIO version.
 
-    Parameters:
+    Args:
         lulc_to_globio_table_path (string): a table that maps arbitrary
             landcover values to globio equivalents.
         lulc_path (string): path to the raw landcover map.
@@ -856,7 +857,8 @@ def _create_globio_lulc_op(
     grass_shrub_result[:] = 5
 
     # man-made pasture
-    valid_pasture_mask = potential_vegetation_array[valid_mask][grass_shrub_mask] <= 8
+    valid_pasture_mask = (
+        potential_vegetation_array[valid_mask][grass_shrub_mask] <= 8)
     grass_shrub_result[valid_pasture_mask] = 6
 
     # primary vegetation
@@ -900,7 +902,7 @@ def _collapse_infrastructure_layers(
     indicates a region that has no layers that overlap but are still contained
     in the bounding box.
 
-    Parameters:
+    Args:
         infrastructure_dir (string): path to a directory containing maps of
             either gdal compatible rasters or OGR compatible shapefiles.
         base_raster_path (string): a path to a file that has the dimensions and
@@ -965,7 +967,8 @@ def _collapse_infrastructure_layers(
             infrastructure_array_list[0].shape, dtype=numpy.uint8)
 
         nodata_mask = numpy.full(infrastructure_array_list[0].shape, True)
-        infrastructure_mask = numpy.full(infrastructure_array_list[0].shape, False)
+        infrastructure_mask = numpy.full(
+            infrastructure_array_list[0].shape, False)
 
         for index in range(len(infrastructure_array_list)):
             # mark all pixels True that have infrastructure in this layer
@@ -1013,7 +1016,7 @@ def _collapse_infrastructure_layers(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation
