@@ -176,12 +176,12 @@ describe('InVEST subprocess testing', () => {
   })
 
   afterEach(() => {
-    cleanupDir(fakeWorkspace)
+    cleanupDir(fakeWorkspace);
     jest.resetAllMocks();
   })
   
   test('Invest subprocess - exit without error', async () => {
-    const { getByText, getByLabelText, ...utils } = render(
+    const { getByText, getByLabelText, unmount, ...utils } = render(
       <App
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
@@ -191,30 +191,36 @@ describe('InVEST subprocess testing', () => {
     const workspaceInput = await utils.findByLabelText(
       RegExp(`${spec.args.workspace_dir.name}`))
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
-    
     const execute = await utils.findByText('Execute');
     fireEvent.click(execute);
     
-    // Emit some stdout, pause, then exit without error
+    // Emit some stdout because our program listens for stdout
+    // in order to know the invest subprocess has spawned,
+    // signalling that an invest logfile now exists in the workspace.
     mockInvestProc.stdout.push('hello from stdout')
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    mockInvestProc.emit('close', 0)  // 0 - exit w/o error
-    
     await waitFor(() => {
       expect(getByText('Log').classList.contains('active')).toBeTruthy();
       // some text from the logfile should be rendered:
       expect(getByText(dummyTextToLog, { exact: false }))
         .toBeInTheDocument();
-      expect(getByText('Model Completed')).toBeInTheDocument();
     });
+    mockInvestProc.emit('close', 0)  // 0 - exit w/o error
+    await waitFor(() => {
+      expect(getByText('Model Completed')).toBeInTheDocument();
+    })
     // A recent session card should be rendered
     const { findByText } = within(getByLabelText('Recent Sessions:'))
     const cardText = await findByText(`${path.resolve(fakeWorkspace)}`)
     expect(cardText).toBeInTheDocument()
+    // Normally we don't explicitly unmount the rendered components,
+    // but in this case we're 'watching' a file that the afterEach()
+    // wants to remove. Unmounting triggers an 'unwatch' of the logfile
+    // before afterEach cleanup, avoiding an error.
+    unmount();
   })
 
   test('Invest subprocess - exit with error', async () => {
-    const { getByText, getByLabelText, ...utils } = render(
+    const { getByText, getByLabelText, unmount, ...utils } = render(
       <App
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
@@ -247,6 +253,7 @@ describe('InVEST subprocess testing', () => {
     const { findByText } = within(getByLabelText('Recent Sessions:'))
     const cardText = await findByText(`${path.resolve(fakeWorkspace)}`)
     expect(cardText).toBeInTheDocument()
+    unmount()
   })
 
 })

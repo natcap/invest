@@ -90,6 +90,9 @@ export default class LogTab extends React.Component {
         logdata += `${data}${os.EOL}`;
         this.setState({ logdata: logdata });
       });
+      this.tail.on('error', (error) => {
+        logger.error(error);
+      });
     } catch (error) {
       this.setState({
         logdata: `Logfile is missing: ${os.EOL}${logfile}`

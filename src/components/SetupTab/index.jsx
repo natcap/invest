@@ -241,7 +241,6 @@ export default class SetupTab extends React.Component {
       model_module: pyModuleName,
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
-    console.log(payload)
     const results = await fetchValidation(payload);
 
     // A) At least one arg was invalid:

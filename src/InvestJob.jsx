@@ -61,7 +61,6 @@ export default class InvestJob extends React.Component {
   }
 
   async componentDidMount() {
-    console.log('investjob didmoutn')
     // If these dirs already exist, this will err and pass
     fs.mkdir(fileRegistry.CACHE_DIR, (err) => {});
     fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
