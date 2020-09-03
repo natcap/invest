@@ -6,8 +6,8 @@ import { createEvent, fireEvent, render,
          waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
-import InvestJob from '../src/InvestJob';
-import { getSpec, fetchDatastackFromFile, fetchValidation } from '../src/server_requests';
+import SetupTab from '../src/components/SetupTab';
+import { fetchDatastackFromFile, fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants'
 
@@ -20,22 +20,21 @@ const MODEL = 'Carbon'
 const MODULE = 'carbon'
 const INVEST_LIST = { [MODEL]: { internal_name: MODULE } };
 
-function renderSetupFromSpec(spec) {
+function renderSetupFromSpec(spec, uiSpec={}) {
   // some ARGS_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
   if (!spec.model_name) { spec.model_name = 'Eco Model' }
   if (!spec.module) { spec.module = 'natcap.invest.dot' }
 
-  getSpec.mockResolvedValue(spec);
   const { getByText, getByLabelText, ...utils } = render(
-    <InvestJob
-      investExe = ''
-      investList={INVEST_LIST}
-      investSettings={{nWorkers: '-1', loggingLevel: 'INFO'}}
-      recentJobs={[]}
-      jobDatabase={fileRegistry.JOBS_DATABASE}
-      updateRecentJobs={() => {}}
-      saveSettings={() => {}}
+    <SetupTab
+      pyModuleName={spec.module}
+      modelName={spec.modelName}
+      argsSpec={spec.args}
+      uiSpec={uiSpec}
+      argsInitValues={undefined}
+      investExecute={() => {}}
+      argsToJsonFile={() => {}}
     />);
   return { getByText, getByLabelText, utils }
 }
@@ -48,7 +47,6 @@ test('SetupTab: expect an input form for a directory', async () => {
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
@@ -71,7 +69,6 @@ test('SetupTab: expect an input form for a csv', async () => {
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   // Typing in a value
   fireEvent.change(input, { target: { value: 'foo' } })
@@ -111,7 +108,6 @@ test('SetupTab: expect an input form for a vector', async () => {
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
@@ -128,7 +124,6 @@ test('SetupTab: expect an input form for a raster', async () => {
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
@@ -150,7 +145,6 @@ test('SetupTab: expect an input form for a freestyle_string', async () => {
   const spec = { args: { arg: { name: 'foo', type: 'freestyle_string' } } }
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
@@ -166,7 +160,6 @@ test('SetupTab: expect an input form for a number', async () => {
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   fireEvent.change(input, { target: { value: 'foo' } })
   await waitFor(() => {
@@ -181,7 +174,6 @@ test('SetupTab: expect an input form for a boolean', async () => {
   const spec = { args: { arg: { name: 'foo', type: 'boolean' } } }
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   await waitFor(() => {
     expect(input).toHaveAttribute('type', 'radio')
@@ -195,7 +187,6 @@ test('SetupTab: expect an input form for an option_string', async () => {
     validation_options: { options: ['a', 'b'] } } } }
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
   const input = await utils.findByLabelText(RegExp(`${spec.args.arg.name}`))
   await waitFor(() => {
     expect(input).toHaveValue('a');
@@ -204,7 +195,6 @@ test('SetupTab: expect an input form for an option_string', async () => {
 })
 
 test('SetupTab: test a UI spec with a boolean controller arg', async () => {
-  
   const spec = { module: 'natcap.invest.dummy', args: { 
     controller: { 
       name: 'Afoo', 
@@ -223,7 +213,7 @@ test('SetupTab: test a UI spec with a boolean controller arg', async () => {
       type: 'number'
     } } }
 
-  const ui_spec = {
+  const uiSpec = {
     controller: { 
       ui_control: ['arg2', 'arg3', 'arg4'], },
     arg2: { 
@@ -232,15 +222,14 @@ test('SetupTab: test a UI spec with a boolean controller arg', async () => {
       ui_option: 'hide', },
     arg4: { 
       ui_option: 'foo', } }  // an invalid option should be ignored
-    // arg5 is deliberately missing from ui_spec to demonstrate that that is okay. 
+    // arg5 is deliberately missing from uiSpec to demonstrate that that is okay. 
 
   fs.writeFileSync(path.join(
     fileRegistry.INVEST_UI_DATA, spec.module + '.json'),
-      JSON.stringify(ui_spec))
+      JSON.stringify(uiSpec))
   
   fetchValidation.mockResolvedValue([])
-  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
+  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec, uiSpec)
 
   const controller = await utils.findByLabelText(RegExp(`${spec.args.controller.name}`))
   const arg2 = await utils.findByLabelText(RegExp(`${spec.args.arg2.name}`))
@@ -296,7 +285,6 @@ test('SetupTab: expect non-boolean input can disable/hide optional inputs', asyn
   
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
 
   const controller = await utils.findByLabelText(RegExp(`${spec.args.controller.name}`))
   const arg2 = await utils.findByLabelText(RegExp(`${spec.args.arg2.name}`))
@@ -337,7 +325,7 @@ test('SetupTab: test grouping and sorting of args', async () => {
       type: 'number'}
     } }
 
-  const ui_spec = {
+  const uiSpec = {
     arg1: { order: 2 },
     arg2: { order: 1.1 },
     arg3: { order: 1 },
@@ -348,11 +336,10 @@ test('SetupTab: test grouping and sorting of args', async () => {
 
   fs.writeFileSync(path.join(
     fileRegistry.INVEST_UI_DATA, spec.module + '.json'),
-      JSON.stringify(ui_spec))
+      JSON.stringify(uiSpec))
   
   fetchValidation.mockResolvedValue([])
-  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
+  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec, uiSpec)
 
   const form = await utils.findByTestId('setup-form')
 
@@ -360,7 +347,7 @@ test('SetupTab: test grouping and sorting of args', async () => {
     // The form should have one child node per arg group
     // 2 of the 5 args share a group and 1 arg is hidden
     expect(form.childNodes.length).toEqual(4)
-    // Input nodes should be in the order defined in ui_spec
+    // Input nodes should be in the order defined in uiSpec
     expect(form.childNodes[0])
       .toHaveTextContent(RegExp(`${spec.args.arg4.name}`))
     expect(form.childNodes[1].childNodes[0])
@@ -393,11 +380,10 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
       name: 'cfoo',
       type: 'csv'} } }
 
-  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  
   let invalidFeedback = 'is a required key'
   fetchValidation.mockResolvedValue([[['a', 'b'], invalidFeedback]])
-  fireEvent.click(getByText(MODEL)); // triggers validation
+
+  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   await waitFor(() => {
     expect(getByText('Execute')).toBeDisabled();
     // The inputs are invalid so the invalid feedback message is present.
@@ -421,8 +407,8 @@ test('SetupTab: populating inputs to enable & disable Execute', async () => {
 
   // These new values will be valid - Execute should enable
   fetchValidation.mockResolvedValue([])
-  fireEvent.change(a, { target: { value: 'foo' } })  // triggers validation
-  fireEvent.change(b, { target: { value: 1 } })      // triggers validation
+  fireEvent.change(a, { target: { value: 'foo' } })
+  fireEvent.change(b, { target: { value: 1 } })
   await waitFor(() => {
     expect(getByText('Execute')).toBeEnabled();
   })
@@ -456,14 +442,13 @@ test('SetupTab: test validation payload is well-formatted', async () => {
       name: 'cfoo',
       type: 'csv'} } }
 
-  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  
   // Mocking to return the payload so we can assert we always send
   // correct payload to this endpoint.
   fetchValidation.mockImplementation((payload) => {
     return payload
   })
-  fireEvent.click(getByText(MODEL)); // triggers validation
+  
+  const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
   await waitFor(() => {
     const expectedKeys = ['model_module', 'args'];
     const payload = fetchValidation.mock.results[0].value
@@ -495,7 +480,6 @@ test('SetupTab: test dragover of a datastack/logfile', async () => {
   fetchDatastackFromFile.mockResolvedValue(mock_datastack)
 
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
-  fireEvent.click(getByText(MODEL));
   const setupForm = await utils.findByTestId('setup-form')
 
   // This should work but doesn't due to lack of dataTransfer object in jsdom:
