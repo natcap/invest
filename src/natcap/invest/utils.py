@@ -796,14 +796,14 @@ def _assert_vectors_equal(
 
     return None
 
-def _reclassify_raster_op(
+def reclassify_raster(
         raster_path_band, value_map, target_raster_path, target_datatype,
-        target_nodata, error_details=None, values_required=True):
+        target_nodata, error_details=None):
     """A wrapper function for calling ``pygeoprocessing.reclassify_raster``.
 
     This wrapper function is helpful when added as a ``TaskGraph.task`` so
-    a better error message can be provided to the users if an exception
-    occurs.
+    a better error message can be provided to the users if a
+    ``pygeoprocessing.ReclassificationMissingValuesError`` is raised.
 
     Args:
         raster_path_band (tuple): a tuple including file path to a raster
@@ -826,8 +826,6 @@ def _reclassify_raster_op(
                 'column_name' - column name from table with which ``value_map``
                     keys came from. 
                 'table_name' - table name that ``value_map`` came from.
-        values_required (bool): If True, raise a ValueError if there is a
-            value in the raster that is not found in ``value_map``.
 
     Returns:
         None
@@ -839,21 +837,27 @@ def _reclassify_raster_op(
     try:
         pygeoprocessing.reclassify_raster(
             raster_path_band, value_map, target_raster_path, target_datatype,
-            target_nodata, values_required=values_required)
+            target_nodata, values_required=True)
     except pygeoprocessing.ReclassificationMissingValuesError as err:
         if error_details is None:
-            raster_name = ' '
-            column_name = ' '
-            table_name = ' '
-        else:
-            raster_name = ' ' + error_details.get('raster_name') + ' '
-            column_name = " '" + error_details.get('column_name') + "' " 
-            table_name = ' ' + error_details.get('table_name') + ' '  
+            error_details = {}
+        
+        formatted_details = {}
+        for key in ['raster_name', 'column_name', 'table_name']:
+            value = error_details.get(key, '')
+            if value == '':
+                formatted_details[key] = ' '
+            else:
+                if key == 'column_name':
+                    formatted_details[key] = " '" + value + "' "
+                else:
+                    formatted_details[key] = " " + value + " "
 
         error_message = (
-                f"Values in the{raster_name}raster were found that are"
-                f" not represented under the{column_name}key column"
-                f" of the{table_name}table. The missing values found in"
-                f" the{raster_name}raster but not the table are:"
-                f" {err.missing_values}.")
+                f"Values in the{formatted_details['raster_name']}raster were"
+                " found that are not represented under the"
+                f" {formatted_details['column_name']}key column of the"
+                f" {formatted_details['table_name']}table. The missing values"
+                f" found in the{formatted_details['raster_name']}raster but"
+                f" not the table are: {err.missing_values}.")
         raise ValueError(error_message)
