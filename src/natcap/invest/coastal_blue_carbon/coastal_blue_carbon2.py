@@ -96,6 +96,9 @@ ARGS_SPEC = {
             "type": "number",
             "required": True,
             "name": "Analysis Year",
+            "validation_options": {
+                "expression": "int(analysis_year) > int(baseline_lulc_year)",
+            },
             "about": (
                 "An analysis year extends the transient analysis "
                 "beyond the transition years."),
@@ -1436,7 +1439,32 @@ def validate(args, limit_to=None):
 
     sufficient_keys = validation.get_sufficient_keys(args)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
-    # TODO: check transition rasters, if the key exists.
-    # TODO: check the interrelationship of years
+
+    if ("transitions_csv" not in invalid_keys and
+            "transitions_csv" in sufficient_keys and
+            "baseline_lulc_year" not in invalid_keys and
+            "baseline_lulc_year" in sufficient_keys):
+        transitions = _extract_transitions_from_table(args['transitions_csv'])
+
+        for transition_year, transition_raster_path in transitions.items():
+            raster_error_message = validation.check_raster(
+                transition_raster_path)
+            if raster_error_message:
+                validation_warnings.append(
+                    (['transitions_csv'], (
+                        f"Transition raster for {transition_year} could not "
+                        f"be validated: {raster_error_message}")))
+
+        if min(set(transitions.keys())) < int(args['baseline_lulc_year']):
+            validation_warnings.append(
+                (['transitions_csv'], ("Transition years must predate the "
+                                       "baseline lulc year.")))
+
+        if ("analysis_year" not in invalid_keys
+                and "analysis_year" in sufficient_keys):
+            if max(set(transitions.keys())) > int(args['analysis_year']):
+                validation_warnings.append(
+                    (['transitions_csv'], ("Transition years must be <= the "
+                                           "analysis year")))
 
     return validation_warnings
