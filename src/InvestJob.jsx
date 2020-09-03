@@ -237,14 +237,9 @@ export default class InvestJob extends React.Component {
           logger.error(err.stack);
         }
       }
-      // extend the args spec with the UI spec
-      Object.keys(args).forEach((key) => {
-        Object.assign(args[key], uiSpec[key]);
-      });
-      return { modelSpec: modelSpec, argsSpec: args };
+      return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
     }
     logger.error(`no spec found for ${modelName}`);
-    return;
   }
 
   /** Change the tab that is currently visible.
@@ -262,6 +257,7 @@ export default class InvestJob extends React.Component {
       modelSpec,
       modelName,
       argsSpec,
+      uiSpec,
       jobStatus,
       logfile,
       logStdErr,
@@ -318,6 +314,7 @@ export default class InvestJob extends React.Component {
                   pyModuleName={modelSpec.module}
                   modelName={modelName}
                   argsSpec={argsSpec}
+                  uiSpec={uiSpec}
                   argsInitValues={this.props.argsInitValues}
                   investExecute={this.investExecute}
                   argsToJsonFile={this.argsToJsonFile}

@@ -95,7 +95,11 @@ export default class SetupTab extends React.Component {
     * that only needs to compute when this.props.argsSpec changes,
     * not on every re-render.
     */
-    const { argsInitValues, argsSpec } = this.props;
+    const { argsInitValues, argsSpec, uiSpec } = this.props;
+    // extend the args spec with the UI spec
+    Object.keys(argsSpec).forEach((key) => {
+      Object.assign(argsSpec[key], uiSpec[key]);
+    });
     // if (argsInitValues) {
     const argGroups = {};
     let {
@@ -348,6 +352,7 @@ SetupTab.propTypes = {
       type: PropTypes.string,
     }),
   ).isRequired,
+  uiSpec: PropTypes.object,
   argsInitValues: PropTypes.object,
   argsToJsonFile: PropTypes.func.isRequired,
   investExecute: PropTypes.func.isRequired,
