@@ -210,7 +210,7 @@ def execute(args):
     This model will take a landcover (crop cover?), N, P, and K map and
     produce modeled yields, and a nutrient table.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
@@ -649,7 +649,7 @@ def _min_op(y_n, y_p, y_k):
 def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     """Reclassify observed_yield nodata to zero.
 
-    Parameters:
+    Args:
         observed_yield_array (numpy.ndarray): raster values
         observed_yield_nodata (float): raster nodata value
 
@@ -672,7 +672,7 @@ def _mask_observed_yield_op(
         landcover_nodata, crop_lucode, pixel_area_ha):
     """Mask total observed yield to crop lulc type.
 
-    Parameters:
+    Args:
         lulc_array (numpy.ndarray): landcover raster values
         observed_yield_array (numpy.ndarray): yield raster values
         observed_yield_nodata (float): yield raster nodata value
@@ -705,7 +705,7 @@ def tabulate_regression_results(
 
     This function includes all the operations that write to results_table.csv.
 
-    Parameters:
+    Args:
         nutrient_table (dict): a lookup of nutrient values by crop in the
             form of nutrient_table[<crop>][<nutrient>].
         crop_to_landcover_table (dict): landcover codes keyed by crop names
@@ -810,7 +810,7 @@ def aggregate_regression_results_to_polygons(
     production and nutrient information for each polygon in
     base_aggregate_vector_path.
 
-    Parameters:
+    Args:
         base_aggregate_vector_path (string): path to polygon vector
         target_aggregate_vector_path (string):
             path to re-projected copy of polygon vector
@@ -914,7 +914,7 @@ def aggregate_regression_results_to_polygons(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

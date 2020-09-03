@@ -381,7 +381,7 @@ def execute(args):
 def _execute(args):
     """Execute the seasonal water yield model.
 
-    Parameters:
+    Args:
         See the parameters for
         `natcap.invest.seasonal_water_yield.seasonal_wateryield.execute`.
 
@@ -606,8 +606,8 @@ def _execute(args):
                         gdal.GDT_Float32, n_events_nodata),
                     kwargs={
                         'error_details': {
-                            'raster_name': 'Climate Zone', 
-                            'column_name': 'cz_id', 
+                            'raster_name': 'Climate Zone',
+                            'column_name': 'cz_id',
                             'table_name': 'Climate Zone'}},
                     target_path_list=[
                         file_registry['n_events_path_list'][month_id]],
@@ -697,8 +697,8 @@ def _execute(args):
                     gdal.GDT_Float32, kc_nodata),
                 kwargs={
                     'error_details': {
-                        'raster_name': 'LULC', 
-                        'column_name': 'lucode', 
+                        'raster_name': 'LULC',
+                        'column_name': 'lucode',
                         'table_name': 'Biophysical'}},
                 target_path_list=[file_registry['kc_path_list'][month_index]],
                 dependent_task_list=[align_task],
@@ -805,7 +805,7 @@ def _execute(args):
 def _calculate_vri(l_path, target_vri_path):
     """Calculate VRI as li_array / qb_sum.
 
-    Parameters:
+    Args:
         l_path (str): path to L raster.
         target_vri_path (str): path to output Vri raster.
 
@@ -843,7 +843,7 @@ def _calculate_vri(l_path, target_vri_path):
 def _calculate_annual_qfi(qfm_path_list, target_qf_path):
     """Calculate annual quickflow.
 
-    Parameters:
+    Args:
         qfm_path_list (list): list of monthly quickflow raster paths.
         target_qf_path (str): path to target annual quickflow raster.
 
@@ -874,7 +874,7 @@ def _calculate_monthly_quick_flow(
         stream_path, si_path, qf_monthly_path):
     """Calculate quick flow for a month.
 
-    Parameters:
+    Args:
         precip_path (string): path to file that correspond to monthly
             precipitation
         lulc_raster_path (string): path to landcover raster
@@ -902,7 +902,7 @@ def _calculate_monthly_quick_flow(
     def qf_op(p_im, s_i, n_events, stream_array):
         """Calculate quick flow as in Eq [1] in user's guide.
 
-        Parameters:
+        Args:
             p_im (numpy.array): precipitation at pixel i on month m
             s_i (numpy.array): factor that is 1000/CN_i - 10
                 (Equation 1b from user's guide)
@@ -916,15 +916,15 @@ def _calculate_monthly_quick_flow(
         """
         # s_i is an intermediate output which will always have a defined
         # nodata value
-        valid_mask = ((p_im != 0.0) & 
-                      (stream_array != 1) & 
+        valid_mask = ((p_im != 0.0) &
+                      (stream_array != 1) &
                       (n_events > 0) &
                       ~numpy.isclose(s_i, si_nodata))
         if p_nodata is not None:
             valid_mask &= ~numpy.isclose(p_im, p_nodata)
         if n_events_nodata is not None:
             valid_mask &= ~numpy.isclose(n_events, n_events_nodata)
-  
+
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
@@ -978,7 +978,7 @@ def _calculate_curve_number_raster(
         lulc_raster_path, soil_group_path, biophysical_table, cn_path):
     """Calculate the CN raster from the landcover and soil group rasters.
 
-    Parameters:
+    Args:
         lulc_raster_path (string): path to landcover raster
         soil_group_path (string): path to raster indicating soil group where
             pixel values are in [1,2,3,4]
@@ -1033,7 +1033,7 @@ def _calculate_curve_number_raster(
         lulc_to_soil[soil_id]['cn_values'] = (
             numpy.array(lulc_to_soil[soil_id]['cn_values'],
                         dtype=numpy.float32))
-    
+
     # Use set of table lucodes in cn_op
     lucodes_set = set(list(biophysical_table))
 
@@ -1078,7 +1078,7 @@ def _calculate_curve_number_raster(
 def _calculate_si_raster(cn_path, stream_path, si_path):
     """Calculate the S factor of the quickflow equation [1].
 
-    Parameters:
+    Args:
         cn_path (string): path to curve number raster
         stream_path (string): path to a stream raster (0, 1)
         si_path (string): path to output s_i raster
@@ -1113,7 +1113,7 @@ def _aggregate_recharge(
     Generates a new shapefile that's a copy of 'aoi_path' in sum values from L
     and Vri.
 
-    Parameters:
+    Args:
         aoi_path (string): path to shapefile that will be used to
             aggregate rasters
         l_path (string): path to (L) local recharge raster
@@ -1194,11 +1194,12 @@ def _calculate_l_avail(l_path, gamma, target_l_avail_path):
         [(l_path, 1)], l_avail_op, target_l_avail_path, gdal.GDT_Float32,
         li_nodata)
 
+
 @validation.invest_validator
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

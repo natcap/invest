@@ -201,7 +201,7 @@ def execute(args):
     The model can operate on a single scenario, a combined present and future
     scenario, as well as an additional REDD scenario.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): a path to the directory that will
             write output and other temporary files during calculation.
         args['results_suffix'] (string): appended to any output file name.
@@ -418,7 +418,7 @@ def _generate_carbon_map(
         lulc_path, carbon_pool_by_type, out_carbon_stock_path):
     """Generate carbon stock raster by mapping LULC values to carbon pools.
 
-    Parameters:
+    Args:
         lulc_path (string): landcover raster with integer pixels.
         out_carbon_stock_path (string): path to output raster that will have
             pixels with carbon storage values in them with units of Mg*C
@@ -435,7 +435,7 @@ def _generate_carbon_map(
         for lulcid, stock in carbon_pool_by_type.items()])
 
     reclass_error_details = {
-        'raster_name': 'LULC', 'column_name': 'lucode', 
+        'raster_name': 'LULC', 'column_name': 'lucode',
         'table_name': 'Carbon Pools'}
     utils.reclassify_raster(
         (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
@@ -483,7 +483,7 @@ def _calculate_valuation_constant(
         price_per_metric_ton_of_c):
     """Calculate a net present valuation constant to multiply carbon storage.
 
-    Parameters:
+    Args:
         lulc_cur_year (int): calendar year in present
         lulc_fut_year (int): calendar year in future
         discount_rate (float): annual discount rate as a percentage
@@ -509,7 +509,7 @@ def _calculate_valuation_constant(
 def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
     """Calculate net present value.
 
-    Parameters:
+    Args:
         delta_carbon_path (string): path to change in carbon storage over
             time.
         valuation_constant (float): value to multiply each carbon storage
@@ -534,7 +534,7 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
 def _generate_report(raster_file_set, model_args, file_registry):
     """Generate a human readable HTML report of summary stats of model run.
 
-    Parameters:
+    Args:
         raster_file_set (set): paths to rasters that need summary stats.
         model_args (dict): InVEST argument dictionary.
         file_registry (dict): file path dictionary for InVEST workspace.
@@ -599,7 +599,7 @@ def _generate_report(raster_file_set, model_args, file_registry):
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation
