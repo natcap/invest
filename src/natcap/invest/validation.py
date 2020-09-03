@@ -10,7 +10,6 @@ import threading
 import functools
 import importlib
 import queue
-import signal
 import warnings
 
 import pygeoprocessing
@@ -935,6 +934,7 @@ def invest_validator(validate_func):
                 if args_value not in ('', None):
                     input_type = args_key_spec['type']
                     validator_func = _VALIDATION_FUNCS[input_type]
+
 
                     try:
                         validation_options = (

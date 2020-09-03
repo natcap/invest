@@ -2,6 +2,7 @@
 import tempfile
 import unittest
 from unittest.mock import Mock
+import functools
 import os
 import shutil
 import string
@@ -218,7 +219,7 @@ class ValidatorTest(unittest.TestCase):
 
         # both args and the kwarg should be passed to the function
         def func(arg):
-            time.sleep(10)
+            time.sleep(6)
 
         # this will return a warning if the timeout is exceeded
         # timeout defaults to 5 seconds so this should fail
@@ -704,12 +705,6 @@ class CSVValidation(unittest.TestCase):
         with open(path, 'w') as file:
             file.write('1,2,3')
 
-        # define a side effect for the mock that will sleep
-        # for longer than the allowed timeout
-        def delay(*args, **kwargs):
-            time.sleep(10)
-
-        # a fake spec with just one key
         spec = {
             "mock_csv_path": {
                 "type": "csv",
@@ -719,18 +714,22 @@ class CSVValidation(unittest.TestCase):
             }
         }
 
-        # validate a mocked CSV that will take 10 seconds to return a value
+        # validate a mocked CSV that will take 6 seconds to return a value
         args = {"mock_csv_path": path}
 
-        # make a mock function to replace pandas.read_csv
-        # this will sleep for 10 seconds, then return a dataframe
-        mock_read_csv = unittest.mock.Mock(
-            side_effect=delay, 
-            return_value=pandas.DataFrame([['1','2','3']]))
+        # define a side effect for the mock that will sleep
+        # for longer than the allowed timeout
+        def delay(*args, **kwargs):
+            time.sleep(6)
+            return []
 
-        # replace the copy of pandas.read_csv that's in the validation module
-        # with the mock function, and try to validate
-        with unittest.mock.patch('natcap.invest.validation.pandas.read_csv', mock_read_csv):
+        # make a copy of the real _VALIDATION_FUNCS and override the CSV function
+        mock_validation_funcs = {key: val for key, val in validation._VALIDATION_FUNCS.items()}
+        mock_validation_funcs['csv'] = functools.partial(validation.timeout, delay)
+
+
+        # replace the validation.check_csv with the mock function, and try to validate
+        with unittest.mock.patch('natcap.invest.validation._VALIDATION_FUNCS', mock_validation_funcs):
             with warnings.catch_warnings(record=True) as ws:
                 # cause all warnings to always be triggered
                 warnings.simplefilter("always")
