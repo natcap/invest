@@ -39,7 +39,7 @@ ARGS_SPEC = {
         "predefined_globio": {
             "type": "boolean",
             "required": False,
-            "about": "if True then \"mode (b)\" else \"mode (a)\"",
+            "about": 'if True then "mode (b)" else "mode (a)"',
             "name": "Predefined land use map for GLOBIO"
         },
         "lulc_path": {
@@ -49,8 +49,8 @@ ARGS_SPEC = {
             },
             "required": "not predefined_globio",
             "about": (
-                "used in \"mode (a)\" path to a base landcover map with"
-                " integer codes"),
+                'used in "mode (a)" path to a base landcover map with'
+                ' integer codes'),
             "name": "Land Use/Cover (Raster)"
         },
         "lulc_to_globio_table_path": {
@@ -74,10 +74,10 @@ ARGS_SPEC = {
             "type": "directory",
             "required": True,
             "about": (
-                "Used in \"mode (a) and (b)\" a path to a folder containing "
-                "maps of either GDAL compatible rasters or vectors. "
-                "These data will be used in the infrastructure "
-                "to calculation of MSA."),
+                'Used in "mode (a) and (b)" a path to a folder containing '
+                'maps of either GDAL compatible rasters or vectors. '
+                'These data will be used in the infrastructure '
+                'to calculation of MSA.'),
             "name": "Infrastructure Directory"
         },
         "pasture_path": {
@@ -86,7 +86,7 @@ ARGS_SPEC = {
                 "projected": True,
             },
             "required": "not predefined_globio",
-            "about": "used in \"mode (a)\" path to pasture raster",
+            "about": 'used in "mode (a)" path to pasture raster',
             "name": "Pasture (Raster)"
         },
         "potential_vegetation_path": {
@@ -96,7 +96,7 @@ ARGS_SPEC = {
             },
             "required": "not predefined_globio",
             "about": (
-                "used in \"mode (a)\" path to potential vegetation raster"),
+                'used in "mode (a)" path to potential vegetation raster'),
             "name": "Potential Vegetation (Raster)"
         },
         "pasture_threshold": {
@@ -105,7 +105,7 @@ ARGS_SPEC = {
             },
             "type": "number",
             "required": "not predefined_globio",
-            "about": "used in \"mode (a)\"",
+            "about": 'used in "mode (a)"',
             "name": "Pasture Threshold"
         },
         "intensification_fraction": {
@@ -125,7 +125,7 @@ ARGS_SPEC = {
             },
             "type": "number",
             "required": "not predefined_globio",
-            "about": "used in \"mode (a)\"",
+            "about": 'used in "mode (a)"',
             "name": "Primary Threshold"
         },
         "msa_parameters_path": {
@@ -158,7 +158,7 @@ ARGS_SPEC = {
             },
             "type": "raster",
             "required": "predefined_globio",
-            "about": "used in \"mode (b)\" path to predefined globio raster.",
+            "about": 'used in "mode (b)" path to predefined globio raster.',
             "name": "GLOBIO Classified Land Use"
         }
     }
@@ -518,7 +518,7 @@ def _msa_f_op(
             less_than[1])
 
     if msa_nodata is not None:
-        nodata_mask = numpy.isclose(primary_veg_smooth, 
+        nodata_mask = numpy.isclose(primary_veg_smooth,
                                     primary_veg_mask_nodata)
         msa_f[nodata_mask] = msa_nodata
 
@@ -829,7 +829,7 @@ def _calculate_globio_lulc_map(
 def _forest_area_mask_op(lulc_array, globio_nodata, forest_areas_nodata):
     """Masking out forest areas."""
     # comparing integers, numpy.isclose not needed
-    valid_mask = lulc_array != globio_nodata 
+    valid_mask = lulc_array != globio_nodata
     # landcover code 130 represents all MODIS forest codes which originate
     # as 1-5
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
@@ -963,7 +963,7 @@ def _collapse_infrastructure_layers(
         # necessarily nodata
         infrastructure_result = numpy.zeros(
             infrastructure_array_list[0].shape, dtype=numpy.uint8)
-        
+
         nodata_mask = numpy.full(infrastructure_array_list[0].shape, True)
         infrastructure_mask = numpy.full(infrastructure_array_list[0].shape, False)
 
@@ -974,7 +974,7 @@ def _collapse_infrastructure_layers(
                 # update nodata mask: intersection with this layer
                 nodata_mask &= numpy.isclose(infrastructure_array_list[index],
                                              infrastructure_nodata_list[index])
-            # if nodata is None, every pixel in this layer has data, 
+            # if nodata is None, every pixel in this layer has data,
             # so the nodata_mask should be all False
             else:
                 nodata_mask &= False
