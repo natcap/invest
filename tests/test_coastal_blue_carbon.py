@@ -1379,36 +1379,34 @@ class TestCBC2(unittest.TestCase):
             (gdal.OpenEx(raster_path)).ReadAsArray(),
             expected_sequestration_2000_to_2010)
 
-        # Stocks in 2010 = 83.5 + initial(soil) + initial(biomass) +
-        #       initial(litter) = 463.5.
-        # Expected sequestration will be negative, calculated as a function of
-        # the carbon stocks, 463.5
         expected_sequestration_2010_to_2020 = numpy.array(
-            [[-128.1559, 0]], dtype=numpy.float32)
+            [[-176.9792, 73.5]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output',
             ('total-net-carbon-sequestration-between-'
                 '2010-and-2020.tif'))
         numpy.testing.assert_allclose(
             gdal.OpenEx(raster_path).ReadAsArray(),
-            expected_sequestration_2010_to_2020)
+            expected_sequestration_2010_to_2020, rtol=1e-6)
 
         expected_sequestration_2020_to_2030 = numpy.array(
-            [[83.5, 0]], dtype=numpy.float32)
+            [[73.5, -25.828205]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output',
             ('total-net-carbon-sequestration-between-'
                 '2020-and-2030.tif'))
         numpy.testing.assert_allclose(
             gdal.OpenEx(raster_path).ReadAsArray(),
-            expected_sequestration_2020_to_2030)
+            expected_sequestration_2020_to_2030, rtol=1e-6)
 
         # Total sequestration is the sum of all the previous sequestration.
-        expected_total_sequestration = numpy.array(
-            [[40.8441, 0]], dtype=numpy.float32)
+        expected_total_sequestration = (
+            expected_sequestration_2000_to_2010 +
+            expected_sequestration_2010_to_2020 +
+            expected_sequestration_2020_to_2030)
         raster_path = os.path.join(
             args['workspace_dir'], 'output',
             'total-net-carbon-sequestration.tif')
         numpy.testing.assert_allclose(
             gdal.OpenEx(raster_path).ReadAsArray(),
-            expected_total_sequestration)
+            expected_total_sequestration, rtol=1e-6)

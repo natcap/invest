@@ -1042,8 +1042,7 @@ def _calculate_net_sequestration(
         target_matrix[valid_accumulation_pixels] += (
             accumulation_matrix[valid_accumulation_pixels])
 
-        valid_emissions_pixels = numpy.ones(emissions_matrix.shape,
-                                            dtype=numpy.bool)
+        valid_emissions_pixels = ~numpy.isclose(emissions_matrix, 0.0)
         if emissions_nodata is not None:
             valid_emissions_pixels &= (
                 ~numpy.isclose(emissions_matrix, emissions_nodata))
@@ -1051,8 +1050,10 @@ def _calculate_net_sequestration(
         target_matrix[valid_emissions_pixels] = emissions_matrix[
             valid_emissions_pixels] * -1
 
-        valid_pixels = ~(valid_accumulation_pixels | valid_emissions_pixels)
-        target_matrix[valid_pixels] = NODATA_FLOAT32
+        invalid_pixels = ~(valid_accumulation_pixels | valid_emissions_pixels)
+        target_matrix[invalid_pixels] = NODATA_FLOAT32
+        return target_matrix
+
     pygeoprocessing.raster_calculator(
         [(accumulation_raster_path, 1), (emissions_raster_path, 1)],
         _record_sequestration, target_raster_path, gdal.GDT_Float32,
@@ -1213,17 +1214,22 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
                     numpy.isnan(field_value)):
                 continue
 
+            # When transition is a disturbance, we use the source landcover's
+            # disturbance values.
             if field_value.endswith('disturb'):
                 soil_disturbance_matrix[from_lucode, to_lucode] = (
                     biophysical_dict[from_lucode][f'soil-{field_value}'])
                 biomass_disturbance_matrix[from_lucode, to_lucode] = (
                     biophysical_dict[from_lucode][f'biomass-{field_value}'])
+
+            # When we're transitioning to a landcover that accumulates, use the
+            # target landcover's accumulation value.
             elif field_value == 'accum':
                 soil_accumulation_matrix[from_lucode, to_lucode] = (
-                    biophysical_dict[from_lucode][
+                    biophysical_dict[to_lucode][
                         f'soil-yearly-accumulation'])
                 biomass_accumulation_matrix[from_lucode, to_lucode] = (
-                    biophysical_dict[from_lucode][
+                    biophysical_dict[to_lucode][
                         f'biomass-yearly-accumulation'])
 
     return (biomass_disturbance_matrix, soil_disturbance_matrix,
