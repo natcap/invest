@@ -393,8 +393,8 @@ def execute(args):
                 (aligned_lulc_raster_path, 1), prop_map, prop_raster_path,
                 gdal.GDT_Float32, TARGET_NODATA),
             kwargs={'error_details': {
-                        'raster_name': 'LULC', 
-                        'column_name': 'lucode', 
+                        'raster_name': 'LULC',
+                        'column_name': 'lucode',
                         'table_name': 'Biophysical'}},
             target_path_list=[prop_raster_path],
             dependent_task_list=[align_task],
@@ -627,7 +627,8 @@ def execute(args):
         intermediate_building_vector_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(
-                args['building_vector_path'], lulc_raster_info['projection_wkt'],
+                args['building_vector_path'],
+                lulc_raster_info['projection_wkt'],
                 intermediate_building_vector_path),
             kwargs={'driver_name': 'ESRI Shapefile'},
             target_path_list=[intermediate_building_vector_path],
@@ -1170,7 +1171,7 @@ def calculate_wbgt(
 
     def wbgt_op(avg_rel_humidity, t_air_array):
         wbgt = numpy.empty(t_air_array.shape, dtype=numpy.float32)
-        
+
         valid_mask = slice(None)
         if t_air_nodata is not None:
             valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
@@ -1396,6 +1397,7 @@ def convolve_2d_by_exponential(
         target_convolve_raster_path, working_dir=temporary_working_dir,
         ignore_nodata_and_edges=True)
     shutil.rmtree(temporary_working_dir)
+
 
 @validation.invest_validator
 def validate(args, limit_to=None):

@@ -250,8 +250,6 @@ ARGS_SPEC = {
 }
 
 
-
-
 _OUTPUT_BASE_FILES = {
     'aggregate_vector_path': 'aggregated_results_swy.shp',
     'annual_precip_path': 'P.tif',
@@ -299,7 +297,7 @@ _TMP_BASE_FILES = {
 def execute(args):
     """Seasonal Water Yield.
 
-    Arguments:
+    Args:
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
@@ -366,6 +364,9 @@ def execute(args):
             use a single process, 0 will be non-blocking scheduling but
             single process, and >= 1 will make additional processes for
             parallel execution.
+
+    Returns:
+        None.
     """
     # This upgrades warnings to exceptions across this model.
     # I found this useful to catch all kinds of weird inputs to the model
@@ -659,7 +660,8 @@ def _execute(args):
                 func=_calculate_monthly_quick_flow,
                 args=(
                     file_registry['precip_path_aligned_list'][month_index],
-                    file_registry['lulc_aligned_path'], file_registry['cn_path'],
+                    file_registry['lulc_aligned_path'],
+                    file_registry['cn_path'],
                     file_registry['n_events_path_list'][month_index],
                     file_registry['stream_path'],
                     file_registry['si_path'],
@@ -733,8 +735,7 @@ def _execute(args):
                 fill_pit_task, qf_task] + quick_flow_task_list,
             task_name='calculate local recharge')
 
-    #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
-
+    # calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
     if args['user_defined_local_recharge']:
         vri_dependent_task_list = [l_avail_task]
     else:
