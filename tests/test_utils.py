@@ -1429,7 +1429,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
         self.assertTrue("Vector geometry assertion fail." in str(cm.exception))
 
 class ReclassifyRasterOpTests(unittest.TestCase):
-    """Tests for natcap.invest.utils._reclassify_raster_op."""
+    """Tests for natcap.invest.utils.reclassify_raster."""
     
     def setUp(self):
         """Setup workspace."""
@@ -1459,10 +1459,9 @@ class ReclassifyRasterOpTests(unittest.TestCase):
             self.workspace_dir, 'tmp_raster_out.tif')
 
         with self.assertRaises(ValueError) as context:
-            utils._reclassify_raster_op(
+            utils.reclassify_raster(
                 (raster_path, 1), value_map, target_raster_path, 
-                gdal.GDT_Int32, -1, error_details=None, 
-                values_required=True)
+                gdal.GDT_Int32, -1, error_details=None)
         self.assertTrue(
             "The missing values found in the raster but not the table"
             " are: [3]" in str(context.exception), str(context.exception))
@@ -1491,10 +1490,9 @@ class ReclassifyRasterOpTests(unittest.TestCase):
             'table_name': 'Biophysical'}
 
         with self.assertRaises(ValueError) as context:
-            utils._reclassify_raster_op(
+            utils.reclassify_raster(
                 (raster_path, 1), value_map, target_raster_path, 
-                gdal.GDT_Int32, -1, error_details=message_details, 
-                values_required=True)
+                gdal.GDT_Int32, -1, error_details=message_details)
         expected_message = (
                 "Values in the LULC raster were found that are"
                 " not represented under the 'lucode' key column"

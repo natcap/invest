@@ -859,8 +859,8 @@ def reclassify_raster(
         error_message = (
                 f"Values in the{formatted_details['raster_name']}raster were"
                 " found that are not represented under the"
-                f" {formatted_details['column_name']}key column of the"
-                f" {formatted_details['table_name']}table. The missing values"
+                f"{formatted_details['column_name']}key column of the"
+                f"{formatted_details['table_name']}table. The missing values"
                 f" found in the{formatted_details['raster_name']}raster but"
                 f" not the table are: {err.missing_values}.")
         raise ValueError(error_message)
