@@ -2,9 +2,12 @@
 import tempfile
 import unittest
 from unittest.mock import Mock
+import functools
 import os
 import shutil
 import string
+import time
+import warnings
 
 from osgeo import gdal, osr, ogr
 import pandas
@@ -198,6 +201,34 @@ class ValidatorTest(unittest.TestCase):
         self.assertTrue(validation_errors[0][0] == ['n_workers'])
         self.assertTrue('could not be interpreted as a number'
                         in validation_errors[0][1])
+
+    def test_timeout_succeed(self):
+        from natcap.invest import validation
+
+        # both args and the kwarg should be passed to the function
+        def func(arg1, arg2, kwarg=None):
+            self.assertEqual(kwarg, 'kwarg')
+            time.sleep(1)
+
+        # this will raise an error if the timeout is exceeded
+        # timeout defaults to 5 seconds so this should pass
+        validation.timeout(func, 'arg1', 'arg2', kwarg='kwarg')
+
+    def test_timeout_fail(self):
+        from natcap.invest import validation
+
+        # both args and the kwarg should be passed to the function
+        def func(arg):
+            time.sleep(6)
+
+        # this will return a warning if the timeout is exceeded
+        # timeout defaults to 5 seconds so this should fail
+        with warnings.catch_warnings(record=True) as ws:
+            # cause all warnings to always be triggered
+            warnings.simplefilter("always")
+            validation.timeout(func, 'arg')
+            self.assertTrue(len(ws) == 1)
+            self.assertTrue('timed out' in str(ws[0].message))
 
 
 class DirectoryValidation(unittest.TestCase):
@@ -664,6 +695,47 @@ class CSVValidation(unittest.TestCase):
         error_msg = validation.check_csv(
             target_file, required_fields=['field_a'], excel_ok=False)
         self.assertTrue('could not be opened as a CSV' in error_msg)
+
+    def test_slow_to_open(self):
+        """Test timeout by mocking a CSV that is slow to open"""
+        from natcap.invest import validation
+
+        # make an actual file so that `check_file` will pass
+        path = os.path.join(self.workspace_dir, 'slow.csv')
+        with open(path, 'w') as file:
+            file.write('1,2,3')
+
+        spec = {
+            "mock_csv_path": {
+                "type": "csv",
+                "required": True,
+                "about": "A CSV that will be mocked.",
+                "name": "CSV"
+            }
+        }
+
+        # validate a mocked CSV that will take 6 seconds to return a value
+        args = {"mock_csv_path": path}
+
+        # define a side effect for the mock that will sleep
+        # for longer than the allowed timeout
+        def delay(*args, **kwargs):
+            time.sleep(6)
+            return []
+
+        # make a copy of the real _VALIDATION_FUNCS and override the CSV function
+        mock_validation_funcs = {key: val for key, val in validation._VALIDATION_FUNCS.items()}
+        mock_validation_funcs['csv'] = functools.partial(validation.timeout, delay)
+
+
+        # replace the validation.check_csv with the mock function, and try to validate
+        with unittest.mock.patch('natcap.invest.validation._VALIDATION_FUNCS', mock_validation_funcs):
+            with warnings.catch_warnings(record=True) as ws:
+                # cause all warnings to always be triggered
+                warnings.simplefilter("always")
+                validation.validate(args, spec)
+                self.assertTrue(len(ws) == 1)
+                self.assertTrue('timed out' in str(ws[0].message))
 
 
 class TestValidationFromSpec(unittest.TestCase):
