@@ -16,6 +16,42 @@ jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants';
 import { cleanupDir } from '../src/utils'
 
+import SAMPLE_SPEC from './data/carbon_args_spec.json';
+const MOCK_INVEST_LIST = {
+  Carbon: { 
+    internal_name: 'carbon'
+  }
+}
+const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
+const MOCK_JOB_DATABASE_PATH = path.join(fileRegistry.CACHE_DIR, 'mock_job_database.json')
+const MOCK_JOB_DATA_PATH = path.join(fileRegistry.CACHE_DIR, 'mock_job_data.json');
+const MOCK_JOB_ID = 'job1hash';
+const MOCK_RECENT_JOBS_DB = { 
+  [MOCK_JOB_ID]: {
+    model: "carbon",
+    workspace: { "directory": "carbon_workspace", "suffix": null },
+    jobDataPath: MOCK_JOB_DATA_PATH,
+    status: "success",
+    humanTime: "3/5/2020, 10:43:14 AM",
+    systemTime: 1583259376573.759,
+  },
+};
+
+beforeAll(() => {
+  // Setting up the files that would exist if there are saved jobs.
+  const job = {
+    jobID: MOCK_JOB_ID,
+    modelRunName: MOCK_RECENT_JOBS_DB[MOCK_JOB_ID].model,
+    argsValues: {
+      workspace_dir: MOCK_RECENT_JOBS_DB[MOCK_JOB_ID].workspace.directory
+    },
+    workspace: MOCK_RECENT_JOBS_DB[MOCK_JOB_ID].workspace,
+    logfile: 'foo-log.txt',
+    status: MOCK_RECENT_JOBS_DB[MOCK_JOB_ID].status,
+  };
+  fs.writeFileSync(MOCK_JOB_DATA_PATH, JSON.stringify(job), 'utf8');
+  fs.writeFileSync(MOCK_JOB_DATABASE_PATH, JSON.stringify(MOCK_RECENT_JOBS_DB), 'utf8');
+})
 
 afterAll(() => {
   // cache dir accumulates files when Execute is clicked
@@ -23,6 +59,57 @@ afterAll(() => {
     fs.unlinkSync(path.join(fileRegistry.CACHE_DIR, filename))
   })
   jest.resetAllMocks()
+})
+
+test('Clicking an invest model button renders SetupTab', async () => {
+  getInvestList.mockResolvedValue(MOCK_INVEST_LIST);
+  getSpec.mockResolvedValue(SAMPLE_SPEC);
+  fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+
+  const { findByText } = render(
+    <App
+      jobDatabase={'foodb.json'}
+      investExe='foo'
+    />
+  );
+
+  const carbon = await findByText('Carbon');
+  fireEvent.click(carbon);
+  const executeButton = await findByText('Execute');
+  const setupTab = await findByText('Setup');
+  expect(executeButton).toBeTruthy();
+  expect(executeButton).toBeDisabled();  // depends on the mocked fetchValidation
+  expect(setupTab.classList.contains('active')).toBeTruthy();  
+  expect(getSpec).toHaveBeenCalledTimes(1);
+})
+
+test('Clicking a recent job renders SetupTab', async () => {
+  getInvestList.mockResolvedValue(MOCK_INVEST_LIST);
+  fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+  getSpec.mockResolvedValue(SAMPLE_SPEC);
+
+  const { findByText, findByLabelText } = render(
+    <App
+      jobDatabase={MOCK_JOB_DATABASE_PATH}
+      investExe='foo'
+    />
+  );
+
+  const recentJobCard = await findByText(
+    MOCK_RECENT_JOBS_DB[MOCK_JOB_ID].workspace.directory
+  );
+  fireEvent.click(recentJobCard);
+  const executeButton = await findByText('Execute');
+  const setupTab = await findByText('Setup');
+  expect(executeButton).toBeTruthy();
+  expect(executeButton).toBeDisabled(); // depends on the mocked fetchValidation
+  expect(setupTab.classList.contains('active')).toBeTruthy();
+
+  // Expect some arg values that were loaded from the saved job:
+  const input = await findByLabelText(/Workspace/);
+  expect(input).toHaveValue(
+    MOCK_RECENT_JOBS_DB[MOCK_JOB_ID].workspace.directory
+  );
 })
 
 test('Recent Jobs: each has a button', async () => {

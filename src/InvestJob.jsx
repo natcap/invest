@@ -65,12 +65,13 @@ export default class InvestJob extends React.Component {
     fs.mkdir(fileRegistry.CACHE_DIR, (err) => {});
     fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
 
-    const { modelSpec, argsSpec } = await this.investGetSpec(
+    const { modelSpec, argsSpec, uiSpec } = await this.investGetSpec(
       this.props.modelRunName
     );
     this.setState({
       modelSpec: modelSpec,
       argsSpec: argsSpec,
+      uiSpec: uiSpec,
       logfile: this.props.logfile,
       jobStatus: this.props.jobStatus,
     }, () => { this.switchTabs('setup'); });

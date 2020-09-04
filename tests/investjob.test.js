@@ -49,50 +49,50 @@ beforeEach(() => {
   // purpose should be 'restored' not 'reset'. Do that inside the test as-needed.
 })
 
-test('Clicking an invest button renders SetupTab', async () => {
-  getSpec.mockResolvedValue(SAMPLE_SPEC);
-  fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+// test('Clicking an invest button renders SetupTab', async () => {
+//   getSpec.mockResolvedValue(SAMPLE_SPEC);
+//   fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
 
-  const { getByText, getByLabelText, utils } = renderInvestJob()
+//   const { getByText, getByLabelText, utils } = renderInvestJob()
 
-  const carbon = getByText('Carbon');
-  fireEvent.click(carbon);  // Choosing a model from the list
-  const execute = await utils.findByText('Execute');
-  await waitFor(() => {
-    // Expect a disabled Execute button and a visible SetupTab
-    expect(execute).toBeTruthy();
-    expect(execute).toBeDisabled();  // depends on the mocked fetchValidation
-    expect(getByText('Setup').classList.contains('active')).toBeTruthy();
-  });
+//   const carbon = getByText('Carbon');
+//   fireEvent.click(carbon);  // Choosing a model from the list
+//   const execute = await utils.findByText('Execute');
+//   await waitFor(() => {
+//     // Expect a disabled Execute button and a visible SetupTab
+//     expect(execute).toBeTruthy();
+//     expect(execute).toBeDisabled();  // depends on the mocked fetchValidation
+//     expect(getByText('Setup').classList.contains('active')).toBeTruthy();
+//   });
   
-  expect(getSpec).toHaveBeenCalledTimes(1);  // the wrapper around fetch
-})
+//   expect(getSpec).toHaveBeenCalledTimes(1);  // the wrapper around fetch
+// })
 
-test('Clicking a recent job renders SetupTab', async () => {
-  fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
-  const mockDatastack = {
-    module_name: 'natcap.invest.carbon',
-    args: {
-      workspace_dir: "carbon-sample", 
-    }
-  }
-  getSpec.mockResolvedValue(SAMPLE_SPEC)
-  fetchDatastackFromFile.mockResolvedValue(mockDatastack)
+// test('Clicking a recent job renders SetupTab', async () => {
+//   fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+//   const mockDatastack = {
+//     module_name: 'natcap.invest.carbon',
+//     args: {
+//       workspace_dir: "carbon-sample", 
+//     }
+//   }
+//   getSpec.mockResolvedValue(SAMPLE_SPEC)
+//   fetchDatastackFromFile.mockResolvedValue(mockDatastack)
 
-  const { getByText, getByLabelText, utils } = renderInvestJob()
+//   const { getByText, getByLabelText, utils } = renderInvestJob()
 
-  const recent = getByText('carbon_setup');
-  fireEvent.click(recent);  // a recent job button
-  const execute = await utils.findByText('Execute');
-  await waitFor(() => {
-    // Expect a disabled Execute button and a visible SetupTab
-    expect(execute).toBeTruthy();
-    expect(execute).toBeDisabled(); // depends on the mocked fetchValidation
-    expect(getByText('Setup').classList.contains('active')).toBeTruthy();
-    // Expect some values that were loaded from the saved state:
-    expect(getByLabelText(/Workspace/)).toHaveValue('carbon-sample')
-  });
-})
+//   const recent = getByText('carbon_setup');
+//   fireEvent.click(recent);  // a recent job button
+//   const execute = await utils.findByText('Execute');
+//   await waitFor(() => {
+//     // Expect a disabled Execute button and a visible SetupTab
+//     expect(execute).toBeTruthy();
+//     expect(execute).toBeDisabled(); // depends on the mocked fetchValidation
+//     expect(getByText('Setup').classList.contains('active')).toBeTruthy();
+//     // Expect some values that were loaded from the saved state:
+//     expect(getByLabelText(/Workspace/)).toHaveValue('carbon-sample')
+//   });
+// })
 
 test('Loading a recent job when the invest logfile is missing', async () => {
   /* We should get an alert saying nothing can be loaded. */
