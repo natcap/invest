@@ -1,7 +1,11 @@
 .. :changelog:
 
 ..
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.8 (2020-09-04)
 ------------------
 * Coastal Vulnerability
     * Improved handling of invalid AOI geometries to avoid crashing and instead
