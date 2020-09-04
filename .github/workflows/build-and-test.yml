@@ -87,8 +87,7 @@ jobs:
               if: matrix.os == 'windows-latest'
               shell: bash -l {0}
               run: |
-                  conda upgrade -y pip setuptools
-                  pip install toml twine ${{ matrix.numpy }}
+                  python -m pip install --upgrade pip pytest setuptools toml twine ${{ matrix.numpy }}
                   pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Set up MacOS python
