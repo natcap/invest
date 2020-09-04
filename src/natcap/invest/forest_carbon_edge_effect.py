@@ -148,7 +148,7 @@ def execute(args):
     InVEST Carbon Edge Model calculates the carbon due to edge effects in
     tropical forest pixels.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): a path to the directory that will write
             output and other temporary files during calculation. (required)
         args['results_suffix'] (string): a string to append to any output file
@@ -187,7 +187,8 @@ def execute(args):
 
                 Note the "n/a" in ``c_above`` are optional since that field
                 is ignored when ``is_tropical_forest==1``.
-        args['lulc_raster_path'] (string): path to a integer landcover code raster
+        args['lulc_raster_path'] (string): path to a integer landcover code
+            raster
         args['pools_to_calculate'] (string): if "all" then all carbon pools
             will be calculted.  If any other value only above ground carbon
             pools will be calculated and expect only a 'c_above' header in
@@ -199,9 +200,9 @@ def execute(args):
             biophysical table to have 'is_tropical_forest' forest field, and
             any landcover codes that have a 1 in this column calculate carbon
             stocks using the Chaplin-Kramer et. al method and ignore 'c_above'.
-        args['tropical_forest_edge_carbon_model_vector_path'] (string): path to a
-            shapefile that defines the regions for the local carbon edge
-            models.  Has at least the fields 'method', 'theta1', 'theta2',
+        args['tropical_forest_edge_carbon_model_vector_path'] (string):
+            path to a shapefile that defines the regions for the local carbon
+            edge models.  Has at least the fields 'method', 'theta1', 'theta2',
             'theta3'.  Where 'method' is an int between 1..3 describing the
             biomass regression model, and the thetas are floating point numbers
             that have different meanings depending on the 'method' parameter.
@@ -324,7 +325,8 @@ def execute(args):
                 task_name='calculate_lulc_%s_map' % carbon_pool_type)
 
     if args['compute_forest_edge_effects']:
-        # generate a map of pixel distance to forest edge from the landcover map
+        # generate a map of pixel distance to forest edge from the landcover
+        # map
         LOGGER.info('Calculating distance from forest edge')
         map_distance_task = task_graph.add_task(
             func=_map_distance_from_tropical_forest_edge,
@@ -387,7 +389,8 @@ def execute(args):
             func=_aggregate_carbon_map,
             args=(args['aoi_vector_path'], output_file_registry['carbon_map'],
                   output_file_registry['aggregated_result_vector']),
-            target_path_list=[output_file_registry['aggregated_result_vector']],
+            target_path_list=[
+                output_file_registry['aggregated_result_vector']],
             task_name='combine_carbon_maps',
             dependent_task_list=[combine_carbon_maps_task])
 
@@ -399,7 +402,7 @@ def execute(args):
 def combine_carbon_maps(*carbon_maps):
     """Combine the carbon maps and leave nodata where all inputs were nodata.
 
-    Parameters:
+    Args:
         *carbon_maps (array): arrays of carbon stocks stored in different pool
             types.
 
@@ -422,11 +425,12 @@ def combine_carbon_maps(*carbon_maps):
 def _aggregate_carbon_map(
         aoi_vector_path, carbon_map_path, target_aggregate_vector_path):
     """Helper function to aggregate carbon values for the given serviceshed.
+
     Generates a new shapefile that's a copy of 'aoi_vector_path' in
     'workspace_dir' with mean and sum values from the raster at
     'carbon_map_path'
 
-    Parameters:
+    Args:
         aoi_vector_path (string): path to shapefile that will be used to
             aggregate raster at'carbon_map_path'.
         workspace_dir (string): path to a directory that function can copy
@@ -504,12 +508,11 @@ def _aggregate_carbon_map(
 def _calculate_lulc_carbon_map(
         lulc_raster_path, biophysical_table_path, carbon_pool_type,
         ignore_tropical_type, compute_forest_edge_effects, carbon_map_path):
-    """Calculates the carbon on the map based on non-forest landcover types
-    only.
+    """Calculates the carbon on the map from non-forest landcover types only.
 
-    Parameters:
-        lulc_raster_path (string): a filepath to the landcover map that contains
-            integer landcover codes
+    Args:
+        lulc_raster_path (string): a filepath to the landcover map that
+            contains integer landcover codes
         biophysical_table_path (string): a filepath to a csv table that indexes
             landcover codes to surface carbon, contains at least the fields
             'lucode' (landcover integer code), 'is_tropical_forest' (0 or 1
@@ -529,7 +532,6 @@ def _calculate_lulc_carbon_map(
         None
 
     """
-
     # classify forest pixels from lulc
     biophysical_table = utils.build_lookup_from_csv(
         biophysical_table_path, 'lucode', to_lower=False)
@@ -565,7 +567,7 @@ def _calculate_lulc_carbon_map(
         'raster_name': 'LULC',
         'column_name': 'lucode',
         'table_name': 'Biophysical'}
-    
+
     utils.reclassify_raster(
         (lulc_raster_path, 1), lucode_to_per_cell_carbon,
         carbon_map_path, gdal.GDT_Float32, CARBON_MAP_NODATA,
@@ -575,10 +577,12 @@ def _calculate_lulc_carbon_map(
 def _map_distance_from_tropical_forest_edge(
         base_lulc_raster_path, biophysical_table_path, edge_distance_path,
         target_non_forest_mask_path):
-    """Generates a raster of forest edge distances where each pixel is the
+    """Generates a raster of forest edge distances.
+
+    Generates a raster of forest edge distances where each pixel is the
     distance to the edge of the forest in meters.
 
-    Parameters:
+    Args:
         base_lulc_raster_path (string): path to the landcover raster that
             contains integer landcover codes
         biophysical_table_path (string): path to a csv table that indexes
@@ -595,7 +599,6 @@ def _map_distance_from_tropical_forest_edge(
         None
 
     """
-
     # Build a list of forest lucodes
     biophysical_table = utils.build_lookup_from_csv(
         biophysical_table_path, 'lucode', to_lower=False)
@@ -609,7 +612,7 @@ def _map_distance_from_tropical_forest_edge(
         base_lulc_raster_path)['nodata']
 
     def mask_non_forest_op(lulc_array):
-        """converts forest lulc codes to 1"""
+        """Converts forest lulc codes to 1."""
         non_forest_mask = ~numpy.in1d(
             lulc_array.flatten(), forest_codes).reshape(lulc_array.shape)
         nodata_mask = lulc_array == lulc_nodata
@@ -628,10 +631,12 @@ def _build_spatial_index(
         base_raster_path, local_model_dir,
         tropical_forest_edge_carbon_model_vector_path,
         target_spatial_index_pickle_path):
-    """Build a kd-tree index of the locally projected globally georeferenced
+    """Build a kd-tree index.
+
+    Build a kd-tree index of the locally projected globally georeferenced
     carbon edge model parameters.
 
-    Parameters:
+    Args:
         base_raster_path (string): path to a raster that is used to define the
             bounding box and projection of the local model.
         local_model_dir (string): path to a directory where we can write a
@@ -653,7 +658,6 @@ def _build_spatial_index(
         None
 
     """
-
     # Reproject the global model into local coordinate system
     carbon_model_reproject_path = os.path.join(
         local_model_dir, 'local_carbon_shape.shp')
@@ -704,7 +708,7 @@ def _calculate_tropical_forest_edge_carbon_map(
     """Calculates the carbon on the forest pixels accounting for their global
     position with respect to precalculated edge carbon models.
 
-    Parameters:
+    Args:
         edge_distance_path (string): path to the a raster where each pixel
             contains the pixel distance to forest edge.
         spatial_index_pickle_path (string): path to the pickle file that
@@ -730,7 +734,6 @@ def _calculate_tropical_forest_edge_carbon_map(
         None
 
     """
-
     # load spatial indeces from pickle file
     kd_tree, theta_model_parameters, method_model_parameter = pickle.load(
         open(spatial_index_pickle_path, 'rb'))
@@ -889,7 +892,7 @@ def _calculate_tropical_forest_edge_carbon_map(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

@@ -389,8 +389,8 @@ def execute(args):
                 func=utils.reclassify_raster,
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_regression_value,
-                      coarse_regression_parameter_raster_path, gdal.GDT_Float32,
-                      _NODATA_YIELD),
+                      coarse_regression_parameter_raster_path,
+                      gdal.GDT_Float32, _NODATA_YIELD),
                 kwargs={'error_details': {
                             'raster_name': f'{crop_name} Climate Bin',
                             'column_name': 'climate_bin',
@@ -662,7 +662,8 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result[:] = 0.0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
-        valid_mask = ~numpy.isclose(observed_yield_array, observed_yield_nodata)
+        valid_mask = ~numpy.isclose(
+            observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
 
@@ -739,7 +740,8 @@ def tabulate_regression_results(
                 _OBSERVED_PRODUCTION_FILE_PATTERN % (
                     crop_name, file_suffix))
 
-            LOGGER.info("Calculating production area and summing observed yield.")
+            LOGGER.info(
+                "Calculating production area and summing observed yield.")
             observed_yield_nodata = pygeoprocessing.get_raster_info(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
@@ -749,7 +751,8 @@ def tabulate_regression_results(
                 # if nodata value undefined, assume all pixels are valid
                 valid_mask = slice(None)
                 if observed_yield_nodata is not None:
-                    valid_mask = ~numpy.isclose(yield_block, observed_yield_nodata)
+                    valid_mask = ~numpy.isclose(
+                        yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
                                           valid_mask & (yield_block > 0.0))
                 yield_sum += numpy.sum(yield_block[valid_mask])

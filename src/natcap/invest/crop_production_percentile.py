@@ -351,7 +351,8 @@ def execute(args):
                 dependent_task_list=[create_coarse_yield_percentile_task],
                 task_name='create_interpolated_yield_percentile_%s_%s' % (
                     crop_name, yield_percentile_id))
-            dependent_task_list.append(create_interpolated_yield_percentile_task)
+            dependent_task_list.append(
+                create_interpolated_yield_percentile_task)
 
             LOGGER.info(
                 "Calculate yield for %s at %s", crop_name,
@@ -371,7 +372,8 @@ def execute(args):
                       percentile_crop_production_raster_path,
                       gdal.GDT_Float32, _NODATA_YIELD),
                 target_path_list=[percentile_crop_production_raster_path],
-                dependent_task_list=[create_interpolated_yield_percentile_task],
+                dependent_task_list=[
+                    create_interpolated_yield_percentile_task],
                 task_name='create_percentile_production_%s_%s' % (
                     crop_name, yield_percentile_id))
             dependent_task_list.append(create_percentile_production_task)
@@ -536,7 +538,8 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result[:] = 0.0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
-        valid_mask = ~numpy.isclose(observed_yield_array, observed_yield_nodata)
+        valid_mask = ~numpy.isclose(
+            observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
 
@@ -625,7 +628,8 @@ def tabulate_results(
                 _OBSERVED_PRODUCTION_FILE_PATTERN % (
                     crop_name, file_suffix))
 
-            LOGGER.info("Calculating production area and summing observed yield.")
+            LOGGER.info(
+                "Calculating production area and summing observed yield.")
             observed_yield_nodata = pygeoprocessing.get_raster_info(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
@@ -635,9 +639,10 @@ def tabulate_results(
                 # if nodata value undefined, assume all pixels are valid
                 valid_mask = slice(None)
                 if observed_yield_nodata is not None:
-                    valid_mask = ~numpy.isclose(yield_block, observed_yield_nodata)
-                production_pixel_count += numpy.count_nonzero(valid_mask & (
-                                                              yield_block > 0.0))
+                    valid_mask = ~numpy.isclose(
+                        yield_block, observed_yield_nodata)
+                production_pixel_count += numpy.count_nonzero(
+                    valid_mask & (yield_block > 0.0))
                 yield_sum += numpy.sum(yield_block[valid_mask])
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
@@ -654,7 +659,8 @@ def tabulate_results(
                         (yield_percentile_raster_path, 1)):
                     # _NODATA_YIELD will always have a value (defined above)
                     yield_sum += numpy.sum(
-                        yield_block[~numpy.isclose(yield_block, _NODATA_YIELD)])
+                        yield_block[~numpy.isclose(
+                            yield_block, _NODATA_YIELD)])
                 production_lookup[yield_percentile_id] = yield_sum
                 result_table.write(",%f" % yield_sum)
 
