@@ -1048,7 +1048,7 @@ def _calculate_curve_number_raster(
         lulc_unique = set(numpy.unique(lulc_array))
         if not lulc_unique.issubset(lucodes_set):
             # cast to list to conform with similar error messages in InVEST
-            missing_lulc_values = list(lulc_unique.difference(lucodes_set))
+            missing_lulc_values = sorted(lulc_unique.difference(lucodes_set))
             error_message = (
                 "Values in the LULC raster were found that are not"
                 " represented under the 'lucode' key column of the"
