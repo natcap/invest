@@ -84,8 +84,8 @@ jobs:
                   channels: conda-forge
 
             - name: Install build dependencies Windows
-              shell: bash -l {0}
               if: matrix.os == 'windows-latest'
+              shell: bash -l {0}
               run: |
                   conda upgrade -y pip setuptools
                   pip install toml twine ${{ matrix.numpy }}
@@ -132,7 +132,8 @@ jobs:
               shell: bash -l {0}
               run: |
                   pip install $(find dist -name "natcap.invest*.whl")
-                  make test
+                  make -v
+                  make -d test
 
             - uses: actions/upload-artifact@v1
               with:
