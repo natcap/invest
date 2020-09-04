@@ -87,8 +87,8 @@ jobs:
               if: matrix.os == 'windows-latest'
               shell: bash -l {0}
               run: |
-                  python -m pip install --upgrade pip pytest setuptools toml twine ${{ matrix.numpy }}
-                  pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  conda upgrade -y pip setuptools
+                  conda install Cython requests numpy twine
 
             - name: Set up MacOS python
               if: matrix.os != 'windows-latest'
@@ -117,7 +117,7 @@ jobs:
               if: matrix.os == 'windows-latest'
               shell: bash -l {0}
               run: |
-                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt > requirements-all.yml
+                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
 
             - name: Install runtime dependencies MacOS
