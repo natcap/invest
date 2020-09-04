@@ -191,13 +191,13 @@ def execute(args):
 
     Executes the hydropower/water_yield model
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): a path to the directory that will write
             output and other temporary files during calculation. (required)
 
-        args['lulc_path'] (string): a path to a land use/land cover raster whose
-            LULC indexes correspond to indexes in the biophysical table input.
-            Used for determining soil retention and other biophysical
+        args['lulc_path'] (string): a path to a land use/land cover raster
+            whose LULC indexes correspond to indexes in the biophysical table
+            input. Used for determining soil retention and other biophysical
             properties of the landscape. (required)
 
         args['depth_to_root_rest_layer_path'] (string): a path to an input
@@ -343,7 +343,8 @@ def execute(args):
         subwatershed_results_vector_path = os.path.join(
             output_dir, 'subwatershed_results_wyield%s.shp' % file_suffix)
         watershed_paths_list.append(
-            (sub_watersheds_path, 'subws_id', subwatershed_results_vector_path))
+            (sub_watersheds_path, 'subws_id',
+             subwatershed_results_vector_path))
 
     seasonality_constant = float(args['seasonality_constant'])
 
@@ -565,10 +566,10 @@ def execute(args):
             func=utils.reclassify_raster,
             args=((clipped_lulc_path, 1), demand_reclassify_dict, demand_path,
                   gdal.GDT_Float32, nodata_dict['out_nodata']),
-        kwargs={'error_details': {
-                    'raster_name': 'LULC',
-                    'column_name': 'lucode',
-                    'table_name': 'Demand'}},
+            kwargs={'error_details': {
+                        'raster_name': 'LULC',
+                        'column_name': 'lucode',
+                        'table_name': 'Demand'}},
             target_path_list=[demand_path],
             dependent_task_list=[align_raster_stack_task],
             task_name='create_demand_raster')
@@ -586,7 +587,8 @@ def execute(args):
         # and store results dictionaries in pickles
         for key_name, rast_path in raster_names_paths_list:
             target_stats_pickle = os.path.join(
-                pickle_dir, '%s_%s%s.pickle' % (ws_id_name, key_name, file_suffix))
+                pickle_dir,
+                '%s_%s%s.pickle' % (ws_id_name, key_name, file_suffix))
             zonal_stats_pickle_list.append((target_stats_pickle, key_name))
             zonal_stats_task_list.append(graph.add_task(
                 func=zonal_stats_tofile,
@@ -627,7 +629,7 @@ def create_vector_output(
     Join results of zonal stats to copies of the watershed shapefiles.
     Also do optional scarcity and valuation calculations.
 
-    Parameters:
+    Args:
         base_vector_path (string): Path to a watershed shapefile provided in
             the args dictionary.
         target_vector_path (string): Path where base_vector_path will be copied
@@ -688,7 +690,7 @@ def create_vector_output(
 def convert_vector_to_csv(base_vector_path, target_csv_path):
     """Create a CSV with all the fields present in vector attribute table.
 
-    Parameters:
+    Args:
         base_vector_path (string):
             Path to the watershed shapefile in the output workspace.
         target_csv_path (string):
@@ -706,7 +708,7 @@ def convert_vector_to_csv(base_vector_path, target_csv_path):
 def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
     """Calculate zonal statistics for watersheds and write results to a file.
 
-    Parameters:
+    Args:
         base_vector_path (string): Path to the watershed shapefile in the
             output workspace.
         raster_path (string): Path to raster to aggregate.
@@ -726,7 +728,7 @@ def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
 def aet_op(fractp, precip, precip_nodata, output_nodata):
     """Compute actual evapotranspiration values.
 
-    Parameters:
+    Args:
         fractp (numpy.ndarray float): fractp raster values.
         precip (numpy.ndarray): precipitation raster values (mm).
         precip_nodata (float): nodata value from the precip raster.
@@ -751,7 +753,7 @@ def aet_op(fractp, precip, precip_nodata, output_nodata):
 def wyield_op(fractp, precip, precip_nodata, output_nodata):
     """Calculate water yield.
 
-    Parameters:
+    Args:
         fractp (numpy.ndarray float): fractp raster values.
         precip (numpy.ndarray): precipitation raster values (mm).
         precip_nodata (float): nodata value from the precip raster.
@@ -777,7 +779,7 @@ def fractp_op(
         nodata_dict, seasonality_constant):
     """Calculate actual evapotranspiration fraction of precipitation.
 
-    Parameters:
+    Args:
         Kc (numpy.ndarray): Kc (plant evapotranspiration
           coefficient) raster values
         eto (numpy.ndarray): potential evapotranspiration raster
@@ -820,7 +822,7 @@ def fractp_op(
         valid_mask &= ~numpy.isclose(soil, nodata_dict['depth_root'])
     if nodata_dict['pawc'] is not None:
         valid_mask &= ~numpy.isclose(pawc, nodata_dict['pawc'])
-        
+
     # Compute Budyko Dryness index
     # Use the original AET equation if the land cover type is vegetation
     # If not vegetation (wetlands, urban, water, etc...) use
@@ -870,7 +872,7 @@ def fractp_op(
 def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
     """Calculate the plant potential evapotranspiration.
 
-    Parameters:
+    Args:
         eto_pix (numpy.ndarray): a numpy array of ETo
         Kc_pix (numpy.ndarray): a numpy array of  Kc coefficient
         precip_nodata (float): nodata value from the precip raster
@@ -894,7 +896,7 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
 def compute_watershed_valuation(watershed_results_vector_path, val_dict):
     """Compute net present value and energy for the watersheds.
 
-    Parameters:
+    Args:
         watershed_results_vector_path (string):
             Path to an OGR shapefile for the watershed results.
             Where the results will be added.
@@ -939,8 +941,8 @@ def compute_watershed_valuation(watershed_results_vector_path, val_dict):
             # Compute hydropower energy production (KWH)
             # This is from the equation given in the Users' Guide
             energy = (
-                val_row['efficiency'] * val_row['fraction'] * val_row['height'] *
-                rsupply_vl * 0.00272)
+                val_row['efficiency'] * val_row['fraction'] *
+                val_row['height'] * rsupply_vl * 0.00272)
 
             dsum = 0.
             # Divide by 100 because it is input at a percent and we need
@@ -967,7 +969,7 @@ def compute_rsupply_volume(watershed_results_vector_path):
     And the mean realized water supply volume per hectare for the given sheds.
     Output units in cubic meters and cubic meters per hectare respectively.
 
-    Parameters:
+    Args:
         watershed_results_vector_path (string): a path to a vector that
             contains fields 'wyield_vol' and 'wyield_mn'.
 
@@ -1021,7 +1023,7 @@ def compute_water_yield_volume(watershed_results_vector_path):
     Results are added to a 'wyield_vol' field in
     `watershed_results_vector_path`. Units are cubic meters.
 
-    Parameters:
+    Args:
         watershed_results_vector_path (str): Path to a sub-watershed
             or watershed vector. This vector's features should have a
             'wyield_mn' attribute.
@@ -1065,7 +1067,7 @@ def _add_zonal_stats_dict_to_shape(
         stats_map, field_name, aggregate_field_id):
     """Add a new field to a shapefile with values from a dictionary.
 
-    Parameters:
+    Args:
         watershed_results_vector_path (string): a path to a vector whose FIDs
             correspond with the keys in `stats_map`.
         stats_map (dict): a dictionary in the format generated by
@@ -1100,9 +1102,6 @@ def _add_zonal_stats_dict_to_shape(
         # only write a value if zonal stats found valid pixels in the polygon:
         if stats_map[feature_fid]['count'] > 0:
             if aggregate_field_id == 'mean':
-                # if stats_map[feature_fid]['count'] == 0:
-                #     field_val = 0.0
-                # else:
                 field_val = float(
                     stats_map[feature_fid]['sum']) / stats_map[feature_fid]['count']
             else:
@@ -1118,7 +1117,7 @@ def _add_zonal_stats_dict_to_shape(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation
