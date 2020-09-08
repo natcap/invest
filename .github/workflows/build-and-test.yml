@@ -131,8 +131,7 @@ jobs:
               shell: bash -l {0}
               run: |
                   pip install $(find dist -name "natcap.invest*.whl")
-                  make -v
-                  make -d test
+                  make test
 
             - uses: actions/upload-artifact@v1
               with:
@@ -157,11 +156,9 @@ jobs:
                   # Specify which python version we want to use (it's the one we're using
                   # in actions/setup-python).
                   $env:CLOUDSDK_PYTHON = (Get-Command python).path
-                  $env:CLOUDSDK_PYTHON
                   $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
-                  $env:CLOUDSDK_GSUTIL_PYTHON
 
-                  make -d GSUTIL=$env:GSUTIL_PATH deploy
+                  make GSUTIL=$env:GSUTIL_PATH deploy
 
     test-source-distribution:
         name: "Check sdist"

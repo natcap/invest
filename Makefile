@@ -153,7 +153,7 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --omit='*/invest/ui/*' $(TESTRUNNER) tests/test_habitat_quality.py
+	coverage run -m --omit='*/invest/ui/*' $(TESTRUNNER) tests
 	coverage report
 	coverage html
 	coverage xml
