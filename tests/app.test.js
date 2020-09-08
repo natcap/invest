@@ -7,11 +7,14 @@ jest.mock('child_process');
 import Stream from 'stream';
 
 import React from 'react';
+import { remote } from 'electron';
 import { fireEvent, render, waitFor, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 import App from '../src/app';
-import { getInvestList, getSpec, fetchValidation } from '../src/server_requests';
+import { 
+  getInvestList, getSpec, fetchValidation, fetchDatastackFromFile
+} from '../src/server_requests';
 jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants';
 import { cleanupDir } from '../src/utils'
@@ -51,6 +54,15 @@ beforeAll(() => {
   };
   fs.writeFileSync(MOCK_JOB_DATA_PATH, JSON.stringify(job), 'utf8');
   fs.writeFileSync(MOCK_JOB_DATABASE_PATH, JSON.stringify(MOCK_RECENT_JOBS_DB), 'utf8');
+})
+
+beforeEach(() => {
+  // needed for the fetchDatastack call monitoring. TODO: scope this better
+  jest.resetAllMocks();
+  // Careful with reset because "resetting a spy results
+  // in a function with no return value". I had been using spies to observe
+  // function calls, but not to mock return values. Spies used for that 
+  // purpose should be 'restored' not 'reset'. Do that inside the test as-needed.
 })
 
 afterAll(() => {
@@ -140,6 +152,66 @@ test('Recent Jobs: database is missing', async () => {
 
   const node = await findByText(/No recent InVEST runs/)
   expect(node).toBeInTheDocument()
+})
+
+test('LoadParameters: Dialog callback renders SetupTab', async () => {
+  const mockDialogData = {
+    filePaths: ['foo.json']
+  }
+  const mockDatastack = {
+    module_name: 'natcap.invest.carbon',
+    args: {
+      carbon_pools_path: "Carbon/carbon_pools_willamette.csv", 
+    }
+  }
+
+  remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
+  fetchDatastackFromFile.mockResolvedValue(mockDatastack)
+  getInvestList.mockResolvedValue(MOCK_INVEST_LIST);
+  getSpec.mockResolvedValue(SAMPLE_SPEC);
+  fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+
+  const { findByText, findByLabelText } = render(
+    <App
+      jobDatabase={'foodb.json'}
+      investExe='foo'
+    />
+  );
+
+  const loadButton = await findByText('Load Parameters');
+  fireEvent.click(loadButton);
+  const executeButton = await findByText('Execute');
+  const setupTab = await findByText('Setup');
+  const input = await findByLabelText(/Carbon Pools/);
+  expect(executeButton).toBeDisabled();  // depends on the mocked fetchValidation
+  expect(setupTab.classList.contains('active')).toBeTruthy();
+  expect(input).toHaveValue(mockDatastack.args.carbon_pools_path)
+})
+
+test('LoadParameters: Dialog callback does nothing when canceled', async () => {
+  // this resembles the callback data if the dialog is canceled instead of 
+  // a file selected.
+  const mockDialogData = {
+    filePaths: []
+  }
+  remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
+  getInvestList.mockResolvedValue(MOCK_INVEST_LIST);
+  
+  const { findByText, findByLabelText } = render(
+    <App
+      jobDatabase={'foodb.json'}
+      investExe='foo'
+    />
+  );
+
+  const loadButton = await findByText('Load Parameters');
+  const homeTab = await findByText('Home');
+  fireEvent.click(loadButton);
+  // expect we're on the same tab we started on instead of switching to Setup
+  expect(homeTab.classList.contains('active')).toBeTruthy();
+  // These are the calls that would have triggered if a file was selected
+  expect(fetchDatastackFromFile).toHaveBeenCalledTimes(0)
+  expect(getSpec).toHaveBeenCalledTimes(0)
 })
 
 test('Settings dialog interactions: logging level', async () => {

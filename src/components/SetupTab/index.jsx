@@ -328,7 +328,7 @@ export default class SetupTab extends React.Component {
                 />
                 <SaveFileButton
                   title="Save to Python script"
-                  defaultTargetPath="execute_invest.python"
+                  defaultTargetPath="execute_invest.py"
                   func={this.savePythonScript}
                 />
               </DropdownButton>

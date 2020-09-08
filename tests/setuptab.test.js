@@ -7,7 +7,10 @@ import { createEvent, fireEvent, render,
 import '@testing-library/jest-dom'
 
 import SetupTab from '../src/components/SetupTab';
-import { fetchDatastackFromFile, fetchValidation } from '../src/server_requests';
+import {
+  fetchDatastackFromFile, fetchValidation, getSpec,
+  saveToPython, writeParametersToFile
+} from '../src/server_requests';
 jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants'
 
@@ -26,7 +29,7 @@ function renderSetupFromSpec(spec, uiSpec={}) {
   if (!spec.model_name) { spec.model_name = 'Eco Model' }
   if (!spec.module) { spec.module = 'natcap.invest.dot' }
 
-  const { getByText, getByLabelText, ...utils } = render(
+  const { findByText, findByLabelText, ...utils } = render(
     <SetupTab
       pyModuleName={spec.module}
       modelName={spec.modelName}
@@ -36,7 +39,7 @@ function renderSetupFromSpec(spec, uiSpec={}) {
       investExecute={() => {}}
       argsToJsonFile={() => {}}
     />);
-  return { getByText, getByLabelText, utils }
+  return { findByText, findByLabelText, utils }
 }
 
 test('SetupTab: expect an input form for a directory', async () => {
@@ -505,3 +508,4 @@ test('SetupTab: test dragover of a datastack/logfile', async () => {
       .toHaveValue(mock_datastack.args.arg2)
   })
 })
+
