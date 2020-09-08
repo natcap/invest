@@ -1423,3 +1423,11 @@ class TestCBC2(unittest.TestCase):
         numpy.testing.assert_allclose(
             gdal.OpenEx(raster_path).ReadAsArray(),
             expected_total_sequestration, rtol=1e-6)
+
+        expected_net_present_value_at_2030 = numpy.array(
+            [[1, 0]], dtype=numpy.float32)
+        raster_path = os.path.join(
+            args['workspace_dir'], 'output', 'net-present-value-at-2030.tif')
+        numpy.testing.assert_allclose(
+            gdal.OpenEx(raster_path).ReadAsArray(),
+            expected_net_present_value_at_2030, rtol=1e-6)

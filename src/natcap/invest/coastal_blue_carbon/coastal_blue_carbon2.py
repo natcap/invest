@@ -45,7 +45,7 @@ TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN = (
     '{end_year}{suffix}.tif')
 TOTAL_NET_SEQ_ALL_YEARS_RASTER_PATTERN = (
     'total-net-carbon-sequestration{suffix}.tif')
-NET_PRESENT_VALUE_RASTER_PATTERN = 'net-present-value{suffix}.tif'
+NET_PRESENT_VALUE_RASTER_PATTERN = 'net-present-value-at-{year}{suffix}.tif'
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -299,6 +299,9 @@ def execute_transition_analysis(args):
     current_emissions_tasks = {}
     prior_net_sequestration_tasks = {}
     current_net_sequestration_tasks = {}
+    valuation_tasks = {}
+    net_present_value_paths = {}
+    valuation_rasters = {}
 
     summary_net_sequestration_tasks = []
     summary_net_sequestration_raster_paths = [
@@ -314,6 +317,8 @@ def execute_transition_analysis(args):
         disturbance_vol_rasters[year] = {}
         emissions_rasters[year] = {}
         year_of_disturbance_rasters[year] = {}
+        valuation_tasks[year] = {}
+        net_present_value_paths = {}
 
         for pool in (POOL_SOIL, POOL_BIOMASS):
             # Calculate stocks from last year's stock plus last year's net
@@ -459,22 +464,22 @@ def execute_transition_analysis(args):
             # TODO: Need to verify the math on this, I'm unsure if the current
             # implementation is correct or makes sense:
             #    (N_biomass + N_soil[baseline]) * price[this year]
-            valuation_raster = os.path.join(
+            valuation_rasters[year] = os.path.join(
                 intermediate_dir, VALUE_RASTER_PATTERN.format(
                     year=year, suffix=suffix))
-            _ = task_graph.add_task(
+            valuation_tasks[year][pool] = task_graph.add_task(
                 func=pygeoprocessing.raster_calculator,
                 args=([(net_sequestration_rasters[year][POOL_BIOMASS], 1),
                        (net_sequestration_rasters[year][POOL_SOIL], 1),
                        (prices[year], 'raw')],
                       _calculate_valuation,
-                      valuation_raster,
+                      valuation_rasters[year],
                       gdal.GDT_Float32,
                       NODATA_FLOAT32),
                 dependent_task_list=[
                     current_net_sequestration_tasks[POOL_BIOMASS],
                     current_net_sequestration_tasks[POOL_SOIL]],
-                target_path_list=[valuation_raster],
+                target_path_list=[valuation_rasters[year]],
                 task_name=f'Calculating the value of carbon for {year}')
 
         # If in the last year before a transition of the last year before the
@@ -547,6 +552,21 @@ def execute_transition_analysis(args):
                     f'and {year}')))
             summary_net_sequestration_raster_paths.append(
                 net_carbon_sequestration_since_last_transition)
+
+            if ('do_economic_analysis' in args and args['do_economic_analysis']):
+                # Sum all of the valuation rasters leading up to and including
+                # the current year.
+                net_present_value_raster_path = os.path.join(
+                    output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
+                        year=(year + 1), suffix=suffix))
+                _ = task_graph.add_task(
+                    func=_sum_n_rasters,
+                    args=(list(raster_path for (year, raster_path) in
+                               valuation_rasters.items() if year < year+1),
+                          net_present_value_raster_path),
+                    dependent_task_list=list(valuation_tasks[year].values()),
+                    target_path_list=[net_present_value_raster_path],
+                    task_name=f'Calculating net present value up to {year}')
 
         # These are the few sets of tasks that we care about referring to from
         # the prior year.
