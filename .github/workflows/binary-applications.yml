@@ -32,7 +32,7 @@ jobs:
         runs-on: windows-latest
         env:
             PYTHON_VERSION: 3.7
-            PYTHON_ARCH: x86
+            PYTHON_ARCH: x64
         steps:
             - uses: actions/checkout@v2
               with:
@@ -48,22 +48,26 @@ jobs:
                   key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Set up python
-              uses: actions/setup-python@v1
+              uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  python-version: ${{ env.PYTHON_VERSION }}
-                  architecture: ${{ env.PYTHON_ARCH }}
+                  activate-environment: conda-env
+                  auto-update-conda: true
+                  python-version: ${{ matrix.python-version }}
+                  channels: conda-forge
 
             - name: Install python dependencies
-              shell: powershell
-              env:
-                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
-                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
-                  PIP_PREFER_BINARY: 1
+              shell: bash -l {0}
               run: |
-                  python -m pip install --upgrade pip pytest setuptools
-                  python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt
+                  conda upgrade -y pip setuptools
+                  conda install toml requests
+                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                        requirements.txt \
+                        requirements-dev.txt \
+                        requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
                   python -m pip install .
-
+            
             - name: Install build dependencies
               shell: powershell
               run: |
@@ -72,7 +76,7 @@ jobs:
                   ./ci/windows-ci-binary-install.ps1
 
             - name: Clone sample data repo (non-lfs)
-              shell: bash
+              shell: bash -l {0}
               run: |
                   GIT_URL=$(make jprint-GIT_SAMPLE_DATA_REPO)
                   LOCALPATH=$(make jprint-GIT_SAMPLE_DATA_REPO_PATH)
@@ -85,12 +89,15 @@ jobs:
                   git -C $LOCALPATH checkout $GIT_REV
 
             - name: Build user's Guide
+              shell: bash -l {0}
               run: make userguide
 
             - name: Build windows binaries
+              shell: bash -l {0}
               run: make binaries
 
             - name: Build installer
+              shell: bash -l {0}
               run: make windows_installer
 
             - name: Set up GCP
@@ -156,7 +163,7 @@ jobs:
         runs-on: macos-10.15
         env:
             PYTHON_VERSION: 3.7
-            PYTHON_ARCH: x86
+            PYTHON_ARCH: x64
         steps:
             - uses: actions/checkout@v2
               with:
