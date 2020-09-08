@@ -82,15 +82,7 @@ jobs:
                   auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
-
-            - name: Install build dependencies Windows
-              if: matrix.os == 'windows-latest'
-              shell: bash -l {0}
-              run: |
-                  conda upgrade -y pip setuptools
-                  conda install toml twine ${{ matrix.numpy }}
-                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-
+            
             - name: Set up MacOS python
               if: matrix.os != 'windows-latest'
               uses: goanpeca/setup-miniconda@v1.1.2
@@ -100,13 +92,12 @@ jobs:
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
 
-            - name: Install build dependencies MacOS
-              if: matrix.os != 'windows-latest'
+            - name: Install build dependencies
               shell: bash -l {0}
               run: |
                   conda upgrade -y pip setuptools
-                  pip install toml twine ${{ matrix.numpy }}
-                  pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  conda install toml twine ${{ matrix.numpy }}
+                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build wheel
               shell: bash -l {0}
@@ -114,15 +105,7 @@ jobs:
                   python setup.py bdist_wheel
                   python -m twine check dist/*
 
-            - name: Install runtime dependencies Windows
-              if: matrix.os == 'windows-latest'
-              shell: bash -l {0}
-              run: |
-                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
-
-            - name: Install runtime dependencies MacOS
-              if: matrix.os != 'windows-latest'
+            - name: Install runtime dependencies
               shell: bash -l {0}
               run: |
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
