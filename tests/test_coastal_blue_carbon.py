@@ -1362,7 +1362,20 @@ class TestCBC2(unittest.TestCase):
             'baseline_lulc_path': baseline_landcover_raster_path,
             'baseline_lulc_year': 2000,
             'analysis_year': 2030,
+            'do_economic_analysis': True,
+            'use_price_table': True,
+            'price_table_path': os.path.join(self.workspace_dir,
+                                             'price_table.csv'),
+            'discount_rate': 4,
         }
+
+        with open(args['price_table_path'], 'w') as price_table:
+            price_table.write('year,price\n')
+            prior_year_price = 1.0
+            for year in range(args['baseline_lulc_year'],
+                              args['analysis_year']+1):
+                price = prior_year_price * 1.04
+                price_table.write(f'{year},{price}\n')
 
         coastal_blue_carbon2.execute(args)
 

@@ -45,6 +45,7 @@ TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN = (
     '{end_year}{suffix}.tif')
 TOTAL_NET_SEQ_ALL_YEARS_RASTER_PATTERN = (
     'total-net-carbon-sequestration{suffix}.tif')
+NET_PRESENT_VALUE_RASTER_PATTERN = 'net-present-value{suffix}.tif'
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -183,19 +184,19 @@ ARGS_SPEC = {
         "price": {
             "name": "Price",
             "type": "number",
-            "required": "do_economic_analysis and (not do_price_table)",
+            "required": "do_economic_analysis and (not use_price_table)",
             "about": "The price per Megatonne CO2e at the base year.",
         },
         "inflation_rate": {
             "name": "Interest Rate (%)",
             "type": "number",
-            "required": "do_economic_analysis and (not do_price_table)",
+            "required": "do_economic_analysis and (not use_price_table)",
             "about": "Annual change in the price per unit of carbon",
         },
-        "price_table": {
+        "price_table_path": {
             "name": "Price Table",
             "type": "csv",
-            "required": "do_price_table",
+            "required": "use_price_table",
             "validation_options": {
                 "required_fields": ["year", "price"],
             },
@@ -552,22 +553,6 @@ def execute_transition_analysis(args):
         prior_stock_tasks = current_stock_tasks
         prior_net_sequestration_tasks = current_net_sequestration_tasks
 
-    # Calculate total net sequestration.
-    total_net_sequestration_raster_path = os.path.join(
-        output_dir, TOTAL_NET_SEQ_ALL_YEARS_RASTER_PATTERN.format(
-            suffix=suffix))
-    _ = task_graph.add_task(
-            func=_sum_n_rasters,
-            args=(summary_net_sequestration_raster_paths,
-                  total_net_sequestration_raster_path),
-            kwargs={
-                'allow_pixel_stacks_with_nodata': True,
-            },
-            dependent_task_list=summary_net_sequestration_tasks,
-            target_path_list=[total_net_sequestration_raster_path],
-            task_name=(
-                'Calculate total net carbon sequestration across all years'))
-
     task_graph.close()
     task_graph.join()
 
@@ -630,7 +615,7 @@ def execute(args):
             prices = {
                 year: values['price'] for (year, values) in
                 utils.build_lookup_from_csv(
-                    args['price_table'], 'year').items()}
+                    args['price_table_path'], 'year').items()}
         else:
             inflation_rate = float(args['inflation_rate']) * 0.01
             annual_price = float(args['price'])
