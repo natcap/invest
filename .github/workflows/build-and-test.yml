@@ -273,7 +273,7 @@ jobs:
             - name: Install dependencies
               shell: bash -l {0}
               run: |
-                  conda install pytest
+                  conda install pytest requests
                   conda upgrade -y pip wheel
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
                   conda env update --file requirements.yml
@@ -324,6 +324,7 @@ jobs:
             - name: Install dependencies
               shell: bash -l {0}
               run: |
+                  conda install requests
                   conda upgrade -y pip setuptools
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
