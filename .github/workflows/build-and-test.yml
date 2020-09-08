@@ -265,7 +265,7 @@ jobs:
             - name: Set python
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  activate-environment: win-env
+                  activate-environment: validate-env
                   auto-update-conda: true
                   python-version: 3.7
                   channels: conda-forge
@@ -280,6 +280,7 @@ jobs:
                   python setup.py install
 
             - name: Validate sample data
+              shell: bash -l {0}
               run: make validate_sampledata
 
     run-ui-tests:
@@ -316,7 +317,7 @@ jobs:
             - name: Set up Windows python
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  activate-environment: win-env
+                  activate-environment: ui-env
                   auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
@@ -331,5 +332,6 @@ jobs:
                   python setup.py install
 
             - name: Run UI tests
+              shell: bash -l {0}
               timeout-minutes: 10  # tests usually take < 2 minutes, so 10 is generous.
               run: make test_ui
