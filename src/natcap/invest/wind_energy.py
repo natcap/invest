@@ -1975,7 +1975,7 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     source_sr = osr.SpatialReference()
     source_sr.SetWellKnownGeogCS("WGS84")
 
-    output_layer = target_vector.CreateLayer(str(layer_name), source_sr,
+    output_layer = target_vector.CreateLayer(layer_name, source_sr,
                                              ogr.wkbPoint)
 
     # Outer unique keys
@@ -2244,10 +2244,10 @@ def _wind_data_to_point_vector(wind_data_pickle_path,
 
     if need_geotranform:
         target_layer = target_vector.CreateLayer(
-            str(layer_name), ref_sr, ogr.wkbPoint)
+            layer_name, ref_sr, ogr.wkbPoint)
     else:
         target_layer = target_vector.CreateLayer(
-            str(layer_name), target_sr, ogr.wkbPoint)
+            layer_name, target_sr, ogr.wkbPoint)
 
     # Construct a list of fields to add from the keys of the inner dictionary
     field_list = list(wind_data[list(wind_data.keys())[0]])
