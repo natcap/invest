@@ -1962,6 +1962,10 @@ class InVESTModel(QtWidgets.QMainWindow):
         # Model: {modelname}
 
         import {py_model}
+        import logging
+
+        logging.basicConfig(level=logging.INFO)
+        LOGGER = logging.getLogger(__name__)
 
         args = {model_args}
 
