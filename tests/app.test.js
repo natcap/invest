@@ -20,9 +20,11 @@ import { fileRegistry } from '../src/constants';
 import { cleanupDir } from '../src/utils'
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 
+const MOCK_MODEL_LIST_KEY = 'Carbon';
+const MOCK_MODEL_RUN_NAME = 'carbon';
 const MOCK_INVEST_LIST = {
-  Carbon: { 
-    internal_name: 'carbon'
+  [MOCK_MODEL_LIST_KEY]: { 
+    internal_name: MOCK_MODEL_RUN_NAME
   }
 }
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
@@ -168,6 +170,55 @@ describe('Various ways to open and close InVEST models', () => {
     // These are the calls that would have triggered if a file was selected
     expect(fetchDatastackFromFile).toHaveBeenCalledTimes(0)
     expect(getSpec).toHaveBeenCalledTimes(0)
+  })
+
+  test('Opening and closing multiple InVEST models', async () => {
+    const { findByText, findByTitle, findAllByText } = render(
+      <App
+        jobDatabase={'foodb.json'}
+        investExe='foo'
+      />
+    );
+
+    // Open first model
+    const modelA = await findByText(MOCK_MODEL_LIST_KEY);
+    fireEvent.click(modelA);
+    const tabPanelA = await findByTitle(MOCK_MODEL_RUN_NAME)
+    const setupTabA = await within(tabPanelA).findByText('Setup');
+    expect(setupTabA.classList.contains('active')).toBeTruthy();  
+    expect(getSpec).toHaveBeenCalledTimes(1);
+
+    // Open another model (via Load button for convenience)
+    const mockDialogData = {
+      filePaths: ['foo.json']
+    }
+    const mockDatastack = {
+      module_name: 'natcap.invest.party',
+      model_run_name: 'party',
+      args: {
+        carbon_pools_path: "Carbon/carbon_pools_willamette.csv", 
+      }
+    }
+    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+    const loadButton = await findByText('Load Parameters');
+    fireEvent.click(loadButton);
+    const tabPanelB = await findByTitle(mockDatastack.model_run_name);
+    const setupTabB = await within(tabPanelB).findByText('Setup');
+    expect(setupTabB.classList.contains('active')).toBeTruthy();  
+    expect(getSpec).toHaveBeenCalledTimes(2);
+
+    // Close one open model
+    const closeButtonArray = await findAllByText('x', { exact: true });
+    fireEvent.click(closeButtonArray[1]);
+    expect(setupTabB).not.toBeInTheDocument();
+    expect(setupTabA.classList.contains('active')).toBeTruthy();
+    
+    // Close the other open model
+    fireEvent.click(closeButtonArray[0]);
+    expect(setupTabA).not.toBeInTheDocument();
+    const homeTab = await findByText('Home');
+    expect(homeTab.classList.contains('active')).toBeTruthy();
   })
 })
 
