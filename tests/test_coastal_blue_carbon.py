@@ -1250,7 +1250,7 @@ class TestCBC2(unittest.TestCase):
 
         # Calculated by hand.
         expected_array = numpy.array([
-            [0.3354775, coastal_blue_carbon2.NODATA_FLOAT32]],
+            [0.3058625, coastal_blue_carbon2.NODATA_FLOAT32]],
             dtype=numpy.float32)
         numpy.testing.assert_allclose(
             result_matrix, expected_array, rtol=1E-6)
