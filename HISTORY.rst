@@ -43,10 +43,13 @@ Unreleased Changes (3.9)
       ``projection_wkt``.
   * Fixed bug that was causing a TypeError when certain input rasters had an
     undefined nodata value. Undefined nodata values should now work everywhere.
+  * Include logging in python script generated from "Save to python script..."
+    in the "Development" menu. Now logging messages from the model execution
+    will show up when you run the script.
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under 
-      required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``. 
+      required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``.
     * Threat and Sensitivity column names are now case-insensitive.
     * Sensitivity threat columns now match threat names from Threat Table 
       exactly, without the need for "L_". "L_" prefix is deprecated.
