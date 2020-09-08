@@ -43,6 +43,8 @@ Unreleased Changes (3.9)
       ``projection_wkt``.
   * Fixed bug that was causing a TypeError when certain input rasters had an
     undefined nodata value. Undefined nodata values should now work everywhere.
+  * Use consistent naming for geopackage (.gpkg) output files and layers. Any
+    suffix applied to the file name will also be applied to the layer name.
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under 
