@@ -370,7 +370,9 @@ signcode_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
-	-$(GSUTIL) -m rsync $(DIST_DIR) '$(DIST_URL_BASE)'
+	@echo "GCS deploy 0"
+	-dir $(DIST_DIR)
+	-$(GSUTIL) -m rsync "$(DIST_DIR)" "$(DIST_URL_BASE)"
 	@echo "GCS deploy 1"
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	@echo "GCS deploy 2"
