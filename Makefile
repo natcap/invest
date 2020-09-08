@@ -371,8 +371,11 @@ signcode_windows:
 
 deploy:
 	-$(GSUTIL) -m rsync $(DIST_DIR) '$(DIST_URL_BASE)'
+	@echo "GCS deploy 1"
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	@echo "GCS deploy 2"
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	@echo "GCS deploy 3"
 	@echo "Applicaiton binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 
