@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 9d40692e216605df65bbf2f5d2a0943ff40c6970
 
 GIT_UG_REPO                  := https://github.com/dcdenu4/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 29c9fe412f96005096a1b1090dcfc828304d443a
+GIT_UG_REPO_REV              := be611da87a6485a05b1136c3cbf4497dfaba706f
 
 
 ENV = env
