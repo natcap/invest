@@ -90,7 +90,7 @@ jobs:
 
             - name: Build user's Guide
               shell: bash -l {0}
-              run: make userguide
+              run: make -d userguide
 
             - name: Build windows binaries
               shell: bash -l {0}
