@@ -265,9 +265,15 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) "-C doc/users-guide SPHINXBUILD='$(PYTHON) -m sphinx' BUILDDIR=../../build/userguide html"
+    ifeq ($(OS),Windows_NT)
+	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
 	-$(RMDIR) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
+    else
+	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
+	-$(RMDIR) $(USERGUIDE_HTML_DIR)
+	$(COPYDIR) build/userguide/html dist/userguide
+    endif
 
 $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))"
