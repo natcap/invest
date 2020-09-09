@@ -8,9 +8,9 @@ GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
 GIT_TEST_DATA_REPO_REV      := 9d40692e216605df65bbf2f5d2a0943ff40c6970
 
-GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
+GIT_UG_REPO                  := https://github.com/dcdenu4/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 25732693ef4139d77bb2ae6847366208b0e16e87
+GIT_UG_REPO_REV              := 29c9fe412f96005096a1b1090dcfc828304d443a
 
 
 ENV = env
@@ -266,7 +266,7 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
     ifeq ($(OS),Windows_NT)
-	"$(MAKE) -d -C doc/users-guide SPHINXBUILD='$(PYTHON) -m sphinx' BUILDDIR=../../build/userguide html" 2>&1 | %{ "$_" }
+	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
 	-$(RMDIR) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
     else
