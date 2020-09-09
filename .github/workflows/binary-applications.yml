@@ -52,7 +52,7 @@ jobs:
               with:
                   activate-environment: conda-env
                   auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
+                  python-version: 3.7
                   channels: conda-forge
 
             - name: Install python dependencies
