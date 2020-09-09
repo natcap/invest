@@ -267,7 +267,7 @@ userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
     ifeq ($(OS),Windows_NT)
 	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
-	-$(RMDIR) $(USERGUIDE_HTML_DIR)
+	-rm -rf $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
     else
 	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
