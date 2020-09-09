@@ -35,8 +35,8 @@ Invoke-WebRequest https://iweb.dl.sourceforge.net/project/nsis/NSIS%203/3.05/nsi
 
 # The binary build requires the shapely DLL to be named something specific.
 # /B copies the file as a binary file.
-Write-Host "Copying shapely DLL"
-Copy-Item "$env:PYTHON\Lib\site-packages\shapely\DLLs\geos_c.dll" -Destination "$env:PYTHON\Lib\site-packages\shapely\DLLs\geos.dll"
+#Write-Host "Copying shapely DLL"
+#Copy-Item "$env:PYTHON\Lib\site-packages\shapely\DLLs\geos_c.dll" -Destination "$env:PYTHON\Lib\site-packages\shapely\DLLs\geos.dll"
 
 # Download and install NSIS plugins to their correct places.
 Write-Host "Downloading and extracting NSIS"
