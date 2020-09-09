@@ -266,7 +266,7 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
     ifeq ($(OS),Windows_NT)
-	"$(MAKE) -d -C doc/users-guide SPHINXBUILD='$(PYTHON) -m sphinx' BUILDDIR=../../build/userguide html 1>&2" 2>&1 | %{ "$_" }
+	"$(MAKE) -d -C doc/users-guide SPHINXBUILD='$(PYTHON) -m sphinx' BUILDDIR=../../build/userguide html" 2>&1 | %{ "$_" }
 	-$(RMDIR) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
     else
