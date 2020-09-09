@@ -561,7 +561,8 @@ def execute_transition_analysis(args):
                         year=(year + 1), suffix=suffix))
                 _ = task_graph.add_task(
                     func=_sum_n_rasters,
-                    args=(list(raster_path for (year, raster_path) in
+                    args=([args['npv_since_baseline_raster']] +
+                          list(raster_path for (year, raster_path) in
                                valuation_rasters.items() if year < year+1),
                           net_present_value_raster_path),
                     dependent_task_list=list(valuation_tasks[year].values()),
@@ -782,7 +783,7 @@ def execute(args):
             output_dir, TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
                 start_year=baseline_lulc_year, end_year=end_of_baseline_period,
                 suffix=suffix)))
-    _ = task_graph.add_task(
+    baseline_net_seq_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(yearly_accum_rasters[POOL_BIOMASS], 1),
                (yearly_accum_rasters[POOL_SOIL], 1),
@@ -891,8 +892,6 @@ def execute(args):
 
         prior_transition_year = current_transition_year
 
-    task_graph.join()
-
     transition_analysis_args = {
         'task_graph': task_graph,
         'workspace_dir': args['workspace_dir'],
@@ -915,10 +914,50 @@ def execute(args):
             POOL_LITTER: stock_rasters[end_of_baseline_period-1][POOL_LITTER],
         }
     }
+
+    if ('do_economic_analysis' in args and args['do_economic_analysis']):
+        baseline_period_npv_raster = os.path.join(
+            output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
+                year=end_of_baseline_period, suffix=suffix))
+        _ = task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=([(total_net_sequestration_for_baseline_period, 1),
+                   (baseline_lulc_year, 'raw'),
+                   (end_of_baseline_period, 'raw'),
+                   (prices, 'raw')],
+                  _calculate_baseline_period_npv,
+                  baseline_period_npv_raster,
+                  gdal.GDT_Float32,
+                  NODATA_FLOAT32),
+            dependent_task_list=[baseline_net_seq_task],
+            target_path_list=[baseline_period_npv_raster],
+            task_name='baseline period NPV')
+        transition_analysis_args['npv_since_baseline_raster'] = baseline_period_npv_raster
+
+    task_graph.join()
     execute_transition_analysis(transition_analysis_args)
 
     task_graph.close()
     task_graph.join()
+
+
+def _calculate_baseline_period_npv(
+        baseline_period_net_seq_matrix, baseline_lulc_year,
+        end_of_baseline_period_year, prices_dict):
+    valid_mask = ~numpy.isclose(baseline_period_net_seq_matrix, NODATA_FLOAT32)
+
+    # We know in advance that accumulation is constant during the baseline
+    # period, so we apply the price to the accumulation that took place in each
+    # year and add it all up.
+    annual_accumulation = baseline_period_net_seq_matrix[valid_mask] / (
+        end_of_baseline_period_year - baseline_lulc_year)
+    result = numpy.zeros(baseline_period_net_seq_matrix.shape,
+                         dtype=numpy.float32)
+    for year in range(baseline_lulc_year, end_of_baseline_period_year+1):
+        result += annual_accumulation * prices_dict[year]
+
+    result[~valid_mask] = NODATA_FLOAT32
+    return result
 
 
 def _calculate_accumulation_from_baseline(

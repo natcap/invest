@@ -1424,6 +1424,10 @@ class TestCBC2(unittest.TestCase):
             gdal.OpenEx(raster_path).ReadAsArray(),
             expected_total_sequestration, rtol=1e-6)
 
+        # TODO: refactor the valuation calculations into a shared function to
+        # be used by both _calculate_baseline_period_npv and
+        # _calculate_valuation.
+        # TODO: verify valuation calculations by hand.
         expected_net_present_value_at_2030 = numpy.array(
             [[1, 0]], dtype=numpy.float32)
         raster_path = os.path.join(
