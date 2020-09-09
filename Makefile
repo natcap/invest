@@ -265,7 +265,7 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C 'doc/users-guide' SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR='../../build/userguide' html
+	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
 	-$(RMDIR) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
