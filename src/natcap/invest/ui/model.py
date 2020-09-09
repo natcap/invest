@@ -1963,9 +1963,33 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         import {py_model}
         import logging
+        import sys
 
-        logging.basicConfig(level=logging.INFO)
+
+        logging.basicConfig(level=logging.DEBUG)
         LOGGER = logging.getLogger(__name__)
+        root_logger = logging.getLogger()
+        
+
+        # Set logging format to the same as the CLI uses
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter(
+            fmt="%(asctime)s %(module)s.%(funcName)s(%(lineno)d) %(levelname)s %(message)s",
+            datefmt='%m/%d/%Y %H:%M:%S ')
+        handler.setFormatter(formatter)
+        LOGGER.addHandler(handler)
+        LOGGER.info('Testing LOGGER...')
+        root_logger.info('Testing root_logger...')
+
+        print(LOGGER.parent)
+        print(root_logger.parent)
+
+        # FYI: Root logger by default has a level of logging.WARNING.
+        # To capture ALL logging produced in this system at runtime, use this:
+        # logging.getLogger().setLevel(logging.DEBUG)
+        # Also FYI: using logging.DEBUG means that the logger will defer to
+        # the setting of the parent logger.
+        # logging.getLogger('natcap').setLevel(logging.DEBUG)
 
         args = {model_args}
 
