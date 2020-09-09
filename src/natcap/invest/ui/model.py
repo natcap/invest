@@ -1970,7 +1970,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         LOGGER = logging.getLogger(__name__)
         root_logger = logging.getLogger()
 
-        handler = logging.StreamHandler(sys.stderr)
+        handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
             fmt=natcap.invest.utils.LOG_FMT,
             datefmt='%m/%d/%Y %H:%M:%S ')
