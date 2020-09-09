@@ -14,7 +14,6 @@ import {
 jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants'
 
-// TODO: refer to this obj
 const MODEL = 'Carbon'
 const MODULE = 'carbon'
 const INVEST_LIST = { [MODEL]: { internal_name: MODULE } };
