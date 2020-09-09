@@ -403,10 +403,13 @@ describe('InVEST subprocess testing', () => {
       // some text from the logfile should be rendered:
       expect(getByText(dummyTextToLog, { exact: false }))
         .toBeInTheDocument();
+      expect(utils.queryByText('Model Completed')).toBeNull()
+      expect(utils.queryByText('Open Workspace')).toBeNull()
     });
     mockInvestProc.emit('close', 0)  // 0 - exit w/o error
     await waitFor(() => {
       expect(getByText('Model Completed')).toBeInTheDocument();
+      expect(getByText('Open Workspace')).toBeEnabled();
     })
     // A recent job card should be rendered
     const { findByText } = within(getByLabelText('Recent InVEST Runs:'))
@@ -438,16 +441,18 @@ describe('InVEST subprocess testing', () => {
     // Emit some stdout, some stderr, then pause and exit with error
     mockInvestProc.stdout.push('hello from stdout')
     mockInvestProc.stderr.push(errorMessage)
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    mockInvestProc.emit('close', 1)  // 1 - exit w/ error
-    
     await waitFor(() => {
       expect(getByText('Log').classList.contains('active')).toBeTruthy();
       // some text from the logfile should be rendered:
       expect(getByText(dummyTextToLog, { exact: false }))
         .toBeInTheDocument();
-      // stderr text should be rendered 
+    })
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    mockInvestProc.emit('close', 1)  // 1 - exit w/ error
+    await waitFor(() => {
+      // stderr text should be rendered in a red alert
       expect(getByText(errorMessage)).toHaveClass('alert-danger');
+      expect(getByText('Open Workspace')).toBeEnabled();
     });
     // A recent job card should be rendered
     const { findByText } = within(getByLabelText('Recent InVEST Runs:'))
