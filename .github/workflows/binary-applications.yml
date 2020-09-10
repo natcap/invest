@@ -89,7 +89,8 @@ jobs:
                   git -C $LOCALPATH checkout $GIT_REV
 
             - name: Build user's Guide
-              run: cmd /C "make userguide"
+              shell: bash -l {0}
+              run: cmd /c 'make 2>&1' userguide
 
             - name: Build windows binaries
               shell: bash -l {0}
