@@ -28,6 +28,8 @@ ifeq ($(OS),Windows_NT)
 	PYTHON = python
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
 	MAKE := make
+	# Since moving to GitHub actions for build workflows, it makes sense 
+	# to use the bash shell for more consistent command runs
 	#SHELL := powershell.exe
 	SHELL := /usr/bin/bash
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
@@ -266,15 +268,9 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
-ifeq ($(OS),Windows_NT)
 	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
 	-$(RMDIR) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
-else
-	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
-	-$(RMDIR) $(USERGUIDE_HTML_DIR)
-	$(COPYDIR) build/userguide/html dist/userguide
-endif
 
 $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))"
@@ -371,15 +367,17 @@ signcode:
 
 P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
 signcode_windows:
+	SHELL := powershell.exe
 	$(BASHLIKE_SHELL_COMMAND) "$(GSUTIL) cp gs://stanford_cert/$(P12_FILE) $(BUILD_DIR)/$(P12_FILE)"
 	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
 	-powershell.exe "Remove-Item $(BUILD_DIR)/$(P12_FILE)"
 	@echo "Installer was signed with signtool"
+	SHELL := /usr/bin/bash
 
 deploy:
-	-"$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)"
-	-"$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data"
-	-"$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide"
+	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
+	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
 	@echo "Applicaiton binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 
