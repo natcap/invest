@@ -100,7 +100,6 @@ export default class SetupTab extends React.Component {
     Object.keys(argsSpec).forEach((key) => {
       Object.assign(argsSpec[key], uiSpec[key]);
     });
-    // if (argsInitValues) {
     const argGroups = {};
     let {
       argsValues, argsValidation
@@ -117,7 +116,7 @@ export default class SetupTab extends React.Component {
         argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
       }
 
-      /** Sort the arg into it's input group */
+      // Sort the arg into it's input group
       // order is optional in the spec, but to be exlplicit about
       // what happens with sorting, defaulting to 100.0.
       if (typeof argumentSpec.order !== 'number') {
@@ -290,15 +289,21 @@ export default class SetupTab extends React.Component {
   }
 
   render() {
-    if (this.state.argsValues) {
+    const {
+      argsValues,
+      argsValid,
+      argsValidation,
+      sortedArgKeys,
+    } = this.state;
+    if (argsValues) {
       const { argsSpec, pyModuleName } = this.props;
       return (
         <Container fluid>
           <ArgsForm
             argsSpec={argsSpec}
-            argsValues={this.state.argsValues}
-            argsValidation={this.state.argsValidation}
-            sortedArgKeys={this.state.sortedArgKeys}
+            argsValues={argsValues}
+            argsValidation={argsValidation}
+            sortedArgKeys={sortedArgKeys}
             pyModuleName={pyModuleName}
             updateArgValues={this.updateArgValues}
             batchUpdateArgs={this.batchUpdateArgs}
@@ -309,7 +314,7 @@ export default class SetupTab extends React.Component {
                 variant="primary"
                 size="lg"
                 onClick={this.wrapInvestExecute}
-                disabled={!this.state.argsValid}
+                disabled={!argsValid}
               >
                 Execute
               </Button>

@@ -17,7 +17,7 @@ import SetupTab from './components/SetupTab';
 import LogTab from './components/LogTab';
 import ResourcesTab from './components/ResourcesTab';
 import {
-  getSpec, fetchDatastackFromFile, writeParametersToFile
+  getSpec, writeParametersToFile
 } from './server_requests';
 import {
   findMostRecentLogfile, cleanupDir
@@ -35,6 +35,38 @@ const LOGLEVELMAP = {
   ERROR: '-v',
 };
 
+/** Get an invest model's ARGS_SPEC when a model button is clicked.
+ *
+ * Also get the model's UI spec if it exists.
+ *
+ * @param {string} modelName - as in a model name appearing in `invest list`
+ * @returns {object} destructures to:
+ *   { modelSpec, argsSpec, uiSpec }
+ */
+async function investGetSpec(modelName) {
+  const spec = await getSpec(modelName);
+  if (spec) {
+    const { args, ...modelSpec } = spec;
+    // A model's UI Spec is optional and may not exist
+    let uiSpec = {};
+    try {
+      uiSpec = JSON.parse(fs.readFileSync(
+        path.join(fileRegistry.INVEST_UI_DATA, `${spec.module}.json`)
+      ));
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        logger.warn(err);
+        logger.warn(`No UI spec exists for ${spec.module}`);
+      } else {
+        logger.error(err.stack);
+      }
+    }
+    return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
+  }
+  logger.error(`no spec found for ${modelName}`);
+  return undefined;
+}
+
 /** This component and it's children render all the visible parts of the app.
  *
  * This component's state includes all the data needed to represent one invest
@@ -46,7 +78,6 @@ export default class InvestJob extends React.Component {
 
     this.state = {
       activeTab: 'setup',
-      // jobID: null, // hash of modelName + workspace generated at model execution
       modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
       logfile: null, // path to the invest logfile associated with invest job
@@ -55,7 +86,6 @@ export default class InvestJob extends React.Component {
     };
 
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
-    this.investGetSpec = this.investGetSpec.bind(this);
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
   }
@@ -64,16 +94,17 @@ export default class InvestJob extends React.Component {
     // If these dirs already exist, this will err and pass
     fs.mkdir(fileRegistry.CACHE_DIR, (err) => {});
     fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
-
-    const { modelSpec, argsSpec, uiSpec } = await this.investGetSpec(
-      this.props.modelRunName
-    );
+    // logfile and jobStatus are undefined unless this is a pre-existing job.
+    const { modelRunName, logfile, jobStatus } = this.props;
+    const {
+      modelSpec, argsSpec, uiSpec
+    } = await investGetSpec(modelRunName);
     this.setState({
       modelSpec: modelSpec,
       argsSpec: argsSpec,
       uiSpec: uiSpec,
-      logfile: this.props.logfile,
-      jobStatus: this.props.jobStatus,
+      logfile: logfile,
+      jobStatus: jobStatus,
     }, () => { this.switchTabs('setup'); });
   }
 
@@ -163,12 +194,11 @@ export default class InvestJob extends React.Component {
 
     // There's no general way to know that a spawned process started,
     // so this logic when listening for stdout seems like the way.
-    // let logfilename = '';
     investRun.stdout.on('data', async () => {
       if (!job.logfile) {
         job.logfile = await findMostRecentLogfile(job.workspace.directory);
-        // TODO: handle case when logfilename is undefined? It seems like
-        // sometimes there is some stdout emitted before a logfile exists.
+        // TODO: handle case when job.logfile is still undefined?
+        // Could be if some stdout is emitted before a logfile exists.
         job.status = 'running';
         this.setState(
           {
@@ -196,12 +226,12 @@ export default class InvestJob extends React.Component {
     });
 
     // Set some state when the invest process exits and update the app's
-    // persistent database by calling saveState.
+    // persistent database by calling saveJob.
     investRun.on('close', (code) => {
       // TODO: there are non-zero exit cases that should be handled
       // differently from one-another, but right now they are all exit code 1.
-      // E.g. this callback is designed with a model crash in mind, but not a fail to 
-      // launch, in which case the saveState call will probably crash.
+      // E.g. this state update is designed with a model crash in mind,
+      // not a fail to launch
       job.status = (code === 0 ? 'success' : 'error');
       this.setState({
         jobStatus: job.status,
@@ -212,38 +242,8 @@ export default class InvestJob extends React.Component {
     });
   }
 
-  /** Get an invest model's ARGS_SPEC when a model button is clicked.
-   *
-   * Also get the model's UI spec if it exists.
-   *
-   * @param {string} modelName - as in a model name appearing in `invest list`
-   * @param {object} argsInitDict - empty, or a JSON representation of an
-   *   invest model's agruments dictionary
-   */
-  async investGetSpec(modelName) {
-    const spec = await getSpec(modelName);
-    if (spec) {
-      const { args, ...modelSpec } = spec;
-      // A model's UI Spec is optional and may not exist
-      let uiSpec = {};
-      try {
-        uiSpec = JSON.parse(fs.readFileSync(
-          path.join(fileRegistry.INVEST_UI_DATA, `${spec.module}.json`)
-        ));
-      } catch (err) {
-        if (err.code === 'ENOENT') {
-          logger.warn(err);
-          logger.warn(`No UI spec exists for ${spec.module}`);
-        } else {
-          logger.error(err.stack);
-        }
-      }
-      return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
-    }
-    logger.error(`no spec found for ${modelName}`);
-  }
-
   /** Change the tab that is currently visible.
+   *
    * @param {string} key - the value of one of the Nav.Link eventKey.
    */
   switchTabs(key) {
@@ -344,8 +344,13 @@ export default class InvestJob extends React.Component {
 
 InvestJob.propTypes = {
   investExe: PropTypes.string.isRequired,
+  modelRunName: PropTypes.string.isRequired,
+  logfile: PropTypes.string,
+  argsInitValues: PropTypes.object,
+  jobStatus: PropTypes.string,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
   }).isRequired,
+  saveJob: PropTypes.func.isRequired,
 };

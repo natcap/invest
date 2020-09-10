@@ -94,17 +94,17 @@ export default class App extends React.Component {
     });
   }
 
-  /**
-   * Push data for a new InvestJob component to a new array.
+  /** Push data for a new InvestJob component to an array.
+   *
    * When this is called to load a "recent job", optional argsValues, logfile,
    * and jobStatus parameters will be defined, otherwise they can be undefined.
    *
    * @param  {string} modelRunName - invest model name as appears in `invest list`
    * @param  {object} argsValues - an invest "args dictionary" with initial values
    * @param  {string} logfile - path to an existing invest logfile
-   * @param  {string} status - indicates how the job exited, if it's a recent job.
+   * @param  {string} jobStatus - indicates how the job exited, if it's a recent job.
    */
-  openInvestModel(modelRunName, argsValues, logfile, status) {
+  openInvestModel(modelRunName, argsValues, logfile, jobStatus) {
     const navID = crypto.randomBytes(16).toString('hex');
     this.setState((state) => ({
       openJobs: [
@@ -113,7 +113,7 @@ export default class App extends React.Component {
           modelRunName: modelRunName,
           argsValues: argsValues,
           logfile: logfile,
-          status: status,
+          status: jobStatus,
           navID: navID,
         },
       ],
@@ -147,11 +147,9 @@ export default class App extends React.Component {
     }, () => this.switchTabs(switchTo));
   }
 
-  /** Save the state of this component (1) and the current InVEST job (2).
-   * 1. Save the state object of this component to a JSON file .
-   * 2. Append metadata of the invest job to a persistent database/file.
-   * This triggers automatically when the invest subprocess starts and again
-   * when it exits.
+  /** Save data describing an invest job to a persistent JSON file.
+   *
+   * @param {object} jobData - data that can be passed to openInvestModel
    */
   saveJob(jobData) {
     const jsonContent = JSON.stringify(jobData);
@@ -176,7 +174,7 @@ export default class App extends React.Component {
   }
 
   render() {
-    const { investExe, jobDatabase } = this.props;
+    const { investExe } = this.props;
     const {
       investList,
       investSettings,
