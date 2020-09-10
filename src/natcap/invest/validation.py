@@ -5,7 +5,11 @@ import logging
 import pprint
 import os
 import re
+import threading
+import functools
 import importlib
+import queue
+import warnings
 
 import pygeoprocessing
 import pandas
@@ -595,17 +599,60 @@ def check_spatial_overlap(spatial_filepaths_list,
     return None
 
 
+def timeout(func, *args, timeout=5, **kwargs):
+    """Stop a function after a given amount of time.
+
+    Args:
+        func (function): function to apply the timeout to
+        args: arguments to pass to the function
+        timeout (number): how many seconds to allow the function to run.
+            Defaults to 5.
+
+    Returns:
+        A string warning message if the thread completed in time and returned
+        warnings, ``None`` otherwise.
+
+    Raises:
+        ``RuntimeWarning`` if the thread does not complete in time.
+    """
+    # use a queue to share the return value from the file checking thread
+    # the target function puts the return value from `func` into shared memory
+    message_queue = queue.Queue()
+    def wrapper_func():
+        message_queue.put(func(*args, **kwargs))
+
+    thread = threading.Thread(target=wrapper_func)
+    LOGGER.info(f'Starting file checking thread with timeout={timeout}')
+    thread.start()
+    thread.join(timeout=timeout)
+
+    if thread.is_alive():
+        # first arg to `check_csv`, `check_raster`, `check_vector` is the path
+        warnings.warn(f'Validation of file {args[0]} timed out. If this file '
+            'is stored in a file streaming service, it may be taking a long '
+            'time to download. Try storing it locally instead.')
+        return None
+
+    else:
+        LOGGER.info('File checking thread completed.')
+        # get any warning messages returned from the thread
+        return message_queue.get()
+
+
+# accessing a file could take a long time if it's in a file streaming service
+# to prevent the UI from hanging due to slow validation,
+# set a timeout for these functions.
 _VALIDATION_FUNCS = {
     'boolean': check_boolean,
-    'csv': check_csv,
-    'file': check_file,
-    'folder': check_directory,
-    'directory': check_directory,
+    'csv': functools.partial(timeout, check_csv),
+    'file': functools.partial(timeout, check_file),
+    'folder': functools.partial(timeout, check_directory),
+    'directory': functools.partial(timeout, check_directory),
     'freestyle_string': check_freestyle_string,
     'number': check_number,
     'option_string': check_option_string,
-    'raster': check_raster,
-    'vector': check_vector,
+    'raster': functools.partial(timeout, check_raster),
+    'vector': functools.partial(timeout, check_vector),
     'other': None,  # Up to the user to define their validate()
 }
 
@@ -886,6 +933,7 @@ def invest_validator(validate_func):
                 if args_value not in ('', None):
                     input_type = args_key_spec['type']
                     validator_func = _VALIDATION_FUNCS[input_type]
+
 
                     try:
                         validation_options = (
