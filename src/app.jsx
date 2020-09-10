@@ -14,7 +14,7 @@ import Button from 'react-bootstrap/Button';
 import HomeTab from './components/HomeTab';
 import InvestJob from './InvestJob';
 import LoadButton from './components/LoadButton';
-import { SettingsModal } from './components/SettingsModal';
+import SettingsModal from './components/SettingsModal';
 import { getInvestList } from './server_requests';
 import { updateRecentJobs, loadRecentJobs } from './utils';
 import { fileRegistry } from './constants';

@@ -122,10 +122,11 @@ describe('Various ways to open and close InVEST models', () => {
       filePaths: ['foo.json']
     }
     const mockDatastack = {
-      module_name: 'natcap.invest.carbon',
       args: {
         carbon_pools_path: "Carbon/carbon_pools_willamette.csv", 
-      }
+      },
+      module_name: 'natcap.invest.carbon',
+      model_run_name: 'carbon',
     }
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
     fetchDatastackFromFile.mockResolvedValue(mockDatastack)
@@ -236,7 +237,7 @@ describe('Display recently executed InVEST jobs', () => {
     const db = JSON.parse(fs.readFileSync(testJobsDatabase));
 
     await waitFor(() => {
-      Object.keys(db).forEach(job => {
+      Object.keys(db).forEach((job) => {
         expect(getByText(db[job].workspace.directory))
           .toBeTruthy();
       })
@@ -380,40 +381,41 @@ describe('InVEST subprocess testing', () => {
     jest.resetAllMocks();
   })
   
-  test('Invest subprocess - exit without error', async () => {
-    const { getByText, getByLabelText, unmount, ...utils } = render(
+  test('exit without error - expect log display', async () => {
+    const { findByText, findByLabelText, queryByText, unmount } = render(
       <App
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
 
-    const carbon = await utils.findByText('Carbon');
+    const carbon = await findByText('Carbon');
     fireEvent.click(carbon);
-    const workspaceInput = await utils.findByLabelText(
-      RegExp(`${spec.args.workspace_dir.name}`))
+    const workspaceInput = await findByLabelText(
+      RegExp(`${spec.args.workspace_dir.name}`)
+    );
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
-    const execute = await utils.findByText('Execute');
+    const execute = await findByText('Execute');
     fireEvent.click(execute);
     
     // Emit some stdout because our program listens for stdout
     // in order to know the invest subprocess has spawned,
     // signalling that an invest logfile now exists in the workspace.
     mockInvestProc.stdout.push('hello from stdout')
-    await waitFor(() => {
-      expect(getByText('Log').classList.contains('active')).toBeTruthy();
-      // some text from the logfile should be rendered:
-      expect(getByText(dummyTextToLog, { exact: false }))
-        .toBeInTheDocument();
-      expect(utils.queryByText('Model Completed')).toBeNull()
-      expect(utils.queryByText('Open Workspace')).toBeNull()
-    });
+    const logTab = await findByText('Log');
+    expect(logTab.classList.contains('active')).toBeTruthy();
+    // some text from the logfile should be rendered:
+    expect(await findByText(dummyTextToLog, { exact: false }))
+      .toBeInTheDocument();
+    expect(queryByText('Model Completed')).toBeNull()
+    expect(queryByText('Open Workspace')).toBeNull()
+    
     mockInvestProc.emit('close', 0)  // 0 - exit w/o error
-    await waitFor(() => {
-      expect(getByText('Model Completed')).toBeInTheDocument();
-      expect(getByText('Open Workspace')).toBeEnabled();
-    })
+    expect(await findByText('Model Completed')).toBeInTheDocument();
+    expect(await findByText('Open Workspace')).toBeEnabled();
+
     // A recent job card should be rendered
-    const { findByText } = within(getByLabelText('Recent InVEST Runs:'))
-    const cardText = await findByText(`${path.resolve(fakeWorkspace)}`)
+    const cardText = await within(
+      await findByLabelText('Recent InVEST Runs:')
+    ).findByText(`${path.resolve(fakeWorkspace)}`)
     expect(cardText).toBeInTheDocument()
     // Normally we don't explicitly unmount the rendered components,
     // but in this case we're 'watching' a file that the afterEach()
@@ -422,42 +424,40 @@ describe('InVEST subprocess testing', () => {
     unmount();
   })
 
-  test('Invest subprocess - exit with error', async () => {
-    const { getByText, getByLabelText, unmount, ...utils } = render(
+  test('exit with error - expect log display', async () => {
+    const { findByText, findByLabelText, unmount, ...utils } = render(
       <App
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
 
-    const carbon = await utils.findByText('Carbon');
+    const carbon = await findByText('Carbon');
     fireEvent.click(carbon);
-    const workspaceInput = await utils.findByLabelText(
+    const workspaceInput = await findByLabelText(
       RegExp(`${spec.args.workspace_dir.name}`))
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
     
-    const execute = await utils.findByText('Execute');
+    const execute = await findByText('Execute');
     fireEvent.click(execute);
     
     const errorMessage = 'fail'
     // Emit some stdout, some stderr, then pause and exit with error
-    mockInvestProc.stdout.push('hello from stdout')
-    mockInvestProc.stderr.push(errorMessage)
-    await waitFor(() => {
-      expect(getByText('Log').classList.contains('active')).toBeTruthy();
-      // some text from the logfile should be rendered:
-      expect(getByText(dummyTextToLog, { exact: false }))
-        .toBeInTheDocument();
-    })
+    mockInvestProc.stdout.push('hello from stdout');
+    mockInvestProc.stderr.push(errorMessage);
+    const logTab = await findByText('Log');
+    expect(logTab.classList.contains('active')).toBeTruthy();
+    // some text from the logfile should be rendered:
+    expect(await findByText(dummyTextToLog, { exact: false }))
+      .toBeInTheDocument();
     await new Promise(resolve => setTimeout(resolve, 2000))
     mockInvestProc.emit('close', 1)  // 1 - exit w/ error
-    await waitFor(() => {
-      // stderr text should be rendered in a red alert
-      expect(getByText(errorMessage)).toHaveClass('alert-danger');
-      expect(getByText('Open Workspace')).toBeEnabled();
-    });
+    // stderr text should be rendered in a red alert
+    expect(await findByText(errorMessage)).toHaveClass('alert-danger');
+    expect(await findByText('Open Workspace')).toBeEnabled();
     // A recent job card should be rendered
-    const { findByText } = within(getByLabelText('Recent InVEST Runs:'))
-    const cardText = await findByText(`${path.resolve(fakeWorkspace)}`)
-    expect(cardText).toBeInTheDocument()
-    unmount()
+    const cardText = await within(
+      await findByLabelText('Recent InVEST Runs:')
+    ).findByText(`${path.resolve(fakeWorkspace)}`);
+    expect(cardText).toBeInTheDocument();
+    unmount();
   })
 })
