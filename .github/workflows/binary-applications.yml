@@ -90,7 +90,9 @@ jobs:
 
             - name: Build user's Guide
               shell: bash -l {0}
-              run: cmd /c 'make 2>&1' userguide
+              run: |
+                which bash
+                make userguide
 
             - name: Build windows binaries
               shell: bash -l {0}

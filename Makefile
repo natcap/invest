@@ -28,7 +28,8 @@ ifeq ($(OS),Windows_NT)
 	PYTHON = python
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
 	MAKE := make
-	SHELL := powershell.exe
+	#SHELL := powershell.exe
+	SHELL := /usr/bin/bash
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
 	.DEFAULT_GOAL := windows_installer
 	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
