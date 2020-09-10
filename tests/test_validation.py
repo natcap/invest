@@ -1218,7 +1218,9 @@ class TestValidationFromSpec(unittest.TestCase):
                 'required': True
             }
         }
-
+        message = 'Provided key b does not exist in ARGS_SPEC'
+        
         with self.assertLogs('natcap.invest.validation', level='DEBUG') as cm:
             validation.validate(args, spec)
+        self.assertTrue(message in cm.output)
 
