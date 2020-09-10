@@ -89,7 +89,6 @@ jobs:
                   git -C $LOCALPATH checkout $GIT_REV
 
             - name: Build user's Guide
-              shell: bash -l {0}
               run: make -d userguide
 
             - name: Build windows binaries
