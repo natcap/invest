@@ -1120,17 +1120,22 @@ class TestCBC2(unittest.TestCase):
         transition_years = (2000, 2010, 2020)
         transition_rasters = []
         with open(csv_path, 'w') as transitions_csv:
-            transitions_csv.write('TRANSITION_YEAR,RASTER_PATH\n')
+            # Check that we can interpret varying case.
+            transitions_csv.write('transition_YEAR,raster_PATH\n')
             for transition_year in transition_years:
+                # Write absolute paths.
                 transition_file_path = os.path.join(
                     self.workspace_dir, f'{transition_year}.tif)')
                 transition_rasters.append(transition_file_path)
                 transitions_csv.write(
                     f'{transition_year},{transition_file_path}\n')
 
-                make_raster_from_array(
-                    numpy.array([[0]], dtype=numpy.int16),
-                    transition_file_path)
+            # Make one path relative to the workspace.
+            # The expected raster path is absolute.
+            transitions_csv.write(f'2030,some_path.tif')
+            transition_years += (2030,)
+            transition_rasters.append(os.path.join(self.workspace_dir,
+                                                   'some_path.tif'))
 
         extracted_transitions = (
             coastal_blue_carbon2._extract_transitions_from_table(csv_path))

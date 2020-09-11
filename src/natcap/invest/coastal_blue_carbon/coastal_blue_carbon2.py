@@ -1437,13 +1437,36 @@ def _reclassify_disturbance_magnitude(
 
 
 def _extract_transitions_from_table(csv_path):
+    """Extract the year/raster transition mapping from a CSV.
+
+    No validation is performed on the years or raster paths.
+
+    Parameters:
+        csv_path (string): The path to a CSV on disk containing transition
+            years and a corresponding transition raster path.  Transition years
+            may be in any order in the CSV, but must be integers and no two
+            years may be the same.  Transition raster paths must refer to a
+            raster file located on disk representing the landcover at that
+            transition.  If the path is absolute, the path will be used as
+            given.  If the path is relative, the path will be interpreted as
+            relative to the parent directory of this CSV file.
+
+    Returns:
+        A ``dict`` mapping int transition years to their corresponding raster
+        paths.  These raster paths will be absolute paths.
+
+    """
     table = utils.read_csv_to_dataframe(csv_path, index_col=False)
     table.columns = table.columns.str.lower()
 
     output_dict = {}
     table.set_index('transition_year', drop=False, inplace=True)
     for index, row in table.iterrows():
-        output_dict[int(index)] = row['raster_path']
+        raster_path = row['raster_path']
+        if not os.path.isabs(raster_path):
+            raster_path = os.path.relpath(
+                raster_path, os.path.dirname(csv_path))
+        output_dict[int(index)] = raster_path
 
     return output_dict
 
