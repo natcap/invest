@@ -74,24 +74,14 @@ jobs:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Set up Windows python
-              if: matrix.os == 'windows-latest'
+            - name: Set python
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  activate-environment: win-env
+                  activate-environment: test-env
                   auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
             
-            - name: Set up MacOS python
-              if: matrix.os != 'windows-latest'
-              uses: goanpeca/setup-miniconda@v1.1.2
-              with:
-                  activate-environment: mac-env
-                  auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
-                  channels: conda-forge
-
             - name: Install build dependencies
               shell: bash -l {0}
               run: |
@@ -132,7 +122,7 @@ jobs:
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
+              if: github.event_name != 'pull_request' && matrix.os == 'macos-latest'
               shell: powershell
               run: |
                   $env:GSUTIL_PATH = (Get-Command gsutil).path
@@ -143,6 +133,20 @@ jobs:
                   $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
 
                   make GSUTIL=$env:GSUTIL_PATH deploy
+            
+            - name: Deploy Windows artifacts to GCS
+              # Secrets not available in PR so don't use GCP.
+              if: github.event_name != 'pull_request' && matrix.os != 'macos-latest'
+              shell: powershell
+              run: |
+                  $env:GSUTIL_PATH = (Get-Command gsutil).path
+
+                  # Specify which python version we want to use (it's the one we're using
+                  # in actions/setup-miniconda).
+                  $env:CLOUDSDK_PYTHON = (Get-Command python).path
+                  $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
+
+                  make GSUTIL=$env:GSUTIL_PATH deploy_windows
 
     test-source-distribution:
         name: "Check sdist"
@@ -162,7 +166,7 @@ jobs:
             - name: Set up python
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  activate-environment: conda-env
+                  activate-environment: source-env
                   auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
@@ -245,7 +249,7 @@ jobs:
                   path: ~\AppData\Local\pip\Cache
                   key: windows-py37-pipcache-sampledata-${{ hashfiles('requirements.txt') }}
 
-            - name: Set python
+            - name: Setup python
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   activate-environment: validate-env
@@ -297,7 +301,7 @@ jobs:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Set up Windows python
+            - name: Set up python
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   activate-environment: ui-env

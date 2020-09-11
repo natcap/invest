@@ -50,7 +50,7 @@ jobs:
             - name: Set up python
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  activate-environment: conda-env
+                  activate-environment: winbin-env  # This is also hardcoded in Pyinstaller's invest.spec
                   auto-update-conda: true
                   python-version: 3.7
                   channels: conda-forge
@@ -88,19 +88,11 @@ jobs:
                   GIT_LFS_SKIP_SMUDGE=1 git clone $GIT_URL $LOCALPATH
                   git -C $LOCALPATH checkout $GIT_REV
 
-            - name: Build user's Guide
+            - name: Build userguide, binaries, installer
               shell: bash -l {0}
               run: |
-                which bash
-                make userguide
-
-            - name: Build windows binaries
-              shell: bash -l {0}
-              run: make binaries
-
-            - name: Build installer
-              shell: bash -l {0}
-              run: make windows_installer
+                  # This builds the users guide, binaries, and installer
+                  make windows_installer
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
@@ -145,7 +137,7 @@ jobs:
                   $env:CLOUDSDK_PYTHON = (Get-Command python).path
                   $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
 
-                  make GSUTIL=$env:GSUTIL_PATH deploy
+                  make GSUTIL=$env:GSUTIL_PATH deploy_windows
 
             - name: Upload installer artifact
               if: always()
@@ -189,7 +181,7 @@ jobs:
             - name: Set up conda
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  activate-environment: mac-env  # This is also hardcoded in Pyinstaller's invest.spec
+                  activate-environment: macbin-env  # This is also hardcoded in Pyinstaller's invest.spec
                   auto-update-conda: true
                   python-version: 3.7
                   channels: conda-forge

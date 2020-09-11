@@ -15,6 +15,7 @@ GIT_UG_REPO_REV              := be611da87a6485a05b1136c3cbf4497dfaba706f
 
 ENV = env
 ifeq ($(OS),Windows_NT)
+	# Double $$ indicates windows environment variable
 	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_SCRIPTS = $(ENV)\Scripts
@@ -34,7 +35,6 @@ ifeq ($(OS),Windows_NT)
 	SHELL := /usr/bin/bash
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
 	.DEFAULT_GOAL := windows_installer
-	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
 	/ := '\'
 else
@@ -54,10 +54,8 @@ else
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
 		.DEFAULT_GOAL := mac_installer
-		JENKINS_BUILD_SCRIPT := ./scripts/jenkins-build.sh
 	else
 		.DEFAULT_GOAL := binaries
-		JENKINS_BUILD_SCRIPT := @echo "NOTE: There is not currently a linux jenkins build."; exit 1
 	endif
 endif
 
@@ -344,15 +342,6 @@ $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
-jenkins:
-	$(JENKINS_BUILD_SCRIPT)
-
-jenkins_test_ui: env
-	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test_ui
-
-jenkins_test: env $(GIT_TEST_DATA_REPO_PATH)
-	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test
-
 CERT_FILE := StanfordUniversity.crt
 KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
 signcode:
@@ -373,12 +362,18 @@ signcode_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
-	-"$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)"
-	-"$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data"
-	-"$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide"
+	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
+	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
 	@echo "Applicaiton binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 
+deploy_windows:
+	-$(BASHLIKE_SHELL_COMMAND) "$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)"
+	-$(BASHLIKE_SHELL_COMMAND) "$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data"
+	-$(BASHLIKE_SHELL_COMMAND) "$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide"
+	@echo "Applicaiton binaries (if they were created) can be downloaded from:"
+	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 
 # Notes on Makefile development
 #
