@@ -369,13 +369,11 @@ deploy:
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 
 deploy_windows:
-	SHELL := powershell.exe
-	-"$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)"
-	-"$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data"
-	-"$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide"
+	-powershell.exe -Command "$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)"
+	-powershell.exe -Command "$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data"
+	-powershell.exe -Command "$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide"
 	@echo "Applicaiton binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
-	SHELL := /usr/bin/bash
 
 # Notes on Makefile development
 #
