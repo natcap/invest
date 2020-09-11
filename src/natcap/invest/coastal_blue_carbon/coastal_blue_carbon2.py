@@ -552,37 +552,12 @@ def execute_transition_analysis(args):
             summary_net_sequestration_raster_paths[year+1] = (
                 net_carbon_sequestration_since_last_transition)
 
-            if ('do_economic_analysis' in args and args['do_economic_analysis']):
-                # Sum all of the valuation rasters leading up to and including
-                # the current year.
-                net_present_value_raster_path = os.path.join(
-                    output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
-                        year=(year + 1), suffix=suffix))
-                _ = task_graph.add_task(
-                    func=_sum_n_rasters,
-                    args=([args['npv_since_baseline_raster']] +
-                          list(raster_path for (year, raster_path) in
-                               valuation_rasters.items() if year < year+1),
-                          net_present_value_raster_path),
-                    dependent_task_list=list(valuation_tasks[year].values()),
-                    target_path_list=[net_present_value_raster_path],
-                    task_name=f'Calculating net present value up to {year}')
-
         # These are the few sets of tasks that we care about referring to from
         # the prior year.
         prior_stock_tasks = current_stock_tasks
         prior_net_sequestration_tasks = current_net_sequestration_tasks
 
-    if ('do_economic_analysis' in args and args['do_economic_analysis']):
-        sorted_transition_years = sorted(transition_years) + [final_year]
-        for transition_year, next_transition_year in zip(
-                sorted_transition_years[:-1], sorted_transition_years[1:]):
-            net_present_value_raster_path = os.path.join(
-                output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
-                    year=next_transition_year, suffix=suffix))
-
-
-    # Calculate total net sequestration.
+    # Calculate total net sequestration
     total_net_sequestration_raster_path = os.path.join(
         output_dir, TOTAL_NET_SEQ_ALL_YEARS_RASTER_PATTERN.format(
             suffix=suffix))
@@ -598,12 +573,13 @@ def execute_transition_analysis(args):
         task_name=(
              'Calculate total net carbon sequestration across all years'))
 
-    # Calculate Net Present Value
+    # Calculate Net Present Value for each of the transition years, relative to
+    # the baseline.
     target_npv_paths = {}
     for transition_year in (
             sorted(set(transition_years).union(set([final_year])))[1:]):
-        target_npv_paths[transition_year] = (
-            NET_PRESENT_VALUE_RASTER_PATTERN.format(
+        target_npv_paths[transition_year] = os.path.join(
+            output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
                 year=transition_year, suffix=suffix))
     _ = task_graph.add_task(
         func=_calculate_npv,
@@ -979,8 +955,8 @@ def _calculate_npv(
 
     source_raster_path = list(net_sequestration_rasters.values())[0]
 
-    for target_raster_year, target_raster_path in (
-            target_raster_years_and_paths.items()):
+    for target_raster_year, target_raster_path in sorted(
+            target_raster_years_and_paths.items(), key=lambda x:x[0]):
 
         # TODO: Refactor this loop to cache prior valuation factors.
         # Skip refactor if it adds too much complexity.
@@ -991,22 +967,28 @@ def _calculate_npv(
                 prices_by_year[year] / (
                     (1 + discount_rate) ** years_since_baseline))
 
-        nodata = pygeoprocessing.get_raster_info(
-            source_raster_path)['nodata'][0]
-
-        def _npv(net_sequestration_matrix):
-            npv = numpy.empty(net_sequestration_matrix.shape,
+        def _npv(*sequestration_matrices):
+            npv = numpy.empty(sequestration_matrices[0].shape,
                               dtype=numpy.float32)
             npv[:] = NODATA_FLOAT32
-            valid_pixels = ~numpy.isclose(net_sequestration_matrix,
-                                          nodata)
+
+            matrix_sum = numpy.zeros(npv.shape, dtype=numpy.float32)
+            valid_pixels = numpy.ones(npv.shape, dtype=numpy.bool)
+            for matrix in sequestration_matrices:
+                valid_pixels &= ~numpy.isclose(matrix, NODATA_FLOAT32)
+                matrix_sum += matrix
+
             npv[valid_pixels] = (
-                net_sequestration_matrix[valid_pixels] * valuation_factor)
+                matrix_sum[valid_pixels] * valuation_factor)
             return npv
 
+        raster_path_band_tuples = [
+            (path, 1) for (year, path) in net_sequestration_rasters.items() if
+            year <= target_raster_year]
+
         pygeoprocessing.raster_calculator(
-            [(net_sequestration_rasters[target_raster_year], 1)],
-            _npv, target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32)
+            raster_path_band_tuples, _npv, target_raster_path,
+            gdal.GDT_Float32, NODATA_FLOAT32)
 
 
 def _calculate_accumulation_from_baseline(
@@ -1061,6 +1043,7 @@ def _calculate_accumulation_over_time(
 def _calculate_valuation(
         biomass_sequestration_matrix, soil_sequestration_matrix,
         price):
+    """"""
     value_matrix = numpy.empty(
         biomass_sequestration_matrix.shape, dtype=numpy.float32)
     value_matrix[:] = NODATA_FLOAT32
@@ -1590,8 +1573,7 @@ def _extract_transitions_from_table(csv_path):
     for index, row in table.iterrows():
         raster_path = row['raster_path']
         if not os.path.isabs(raster_path):
-            raster_path = os.path.relpath(
-                raster_path, os.path.dirname(csv_path))
+            raster_path = os.path.join(os.path.dirname(csv_path), raster_path)
         output_dict[int(index)] = raster_path
 
     return output_dict

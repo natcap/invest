@@ -1130,9 +1130,10 @@ class TestCBC2(unittest.TestCase):
                 transitions_csv.write(
                     f'{transition_year},{transition_file_path}\n')
 
-            # Make one path relative to the workspace.
+            # Make one path relative to the workspace, where the transitions
+            # CSV also lives.
             # The expected raster path is absolute.
-            transitions_csv.write(f'2030,some_path.tif')
+            transitions_csv.write(f'2030,some_path.tif\n')
             transition_years += (2030,)
             transition_rasters.append(os.path.join(self.workspace_dir,
                                                    'some_path.tif'))
@@ -1454,7 +1455,7 @@ class TestCBC2(unittest.TestCase):
             expected_total_sequestration, rtol=1e-6)
 
         expected_net_present_value_at_2030 = numpy.array(
-            [[624.90564, 49.578667]], dtype=numpy.float32)
+            [[-373.67245, 891.60846]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output', 'net-present-value-at-2030.tif')
         numpy.testing.assert_allclose(
