@@ -1271,6 +1271,42 @@ def _sum_n_rasters(raster_path_list, target_raster_path,
 
 
 def _read_transition_matrix(transition_csv_path, biophysical_dict):
+    """Read a transition CSV table in to a series of sparse matrices.
+
+    Args:
+        transition_csv_path (string): The path to the transition CSV on disk.
+            This CSV indicates the carbon actions taking place on the landscape
+            when a landcover transitions from one landcover (the y axis on the
+            table, under the column ``'lulc-class'``) to another landcover (the
+            x axis, in the column headings).  Valid cell values may be one of:
+
+                * ``'NCC'`` representing no change in carbon
+                * ``'accum'`` representing a state of accumulation
+                * ``'low-impact-disturb'`` indicating a low-impact disturbance
+                * ``'medium-impact-disturb'`` indicating a medium-impact disturbance
+                * ``'high-impact-disturb'`` indicating a high-impact disturbance
+                * ``''`` (blank), which is equivalent to no carbon change.o
+        biophysical_dict (dict): A ``dict`` mapping of integer landcover codes
+            to biophysical values for disturbance and accumulation values for
+            soil and biomass carbon pools.
+
+    Returns:
+        Four ``scipy.sparse.dok_matrix`` objects of type ``numpy.float32`` are
+        returned:
+
+            1. ``biomass_disturbance_matrix`` where nonzero floating-point
+                values represent the disturbance magnitudes for the biomass
+                carbon pool for this transition.
+            2. ``soil_disturbance_matrix`` where nonzero floating-point
+                values represent the disturbance magnitudes for the soil
+                carbon pool for this transition.
+            3. ``biomass_accumulation_matrix`` where nonzero floating-point
+                values represent the rates of accumulation in the biomass
+                carbon pool for this transition.
+            4. ``soil_accumulation_matrix`` where nonzero floating-point values
+                represent the rates of accumulation in the soil carbon pool for
+                this transition.
+    """
     table = utils.read_csv_to_dataframe(transition_csv_path, index_col=False)
 
     lulc_class_to_lucode = {}
