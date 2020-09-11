@@ -1280,8 +1280,8 @@ class TestCBC2(unittest.TestCase):
             gdal.OpenEx(target_path).ReadAsArray(),
             numpy.array([[8, nodata, nodata]], dtype=numpy.float32))
 
-    def test_model(self):
-        """CBC: Test the model's execution."""
+    @staticmethod
+    def _create_model_args(target_dir):
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31 S
         wkt = srs.ExportToWkt()
@@ -1306,7 +1306,7 @@ class TestCBC2(unittest.TestCase):
                 0],  # litter accum.
         ]
         biophysical_table_path = os.path.join(
-            self.workspace_dir, 'biophysical.csv')
+            target_dir, 'biophysical.csv')
         with open(biophysical_table_path, 'w') as bio_table:
             for line_list in biophysical_table:
                 line = ','.join(str(field) for field in line_list)
@@ -1318,35 +1318,35 @@ class TestCBC2(unittest.TestCase):
             ['parking lot', 'accum', 'NCC']
         ]
         transition_matrix_path = os.path.join(
-            self.workspace_dir, 'transitions.csv')
+            target_dir, 'transitions.csv')
         with open(transition_matrix_path, 'w') as transition_table:
             for line_list in transition_matrix:
                 line = ','.join(line_list)
                 transition_table.write(f'{line}\n')
 
         baseline_landcover_raster_path = os.path.join(
-            self.workspace_dir, 'baseline_lulc.tif')
+            target_dir, 'baseline_lulc.tif')
         baseline_matrix = numpy.array([[1, 2]], dtype=numpy.uint8)
         pygeoprocessing.numpy_array_to_raster(
             baseline_matrix, 255, (2, -2), (2, -2), wkt,
             baseline_landcover_raster_path)
 
         transition_2010_raster_path = os.path.join(
-            self.workspace_dir, 'transition_2010.tif')
+            target_dir, 'transition_2010.tif')
         transition_2010_matrix = numpy.array([[2, 1]], dtype=numpy.uint8)
         pygeoprocessing.numpy_array_to_raster(
             transition_2010_matrix, 255, (2, -2), (2, -2), wkt,
             transition_2010_raster_path)
 
         transition_2020_raster_path = os.path.join(
-            self.workspace_dir, 'transition_2020.tif')
+            target_dir, 'transition_2020.tif')
         transition_2020_matrix = numpy.array([[1, 2]], dtype=numpy.uint8)
         pygeoprocessing.numpy_array_to_raster(
             transition_2020_matrix, 255, (2, -2), (2, -2), wkt,
             transition_2020_raster_path)
 
         transition_rasters_csv_path = os.path.join(
-            self.workspace_dir, 'transition_rasters.csv')
+            target_dir, 'transition_rasters.csv')
         with open(transition_rasters_csv_path, 'w') as transition_rasters_csv:
             transition_rasters_csv.write('transition_year,raster_path\n')
             transition_rasters_csv.write(
@@ -1355,7 +1355,6 @@ class TestCBC2(unittest.TestCase):
                 f'2020,{transition_2020_raster_path}\n')
 
         args = {
-            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
             'landcover_transitions_table': transition_matrix_path,
             'transitions_csv': transition_rasters_csv_path,
             'biophysical_table_path': biophysical_table_path,
@@ -1364,7 +1363,7 @@ class TestCBC2(unittest.TestCase):
             'analysis_year': 2030,
             'do_economic_analysis': True,
             'use_price_table': True,
-            'price_table_path': os.path.join(self.workspace_dir,
+            'price_table_path': os.path.join(target_dir,
                                              'price_table.csv'),
             'discount_rate': 4,
         }
@@ -1376,6 +1375,12 @@ class TestCBC2(unittest.TestCase):
                               args['analysis_year']+1):
                 price = prior_year_price * 1.04
                 price_table.write(f'{year},{price}\n')
+        return args
+
+    def test_model(self):
+        """CBC: Test the model's execution."""
+        args = TestCBC2._create_model_args(self.workspace_dir)
+        args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
         coastal_blue_carbon2.execute(args)
 
@@ -1431,3 +1436,10 @@ class TestCBC2(unittest.TestCase):
         numpy.testing.assert_allclose(
             gdal.OpenEx(raster_path).ReadAsArray(),
             expected_net_present_value_at_2030, rtol=1e-6)
+
+    def test_validation(self):
+        """CBC: Test custom validation."""
+        args = TestCBC2._create_model_args(self.workspace_dir)
+
+        # verify validation passes on basic set of arguments.
+        validation_warnings = coastal_blue_carbon2.validate(args)
