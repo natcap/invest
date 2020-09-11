@@ -98,9 +98,6 @@ ARGS_SPEC = {
             "type": "number",
             "required": True,
             "name": "Analysis Year",
-            "validation_options": {
-                "expression": "int(value) > int(baseline_lulc_year)",
-            },
             "about": (
                 "An analysis year extends the transient analysis "
                 "beyond the transition years."),

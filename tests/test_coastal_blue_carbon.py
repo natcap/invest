@@ -1522,5 +1522,13 @@ class TestCBC2(unittest.TestCase):
         args['analysis_year'] = args['baseline_lulc_year']-4
 
         validation_warnings = coastal_blue_carbon2.validate(args)
-        import pdb; pdb.set_trace()
         self.assertEquals(len(validation_warnings), 3)
+        self.assertIn(
+            f"Transition raster for {args['baseline_lulc_year']-3} could not "
+            "be validated", validation_warnings[0][1])
+        self.assertIn(
+            f"Transition years must predate the baseline",
+            validation_warnings[1][1])
+        self.assertIn(
+            f"Transition years must be <= the analysis year",
+            validation_warnings[2][1])
