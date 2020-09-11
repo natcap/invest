@@ -305,8 +305,8 @@ def execute(args):
             if x != 'climate_bin']
 
         reclassify_error_details = {
-            'raster_name': f'{crop_name} Climate Bin', 
-            'column_name': 'climate_bin', 
+            'raster_name': f'{crop_name} Climate Bin',
+            'column_name': 'climate_bin',
             'table_name': f'Climate {crop_name} Percentile Yield'}
         for yield_percentile_id in yield_percentile_headers:
             LOGGER.info("Map %s to climate bins.", yield_percentile_id)

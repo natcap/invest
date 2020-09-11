@@ -1142,7 +1142,7 @@ class HabitatQualityTests(unittest.TestCase):
         # 2 is the missing landcover codes.
         # Raster nodata is 255 and should NOT appear in this list.
         self.assertTrue(
-            "The missing values found in the LULC raster but not the table"
+            "The missing values found in the LULC_c raster but not the table"
             " are: [2]" in str(cm.exception))
 
     def test_habitat_quality_validate(self):

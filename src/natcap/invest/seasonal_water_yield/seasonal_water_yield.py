@@ -607,7 +607,7 @@ def _execute(args):
                         (file_registry['cz_aligned_raster_path'], 1),
                         climate_zone_rain_events_month,
                         file_registry['n_events_path_list'][month_id],
-                        gdal.GDT_Float32, n_events_nodata, 
+                        gdal.GDT_Float32, n_events_nodata,
                         reclass_error_details),
                     target_path_list=[
                         file_registry['n_events_path_list'][month_id]],
@@ -686,7 +686,7 @@ def _execute(args):
         LOGGER.info('calculate local recharge')
         kc_task_list = []
         reclass_error_details = {
-            'raster_name': 'LULC', 'column_name': 'lucode', 
+            'raster_name': 'LULC', 'column_name': 'lucode',
             'table_name': 'Biophysical'}
         for month_index in range(N_MONTHS):
             kc_lookup = dict([

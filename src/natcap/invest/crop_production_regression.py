@@ -394,7 +394,7 @@ def execute(args):
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_regression_value,
                       coarse_regression_parameter_raster_path,
-                      gdal.GDT_Float32, _NODATA_YIELD, 
+                      gdal.GDT_Float32, _NODATA_YIELD,
                       reclassify_error_details),
                 target_path_list=[coarse_regression_parameter_raster_path],
                 dependent_task_list=[crop_climate_bin_task],

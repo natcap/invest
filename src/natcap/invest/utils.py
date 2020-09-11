@@ -845,7 +845,7 @@ def reclassify_raster(
         error_message = (
                 f"Values in the {error_details['raster_name']} raster were"
                 " found that are not represented under the corresponding"
-                f" {error_details['column_name']} column of the"
+                f" '{error_details['column_name']}' column of the"
                 f" {error_details['table_name']} table. The missing values"
                 f" found in the {error_details['raster_name']} raster but"
                 f" not the table are: {err.missing_values}.")
