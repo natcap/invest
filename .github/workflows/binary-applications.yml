@@ -127,11 +127,7 @@ jobs:
                 $env:CLOUDSDK_PYTHON = (Get-Command python).path
                 $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
 
-                make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} `
-                        GSUTIL=$env:GSUTIL_PATH `
-                        BIN_TO_SIGN=$env:INSTALLER_BINARY `
-                        SIGNTOOL=$env:SIGNTOOL_PATH `
-                    signcode_windows
+                cmd /c "make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} GSUTIL=$env:GSUTIL_PATH BIN_TO_SIGN=$env:INSTALLER_BINARY SIGNTOOL=$env:SIGNTOOL_PATH signcode_windows"
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.

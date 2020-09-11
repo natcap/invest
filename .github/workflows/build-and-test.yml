@@ -142,7 +142,7 @@ jobs:
                   $env:CLOUDSDK_PYTHON = (Get-Command python).path
                   $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
 
-                  make GSUTIL=$env:GSUTIL_PATH deploy
+                  cmd /c "make GSUTIL=$env:GSUTIL_PATH deploy"
 
     test-source-distribution:
         name: "Check sdist"
