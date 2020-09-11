@@ -1225,6 +1225,25 @@ def _calculate_emissions(
 
 def _sum_n_rasters(raster_path_list, target_raster_path,
         allow_pixel_stacks_with_nodata=False):
+    """Sum an arbitrarily-large list of rasters in a memory-efficient manner.
+
+    Args:
+        raster_path_list (list of strings): A list of string paths to rasters
+            on disk.  All rasters in this list are assumed to be in the same
+            projected coordinate system and to have identical dimensions.
+        target_raster_path (string): The path to a raster on disk where the
+            sum of rasters in ``raster_path_list`` will be stored.
+        allow_pixel_stacks_with_nodata=False (bool): Whether to tolerate pixel
+            stacks that contain nodata.  If ``True``, then the value of the sum
+            of a given pixel stack will simply not include the numeric value of
+            nodata for those pixels that match nodata.  If ``False``, the
+            entire pixel stack will be excluded if any pixels in the stack are
+            nodata.
+
+    Returns:
+        ``None``.
+
+    """
     LOGGER.info('Summing %s rasters to %s', len(raster_path_list),
                 target_raster_path)
     pygeoprocessing.new_raster_from_base(
