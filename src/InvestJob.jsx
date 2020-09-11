@@ -190,11 +190,15 @@ export default class InvestJob extends React.Component {
       `-d ${datastackPath}`,
     ];
     let investRun;
-    if (process.platform !== 'windows') {
+    if (process.platform !== 'foo') {
       investRun = spawn(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
         shell: true, // without shell, IOError when datastack.py loads json
         detached: true, // we want invest to terminate when this shell terminates
+      });
+    } else {
+      investRun = execFile(path.basename(investExe), cmdArgs, {
+        env: { PATH: path.dirname(investExe) },
       });
     }
 
@@ -264,8 +268,15 @@ export default class InvestJob extends React.Component {
     const { subprocessPID } = this.state;
     if (subprocessPID) {
       console.log(subprocessPID);
-      if (process.platform !== 'windows') {
+      if (process.platform !== 'foo') {
+        // on unix-like systems invest is launched inside a shell
+        // and the pid here is for the shell process.
+        // the '-' indicates the whole process group gets terminated.
+        // Apparently, that doesnt' work on windows.
+        // https://github.com/nodejs/node/issues/7281#issuecomment-225494401
         process.kill(-subprocessPID, 'SIGTERM');
+      } else {
+        process.kill(subprocessPID, 'SIGTERM');
       }
     }
   }
