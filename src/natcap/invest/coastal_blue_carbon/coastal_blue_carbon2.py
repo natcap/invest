@@ -968,10 +968,6 @@ def execute(args):
     task_graph.join()
 
 
-def _value(stock, price, discount_rate, n_years_elapsed):
-    return (price * stock) / (1 + discount_rate) ** n_years_elapsed
-
-
 def _calculate_npv(
         net_sequestration_rasters, prices_by_year, discount_rate, baseline_year,
         target_raster_years_and_paths):
