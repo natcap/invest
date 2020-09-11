@@ -1380,10 +1380,11 @@ def _reclassify_accumulation_transition(
 def _reclassify_disturbance_magnitude(
         landuse_transition_from_raster, landuse_transition_to_raster,
         disturbance_magnitude_matrix, target_raster_path):
-    """Calculate the volume of carbon disturbed in a transition.
+    """Calculate the magnitude of carbon disturbed in a transition.
 
     This function calculates the magnitude of disturbed carbon for each
-    landcover transitioning from one landcover type to a disturbance type.
+    landcover transitioning from one landcover type to a disturbance type,
+    writing the output to a raster via ``raster_calculator``.
     The magnitude of the disturbance is in ``disturbance_magnitude_matrix``.
 
     Args:
