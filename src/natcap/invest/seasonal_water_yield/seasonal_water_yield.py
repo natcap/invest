@@ -588,6 +588,9 @@ def _execute(args):
         # user didn't predefine local recharge so calculate it
         LOGGER.info('loading number of monthly events')
         reclassify_n_events_task_list = []
+        reclass_error_details = {
+            'raster_name': 'Climate Zone', 'column_name': 'cz_id',
+            'table_name': 'Climate Zone'}
         for month_id in range(N_MONTHS):
             if args['user_defined_climate_zones']:
                 cz_rain_events_lookup = (
@@ -604,12 +607,8 @@ def _execute(args):
                         (file_registry['cz_aligned_raster_path'], 1),
                         climate_zone_rain_events_month,
                         file_registry['n_events_path_list'][month_id],
-                        gdal.GDT_Float32, n_events_nodata),
-                    kwargs={
-                        'error_details': {
-                            'raster_name': 'Climate Zone',
-                            'column_name': 'cz_id',
-                            'table_name': 'Climate Zone'}},
+                        gdal.GDT_Float32, n_events_nodata, 
+                        reclass_error_details),
                     target_path_list=[
                         file_registry['n_events_path_list'][month_id]],
                     dependent_task_list=[align_task],
@@ -686,6 +685,9 @@ def _execute(args):
 
         LOGGER.info('calculate local recharge')
         kc_task_list = []
+        reclass_error_details = {
+            'raster_name': 'LULC', 'column_name': 'lucode', 
+            'table_name': 'Biophysical'}
         for month_index in range(N_MONTHS):
             kc_lookup = dict([
                 (lucode, biophysical_table[lucode]['kc_%d' % (month_index+1)])
@@ -696,12 +698,7 @@ def _execute(args):
                 args=(
                     (file_registry['lulc_aligned_path'], 1), kc_lookup,
                     file_registry['kc_path_list'][month_index],
-                    gdal.GDT_Float32, kc_nodata),
-                kwargs={
-                    'error_details': {
-                        'raster_name': 'LULC',
-                        'column_name': 'lucode',
-                        'table_name': 'Biophysical'}},
+                    gdal.GDT_Float32, kc_nodata, reclass_error_details),
                 target_path_list=[file_registry['kc_path_list'][month_index]],
                 dependent_task_list=[align_task],
                 hash_algorithm='md5',

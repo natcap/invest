@@ -364,6 +364,10 @@ def execute(args):
             x for x in list(crop_regression_table.values())[0]
             if x != 'climate_bin']
 
+        reclassify_error_details = {
+            'raster_name': f'{crop_name} Climate Bin',
+            'column_name': 'climate_bin',
+            'table_name': f'Climate {crop_name} Regression Yield'}
         regression_parameter_raster_path_lookup = {}
         for yield_regression_id in yield_regression_headers:
             # there are extra headers in that table
@@ -390,12 +394,8 @@ def execute(args):
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_regression_value,
                       coarse_regression_parameter_raster_path,
-                      gdal.GDT_Float32, _NODATA_YIELD),
-                kwargs={'error_details': {
-                            'raster_name': f'{crop_name} Climate Bin',
-                            'column_name': 'climate_bin',
-                            'table_name': (
-                                f'Climate {crop_name} Regression Yield')}},
+                      gdal.GDT_Float32, _NODATA_YIELD, 
+                      reclassify_error_details),
                 target_path_list=[coarse_regression_parameter_raster_path],
                 dependent_task_list=[crop_climate_bin_task],
                 task_name='create_coarse_regression_parameter_%s_%s' % (

@@ -470,15 +470,14 @@ def execute(args):
             intermediate_output_dir,
             f'habitat{lulc_key}{file_suffix}.tif')
 
+        reclass_error_details = {
+            'raster_name': f'LULC{lulc_key}', 'column_name': 'lucode',
+            'table_name': 'Sensitivity'}
         habitat_raster_task = task_graph.add_task(
             func=utils.reclassify_raster,
             args=((lulc_path, 1), sensitivity_reclassify_habitat_dict,
-                  habitat_raster_path, gdal.GDT_Float32, _OUT_NODATA),
-            kwargs={
-                'error_details': {
-                    'raster_name': 'LULC',
-                    'column_name': 'lucode',
-                    'table_name': 'Sensitivity'}},
+                  habitat_raster_path, gdal.GDT_Float32, _OUT_NODATA,
+                  reclass_error_details),
             dependent_task_list=[align_task],
             task_name=f'habitat_raster{lulc_key}')
 
@@ -556,15 +555,14 @@ def execute(args):
                 int(key): float(val[threat]) for key, val in
                 sensitivity_dict.items()}
 
+            reclass_error_details = {
+                'raster_name': 'LULC', 'column_name': 'lucode',
+                'table_name': 'Sensitivity'}
             sens_threat_task = task_graph.add_task(
                 func=utils.reclassify_raster,
                 args=((lulc_path, 1), sensitivity_reclassify_threat_dict,
-                      sens_raster_path, gdal.GDT_Float32, _OUT_NODATA),
-                kwargs={
-                    'error_details': {
-                        'raster_name': 'LULC',
-                        'column_name': 'lucode',
-                        'table_name': 'Sensitivity'}},
+                      sens_raster_path, gdal.GDT_Float32, _OUT_NODATA,
+                      reclass_error_details),
                 target_path_list=[sens_raster_path],
                 dependent_task_list=[align_task],
                 task_name=f'sens_raster_{decay_type}{lulc_key}_{threat}')

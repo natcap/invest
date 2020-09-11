@@ -801,7 +801,7 @@ def _assert_vectors_equal(
 
 def reclassify_raster(
         raster_path_band, value_map, target_raster_path, target_datatype,
-        target_nodata, error_details=None):
+        target_nodata, error_details):
     """A wrapper function for calling ``pygeoprocessing.reclassify_raster``.
 
     This wrapper function is helpful when added as a ``TaskGraph.task`` so
@@ -842,25 +842,11 @@ def reclassify_raster(
             raster_path_band, value_map, target_raster_path, target_datatype,
             target_nodata, values_required=True)
     except pygeoprocessing.ReclassificationMissingValuesError as err:
-        if error_details is None:
-            error_details = {}
-
-        formatted_details = {}
-        for key in ['raster_name', 'column_name', 'table_name']:
-            value = error_details.get(key, '')
-            if value == '':
-                formatted_details[key] = ' '
-            else:
-                if key == 'column_name':
-                    formatted_details[key] = " '" + value + "' "
-                else:
-                    formatted_details[key] = " " + value + " "
-
         error_message = (
-                f"Values in the{formatted_details['raster_name']}raster were"
-                " found that are not represented under the"
-                f"{formatted_details['column_name']}key column of the"
-                f"{formatted_details['table_name']}table. The missing values"
-                f" found in the{formatted_details['raster_name']}raster but"
+                f"Values in the {error_details['raster_name']} raster were"
+                " found that are not represented under the corresponding"
+                f" {error_details['column_name']} column of the"
+                f" {error_details['table_name']} table. The missing values"
+                f" found in the {error_details['raster_name']} raster but"
                 f" not the table are: {err.missing_values}.")
         raise ValueError(error_message)

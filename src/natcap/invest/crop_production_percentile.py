@@ -304,6 +304,10 @@ def execute(args):
             x for x in list(crop_climate_percentile_table.values())[0]
             if x != 'climate_bin']
 
+        reclassify_error_details = {
+            'raster_name': f'{crop_name} Climate Bin', 
+            'column_name': 'climate_bin', 
+            'table_name': f'Climate {crop_name} Percentile Yield'}
         for yield_percentile_id in yield_percentile_headers:
             LOGGER.info("Map %s to climate bins.", yield_percentile_id)
             interpolated_yield_percentile_raster_path = os.path.join(
@@ -325,12 +329,7 @@ def execute(args):
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_percentile_yield,
                       coarse_yield_percentile_raster_path, gdal.GDT_Float32,
-                      _NODATA_YIELD),
-                kwargs={'error_details': {
-                            'raster_name': f'{crop_name} Climate Bin',
-                            'column_name': 'climate_bin',
-                            'table_name': (
-                                f'Climate {crop_name} Percentile Yield')}},
+                      _NODATA_YIELD, reclassify_error_details),
                 target_path_list=[coarse_yield_percentile_raster_path],
                 dependent_task_list=[crop_climate_bin_task],
                 task_name='create_coarse_yield_percentile_%s_%s' % (

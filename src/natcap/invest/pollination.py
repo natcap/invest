@@ -350,6 +350,9 @@ def execute(args):
     # N(x, n) = ln(l(x), n)
     scenario_variables['nesting_substrate_index_path'] = {}
     landcover_substrate_index_tasks = {}
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Biophysical'}
     for substrate in scenario_variables['substrate_list']:
         nesting_substrate_index_path = os.path.join(
             intermediate_output_dir,
@@ -364,11 +367,7 @@ def execute(args):
                 (args['landcover_raster_path'], 1),
                 scenario_variables['landcover_substrate_index'][substrate],
                 nesting_substrate_index_path, gdal.GDT_Float32,
-                _INDEX_NODATA),
-            kwargs={'error_details': {
-                        'raster_name': 'LULC',
-                        'column_name': 'lucode',
-                        'table_name': 'Biophysical'}},
+                _INDEX_NODATA, reclass_error_details),
             target_path_list=[nesting_substrate_index_path])
 
     # calculate farm_nesting_substrate_index[substrate] substrate maps
@@ -432,6 +431,9 @@ def execute(args):
 
     scenario_variables['relative_floral_abundance_index_path'] = {}
     relative_floral_abudance_task_map = {}
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Biophysical'}
     for season in scenario_variables['season_list']:
         # calculate relative_floral_abundance_index[season] per season
         # RA(l(x), j)
@@ -447,11 +449,7 @@ def execute(args):
                 (args['landcover_raster_path'], 1),
                 scenario_variables['landcover_floral_resources'][season],
                 relative_floral_abundance_index_path, gdal.GDT_Float32,
-                _INDEX_NODATA),
-            kwargs={'error_details': {
-                        'raster_name': 'LULC',
-                        'column_name': 'lucode',
-                        'table_name': 'Biophysical'}},
+                _INDEX_NODATA, reclass_error_details),
             target_path_list=[relative_floral_abundance_index_path])
 
         # if there's a farm, rasterize floral resources over the top

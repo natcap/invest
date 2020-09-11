@@ -442,7 +442,7 @@ def _generate_carbon_map(
         'table_name': 'Carbon Pools'}
     utils.reclassify_raster(
         (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
-        gdal.GDT_Float32, _CARBON_NODATA, error_details=reclass_error_details)
+        gdal.GDT_Float32, _CARBON_NODATA, reclass_error_details)
 
 
 def _sum_rasters(storage_path_list, output_sum_path):

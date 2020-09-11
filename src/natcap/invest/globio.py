@@ -376,14 +376,14 @@ def execute(args):
     msa_lu_path = os.path.join(
         output_dir, 'msa_lu%s.tif' % file_suffix)
     LOGGER.info('calculate msa_lu')
+    reclass_error_details = {
+        'raster_name': 'GLOBIO LULC', 'column_name': 'MSA_type-msa_lu',
+        'table_name': 'MSA'}
     calculate_msa_lu_task = task_graph.add_task(
         func=utils.reclassify_raster,
         args=((globio_lulc_path, 1), msa_parameter_table['msa_lu'],
-              msa_lu_path, gdal.GDT_Float32, globio_nodata),
-        kwargs={'error_details': {
-                    'raster_name': 'GLOBIO LULC',
-                    'column_name': 'MSA_type-msa_lu',
-                    'table_name': 'MSA'}},
+              msa_lu_path, gdal.GDT_Float32, globio_nodata,
+              reclass_error_details),
         target_path_list=[msa_lu_path],
         dependent_task_list=calculate_globio_task_list,
         task_name='calculate_msa_lu')
@@ -744,14 +744,13 @@ def _calculate_globio_lulc_map(
 
     intermediate_globio_lulc_path = os.path.join(
         tmp_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Land Cover to GLOBIO Land Cover'}
     reclass_lulc_to_globio_task = task_graph.add_task(
         func=utils.reclassify_raster,
         args=((lulc_path, 1), lulc_to_globio, intermediate_globio_lulc_path,
-              gdal.GDT_Int32, globio_nodata),
-        kwargs={'error_details': {
-                    'raster_name': 'LULC',
-                    'column_name': 'lucode',
-                    'table_name': 'Land Cover to GLOBIO Land Cover'}},
+              gdal.GDT_Int32, globio_nodata, reclass_error_details),
         target_path_list=[intermediate_globio_lulc_path],
         task_name='reclassify_lulc_to_globio')
 

@@ -571,7 +571,7 @@ def _calculate_lulc_carbon_map(
     utils.reclassify_raster(
         (lulc_raster_path, 1), lucode_to_per_cell_carbon,
         carbon_map_path, gdal.GDT_Float32, CARBON_MAP_NODATA,
-        error_details=reclass_error_details)
+        reclass_error_details)
 
 
 def _map_distance_from_tropical_forest_edge(

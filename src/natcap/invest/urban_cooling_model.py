@@ -380,6 +380,9 @@ def execute(args):
     else:
         reclassification_props += ('building_intensity',)
 
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Biophysical'}
     for prop in reclassification_props:
         prop_map = dict(
             (lucode, x[prop])
@@ -391,11 +394,7 @@ def execute(args):
             func=utils.reclassify_raster,
             args=(
                 (aligned_lulc_raster_path, 1), prop_map, prop_raster_path,
-                gdal.GDT_Float32, TARGET_NODATA),
-            kwargs={'error_details': {
-                        'raster_name': 'LULC',
-                        'column_name': 'lucode',
-                        'table_name': 'Biophysical'}},
+                gdal.GDT_Float32, TARGET_NODATA, reclass_error_details),
             target_path_list=[prop_raster_path],
             dependent_task_list=[align_task],
             task_name='reclassify to %s' % prop)
