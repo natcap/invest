@@ -686,7 +686,12 @@ def execute(args):
         else:
             inflation_rate = float(args['inflation_rate']) * 0.01
             annual_price = float(args['price'])
-            max_year = max(transition_years.keys()).union(set([analysis_year]))
+
+            try:
+                max_year = max(transition_years).union(set([analysis_year]))
+            except ValueError:
+                # When transition_years is an empty sequence.
+                max_year = analysis_year
 
             prices = {}
             for timestep_index, year in enumerate(
@@ -962,7 +967,8 @@ def execute(args):
         transition_analysis_args['npv_since_baseline_raster'] = baseline_period_npv_raster
 
     task_graph.join()
-    execute_transition_analysis(transition_analysis_args)
+    if transitions:
+        execute_transition_analysis(transition_analysis_args)
 
     task_graph.close()
     task_graph.join()
