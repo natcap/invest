@@ -1500,6 +1500,27 @@ class TestCBC2(unittest.TestCase):
     def test_validation(self):
         """CBC: Test custom validation."""
         args = TestCBC2._create_model_args(self.workspace_dir)
+        args['workspace_dir'] = self.workspace_dir
 
         # verify validation passes on basic set of arguments.
         validation_warnings = coastal_blue_carbon2.validate(args)
+        self.assertEqual([], validation_warnings)
+
+        # Now work through the extra validation warnings.
+        # Create an invalid transitions table.
+        invalid_raster_path = os.path.join(self.workspace_dir,
+                                           'invalid_raster.tif')
+        with open(invalid_raster_path, 'w') as raster:
+            raster.write('not a raster')
+
+        with open(args['transitions_csv'], 'w') as transitions_table:
+            transitions_table.write('transition_year,raster_path\n')
+            transitions_table.write(
+                f"{args['baseline_lulc_year']-3},{invalid_raster_path}")
+
+        # analysis year must be >= the last transition year.
+        args['analysis_year'] = args['baseline_lulc_year']-4
+
+        validation_warnings = coastal_blue_carbon2.validate(args)
+        import pdb; pdb.set_trace()
+        self.assertEquals(len(validation_warnings), 3)

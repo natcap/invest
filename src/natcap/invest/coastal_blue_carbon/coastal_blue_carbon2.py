@@ -99,7 +99,7 @@ ARGS_SPEC = {
             "required": True,
             "name": "Analysis Year",
             "validation_options": {
-                "expression": "int(analysis_year) > int(baseline_lulc_year)",
+                "expression": "int(value) > int(baseline_lulc_year)",
             },
             "about": (
                 "An analysis year extends the transient analysis "
