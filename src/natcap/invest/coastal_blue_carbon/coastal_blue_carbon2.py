@@ -1343,7 +1343,31 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
 def _reclassify_accumulation_transition(
         landuse_transition_from_raster, landuse_transition_to_raster,
         accumulation_rate_matrix, target_raster_path):
+    """Determine rates of accumulation after a landcover transition.
 
+    This function takes two landcover rasters and determines the rate of
+    accumulation that will be taking place upon completion of the transition.
+    Rates of accumulation are provided in ``accumulation_rate_matrix``, and the
+    results are written to a raster at ``target_raster_path``.
+
+    Args:
+        landuse_transition_from_raster (string): An integer landcover raster
+            representing landcover codes that we are transitioning FROM.
+        landuse_transition_to_raster (string): An integer landcover raster
+            representing landcover codes that we are transitioning TO.
+        accumulation_rate_matrix (scipy.sparse.dok_matrix): A sparse matrix
+            where axis 0 represents the integer landcover codes being
+            transitioned from and axis 1 represents the integer landcover codes
+            being transitioned to.  The values at the intersection of these
+            coordinate pairs are ``numpy.float32`` values representing the
+            magnitude of the disturbance in a given carbon stock during this
+            transition.
+        target_raster_path (string): The path to where the output raster should
+            be stored on disk.
+
+    Returns:
+        ``None``.
+    """
     from_nodata = pygeoprocessing.get_raster_info(
         landuse_transition_from_raster)['nodata'][0]
     to_nodata = pygeoprocessing.get_raster_info(
@@ -1404,6 +1428,7 @@ def _reclassify_disturbance_magnitude(
 
     Returns:
         ``None``
+
     """
     from_nodata = pygeoprocessing.get_raster_info(
         landuse_transition_from_raster)['nodata'][0]
