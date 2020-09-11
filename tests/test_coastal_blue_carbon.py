@@ -1179,6 +1179,81 @@ class TestCBC2(unittest.TestCase):
             gdal.OpenEx(target_raster_path, gdal.OF_RASTER).ReadAsArray(),
             expected_array)
 
+    def test_read_transition_matrix(self):
+        """CBC: Test transition matrix reading."""
+        # The full biophysical table will have much, much more information.  To
+        # keep the test simple, I'm only tracking the columns I know I'll need
+        # in this function.
+        biophysical_table = {
+            1: {'lulc-class': 'a',
+                'soil-yearly-accumulation': 2,
+                'biomass-yearly-accumulation': 3,
+                'soil-high-impact-disturb': 4,
+                'biomass-high-impact-disturb': 5,
+            },
+            2: {'lulc-class': 'b',
+                'soil-yearly-accumulation': 6,
+                'biomass-yearly-accumulation': 7,
+                'soil-high-impact-disturb': 8,
+                'biomass-high-impact-disturb': 9,
+            },
+            3: {'lulc-class': 'c',
+                'soil-yearly-accumulation': 10,
+                'biomass-yearly-accumulation': 11,
+                'soil-high-impact-disturb': 12,
+                'biomass-high-impact-disturb': 13,
+            }
+        }
+
+        transition_csv_path = os.path.join(self.workspace_dir,
+                                           'transitions.csv')
+        with open(transition_csv_path, 'w') as transition_csv:
+            transition_csv.write('lulc-class,a,b,c\n')
+            transition_csv.write('a,NCC,accum,high-impact-disturb\n')
+            transition_csv.write('b,,NCC,accum\n')
+            transition_csv.write('c,accum,,NCC')
+
+        (biomass_disturbance_matrix, soil_disturbance_matrix,
+         biomass_accumulation_matrix, soil_accumulation_matrix) = (
+             coastal_blue_carbon2._read_transition_matrix(
+                 transition_csv_path, biophysical_table))
+
+        expected_biomass_disturbance = numpy.zeros((4,4), dtype=numpy.float32)
+        expected_biomass_disturbance[1, 3] = (
+            biophysical_table[1]['biomass-high-impact-disturb'])
+        numpy.testing.assert_allclose(
+            expected_biomass_disturbance,
+            biomass_disturbance_matrix.toarray())
+
+        expected_soil_disturbance = numpy.zeros((4,4), dtype=numpy.float32)
+        expected_soil_disturbance[1, 3] = (
+            biophysical_table[1]['soil-high-impact-disturb'])
+        numpy.testing.assert_allclose(
+            expected_soil_disturbance,
+            soil_disturbance_matrix.toarray())
+
+        expected_biomass_accumulation = numpy.zeros((4,4), dtype=numpy.float32)
+        expected_biomass_accumulation[3, 1] = (
+            biophysical_table[1]['biomass-yearly-accumulation'])
+        expected_biomass_accumulation[1, 2] = (
+            biophysical_table[2]['biomass-yearly-accumulation'])
+        expected_biomass_accumulation[2, 3] = (
+            biophysical_table[3]['biomass-yearly-accumulation'])
+        numpy.testing.assert_allclose(
+            expected_biomass_accumulation,
+            biomass_accumulation_matrix.toarray())
+
+        expected_soil_accumulation = numpy.zeros((4,4), dtype=numpy.float32)
+        expected_soil_accumulation[3, 1] = (
+            biophysical_table[1]['soil-yearly-accumulation'])
+        expected_soil_accumulation[1, 2] = (
+            biophysical_table[2]['soil-yearly-accumulation'])
+        expected_soil_accumulation[2, 3] = (
+            biophysical_table[3]['soil-yearly-accumulation'])
+        numpy.testing.assert_allclose(
+            expected_soil_accumulation,
+            soil_accumulation_matrix.toarray())
+
     def test_emissions(self):
         """CBC: Check emissions calculations."""
         volume_disturbed_carbon = numpy.array(

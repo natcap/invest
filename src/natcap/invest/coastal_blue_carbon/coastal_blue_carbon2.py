@@ -1250,9 +1250,6 @@ def _sum_n_rasters(raster_path_list, target_raster_path,
         pixels_touched = numpy.zeros(sum_array.shape, dtype=numpy.bool)
         for raster_path in raster_path_list:
             raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
-            if raster is None:
-                LOGGER.error('Could not open %s', raster_path)
-
             band = raster.GetRasterBand(1)
             band_nodata = band.GetNoDataValue()
 
@@ -1298,19 +1295,17 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
     biomass_accumulation_matrix = scipy.sparse.dok_matrix(
         (n_rows, n_rows), dtype=numpy.float32)
 
-    # TODO: I don't actually know if this is any better than the dict-based
+    # I don't actually know if this uses less memory than the dict-based
     # approach we had before since that, too, was basically sparse.
+    # At least this approach allows numpy-style indexing for easier 2D
+    # reclassifications.
     # If we really wanted to save memory, we wouldn't duplicate the float32
     # values here and instead use the transitions to index into the various
     # biophysical values when reclassifying. That way we rely on python's
     # assumption that ints<2000 or so are singletons and thus use less memory.
     # Even so, the RIGHT way to do this is to have the user provide their own
-    # maps of the following values PER TRANSITION:
-    #  * {soil,biomass} disturbance values
-    #  * {soil,biomass} halflife values
-    #  * {soil,biomass} yearly accumulation
-    #  * litter
-    #  --> maybe some others, too?
+    # maps of the spatial values per transition to the timeseries analysis
+    # function.
     for index, row in table.iterrows():
         from_lucode = lulc_class_to_lucode[row['lulc-class'].lower()]
 
