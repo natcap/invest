@@ -1172,18 +1172,20 @@ def _calculate_net_sequestration(
 def _calculate_emissions(
         carbon_disturbed_matrix, year_of_last_disturbance_matrix,
         carbon_half_life_matrix, current_year):
-    # carbon_disturbed_matrix - the volume of carbon disturbed in the most
-    # recent disturbance event AND any prior events.
-    #
-    # year_of_last_disturbance_matrix - a numpy matrix with pixel values of the
-    # integer (uint16) years of the last transition.
-    #
-    # carbon_half_life_matrix - the halflife of the carbon in this pool,
-    # spatially distributed.  Float32.
-    #
-    # Current timestep (integer), the current timestep year.
-    #
-    # Returns: A float32 matrix with the volume of carbon emissions THIS YEAR.
+    """Calculate emissions.
+
+    Args:
+        carbon_disturbed_matrix (numpy.array): The volume of carbon disturbed in
+            the most recent transition year as time approaches infinity.
+        year_of_last_disturbance_matrix (numpy.array): A matrix indicating the
+            integer years of the most recent disturbance.
+        carbon_half_life_matrux (numpy.array): A matrix indicating the spatial
+            distribution of half-lives for this carbon pool.
+        current_year (int): The current year for this timestep.
+
+    Returns:
+        A numpy array with the calculated emissions.
+    """
     emissions_matrix = numpy.empty(
         carbon_disturbed_matrix.shape, dtype=numpy.float32)
     emissions_matrix[:] = NODATA_FLOAT32
@@ -1208,10 +1210,6 @@ def _calculate_emissions(
 
     valid_half_life_pixels = carbon_half_life_matrix[valid_pixels]
 
-    # TODO: Verify this math is correct based on what's in the UG!
-    # Note that `n_years_elapsed` can be 0, which maybe doesn't make sense, but
-    # I'll need to check with someone to make sure of this.
-    # TODO: should we be emitting carbon in the transition year?
     emissions_matrix[valid_pixels] = (
         carbon_disturbed_matrix[valid_pixels] * (
             0.5**((n_years_elapsed-1) / valid_half_life_pixels) -
