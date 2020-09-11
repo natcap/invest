@@ -826,8 +826,8 @@ def reclassify_raster(
             keys must be {'raster_name', 'column_name', 'table_name'}. Values
             each key represent:
                 'raster_name' - string for the raster name being reclassified
-                'column_name' - column name from table with which ``value_map``
-                    keys came from.
+                'column_name' - name of the table column that ``value_map``
+                    dictionary keys came from.
                 'table_name' - table name that ``value_map`` came from.
 
     Returns:
