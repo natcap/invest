@@ -107,29 +107,49 @@ export default class LogTab extends React.Component {
   }
 
   render() {
+    const { jobStatus } = this.props;
     let ModelStatusAlert;
     const WorkspaceButton = (
       <Button
         className="float-right float-bottom"
         variant="outline-dark"
         onClick={this.handleOpenWorkspace}
-        disabled={this.props.jobStatus === 'running'}
+        disabled={jobStatus === 'running'}
       >
         Open Workspace
       </Button>
     );
 
-    if (this.props.jobStatus === 'error') {
+    if (jobStatus === 'running') {
+      ModelStatusAlert = (
+        <Alert className="py-4 mt-3" variant="secondary">
+          <Button
+            className="float-right float-bottom"
+            variant="outline-dark"
+            onClick={this.props.killInvestProcess}
+          >
+            Cancel Run
+          </Button>
+        </Alert>
+      );
+    } else if (jobStatus === 'error') {
       ModelStatusAlert = (
         <Alert className="py-4 mt-3" variant="danger">
           {this.props.logStdErr}
           {WorkspaceButton}
         </Alert>
       );
-    } else if (this.props.jobStatus === 'success') {
+    } else if (jobStatus === 'success') {
       ModelStatusAlert = (
         <Alert className="py-4 mt-3" variant="success">
           <span>Model Completed</span>
+          {WorkspaceButton}
+        </Alert>
+      );
+    } else if (jobStatus === 'canceled') {
+      ModelStatusAlert = (
+        <Alert className="py-4 mt-3" variant="warning">
+          <span>Run Canceled</span>
           {WorkspaceButton}
         </Alert>
       );
