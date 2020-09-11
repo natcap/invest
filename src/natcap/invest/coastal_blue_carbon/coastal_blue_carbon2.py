@@ -955,49 +955,38 @@ def _value(stock, price, discount_rate, n_years_elapsed):
 def _calculate_npv(
         net_sequestration_rasters, prices_by_year, discount_rate, baseline_year,
         target_raster_years_and_paths):
+    # net_sequestration_rasters = {end_of_transition_year: summary seq. path
+    # target_raster_years_and_paths = does not include baseline period raster
 
-    source_raster_path = net_sequestration_rasters[baseline_year][POOL_SOIL]
+    source_raster_path = net_sequestration_rasters[baseline_year]
 
-    # Create the output rasters, we'll fill in the details later.
-    for target_raster_path in target_raster_years_and_paths.values():
-        pygeoprocessing.new_raster_from_base(
-            source_raster_path, target_raster_path, gdal.GDT_Float32,
-            [NODATA_FLOAT32])
+    for target_raster_year, target_raster_path in (
+            target_raster_years_and_paths.items()):
 
-    for block_info in pygeoprocessing.iterblocks(
-            (source_raster_path, 1),
-            offset_only=True):
-        array_shape = (block_info['win_ysize'], block_info['win_xsize']),
-        valuation_sum = numpy.zeros(array_shape, dtype=numpy.float32)
+        # TODO: Refactor this loop to cache prior valuation factors.
+        # Skip refactor if it adds too much complexity.
+        valuation_factor = 0
+        for years_since_baseline, year in enumerate(
+                range(baseline_year, target_raster_year)):
+            valuation_factor += (
+                prices_by_year[year] / (
+                    (1 + discount_rate) ** years_since_baseline))
 
-        for year, net_seq_by_pools in net_sequestration_rasters.items():
-            valid_pixels = numpy.ones(array_shape, dtype=numpy.bool)
-            stocks = numpy.zeros(array_shape, dtype=numpy.float32)
+        nodata = pygeoprocessing.get_raster_info(
+            net_sequestration_rasters[year])['nodata'][0]
 
-            for pool in (POOL_SOIL, POOL_BIOMASS):
-                raster = gdal.OpenEx(net_seq_by_pools[pool], gdal.OF_RASTER)
-                band = raster.GetRasterBand(1)
-                nodata = band.GetNoDataValue()
-                array = band.ReadAsArray(**block_info)
+        def _npv(net_sequestration_matrix):
+            npv = numpy.empty(net_sequestration_matrix.shape,
+                              dtype=numpy.float32)
+            npv[:] = NODATA_FLOAT32
+            valid_pixels = ~numpy.isclose(net_sequestration_matrix,
+                                          ~nodata)
+            npv[valid_pixels] = npv[valid_pixels] * valuation_factor
+            return npv
 
-                valid_pixels &= ~numpy.isclose(array, nodata)
-                stocks[valid_pixels] += array[valid_pixels]
-
-            valuation_sum += _value(
-                stock=stocks, price=prices[year], discount_rate=discount_rate,
-                n_years_elapsed=(year - baseline_year))
-
-            valuation_sum[~valid_pixels] = NODATA_FLOAT32
-
-            if year in target_raster_years_and_paths:
-                target_raster = gdal.OpenEx(
-                    target_raster_years_and_paths[year],
-                    gdal.OF_RASTER | gdal.GA_Update)
-                target_band = target_raster.GetRasterBand(1)
-                target_band.WriteArray(
-                    valuation_sum, block_info['xoff'], block_info['yoff'])
-                target_band = None
-                target_raster = None
+        pygeoprocessing.raster_calculator(
+            [(net_sequestration_rasters[target_raster_year], 1)],
+            _npv, target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32)
 
 
 def _calculate_baseline_period_npv(
