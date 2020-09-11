@@ -262,6 +262,8 @@ def execute_transition_analysis(args):
     if 'carbon_prices_per_year' in args and args['carbon_prices_per_year']:
         prices = {int(year) : float(price)
                   for (year, price) in args['carbon_prices_per_year'].items()}
+    discount_rate = float(args['discount_rate'])
+    baseline_lulc_year = int(args['baseline_lulc_year'])
 
     # ASSUMPTIONS
     #
@@ -575,7 +577,7 @@ def execute_transition_analysis(args):
         prior_net_sequestration_tasks = current_net_sequestration_tasks
 
     if ('do_economic_analysis' in args and args['do_economic_analysis']):
-        sorted_transition_years = sorted(transition_yeras) + [final_year]
+        sorted_transition_years = sorted(transition_years) + [final_year]
         for transition_year, next_transition_year in zip(
                 sorted_transition_years[:-1], sorted_transition_years[1:]):
             net_present_value_raster_path = os.path.join(
@@ -587,15 +589,34 @@ def execute_transition_analysis(args):
     total_net_sequestration_raster_path = os.path.join(
         output_dir, TOTAL_NET_SEQ_ALL_YEARS_RASTER_PATTERN.format(
             suffix=suffix))
-    total_net_seq_task = task_graph.add_task(
+    _ = task_graph.add_task(
         func=_sum_n_rasters,
-        args=(summary_net_sequestration_raster_paths,
+        args=(list(summary_net_sequestration_raster_paths.values()),
               total_net_sequestration_raster_path),
         kwargs={
             'allow_pixel_stacks_with_nodata': True,
         },
         dependent_task_list=summary_net_sequestration_tasks,
         target_path_list=[total_net_sequestration_raster_path],
+        task_name=(
+             'Calculate total net carbon sequestration across all years'))
+
+    # Calculate Net Present Value
+    target_npv_paths = {}
+    for transition_year in (
+            sorted(set(transition_years).union(set([final_year])))[1:]):
+        target_npv_paths[transition_year] = (
+            NET_PRESENT_VALUE_RASTER_PATTERN.format(
+                year=transition_year, suffix=suffix))
+    _ = task_graph.add_task(
+        func=_calculate_npv,
+        args=(summary_net_sequestration_raster_paths,
+              prices,
+              discount_rate,
+              baseline_lulc_year,
+              target_npv_paths),
+        dependent_task_list=summary_net_sequestration_tasks,
+        target_path_list=list(target_npv_paths.values()),
         task_name=(
             'Calculate total net carbon sequestration across all years'))
 
@@ -912,6 +933,7 @@ def execute(args):
         'analysis_year': analysis_year,
         'do_economic_analysis': args.get('do_economic_analysis', False),
         'baseline_lulc_raster': aligned_lulc_paths[baseline_lulc_year],
+        'baseline_lulc_year': baseline_lulc_year,
         'sequestration_since_baseline_raster': (
             total_net_sequestration_for_baseline_period),
         'stocks_at_first_transition': {
@@ -927,15 +949,13 @@ def execute(args):
             output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
                 year=end_of_baseline_period, suffix=suffix))
         _ = task_graph.add_task(
-            func=pygeoprocessing.raster_calculator,
-            args=([(total_net_sequestration_for_baseline_period, 1),
-                   (baseline_lulc_year, 'raw'),
-                   (end_of_baseline_period, 'raw'),
-                   (prices, 'raw')],
-                  _calculate_baseline_period_npv,
-                  baseline_period_npv_raster,
-                  gdal.GDT_Float32,
-                  NODATA_FLOAT32),
+            func=_calculate_npv,
+            args=({end_of_baseline_period:
+                   total_net_sequestration_for_baseline_period},
+                  prices,
+                  discount_rate,
+                  baseline_lulc_year,
+                  {end_of_baseline_period: baseline_period_npv_raster}),
             dependent_task_list=[baseline_net_seq_task],
             target_path_list=[baseline_period_npv_raster],
             task_name='baseline period NPV')
@@ -958,7 +978,7 @@ def _calculate_npv(
     # net_sequestration_rasters = {end_of_transition_year: summary seq. path
     # target_raster_years_and_paths = does not include baseline period raster
 
-    source_raster_path = net_sequestration_rasters[baseline_year]
+    source_raster_path = list(net_sequestration_rasters.values())[0]
 
     for target_raster_year, target_raster_path in (
             target_raster_years_and_paths.items()):
@@ -973,46 +993,21 @@ def _calculate_npv(
                     (1 + discount_rate) ** years_since_baseline))
 
         nodata = pygeoprocessing.get_raster_info(
-            net_sequestration_rasters[year])['nodata'][0]
+            source_raster_path)['nodata'][0]
 
         def _npv(net_sequestration_matrix):
             npv = numpy.empty(net_sequestration_matrix.shape,
                               dtype=numpy.float32)
             npv[:] = NODATA_FLOAT32
             valid_pixels = ~numpy.isclose(net_sequestration_matrix,
-                                          ~nodata)
-            npv[valid_pixels] = npv[valid_pixels] * valuation_factor
+                                          nodata)
+            npv[valid_pixels] = (
+                net_sequestration_matrix[valid_pixels] * valuation_factor)
             return npv
 
         pygeoprocessing.raster_calculator(
             [(net_sequestration_rasters[target_raster_year], 1)],
             _npv, target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32)
-
-
-def _calculate_baseline_period_npv(
-        baseline_period_net_seq_matrix, baseline_lulc_year,
-        end_of_baseline_period_year, prices_dict, discount_rate):
-    valid_mask = ~numpy.isclose(baseline_period_net_seq_matrix, NODATA_FLOAT32)
-
-    # We know in advance that accumulation is constant during the baseline
-    # period, so we apply the price to the accumulation that took place in each
-    # year and add it all up.
-    annual_accumulation = baseline_period_net_seq_matrix[valid_mask] / (
-        end_of_baseline_period_year - baseline_lulc_year)
-    result = numpy.zeros(baseline_period_net_seq_matrix.shape,
-                         dtype=numpy.float32)
-    for year in range(baseline_lulc_year, end_of_baseline_period_year+1):
-        result += annual_accumulation * prices_dict[year]
-
-    valuation = numpy.zeros(valid_mask.shape, dtype=numpy.float32)
-    valid_annual_accumulation =
-    for year_since_baseline in range(end_of_baseline_period_year -
-                                     baseline_lulc_year):
-        valuation += _value(
-            stock=baseline_period_net_seq_matrix[valid_mask]
-
-    result[~valid_mask] = NODATA_FLOAT32
-    return result
 
 
 def _calculate_accumulation_from_baseline(

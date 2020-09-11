@@ -1429,7 +1429,7 @@ class TestCBC2(unittest.TestCase):
         # _calculate_valuation.
         # TODO: verify valuation calculations by hand.
         expected_net_present_value_at_2030 = numpy.array(
-            [[1, 0]], dtype=numpy.float32)
+            [[624.90564, 49.578667]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output', 'net-present-value-at-2030.tif')
         numpy.testing.assert_allclose(
