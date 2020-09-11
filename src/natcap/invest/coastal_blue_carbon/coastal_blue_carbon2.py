@@ -1080,6 +1080,26 @@ def _track_latest_transition_year(
         known_transition_years_raster_path,
         current_transition_year,
         target_path):
+    """Track the year of latest disturbance in a raster.
+
+    Args:
+        current_disturbance_vol_raster_path (string): The path to a raster on
+            disk representing the volume of carbon disturbed in the most recent
+            transition.  This raster must be a 32-bit floating-point raster.
+        known_transition_years_raster_path (string or None): If a string, the
+            path to the most recent raster of known transition years.  If
+            ``None``, we assume that this is the first year for which
+            transitions are being tracked.  This raster must be an unsigned
+            16-bit integer raster.
+        current_transition_year (int): The year of the transition that we are
+            tracking.
+        target_path (string): The path to a raster on disk where where the year
+            of the latest transition values will be tracked.
+
+    Returns:
+        ``None``.
+
+    """
     current_disturbance_vol_nodata = pygeoprocessing.get_raster_info(
         current_disturbance_vol_raster_path)['nodata'][0]
 
@@ -1093,7 +1113,7 @@ def _track_latest_transition_year(
 
     def _track_transition_year(
             current_disturbance_vol_matrix, known_transition_years_matrix):
-
+        """Raster_calculator op for tracking the latest transition year."""
         target_matrix = numpy.empty(
             current_disturbance_vol_matrix.shape, dtype=numpy.uint16)
         target_matrix[:] = NODATA_UINT16
