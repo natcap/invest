@@ -303,12 +303,12 @@ def execute_transition_analysis(args):
     net_present_value_paths = {}
     valuation_rasters = {}
 
-    summary_net_sequestration_tasks = []
-    summary_net_sequestration_raster_paths = [
-        args['sequestration_since_baseline_raster']]
-
     first_transition_year = min(transition_years)
     final_year = int(args['analysis_year'])
+
+    summary_net_sequestration_tasks = []
+    summary_net_sequestration_raster_paths = {
+        first_transition_year: args['sequestration_since_baseline_raster']}
 
     for year in range(first_transition_year, final_year+1):
         current_stock_tasks = {}
@@ -550,7 +550,7 @@ def execute_transition_analysis(args):
                 task_name=(
                     f'Summing sequestration between {current_transition_year} '
                     f'and {year}')))
-            summary_net_sequestration_raster_paths.append(
+            summary_net_sequestration_raster_paths[year+1] = (
                 net_carbon_sequestration_since_last_transition)
 
             if ('do_economic_analysis' in args and args['do_economic_analysis']):
@@ -573,6 +573,15 @@ def execute_transition_analysis(args):
         # the prior year.
         prior_stock_tasks = current_stock_tasks
         prior_net_sequestration_tasks = current_net_sequestration_tasks
+
+    if ('do_economic_analysis' in args and args['do_economic_analysis']):
+        sorted_transition_years = sorted(transition_yeras) + [final_year]
+        for transition_year, next_transition_year in zip(
+                sorted_transition_years[:-1], sorted_transition_years[1:]):
+            net_present_value_raster_path = os.path.join(
+                output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
+                    year=next_transition_year, suffix=suffix))
+
 
     # Calculate total net sequestration.
     total_net_sequestration_raster_path = os.path.join(
@@ -666,9 +675,6 @@ def execute(args):
                     annual_price)
 
         discount_rate = float(args['discount_rate']) * 0.01
-        for year, price in prices.items():
-            n_years_elapsed = year - baseline_lulc_year
-            prices[year] /= (1 + discount_rate) ** n_years_elapsed
 
     alignment_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
@@ -902,6 +908,7 @@ def execute(args):
         'half_life_rasters': halflife_rasters,
         'annual_rate_of_accumulation_rasters': yearly_accum_rasters,
         'carbon_prices_per_year': prices,
+        'discount_rate': discount_rate,
         'analysis_year': analysis_year,
         'do_economic_analysis': args.get('do_economic_analysis', False),
         'baseline_lulc_raster': aligned_lulc_paths[baseline_lulc_year],
@@ -941,9 +948,61 @@ def execute(args):
     task_graph.join()
 
 
+def _value(stock, price, discount_rate, n_years_elapsed):
+    return (price * stock) / (1 + discount_rate) ** n_years_elapsed
+
+
+def _calculate_npv(
+        net_sequestration_rasters, prices_by_year, discount_rate, baseline_year,
+        target_raster_years_and_paths):
+
+    source_raster_path = net_sequestration_rasters[baseline_year][POOL_SOIL]
+
+    # Create the output rasters, we'll fill in the details later.
+    for target_raster_path in target_raster_years_and_paths.values():
+        pygeoprocessing.new_raster_from_base(
+            source_raster_path, target_raster_path, gdal.GDT_Float32,
+            [NODATA_FLOAT32])
+
+    for block_info in pygeoprocessing.iterblocks(
+            (source_raster_path, 1),
+            offset_only=True):
+        array_shape = (block_info['win_ysize'], block_info['win_xsize']),
+        valuation_sum = numpy.zeros(array_shape, dtype=numpy.float32)
+
+        for year, net_seq_by_pools in net_sequestration_rasters.items():
+            valid_pixels = numpy.ones(array_shape, dtype=numpy.bool)
+            stocks = numpy.zeros(array_shape, dtype=numpy.float32)
+
+            for pool in (POOL_SOIL, POOL_BIOMASS):
+                raster = gdal.OpenEx(net_seq_by_pools[pool], gdal.OF_RASTER)
+                band = raster.GetRasterBand(1)
+                nodata = band.GetNoDataValue()
+                array = band.ReadAsArray(**block_info)
+
+                valid_pixels &= ~numpy.isclose(array, nodata)
+                stocks[valid_pixels] += array[valid_pixels]
+
+            valuation_sum += _value(
+                stock=stocks, price=prices[year], discount_rate=discount_rate,
+                n_years_elapsed=(year - baseline_year))
+
+            valuation_sum[~valid_pixels] = NODATA_FLOAT32
+
+            if year in target_raster_years_and_paths:
+                target_raster = gdal.OpenEx(
+                    target_raster_years_and_paths[year],
+                    gdal.OF_RASTER | gdal.GA_Update)
+                target_band = target_raster.GetRasterBand(1)
+                target_band.WriteArray(
+                    valuation_sum, block_info['xoff'], block_info['yoff'])
+                target_band = None
+                target_raster = None
+
+
 def _calculate_baseline_period_npv(
         baseline_period_net_seq_matrix, baseline_lulc_year,
-        end_of_baseline_period_year, prices_dict):
+        end_of_baseline_period_year, prices_dict, discount_rate):
     valid_mask = ~numpy.isclose(baseline_period_net_seq_matrix, NODATA_FLOAT32)
 
     # We know in advance that accumulation is constant during the baseline
@@ -955,6 +1014,13 @@ def _calculate_baseline_period_npv(
                          dtype=numpy.float32)
     for year in range(baseline_lulc_year, end_of_baseline_period_year+1):
         result += annual_accumulation * prices_dict[year]
+
+    valuation = numpy.zeros(valid_mask.shape, dtype=numpy.float32)
+    valid_annual_accumulation =
+    for year_since_baseline in range(end_of_baseline_period_year -
+                                     baseline_lulc_year):
+        valuation += _value(
+            stock=baseline_period_net_seq_matrix[valid_mask]
 
     result[~valid_mask] = NODATA_FLOAT32
     return result
@@ -1007,7 +1073,6 @@ def _calculate_accumulation_over_time(
             annual_soil_matrix[valid_pixels] +
             annual_litter_matrix[valid_pixels]) * n_years)
     return target_matrix
-
 
 
 def _calculate_valuation(
