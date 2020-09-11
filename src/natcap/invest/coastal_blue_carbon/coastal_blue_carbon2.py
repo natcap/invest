@@ -1128,12 +1128,37 @@ def _track_latest_transition_year(
 
 def _calculate_net_sequestration(
         accumulation_raster_path, emissions_raster_path, target_raster_path):
+    """Calculate net sequestration for a given timestep and pool.
+
+    Sequestration is the per-pixel tallying of carbon accumulated or
+    emitted in this timestep and for this pool.  This model assume that a given
+    pixel may be either in a state of accumulation or a state of emissions, but
+    not both.  It is possible to have a state where a pixel might have both,
+    since a user is able to provide rasters mapping the spatial distribution of
+    carbon accumulated for a transition year.  If this happens, we assume that
+    emissions takes precedence.
+
+    Args:
+        accumulation_raster_path (string): A string path to a raster located on
+            disk.  Pixel values represent the annual rate of accumulation for
+            this carbon pool.
+        emissions_raster_path (string): A string path to a raster located on
+            disk.  Pixel values represent the volume of this pool's carbon
+            emitted in this timestep.
+        target_raster_path (string): A string path to where the target raster
+            should be written.
+
+    Returns:
+        ``None``.
+
+    """
     accumulation_nodata = pygeoprocessing.get_raster_info(
         accumulation_raster_path)['nodata'][0]
     emissions_nodata = pygeoprocessing.get_raster_info(
         emissions_raster_path)['nodata'][0]
 
     def _record_sequestration(accumulation_matrix, emissions_matrix):
+        """Given accumulation and emissions, calculate sequestration."""
         target_matrix = numpy.zeros(
             accumulation_matrix.shape, dtype=numpy.float32)
 
@@ -1429,6 +1454,7 @@ def _reclassify_accumulation_transition(
     def _reclassify_accumulation(
             landuse_transition_from_matrix, landuse_transition_to_matrix,
             accumulation_rate_matrix):
+        """Pygeoprocessing op to reclassify accumulation."""
         output_matrix = numpy.empty(landuse_transition_from_matrix.shape,
                                     dtype=numpy.float32)
         output_matrix[:] = NODATA_FLOAT32
@@ -1490,6 +1516,7 @@ def _reclassify_disturbance_magnitude(
 
     def _reclassify_disturbance(
             landuse_transition_from_matrix, landuse_transition_to_matrix):
+        """Pygeoprocessing op to reclassify disturbances."""
         output_matrix = numpy.empty(landuse_transition_from_matrix.shape,
                                     dtype=numpy.float32)
         output_matrix[:] = NODATA_FLOAT32
