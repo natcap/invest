@@ -458,29 +458,6 @@ def execute_transition_analysis(args):
             target_path_list=[total_carbon_rasters[year]],
             task_name=f'Calculating total carbon stocks in {year}')
 
-        # Calculate valuation if we're doing valuation (requires Net Seq.)
-        if ('do_economic_analysis' in args and args['do_economic_analysis']):
-            # TODO: Need to verify the math on this, I'm unsure if the current
-            # implementation is correct or makes sense:
-            #    (N_biomass + N_soil[baseline]) * price[this year]
-            valuation_rasters[year] = os.path.join(
-                intermediate_dir, VALUE_RASTER_PATTERN.format(
-                    year=year, suffix=suffix))
-            valuation_tasks[year][pool] = task_graph.add_task(
-                func=pygeoprocessing.raster_calculator,
-                args=([(net_sequestration_rasters[year][POOL_BIOMASS], 1),
-                       (net_sequestration_rasters[year][POOL_SOIL], 1),
-                       (prices[year], 'raw')],
-                      _calculate_valuation,
-                      valuation_rasters[year],
-                      gdal.GDT_Float32,
-                      NODATA_FLOAT32),
-                dependent_task_list=[
-                    current_net_sequestration_tasks[POOL_BIOMASS],
-                    current_net_sequestration_tasks[POOL_SOIL]],
-                target_path_list=[valuation_rasters[year]],
-                task_name=f'Calculating the value of carbon for {year}')
-
         # If in the last year before a transition of the last year before the
         # final year of the analysis (which might not be a transition):
         #  * sum emissions since last transition
@@ -1038,24 +1015,6 @@ def _calculate_accumulation_over_time(
             annual_soil_matrix[valid_pixels] +
             annual_litter_matrix[valid_pixels]) * n_years)
     return target_matrix
-
-
-def _calculate_valuation(
-        biomass_sequestration_matrix, soil_sequestration_matrix,
-        price):
-    """"""
-    value_matrix = numpy.empty(
-        biomass_sequestration_matrix.shape, dtype=numpy.float32)
-    value_matrix[:] = NODATA_FLOAT32
-
-    valid_pixels = (
-        ~numpy.isclose(biomass_sequestration_matrix, NODATA_FLOAT32) &
-        ~numpy.isclose(soil_sequestration_matrix, NODATA_FLOAT32))
-    value_matrix[valid_pixels] = (
-        (biomass_sequestration_matrix[valid_pixels] +
-            soil_sequestration_matrix[valid_pixels]) * price)
-
-    return value_matrix
 
 
 def _track_latest_transition_year(
