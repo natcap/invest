@@ -551,6 +551,48 @@ def execute_transition_analysis(args):
 
 
 def execute(args):
+    """Model Coastal Blue Carbon over a time series.
+
+    Args:
+        args['workspace_dir'] (string): the path to a workspace directory where
+            outputs should be written.
+        args['results_suffix'] (string): (optional) If provided, a string
+            suffix that will be added to each output filename.
+        args['n_workers'] (int): (optional) If provided, the number of workers
+            to pass to ``taskgraph``.
+        args['transitions_csv'] (string): The path to a transitions CSV table
+            containing transition years and the LULC rasters representing that
+            year. Required for transition analysis.
+        args['baseline_lulc_path'] (string): The path to the baseline LULC
+            raster.
+        args['baseline_lulc_year'] (int): The year of the baseline LULC
+            scenario.
+        args['analysis_year'] (int): the year of the final analysis.
+        args['do_economic_analysis'] (bool): Whether to do valuation.
+        args['use_price_table'] (bool): Whether to use a table of annual carbon
+            prices for valuation.  Defaults to ``False``.
+        args['price_table_path'] (string): The path to a table of prices to use
+            for valuation.  Required if ``args['use_price_table']`` is
+            ``True``.
+        args['inflation_rate'] (number): The rate of inflation.  The number
+            provided is multiplied by ``0.01`` to compute the actual rate of
+            inflation.  Required if ``args['use_price_table']`` is ``False``.
+        args['price'] (number): The carbon price.  Required if
+            ``args['use_price_table']`` is ``False``.
+        args['discount_rate'] (number): The discount rate.  The number provided
+            is multiplied by ``0.01`` to compute the actual discount rate.
+            Required if ``args['do_economic_analysis']``.
+        args['biophysical_table_path'] (string): The path to the biophysical
+            table on disk.  This table has many required columns.  See
+            ``ARGS_SPEC`` for the required columns.
+        args['landcover_transitions_table'] (string): The path to the landcover
+            transitions table, indicating the behavior of carbon when the
+            landscape undergoes a transition.
+
+    Returns:
+        ``None``.
+
+    """
     suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
@@ -646,10 +688,6 @@ def execute(args):
     biophysical_parameters = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'code')
 
-    # TODO: make sure we're also returning a sparse matrix representing the
-    # 'accum' values from the table.  This should then be used when creating
-    # the accumulation raster, and only those pixel values with an 'accum'
-    # transition should actually accumulate.
     (biomass_disturb_matrix, soil_disturb_matrix,
         biomass_accum_matrix, soil_accum_matrix) = _read_transition_matrix(
         args['landcover_transitions_table'], biophysical_parameters)
