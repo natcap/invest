@@ -216,21 +216,85 @@ ARGS_SPEC = {
 }
 
 
-# TODO: restructure to separate initial from baseline from transitions.
-#  Phase 0: Table reading and raster alignment.
-#  Phase 1: Map initial variables (reclassify initial biomass, soil, litter)
-#  Phase 2: Accumulate everything up to the first transition or analysis year.
-#  Phase 3: Do the transition timeseries analysis.
-#
-# This structure should nicely separate things out so that the looping logic is
-# substantially simpler and easier to maintain in the long run.
-#
-# Besides, net sequestration until the first transition is always just a
-# multiple of the accumulation per pool, then summed.  So why loop over piles
-# of rasters when we can just multiply?
-
-
 def execute_transition_analysis(args):
+    """Execute a transition analysis.
+
+    The calculations required for an analysis centered around a baseline period
+    are trivial and can be accomplished with a few calls to your
+    ``raster_calculator`` of choice because of the linear rates of carbon
+    accumulation that this model assumes.  By contrast, the raster calculations
+    required for an analysis involving transitions are much more complex, and
+    by providing this function separate from ``execute``, the adept modeller is
+    able to provide spatially-explicit distributions of rates of accumulation,
+    the magnitudes of disturbances, carbon half-lives and carbon stocks for
+    each carbon pool as desired.
+
+    There are certain constraints placed on some of these inputs:
+
+        * The years listed in ``args['transition_years']`` must match the keys
+            in ``args['disturbance_magnitude_rasters']``,
+            ``args['half_life_rasters']``, and
+            ``args['annual_rate_of_accumulation_rasters']``.
+        * All rasters provided to this function must be in the same projected
+            coordinate system and have identical dimensions and pixel sizes.
+        * All rasters provided to this function are assumed to be 32-bit
+            floating-point rasters with a nodata value matching this module's
+            ``NODATA_FLOAT32`` attribute.
+        * All data structures provided to this function that use pools as an
+            index assume that the pools are strings matching the ``POOL_SOIL``,
+            ``POOL_BIOMASS`` and ``POOL_LITTER`` attributes of this module.
+        * Most dicts passed to this function are nested dictionaries indexed
+            first by transition year, then by pool (see note about pool keys).
+            These dicts are accessed like so::
+
+                args['half_life_rasters'][transition_year][POOL_SOIL]
+
+        * The "baseline period" is the range of years between the baseline year
+            and the first transition, not including the year of the first
+            transition.
+
+    Args:
+        args['workspace_dir'] (string): The path to a workspace directory where
+            outputs should be written.
+        args['suffix'] (string): If provided, a string suffix that will be
+            added to each output filename. Optional.
+        args['n_workers'] (int):  The number of workers that ``taskgraph`` may
+            use.
+        args['transition_years'] (set): A python set of int years in which a
+            transition will take place.
+        args['disturbance_magnitude_rasters'] (dict): A 2-level deep dict
+            structure mapping int transition years to string pools to raster
+            paths representing the magnitude (0-1, float32) of a disturbance.
+        args['half_life_rasters'] (dict): A 2-level deep dict structure mapping
+            int transition years to string pools to raster paths representing
+            the half-life of the given carbon pool at that transition year.
+        args['annual_rate_of_accumulation_rasters'] (dict): A 2-level deep dict
+            structure mapping int transition years to string pools to raster
+            paths representing the annual rate of accumulation for this pool in
+            the given transition period.
+        args['carbon_prices_per_year'] (dict): A dict mapping int years to the
+            floating-point price of carbon in that year.  Every year between
+            the baseline year and the analysis year (inclusive) must have a
+            key-value pair defined.
+        args['discount_rate'] (number): The discount rate for carbon
+            valuation.
+        args['analysis_year'] (int): The analysis year.  Must be greater than
+            or equal to the final transition year.
+        args['do_economic_analysis'] (bool): Whether to do valuation.
+        args['baseline_lulc_raster'] (string): The path to the baseline lulc
+            raster on disk.
+        args['baseline_lulc_year'] (int): The year of the baseline scenario.
+        args['sequestration_since_baseline_raster'] (string): The string path
+            to a raster on disk representing the total carbon sequestration
+            across all 3 carbon pools in the entire baseline period.
+        args['stocks_at_first_transition'] (dict): A dict mapping pool strings
+            (see above for the valid pool identifiers) to rasters representing
+            the carbon stocks at the end of the baseline period.
+
+    Returns:
+        ``None``.
+
+    """
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -889,7 +953,6 @@ def execute(args):
         prior_transition_year = current_transition_year
 
     transition_analysis_args = {
-        'task_graph': task_graph,
         'workspace_dir': args['workspace_dir'],
         'suffix': suffix,
         'n_workers': n_workers,
