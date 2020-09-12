@@ -307,8 +307,6 @@ def execute(args):
                 f'aligned_lulc_transition_{transition_year}{suffix}.tif'))
         aligned_lulc_paths[transition_year] = aligned_paths[-1]
 
-    # TODO: check that the years in the price table match the years in the
-    # range of the timesteps we're running.
     prices = None
     if ('do_economic_analysis' in args and
             args['do_economic_analysis'] not in ('', None)):
