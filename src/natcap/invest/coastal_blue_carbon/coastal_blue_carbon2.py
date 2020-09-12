@@ -1,10 +1,7 @@
-import itertools
 import logging
 import os
-import pprint
 
 import numpy
-import pandas
 import pygeoprocessing
 import scipy.sparse
 import taskgraph
@@ -755,7 +752,6 @@ def execute_transition_analysis(args):
     prior_net_sequestration_tasks = {}
     current_net_sequestration_tasks = {}
     valuation_tasks = {}
-    net_present_value_paths = {}
 
     first_transition_year = min(transition_years)
     final_year = int(args['analysis_year'])
@@ -1508,10 +1504,10 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
             elif field_value == 'accum':
                 soil_accumulation_matrix[from_lucode, to_lucode] = (
                     biophysical_dict[to_lucode][
-                        f'soil-yearly-accumulation'])
+                        'soil-yearly-accumulation'])
                 biomass_accumulation_matrix[from_lucode, to_lucode] = (
                     biophysical_dict[to_lucode][
-                        f'biomass-yearly-accumulation'])
+                        'biomass-yearly-accumulation'])
 
     return (biomass_disturbance_matrix, soil_disturbance_matrix,
             biomass_accumulation_matrix, soil_accumulation_matrix)
