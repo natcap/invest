@@ -486,30 +486,6 @@ def execute_transition_analysis(args):
                     f'Sum emissions between {current_transition_year} '
                     f'and {year}'))
 
-            accumulation_since_last_transition = os.path.join(
-                output_dir,
-                ACCUMULATION_SINCE_TRANSITION_RASTER_PATTERN.format(
-                    start_year=current_transition_year, end_year=(year + 1),
-                    suffix=suffix))
-            _ = task_graph.add_task(
-                func=pygeoprocessing.raster_calculator,
-                args=(
-                    [(yearly_accum_rasters[
-                        current_transition_year][POOL_SOIL], 1),
-                     (yearly_accum_rasters[
-                         current_transition_year][POOL_BIOMASS], 1),
-                     (yearly_accum_rasters[
-                         current_transition_year][POOL_LITTER], 1),
-                     (((year + 1) - current_transition_year), 'raw')],
-                    _calculate_accumulation_over_time,
-                    accumulation_since_last_transition,
-                    gdal.GDT_Float32,
-                    NODATA_FLOAT32),
-                target_path_list=[accumulation_since_last_transition],
-                task_name=(
-                    f'Summing accumulation between {current_transition_year} '
-                    f'and {year+1}'))
-
             net_carbon_sequestration_since_last_transition = os.path.join(
                 output_dir,
                 TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
@@ -747,7 +723,7 @@ def execute(args):
                 STOCKS_RASTER_PATTERN.format(
                     pool=pool, year=end_of_baseline_period-1, suffix=suffix))
             baseline_stock_tasks[pool] = task_graph.add_task(
-                func=_calculate_accumulation_from_baseline,
+                func=_calculate_stocks_after_baseline_period,
                 args=(stock_rasters[baseline_lulc_year][pool],
                       yearly_accum_rasters[pool],
                       (end_of_baseline_period - baseline_lulc_year),
@@ -968,7 +944,7 @@ def _calculate_npv(
             gdal.GDT_Float32, NODATA_FLOAT32)
 
 
-def _calculate_accumulation_from_baseline(
+def _calculate_stocks_after_baseline_period(
         baseline_stock_raster_path, yearly_accumulation_raster_path, n_years,
         target_raster_path):
     # Both of these values are assumed to be defined from earlier in the
@@ -1001,6 +977,25 @@ def _calculate_accumulation_from_baseline(
 def _calculate_accumulation_over_time(
         annual_biomass_matrix, annual_soil_matrix,
         annual_litter_matrix, n_years):
+    """Calculate the total accumulation over a period of years.
+
+    This is a shortcut for adding up 3 rasters per year over n years.
+
+    Args:
+        annual_biomass_matrix (numpy.array): A float32 matrix of the annual
+            rate of biomass accumulation.
+        annual_soil_matrix (numpy.array): A float32 matrix of the annual
+            rate of soil accumulation.
+        annual_litter_matrix (numpy.array): A float32 matrix of the annual
+            rate of litter accumulation.
+        n_years (int): The number of years in the baseline period.
+
+    Returns:
+        A numpy array representing the sum of the 3 input matrices (excluding
+        nodata pixels), multiplied by the number of years in the baseline
+        period.
+
+    """
     target_matrix = numpy.empty(annual_biomass_matrix.shape,
                                 dtype=numpy.float32)
     target_matrix[:] = NODATA_FLOAT32
