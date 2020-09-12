@@ -903,9 +903,26 @@ def execute(args):
 def _calculate_npv(
         net_sequestration_rasters, prices_by_year, discount_rate, baseline_year,
         target_raster_years_and_paths):
-    # net_sequestration_rasters = {end_of_transition_year: summary seq. path
-    # target_raster_years_and_paths = does not include baseline period raster
+    """Calculate the net present value of carbon sequestered.
 
+    Args:
+        net_sequestration_rasters (dict): A dict mapping int years to string
+            paths to sequestration rasters.  The year keys correspond to the
+            years marking the end of a transition period.  All rasters must
+            share the same projected CRS and have identical dimensions.
+        prices_by_year (dict): A dict mapping int years between the baseline
+            year and the final year.
+        discount_rate (float): The discount rate (between 0 and 1).
+        baseline_year (int): The year of the baseline scenario.
+        target_raster_years_and_paths (dict): A dict mapping int years to
+            string paths indicating where the target rasters should be written.
+            Year keys must match up with the keys of
+            ``net_sequestration_rasters``.
+
+    Returns:
+        ``None``.
+
+    """
     source_raster_path = list(net_sequestration_rasters.values())[0]
 
     for target_raster_year, target_raster_path in sorted(
@@ -947,6 +964,27 @@ def _calculate_npv(
 def _calculate_stocks_after_baseline_period(
         baseline_stock_raster_path, yearly_accumulation_raster_path, n_years,
         target_raster_path):
+    """Calculate the stocks after the baseline period.
+
+    Stocks for the given pool at the end of the baseline period are a function
+    of the initial baseline stocks, the yearly accumulation rate, and the
+    number of years in the baseline period.
+
+    Args:
+        baseline_stock_raster_path (string): The string path to a GDAL raster
+            on disk representing the initial carbon stocks for this pool at the
+            baseline year.
+        yearly_accumulation_raster_path (string): The string path to a GDAL
+            raster on disk representing the yearly accumulation rate for this
+            carbon pool.
+        n_years (int): The number of years in the baseline period.
+        target_raster_path (string): The path to where the calculated stocks
+            raster should be written.
+
+    Returns:
+        ``None``.
+
+    """
     # Both of these values are assumed to be defined from earlier in the
     # model's execution.
     baseline_nodata = pygeoprocessing.get_raster_info(
