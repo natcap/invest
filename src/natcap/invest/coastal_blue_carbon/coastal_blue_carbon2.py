@@ -321,7 +321,7 @@ def execute_transition_analysis(args):
 
     prices = None
     if 'carbon_prices_per_year' in args and args['carbon_prices_per_year']:
-        prices = {int(year) : float(price)
+        prices = {int(year): float(price)
                   for (year, price) in args['carbon_prices_per_year'].items()}
     discount_rate = float(args['discount_rate'])
     baseline_lulc_year = int(args['baseline_lulc_year'])
@@ -345,8 +345,10 @@ def execute_transition_analysis(args):
     net_sequestration_rasters = {
         (min(transition_years) - 1): {
             POOL_SOIL: args['annual_rate_of_accumulation_rasters'][POOL_SOIL],
-            POOL_BIOMASS: args['annual_rate_of_accumulation_rasters'][POOL_BIOMASS],
-            POOL_LITTER: args['annual_rate_of_accumulation_rasters'][POOL_LITTER],
+            POOL_BIOMASS: (
+                args['annual_rate_of_accumulation_rasters'][POOL_BIOMASS]),
+            POOL_LITTER: (
+                args['annual_rate_of_accumulation_rasters'][POOL_LITTER]),
         }
     }
     disturbance_vol_rasters = {}
@@ -364,7 +366,6 @@ def execute_transition_analysis(args):
     current_net_sequestration_tasks = {}
     valuation_tasks = {}
     net_present_value_paths = {}
-    valuation_rasters = {}
 
     first_transition_year = min(transition_years)
     final_year = int(args['analysis_year'])
@@ -381,7 +382,6 @@ def execute_transition_analysis(args):
         emissions_rasters[year] = {}
         year_of_disturbance_rasters[year] = {}
         valuation_tasks[year] = {}
-        net_present_value_paths = {}
 
         for pool in (POOL_SOIL, POOL_BIOMASS):
             # Calculate stocks from last year's stock plus last year's net
@@ -410,7 +410,6 @@ def execute_transition_analysis(args):
                 task_name=f'Calculating {pool} carbon stock for {year}')
 
             # Calculate disturbance volume if we're at a transition year.
-            #    TODO: provide disturbance magnitude as a raster input
             if year in transition_years:
                 # We should only switch around the transition years the first
                 # time we encounter this, not for each pool.
@@ -430,7 +429,8 @@ def execute_transition_analysis(args):
                            "stocks": (stock_rasters[year-1][pool], 1)},
                           NODATA_FLOAT32,
                           disturbance_vol_rasters[year][pool]),
-                    dependent_task_list=current_disturbance_vol_dependent_tasks,
+                    dependent_task_list=(
+                        current_disturbance_vol_dependent_tasks),
                     target_path_list=[
                         disturbance_vol_rasters[year][pool]],
                     task_name=(
@@ -474,7 +474,8 @@ def execute_transition_analysis(args):
             current_emissions_tasks[pool] = task_graph.add_task(
                 func=pygeoprocessing.raster_calculator,
                 args=(
-                    [(disturbance_vol_rasters[current_transition_year][pool], 1),
+                    [(disturbance_vol_rasters[
+                        current_transition_year][pool], 1),
                      (year_of_disturbance_rasters[
                           current_transition_year][pool], 1),
                      (half_life_rasters[current_transition_year][pool], 1),
@@ -816,11 +817,12 @@ def execute(args):
             dependent_task_list=[alignment_task],
             target_path_list=[yearly_accum_rasters[pool]],
             task_name=(
-                f'Mapping {pool} carbon accumulation for {baseline_lulc_year}'))
+                f'Mapping {pool} carbon accumulation for '
+                f'{baseline_lulc_year}'))
 
         if end_of_baseline_period != baseline_lulc_year:
-            # The total stocks between baseline and the first year of interest is
-            # just a sum-and-multiply for each pool.
+            # The total stocks between baseline and the first year of interest
+            # is just a sum-and-multiply for each pool.
             stock_rasters[end_of_baseline_period-1][pool] = os.path.join(
                 STOCKS_RASTER_PATTERN.format(
                     pool=pool, year=end_of_baseline_period-1, suffix=suffix))
@@ -835,8 +837,8 @@ def execute(args):
                 target_path_list=[
                     stock_rasters[end_of_baseline_period-1][pool]],
                 task_name=(
-                    f'Calculating {pool} stocks before the first transition or '
-                    'the analysis year'))
+                    f'Calculating {pool} stocks before the first transition '
+                    'or the analysis year'))
 
     total_net_sequestration_for_baseline_period = (
         os.path.join(
@@ -855,7 +857,7 @@ def execute(args):
               NODATA_FLOAT32),
         target_path_list=[total_net_sequestration_for_baseline_period],
         task_name=(
-            f'Calculate accumulation between baseline year and final year'))
+            'Calculate accumulation between baseline year and final year'))
 
     # Reclassify transitions appropriately for each transition year.
     halflife_rasters = {}
@@ -911,20 +913,23 @@ def execute(args):
 
             disturbance_magnitude_rasters[
                 current_transition_year][pool] = os.path.join(
-                    intermediate_dir, DISTURBANCE_MAGNITUDE_RASTER_PATTERN.format(
+                    intermediate_dir,
+                    DISTURBANCE_MAGNITUDE_RASTER_PATTERN.format(
                         pool=pool, year=current_transition_year,
                         suffix=suffix))
             # this is _actually_ the magnitude, not the magnitude multiplied by
             # the stocks.
-            disturbance_magnitude_task = task_graph.add_task(
+            _ = task_graph.add_task(
                 func=_reclassify_disturbance_magnitude,
                 args=(aligned_lulc_paths[prior_transition_year],
                       aligned_lulc_paths[current_transition_year],
                       disturbance_matrices[pool],
-                      disturbance_magnitude_rasters[current_transition_year][pool]),
+                      disturbance_magnitude_rasters[
+                          current_transition_year][pool]),
                 dependent_task_list=[alignment_task],
                 target_path_list=[
-                    disturbance_magnitude_rasters[current_transition_year][pool]],
+                    disturbance_magnitude_rasters[
+                        current_transition_year][pool]],
                 task_name=(
                     f'map {pool} carbon disturbance {prior_transition_year} '
                     f'to {current_transition_year}'))
@@ -991,7 +996,8 @@ def execute(args):
             dependent_task_list=[baseline_net_seq_task],
             target_path_list=[baseline_period_npv_raster],
             task_name='baseline period NPV')
-        transition_analysis_args['npv_since_baseline_raster'] = baseline_period_npv_raster
+        transition_analysis_args[
+            'npv_since_baseline_raster'] = baseline_period_npv_raster
 
     task_graph.join()
     if transitions:
@@ -1002,8 +1008,8 @@ def execute(args):
 
 
 def _calculate_npv(
-        net_sequestration_rasters, prices_by_year, discount_rate, baseline_year,
-        target_raster_years_and_paths):
+        net_sequestration_rasters, prices_by_year, discount_rate,
+        baseline_year, target_raster_years_and_paths):
     """Calculate the net present value of carbon sequestered.
 
     Args:
@@ -1024,13 +1030,9 @@ def _calculate_npv(
         ``None``.
 
     """
-    source_raster_path = list(net_sequestration_rasters.values())[0]
-
     for target_raster_year, target_raster_path in sorted(
-            target_raster_years_and_paths.items(), key=lambda x:x[0]):
+            target_raster_years_and_paths.items(), key=lambda x: x[0]):
 
-        # TODO: Refactor this loop to cache prior valuation factors.
-        # Skip refactor if it adds too much complexity.
         valuation_factor = 0
         for years_since_baseline, year in enumerate(
                 range(baseline_year, target_raster_year)):
@@ -1098,7 +1100,7 @@ def _calculate_stocks_after_baseline_period(
         target_matrix[:] = NODATA_FLOAT32
 
         valid_pixels = (~numpy.isclose(baseline_matrix, baseline_nodata) &
-                       (~numpy.isclose(accum_matrix, accum_nodata)))
+                        ~numpy.isclose(accum_matrix, accum_nodata))
 
         target_matrix[valid_pixels] = (
             baseline_matrix[valid_pixels] + (
@@ -1296,8 +1298,8 @@ def _calculate_emissions(
     """Calculate emissions.
 
     Args:
-        carbon_disturbed_matrix (numpy.array): The volume of carbon disturbed in
-            the most recent transition year as time approaches infinity.
+        carbon_disturbed_matrix (numpy.array): The volume of carbon disturbed
+            in the most recent transition year as time approaches infinity.
         year_of_last_disturbance_matrix (numpy.array): A matrix indicating the
             integer years of the most recent disturbance.
         carbon_half_life_matrux (numpy.array): A matrix indicating the spatial
@@ -1342,7 +1344,8 @@ def _calculate_emissions(
     return emissions_matrix
 
 
-def _sum_n_rasters(raster_path_list, target_raster_path,
+def _sum_n_rasters(
+        raster_path_list, target_raster_path,
         allow_pixel_stacks_with_nodata=False):
     """Sum an arbitrarily-large list of rasters in a memory-efficient manner.
 
@@ -1421,8 +1424,10 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
                 * ``'NCC'`` representing no change in carbon
                 * ``'accum'`` representing a state of accumulation
                 * ``'low-impact-disturb'`` indicating a low-impact disturbance
-                * ``'medium-impact-disturb'`` indicating a medium-impact disturbance
-                * ``'high-impact-disturb'`` indicating a high-impact disturbance
+                * ``'medium-impact-disturb'`` indicating a
+                    medium-impact disturbance
+                * ``'high-impact-disturb'`` indicating a
+                    high-impact disturbance
                 * ``''`` (blank), which is equivalent to no carbon change.o
         biophysical_dict (dict): A ``dict`` mapping of integer landcover codes
             to biophysical values for disturbance and accumulation values for
