@@ -126,7 +126,7 @@ export default class LogTab extends React.Component {
           <Button
             className="float-right float-bottom"
             variant="outline-dark"
-            onClick={this.props.killInvestProcess}
+            onClick={this.props.terminateInvestProcess}
           >
             Cancel Run
           </Button>

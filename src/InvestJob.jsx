@@ -83,13 +83,14 @@ export default class InvestJob extends React.Component {
       logfile: null, // path to the invest logfile associated with invest job
       logStdErr: null, // stderr data from the invest subprocess
       jobStatus: null, // 'running', 'error', 'success', 'canceled'
-      subprocessPID: null,
     };
 
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
-    this.killInvestProcess = this.killInvestProcess.bind(this);
+    this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
+
+    this.investRun = undefined;
   }
 
   async componentDidMount() {
@@ -189,33 +190,36 @@ export default class InvestJob extends React.Component {
       '--headless',
       `-d ${datastackPath}`,
     ];
-    let investRun;
+    // let investRun;
     if (process.platform !== 'foo') {
-      investRun = spawn(path.basename(investExe), cmdArgs, {
+      this.investRun = spawn(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
         shell: true, // without shell, IOError when datastack.py loads json
         detached: true, // we want invest to terminate when this shell terminates
       });
+      this.investRun.terminate = () => {
+        if (this.state.jobStatus === 'running') {
+          process.kill(-this.investRun.pid, 'SIGTERM');
+        }
+      };
     } else {
-      investRun = execFile(path.basename(investExe), cmdArgs, {
+      this.investRun = execFile(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
       });
     }
 
     // There's no general way to know that a spawned process started,
     // so this logic when listening for stdout seems like the way.
-    investRun.stdout.on('data', async () => {
+    this.investRun.stdout.on('data', async () => {
       if (!job.logfile) {
         job.logfile = await findMostRecentLogfile(job.workspace.directory);
         // TODO: handle case when job.logfile is still undefined?
         // Could be if some stdout is emitted before a logfile exists.
         job.status = 'running';
-        console.log(investRun.pid);
         this.setState(
           {
             logfile: job.logfile,
             jobStatus: job.status,
-            subprocessPID: investRun.pid,
           }, () => {
             this.switchTabs('log');
             saveJob(job);
@@ -230,7 +234,7 @@ export default class InvestJob extends React.Component {
     // invest CLI or even the shell, rather than the invest model,
     // in which case it's useful to logger.debug too.
     let stderr = Object.assign('', this.state.logStdErr);
-    investRun.stderr.on('data', (data) => {
+    this.investRun.stderr.on('data', (data) => {
       stderr += `${data}`;
       this.setState({
         logStdErr: stderr,
@@ -239,12 +243,11 @@ export default class InvestJob extends React.Component {
 
     // Set some state when the invest process exits and update the app's
     // persistent database by calling saveJob.
-    investRun.on('exit', (code) => {
+    this.investRun.on('exit', (code) => {
       // TODO: there are non-zero exit cases that should be handled
       // differently from one-another, but right now they are all exit code 1.
       // E.g. this state update is designed with a model crash in mind,
       // not a fail to launch
-      console.log(code);
       if (code === 0) {
         job.status = 'success';
       } else if (code === 1) {
@@ -256,7 +259,6 @@ export default class InvestJob extends React.Component {
       }
       this.setState({
         jobStatus: job.status,
-        subprocessPID: undefined,
       }, () => {
         saveJob(job);
         cleanupDir(tempDir);
@@ -264,21 +266,8 @@ export default class InvestJob extends React.Component {
     });
   }
 
-  killInvestProcess() {
-    const { subprocessPID } = this.state;
-    if (subprocessPID) {
-      console.log(subprocessPID);
-      if (process.platform !== 'foo') {
-        // on unix-like systems invest is launched inside a shell
-        // and the pid here is for the shell process.
-        // the '-' indicates the whole process group gets terminated.
-        // Apparently, that doesnt' work on windows.
-        // https://github.com/nodejs/node/issues/7281#issuecomment-225494401
-        process.kill(-subprocessPID, 'SIGTERM');
-      } else {
-        process.kill(subprocessPID, 'SIGTERM');
-      }
-    }
+  terminateInvestProcess() {
+    this.investRun.terminate();
   }
 
   /** Change the tab that is currently visible.
@@ -366,7 +355,7 @@ export default class InvestJob extends React.Component {
                   jobStatus={jobStatus}
                   logfile={logfile}
                   logStdErr={logStdErr}
-                  killInvestProcess={this.killInvestProcess}
+                  terminateInvestProcess={this.terminateInvestProcess}
                 />
               </TabPane>
               <TabPane eventKey="resources" title="Resources">
