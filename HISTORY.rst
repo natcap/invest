@@ -43,11 +43,14 @@ Unreleased Changes (3.9)
       ``projection_wkt``.
   * Fixed bug that was causing a TypeError when certain input rasters had an
     undefined nodata value. Undefined nodata values should now work everywhere.
+  * Include logging in python script generated from "Save to python script..."
+    in the "Development" menu. Now logging messages from the model execution
+    will show up when you run the script.
 * Coastal Vulnerability
   * 'shore_points_missing_geomorphology.gpkg' output file name now includes 
     the suffix if any, and its one layer now is renamed from 
     'missing_geomorphology' to be the same as the file name (including suffix).
-* DelineateIt
+* Delineateit
   * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
     'verified_geometries' to be the same as the file name (including suffix).
    * The layer in the 'snapped_outlets.gpkg' output is renamed from
@@ -55,7 +58,7 @@ Unreleased Changes (3.9)
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under 
-      required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``. 
+      required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``.
     * Threat and Sensitivity column names are now case-insensitive.
     * Sensitivity threat columns now match threat names from Threat Table 
       exactly, without the need for "L_". "L_" prefix is deprecated.
@@ -76,12 +79,21 @@ Unreleased Changes (3.9)
     "333" leading to high export spikes in some pixels.
 
 ..
+..
 Unreleased Changes
+------------------
+* Hydropower
+    * Fixed bug that prevented validation from ever passing for this model.
+      Validation will allow extra keys in addition to those in the ARGS_SPEC.
+* Urban Flood Mitigation
+    * Fixed incorrect calculation of total quickflow volume.
+
+3.8.8 (2020-09-04)
 ------------------
 * Coastal Vulnerability
     * Improved handling of invalid AOI geometries to avoid crashing and instead
       fix the geometry when possible and skip it otherwise.
-    * Added validation check that shows a warning if the SLR vector is not 
+    * Added validation check that shows a warning if the SLR vector is not
       a point or multipoint geometry.
 * Urban Cooling
     * Energy units are now (correctly) expressed in kWh.  They were previously
@@ -101,7 +113,7 @@ Unreleased Changes
 * Datastack
     * Saved datastack archives now use helpful identifying names for spatial input folders
 * Validation
-    * Fixed bug that caused fields activated by a checkbox to make validation fail, 
+    * Fixed bug that caused fields activated by a checkbox to make validation fail,
       even when the checkbox was unchecked.
 * General
     * Input table column headers are now insensitive to leading/trailing whitespace in
@@ -112,6 +124,9 @@ Unreleased Changes
 * Recreation
     * Validate values in the type column of predictor tables early in execution. Raise
       a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
+* Validation
+    * Set a 5-second timeout on validation functions that access a file. This will raise
+      a warning and prevent validation from slowing down the UI too much.
 
 3.8.7 (2020-07-17)
 ------------------

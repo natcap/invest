@@ -306,8 +306,7 @@ def execute(args):
     flood_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
-            [(float(args['rainfall_depth']), 'raw'),
-             (q_pi_raster_path, 1), (q_pi_nodata, 'raw'),
+            [(q_pi_raster_path, 1), (q_pi_nodata, 'raw'),
              (pixel_area, 'raw'), (flood_vol_nodata, 'raw')],
             _flood_vol_op, flood_vol_raster_path, gdal.GDT_Float32,
             flood_vol_nodata),
@@ -612,7 +611,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
 
 
 def _flood_vol_op(
-        rainfall_depth, q_pi_array, q_pi_nodata, pixel_area, target_nodata):
+        q_pi_array, q_pi_nodata, pixel_area, target_nodata):
     """Calculate vol of flood water.
 
     Parmeters:
@@ -629,9 +628,9 @@ def _flood_vol_op(
     result = numpy.empty(q_pi_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
     valid_mask = q_pi_array != q_pi_nodata
-    # 0.001 converts mm (rainfall depth) to m (pixel area units)
+    # 0.001 converts mm (quickflow) to m (pixel area units)
     result[valid_mask] = (
-        q_pi_array[valid_mask] * rainfall_depth * pixel_area * 0.001)
+        q_pi_array[valid_mask] * pixel_area * 0.001)
     return result
 
 
