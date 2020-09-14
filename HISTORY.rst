@@ -69,11 +69,15 @@ Unreleased Changes (3.9)
     333^2 m^2. In previous versions the LS factor was erroniously capped to
     "333" leading to high export spikes in some pixels.
 
-
+..
+..
 Unreleased Changes
 ------------------
-* Fixed incorrect calculation of total quickflow volume in Urban Flood
-  Mitigation.
+* Hydropower
+    * Fixed bug that prevented validation from ever passing for this model.
+      Validation will allow extra keys in addition to those in the ARGS_SPEC.
+* Urban Flood Mitigation
+    * Fixed incorrect calculation of total quickflow volume.
 
 3.8.8 (2020-09-04)
 ------------------
