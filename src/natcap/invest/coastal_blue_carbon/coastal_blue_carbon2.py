@@ -317,7 +317,7 @@ def execute(args):
             annual_price = float(args['price'])
 
             try:
-                max_year = max(transition_years).union(set([analysis_year]))
+                max_year = max(transition_years.union(set([analysis_year])))
             except ValueError:
                 # When transition_years is an empty sequence.
                 max_year = analysis_year
@@ -1714,8 +1714,12 @@ def validate(args, limit_to=None):
         if ("analysis_year" not in invalid_keys
                 and "analysis_year" in sufficient_keys):
             if max(set(transitions.keys())) > int(args['analysis_year']):
+                transition_years = ','.join(
+                    [str(year) for year in sorted(transitions.keys())])
                 validation_warnings.append(
-                    (['transitions_csv'], ("Transition years must be <= the "
-                                           "analysis year")))
+                    (['analysis_year'], (
+                        f"Transition years ({transition_years}) must "
+                        "all be <= the analysis year "
+                        f"({args['analysis_year']})")))
 
     return validation_warnings

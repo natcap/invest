@@ -1536,5 +1536,5 @@ class TestCBC2(unittest.TestCase):
             f"Transition years must predate the baseline",
             validation_warnings[1][1])
         self.assertIn(
-            f"Transition years must be <= the analysis year",
+            f"Transition years (1997) must all be <= the analysis year (1996)",
             validation_warnings[2][1])
