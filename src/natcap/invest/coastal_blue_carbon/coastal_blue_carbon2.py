@@ -185,15 +185,14 @@ ARGS_SPEC = {
             "name": "Interest Rate (%)",
             "type": "number",
             "required": "do_economic_analysis and (not use_price_table)",
-            "about": "Annual change in the price per unit of carbon",
+            "about": (
+                "Annual change in the price per unit of carbon. A value of "
+                "5 would represent a 5% inflation rate."),
         },
         "price_table_path": {
             "name": "Price Table",
             "type": "csv",
             "required": "use_price_table",
-            "validation_options": {
-                "required_fields": ["year", "price"],
-            },
             "about": (
                 "Can be used in place of price and interest rate "
                 "inputs.  The provided CSV table contains the price "
@@ -207,7 +206,8 @@ ARGS_SPEC = {
             "required": "do_economic_analysis",
             "about": (
                 "The discount rate on future valuations of "
-                "sequestered carbon, compounded yearly."),
+                "sequestered carbon, compounded yearly.  A "
+                "value of 5 would represent a 5% discount."),
         },
     }
 }
