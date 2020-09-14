@@ -6,14 +6,14 @@ import itertools
 import glob
 from PyInstaller.compat import is_win, is_darwin, is_linux
 
-conda_env = os.environ['CONDA_PREFIX']
+if not is_win:
+    # Windows builds on Actions don't use conda
+    conda_env = os.environ['CONDA_PREFIX']
 workbench_dir = os.getcwd()
 invest_dir = os.path.join(workbench_dir, 'invest')
 block_cipher = None
 invest_exename = 'invest'
 server_exename = 'server'
-# mac_conda_env = '/usr/local/miniconda/envs/invest-env'
-# ubuntu_conda_env = '/usr/share/miniconda/envs/invest-env'
 
 kwargs = {
     'hookspath': [os.path.join(invest_dir, 'exe', 'hooks')],
