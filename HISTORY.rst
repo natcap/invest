@@ -69,17 +69,18 @@ Unreleased Changes (3.9)
     333^2 m^2. In previous versions the LS factor was erroniously capped to
     "333" leading to high export spikes in some pixels.
 
-..
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* Fixed incorrect calculation of total quickflow volume in Urban Flood
+  Mitigation.
 
 3.8.8 (2020-09-04)
 ------------------
 * Coastal Vulnerability
     * Improved handling of invalid AOI geometries to avoid crashing and instead
       fix the geometry when possible and skip it otherwise.
-    * Added validation check that shows a warning if the SLR vector is not 
+    * Added validation check that shows a warning if the SLR vector is not
       a point or multipoint geometry.
 * Urban Cooling
     * Energy units are now (correctly) expressed in kWh.  They were previously
@@ -99,7 +100,7 @@ Unreleased Changes (3.9)
 * Datastack
     * Saved datastack archives now use helpful identifying names for spatial input folders
 * Validation
-    * Fixed bug that caused fields activated by a checkbox to make validation fail, 
+    * Fixed bug that caused fields activated by a checkbox to make validation fail,
       even when the checkbox was unchecked.
 * General
     * Input table column headers are now insensitive to leading/trailing whitespace in
@@ -111,7 +112,7 @@ Unreleased Changes (3.9)
     * Validate values in the type column of predictor tables early in execution. Raise
       a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
 * Validation
-    * Set a 5-second timeout on validation functions that access a file. This will raise 
+    * Set a 5-second timeout on validation functions that access a file. This will raise
       a warning and prevent validation from slowing down the UI too much.
 
 3.8.7 (2020-07-17)
