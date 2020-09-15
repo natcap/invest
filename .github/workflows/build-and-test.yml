@@ -135,6 +135,7 @@ jobs:
                     Write-Host $_
                     Write-Host $?
                     Write-Host $LASTEXITCODE
+                    Write-Host $error
                   }
 
 
