@@ -36,7 +36,7 @@ jobs:
       uses: goanpeca/setup-miniconda@v1.1.2
       if: matrix.os != 'windows-latest'
       with:
-        activate-environment: invest-env  # This is also hardcoded in Pyinstaller's invest.spec
+        activate-environment: invest-env
         auto-update-conda: true
         python-version: 3.7
         channels: conda-forge
@@ -92,8 +92,7 @@ jobs:
     - name: Install natcap.invest python package
       shell: bash -l {0}
       working-directory: ./invest
-      run: |
-          make install
+      run: make install
 
     - name: Freeze Python environment
       shell: bash -l {0}
@@ -103,8 +102,12 @@ jobs:
     - name: NPM Install
       run: npm install
 
-      # Also run all tests on the build dir code?
+    - name: Install sample data for binary tests
+      shell: bash -l {0}
+      working-directory: ./invest
+      run: make fetch
 
+      # Also run all tests on the build dir code?
     - name: Run tests that require binaries
       shell: bash -l {0}
       run: npm run test-binaries
