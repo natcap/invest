@@ -362,9 +362,9 @@ signcode_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
-	-$(BASHLIKE_SHELL_COMMAND) "$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)"
-	-$(GSUTIL) -m rsync -r '$(DIST_DIR)/data' '$(DIST_URL_BASE)/data'
-	-$(GSUTIL) -m rsync -r '$(DIST_DIR)/userguide' '$(DIST_URL_BASE)/userguide'
+	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
+	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
 	@echo "Applicaiton binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 
