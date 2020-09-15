@@ -370,7 +370,7 @@ deploy:
 
 deploy_windows:
 	@echo "deploy_windows"
-	-$(BASHLIKE_SHELL_COMMAND) "$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)"
+	-"$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)"
 	@echo "deploy_windows 1"
 	-"$(GSUTIL)" -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	-"$(GSUTIL)" -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
