@@ -116,6 +116,14 @@ jobs:
               with:
                   version: '281.0.0'
                   service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+              shell: bash -l {0}
+              run: |
+                  # Specify which python version we want to use (it's the one
+                  # we're using in actions/setup-miniconda)
+                  export GSUTIL_PATH=$(which gsutil)
+                  export CLOUDSDK_GSUTIL_PYTHON=$(which python)
+
+                  make -d GSUTIL="${GSUTIL_PATH}" deploy
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
