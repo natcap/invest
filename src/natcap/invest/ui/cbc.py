@@ -7,6 +7,26 @@ from natcap.invest.coastal_blue_carbon import coastal_blue_carbon2
 from natcap.invest.coastal_blue_carbon import preprocessor
 
 
+def _ui_keys(args_key):
+    """Helper function to return kwargs for most model inputs.
+
+    Args:
+        args_key: The args key of the input from which a kwargs
+            dict is being built.
+
+    Returns:
+        A dict of ``kwargs`` to explode to an ``inputs.GriddedInput``
+        object at creation time.
+    """
+    model_spec = coastal_blue_carbon2.ARGS_SPEC['args']
+    return {
+        'args_key': args_key,
+        'helptext': model_spec[args_key]['about'],
+        'label': model_spec[args_key]['name'],
+        'validator': self.validator,
+    }
+
+
 class CoastalBlueCarbonPreprocessor(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
@@ -16,15 +36,16 @@ class CoastalBlueCarbonPreprocessor(model.InVESTModel):
             validator=preprocessor.validate,
             localdoc='coastal_blue_carbon.html')
 
-        self.lulc_lookup_uri = inputs.File(
-            args_key='lulc_lookup_uri',
+        self.lulc_lookup_table_path = inputs.File(
+            args_key='lulc_lookup_table_path',
             helptext=(
                 "A CSV table used to map lulc classes to their values "
                 "in a raster, as well as to indicate whether or not "
                 "the lulc class is a coastal blue carbon habitat."),
             label='LULC Lookup Table (CSV)',
             validator=self.validator)
-        self.add_input(self.lulc_lookup_uri)
+        self.add_input(self.lulc_lookup_table_path)
+
         self.lulc_snapshot_list = inputs.Multi(
             args_key='lulc_snapshot_list',
             callable_=functools.partial(inputs.File, label="Input"),
@@ -36,7 +57,7 @@ class CoastalBlueCarbonPreprocessor(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.lulc_lookup_uri.args_key: self.lulc_lookup_uri.value(),
+            self.lulc_lookup_table_path.args_key: self.lulc_lookup_table_path.value(),
             self.lulc_snapshot_list.args_key: self.lulc_snapshot_list.value(),
         }
         return args
@@ -50,25 +71,6 @@ class CoastalBlueCarbon(model.InVESTModel):
             target=coastal_blue_carbon2.execute,
             validator=coastal_blue_carbon2.validate,
             localdoc='coastal_blue_carbon.html')
-
-        def _ui_keys(args_key):
-            """Helper function to return kwargs for most model inputs.
-
-            Args:
-                args_key: The args key of the input from which a kwargs
-                    dict is being built.
-
-            Returns:
-                A dict of ``kwargs`` to explode to an ``inputs.GriddedInput``
-                object at creation time.
-            """
-            model_spec = coastal_blue_carbon2.ARGS_SPEC['args']
-            return {
-                'args_key': args_key,
-                'helptext': model_spec[args_key]['about'],
-                'label': model_spec[args_key]['name'],
-                'validator': self.validator,
-            }
 
         self.baseline_lulc_raster_path = inputs.File(
             **_ui_keys('baseline_lulc_path'))

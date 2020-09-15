@@ -9,11 +9,11 @@ from functools import reduce
 
 from osgeo import gdal
 import numpy
-import pandas
 import pygeoprocessing
 
 from .. import utils
 from .. import validation
+from . import coastal_blue_carbon2
 
 
 NODATA_INT = -9999  # typical integer nodata value used in rasters
@@ -40,23 +40,24 @@ ARGS_SPEC = {
                                     "is_coastal_blue_carbon_habitat"]
             },
         },
-        "lulc_snapshot_list": {
-            "name": "Land Use/Land Cover Rasters",
-            "type": "other",
-            "required": True,
+        "transitions_csv": {
+            "validation_options": {
+                "required_fields": ["transition_year", "raster_path"],
+            },
+            "type": "csv",
+            "required": False,
             "about": (
-                "One or more GDAL-supported land use/land cover rasters "
-                "representing the land/seascape at particular points in time. "
-                "The values for this rater are unique integers representing "
-                "each LULC class and must have matching values in the "
-                "``code`` column of the LULC lookup table.  The Land Use/ "
-                "Land Cover rasters must be entered into the user "
-                "interface in chronological order. All pixel stacks across "
-                "all timesteps must have valid pixels in order for "
-                "calculations to take place."),
+                "A CSV table where each row represents the year and path "
+                "to a raster file on disk representing the landcover raster "
+                "representing the state of the landscape in that year. "
+                "Landcover codes match those in the biophysical table and in "
+                "the landcover transitions table."
+            ),
+            "name": "Transitions Table",
         },
     }
 }
+
 
 _OUTPUT = {
     'aligned_lulc_template': 'aligned_lulc_%s.tif',
@@ -79,16 +80,11 @@ def execute(args):
         workspace_dir (string): directory path to workspace
         results_suffix (string): append to outputs directory name if provided
         lulc_lookup_uri (string): filepath of lulc lookup table
-        lulc_snapshot_list (list): a list of filepaths to lulc rasters
+        landcover_csv_path (string): filepath to a CSV containing the
+            year and filepath to a raster on disk.
 
-    Example Args::
-
-        args = {
-            'workspace_dir': 'path/to/workspace_dir/',
-            'results_suffix': '',
-            'lulc_lookup_uri': 'path/to/lookup.csv',
-            'lulc_snapshot_list': ['path/to/raster1', 'path/to/raster2', ...]
-        }
+    Returns:
+        ``None``
     """
     LOGGER.info('Starting Coastal Blue Carbon Preprocessor run...')
 
@@ -151,7 +147,7 @@ def _get_inputs(args):
         args, 'results_suffix')
 
     lulc_lookup_dict = utils.build_lookup_from_csv(
-        args['lulc_lookup_uri'], 'code')
+        args['lulc_lookup_table_path'], 'code')
 
     for code in lulc_lookup_dict.keys():
         sub_dict = lulc_lookup_dict[code]
