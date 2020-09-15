@@ -164,21 +164,21 @@ def identify_pour_points(flow_direction_raster_path, target_vector_path):
 
 
 
-    # opt_1_start = time.perf_counter()
-    # option_1(padded_flow_direction_array)
-    # opt_1_end = time.perf_counter()
+    opt_1_start = time.perf_counter()
+    option_1(padded_flow_direction_array)
+    opt_1_end = time.perf_counter()
 
-    # opt_2_start = time.perf_counter()
-    # option_2(flow_direction_array)
-    # opt_2_end = time.perf_counter()
+    opt_2_start = time.perf_counter()
+    option_2(flow_direction_array)
+    opt_2_end = time.perf_counter()
 
     opt_3_start = time.perf_counter()
     out_array = option_3(flow_direction_array)
     opt_3_end = time.perf_counter()
 
-    # print('Option 1:', opt_1_end - opt_1_start)
-    # print('Option 2:', opt_2_end - opt_2_start)
-    # print('Option 3:', opt_3_end - opt_3_start)
+    print('Option 1:', opt_1_end - opt_1_start)
+    print('Option 2:', opt_2_end - opt_2_start)
+    print('Option 3:', opt_3_end - opt_3_start)
 
     print(out_array)
     print(numpy.min(out_array), numpy.max(out_array))
