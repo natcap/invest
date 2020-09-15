@@ -48,9 +48,6 @@ jobs:
                 include:
                     - python-version: 3.7
                       numpy: "numpy~=1.15"
-                exclude:
-                    - os: macos-latest
-                      python-architecture: x64
         steps:
             - uses: actions/checkout@v2
               with:
@@ -77,11 +74,11 @@ jobs:
             - name: Set python
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  activate-environment: test-env
+                  activate-environment: ${{ matrix.os }}-test-env
                   auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
-            
+
             - name: Install build dependencies
               shell: bash -l {0}
               run: |
@@ -133,6 +130,7 @@ jobs:
                   $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
 
                   make -d GSUTIL=$env:GSUTIL_PATH deploy
+
 
     test-source-distribution:
         name: "Check sdist"
