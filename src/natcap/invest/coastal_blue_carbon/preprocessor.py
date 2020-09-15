@@ -27,7 +27,7 @@ ARGS_SPEC = {
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
-        "lulc_lookup_uri": {
+        "": {
             "name": "LULC Lookup Table",
             "type": "csv",
             "about": (
@@ -40,9 +40,9 @@ ARGS_SPEC = {
                                     "is_coastal_blue_carbon_habitat"]
             },
         },
-        "transitions_csv": {
+        "landcover_snapshot_csv": {
             "validation_options": {
-                "required_fields": ["transition_year", "raster_path"],
+                "required_fields": ["snapshot_year", "raster_path"],
             },
             "type": "csv",
             "required": False,
@@ -50,8 +50,7 @@ ARGS_SPEC = {
                 "A CSV table where each row represents the year and path "
                 "to a raster file on disk representing the landcover raster "
                 "representing the state of the landscape in that year. "
-                "Landcover codes match those in the biophysical table and in "
-                "the landcover transitions table."
+                "Landcover codes match those in the LULC lookup table."
             ),
             "name": "Transitions Table",
         },
