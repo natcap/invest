@@ -41,32 +41,32 @@ Unreleased Changes (3.9)
     * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
     * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to
       ``projection_wkt``.
-  * Improve consistency and context for error messages when an input raster
-    has values not found in a required corresponding table input column.
+  * Improve consistency and context for error messages related to raster
+    reclassification across models by using ``utils.reclassify_raster``.
   * Fixed bug that was causing a TypeError when certain input rasters had an
     undefined nodata value. Undefined nodata values should now work everywhere.
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
-    * Threat files are now indicated in the Threat Table csv input under 
-      required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``. 
+    * Threat files are now indicated in the Threat Table csv input under
+      required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``.
     * Threat and Sensitivity column names are now case-insensitive.
-    * Sensitivity threat columns now match threat names from Threat Table 
+    * Sensitivity threat columns now match threat names from Threat Table
       exactly, without the need for "L_". "L_" prefix is deprecated.
     * Threat raster input folder has been removed.
     * Validation enhancements that check whether threat raster paths are valid.
     * HQ update to User's Guide.
-    * Changing sample data to reflect Threat Table csv input changes and 
+    * Changing sample data to reflect Threat Table csv input changes and
       bumping revision.
     * More comprehensive testing for Habitat Quality and validation.
-    * Checking if Threat raster values are between 0 and 1 range, raising 
+    * Checking if Threat raster values are between 0 and 1 range, raising
       ValueError if not. No longer snapping values less than 0 to 0 and greater
       than 1 to 1.
-    * Fixing bug that was setting Threat raster values to 1 even if they were 
+    * Fixing bug that was setting Threat raster values to 1 even if they were
       floats between 0 and 1.
-    * Updating how threats are decayed across distance. Before, nodata edges 
+    * Updating how threats are decayed across distance. Before, nodata edges
       were ignored causing values on the edges to maintain a higher threat
       value. Now, the decay does not ignore those nodata edges causing values
-      on the edges to decay more quickly. The area of study should have 
+      on the edges to decay more quickly. The area of study should have
       adequate boundaries to account for these edge effects.
 * SDR:
   * Fixing an issue where the LS factor should be capped to an upstream area of
@@ -97,7 +97,7 @@ Unreleased Changes
 * Datastack
     * Saved datastack archives now use helpful identifying names for spatial input folders
 * Validation
-    * Fixed bug that caused fields activated by a checkbox to make validation fail, 
+    * Fixed bug that caused fields activated by a checkbox to make validation fail,
       even when the checkbox was unchecked.
 * General
     * Input table column headers are now insensitive to leading/trailing whitespace in

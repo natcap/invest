@@ -837,16 +837,20 @@ def reclassify_raster(
         ValueError if ``values_required`` is ``True`` and a pixel value from
         ``raster_path_band`` is not a key in ``value_map``.
     """
+    # Error early if 'error_details' keys are invalid
+    raster_name = error_details['raster_name']
+    column_name = error_details['column_name']
+    table_name = error_details['table_name']
+
     try:
         pygeoprocessing.reclassify_raster(
             raster_path_band, value_map, target_raster_path, target_datatype,
             target_nodata, values_required=True)
     except pygeoprocessing.ReclassificationMissingValuesError as err:
         error_message = (
-                f"Values in the {error_details['raster_name']} raster were"
-                " found that are not represented under the corresponding"
-                f" '{error_details['column_name']}' column of the"
-                f" {error_details['table_name']} table. The missing values"
-                f" found in the {error_details['raster_name']} raster but"
-                f" not the table are: {err.missing_values}.")
+                f"Values in the {raster_name} raster were found that are not"
+                f" represented under the '{column_name}' column of the"
+                f" {table_name} table. The missing values found in the"
+                f" {raster_name} raster but not the table are:"
+                f" {err.missing_values}.")
         raise ValueError(error_message)
