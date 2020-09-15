@@ -8,24 +8,16 @@ workflows of an InVEST user.
 
 ## To develop and launch this Application
 
-`npm install` from repo directory  
+* `npm install`  
+* clone natcap.invest and checkout a recent revision (e.g. `main`)  
+* setup a conda* environment with deps for `natcap.invest Flask PyInstaller`  
+* build invest binaries  
+	`python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec`  
+* `npm start`  
 
-`npm run prebuilt-invest "windows-latest"` (or "macos-latest" "ubuntu-latest")
-`unzip ./build/binaries.zip -d ./build`
-
-Create `.env` in the project root by copying `.env-example` and modifying the
-invest and server executeable paths as needed. See `.env-example` for details.
-
-`npm start`  
-
-There's an intermittent issue with a `fetch` call. If you don't see a long list 
-of green invest model buttons, try refreshing.
-
+(* invest-flask.spec script assumes a conda environment)
 
 ## To build this application
-
-`npm run prebuilt-invest "windows-latest"` (or "macos-latest" "ubuntu-latest")
-`unzip ./build/binaries.zip -d ./build`
 
 `npm run build`  -- calls babel to transpile ES6 and jsx code to commonjs
 
@@ -39,10 +31,7 @@ of green invest model buttons, try refreshing.
 To run these or other command-line utils of locally installed packages outside the context of the `package.json scripts`, use `npx` (e.g. `npx eslint ...`) as a shortcut to the executeable. 
 
 ### To run a single test file:
-`npx jest --coverage=false app.test.js`  (note this is not the path to the test file, rather a pattern for matching)  
+`npx jest --coverage=false --verbose app.test.js`  
 
 To run snippets of code outside the electron runtime, but with the same ECMAscript features and babel configurations, use `node -r @babel/register script.js`.  
 
-
-### Developing Visualization components
-Visualization components (i.e. folders in `src/components/VizTab/Visualization`) should be named with the same model name used in the `invest run <model>` command so that these components can be imported dynamically and lazily. These are the same names returned by `invest list`.
