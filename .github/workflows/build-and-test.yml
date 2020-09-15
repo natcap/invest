@@ -129,7 +129,13 @@ jobs:
                   $env:CLOUDSDK_PYTHON = (Get-Command python).path
                   $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
 
-                  make -d GSUTIL=$env:GSUTIL_PATH deploy
+                  try{& "make" -d GSUTIL=$env:GSUTIL_PATH deploy}
+                  catch{
+                    Write-Host "ERROR"
+                    Write-Host $_
+                    Write-Host $?
+                    Write-Host $LASTEXITCODE
+                  }
 
 
     test-source-distribution:
