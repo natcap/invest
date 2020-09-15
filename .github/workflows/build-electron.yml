@@ -102,10 +102,10 @@ jobs:
     - name: NPM Install
       run: npm install
 
-    - name: Install sample data for binary tests
-      shell: bash -l {0}
-      working-directory: ./invest
-      run: make fetch
+    # - name: Install sample data for binary tests
+    #   shell: bash -l {0}
+    #   working-directory: ./invest
+    #   run: make fetch
 
       # Also run all tests on the build dir code?
     - name: Run tests that require binaries

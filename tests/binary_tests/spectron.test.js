@@ -1,36 +1,41 @@
 import { Application } from 'spectron';
 import glob from 'glob';
 
-const appPath = glob.sync('dist/invest-desktop_*')
+jest.setTimeout(60000)
+
+// const appPath = glob.sync('dist/invest-desktop_*');
+const appPath = glob.sync('/home/dmf/Downloads/invest-desktop_*');
+console.log(appPath)
+let app;
 
 beforeAll(() => {
-  const app = new Application({
+  app = new Application({
     path: appPath[0],
     // args: ["src/specmain.js"],
     // args: ["src/main.js"],
     // webdriverOptions: {execArgv: "-r @babel/register"},
-    chromeDriverArgs: ['--disable-dev-shm-usage', '--headless'],
+    // chromeDriverArgs: ['--disable-dev-shm-usage', '--headless'],
     chromeDriverLogPath: 'chromeDriver.log'
   });
 });
 
 
-// jest.setTimeout(10000)
 
-beforeEach(() => {
-  return app.start()
-})
+// beforeEach(async () => {
+//   return await app.start()
+// })
 
-afterAll(() => {
-  if (app.isRunning()) {
-    return app.stop()
-  }
-})
+// afterAll(async () => {
+//   if (app.isRunning()) {
+//     return await app.stop()
+//   }
+// })
 
-// jest shows a failed test suite if there are no tests,
-// so a placeholder until we revisit the rest of tests.
-test('placeholder test', () => {
-	expect(true).toBeTruthy()
+test('somthing', async () => {
+  await app.start();
+  expect(app.isRunning()).toBeTruthy();
+  await app.stop();
+	// expect(app.browserWindow.isVisible()).toBeTruthy()
 })
 
 
