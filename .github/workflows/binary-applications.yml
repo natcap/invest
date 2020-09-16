@@ -110,7 +110,7 @@ jobs:
                 # figure out the path to signtool.exe (it keeps changing with SDK updates)
                 SIGNTOOL_PATH=$(find 'C:\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1) 
                 echo "$SIGNTOOL_PATH"
-                INSTALLER_BINARY=$(find $(cd ..; pwd) -type f -name 'dist/*.exe' | head -n 1)
+                INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name '*.exe' | head -n 1)
                 echo "$INSTALLER_BINARY"
                 GSUTIL_PATH="gstuil"
 
