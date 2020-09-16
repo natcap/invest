@@ -45,6 +45,9 @@ Unreleased Changes (3.9)
     reclassification across models by using ``utils.reclassify_raster``.
   * Fixed bug that was causing a TypeError when certain input rasters had an
     undefined nodata value. Undefined nodata values should now work everywhere.
+  * Include logging in python script generated from "Save to python script..."
+    in the "Development" menu. Now logging messages from the model execution
+    will show up when you run the script.
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under
@@ -74,11 +77,22 @@ Unreleased Changes (3.9)
     "333" leading to high export spikes in some pixels.
 
 ..
+..
 Unreleased Changes
+------------------
+* Hydropower
+    * Fixed bug that prevented validation from ever passing for this model.
+      Validation will allow extra keys in addition to those in the ARGS_SPEC.
+* Urban Flood Mitigation
+    * Fixed incorrect calculation of total quickflow volume.
+
+3.8.8 (2020-09-04)
 ------------------
 * Coastal Vulnerability
     * Improved handling of invalid AOI geometries to avoid crashing and instead
       fix the geometry when possible and skip it otherwise.
+    * Added validation check that shows a warning if the SLR vector is not
+      a point or multipoint geometry.
 * Urban Cooling
     * Energy units are now (correctly) expressed in kWh.  They were previously
       (incorrectly) expressed in kW.
@@ -108,6 +122,9 @@ Unreleased Changes
 * Recreation
     * Validate values in the type column of predictor tables early in execution. Raise
       a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
+* Validation
+    * Set a 5-second timeout on validation functions that access a file. This will raise
+      a warning and prevent validation from slowing down the UI too much.
 
 3.8.7 (2020-07-17)
 ------------------

@@ -449,15 +449,19 @@ cpdef calculate_local_recharge(
     et0_m_nodata_list = []
     for et0_path in et0_path_list:
         et0_m_raster_list.append(_ManagedRaster(et0_path, 1, 0))
-        et0_m_nodata_list.append(
-            pygeoprocessing.get_raster_info(et0_path)['nodata'][0] or -1)
+        nodata = pygeoprocessing.get_raster_info(et0_path)['nodata'][0]
+        if nodata is None:
+            nodata = -1
+        et0_m_nodata_list.append(nodata)
 
     precip_m_raster_list = []
     precip_m_nodata_list = []
     for precip_m_path in precip_path_list:
         precip_m_raster_list.append(_ManagedRaster(precip_m_path, 1, 0))
-        precip_m_nodata_list.append(
-            pygeoprocessing.get_raster_info(precip_m_path)['nodata'][0] or -1)
+        nodata = pygeoprocessing.get_raster_info(precip_m_path)['nodata'][0]
+        if nodata is None:
+            nodata = -1
+        precip_m_nodata_list.append(nodata)
 
     qf_m_raster_list = []
     qf_m_nodata_list = []
