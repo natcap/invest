@@ -46,6 +46,15 @@ Unreleased Changes (3.9)
   * Include logging in python script generated from "Save to python script..."
     in the "Development" menu. Now logging messages from the model execution
     will show up when you run the script.
+* Coastal Vulnerability
+  * 'shore_points_missing_geomorphology.gpkg' output file name now includes 
+    the suffix if any, and its one layer now is renamed from 
+    'missing_geomorphology' to be the same as the file name (including suffix).
+* Delineateit
+  * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
+    'verified_geometries' to be the same as the file name (including suffix).
+   * The layer in the 'snapped_outlets.gpkg' output is renamed from
+    'snapped' to be the same as the file name (including suffix).    
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under 

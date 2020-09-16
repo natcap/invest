@@ -395,8 +395,9 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
     gpkg_driver = gdal.GetDriverByName('GPKG')
     target_vector = gpkg_driver.Create(target_vector_path, 0, 0, 0,
                                        gdal.GDT_Unknown)
+    layer_name = os.path.splitext(os.path.basename(target_vector_path))[0]
     target_layer = target_vector.CreateLayer(
-        'verified_geometries', dem_srs, ogr.wkbUnknown)  # Use source layer type?
+        layer_name, dem_srs, ogr.wkbUnknown)  # Use source layer type?
 
     outflow_vector = gdal.OpenEx(outlet_vector_path, gdal.OF_VECTOR)
     outflow_layer = outflow_vector.GetLayer()
@@ -509,8 +510,10 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
     driver = gdal.GetDriverByName('GPKG')
     snapped_vector = driver.Create(snapped_points_vector_path, 0, 0, 0,
                                    gdal.GDT_Unknown)
+    layer_name = os.path.splitext(
+        os.path.basename(snapped_points_vector_path))[0]
     snapped_layer = snapped_vector.CreateLayer(
-        'snapped', points_layer.GetSpatialRef(), points_layer.GetGeomType())
+        layer_name, points_layer.GetSpatialRef(), points_layer.GetGeomType())
     snapped_layer.CreateFields(points_layer.schema)
     snapped_layer_defn = snapped_layer.GetLayerDefn()
 

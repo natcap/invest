@@ -466,11 +466,11 @@ def _write_summary_vector(
     esri_driver = gdal.GetDriverByName('ESRI Shapefile')
     target_watershed_vector = esri_driver.Create(
         target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
-    layer_name = str(os.path.splitext(os.path.basename(
-        target_vector_path))[0])
+    layer_name = os.path.splitext(os.path.basename(
+        target_vector_path))[0]
     LOGGER.debug("creating layer %s", layer_name)
     target_watershed_layer = target_watershed_vector.CreateLayer(
-        str(layer_name), source_srs, source_geom_type)
+        layer_name, source_srs, source_geom_type)
 
     target_fields = ['rnf_rt_idx', 'rnf_rt_m3', 'flood_vol']
     if not damage_per_aoi_stats:
