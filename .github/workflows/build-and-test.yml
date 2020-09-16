@@ -127,32 +127,8 @@ jobs:
                   # we're using in actions/setup-miniconda)
                   export CLOUDSDK_PYTHON=$(which python)
                   export CLOUDSDK_GSUTIL_PYTHON=$(which python)
-                  echo "$CLOUDSDK_PYTHON"
-                  echo "$CLOUDSDK_GSUTIL_PYTHON"
 
-                  make -d GSUTIL="gsutil" deploy
-
-#            - name: Deploy artifacts to GCS
-#              # Secrets not available in PR so don't use GCP.
-#              if: github.event_name != 'pull_request'
-#              shell: powershell
-#              run: |
-#                  $env:GSUTIL_PATH = (Get-Command gsutil).path
-#
-#                  # Specify which python version we want to use (it's the one we're using
-#                  # in actions/setup-miniconda).
-#                  $env:CLOUDSDK_PYTHON = (Get-Command python).path
-#                  $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
-#
-#                  try{& "make" -d GSUTIL=$env:GSUTIL_PATH deploy}
-#                  catch{
-#                    Write-Host "ERROR"
-#                    Write-Host $_
-#                    Write-Host $?
-#                    Write-Host $LASTEXITCODE
-#                    Write-Host $error
-#                  }
-
+                  make GSUTIL="gsutil" deploy
 
     test-source-distribution:
         name: "Check sdist"
