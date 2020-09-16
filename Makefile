@@ -354,13 +354,14 @@ signcode:
 	rm $(BUILD_DIR)/$(KEY_FILE)
 	@echo "Installer was signed with osslsigncode"
 
-P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
+#P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
 #signcode_windows:
 #	$(BASHLIKE_SHELL_COMMAND) "$(GSUTIL) cp gs://stanford_cert/$(P12_FILE) $(BUILD_DIR)/$(P12_FILE)"
 #	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
 #	-powershell.exe "Remove-Item $(BUILD_DIR)/$(P12_FILE)"
 #	@echo "Installer was signed with signtool"
 
+P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
 signcode_windows:
 	$(GSUTIL) cp gs://stanford_cert/$(P12_FILE) $(BUILD_DIR)/$(P12_FILE)
 	$(SIGNTOOL) sign /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'
