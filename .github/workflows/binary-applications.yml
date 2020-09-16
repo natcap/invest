@@ -112,7 +112,7 @@ jobs:
                 echo "$SIGNTOOL_PATH"
                 INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name '*.exe' | head -n 1)
                 echo "$INSTALLER_BINARY"
-                GSUTIL_PATH="gstuil"
+                GSUTIL_PATH="gsutil"
 
                 # Specify which python version we want to use (it's the one we're using
                 # in actions/setup-python.
