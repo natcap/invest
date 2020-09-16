@@ -1,3 +1,4 @@
+import fs from 'fs';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -9,6 +10,10 @@ import Spinner from 'react-bootstrap/Spinner';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
+
+import { getLogger } from '../../logger';
+
+const logger = getLogger(__filename.split('/').slice(-2).join('/'));
 
 // these are bootstrap codes for colors
 // const STATUS_COLOR_MAP = {
@@ -35,12 +40,12 @@ export default class HomeTab extends React.PureComponent {
   }
 
   handleClick(event) {
-    const modelName = event.target.value;
-    this.props.investGetSpec(modelName);
+    const modelRunName = event.target.value;
+    this.props.openInvestModel(modelRunName);
   }
 
   render() {
-    const { investList, loadState, recentSessions } = this.props;
+    const { investList, recentJobs } = this.props;
     // A button in a table row for each model
     const investButtons = [];
     Object.keys(investList).forEach((model) => {
@@ -73,8 +78,8 @@ export default class HomeTab extends React.PureComponent {
         </Col>
         <Col md={7}>
           <RecentInvestJobs
-            loadState={loadState}
-            recentSessions={recentSessions}
+            openInvestModel={this.props.openInvestModel}
+            recentJobs={recentJobs}
           />
         </Col>
       </Row>
@@ -88,34 +93,54 @@ HomeTab.propTypes = {
       internal_name: PropTypes.string,
     }),
   ).isRequired,
-  investGetSpec: PropTypes.func.isRequired,
-  loadState: PropTypes.func.isRequired,
-  recentSessions: PropTypes.array,
+  openInvestModel: PropTypes.func.isRequired,
+  recentJobs: PropTypes.arrayOf(
+    PropTypes.array
+  ),
 };
 HomeTab.defaultProps = {
-  recentSessions: [],
+  recentJobs: [],
 };
 
 /**
  * Renders a button for each recent invest job.
  */
 class RecentInvestJobs extends React.PureComponent {
+  constructor(props) {
+    super(props);
+    this.handleClick = this.handleClick.bind(this);
+  }
+
+  handleClick(jobDataPath) {
+    const jobData = JSON.parse(
+      fs.readFileSync(jobDataPath, 'utf8')
+    );
+    this.props.openInvestModel(
+      jobData.modelRunName,
+      jobData.argsValues,
+      jobData.logfile,
+      jobData.status,
+    );
+  }
+
   render() {
     // Buttons to load each recently saved state
     const recentButtons = [];
-    const { recentSessions } = this.props;
-    recentSessions.forEach((session) => {
-      // These properties are required, if they don't exist,
-      // the session data was corrupted and should be skipped
-      let name;
-      let metadata;
+    const { recentJobs } = this.props;
+    recentJobs.forEach((job) => {
       let model;
       let workspaceDir;
+      let jobDataPath;
+      const [jobID, metadata] = job;
+      // The following properties are required. If they don't exist,
+      // the recent job's data was corrupted and should be skipped over.
+      if (jobID === undefined) { return; }
       try {
-        [name, metadata] = session;
         model = metadata.model;
         workspaceDir = metadata.workspace.directory;
+        jobDataPath = metadata.jobDataPath;
       } catch (error) {
+        logger.error(error);
         return;
       }
 
@@ -126,13 +151,13 @@ class RecentInvestJobs extends React.PureComponent {
 
       const headerStyle = {
         backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
-      }
+      };
       recentButtons.push(
         <Card
-          className="text-left session-card"
+          className="text-left recent-job-card"
           as="button"
-          key={name}
-          onClick={() => this.props.loadState(metadata.statefile)}
+          key={jobID}
+          onClick={() => this.handleClick(jobDataPath)}
         >
           <Card.Body>
             <Card.Header as="h4" style={headerStyle}>
@@ -166,21 +191,21 @@ class RecentInvestJobs extends React.PureComponent {
 
     return (
       <Container>
-        <label htmlFor="session-card-group">
-          <h4>Recent Sessions:</h4>
+        <label htmlFor="recent-job-card-group">
+          <h4>Recent InVEST Runs:</h4>
         </label>
         {recentButtons.length
           ? (
             <CardGroup
-              id="session-card-group"
-              className="session-card-group"
+              id="recent-job-card-group"
+              className="recent-job-card-group"
             >
               {recentButtons}
             </CardGroup>
           )
           : (
             <div>
-              No recent sessions yet.
+              No recent InVEST runs yet.
               <br />
               Try the <b>Load</b> button to load a sample data json file
             </div>
@@ -191,6 +216,5 @@ class RecentInvestJobs extends React.PureComponent {
 }
 
 RecentInvestJobs.propTypes = {
-  loadState: PropTypes.func.isRequired,
-  recentSessions: PropTypes.array.isRequired,
+  recentJobs: PropTypes.array.isRequired,
 };

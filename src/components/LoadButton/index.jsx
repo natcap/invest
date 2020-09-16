@@ -20,7 +20,7 @@ export default class LoadButton extends React.Component {
     const data = await remote.dialog.showOpenDialog();
     if (data.filePaths.length) {
       const datastack = await fetchDatastackFromFile(data.filePaths[0]);
-      this.props.investGetSpec(datastack.model_run_name, datastack.args);
+      this.props.openInvestModel(datastack.model_run_name, datastack.args);
     }
   }
 
@@ -38,5 +38,5 @@ export default class LoadButton extends React.Component {
 }
 
 LoadButton.propTypes = {
-  investGetSpec: PropTypes.func.isRequired,
+  openInvestModel: PropTypes.func.isRequired,
 };

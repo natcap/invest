@@ -7,23 +7,19 @@ import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
-export class SettingsModal extends React.Component {
-  /** Renders a model dialog with a form where global invest settings
-  * can be adjusted. Values displayed in this form always inherit from
-  * those global settings, which are stored in the parent component's state.
-  */
-
+/** Render a dialog with a form for configuring global invest settings */
+export default class SettingsModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       show: false,
       localSettings: {}
-    }
+    };
 
-    this.handleClose = this.handleClose.bind(this);
     this.handleShow = this.handleShow.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
   }
 
   componentDidUpdate(prevProps) {
@@ -142,10 +138,10 @@ SettingsModal.propTypes = {
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
   })
-}
+};
 
+/** Validate that n_wokers is an acceptable value for Taskgraph. */
 function validateNWorkers(value) {
-  /** Validate that n_wokers is an acceptable value for Taskgraph. */
-  const nInt = parseInt(value)
-  return Number.isInteger(nInt) && nInt >= -1
+  const nInt = parseInt(value);
+  return Number.isInteger(nInt) && nInt >= -1;
 }

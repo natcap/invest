@@ -8,18 +8,16 @@ import PropTypes from 'prop-types';
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
-import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
 
-import HomeTab from './components/HomeTab';
 import SetupTab from './components/SetupTab';
 import LogTab from './components/LogTab';
 import ResourcesTab from './components/ResourcesTab';
-import LoadButton from './components/LoadButton';
-import { SettingsModal } from './components/SettingsModal';
 import {
-  getSpec, fetchDatastackFromFile, writeParametersToFile
+  getSpec, writeParametersToFile
 } from './server_requests';
 import {
   findMostRecentLogfile, cleanupDir
@@ -37,9 +35,36 @@ const LOGLEVELMAP = {
   ERROR: '-v',
 };
 
-function changeSetupKey(int) {
-  // Used for generating a new unique `key` for SetupTab component.
-  return (int + 1);
+/** Get an invest model's ARGS_SPEC when a model button is clicked.
+ *
+ * Also get the model's UI spec if it exists.
+ *
+ * @param {string} modelName - as in a model name appearing in `invest list`
+ * @returns {object} destructures to:
+ *   { modelSpec, argsSpec, uiSpec }
+ */
+async function investGetSpec(modelName) {
+  const spec = await getSpec(modelName);
+  if (spec) {
+    const { args, ...modelSpec } = spec;
+    // A model's UI Spec is optional and may not exist
+    let uiSpec = {};
+    try {
+      uiSpec = JSON.parse(fs.readFileSync(
+        path.join(fileRegistry.INVEST_UI_DATA, `${spec.module}.json`)
+      ));
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        logger.warn(err);
+        logger.warn(`No UI spec exists for ${spec.module}`);
+      } else {
+        logger.error(err.stack);
+      }
+    }
+    return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
+  }
+  logger.error(`no spec found for ${modelName}`);
+  return undefined;
 }
 
 /** This component and it's children render all the visible parts of the app.
@@ -52,96 +77,35 @@ export default class InvestJob extends React.Component {
     super(props);
 
     this.state = {
-      setupKey: 0,
-      sessionID: null, // hash of modelName + workspace generated at model execution
-      modelName: '', // as appearing in `invest list`
-      modelSpec: {}, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
-      argsSpec: {}, // ARGS_SPEC.args, the immutable args stuff
-      argsInitDict: null,
-      workspace: { // only set values when execute starts the subprocess
-        directory: null,
-        suffix: null,
-      },
+      activeTab: 'setup',
+      modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
+      argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
       logfile: null, // path to the invest logfile associated with invest job
       logStdErr: null, // stderr data from the invest subprocess
-      sessionProgress: 'home', // 'home', 'setup', 'log' - used on loadState to decide which tab to activate
       jobStatus: null, // 'running', 'error', 'success'
-      activeTab: 'home', // controls which tab is currently visible
     };
 
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
-    this.investGetSpec = this.investGetSpec.bind(this);
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
-    this.saveState = this.saveState.bind(this);
-    this.loadState = this.loadState.bind(this);
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     // If these dirs already exist, this will err and pass
     fs.mkdir(fileRegistry.CACHE_DIR, (err) => {});
     fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
-  }
-
-  /** Save the state of this component (1) and the current InVEST job (2).
-   * 1. Save the state object of this component to a JSON file .
-   * 2. Append metadata of the invest job to a persistent database/file.
-   * This triggers automatically when the invest subprocess starts and again
-   * when it exits.
-   */
-  saveState() {
+    // logfile and jobStatus are undefined unless this is a pre-existing job.
+    const { modelRunName, logfile, jobStatus } = this.props;
     const {
-      sessionID,
-      modelName,
-      workspace,
-      jobStatus,
-    } = this.state;
-    const jsonContent = JSON.stringify(this.state, null, 2);
-    const filepath = path.join(fileRegistry.CACHE_DIR, `${sessionID}.json`);
-    fs.writeFile(filepath, jsonContent, 'utf8', (err) => {
-      if (err) {
-        logger.error('An error occured while writing JSON Object to File.');
-        return logger.error(err.stack);
-      }
-    });
-    const jobMetadata = {};
-    jobMetadata[sessionID] = {
-      model: modelName,
-      workspace: workspace,
-      statefile: filepath,
-      status: jobStatus,
-      humanTime: new Date().toLocaleString(),
-      systemTime: new Date().getTime(),
-    };
-    this.props.updateRecentSessions(jobMetadata, this.props.jobDatabase);
-  }
-
-  /** Set this component's state to the object parsed from a JSON file.
-   *
-   * @param {string} sessionFilename - path to a JSON file.
-   */
-  async loadState(sessionFilename) {
-    if (fs.existsSync(sessionFilename)) {
-      const loadedState = JSON.parse(fs.readFileSync(sessionFilename, 'utf8'));
-      // saveState is only called w/in investExecute and only after invest
-      // has created a logfile, which means an invest logfile should always
-      // exist and can be used to get args values and initialize SetupTab.
-      const datastack = await fetchDatastackFromFile(loadedState.logfile);
-      if (datastack) {
-        loadedState.argsInitDict = datastack.args;
-        Object.assign(
-          loadedState, { setupKey: changeSetupKey(this.state.setupKey) }
-        );
-        this.setState(loadedState,
-          () => {
-            this.switchTabs(loadedState.sessionProgress);
-          });
-      } else {
-        alert('Cannot load this session because data is missing')
-      }
-    } else {
-      logger.error(`state file not found: ${sessionFilename}`);
-    }
+      modelSpec, argsSpec, uiSpec
+    } = await investGetSpec(modelRunName);
+    this.setState({
+      modelSpec: modelSpec,
+      argsSpec: argsSpec,
+      uiSpec: uiSpec,
+      logfile: logfile,
+      jobStatus: jobStatus,
+    }, () => { this.switchTabs('setup'); });
   }
 
   /** Write an invest args JSON file for passing to invest cli.
@@ -163,7 +127,7 @@ export default class InvestJob extends React.Component {
       parameterSetPath: datastackPath,
       moduleName: this.state.modelSpec.module,
       relativePaths: false,
-      args: argsValuesCopy,
+      args: JSON.stringify(argsValuesCopy),
     };
     await writeParametersToFile(payload);
   }
@@ -180,32 +144,46 @@ export default class InvestJob extends React.Component {
    *   as a javascript object
    */
   async investExecute(argsValues) {
-    const { investExe, investSettings } = this.props;
+    const {
+      investExe,
+      investSettings,
+      modelRunName,
+      saveJob,
+    } = this.props;
 
+    // If the same model, workspace, and suffix are executed, invest
+    // will overwrite the previous outputs. So our recent jobs
+    // catalogue should overwite as well, and that's assured by this
+    // non-unique jobID.
     const workspace = {
       directory: path.resolve(argsValues.workspace_dir),
       suffix: argsValues.results_suffix,
     };
-    // If the same model, workspace, and suffix are executed, invest
-    // will overwrite the previous outputs. So our recent session
-    // catalogue should overwite as well, and that's assured by this
-    // non-unique sessionID.
-    const sessionID = crypto.createHash('sha1').update(
-      `${this.state.modelName}${JSON.stringify(workspace)}`
+    const jobID = crypto.createHash('sha1').update(
+      `${modelRunName}${JSON.stringify(workspace)}`
     ).digest('hex');
+
+    const job = {
+      jobID: jobID,
+      modelRunName: modelRunName,
+      argsValues: argsValues,
+      workspace: workspace,
+      logfile: undefined,
+      status: undefined,
+    };
 
     // Write a temporary datastack json for passing to invest CLI
     const tempDir = fs.mkdtempSync(path.join(
       fileRegistry.TEMP_DIR, 'data-'
     ));
     const datastackPath = path.join(tempDir, 'datastack.json');
-    await this.argsToJsonFile(datastackPath, argsValues);
+    await this.argsToJsonFile(datastackPath, job.argsValues);
 
     const verbosity = LOGLEVELMAP[investSettings.loggingLevel];
     const cmdArgs = [
       verbosity,
       'run',
-      this.state.modelName,
+      job.modelRunName,
       '--headless',
       `-d ${datastackPath}`,
     ];
@@ -216,22 +194,19 @@ export default class InvestJob extends React.Component {
 
     // There's no general way to know that a spawned process started,
     // so this logic when listening for stdout seems like the way.
-    let logfilename = '';
     investRun.stdout.on('data', async () => {
-      if (!logfilename) {
-        logfilename = await findMostRecentLogfile(workspace.directory);
-        // TODO: handle case when logfilename is undefined? It seems like
-        // sometimes there is some stdout emitted before a logfile exists.
+      if (!job.logfile) {
+        job.logfile = await findMostRecentLogfile(job.workspace.directory);
+        // TODO: handle case when job.logfile is still undefined?
+        // Could be if some stdout is emitted before a logfile exists.
+        job.status = 'running';
         this.setState(
           {
-            logfile: logfilename,
-            sessionID: sessionID,
-            sessionProgress: 'log',
-            workspace: workspace,
-            jobStatus: 'running',
+            logfile: job.logfile,
+            jobStatus: job.status,
           }, () => {
             this.switchTabs('log');
-            this.saveState();
+            saveJob(job);
           }
         );
       }
@@ -251,79 +226,24 @@ export default class InvestJob extends React.Component {
     });
 
     // Set some state when the invest process exits and update the app's
-    // persistent database by calling saveState.
+    // persistent database by calling saveJob.
     investRun.on('close', (code) => {
       // TODO: there are non-zero exit cases that should be handled
       // differently from one-another, but right now they are all exit code 1.
-      // E.g. this callback is designed with a model crash in mind, but not a fail to 
-      // launch, in which case the saveState call will probably crash.
-      const status = (code === 0 ? 'success' : 'error');
+      // E.g. this state update is designed with a model crash in mind,
+      // not a fail to launch
+      job.status = (code === 0 ? 'success' : 'error');
       this.setState({
-        jobStatus: status,
+        jobStatus: job.status,
       }, () => {
-        this.saveState();
+        saveJob(job);
         cleanupDir(tempDir);
       });
     });
   }
 
-  /** Get an invest model's ARGS_SPEC when a model button is clicked.
-   *
-   * Also get the model's UI spec if it exists.
-   * Then reset much of this component's state in case a prior job's
-   * state exists. This includes setting a new setupKey, which is passed
-   * as a key to the SetupTab component, triggering it to re-mount
-   * rather than just re-render, allowing one-time initilization of
-   * arg grouping and ordering.
-   *
-   * @param {string} modelName - as in a model name appearing in `invest list`
-   * @param {object} argsInitDict - empty, or a JSON representation of an
-   *   invest model's agruments dictionary
-   */
-  async investGetSpec(modelName, argsInitDict = {}) {
-    const spec = await getSpec(modelName);
-    if (spec) {
-      const { args, ...modelSpec } = spec;
-      // A model's UI Spec is optional and may not exist
-      let uiSpec = {};
-      try {
-        uiSpec = JSON.parse(fs.readFileSync(
-          path.join(fileRegistry.INVEST_UI_DATA, `${spec.module}.json`)
-        ));
-      } catch (err) {
-        if (err.code === 'ENOENT') {
-          logger.warn(err);
-          logger.warn(`No UI spec exists for ${spec.module}`);
-        } else {
-          logger.error(err.stack);
-        }
-      }
-      // extend the args spec with the UI spec
-      Object.keys(args).forEach((key) => {
-        Object.assign(args[key], uiSpec[key]);
-      });
-      // This event represents a user selecting a model,
-      // and so some existing state should be reset.
-      this.setState({
-        modelName: modelName,
-        modelSpec: modelSpec,
-        argsSpec: args,
-        argsInitDict: argsInitDict,
-        sessionProgress: 'setup',
-        jobStatus: null,
-        logStdErr: '',
-        logStdOut: '',
-        sessionID: null,
-        workspace: null,
-        setupKey: changeSetupKey(this.state.setupKey),
-        activeTab: 'setup',
-      });
-    } else {
-      logger.error(`no spec found for ${modelName}`);
-    }
-  }
-
   /** Change the tab that is currently visible.
+   *
    * @param {string} key - the value of one of the Nav.Link eventKey.
    */
   switchTabs(key) {
@@ -337,108 +257,86 @@ export default class InvestJob extends React.Component {
       activeTab,
       modelSpec,
       modelName,
-      setupKey,
       argsSpec,
-      argsInitDict,
+      uiSpec,
       jobStatus,
       logfile,
       logStdErr,
     } = this.state;
-    const {
-      saveSettings,
-      investSettings,
-      investList,
-      recentSessions,
-    } = this.props;
-    const setupDisabled = !(this.state.argsSpec); // enable once modelSpec has loaded
-    const logDisabled = (this.state.jobStatus == null); // enable during and after execution
+
+    const logDisabled = (!logfile);
+
+    // Don't render the model setup & log until data has been fetched.
+    if (!modelSpec) {
+      return (<div />);
+    }
 
     return (
       <TabContainer activeKey={activeTab}>
-        <Navbar bg="light" expand="lg">
-          <Nav
-            variant="tabs"
-            id="controlled-tab-example"
-            className="mr-auto"
-            activeKey={activeTab}
-            onSelect={this.switchTabs}
-          >
-            <Nav.Item>
-              <Nav.Link eventKey="home">
-                Home
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="setup" disabled={setupDisabled}>
-                Setup
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="log" disabled={logDisabled}>
-                { this.state.jobStatus === 'running'
-                && (
-                  <Spinner
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                  />
-                )}
-                Log
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="resources">
-                Resources
-              </Nav.Link>
-            </Nav.Item>
-          </Nav>
-          <Navbar.Brand>{modelSpec.model_name}</Navbar.Brand>
-          <LoadButton
-            investGetSpec={this.investGetSpec}
-            batchUpdateArgs={this.batchUpdateArgs}
-          />
-          <SettingsModal
-            className="mx-3"
-            saveSettings={saveSettings}
-            investSettings={investSettings}
-          />
-        </Navbar>
-        <TabContent className="mt-3">
-          <TabPane eventKey="home" title="Home">
-            <HomeTab
-              investList={investList}
-              investGetSpec={this.investGetSpec}
-              saveState={this.saveState}
-              loadState={this.loadState}
-              recentSessions={recentSessions}
-            />
-          </TabPane>
-          <TabPane eventKey="setup" title="Setup">
-            <SetupTab
-              key={setupKey}
-              pyModuleName={modelSpec.module}
-              modelName={modelName}
-              argsSpec={argsSpec}
-              argsInitValues={argsInitDict}
-              investExecute={this.investExecute}
-              argsToJsonFile={this.argsToJsonFile}
-            />
-          </TabPane>
-          <TabPane eventKey="log" title="Log">
-            <LogTab
-              jobStatus={jobStatus}
-              logfile={logfile}
-              logStdErr={logStdErr}
-            />
-          </TabPane>
-          <TabPane eventKey="resources" title="Resources">
-            <ResourcesTab 
-              modelName={modelSpec.model_name}
-              docs={modelSpec.userguide_html}
-            />
-          </TabPane>
-        </TabContent>
+        <Row>
+          <Col sm={3}>
+            <Nav
+              variant="pills"
+              id="vertical tabs"
+              className="flex-column"
+              activeKey={activeTab}
+              onSelect={this.switchTabs}
+            >
+              <Nav.Item>
+                <Nav.Link eventKey="setup">
+                  Setup
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="log" disabled={logDisabled}>
+                  { this.state.jobStatus === 'running'
+                  && (
+                    <Spinner
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                    />
+                  )}
+                  Log
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="resources">
+                  Resources
+                </Nav.Link>
+              </Nav.Item>
+            </Nav>
+          </Col>
+          <Col sm={9}>
+            <TabContent className="mt-3">
+              <TabPane eventKey="setup" title="Setup">
+                <SetupTab
+                  pyModuleName={modelSpec.module}
+                  modelName={modelName}
+                  argsSpec={argsSpec}
+                  uiSpec={uiSpec}
+                  argsInitValues={this.props.argsInitValues}
+                  investExecute={this.investExecute}
+                  argsToJsonFile={this.argsToJsonFile}
+                />
+              </TabPane>
+              <TabPane eventKey="log" title="Log">
+                <LogTab
+                  jobStatus={jobStatus}
+                  logfile={logfile}
+                  logStdErr={logStdErr}
+                />
+              </TabPane>
+              <TabPane eventKey="resources" title="Resources">
+                <ResourcesTab
+                  modelName={modelSpec.model_name}
+                  docs={modelSpec.userguide_html}
+                />
+              </TabPane>
+            </TabContent>
+          </Col>
+        </Row>
       </TabContainer>
     );
   }
@@ -446,19 +344,13 @@ export default class InvestJob extends React.Component {
 
 InvestJob.propTypes = {
   investExe: PropTypes.string.isRequired,
-  investList: PropTypes.objectOf(
-    PropTypes.shape({
-      internal_name: PropTypes.string,
-    })
-  ).isRequired,
+  modelRunName: PropTypes.string.isRequired,
+  logfile: PropTypes.string,
+  argsInitValues: PropTypes.object,
+  jobStatus: PropTypes.string,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
   }).isRequired,
-  recentSessions: PropTypes.arrayOf(
-    PropTypes.array
-  ),
-  jobDatabase: PropTypes.string,
-  updateRecentSessions: PropTypes.func.isRequired,
-  saveSettings: PropTypes.func.isRequired,
-}
+  saveJob: PropTypes.func.isRequired,
+};

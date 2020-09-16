@@ -95,65 +95,68 @@ export default class SetupTab extends React.Component {
     * that only needs to compute when this.props.argsSpec changes,
     * not on every re-render.
     */
-    const { argsInitValues, argsSpec } = this.props;
-    if (argsInitValues) {
-      const argGroups = {};
-      let {
-        argsValues, argsValidation
-      } = initializeArgValues(argsSpec, argsInitValues);
+    const { argsInitValues, argsSpec, uiSpec } = this.props;
+    // extend the args spec with the UI spec
+    Object.keys(argsSpec).forEach((key) => {
+      Object.assign(argsSpec[key], uiSpec[key]);
+    });
+    const argGroups = {};
+    let {
+      argsValues, argsValidation
+    } = initializeArgValues(argsSpec, argsInitValues || {});
 
-      Object.keys(argsSpec).forEach((argkey) => {
-        // these argkeys do not get rendered inputs
-        if (argkey === 'n_workers'
-          || argsSpec[argkey].order === 'hidden') { return; }
+    Object.keys(argsSpec).forEach((argkey) => {
+      // these argkeys do not get rendered inputs
+      if (argkey === 'n_workers'
+        || argsSpec[argkey].order === 'hidden') { return; }
 
-        // Update any dependent args in response to this arg's value
-        const argumentSpec = { ...argsSpec[argkey] };
-        if (argumentSpec.ui_control) {
-          argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
-        }
+      // Update any dependent args in response to this arg's value
+      const argumentSpec = { ...argsSpec[argkey] };
+      if (argumentSpec.ui_control) {
+        argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
+      }
 
-        /** Sort the arg into it's input group */
-        // order is optional in the spec, but to be exlplicit about
-        // what happens with sorting, defaulting to 100.0.
-        if (typeof argumentSpec.order !== 'number') {
-          argumentSpec.order = 100.0;
-        }
-        // Groups are defined by the whole number digits
-        const g = Math.floor(argumentSpec.order);
-        const orderArgPair = { [argumentSpec.order]: argkey };
-        if (argGroups[g]) {
-          argGroups[g].push(orderArgPair);
-        } else {
-          argGroups[g] = [orderArgPair];
-        }
-      });
+      // Sort the arg into it's input group
+      // order is optional in the spec, but to be exlplicit about
+      // what happens with sorting, defaulting to 100.0.
+      if (typeof argumentSpec.order !== 'number') {
+        argumentSpec.order = 100.0;
+      }
+      // Groups are defined by the whole number digits
+      const g = Math.floor(argumentSpec.order);
+      const orderArgPair = { [argumentSpec.order]: argkey };
+      if (argGroups[g]) {
+        argGroups[g].push(orderArgPair);
+      } else {
+        argGroups[g] = [orderArgPair];
+      }
+    });
 
-      // sort the groups by the group number (keys of argGroups)
-      const sortedGroups = Object.entries(argGroups).sort(
-        (a, b) => a[0] - b[0]
-      );
-      // sort args within the groups
-      const sortedArgKeys = [];
-      sortedGroups.forEach((groupArray) => {
-        if (groupArray.length > 1) {
-          // [1] is the array of objects keyed by their order number
-          const sortedGroup = groupArray[1].sort(
-            (a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0])
-          );
-          sortedArgKeys.push(
-            // drop the order numbers now that argkeys are sorted
-            sortedGroup.map((item) => Object.values(item)[0])
-          );
-        }
-      });
+    // sort the groups by the group number (keys of argGroups)
+    const sortedGroups = Object.entries(argGroups).sort(
+      (a, b) => a[0] - b[0]
+    );
+    // sort args within the groups
+    const sortedArgKeys = [];
+    sortedGroups.forEach((groupArray) => {
+      if (groupArray.length > 1) {
+        // [1] is the array of objects keyed by their order number
+        const sortedGroup = groupArray[1].sort(
+          (a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0])
+        );
+        sortedArgKeys.push(
+          // drop the order numbers now that argkeys are sorted
+          sortedGroup.map((item) => Object.values(item)[0])
+        );
+      }
+    });
 
-      this.setState({
-        argsValues: argsValues,
-        argsValidation: argsValidation,
-        sortedArgKeys: sortedArgKeys,
-      }, () => this.investValidate(this.state.argsValues));
-    }
+    this.setState({
+      argsValues: argsValues,
+      argsValidation: argsValidation,
+      sortedArgKeys: sortedArgKeys,
+    }, () => this.investValidate(this.state.argsValues));
+    // }
   }
 
   /** Save the current invest arguments to a python script via datastack.py API.
@@ -202,7 +205,7 @@ export default class SetupTab extends React.Component {
       argsValues = updatedArgsValues;
     }
     this.setState({ argsValues: argsValues });
-    this.investValidate(argsValues)
+    this.investValidate(argsValues);
   }
 
   batchUpdateArgs(argsDict) {
@@ -211,7 +214,7 @@ export default class SetupTab extends React.Component {
     * @params {object} argsDict - key: value pairs of InVEST arguments.
     */
     const { argsSpec } = this.props;
-    let { argsValues, argsValidation } = initializeArgValues(argsSpec, argsDict)
+    let { argsValues, argsValidation } = initializeArgValues(argsSpec, argsDict);
     Object.keys(argsSpec).forEach((argkey) => {
       if (argkey === 'n_workers') { return; }
       const argumentSpec = Object.assign({}, argsSpec[argkey]);
@@ -286,15 +289,21 @@ export default class SetupTab extends React.Component {
   }
 
   render() {
-    if (this.state.argsValues) {
+    const {
+      argsValues,
+      argsValid,
+      argsValidation,
+      sortedArgKeys,
+    } = this.state;
+    if (argsValues) {
       const { argsSpec, pyModuleName } = this.props;
       return (
         <Container fluid>
           <ArgsForm
             argsSpec={argsSpec}
-            argsValues={this.state.argsValues}
-            argsValidation={this.state.argsValidation}
-            sortedArgKeys={this.state.sortedArgKeys}
+            argsValues={argsValues}
+            argsValidation={argsValidation}
+            sortedArgKeys={sortedArgKeys}
             pyModuleName={pyModuleName}
             updateArgValues={this.updateArgValues}
             batchUpdateArgs={this.batchUpdateArgs}
@@ -305,7 +314,7 @@ export default class SetupTab extends React.Component {
                 variant="primary"
                 size="lg"
                 onClick={this.wrapInvestExecute}
-                disabled={!this.state.argsValid}
+                disabled={!argsValid}
               >
                 Execute
               </Button>
@@ -324,7 +333,7 @@ export default class SetupTab extends React.Component {
                 />
                 <SaveFileButton
                   title="Save to Python script"
-                  defaultTargetPath="execute_invest.python"
+                  defaultTargetPath="execute_invest.py"
                   func={this.savePythonScript}
                 />
               </DropdownButton>
@@ -348,6 +357,7 @@ SetupTab.propTypes = {
       type: PropTypes.string,
     }),
   ).isRequired,
+  uiSpec: PropTypes.object,
   argsInitValues: PropTypes.object,
   argsToJsonFile: PropTypes.func.isRequired,
   investExecute: PropTypes.func.isRequired,

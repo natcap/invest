@@ -6,15 +6,14 @@ import itertools
 import glob
 from PyInstaller.compat import is_win, is_darwin, is_linux
 
-# Global Variables
+if not is_win:
+    # Windows builds on Actions don't use conda
+    conda_env = os.environ['CONDA_PREFIX']
 workbench_dir = os.getcwd()
 invest_dir = os.path.join(workbench_dir, 'invest')
 block_cipher = None
 invest_exename = 'invest'
 server_exename = 'server'
-mac_conda_env = '/usr/local/miniconda/envs/invest-env'
-ubuntu_conda_env = '/usr/share/miniconda/envs/invest-env'
-
 
 kwargs = {
     'hookspath': [os.path.join(invest_dir, 'exe', 'hooks')],
@@ -53,14 +52,12 @@ if is_darwin:
     # add rtree dependency dynamic libraries from conda environment
     invest_a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
-        glob.glob(os.path.join(mac_conda_env, 'lib/libspatialindex*.dylib'))]
+        glob.glob(os.path.join(conda_env, 'lib/libspatialindex*.dylib'))]
 elif is_linux:
     # add rtree dependency dynamic libraries from conda environment
     invest_a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
-        glob.glob(os.path.join(ubuntu_conda_env, 'lib/libspatialindex*'))]
-    print("FOUND LINUX BINARIES")
-    print(invest_a.binaries)
+        glob.glob(os.path.join(conda_env, 'lib/libspatialindex*'))]
 elif is_win:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/
