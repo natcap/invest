@@ -21,38 +21,25 @@ beforeAll(() => {
 
 
 
-// beforeEach(async () => {
-//   return await app.start()
-// })
-
-// afterAll(async () => {
-//   if (app.isRunning()) {
-//     return await app.stop()
-//   }
-// })
-
-test('somthing', async () => {
-  await app.start();
-  expect(app.isRunning()).toBeTruthy();
-  await app.stop();
-	// expect(app.browserWindow.isVisible()).toBeTruthy()
+beforeEach(async () => {
+  return await app.start()
 })
 
+afterAll(async () => {
+  if (app.isRunning()) {
+    return await app.stop()
+  }
+})
 
-// test('Application starts and stops', async () => {
-//   await app.start()
-//   app.client.getMainProcessLogs().then(function (logs) {
-//     logs.forEach(function (log) {
-//       console.log(log)
-//     })
-//   })
-//   // const title = await app.client.getTitle()  
-//   await app.client.waitUntilWindowLoaded()  // method not found
-//   const isVisible = await app.browserWindow.isVisible() // browserWindow undefined
-//   expect(isVisible).toBeTruthy()
+test('browser window opens', () => {
+  expect(app.isRunning()).toBeTruthy();
+	expect(app.browserWindow.isVisible()).toBeTruthy()
+})
 
-//   const res = await app.client.$('Resources')
-//   console.log(res);
-
-//   await app.stop()
-// })
+test.only('execute and cancel an invest run', async () => {
+  console.log(app.isRunning());
+  // await app.client.$('button=Load Parameters').click(); // works
+  // const loadButton = await app.client.$('button=Load Parameters');
+  // await loadButton.click(); // no work
+  await app.client.click('button=Load Parameters');
+})
