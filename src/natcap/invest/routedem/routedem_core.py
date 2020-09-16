@@ -110,14 +110,18 @@ def identify_pour_points(flow_direction_raster_path, target_vector_path):
 
         return pour_point_array
 
-
+    TMP_NODATA = 100
+    FILL_VALUE = 101
 
     def option_3(flow_direction_array):
+
+        
 
         def func(x):
             # 3 2 1       0 1 2 
             # 4 x 0  -->  3 4 5 
             # 5 6 7       6 7 8 
+            # print(x)
             convert = {
                 0: 5,
                 1: 2,
@@ -128,25 +132,32 @@ def identify_pour_points(flow_direction_raster_path, target_vector_path):
                 6: 7,
                 7: 8
             }
-            flow_dir = x[4]
-            if flow_dir == nodata:
+
+            if FILL_VALUE in x:
+                # print('fill value is in x')
+                return nodata
+            if x[4] == TMP_NODATA:
+                # print('center pixel is nodata')
                 return nodata
             else:
-                return x[convert[flow_dir]] == nodata
+                # print('is pour point:', x[convert[x[4]]] == TMP_NODATA)
+                return x[convert[x[4]]] == TMP_NODATA
 
-       
         footprint = [
             [1, 1, 1],
             [1, 1, 1],
             [1, 1, 1]
         ]
 
+        # 
+        flow_direction_array[flow_direction_array == nodata] = TMP_NODATA
+
         pour_point_array = ndimage.generic_filter(
                                 flow_direction_array, 
                                 func, 
                                 footprint=footprint, 
                                 mode='constant', 
-                                cval=nodata)
+                                cval=FILL_VALUE)
 
         return pour_point_array
 
@@ -192,6 +203,7 @@ def identify_pour_points(flow_direction_raster_path, target_vector_path):
             None
 
         """
+        print('writing to point vector...')
         # use same spatial reference as the input
         aoi_spatial_reference = osr.SpatialReference()
         aoi_spatial_reference.ImportFromWkt(raster_info['projection_wkt'])
@@ -217,7 +229,7 @@ def identify_pour_points(flow_direction_raster_path, target_vector_path):
 
         target_layer.StartTransaction()
         for idx, (x, y) in enumerate(pour_point_set):
-            # print(x, y)
+            print(x, y)
             
             # Convert x (which is spatially referenced to the raster as a 
             # numpy array) to the correct location in the output spatial 
@@ -225,9 +237,10 @@ def identify_pour_points(flow_direction_raster_path, target_vector_path):
             # centered on the pixel.
             x_coord = x_origin + (x + 0.5) * x_pixel_size
             y_coord = y_origin + (y + 0.5) * y_pixel_size
+            print(x_coord, y_coord)
 
             geometry = ogr.Geometry(ogr.wkbPoint)
-            geometry.AddPoint(int(x), int(y))
+            geometry.AddPoint(x_coord, y_coord)
             feature = ogr.Feature(target_defn)
             feature.SetGeometry(geometry)
             feature.SetField('point_id', idx)
@@ -242,29 +255,47 @@ def identify_pour_points(flow_direction_raster_path, target_vector_path):
 
         pour_point_array = numpy.empty((height, width))
         pour_point_set = set()
-
-        for block in pygeoprocessing.iterblocks((flow_direction_raster_path, 1),
-                                                offset_only=True):
-            print(block)
+        print(p for p in pygeoprocessing.iterblocks((flow_direction_raster_path, 1),
+                                                offset_only=True))
+        right_overlap, bottom_overlap = None, None
+        for block, array in pygeoprocessing.iterblocks((flow_direction_raster_path, 1)):
             # Expand each block towards the upper left by a one-pixel-wide strip,
             # if possible. This way the blocks will overlap so the watershed 
             # calculation will be continuous.
-            if block['xoff'] > 0:
-                block['xoff'] -= 1
-                block['win_xsize'] += 1
-            if block['yoff'] > 0:
-                block['yoff'] -= 1
-                block['win_ysize'] += 1
+            # if block['xoff'] > 0:
+            #     block['xoff'] -= 2
+            #     block['win_xsize'] += 2
+            # if block['yoff'] > 0:
+            #     block['yoff'] -= 2
+            #     block['win_ysize'] += 2
+            # print(block)
 
-            # Read in the block frome the flow direction raster
+            # Read in the block from the flow direction raster
             in_raster = gdal.OpenEx(flow_direction_raster_path, gdal.OF_RASTER)
             if in_raster is None:
                 raise ValueError(
                     "Raster at %s could not be opened." % flow_direction_raster_path)
             in_band = in_raster.GetRasterBand(1)
-
-            # Calculate pour point
             flow_dir_block = in_band.ReadAsArray(**block)
+
+            # Add 1-pixel-wide nodata border relative to the whole raster
+            if block['xoff'] == 0:
+                border = numpy.full(flow_dir_block.shape[0], TMP_NODATA)
+                print(flow_dir_block.shape, border.shape)
+                flow_dir_block = numpy.column_stack([border, flow_dir_block])
+            if block['yoff'] == 0:
+                border = numpy.full(flow_dir_block.shape[1], TMP_NODATA)
+                flow_dir_block = numpy.vstack([border, flow_dir_block])
+            if block['xoff'] + block['win_xsize'] == width:
+                border = numpy.full(flow_dir_block.shape[0], TMP_NODATA)
+                flow_dir_block = numpy.column_stack([flow_dir_block, border])
+            if block['yoff'] + block['win_ysize'] == height:
+                border = numpy.full(flow_dir_block.shape[1], TMP_NODATA)
+                flow_dir_block = numpy.vstack([flow_dir_block, border])
+
+            print(flow_dir_block, flow_dir_block.shape)
+
+            # Calculate pour points
             pour_point_block = option_3(flow_dir_block)
 
             in_raster = None
@@ -282,6 +313,7 @@ def identify_pour_points(flow_direction_raster_path, target_vector_path):
             print(set(zip(xs, ys)))
             pour_point_set = pour_point_set.union(set(zip(xs, ys)))
 
+        print('pour points:', pour_point_set)
         return pour_point_set
 
 
