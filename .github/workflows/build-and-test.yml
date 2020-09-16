@@ -122,10 +122,13 @@ jobs:
               if: github.event_name != 'pull_request'
               shell: bash -l {0}
               run: |
+                  GSUTIL_PATH=$(which gsutil)
                   # Specify which python version we want to use (it's the one
                   # we're using in actions/setup-miniconda)
-                  export GSUTIL_PATH=$(which gsutil)
+                  export CLOUDSDK_PYTHON=$(which python)
                   export CLOUDSDK_GSUTIL_PYTHON=$(which python)
+                  echo "$CLOUDSDK_PYTHON"
+                  echo "$CLOUDSDK_GSUTIL_PYTHON"
 
                   make -d GSUTIL="gsutil" deploy
 
