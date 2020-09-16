@@ -48,6 +48,8 @@ jobs:
                 include:
                     - python-version: 3.7
                       numpy: "numpy~=1.15"
+                    - python-version: 3.8
+                      numpy: "numpy~=1.15"
         steps:
             - uses: actions/checkout@v2
               with:
@@ -95,7 +97,9 @@ jobs:
             - name: Install runtime dependencies
               shell: bash -l {0}
               run: |
-                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                    requirements.txt requirements-dev.txt \
+                    requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
 
             - name: Run model tests
@@ -136,7 +140,7 @@ jobs:
         needs: check-syntax-errors
         strategy:
             matrix:
-                python-version: [3.7]
+                python-version: [3.7, 3.8]
                 python-architecture: [x64]
                 os: [windows-latest, macos-latest]
         steps:
@@ -159,7 +163,8 @@ jobs:
                   conda upgrade -y pip setuptools
                   pip install toml twine
                   pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements-all.yml
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                    requirements.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
 
             - name: Build source distribution
@@ -203,16 +208,15 @@ jobs:
               # overwrite artifacts or have duplicates (mac/windows sdists have
               # different extensions)
               if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == '3.7'
-              shell: powershell
+              shell: bash -l {0}
               run: |
-                  $env:GSUTIL_PATH = (Get-Command gsutil).path
+                  GSUTIL_PATH=$(which gsutil)
+                  # Specify which python version we want to use (it's the one
+                  # we're using in actions/setup-miniconda)
+                  export CLOUDSDK_PYTHON=$(which python)
+                  export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
-                  # Specify which python version we want to use (it's the one we're using
-                  # in actions/setup-python).
-                  $env:CLOUDSDK_PYTHON = (Get-Command python).path
-                  $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
-
-                  make GSUTIL=$env:GSUTIL_PATH deploy
+                  make GSUTIL="gsutil" deploy
 
 
     validate-sampledata:
@@ -296,7 +300,9 @@ jobs:
               run: |
                   conda install requests
                   conda upgrade -y pip setuptools
-                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                    requirements.txt requirements-dev.txt \
+                    requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
                   python setup.py install
 
