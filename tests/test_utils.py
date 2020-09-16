@@ -1468,7 +1468,7 @@ class ReclassifyRasterOpTests(unittest.TestCase):
                 gdal.GDT_Int32, -1, error_details=message_details)
         expected_message = (
                 "Values in the LULC raster were found that are"
-                " not represented under the corresponding 'lucode' column"
+                " not represented under the 'lucode' column"
                 " of the Biophysical table. The missing values found in"
                 " the LULC raster but not the table are: [3].")
         self.assertTrue(
