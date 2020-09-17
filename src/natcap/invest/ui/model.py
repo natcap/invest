@@ -3,6 +3,7 @@
 
 import logging
 import os
+import sys
 import pprint
 from pkg_resources import parse_version
 import collections
@@ -686,7 +687,16 @@ class WindowTitle(QtCore.QObject):
         """
         LOGGER.info('__setattr__: %s, %s', name, value)
         old_attr = getattr(self, name, 'None')
-        super().__setattr__(name, value)
+        # Python Core and Builtins were updated in Python 3.8.4
+        # that handle __setattr__ differently. In 3.7, the super()
+        # implementation causes a `TypeError: can't apply this __setattr__
+        # to object object` when running `invest run carbon`. In Python 3.8.4+
+        # with the object implementation the error `TypeError: can't apply 
+        # this __setattr__ to Carbon object` 
+        if (sys.version_info.minor >= 8) and (sys.version_info.micro >= 4):
+            super().__setattr__(name, value)
+        else:
+            object.__setattr__(self, name, value)
         if old_attr != value:
             new_value = repr(self)
             LOGGER.info('Emitting new title %s', new_value)
@@ -1464,7 +1474,16 @@ class InVESTModel(QtWidgets.QMainWindow):
         """
         if isinstance(value, inputs.InVESTModelInput):
             self.inputs.add(value)
-        super().__setattr__(name, value)
+        # Python Core and Builtins were updated in Python 3.8.4
+        # that handle __setattr__ differently. In 3.7, the super()
+        # implementation causes a `TypeError: can't apply this __setattr__
+        # to object object` when running `invest run carbon`. In Python 3.8.4+
+        # with the object implementation the error `TypeError: can't apply 
+        # this __setattr__ to Carbon object` 
+        if (sys.version_info.minor >= 8) and (sys.version_info.micro >= 4):
+            super().__setattr__(name, value)
+        else:
+            object.__setattr__(self, name, value)
 
     def _check_local_docs(self, link=None):
         if link in (None, 'localdocs'):
