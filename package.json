@@ -54,6 +54,7 @@
   "author": "dmf",
   "license": "MIT",
   "dependencies": {
+    "@electron/remote": "^1.0.0",
     "@turf/turf": "^5.1.6",
     "chroma-js": "^2.1.0",
     "cross-env": "^5.2.1",
@@ -98,9 +99,9 @@
     "@testing-library/react": "^10.4.9",
     "babel-eslint": "^10.1.0",
     "dotenv": "^8.2.0",
-    "electron": "^8.5.1",
+    "electron": "^10.1.2",
     "electron-builder": "^22.8.0",
-    "electron-devtools-installer": "^2.2.4",
+    "electron-devtools-installer": "^3.1.1",
     "eslint": "^7.9.0",
     "eslint-config-airbnb": "^18.2.0",
     "eslint-plugin-import": "^2.22.0",
@@ -113,7 +114,7 @@
     "jest-environment-jsdom-sixteen": "^1.0.3",
     "react-test-renderer": "^16.13.1",
     "sinon": "^9.0.3",
-    "spectron": "^10.0.0"
+    "spectron": "^11.1.0"
   },
   "browserslist": {
     "production": [
