@@ -1,5 +1,5 @@
 import path from 'path';
-import { remote } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import remote from '@electron/remote';
 
 const USER_DATA = remote.app.getPath('userData');
 

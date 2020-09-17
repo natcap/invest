@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { remote } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import remote from '@electron/remote';
 
 import Form from 'react-bootstrap/Form';
 

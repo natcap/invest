@@ -1,4 +1,5 @@
-const { remote, ipcRenderer } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
+const { ipcRenderer } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
+const remote = require('@electron/remote');
 
 const isDevMode = remote.process.argv[2] === '--dev';
 if (isDevMode) {
@@ -51,5 +52,5 @@ ipcRenderer.on('variable-reply', (event, arg) => {
   // render the App after receiving any critical data
   // from the main process
   render(arg.investExe);
-})
+});
 ipcRenderer.send('variable-request', 'ping');

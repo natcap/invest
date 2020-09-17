@@ -1,3 +1,5 @@
+require('@electron/remote/main').initialize();
+
 const isDevMode = process.argv[2] === '--dev';
 if (isDevMode) {
   // in dev mode we can have babel transpile modules on import
@@ -45,6 +47,7 @@ const createWindow = async () => {
     useContentSize: true,
     webPreferences: {
       nodeIntegration: true,
+      enableRemoteModule: true,
     },
   });
 

@@ -1,12 +1,13 @@
 const path = require('path');
 const winston = require('winston');
 require('winston-daily-rotate-file');
-const { app, remote } = require('electron');
+const { app } = require('electron');
 
 let userDataPath;
 let isDevMode;
-if (remote) {
-  // When this module is imported from render process, access via remote
+if (process && process.type === 'renderer') {
+  // When this module is imported from renderer process, access via remote
+  const remote = require('@electron/remote');
   userDataPath = remote.app.getPath('userData');
   isDevMode = remote.process.argv[2] === '--dev';
 } else {
