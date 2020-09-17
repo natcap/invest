@@ -686,7 +686,7 @@ class WindowTitle(QtCore.QObject):
         """
         LOGGER.info('__setattr__: %s, %s', name, value)
         old_attr = getattr(self, name, 'None')
-        object.__setattr__(self, name, value)
+        super().__setattr__(name, value)
         if old_attr != value:
             new_value = repr(self)
             LOGGER.info('Emitting new title %s', new_value)
@@ -1464,7 +1464,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         """
         if isinstance(value, inputs.InVESTModelInput):
             self.inputs.add(value)
-        object.__setattr__(self, name, value)
+        super().__setattr__(name, value)
 
     def _check_local_docs(self, link=None):
         if link in (None, 'localdocs'):
