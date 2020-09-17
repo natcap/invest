@@ -47,31 +47,33 @@ Unreleased Changes (3.9)
     in the "Development" menu. Now logging messages from the model execution
     will show up when you run the script.
 * Coastal Vulnerability
-  * 'shore_points_missing_geomorphology.gpkg' output file name now includes 
-    the suffix if any, and its one layer now is renamed from 
+  * 'shore_points_missing_geomorphology.gpkg' output file name now includes
+    the suffix if any, and its one layer now is renamed from
     'missing_geomorphology' to be the same as the file name (including suffix).
 * Delineateit
   * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
     'verified_geometries' to be the same as the file name (including suffix).
-   * The layer in the 'snapped_outlets.gpkg' output is renamed from
-    'snapped' to be the same as the file name (including suffix).    
+  * The layer in the 'snapped_outlets.gpkg' output is renamed from
+    'snapped' to be the same as the file name (including suffix).
+  * The layer in the 'watersheds.gpkg' output has been renamed from
+    'watersheds' to match the name of the vector file (including the suffix).
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
-    * Threat files are now indicated in the Threat Table csv input under 
+    * Threat files are now indicated in the Threat Table csv input under
       required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``.
     * Threat and Sensitivity column names are now case-insensitive.
-    * Sensitivity threat columns now match threat names from Threat Table 
+    * Sensitivity threat columns now match threat names from Threat Table
       exactly, without the need for "L_". "L_" prefix is deprecated.
     * Threat raster input folder has been removed.
     * Validation enhancements that check whether threat raster paths are valid.
     * HQ update to User's Guide.
-    * Changing sample data to reflect Threat Table csv input changes and 
+    * Changing sample data to reflect Threat Table csv input changes and
       bumping revision.
     * More comprehensive testing for Habitat Quality and validation.
-    * Checking if Threat raster values are between 0 and 1 range, raising 
+    * Checking if Threat raster values are between 0 and 1 range, raising
       ValueError if not. No longer snapping values less than 0 to 0 and greater
       than 1 to 1.
-    * Fixing bug that was setting Threat raster values to 1 even if they were 
+    * Fixing bug that was setting Threat raster values to 1 even if they were
       floats between 0 and 1.
 * SDR:
   * Fixing an issue where the LS factor should be capped to an upstream area of
