@@ -66,9 +66,9 @@ ARGS_SPEC = {
                 "baseline scenario."),
             "name": "Baseline Land-Use/Land-Cover",
         },
-        "transitions_csv": {
+        "landcover_snapshot_csv": {
             "validation_options": {
-                "required_fields": ["transition_year", "raster_path"],
+                "required_fields": ["snapshot_year", "raster_path"],
             },
             "type": "csv",
             "required": False,
@@ -222,7 +222,7 @@ def execute(args):
             suffix that will be added to each output filename.
         args['n_workers'] (int): (optional) If provided, the number of workers
             to pass to ``taskgraph``.
-        args['transitions_csv'] (string): The path to a transitions CSV table
+        args['landcover_snapshot_csv'] (string): The path to a transitions CSV table
             containing transition years and the LULC rasters representing that
             year. Required for transition analysis.
         args['baseline_lulc_path'] (string): The path to the baseline LULC
@@ -272,8 +272,8 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(
         taskgraph_cache_dir, n_workers, reporting_interval=5.0)
 
-    if 'transitions_csv' in args and args['transitions_csv'] not in ('', None):
-        transitions = _extract_transitions_from_table(args['transitions_csv'])
+    if 'landcover_snapshot_csv' in args and args['landcover_snapshot_csv'] not in ('', None):
+        transitions = _extract_snapshots_from_table(args['landcover_snapshot_csv'])
     else:
         transitions = {}
 
@@ -1662,23 +1662,23 @@ def _reclassify_disturbance_magnitude(
         target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32)
 
 
-def _extract_transitions_from_table(csv_path):
-    """Extract the year/raster transition mapping from a CSV.
+def _extract_snapshots_from_table(csv_path):
+    """Extract the year/raster snapshot mapping from a CSV.
 
     No validation is performed on the years or raster paths.
 
     Parameters:
-        csv_path (string): The path to a CSV on disk containing transition
-            years and a corresponding transition raster path.  Transition years
+        csv_path (string): The path to a CSV on disk containing snapshot
+            years and a corresponding transition raster path.  Snapshot years
             may be in any order in the CSV, but must be integers and no two
-            years may be the same.  Transition raster paths must refer to a
+            years may be the same.  Snapshot raster paths must refer to a
             raster file located on disk representing the landcover at that
             transition.  If the path is absolute, the path will be used as
             given.  If the path is relative, the path will be interpreted as
             relative to the parent directory of this CSV file.
 
     Returns:
-        A ``dict`` mapping int transition years to their corresponding raster
+        A ``dict`` mapping int snapshot years to their corresponding raster
         paths.  These raster paths will be absolute paths.
 
     """
@@ -1686,7 +1686,7 @@ def _extract_transitions_from_table(csv_path):
     table.columns = table.columns.str.lower()
 
     output_dict = {}
-    table.set_index('transition_year', drop=False, inplace=True)
+    table.set_index("snapshot_year", drop=False, inplace=True)
     for index, row in table.iterrows():
         raster_path = row['raster_path']
         if not os.path.isabs(raster_path):
@@ -1716,25 +1716,25 @@ def validate(args, limit_to=None):
     sufficient_keys = validation.get_sufficient_keys(args)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 
-    if ("transitions_csv" not in invalid_keys and
-            "transitions_csv" in sufficient_keys and
+    if ("landcover_snapshot_csv" not in invalid_keys and
+            "landcover_snapshot_csv" in sufficient_keys and
             "baseline_lulc_year" not in invalid_keys and
             "baseline_lulc_year" in sufficient_keys):
-        transitions = _extract_transitions_from_table(args['transitions_csv'])
+        transitions = _extract_snapshots_from_table(args['landcover_snapshot_csv'])
 
         for transition_year, transition_raster_path in transitions.items():
             raster_error_message = validation.check_raster(
                 transition_raster_path)
             if raster_error_message:
                 validation_warnings.append(
-                    (['transitions_csv'], (
+                    (['landcover_snapshot_csv'], (
                         f"Transition raster for {transition_year} could not "
                         f"be validated: {raster_error_message}")))
 
         if min(set(transitions.keys())) < int(args['baseline_lulc_year']):
             validation_warnings.append(
-                (['transitions_csv'], ("Transition years must predate the "
-                                       "baseline lulc year.")))
+                (['landcover_snapshot_csv'], ("Transition years must predate the "
+                                              "baseline lulc year.")))
 
         if ("analysis_year" not in invalid_keys
                 and "analysis_year" in sufficient_keys):

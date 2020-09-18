@@ -98,7 +98,7 @@ def execute(args):
         vars_dict['results_suffix'])
 
     aligned_lulcs = [reg['aligned_lulc_template'] % index
-                     for index in range(len(args['lulc_snapshot_list']))]
+                     for index in range(len(vars_dict['lulc_snapshot_list']))]
     min_pixel_raster_info = min(
         (pygeoprocessing.get_raster_info(path) for path
          in vars_dict['lulc_snapshot_list']),
@@ -167,13 +167,19 @@ def _get_inputs(args):
     output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
     utils.make_directories([output_dir])
 
-    _validate_inputs(args['lulc_snapshot_list'], lulc_lookup_dict)
+    snapshots_dict = (
+        coastal_blue_carbon2._extract_transitions_from_table(
+            args['landcover_snapshot_csv']))
+    snapshots_list = sorted([
+        raster for (year, raster) in sorted(
+            snapshots_dict.items(), key=lambda x: x[0])])
+    _validate_inputs(snapshots_list, lulc_lookup_dict)
 
     vars_dict = {
         'workspace_dir': args['workspace_dir'],
         'output_dir': output_dir,
         'results_suffix': results_suffix,
-        'lulc_snapshot_list': args['lulc_snapshot_list'],
+        'lulc_snapshot_list': snapshots_list,
         'lulc_lookup_dict': lulc_lookup_dict,
         'code_to_lulc_dict': code_to_lulc_dict,
         'lulc_to_code_dict': lulc_to_code_dict

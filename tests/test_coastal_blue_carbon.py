@@ -223,44 +223,36 @@ def _get_preprocessor_args(args_choice, workspace):
         band_matrices_nodata, NODATA_INT, (100, -100), origin, projection_wkt,
         raster_nodata_path)
 
+    snapshot_csv_path = os.path.join(workspace, 'snapshot_csv.csv')
+    def _write_snapshot_csv(raster_path_list):
+        with open(snapshot_csv_path, 'w') as snapshot_csv:
+            snapshot_csv.write('snapshot_year,raster_path\n')
+
+            # The actual years in the snapshots CSV don't matter except that
+            # they are numeric and unique.  Hardcoding them here should be
+            # fine.
+            for year, raster_path in enumerate(raster_path_list, start=2000):
+                snapshot_csv.write(f'{year},{raster_path}\n')
+
+    workspace_path = os.path.join(workspace, 'workspace')
     args = {
-        'workspace_dir': os.path.join(workspace, 'workspace'),
+        'workspace_dir': workspace_path,
         'results_suffix': 'test',
-        'lulc_lookup_uri': lulc_lookup_path,
-        'lulc_snapshot_list': [raster_0_path, raster_1_path, raster_2_path]
+        'lulc_lookup_table_path': lulc_lookup_path,
+        'landcover_snapshot_csv': snapshot_csv_path,
     }
-
-    args2 = {
-        'workspace_dir': os.path.join(workspace, 'workspace'),
-        'results_suffix': 'test',
-        'lulc_lookup_uri': lulc_lookup_path,
-        'lulc_snapshot_list': [raster_0_path, raster_1_path, raster_3_path]
-    }
-
-    args3 = {
-        'workspace_dir': os.path.join(workspace, 'workspace'),
-        'results_suffix': 'test',
-        'lulc_lookup_uri': lulc_lookup_path,
-        'lulc_snapshot_list': [
-            raster_0_path, raster_nodata_path, raster_3_path]
-    }
-
-    args4 = {
-        'workspace_dir': os.path.join(workspace, 'workspace'),
-        'results_suffix': 'test',
-        'lulc_lookup_uri': lulc_lookup_path,
-        'lulc_snapshot_list': [
-            raster_0_path, raster_nodata_path, raster_4_path]
-    }
-
     if args_choice == 1:
-        return args
+        _write_snapshot_csv([raster_0_path, raster_1_path, raster_2_path])
     elif args_choice == 2:
-        return args2
+        _write_snapshot_csv([raster_0_path, raster_1_path, raster_3_path])
     elif args_choice == 3:
-        return args3
+        _write_snapshot_csv([raster_0_path, raster_nodata_path, raster_3_path])
+    elif args_choice == 4:
+        _write_snapshot_csv([raster_0_path, raster_nodata_path, raster_4_path])
     else:
-        return args4
+        raise ValueError("Invalid args_choice value")
+
+    return args
 
 
 class TestPreprocessor(unittest.TestCase):
@@ -343,6 +335,7 @@ class TestPreprocessor(unittest.TestCase):
         # just a regression test.  this tests that an output file was
         # successfully created, and that two particular land class transitions
         # occur and are set in the right directions.
+        import pdb; pdb.set_trace()
         self.assertTrue(lines[2][:].startswith('x,,'))
 
     def test_preprocessor_user_defined_nodata(self):
@@ -369,29 +362,7 @@ class TestPreprocessor(unittest.TestCase):
         """Coastal Blue Carbon: Test lookup table parsing exception."""
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(1, self.workspace_dir)
-        _create_table(args['lulc_lookup_uri'], lulc_lookup_list_unreadable)
-        with self.assertRaises(ValueError):
-            preprocessor.execute(args)
-
-    def test_raster_validation(self):
-        """Coastal Blue Carbon: Test raster validation."""
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace_dir)
-        OTHER_NODATA = -1
-
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3157)
-        projection_wkt = srs.ExportToWkt()
-        origin = (443723.127327877911739, 4956546.905980412848294)
-
-        band_matrices_with_nodata = numpy.ones((2, 2)) * OTHER_NODATA
-        raster_wrong_nodata = os.path.join(
-            self.workspace_dir, 'raster_wrong_nodata.tif')
-        pygeoprocessing.numpy_array_to_raster(
-            band_matrices_with_nodata, OTHER_NODATA, (100, -100), origin,
-            projection_wkt, raster_wrong_nodata)
-
-        args['lulc_snapshot_list'][0] = raster_wrong_nodata
+        _create_table(args['lulc_lookup_table_path'], lulc_lookup_list_unreadable)
         with self.assertRaises(ValueError):
             preprocessor.execute(args)
 
@@ -399,7 +370,7 @@ class TestPreprocessor(unittest.TestCase):
         """Coastal Blue Carbon: Test raster values not in lookup table."""
         from natcap.invest.coastal_blue_carbon import preprocessor
         args = _get_preprocessor_args(1, self.workspace_dir)
-        _create_table(args['lulc_lookup_uri'], lulc_lookup_list_no_ones)
+        _create_table(args['lulc_lookup_table_path'], lulc_lookup_list_no_ones)
         with self.assertRaises(ValueError):
             preprocessor.execute(args)
 
@@ -464,7 +435,7 @@ class TestPreprocessor(unittest.TestCase):
         args = {
             'workspace_dir': _create_workspace(),
             'results_suffix': '150225',
-            'lulc_lookup_uri': os.path.join(
+            'lulc_lookup_table_path': os.path.join(
                 REGRESSION_DATA, 'inputs', 'lulc_lookup.csv'),
             'lulc_snapshot_list': [raster_0_path, raster_1_path, raster_2_path]
         }
@@ -1114,14 +1085,14 @@ class TestCBC2(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.workspace_dir)
 
-    def test_extract_transitions(self):
-        csv_path = os.path.join(self.workspace_dir, 'transitions.csv')
+    def test_extract_shapshots(self):
+        csv_path = os.path.join(self.workspace_dir, 'snapshots.csv')
 
         transition_years = (2000, 2010, 2020)
         transition_rasters = []
         with open(csv_path, 'w') as transitions_csv:
             # Check that we can interpret varying case.
-            transitions_csv.write('transition_YEAR,raster_PATH\n')
+            transitions_csv.write('snapshot_YEAR,raster_PATH\n')
             for transition_year in transition_years:
                 # Write absolute paths.
                 transition_file_path = os.path.join(
@@ -1139,7 +1110,7 @@ class TestCBC2(unittest.TestCase):
                                                    'some_path.tif'))
 
         extracted_transitions = (
-            coastal_blue_carbon2._extract_transitions_from_table(csv_path))
+            coastal_blue_carbon2._extract_snapshots_from_table(csv_path))
 
         self.assertEqual(
             extracted_transitions,
@@ -1356,32 +1327,32 @@ class TestCBC2(unittest.TestCase):
             baseline_matrix, 255, (2, -2), (2, -2), wkt,
             baseline_landcover_raster_path)
 
-        transition_2010_raster_path = os.path.join(
-            target_dir, 'transition_2010.tif')
-        transition_2010_matrix = numpy.array([[2, 1]], dtype=numpy.uint8)
+        snapshot_2010_raster_path = os.path.join(
+            target_dir, 'snapshot_2010.tif')
+        snapshot_2010_matrix = numpy.array([[2, 1]], dtype=numpy.uint8)
         pygeoprocessing.numpy_array_to_raster(
-            transition_2010_matrix, 255, (2, -2), (2, -2), wkt,
-            transition_2010_raster_path)
+            snapshot_2010_matrix, 255, (2, -2), (2, -2), wkt,
+            snapshot_2010_raster_path)
 
-        transition_2020_raster_path = os.path.join(
-            target_dir, 'transition_2020.tif')
-        transition_2020_matrix = numpy.array([[1, 2]], dtype=numpy.uint8)
+        snapshot_2020_raster_path = os.path.join(
+            target_dir, 'snapshot_2020.tif')
+        snapshot_2020_matrix = numpy.array([[1, 2]], dtype=numpy.uint8)
         pygeoprocessing.numpy_array_to_raster(
-            transition_2020_matrix, 255, (2, -2), (2, -2), wkt,
-            transition_2020_raster_path)
+            snapshot_2020_matrix, 255, (2, -2), (2, -2), wkt,
+            snapshot_2020_raster_path)
 
-        transition_rasters_csv_path = os.path.join(
-            target_dir, 'transition_rasters.csv')
-        with open(transition_rasters_csv_path, 'w') as transition_rasters_csv:
-            transition_rasters_csv.write('transition_year,raster_path\n')
-            transition_rasters_csv.write(
-                f'2010,{transition_2010_raster_path}\n')
-            transition_rasters_csv.write(
-                f'2020,{transition_2020_raster_path}\n')
+        snapshot_rasters_csv_path = os.path.join(
+            target_dir, 'snapshot_rasters.csv')
+        with open(snapshot_rasters_csv_path, 'w') as snapshot_rasters_csv:
+            snapshot_rasters_csv.write('snapshot_year,raster_path\n')
+            snapshot_rasters_csv.write(
+                f'2010,{snapshot_2010_raster_path}\n')
+            snapshot_rasters_csv.write(
+                f'2020,{snapshot_2020_raster_path}\n')
 
         args = {
             'landcover_transitions_table': transition_matrix_path,
-            'transitions_csv': transition_rasters_csv_path,
+            'landcover_snapshot_csv': snapshot_rasters_csv_path,
             'biophysical_table_path': biophysical_table_path,
             'baseline_lulc_path': baseline_landcover_raster_path,
             'baseline_lulc_year': 2000,
@@ -1471,7 +1442,7 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        del args['transitions_csv']  # Remove transitions.
+        del args['landcover_snapshot_csv']  # Remove transitions.
         args['analysis_year'] = args['baseline_lulc_year'] + 10
 
         # Use valuation parameters rather than price table.
@@ -1519,9 +1490,9 @@ class TestCBC2(unittest.TestCase):
         with open(invalid_raster_path, 'w') as raster:
             raster.write('not a raster')
 
-        with open(args['transitions_csv'], 'w') as transitions_table:
-            transitions_table.write('transition_year,raster_path\n')
-            transitions_table.write(
+        with open(args['landcover_snapshot_csv'], 'w') as snapshot_table:
+            snapshot_table.write('snapshot_year,raster_path\n')
+            snapshot_table.write(
                 f"{args['baseline_lulc_year']-3},{invalid_raster_path}")
 
         # analysis year must be >= the last transition year.
