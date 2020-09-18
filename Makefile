@@ -323,7 +323,7 @@ $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
 WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(INSTALLER_NAME_FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 windows_installer: $(WINDOWS_INSTALLER_FILE)
-$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) build/vcredist_x86.exe | $(GIT_SAMPLE_DATA_REPO_PATH)
+$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vcredist_x86.exe | $(GIT_SAMPLE_DATA_REPO_PATH)
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
@@ -365,7 +365,7 @@ deploy:
 	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
-	@echo "Applicaiton binaries (if they were created) can be downloaded from:"
+	@echo "Application binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 
 # Notes on Makefile development
