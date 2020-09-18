@@ -59,6 +59,8 @@ ARGS_SPEC = {
 
 
 ALIGNED_LULC_RASTER_TEMPLATE = 'aligned_lulc_{year}{suffix}.tif'
+TRANSITION_TABLE = 'carbon_pool_transient_template{suffix}.tif'
+BIOPHYSICAL_TABLE = 'carbon_biophysical_table_template{suffix}.tif'
 
 _OUTPUT = {
     'aligned_lulc_template': 'aligned_lulc_%s.tif',
@@ -130,9 +132,30 @@ def execute(args):
         target_path_list=aligned_snapshot_paths,
         task_name='Align input landcover rasters')
 
+    landcover_table = utils.build_lookup_from_csv(
+        args['lulc_lookup_table_path'], 'code')
 
+    target_transition_table = os.path.join(
+        output_dir, TRANSITION_TABLE.format(suffix=suffix))
+    transition_matrix_creation_task = task_graph.add_task(
+        func=_create_transition_table,
+        args=(landcover_table,
+              sorted(snapshots_dict.values(), key=lambda x:[0]),
+             target_transition_table),
+        target_path_list=[target_transition_table],
+        dependent_task_list=[alignment_task],
+        task_name='Determine transitions and write transition table')
 
+    # Creating this table should be cheap, so it's not in a task.
+    # This is only likely to be expensive if the user provided a landcover
+    # lookup with many many rows. If that happens, this tool will have other
+    # problems (like exploding memory in the transition table creation).
+    target_biophysical_table_path = os.path.join(
+        output_dir, BIOPHYSICAL_TABLE.format(suffix=suffix))
+    _create_biophysical_table(landcover_table, target_biophysical_table_path)
 
+    task_graph.close()
+    task_graph.join()
 
 
 def execute_old(args):
@@ -352,6 +375,11 @@ def _mark_transition_type(lookup_dict, lulc_from, lulc_to):
         return 'NCC'  # non-veg --> non-veg
 
 
+def _create_transition_table(landcover_table, lulc_snapshot_list,
+                             target_table_path):
+    pass
+
+
 def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
     """Preprocess data.
 
@@ -382,7 +410,7 @@ def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
     return transition_matrix_dict
 
 
-def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
+def _create_transition_table_old(filepath, lulc_class_list, transition_matrix_dict,
                              code_to_lulc_dict):
     """Create transition table representing effect on emissions or sequestration.
 
