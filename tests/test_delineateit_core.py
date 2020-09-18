@@ -1,10 +1,11 @@
 import unittest
 import gdal
 import os
+import shutil
 import tempfile
 
-
-from natcap.invest import routedem
+from natcap.invest.ndr import ndr_core
+from natcap.invest.delineateit import delineateit_core
 
 
 SAMPLE_DATA_PATH = os.path.join(
@@ -15,7 +16,7 @@ TEST_DATA_PATH = os.path.join(
     'delineateit')
 
 
-class RouteDEMCoreTests(unittest.TestCase):
+class DelineateitCoreTests(unittest.TestCase):
 
     def setUp(self):
         """Overriding setUp function to create temp workspace directory."""
@@ -31,7 +32,7 @@ class RouteDEMCoreTests(unittest.TestCase):
         input_path = '/Users/emily/invest/test_flow_direction.tif'
         output_path = os.path.join(self.workspace_dir, 'point_vector.gpkg')
 
-        routedem.routedem_core.identify_pour_points(input_path, output_path)
+        delineateit.delineateit_core.identify_pour_points(input_path, output_path)
 
         vector = gdal.OpenEx(output_path, gdal.OF_VECTOR)
         layer = vector.GetLayer(1)

@@ -34,7 +34,7 @@ class DelineateItTests(unittest.TestCase):
 
     def test_delineateit_willamette(self):
         """DelineateIt: regression testing full run."""
-        from natcap.invest import delineateit
+        from natcap.invest.delineateit import delineateit
 
         args = {
             'dem_path': os.path.join(REGRESSION_DATA, 'input', 'dem.tif'),
@@ -70,7 +70,7 @@ class DelineateItTests(unittest.TestCase):
 
     def test_delineateit_validate(self):
         """DelineateIt: test validation function."""
-        from natcap.invest import delineateit
+        from natcap.invest.delineateit import delineateit
         missing_keys = {}
         validation_warnings = delineateit.validate(missing_keys)
         self.assertEqual(len(validation_warnings), 1)
@@ -125,7 +125,7 @@ class DelineateItTests(unittest.TestCase):
 
     def test_point_snapping(self):
         """DelineateIt: test point snapping."""
-        from natcap.invest import delineateit
+        from natcap.invest.delineateit import delineateit
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
@@ -201,7 +201,7 @@ class DelineateItTests(unittest.TestCase):
 
     def test_vector_may_contain_points(self):
         """DelineateIt: Check whether a layer contains points."""
-        from natcap.invest import delineateit
+        from natcap.invest.delineateit import delineateit
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
@@ -239,7 +239,7 @@ class DelineateItTests(unittest.TestCase):
 
     def test_check_geometries(self):
         """DelineateIt: Check that we can reasonably repair geometries."""
-        from natcap.invest import delineateit
+        from natcap.invest.delineateit import delineateit
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
         projection_wkt = srs.ExportToWkt()
@@ -345,3 +345,91 @@ class DelineateItTests(unittest.TestCase):
 
         target_layer = None
         target_vector = None
+
+
+
+    def test_identify_pour_points(self):
+        from natcap.invest.delineateit import delineateit
+
+        input_path = '/Users/emily/invest/test_flow_direction.tif'
+        output_path = os.path.join(self.workspace_dir, 'point_vector.gpkg')
+
+        delineateit.identify_pour_points(input_path, output_path)
+
+        vector = gdal.OpenEx(output_path, gdal.OF_VECTOR)
+        layer = vector.GetLayer()
+
+        points = []
+        for feature in layer:
+            geom = feature.GetGeometryRef()
+            x, y, _ = geom.GetPoint()
+            points.append((x, y))
+        points.sort()
+
+        expected_points = [
+            (277713.1562500205, 9941874.499999935),
+            (277713.1562500205, 9941859.499999935)]
+
+        self.assertTrue(numpy.isclose(points[0][0], expected_points[0][0]))
+        self.assertTrue(numpy.isclose(points[0][1], expected_points[0][1]))
+        self.assertTrue(numpy.isclose(points[1][0], expected_points[1][0]))
+        self.assertTrue(numpy.isclose(points[1][1], expected_points[1][1]))
+
+
+    def test_is_pour_point(self):
+        from natcap.invest.delineateit import delineateit
+
+        a = delineateit.TMP_NODATA
+        b = delineateit.FILL_VALUE
+
+        kernel_1 = [a, a, a, 
+                    a, 2, 4, 
+                    a, 2, 4]
+        kernel_2 = [0, 0, b, 
+                    0, 0, b, 
+                    a, a, b]
+        kernel_3 = [a, a, a, 
+                    4, 6, 1, 
+                    3, 3, 3]
+
+        self.assertEqual(delineateit._is_pour_point(kernel_1), 1)
+        self.assertEqual(delineateit._is_pour_point(kernel_2), a)
+        self.assertEqual(delineateit._is_pour_point(kernel_3), 0)
+
+
+    def test_calculate_pour_point_array(self):
+        from natcap.invest.delineateit import delineateit
+
+        a = delineateit.TMP_NODATA
+        flow_dir_array = [
+            [7, 7, 7, 5],
+            [6, 6, 6, 4],
+            [0, 1, a, 0],
+            [a, 2, 3, 4]
+        ]
+
+        expected_pour_point_array = [
+            [0, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, a, 1],
+            [a, 0, 0, 0]
+        ]
+
+        self.assertTrue(numpy.array_equal(
+            delineateit._calculate_pour_point_array(flow_dir_array),
+            expected_pour_point_array))
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
