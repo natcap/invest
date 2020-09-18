@@ -118,7 +118,8 @@ jobs:
                 export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
                 make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} `
-                        GSUTIL="$GSUTIL_PATH" BIN_TO_SIGN="$INSTALLER_BINARY" `
+                        GSUTIL="$GSUTIL_PATH" `
+                        BIN_TO_SIGN="$INSTALLER_BINARY" `
                         SIGNTOOL="$SIGNTOOL_PATH" `
                      signcode_windows
 
