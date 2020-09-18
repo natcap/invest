@@ -377,7 +377,86 @@ def _mark_transition_type(lookup_dict, lulc_from, lulc_to):
 
 def _create_transition_table(landcover_table, lulc_snapshot_list,
                              target_table_path):
-    pass
+
+    def _read_block(raster_path, offset_dict):
+        try:
+            raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
+            band = raster.GetRasterBand(1)
+            array = band.ReadAsArray(**offset_dict)
+            nodata = band.GetNoDataValue()
+        finally:
+            band = None
+            raster = None
+        return array, nodata
+
+    transition_pairs = set()
+    for block_offsets in pygeoprocessing.iterblocks((lulc_snapshot_list, 1),
+                                                    offset_only=True):
+        # TODO: make this loop more efficient by not reading in each raster
+        # twice
+        for from_raster, to_raster in zip(lulc_snapshot_list[:-1],
+                                          lulc_snapshot_list[1:]):
+            from_array, from_nodata = _read_block(from_raster, block_offsets)
+            to_array, to_nodata = _read_block(to_raster, block_offsets)
+
+            # This comparison assumes that our landcover rasters are of an
+            # integer type.  When int matrices, we can compare directly to
+            # None.
+            valid_pixels = ((from_array != from_nodata) &
+                            (to_array != to_nodata))
+            transition_pairs = transition_pairs.union(
+                set(zip(from_array[valid_pixels].flatten(),
+                        to_array[valid_pixels].flatten())))
+
+    # Mapping of whether the from, to landcover types are coastal blue carbon
+    # habitats to the string carbon transition type.
+    # The keys are structured as a tuple of two booleans where:
+    #  * tuple[0] = whether the FROM transition is CBC habitat
+    #  * tuple[1] = whether the TO transition is CBC habitat
+    transition_types = {
+        (True, True): 'accum',  # veg --> veg
+        (False, True): 'accum',  # non-veg --> veg
+        (True, False): 'disturb',  # veg --> non-veg
+        (False, False): 'NCC',  # non-veg --> non-veg
+    }
+
+    sparse_transition_table = {}
+    for from_lucode, to_lucode in transition_pairs:
+        from_is_cbc = landcover_table[
+            from_lucode]['is_coastal_blue_carbon_habitat']
+        to_is_cbc = landcover_table[
+            to_lucode]['is_coastal_blue_carbon_habitat']
+
+        sparse_transition_table[(from_lucode, to_lucode)] = (
+            transition_types[(from_is_cbc, to_is_cbc)])
+
+    code_list = sorted([code for code in landcover_table.keys()])
+    lulc_class_list_sorted = [landcover_table[code]['lulc-class'] for code in code_list]
+    with open(target_table_path, 'w') as csv_file:
+        fieldnames = ['lulc-class'] + lulc_class_list_sorted
+        csv_file.write(f"{','.join(fieldnames)}\n")
+        for row_code in code_list:
+            class_name = landcover_table[row_code]['lulc-class']
+            row = [class_name]
+            for col_code in code_list:
+                try:
+                    column_value = sparse_transition_table[
+                        (row_code, col_code)]
+                except KeyError:
+                    # When there isn't a transition that we know about, just
+                    # leave the table blank.
+                    column_value = ''
+                row.append(column_value)
+            csv_file.write(','.join(row) + '\n')
+
+        # Append legend
+        csv_file.write(",\n,legend")
+        csv_file.write(
+            "\n,empty cells indicate that no transitions occur of that type")
+        csv_file.write("\n,disturb (disturbance): change to low- med- or "
+                       "high-impact-disturb")
+        csv_file.write("\n,accum (accumulation)")
+        csv_file.write("\n,NCC (no-carbon-change)")
 
 
 def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
