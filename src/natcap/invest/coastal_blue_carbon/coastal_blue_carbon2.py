@@ -6,7 +6,6 @@ import pygeoprocessing
 import scipy.sparse
 import taskgraph
 from osgeo import gdal
-from pygeoprocessing.symbolic import evaluate_raster_calculator_expression
 
 from .. import utils
 from .. import validation
@@ -808,13 +807,15 @@ def execute_transition_analysis(args):
                     DISTURBANCE_VOL_RASTER_PATTERN.format(
                         pool=pool, year=year, suffix=suffix))
                 current_disturbance_vol_tasks[pool] = task_graph.add_task(
-                    func=evaluate_raster_calculator_expression,
-                    args=("magnitude*stocks",
-                          {"magnitude": (
-                              disturbance_magnitude_rasters[year][pool], 1),
-                           "stocks": (stock_rasters[year-1][pool], 1)},
-                          NODATA_FLOAT32,
-                          disturbance_vol_rasters[year][pool]),
+                    func=pygeoprocessing.raster_calculator,
+                    args=([(disturbance_magnitude_rasters[year][pool], 1),
+                           # TODO: why is this using prior year's stocks?
+                           (stock_rasters[year-1][pool], 1)],
+                          _calculate_disturbance_volume,
+                          disturbance_vol_rasters[year][pool],
+                          gdal.GDT_Float32,
+                          NODATA_FLOAT32
+                         ),
                     dependent_task_list=(
                         current_disturbance_vol_dependent_tasks),
                     target_path_list=[
@@ -999,6 +1000,30 @@ def execute_transition_analysis(args):
 
     task_graph.close()
     task_graph.join()
+
+
+def _calculate_disturbance_volume(disturbance_magnitude_matrix, stock_matrix):
+    """Calculate disturbance volume.
+
+    Args:
+        disturbance_magnitude_matrix (numpy.array): A float32 matrix of the
+            magnitude of a disturbance.  Nodata values must be NODATA_FLOAT32.
+        stock_matrix (numpy.array): A float32 matrix of the stocks present at
+            the time of disturbance.  Nodata values must be NODATA_FLOAT32.
+
+    Returns:
+        A numpy float32 matrix of disturbance volume.
+    """
+    disturbed_carbon_volume = numpy.empty(disturbance_magnitude_matrix.shape,
+                                          dtype=numpy.float32)
+    disturbed_carbon_volume[:] = NODATA_FLOAT32
+    valid_pixels = (~numpy.isclose(disturbance_magnitude_matrix,
+                                   NODATA_FLOAT32) &
+                    ~numpy.isclose(stock_matrix, NODATA_FLOAT32))
+    disturbed_carbon_volume[valid_pixels] = (
+        disturbance_magnitude_matrix[valid_pixels] *
+        stock_matrix[valid_pixels])
+    return disturbed_carbon_volume
 
 
 def _calculate_npv(
