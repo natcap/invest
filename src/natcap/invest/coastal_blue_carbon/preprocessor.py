@@ -58,6 +58,8 @@ ARGS_SPEC = {
 }
 
 
+ALIGNED_LULC_RASTER_TEMPLATE = 'aligned_lulc_{year}{suffix}.tif'
+
 _OUTPUT = {
     'aligned_lulc_template': 'aligned_lulc_%s.tif',
     'transitions': 'transitions.csv',
@@ -67,6 +69,73 @@ _OUTPUT = {
 
 
 def execute(args):
+    """Coastal Blue Carbon Preprocessor.
+
+    The preprocessor accepts a list of rasters and checks for cell-transitions
+    across the rasters.  The preprocessor outputs a CSV file representing a
+    matrix of land cover transitions, each cell pre-filled with a string
+    indicating whether carbon accumulates or is disturbed as a result of the
+    transition, if a transition occurs.
+
+    Args:
+        args['workspace_dir'] (string): directory path to workspace
+        args['results_suffix'] (string): append to outputs directory name if provided
+        args['lulc_lookup_table_path'] (string): filepath of lulc lookup table
+        args['landcover_csv_path'] (string): filepath to a CSV containing the
+            year and filepath to snapshot rasters on disk.  The years may be in
+            any order, but must be unique.
+
+    Returns:
+        ``None``
+    """
+    suffix = utils.make_suffix_string(args, 'results_suffix')
+    output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
+
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
+    task_graph = taskgraph.TaskGraph(
+        taskgraph_cache_dir, n_workers, reporting_interval=5.0)
+
+    snapshots_dict = (
+        coastal_blue_carbon2._extract_snapshots_from_tabls(
+            args['landcover_snapshot_csv']))
+
+    # Align the raster stack for analyzing the various transitions.
+    min_pixel_size = float('inf')
+    source_snapshot_paths = []
+    aligned_snapshot_paths = []
+    for snapshot_year, raster_path in snapshots_dict.items():
+        source_snapshot_paths.append(raster_path)
+        aligned_snapshot_paths.append(ALIGNED_LULC_RASTER_TEMPLATE.format(
+            year=snapshot_year, suffix=suffix))
+        min_pixel_size = min(
+            utils.mean_pixel_size_and_area(
+                pygeoprocessing.get_raster_info(raster_path)['pixel_size'])[0],
+            min_pixel_size)
+
+    alignment_task = task_graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        args=(source_snapshot_paths,
+              aligned_snapshot_paths,
+              ['nearest']*len(source_snapshot_paths),
+              (min_pixel_size, -min_pixel_size),
+              'intersection'),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=aligned_snapshot_paths,
+        task_name='Align input landcover rasters')
+
+
+
+
+
+
+def execute_old(args):
     """Coastal Blue Carbon Preprocessor.
 
     The preprocessor accepts a list of rasters and checks for cell-transitions
