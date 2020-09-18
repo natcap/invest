@@ -459,6 +459,25 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
         csv_file.write("\n,NCC (no-carbon-change)")
 
 
+def _create_biophysical_table(landcover_table, target_biophysical_table_path):
+    target_column_names = coastal_blue_carbon2.ARGS_SPEC['args'][
+        'biophysical_table_path']['validation_options']['required_fields']
+
+    with open(target_biophysical_table_path, 'w') as bio_table:
+        bio_table.write(f"{','.join(target_column_names)}\n")
+        for lulc_code in sorted(landcover_table.keys()):
+            # 2 columns are defined below, and we need 1 less comma to only
+            # have commas between fields.
+            row = []
+            for colname in target_column_names:
+                try:
+                    # Use the user's defined value if it exists
+                    row.append(landcover_table[colname])
+                except KeyError:
+                    row.append('')
+            bio_table.write(f"{','.join(row)}\n")
+
+
 def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
     """Preprocess data.
 
