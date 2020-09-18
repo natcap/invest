@@ -12,7 +12,6 @@
     "test-binaries": "jest tests/binary_tests/*",
     "postinstall": "electron-builder install-app-deps",
     "build": "npx ./build.js",
-    "clean-build": "npx ./build.js clean",
     "dist": "electron-builder -c.extraMetadata.main=build/main.js",
     "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js"
   },
