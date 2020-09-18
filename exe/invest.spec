@@ -10,8 +10,8 @@ from PyInstaller.compat import is_win, is_darwin
 current_dir = os.getcwd()  # assume we're building from the project root
 block_cipher = None
 exename = 'invest'
-conda_env = '/usr/local/miniconda/envs/mac-env'
-
+mac_conda_env = '/usr/local/miniconda/envs/macbin-env'
+win_conda_env = 'C:\Miniconda\envs\winbin-env'
 
 kwargs = {
     'hookspath': [os.path.join(current_dir, 'exe', 'hooks')],
@@ -43,7 +43,7 @@ if is_darwin:
     # add rtree dependency dynamic libraries from conda environment
     a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
-        glob.glob(os.path.join(conda_env, 'lib/libspatialindex*.dylib'))]
+        glob.glob(os.path.join(mac_conda_env, 'lib/libspatialindex*.dylib'))]
 elif is_win:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/
@@ -55,6 +55,10 @@ elif is_win:
         ('msvcr90.dll', 'C:\\Windows\\System32\\msvcr90.dll', 'BINARY')
     ]
 
+    # add rtree dependency dynamic libraries from conda environment
+    a.binaries += [
+        (os.path.basename(name), name, 'BINARY') for name in
+        glob.glob(os.path.join(win_conda_env, 'Library/bin/spatialindex*.dll'))]
     # .exe extension is required if we're on windows.
     exename += '.exe'
 

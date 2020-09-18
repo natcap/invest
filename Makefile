@@ -8,13 +8,14 @@ GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
 GIT_TEST_DATA_REPO_REV      := f1600516ab5b5704901d6478cca830bdf2fdfb20
 
-GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
+GIT_UG_REPO                  := https://github.com/dcdenu4/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 25732693ef4139d77bb2ae6847366208b0e16e87
+GIT_UG_REPO_REV              := be611da87a6485a05b1136c3cbf4497dfaba706f
 
 
 ENV = env
 ifeq ($(OS),Windows_NT)
+	# Double $$ indicates windows environment variable
 	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_SCRIPTS = $(ENV)\Scripts
@@ -28,10 +29,12 @@ ifeq ($(OS),Windows_NT)
 	PYTHON = python
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
 	MAKE := make
-	SHELL := powershell.exe
+	# Since moving to GitHub actions for build workflows, it makes sense 
+	# to use the bash shell for more consistent command runs
+	#SHELL := powershell.exe
+	SHELL := /usr/bin/bash
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
 	.DEFAULT_GOAL := windows_installer
-	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
 	/ := '\'
 else
@@ -51,10 +54,8 @@ else
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
 		.DEFAULT_GOAL := mac_installer
-		JENKINS_BUILD_SCRIPT := ./scripts/jenkins-build.sh
 	else
 		.DEFAULT_GOAL := binaries
-		JENKINS_BUILD_SCRIPT := @echo "NOTE: There is not currently a linux jenkins build."; exit 1
 	endif
 endif
 
@@ -153,16 +154,13 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --omit=*/invest/ui/* $(TESTRUNNER) tests
+	coverage run -m --omit='*/invest/ui/*' $(TESTRUNNER) tests
 	coverage report
 	coverage html
 	coverage xml
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --include=*/invest/ui/* $(TESTRUNNER) ui_tests
-	coverage report
-	coverage html
-	coverage xml
+	coverage run -m --include='*/invest/ui/*' $(TESTRUNNER) ui_tests
 
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
@@ -230,7 +228,7 @@ env:
 # of pip don't think CWD is a valid package.
 install: $(DIST_DIR)/natcap.invest%.whl
 	-$(RMDIR) natcap.invest.egg-info
-	$(PIP) install --isolated --upgrade --only-binary natcap.invest --find-links=dist natcap.invest
+	$(PIP) install --isolated --upgrade --no-index --only-binary natcap.invest --find-links=dist natcap.invest
 
 
 # Bulid python packages and put them in dist/
@@ -325,7 +323,7 @@ $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
 WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(INSTALLER_NAME_FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 windows_installer: $(WINDOWS_INSTALLER_FILE)
-$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) build/vcredist_x86.exe | $(GIT_SAMPLE_DATA_REPO_PATH)
+$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vcredist_x86.exe | $(GIT_SAMPLE_DATA_REPO_PATH)
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
@@ -344,15 +342,6 @@ $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
-jenkins:
-	$(JENKINS_BUILD_SCRIPT)
-
-jenkins_test_ui: env
-	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test_ui
-
-jenkins_test: env $(GIT_TEST_DATA_REPO_PATH)
-	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test
-
 CERT_FILE := StanfordUniversity.crt
 KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
 signcode:
@@ -367,18 +356,17 @@ signcode:
 
 P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
 signcode_windows:
-	$(BASHLIKE_SHELL_COMMAND) "$(GSUTIL) cp gs://stanford_cert/$(P12_FILE) $(BUILD_DIR)/$(P12_FILE)"
+	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
-	-powershell.exe "Remove-Item $(BUILD_DIR)/$(P12_FILE)"
+	-rm $(BUILD_DIR)/$(P12_FILE)
 	@echo "Installer was signed with signtool"
 
 deploy:
 	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
-	@echo "Applicaiton binaries (if they were created) can be downloaded from:"
+	@echo "Application binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
-
 
 # Notes on Makefile development
 #
