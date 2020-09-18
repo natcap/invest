@@ -73,7 +73,7 @@ jobs:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Set python
+            - name: Setup conda environment
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   activate-environment: ${{ matrix.os }}-test-env
@@ -126,13 +126,14 @@ jobs:
               if: github.event_name != 'pull_request'
               shell: bash -l {0}
               run: |
-                  GSUTIL_PATH=$(which gsutil)
+                  # setup-gcloud action adds 'gsutil' to the PATH
+                  GSUTIL_PATH="gsutil"
                   # Specify which python version we want to use (it's the one
                   # we're using in actions/setup-miniconda)
                   export CLOUDSDK_PYTHON=$(which python)
                   export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
-                  make GSUTIL="gsutil" deploy
+                  make GSUTIL=$(GSUTIL_PATH) deploy
 
     test-source-distribution:
         name: "Check sdist"
@@ -149,7 +150,7 @@ jobs:
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Set up python
+            - name: Setup conda environment 
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   activate-environment: source-env
@@ -210,14 +211,14 @@ jobs:
               if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == '3.7'
               shell: bash -l {0}
               run: |
-                  GSUTIL_PATH=$(which gsutil)
+                  # setup-gcloud action adds 'gsutil' to the PATH
+                  GSUTIL_PATH="gsutil"
                   # Specify which python version we want to use (it's the one
                   # we're using in actions/setup-miniconda)
                   export CLOUDSDK_PYTHON=$(which python)
                   export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
-                  make GSUTIL="gsutil" deploy
-
+                  make GSUTIL=$(GSUTIL_PATH) deploy
 
     validate-sampledata:
         name: "Validate sample datastacks"
@@ -235,7 +236,7 @@ jobs:
                   path: ~\AppData\Local\pip\Cache
                   key: windows-py37-pipcache-sampledata-${{ hashfiles('requirements.txt') }}
 
-            - name: Setup python
+            - name: Setup conda environment
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   activate-environment: validate-env
@@ -287,7 +288,7 @@ jobs:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Set up python
+            - name: Setup conda environment
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   activate-environment: ui-env
