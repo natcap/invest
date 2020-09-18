@@ -962,7 +962,7 @@ def _raster_to_geojson(
     vector = gpkg_driver.Create(temp_gpkg_path, 0, 0, 0, gdal.GDT_Unknown)
 
     vector.StartTransaction()
-    vector_layer = vector.CreateLayer(str(layer_name), base_sr, ogr.wkbPolygon)
+    vector_layer = vector.CreateLayer(layer_name, base_sr, ogr.wkbPolygon)
 
     # Create an integer field that contains values from the raster
     field_defn = ogr.FieldDefn(str(field_name), ogr.OFTInteger)
@@ -3132,7 +3132,7 @@ def _simplify_geometry(
     target_simplified_vector = gpkg_driver.Create(
         target_simplified_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     target_simplified_layer = target_simplified_vector.CreateLayer(
-        str(target_layer_name),
+        target_layer_name,
         base_layer.GetSpatialRef(), base_layer.GetGeomType())
 
     target_simplified_vector.StartTransaction()
