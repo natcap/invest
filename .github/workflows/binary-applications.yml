@@ -118,11 +118,11 @@ jobs:
                 export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
                 # What are the ticks doing here?
-                make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} `
-                        GSUTIL="$GSUTIL_PATH" `
-                        BIN_TO_SIGN="$INSTALLER_BINARY" `
-                        SIGNTOOL="$SIGNTOOL_PATH" `
-                     signcode_windows
+                make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} \
+                        GSUTIL="$GSUTIL_PATH" \
+                        BIN_TO_SIGN="$INSTALLER_BINARY" \
+                        SIGNTOOL="$SIGNTOOL_PATH" \
+                        signcode_windows
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
