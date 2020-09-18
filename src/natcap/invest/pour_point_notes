@@ -1,0 +1,118 @@
+
+Input raster (x = a D8 direction [0-7]):
+
+x  x  x  x  x  x
+x  x  x  x  x  x
+x  x  x  x  x  x
+x  x  x  x  x  x
+
+
+Split into blocks that overlap by a 2 pixel margin:
+
+x  x  x | x  x  x      x  x  x  x     x  x  x  x
+x  x  x | x  x  x  --> x  x  x  x     x  x  x  x
+x  x  x | x  x  x      x  x  x  x     x  x  x  x
+x  x  x | x  x  x      x  x  x  x  ,  x  x  x  x
+                             ^  ^     ^  ^
+                          these are the same 2 columns
+
+For each block:
+
+    Pad the outside edges with a nodata value (using -1 here)
+    (edges that are edges of the original raster, not edges between blocks):
+
+    -1 -1 -1 -1 -1
+    -1  x  x  x  x
+    -1  x  x  x  x
+    -1  x  x  x  x
+    -1  x  x  x  x
+    -1 -1 -1 -1 -1
+
+
+    scipy.ndimage.generic_filter can iterate over each 3x3 kernel in the block.
+
+    There is a 3x3 kernel centered on each pixel in the block, so those
+    centered on an edge element extend beyond the block. generic_filter can
+    fill in those spots with a constant fill value (using -2 here). For instance,
+    here are two of the 30 kernels that would exist for this block:
+
+     ---------
+    |-1 -1 -1 | -1 -1
+    |-1  x  x |  x  x        
+    |-1  x  x |  x  x        -1 -1 -1
+     ---------         --->  -1  x  x
+     -1  x  x    x  x        -1  x  x      
+     -1  x  x    x  x        
+     -1 -1 -1   -1 -1
+
+
+    -1 -1 -1 -1 -1
+    -1  x  x  x  x 
+    -1  x  x  x  x 
+              ---------        
+    -1  x  x |  x  x   |          x  x -2
+    -1  x  x |  x  x   |    --->  x  x -2
+    -1 -1 -1 | -1 -1   |         -1 -1 -2
+              ---------
+
+     For each 3x3 kernel:
+
+        Flatten it into a 9x1 array:
+
+        -1 -1 -1
+        -1  x  x  -->  [-1, -1, -1, -1, x, x, -1, x, x]
+        -1  x  x 
+
+
+         x  x -2 
+         x  x -2  -->  [x, x, -2, x, x, -2, -1, -1, -2]
+        -1 -1 -2 
+
+        Get the center element (this is an x in both examples).
+        This is the flow direction pixel we're interested in.
+
+        Get the element it's pointing to by converting from the D8
+        indexing system:
+
+        D8          flattened kernel array
+
+        3 2 1       0 1 2 
+        4 x 0  -->  3 4 5 
+        5 6 7       6 7 8 
+
+
+            Let's say that in the first example, the center element x = 3.
+        That means it flows into its neighbor in D8 position 3, which 
+        is at index 0 of the flattened kernel array.
+        array[0] = -1, which is the nodata value. This pixel is flowing
+        off the edge of the raster, so this is a pour point.
+
+            In the second example, let's say the center element x = 0.
+        That means it flows into its neighbor in D8 position 0, which is at
+        inxed 5 of the flattened kernel array.
+        array[5] = -2, which is the fill value. We don't know what actually 
+        goes here (could be nodata or a real value), so it's unknown if this
+        is a pour point. 
+
+        Actually, any pixel whose surrounding 3x3 kernel contains the fill value
+        should be ignored (set to nodata). Without all 9 pixels, there might not
+        enough information in this block to determine if it's a pour point.
+
+        But because the blocks overlap, another block definitely will be able to 
+        determine if this pixel is a pour point. Looking back at the division of blocks:
+
+        0  1  2  3  4  5
+
+        x  x  x  x  x  x 
+        x  x  x  x  x  x 
+        x  x  x  x  x  x 
+        x  x  x  x  x  x 
+        
+        The first block contains columns 0 through 3, and the second block 
+        contains columns 2 through 5.
+
+        But the first block will only calculate pour point results for 
+        columns 0 through 2, and the second block will take care of 3 through 5,
+        because a 1-pixel-wide margin of data is needed to do the calculation.
+
+
