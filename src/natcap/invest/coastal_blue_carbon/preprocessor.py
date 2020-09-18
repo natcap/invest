@@ -27,7 +27,7 @@ ARGS_SPEC = {
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
-        "": {
+        "lulc_lookup_table_path": {
             "name": "LULC Lookup Table",
             "type": "csv",
             "about": (
@@ -45,7 +45,7 @@ ARGS_SPEC = {
                 "required_fields": ["snapshot_year", "raster_path"],
             },
             "type": "csv",
-            "required": False,
+            "required": True,
             "about": (
                 "A CSV table where each row represents the year and path "
                 "to a raster file on disk representing the landcover raster "
@@ -88,6 +88,8 @@ def execute(args):
     LOGGER.info('Starting Coastal Blue Carbon Preprocessor run...')
 
     # Inputs
+    results_suffix = utils.make_suffix_string(
+        args, 'results_suffix')
     vars_dict = _get_inputs(args)
 
     base_file_path_list = [(_OUTPUT, vars_dict['output_dir'])]
@@ -229,7 +231,11 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
     transition_set = set()
 
     for d, a1 in pygeoprocessing.iterblocks((raster_t1_uri, 1)):
-        a2 = read_from_raster(raster_t2_uri, d)
+        raster = gdal.OpenEx(raster_t2_uri, gdal.OF_RASTER)
+        band = raster.GetRasterBand(1)
+        a2 = band.ReadAsArray(**d)
+        band = None
+        raster = None
         transition_list = zip(a1.flatten(), a2.flatten())
         transition_set = transition_set.union(set(transition_list))
 
@@ -243,23 +249,6 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
                 transition_set.remove(i)
 
     return transition_set
-
-
-def read_from_raster(input_raster, offset_block):
-    """Read block from raster.
-
-    Args:
-        input_raster (str): filepath to raster.
-        offset_block (dict): where the block is indexed.
-
-    Returns:
-        a (np.array): the raster block.
-    """
-    ds = gdal.OpenEx(input_raster)
-    band = ds.GetRasterBand(1)
-    a = band.ReadAsArray(**offset_block)
-    ds = None
-    return a
 
 
 def _mark_transition_type(lookup_dict, lulc_from, lulc_to):
