@@ -133,7 +133,7 @@ jobs:
                   export CLOUDSDK_PYTHON=$(which python)
                   export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
-                  make GSUTIL=$(GSUTIL_PATH) deploy
+                  make GSUTIL=$GSUTIL_PATH deploy
 
     test-source-distribution:
         name: "Check sdist"
@@ -218,7 +218,7 @@ jobs:
                   export CLOUDSDK_PYTHON=$(which python)
                   export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
-                  make GSUTIL=$(GSUTIL_PATH) deploy
+                  make GSUTIL=$GSUTIL_PATH deploy
 
     validate-sampledata:
         name: "Validate sample datastacks"

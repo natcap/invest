@@ -47,7 +47,7 @@ jobs:
                   path: ~\AppData\Local\pip\Cache
                   key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
-            - name: Set up python
+            - name: Setup conda environment
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   activate-environment: winbin-env  # This is also hardcoded in Pyinstaller's invest.spec
@@ -110,6 +110,7 @@ jobs:
                 # figure out the path to signtool.exe (it keeps changing with SDK updates)
                 SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
                 INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name '*.exe' | head -n 1)
+                # setup-gcloud adds 'gsutil' to PATH
                 GSUTIL_PATH="gsutil"
 
                 # Specify which python version we want to use (it's the one we're using
@@ -128,13 +129,14 @@ jobs:
               if: github.event_name != 'pull_request'
               shell: bash -l {0}
               run: |
-                  GSUTIL_PATH=$(which gsutil)
+                  # setup-gcloud adds 'gsutil' to PATH
+                  GSUTIL_PATH="gsutil"
                   # Specify which python version we want to use (it's the one
                   # we're using in actions/setup-miniconda)
                   export CLOUDSDK_PYTHON=$(which python)
                   export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
-                  make -d GSUTIL="gsutil" deploy
+                  make GSUTIL=$GSUTIL_PATH deploy
 
             - name: Upload installer artifact
               if: always()
@@ -175,7 +177,7 @@ jobs:
                   path: ~/opt/anaconda3
                   key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
 
-            - name: Set up conda
+            - name: Setup conda environment
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   activate-environment: macbin-env  # This is also hardcoded in Pyinstaller's invest.spec
