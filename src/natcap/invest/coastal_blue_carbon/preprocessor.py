@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Preprocessor."""
 import os
-import itertools
-from itertools import product
 import logging
-import copy
-from functools import reduce
 
 from osgeo import gdal
-import numpy
 import pygeoprocessing
+import taskgraph
 
 from .. import utils
 from .. import validation
@@ -27,6 +23,7 @@ ARGS_SPEC = {
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
         "lulc_lookup_table_path": {
             "name": "LULC Lookup Table",
             "type": "csv",
@@ -59,8 +56,8 @@ ARGS_SPEC = {
 
 
 ALIGNED_LULC_RASTER_TEMPLATE = 'aligned_lulc_{year}{suffix}.tif'
-TRANSITION_TABLE = 'carbon_pool_transient_template{suffix}.tif'
-BIOPHYSICAL_TABLE = 'carbon_biophysical_table_template{suffix}.tif'
+TRANSITION_TABLE = 'carbon_pool_transition_template{suffix}.tif'
+BIOPHYSICAL_TABLE = 'carbon_biophysical_table_template{suffix}.csv'
 
 _OUTPUT = {
     'aligned_lulc_template': 'aligned_lulc_%s.tif',
@@ -92,6 +89,8 @@ def execute(args):
     """
     suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
+    taskgraph_cache_dir = os.path.join(args['workspace_dir'], 'task_cache')
+    utils.make_directories([output_dir, taskgraph_cache_dir])
 
     try:
         n_workers = int(args['n_workers'])
@@ -104,7 +103,7 @@ def execute(args):
         taskgraph_cache_dir, n_workers, reporting_interval=5.0)
 
     snapshots_dict = (
-        coastal_blue_carbon2._extract_snapshots_from_tabls(
+        coastal_blue_carbon2._extract_snapshots_from_table(
             args['landcover_snapshot_csv']))
 
     # Align the raster stack for analyzing the various transitions.
@@ -173,7 +172,7 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
         return array, nodata
 
     transition_pairs = set()
-    for block_offsets in pygeoprocessing.iterblocks((lulc_snapshot_list, 1),
+    for block_offsets in pygeoprocessing.iterblocks((lulc_snapshot_list[0], 1),
                                                     offset_only=True):
         # TODO: make this loop more efficient by not reading in each raster
         # twice
@@ -208,12 +207,17 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
         try:
             from_is_cbc = landcover_table[
                 from_lucode]['is_coastal_blue_carbon_habitat']
+        except KeyError:
+            raise ValueError(
+                'The landcover table is missing a row with the landuse '
+                f'code {from_lucode}.')
+        try:
             to_is_cbc = landcover_table[
                 to_lucode]['is_coastal_blue_carbon_habitat']
         except KeyError:
             raise ValueError(
                 'The landcover table is missing a row with the landuse '
-                f'code {row_code}.')
+                f'code {to_lucode}.')
 
         sparse_transition_table[(from_lucode, to_lucode)] = (
             transition_types[(from_is_cbc, to_is_cbc)])

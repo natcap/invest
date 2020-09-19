@@ -266,198 +266,51 @@ class TestPreprocessor(unittest.TestCase):
         """Remove workspace."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_create_carbon_pool_transient_table_template(self):
-        """Coastal Blue Carbon: Test creation of transient table template."""
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        filepath = os.path.join(
-            self.workspace_dir, 'transient_temp.csv')
-        code_to_lulc_dict = {1: 'one', 2: 'two', 3: 'three'}
-        preprocessor._create_carbon_pool_transient_table_template(
-            filepath, code_to_lulc_dict)
-        transient_dict = utils.build_lookup_from_csv(filepath, 'code')
-        # demonstrate that output table contains all input land cover classes
-        for i in [1, 2, 3]:
-            self.assertTrue(i in transient_dict.keys())
-
-    def test_preprocessor_ones(self):
-        """Coastal Blue Carbon: Test entire run of preprocessor (ones).
-
-        All rasters contain ones.
-        """
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace_dir)
-        preprocessor.execute(args)
-        trans_csv = os.path.join(
-            args['workspace_dir'],
-            'outputs_preprocessor',
-            'transitions_test.csv')
-        with open(trans_csv, 'r') as f:
-            lines = f.readlines()
-        # just a regression test.  this tests that an output file was
-        # successfully created, and demonstrates that one land class transition
-        # does not occur and the other is set in the right direction.
-        self.assertTrue(lines[2].startswith('x,,accum'))
-
-    def test_preprocessor_zeros(self):
-        """Coastal Blue Carbon: Test entire run of preprocessor (zeroes).
-
-        First two rasters contain ones, last contains zeros.
-        """
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args2 = _get_preprocessor_args(2, self.workspace_dir)
-        preprocessor.execute(args2)
-        trans_csv = os.path.join(
-            args2['workspace_dir'],
-            'outputs_preprocessor',
-            'transitions_test.csv')
-        with open(trans_csv, 'r') as f:
-            lines = f.readlines()
-
-        # just a regression test.  this tests that an output file was
-        # successfully created, and that two particular land class transitions
-        # occur and are set in the right directions.
-        self.assertTrue(lines[2][:].startswith('x,disturb,accum'))
-
-    def test_preprocessor_nodata(self):
-        """Coastal Blue Carbon: Test run of preprocessor (various values).
-
-        First raster contains ones, second nodata, third zeros.
-        """
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(3, self.workspace_dir)
-        preprocessor.execute(args)
-        trans_csv = os.path.join(
-            args['workspace_dir'],
-            'outputs_preprocessor',
-            'transitions_test.csv')
-        with open(trans_csv, 'r') as f:
-            lines = f.readlines()
-        # just a regression test.  this tests that an output file was
-        # successfully created, and that two particular land class transitions
-        # occur and are set in the right directions.
-        import pdb; pdb.set_trace()
-        self.assertTrue(lines[2][:].startswith('x,,'))
-
-    def test_preprocessor_user_defined_nodata(self):
-        """Coastal Blue Carbon: Test preprocessor with user-defined nodata.
-
-        First raster contains ones, second nodata, third zeros.
-        """
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(4, self.workspace_dir)
-        preprocessor.execute(args)
-        trans_csv = os.path.join(
-            self.workspace_dir,
-            'workspace',
-            'outputs_preprocessor',
-            'transitions_test.csv')
-        with open(trans_csv, 'r') as f:
-            lines = f.readlines()
-        # just a regression test.  this tests that an output file was
-        # successfully created, and that two particular land class transitions
-        # occur and are set in the right directions.
-        self.assertTrue(lines[2][:].startswith('x,,'))
-
-    def test_lookup_parsing_exception(self):
-        """Coastal Blue Carbon: Test lookup table parsing exception."""
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace_dir)
-        _create_table(args['lulc_lookup_table_path'], lulc_lookup_list_unreadable)
-        with self.assertRaises(ValueError):
-            preprocessor.execute(args)
-
-    def test_raster_values_not_in_lookup_table(self):
-        """Coastal Blue Carbon: Test raster values not in lookup table."""
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace_dir)
-        _create_table(args['lulc_lookup_table_path'], lulc_lookup_list_no_ones)
-        with self.assertRaises(ValueError):
-            preprocessor.execute(args)
-
-    def test_mark_transition_type(self):
-        """Coastal Blue Carbon: Test mark_transition_type."""
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace_dir)
-
-        band_matrices_zero = numpy.zeros((2, 2))
-
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3157)
-        projection_wkt = srs.ExportToWkt()
-        origin = (443723.127327877911739, 4956546.905980412848294)
-
-        raster_zeros = os.path.join(self.workspace_dir, 'raster_1.tif')
-        pygeoprocessing.numpy_array_to_raster(
-            band_matrices_zero, NODATA_INT, (100, -100), origin,
-            projection_wkt, raster_zeros)
-        args['lulc_snapshot_list'][0] = raster_zeros
-
-        preprocessor.execute(args)
-        trans_csv = os.path.join(
-            self.workspace_dir,
-            'workspace',
-            'outputs_preprocessor',
-            'transitions_test.csv')
-        with open(trans_csv, 'r') as f:
-            lines = f.readlines()
-        self.assertTrue(lines[1][:].startswith('n,NCC,accum'))
-
-    def test_mark_transition_type_nodata_check(self):
-        """Coastal Blue Carbon: Test mark_transition_type with nodata check."""
-        from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace_dir)
-
-        band_matrices_zero = numpy.zeros((2, 2))
-
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3157)
-        projection_wkt = srs.ExportToWkt()
-        origin = (443723.127327877911739, 4956546.905980412848294)
-
-        raster_zeros = os.path.join(self.workspace_dir, 'raster_1.tif')
-        pygeoprocessing.numpy_array_to_raster(
-            band_matrices_zero, NODATA_INT, (100, -100), origin,
-            projection_wkt, raster_zeros)
-        args['lulc_snapshot_list'][0] = raster_zeros
-
-        preprocessor.execute(args)
-
-    def test_binary(self):
-        """Coastal Blue Carbon: Test preprocessor run against InVEST-Data."""
+    def test_sample_data(self):
+        """CBC Preprocessor: Test on sample data."""
         from natcap.invest.coastal_blue_carbon import preprocessor
 
-        raster_0_path = os.path.join(
-            REGRESSION_DATA, 'inputs/GBJC_2010_mean_Resample.tif')
-        raster_1_path = os.path.join(
-            REGRESSION_DATA, 'inputs/GBJC_2030_mean_Resample.tif')
-        raster_2_path = os.path.join(
-            REGRESSION_DATA, 'inputs/GBJC_2050_mean_Resample.tif')
+        snapshot_csv_path = os.path.join(REGRESSION_DATA, 'inputs', 'snapshots.csv')
+
         args = {
             'workspace_dir': _create_workspace(),
             'results_suffix': '150225',
             'lulc_lookup_table_path': os.path.join(
                 REGRESSION_DATA, 'inputs', 'lulc_lookup.csv'),
-            'lulc_snapshot_list': [raster_0_path, raster_1_path, raster_2_path]
+            'landcover_snapshot_csv': snapshot_csv_path,
         }
         preprocessor.execute(args)
 
         # walk through all files in the workspace and assert that outputs have
         # the file suffix.
         non_suffixed_files = []
-        for root_dir, dirnames, filenames in os.walk(args['workspace_dir']):
+        outputs_dir = os.path.join(
+            args['workspace_dir'], 'outputs_preprocessor')
+        for root_dir, dirnames, filenames in os.walk(outputs_dir):
             for filename in filenames:
                 if not filename.lower().endswith('.txt'):  # ignore logfile
                     basename, extension = os.path.splitext(filename)
                     if not basename.endswith('_150225'):
                         path_rel_to_workspace = os.path.relpath(
                             os.path.join(root_dir, filename),
-                            self.args['workspace_dir'])
+                            args['workspace_dir'])
                         non_suffixed_files.append(path_rel_to_workspace)
 
         if non_suffixed_files:
             self.fail('%s files are missing suffixes: %s' %
                       (len(non_suffixed_files),
                        pprint.pformat(non_suffixed_files)))
+
+        expected_landcover_codes = set([])
+        found_landcover_codes = set(utils.build_lookup_from_csv(
+            os.path.join(outputs_dir,
+                         'carbon_biophysical_table_template_150225.csv'),
+            'code').keys())
+        self.assertEqual(expected_landcover_codes, found_landcover_codes)
+
+    def test_transition_table(self):
+        """CBC Preprocessor: Test creation of transition table."""
+        pass
 
 
 class TestIO(unittest.TestCase):
