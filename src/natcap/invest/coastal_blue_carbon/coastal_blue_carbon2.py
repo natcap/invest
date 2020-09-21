@@ -273,7 +273,7 @@ def execute(args):
         taskgraph_cache_dir, n_workers, reporting_interval=5.0)
 
     if 'landcover_snapshot_csv' in args and args['landcover_snapshot_csv'] not in ('', None):
-        transitions = _extract_transitions_from_table(args['landcover_snapshot_csv'])
+        transitions = _extract_snapshots_from_table(args['landcover_snapshot_csv'])
     else:
         transitions = {}
 

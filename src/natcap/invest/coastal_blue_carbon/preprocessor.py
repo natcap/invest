@@ -12,10 +12,7 @@ from .. import validation
 from . import coastal_blue_carbon2
 
 
-NODATA_INT = -9999  # typical integer nodata value used in rasters
-
 LOGGER = logging.getLogger(__name__)
-
 ARGS_SPEC = {
     "model_name": "Coastal Blue Carbon Preprocessor",
     "module": __name__,
