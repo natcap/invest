@@ -409,36 +409,35 @@ class DelineateItTests(unittest.TestCase):
         # at this point the flow direction array will already have been
         # buffered with a border of nodata
         flow_dir_array = numpy.array([
-            [a, a, a, a, a],
-            [a, 7, 7, 7, 5],
-            [a, 6, 6, 6, 4],
-            [a, 0, 1, a, 0],
-            [a, a, 2, 3, 4]
+            [7, 7, 7, 5],
+            [6, 6, 6, 4],
+            [0, 1, a, 0],
+            [a, 2, 3, 4]
         ])
 
+        edges = {'top': True, 'left': True, 'bottom': False, 'right': False}
+
         expected_pour_point_array1 = numpy.array([
-            [a, a, a, a, a],
-            [a, 0, 0, 0, a],
-            [a, 0, 0, 1, a],
-            [a, 0, 0, a, a],
-            [a, a, a, a, a]
+            [0, 0, 0, a],
+            [0, 0, 1, a],
+            [0, 0, a, a],
+            [a, a, a, a]
         ], dtype=numpy.int8)
 
         expected_pour_point_array2 = numpy.array([
-            [a, a, a, a, a],
-            [a, 0, 0, 0, 0],
-            [a, 0, 0, 1, 0],
-            [a, 0, 0, a, a],
-            [a, a, 0, 0, 0]
+            [0, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, a, a],
+            [a, 0, 0, 0]
         ], dtype=numpy.int8)
 
-        output = delineateit._calculate_pour_point_array(flow_dir_array)
+        output = delineateit._calculate_pour_point_array(flow_dir_array, edges)
         print(output)
         self.assertTrue(numpy.array_equal(
             output,
             expected_pour_point_array1))
 
-        output = delineateit._calculate_pour_point_array2(flow_dir_array)
+        output = delineateit._calculate_pour_point_array2(flow_dir_array, edges)
         print(output.astype(numpy.int8))
         self.assertTrue(numpy.array_equal(
             output.astype(numpy.int8),
