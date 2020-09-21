@@ -33,13 +33,13 @@ class CoastalBlueCarbonPreprocessor(model.InVESTModel):
                 'label': model_spec[args_key]['name'],
                 'validator': self.validator,
             }
-        self.lulc_lookup_table_path = inputs.File(
-            **_ui_keys('lulc_lookup_table_path'))
-        self.add_input(self.lulc_lookup_table_path)
-
         self.lulc_snapshot_csv = inputs.File(
             **_ui_keys('landcover_snapshot_csv'))
         self.add_input(self.lulc_snapshot_csv)
+
+        self.lulc_lookup_table_path = inputs.File(
+            **_ui_keys('lulc_lookup_table_path'))
+        self.add_input(self.lulc_lookup_table_path)
 
     def assemble_args(self):
         args = {

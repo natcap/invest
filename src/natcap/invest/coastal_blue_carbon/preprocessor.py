@@ -46,7 +46,7 @@ ARGS_SPEC = {
                 "representing the state of the landscape in that year. "
                 "Landcover codes match those in the LULC lookup table."
             ),
-            "name": "Transitions Table",
+            "name": "LULC Snapshots Table",
         },
     }
 }
