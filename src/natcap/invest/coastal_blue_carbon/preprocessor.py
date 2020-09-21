@@ -53,7 +53,7 @@ ARGS_SPEC = {
 
 
 ALIGNED_LULC_RASTER_TEMPLATE = 'aligned_lulc_{year}{suffix}.tif'
-TRANSITION_TABLE = 'carbon_pool_transition_template{suffix}.tif'
+TRANSITION_TABLE = 'carbon_pool_transition_template{suffix}.csv'
 BIOPHYSICAL_TABLE = 'carbon_biophysical_table_template{suffix}.csv'
 
 _OUTPUT = {
@@ -110,8 +110,9 @@ def execute(args):
     aligned_snapshot_paths = []
     for snapshot_year, raster_path in snapshots_dict.items():
         source_snapshot_paths.append(raster_path)
-        aligned_snapshot_paths.append(ALIGNED_LULC_RASTER_TEMPLATE.format(
-            year=snapshot_year, suffix=suffix))
+        aligned_snapshot_paths.append(os.path.join(
+            output_dir, ALIGNED_LULC_RASTER_TEMPLATE.format(
+                year=snapshot_year, suffix=suffix)))
         min_pixel_size = min(
             utils.mean_pixel_size_and_area(
                 pygeoprocessing.get_raster_info(raster_path)['pixel_size'])[0],
@@ -251,8 +252,25 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
 
 
 def _create_biophysical_table(landcover_table, target_biophysical_table_path):
-    target_column_names = coastal_blue_carbon2.ARGS_SPEC['args'][
-        'biophysical_table_path']['validation_options']['required_fields']
+    """Write the biophysical table template to disk.
+
+    The biophysical table templates contains all of the fields required by the
+    main Coastal Blue Carbon model, and any field values that exist in the
+    landcover table provided to this model will be carried over to the new
+    table.
+
+    Args:
+        landcover_table (dict): A dict mapping int landcover codes to a dict
+            with string keys that map to numeric or string column values.
+        target_biophysical_table_path (string): The path to where the
+            biophysical table template will be stored on disk.
+
+    Returns:
+        ``None``
+    """
+    target_column_names = [
+        colname.lower() for colname in coastal_blue_carbon2.ARGS_SPEC['args'][
+            'biophysical_table_path']['validation_options']['required_fields']]
 
     with open(target_biophysical_table_path, 'w') as bio_table:
         bio_table.write(f"{','.join(target_column_names)}\n")
@@ -263,7 +281,7 @@ def _create_biophysical_table(landcover_table, target_biophysical_table_path):
             for colname in target_column_names:
                 try:
                     # Use the user's defined value if it exists
-                    row.append(landcover_table[colname])
+                    row.append(str(landcover_table[lulc_code][colname]))
                 except KeyError:
                     row.append('')
             bio_table.write(f"{','.join(row)}\n")
