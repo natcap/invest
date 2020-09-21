@@ -75,7 +75,8 @@ def execute(args):
 
     Args:
         args['workspace_dir'] (string): directory path to workspace
-        args['results_suffix'] (string): append to outputs directory name if provided
+        args['results_suffix'] (string): append to outputs directory name if
+            provided
         args['lulc_lookup_table_path'] (string): filepath of lulc lookup table
         args['landcover_csv_path'] (string): filepath to a CSV containing the
             year and filepath to snapshot rasters on disk.  The years may be in
@@ -133,11 +134,11 @@ def execute(args):
 
     target_transition_table = os.path.join(
         output_dir, TRANSITION_TABLE.format(suffix=suffix))
-    transition_matrix_creation_task = task_graph.add_task(
+    _ = task_graph.add_task(
         func=_create_transition_table,
         args=(landcover_table,
-              sorted(snapshots_dict.values(), key=lambda x:[0]),
-             target_transition_table),
+              sorted(snapshots_dict.values(), key=lambda x: [0]),
+              target_transition_table),
         target_path_list=[target_transition_table],
         dependent_task_list=[alignment_task],
         task_name='Determine transitions and write transition table')
@@ -220,7 +221,8 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
             transition_types[(from_is_cbc, to_is_cbc)])
 
     code_list = sorted([code for code in landcover_table.keys()])
-    lulc_class_list_sorted = [landcover_table[code]['lulc-class'] for code in code_list]
+    lulc_class_list_sorted = [
+        landcover_table[code]['lulc-class'] for code in code_list]
     with open(target_table_path, 'w') as csv_file:
         fieldnames = ['lulc-class'] + lulc_class_list_sorted
         csv_file.write(f"{','.join(fieldnames)}\n")
