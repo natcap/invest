@@ -248,6 +248,7 @@ jobs:
               shell: bash -l {0}
               run: |
                   conda install pytest requests
+                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   conda upgrade -y pip wheel
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
                   conda env update --file requirements.yml
