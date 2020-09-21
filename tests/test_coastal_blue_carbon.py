@@ -301,7 +301,7 @@ class TestPreprocessor(unittest.TestCase):
                       (len(non_suffixed_files),
                        pprint.pformat(non_suffixed_files)))
 
-        expected_landcover_codes = set([])
+        expected_landcover_codes = set(range(0, 24))
         found_landcover_codes = set(utils.build_lookup_from_csv(
             os.path.join(outputs_dir,
                          'carbon_biophysical_table_template_150225.csv'),
