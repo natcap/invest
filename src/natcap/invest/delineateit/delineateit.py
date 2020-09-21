@@ -637,7 +637,7 @@ def identify_pour_points(flow_direction_raster_path, target_vector_path):
 
     
 
-    pour_point_set = _find_pour_points_by_block(flow_direction_raster_path)
+    pour_point_set = _find_raster_pour_points(flow_direction_raster_path)
 
     # use same spatial reference as the input
     aoi_spatial_reference = osr.SpatialReference()
@@ -673,14 +673,104 @@ def identify_pour_points(flow_direction_raster_path, target_vector_path):
 
 
 
-
-def _calculate_pour_point_array(flow_direction_array):
+def _calculate_pour_point_array2(flow_dir_array, edges):
     """
     Return a binary array indicating which pixels are pour points.
 
     Args:
-        flow_direction_array (numpy.ndarray): a 2D array of D8 flow
+        flow_dir_array (numpy.ndarray): a 2D array of D8 flow direction 
+            values (0 - 7) and possiby the nodata value.
+        edges (dict): has boolean keys 'top', 'left', 'bottom', 'right'
+            indicating whether or not each edge is an edge of the raster.
+the 
+    Returns:
+        numpy.ndarray of the same shape as ``flow_direction_array``.
+        Each element is 1 if that pixel is a pour point, 0 if not,
+        nodata if it cannot be determined.
+    """
+
+    height, width = flow_direction_array.shape
+    pour_point_array = numpy.empty((height, width))
+
+    if edges['left']:
+        border = numpy.full(flow_dir_array.shape[0], TMP_NODATA)
+        flow_dir_array = numpy.column_stack([border, flow_dir_array])
+    if edges['top']:
+        border = numpy.full(flow_dir_array.shape[1], TMP_NODATA)
+        flow_dir_array = numpy.vstack([border, flow_dir_array])
+    if edges['right']:
+        border = numpy.full(flow_dir_array.shape[0], TMP_NODATA)
+        flow_dir_array = numpy.column_stack([flow_dir_array, border])
+    if edges['bottom']:
+        border = numpy.full(flow_dir_array.shape[1], TMP_NODATA)
+        flow_dir_array = numpy.vstack([flow_dir_array, border])     
+
+
+    # flow direction: (delta rows, delta columns)
+    # for a pixel at (i, j) with flow direction x,
+    # the pixel it flows into is located at:
+    # (i + directions[x][0], j + directions[x][1])
+    directions = {
+        0: (0, 1),
+        1: (-1, 1),
+        2: (-1, 0),
+        3: (-1, -1),
+        4: (0, -1),
+        5: (1, -1),
+        6: (1, 0),
+        7: (1, 1)
+    }
+
+    x_start = 1 if edges['left'] else 0
+    y_start = 1 if edges['top'] else 0
+
+    # iterate over each pixel
+    for row in range(y_start, y_start + height):
+        for col in range(x_start, x_start + width):
+            # get the flow direction [0-7] for this pixel
+            flow_dir = flow_direction_array[row, col]
+            print(flow_dir)
+            if flow_dir == TMP_NODATA:
+                pour_point_array[row, col] = TMP_NODATA
+            else:
+                # get the location of the pixel it flows into
+                delta_x, delta_y = directions[flow_dir]
+                sink_row, sink_col = row + delta_x, col + delta_y
+                print('flows into', (sink_col, sink_row))
+
+                # The array passed into this function should already have a
+                # nodata border if applicable marking which edges are edges
+                # of the original raster.
+
+                # if either index is < 0, or >= the array dimensions, it's 
+                # outside the area of this block, so nodata
+                if (sink_row < 0 or 
+                    sink_col < 0 or 
+                    sink_row >= width or
+                    sink_col >= height):
+                    pour_point_array[row, col] = TMP_NODATA
+                # if the sink pixel value is nodata, it's either flowing
+                # into a nodata area, or off the edge of the whole raster
+                # either case means this is a pour point
+                elif flow_direction_array[sink_row, sink_col] == TMP_NODATA:
+                    pour_point_array[row, col] = 1
+                else:
+                    pour_point_array[row, col] = 0
+
+    return pour_point_array
+
+
+
+
+def _calculate_pour_point_array(flow_dir_array, edges):
+    """
+    Return a binary array indicating which pixels are pour points.
+
+    Args:
+        flow_dir_array (numpy.ndarray): a 2D array of D8 flow
             direction values (0 - 7) and possiby the nodata value.
+        edges (dict): has boolean keys 'top', 'left', 'bottom', 'right'
+            indicating whether or not each edge is an edge of the raster.
 
     Returns:
         numpy.ndarray of the same shape as ``flow_direction_array``.
@@ -694,12 +784,38 @@ def _calculate_pour_point_array(flow_direction_array):
         [1, 1, 1]
     ]
 
+    if edges['left']:
+        border = numpy.full(flow_dir_array.shape[0], TMP_NODATA)
+        flow_dir_array = numpy.column_stack([border, flow_dir_array])
+    if edges['top']:
+        border = numpy.full(flow_dir_array.shape[1], TMP_NODATA)
+        flow_dir_array = numpy.vstack([border, flow_dir_array])
+    if edges['right']:
+        border = numpy.full(flow_dir_array.shape[0], TMP_NODATA)
+        flow_dir_array = numpy.column_stack([flow_dir_array, border])
+    if edges['bottom']:
+        border = numpy.full(flow_dir_array.shape[1], TMP_NODATA)
+        flow_dir_array = numpy.vstack([flow_dir_array, border])
+
+
+
     pour_point_array = ndimage.generic_filter(
-                            flow_direction_array, 
+                            flow_dir_array, 
                             _is_pour_point, 
                             footprint=footprint, 
                             mode='constant', 
                             cval=FILL_VALUE)
+    print('before', pour_point_array)    
+
+    if edges['left']:
+        pour_point_array = numpy.delete(pour_point_array, 0, 1)
+    if edges['top']:
+        pour_point_array = numpy.delete(pour_point_array, 0, 0)
+    if edges['right']:
+        pour_point_array = numpy.delete(pour_point_array, -1, 1)
+    if edges['bottom']:
+        pour_point_array = numpy.delete(pour_point_array, -1, 0)
+    print('after', pour_point_array)  
 
     return pour_point_array
 
@@ -734,7 +850,6 @@ def _is_pour_point(kernel):
         6: 7,
         7: 8
     }
-
     if FILL_VALUE in kernel:
         return TMP_NODATA
     if kernel[4] == TMP_NODATA:
@@ -742,7 +857,7 @@ def _is_pour_point(kernel):
     else:
         return kernel[convert[kernel[4]]] == TMP_NODATA
 
-def _find_pour_points_by_block(flow_direction_raster_path):
+def _find_raster_pour_points(flow_direction_raster_path):
     """
     Memory-safe pour point calculation from a flow direction raster.
     
@@ -767,61 +882,111 @@ def _find_pour_points_by_block(flow_direction_raster_path):
     pour_point_set = set()
     for block in pygeoprocessing.iterblocks((flow_direction_raster_path, 1),
                                             offset_only=True):
-        # Expand each block by a one-pixel-wide margin, if possible. 
-        # This way the blocks will overlap so the watershed 
-        # calculation will be continuous.
-        if block['xoff'] > 0:
-            block['xoff'] -= 1
-            block['win_xsize'] += 1
-        if block['yoff'] > 0:
-            block['yoff'] -= 1
-            block['win_ysize'] += 1
-        if block['xoff'] + block['win_xsize'] < width:
-            block['win_xsize'] += 1
-        if block['yoff'] + block['win_ysize'] < height:
-            block['win_ysize'] += 1
-
-        flow_dir_block = band.ReadAsArray(**block)
-        # Replace every nodata value with the temporary nodata
-        flow_dir_block[flow_dir_block == raster_info['nodata'][0]] = TMP_NODATA
-
-
-        # Add 1-pixel-wide nodata border relative to the whole raster
-        if block['xoff'] == 0:
-            border = numpy.full(flow_dir_block.shape[0], TMP_NODATA)
-            flow_dir_block = numpy.column_stack([border, flow_dir_block])
-        if block['yoff'] == 0:
-            border = numpy.full(flow_dir_block.shape[1], TMP_NODATA)
-            flow_dir_block = numpy.vstack([border, flow_dir_block])
-        if block['xoff'] + block['win_xsize'] == width:
-            border = numpy.full(flow_dir_block.shape[0], TMP_NODATA)
-            flow_dir_block = numpy.column_stack([flow_dir_block, border])
-        if block['yoff'] + block['win_ysize'] == height:
-            border = numpy.full(flow_dir_block.shape[1], TMP_NODATA)
-            flow_dir_block = numpy.vstack([flow_dir_block, border])
-
-        # Calculate pour points
-        pour_point_block = _calculate_pour_point_array(flow_dir_block)
-
-        # Add any pour points found in this block as (x, y) pairs
-        # Use a set so that any duplicates in the overlap areas
-        # won't be double-counted
-        ys, xs = numpy.where(pour_point_block == 1)
-        # Add the offsets so that all points reference the same coordinate
-        # system (such that the upper-left corner of the raster is (0, 0),
-        # and each pixel is 1x1).
-        ys += block['yoff']
-        xs += block['xoff']
-        pour_point_set = pour_point_set.union(set(zip(xs, ys)))
+        pour_point_set = pour_point_set.union(
+            _find_block_pour_points(block, band, raster_info))
 
     raster = None
     band = None
 
-    print('pour points:', pour_point_set)
+    # print('pour points:', pour_point_set)
     # Return coordinates in the same coordinate system as the input raster
     origin = (raster_info['geotransform'][0], raster_info['geotransform'][3])
     return _convert_numpy_coords_to_geotransform(
         pour_point_set, origin, raster_info['pixel_size'])
+
+def _find_block_pour_points(block, band, raster_info):
+    block, edges = _expand_and_pad_block(block, raster_info)
+
+    flow_dir_block = band.ReadAsArray(**block)
+
+    print(block, edges)
+    print(flow_dir_block)
+    # Calculate pour points
+    pour_point_block = _calculate_pour_point_array(flow_dir_block, edges)
+    print(pour_point_block)
+
+
+    # Add any pour points found in this block as (x, y) pairs
+    # Use a set so that any duplicates in the overlap areas
+    # won't be double-counted
+    ys, xs = numpy.where(pour_point_block == 1)
+    # Add the offsets so that all points reference the same coordinate
+    # system (such that the upper-left corner of the raster is (0, 0),
+    # and each pixel is 1x1).
+    ys += block['yoff']
+    xs += block['xoff']
+    return set(zip(xs, ys))
+
+def _expand_and_pad_block(block, raster_info):
+    """
+    Expand block by a 1-pixel margin and mark edges.
+
+    This function modifies the block dictionary, which is yielded from
+    ``pygeoprocessing.iterblocks``. It doesn't actually read from the raster.
+    Expand the given block by a 1-pixel-wide margin in each direction where
+    that is possible.
+
+    Args:
+        block (dict): describes the dimensions of a raster block, as yielded
+            by ``pygeoprocessing.iterblocks``. Must have the keys 
+            'xoff', 'yoff', 'win_xsize', and 'win_ysize'.
+        raster_info (dict): info from ``pygeoprocessing.get_raster_info``.
+            Must have the keys 'raster_size', 'nodata'.
+
+    Returns:
+        tuple (dict, dict):
+            - tuple[0]: modified ``block``. Has the original keys 'xoff', 'yoff', 
+            'win_xsize', and 'win_ysize', which have been incremented or 
+            decremented to make the blocks overlap.
+            - tuple[1]: Edge dict with boolean keys 'top', 'left', 'bottom', 
+            'right', indicating whether each block edge is an edge of the 
+            raster or not.
+    """
+
+    # Expand each block by a one-pixel-wide margin, if possible. 
+    # This way the blocks will overlap so the watershed 
+    # calculation will be continuous.
+    if block['xoff'] > 0:
+        block['xoff'] -= 1
+        block['win_xsize'] += 1
+    if block['yoff'] > 0:
+        block['yoff'] -= 1
+        block['win_ysize'] += 1
+    if block['xoff'] + block['win_xsize'] < raster_info['raster_size'][0]:
+        block['win_xsize'] += 1
+    if block['yoff'] + block['win_ysize'] < raster_info['raster_size'][1]:
+        block['win_ysize'] += 1
+
+    # flow_dir_block = band.ReadAsArray(**block)
+    # # Replace every nodata value with the temporary nodata
+    # flow_dir_block[flow_dir_block == raster_info['nodata'][0]] = TMP_NODATA
+
+    # # Add 1-pixel-wide nodata border relative to the whole raster
+    # if block['xoff'] == 0:
+    #     border = numpy.full(flow_dir_block.shape[0], TMP_NODATA)
+    #     flow_dir_block = numpy.column_stack([border, flow_dir_block])
+    # if block['yoff'] == 0:
+    #     border = numpy.full(flow_dir_block.shape[1], TMP_NODATA)
+    #     flow_dir_block = numpy.vstack([border, flow_dir_block])
+    # if block['xoff'] + block['win_xsize'] == raster_info['raster_size'][0]:
+    #     border = numpy.full(flow_dir_block.shape[0], TMP_NODATA)
+    #     flow_dir_block = numpy.column_stack([flow_dir_block, border])
+    # if block['yoff'] + block['win_ysize'] == raster_info['raster_size'][1]:
+    #     border = numpy.full(flow_dir_block.shape[1], TMP_NODATA)
+    #     flow_dir_block = numpy.vstack([flow_dir_block, border])
+    # return flow_dir_block
+
+    # Add 1-pixel-wide nodata border relative to the whole raster
+
+    # Add fields that indicate whether each edge is an edge of the raster
+    width, height = raster_info['raster_size']
+    edges = {}
+    edges['top'] = (block['yoff'] == 0)
+    edges['left'] = (block['xoff'] == 0)
+    edges['bottom'] = (block['yoff'] + block['win_ysize'] == height)
+    edges['right'] = (block['xoff'] + block['win_xsize'] == width)
+
+    return block, edges
 
 def _convert_numpy_coords_to_geotransform(coords, origin, pixel_size):
     """
