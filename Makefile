@@ -161,6 +161,9 @@ test: $(GIT_TEST_DATA_REPO_PATH)
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	coverage run -m --include='*/invest/ui/*' $(TESTRUNNER) ui_tests
+	coverage report
+	coverage html
+	coverage xml
 
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)

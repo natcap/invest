@@ -120,7 +120,7 @@ jobs:
               with:
                   version: '281.0.0'
                   service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
-              
+
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
@@ -150,7 +150,7 @@ jobs:
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Setup conda environment 
+            - name: Setup conda environment
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
                   activate-environment: source-env
