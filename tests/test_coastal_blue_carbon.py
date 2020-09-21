@@ -310,8 +310,57 @@ class TestPreprocessor(unittest.TestCase):
 
     def test_transition_table(self):
         """CBC Preprocessor: Test creation of transition table."""
-        pass
+        from natcap.invest.coastal_blue_carbon import preprocessor
 
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        matrix_a = numpy.array([
+            [0, 1],
+            [0, 1],
+            [0, 1]], dtype=numpy.int16)
+        filename_a = os.path.join(self.workspace_dir, 'raster_a.tif')
+        snapshot_a = pygeoprocessing.numpy_array_to_raster(
+            matrix_a, -1, (100, -100), origin, projection_wkt, filename_a)
+
+        matrix_b = numpy.array([
+            [0, 1],
+            [1, 0],
+            [-1, -1]], dtype=numpy.int16)
+        filename_b = os.path.join(self.workspace_dir, 'raster_b.tif')
+        snapshot_b = pygeoprocessing.numpy_array_to_raster(
+            matrix_b, -1, (100, -100), origin, projection_wkt, filename_b)
+
+        landcover_table_path = os.path.join(self.workspace_dir,
+                                            'lulc_table.csv')
+        with open(landcover_table_path, 'w') as lulc_csv:
+            lulc_csv.write('code,lulc-class,is_coastal_blue_carbon_habitat\n')
+            lulc_csv.write('0,mangrove,True\n')
+            lulc_csv.write('1,parking lot,False\n')
+
+        landcover_table = utils.build_lookup_from_csv(
+            landcover_table_path, 'code')
+
+        target_table_path = os.path.join(self.workspace_dir,
+                                         'transition_table.csv')
+        preprocessor._create_transition_table(
+            landcover_table, [filename_a, filename_b], target_table_path)
+
+        with open(target_table_path) as transition_table:
+            self.assertEqual(
+                transition_table.readline(),
+                'lulc-class,mangrove,parking lot\n')
+            self.assertEqual(
+                transition_table.readline(),
+                'mangrove,accum,disturb\n')
+            self.assertEqual(
+                transition_table.readline(),
+                'parking lot,accum,NCC\n')
+
+            # After the above lines is a blank line, then the legend.
+            # Deliberately not testing the legend.
+            self.assertEqual(transition_table.readline(), '\n')
 
 class TestIO(unittest.TestCase):
     """Test Coastal Blue Carbon io library functions."""

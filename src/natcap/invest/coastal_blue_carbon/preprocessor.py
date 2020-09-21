@@ -242,7 +242,7 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
             csv_file.write(','.join(row) + '\n')
 
         # Append legend
-        csv_file.write(",\n,legend")
+        csv_file.write("\n,legend")
         csv_file.write(
             "\n,empty cells indicate that no transitions occur of that type")
         csv_file.write("\n,disturb (disturbance): change to low- med- or "
