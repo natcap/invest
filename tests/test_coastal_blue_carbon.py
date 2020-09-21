@@ -341,9 +341,21 @@ class TestPreprocessor(unittest.TestCase):
 
         landcover_table = utils.build_lookup_from_csv(
             landcover_table_path, 'code')
-
         target_table_path = os.path.join(self.workspace_dir,
                                          'transition_table.csv')
+
+        # Remove landcover code 1 from the table; expect error.
+        del landcover_table[1]
+        with self.assertRaises(ValueError) as context:
+            preprocessor._create_transition_table(
+                landcover_table, [filename_a, filename_b], target_table_path)
+
+        self.assertIn('missing a row with the landuse code 1',
+                      str(context.exception))
+
+        # Re-load the landcover table
+        landcover_table = utils.build_lookup_from_csv(
+            landcover_table_path, 'code')
         preprocessor._create_transition_table(
             landcover_table, [filename_a, filename_b], target_table_path)
 

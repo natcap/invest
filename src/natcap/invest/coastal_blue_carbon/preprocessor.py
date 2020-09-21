@@ -206,17 +206,14 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
         try:
             from_is_cbc = landcover_table[
                 from_lucode]['is_coastal_blue_carbon_habitat']
-        except KeyError:
-            raise ValueError(
-                'The landcover table is missing a row with the landuse '
-                f'code {from_lucode}.')
-        try:
             to_is_cbc = landcover_table[
                 to_lucode]['is_coastal_blue_carbon_habitat']
         except KeyError:
-            raise ValueError(
-                'The landcover table is missing a row with the landuse '
-                f'code {to_lucode}.')
+            for variable in (from_lucode, to_lucode):
+                if variable not in landcover_table:
+                    raise ValueError(
+                        'The landcover table is missing a row with the '
+                        f'landuse code {variable}.')
 
         sparse_transition_table[(from_lucode, to_lucode)] = (
             transition_types[(from_is_cbc, to_is_cbc)])
