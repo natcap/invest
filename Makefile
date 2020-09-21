@@ -8,9 +8,9 @@ GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
 GIT_TEST_DATA_REPO_REV      := f1600516ab5b5704901d6478cca830bdf2fdfb20
 
-GIT_UG_REPO                  := https://github.com/dcdenu4/invest.users-guide
+GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := bcad34fe7d88bad3c0d1e7e56d432fd342423667
+GIT_UG_REPO_REV              := c993a4f86d161e2922d445a3b79a344ab50a6f26
 
 
 ENV = env
