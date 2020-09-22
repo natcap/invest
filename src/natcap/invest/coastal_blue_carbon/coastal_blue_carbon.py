@@ -257,7 +257,6 @@ def execute(args):
     baseline_lulc_path = snapshots[baseline_lulc_year]
     baseline_lulc_info = pygeoprocessing.get_raster_info(
         baseline_lulc_path)
-    target_sr_wkt = baseline_lulc_info['projection_wkt']
     min_pixel_size = numpy.min(numpy.abs(baseline_lulc_info['pixel_size']))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
@@ -312,10 +311,6 @@ def execute(args):
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(base_paths, aligned_paths, ['nearest']*len(base_paths),
               target_pixel_size, 'intersection'),
-        kwargs={
-            'target_projection_wkt': target_sr_wkt,
-            'raster_align_index': 0,
-        },
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
         target_path_list=aligned_paths,
