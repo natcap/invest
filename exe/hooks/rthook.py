@@ -5,5 +5,4 @@ import platform
 
 multiprocessing.freeze_support()
 
-# if platform.system() == 'Darwin':
-#     os.environ['GDAL_DATA'] = os.path.join(sys._MEIPASS, 'gdal-data', 'gdal')
+os.environ['PROJ_LIB'] = os.path.join(sys._MEIPASS, 'proj')
