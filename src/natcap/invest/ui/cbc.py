@@ -2,7 +2,6 @@
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
-from natcap.invest.coastal_blue_carbon import coastal_blue_carbon2
 from natcap.invest.coastal_blue_carbon import preprocessor
 
 
@@ -57,8 +56,8 @@ class CoastalBlueCarbon(model.InVESTModel):
         model.InVESTModel.__init__(
             self,
             label='Coastal Blue Carbon',
-            target=coastal_blue_carbon2.execute,
-            validator=coastal_blue_carbon2.validate,
+            target=coastal_blue_carbon.execute,
+            validator=coastal_blue_carbon.validate,
             localdoc='coastal_blue_carbon.html')
 
         def _ui_keys(args_key):
@@ -72,7 +71,7 @@ class CoastalBlueCarbon(model.InVESTModel):
                 A dict of ``kwargs`` to explode to an ``inputs.GriddedInput``
                 object at creation time.
             """
-            model_spec = coastal_blue_carbon2.ARGS_SPEC['args']
+            model_spec = coastal_blue_carbon.ARGS_SPEC['args']
             return {
                 'args_key': args_key,
                 'helptext': model_spec[args_key]['about'],

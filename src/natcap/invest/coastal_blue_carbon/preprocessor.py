@@ -9,7 +9,7 @@ import taskgraph
 
 from .. import utils
 from .. import validation
-from . import coastal_blue_carbon2
+from . import coastal_blue_carbon
 
 
 LOGGER = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ def execute(args):
         taskgraph_cache_dir, n_workers, reporting_interval=5.0)
 
     snapshots_dict = (
-        coastal_blue_carbon2._extract_snapshots_from_table(
+        coastal_blue_carbon._extract_snapshots_from_table(
             args['landcover_snapshot_csv']))
 
     # Align the raster stack for analyzing the various transitions.
@@ -266,7 +266,7 @@ def _create_biophysical_table(landcover_table, target_biophysical_table_path):
         ``None``
     """
     target_column_names = [
-        colname.lower() for colname in coastal_blue_carbon2.ARGS_SPEC['args'][
+        colname.lower() for colname in coastal_blue_carbon.ARGS_SPEC['args'][
             'biophysical_table_path']['validation_options']['required_fields']]
 
     with open(target_biophysical_table_path, 'w') as bio_table:
