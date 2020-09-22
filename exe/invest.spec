@@ -12,7 +12,7 @@ block_cipher = None
 exename = 'invest'
 mac_conda_env = os.path.join(
     os.sep, 'usr', 'local', 'miniconda', 'envs', 'macbin-env')
-win_conda_env = os.path.join('C', os.sep, 'Miniconda', 'envs', 'winbin-env')
+win_conda_env = 'C:\Miniconda\envs\winbin-env'
 
 kwargs = {
     'hookspath': [os.path.join(current_dir, 'exe', 'hooks')],
@@ -59,7 +59,7 @@ elif is_win:
     # add rtree dependency dynamic libraries from conda environment
     a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
-        glob.glob(os.path.join(win_conda_env, 'Library', 'bin', 'spatialindex*.dll'))]
+        glob.glob(os.path.join(win_conda_env, 'Library/bin/spatialindex*.dll'))]
     # .exe extension is required if we're on windows.
     exename += '.exe'
 
