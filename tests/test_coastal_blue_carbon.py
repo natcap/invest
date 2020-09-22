@@ -220,9 +220,13 @@ class TestCBC2(unittest.TestCase):
         expected_array = numpy.array([
             [11, 11],
             [5, 11]], dtype=numpy.uint16)
-        numpy.testing.assert_allclose(
-            gdal.OpenEx(target_raster_path, gdal.OF_RASTER).ReadAsArray(),
-            expected_array)
+        try:
+            raster = gdal.OpenEx(target_raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_array)
+        finally:
+            raster = None
 
     def test_read_transition_matrix(self):
         """CBC: Test transition matrix reading."""
@@ -338,9 +342,13 @@ class TestCBC2(unittest.TestCase):
             [raster_a_path, raster_b_path], target_path)
 
         nodata = coastal_blue_carbon.NODATA_FLOAT32
-        numpy.testing.assert_allclose(
-            gdal.OpenEx(target_path).ReadAsArray(),
-            numpy.array([[8, nodata, nodata]], dtype=numpy.float32))
+        try:
+            raster = gdal.OpenEx(target_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                numpy.array([[8, nodata, nodata]], dtype=numpy.float32))
+        finally:
+            raster = None
 
     @staticmethod
     def _create_model_args(target_dir):
@@ -456,9 +464,13 @@ class TestCBC2(unittest.TestCase):
             args['workspace_dir'], 'output',
             ('total-net-carbon-sequestration-between-'
                 '2000-and-2010.tif'))
-        numpy.testing.assert_allclose(
-            (gdal.OpenEx(raster_path)).ReadAsArray(),
-            expected_sequestration_2000_to_2010)
+        try:
+            raster = gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_sequestration_2000_to_2010)
+        finally:
+            raster = None
 
         expected_sequestration_2010_to_2020 = numpy.array(
             [[-176.9792, 73.5]], dtype=numpy.float32)
@@ -466,9 +478,13 @@ class TestCBC2(unittest.TestCase):
             args['workspace_dir'], 'output',
             ('total-net-carbon-sequestration-between-'
                 '2010-and-2020.tif'))
-        numpy.testing.assert_allclose(
-            gdal.OpenEx(raster_path).ReadAsArray(),
-            expected_sequestration_2010_to_2020, rtol=1e-6)
+        try:
+            raster = gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_sequestration_2010_to_2020, rtol=1e-6)
+        finally:
+            raster = None
 
         expected_sequestration_2020_to_2030 = numpy.array(
             [[73.5, -25.828205]], dtype=numpy.float32)
@@ -476,9 +492,13 @@ class TestCBC2(unittest.TestCase):
             args['workspace_dir'], 'output',
             ('total-net-carbon-sequestration-between-'
                 '2020-and-2030.tif'))
-        numpy.testing.assert_allclose(
-            gdal.OpenEx(raster_path).ReadAsArray(),
-            expected_sequestration_2020_to_2030, rtol=1e-6)
+        try:
+            raster = gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_sequestration_2020_to_2030, rtol=1e-6)
+        finally:
+            raster = None
 
         # Total sequestration is the sum of all the previous sequestration.
         expected_total_sequestration = (
@@ -488,17 +508,25 @@ class TestCBC2(unittest.TestCase):
         raster_path = os.path.join(
             args['workspace_dir'], 'output',
             'total-net-carbon-sequestration.tif')
-        numpy.testing.assert_allclose(
-            gdal.OpenEx(raster_path).ReadAsArray(),
-            expected_total_sequestration, rtol=1e-6)
+        try:
+            raster = gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_total_sequestration, rtol=1e-6)
+        finally:
+            raster = None
 
         expected_net_present_value_at_2030 = numpy.array(
             [[-373.67245, 891.60846]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output', 'net-present-value-at-2030.tif')
-        numpy.testing.assert_allclose(
-            gdal.OpenEx(raster_path).ReadAsArray(),
-            expected_net_present_value_at_2030, rtol=1e-6)
+        try:
+            raster = gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_net_present_value_at_2030, rtol=1e-6)
+        finally:
+            raster = None
 
     def test_model_no_transitions(self):
         """CBC: Test model without transitions.
@@ -532,9 +560,13 @@ class TestCBC2(unittest.TestCase):
             args['workspace_dir'], 'output',
             ('total-net-carbon-sequestration-between-'
                 '2000-and-2010.tif'))
-        numpy.testing.assert_allclose(
-            (gdal.OpenEx(raster_path)).ReadAsArray(),
-            expected_sequestration_2000_to_2010)
+        try:
+            raster= gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_sequestration_2000_to_2010)
+        finally:
+            raster = None
 
         # Check valuation raster
         # Discount rate here matches the inflation rate, so the value of the 10
@@ -543,9 +575,13 @@ class TestCBC2(unittest.TestCase):
             [[835.0, 0.]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output', 'net-present-value-at-2010.tif')
-        numpy.testing.assert_allclose(
-            gdal.OpenEx(raster_path).ReadAsArray(),
-            expected_net_present_value_at_2010, rtol=1e-6)
+        try:
+            raster = gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_net_present_value_at_2010, rtol=1e-6)
+        finally:
+            raster = None
 
     def test_validation(self):
         """CBC: Test custom validation."""
