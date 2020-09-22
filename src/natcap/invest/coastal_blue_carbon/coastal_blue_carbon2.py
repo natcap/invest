@@ -55,17 +55,6 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
-        "baseline_lulc_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "The path to a land use/land cover raster representing the "
-                "baseline scenario."),
-            "name": "Baseline Land-Use/Land-Cover",
-        },
         "landcover_snapshot_csv": {
             "validation_options": {
                 "required_fields": ["snapshot_year", "raster_path"],
@@ -79,16 +68,7 @@ ARGS_SPEC = {
                 "Landcover codes match those in the biophysical table and in "
                 "the landcover transitions table."
             ),
-            "name": "Transitions Table",
-        },
-        "baseline_lulc_year": {
-            "type": "number",
-            "required": True,
-            "name": "Year of Baseline LULC",
-            "about": (
-                "The year of the Baseline LULC raster.  Must predate the "
-                "the first transition year."
-            ),
+            "name": "Landcover Snapshots Table",
         },
         "analysis_year": {
             "type": "number",
@@ -225,10 +205,6 @@ def execute(args):
         args['landcover_snapshot_csv'] (string): The path to a transitions CSV table
             containing transition years and the LULC rasters representing that
             year. Required for transition analysis.
-        args['baseline_lulc_path'] (string): The path to the baseline LULC
-            raster.
-        args['baseline_lulc_year'] (int): The year of the baseline LULC
-            scenario.
         args['analysis_year'] (int): the year of the final analysis.
         args['do_economic_analysis'] (bool): Whether to do valuation.
         args['use_price_table'] (bool): Whether to use a table of annual carbon
@@ -272,36 +248,36 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(
         taskgraph_cache_dir, n_workers, reporting_interval=5.0)
 
-    if 'landcover_snapshot_csv' in args and args['landcover_snapshot_csv'] not in ('', None):
-        transitions = _extract_snapshots_from_table(args['landcover_snapshot_csv'])
-    else:
-        transitions = {}
+    snapshots = _extract_snapshots_from_table(args['landcover_snapshot_csv'])
 
     # Phase 1: alignment and preparation of inputs
+    baseline_lulc_year = min(snapshots.keys())
+    baseline_lulc_path = snapshots[baseline_lulc_year]
     baseline_lulc_info = pygeoprocessing.get_raster_info(
-        args['baseline_lulc_path'])
+        baseline_lulc_path)
     target_sr_wkt = baseline_lulc_info['projection_wkt']
     min_pixel_size = numpy.min(numpy.abs(baseline_lulc_info['pixel_size']))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
     transition_years = set()
-    baseline_lulc_year = int(args['baseline_lulc_year'])
     analysis_year = int(args['analysis_year'])
 
-    base_paths = [args['baseline_lulc_path']]
+    base_paths = [baseline_lulc_path]
     aligned_lulc_paths = {}
     aligned_paths = [os.path.join(
         intermediate_dir,
         f'aligned_lulc_baseline_{baseline_lulc_year}{suffix}.tif')]
     aligned_lulc_paths[baseline_lulc_year] = aligned_paths[0]
-    for transition_year in transitions:
-        base_paths.append(transitions[transition_year])
-        transition_years.add(transition_year)
+    for snapshot_year in snapshots:
+        if snapshot_year == baseline_lulc_year:
+            continue
+        base_paths.append(snapshots[snapshot_year])
+        transition_years.add(snapshot_year)
         aligned_paths.append(
             os.path.join(
                 intermediate_dir,
-                f'aligned_lulc_transition_{transition_year}{suffix}.tif'))
-        aligned_lulc_paths[transition_year] = aligned_paths[-1]
+                f'aligned_lulc_snapshot_{snapshot_year}{suffix}.tif'))
+        aligned_lulc_paths[snapshot_year] = aligned_paths[-1]
 
     prices = None
     if ('do_economic_analysis' in args and
@@ -458,7 +434,7 @@ def execute(args):
     halflife_rasters = {}
     disturbance_magnitude_rasters = {}
     prior_transition_year = baseline_lulc_year
-    for current_transition_year in sorted(transitions):
+    for current_transition_year in sorted(transition_years):
         yearly_accum_rasters[current_transition_year] = {}
         halflife_rasters[current_transition_year] = {}
         disturbance_magnitude_rasters[current_transition_year] = {}
@@ -595,7 +571,7 @@ def execute(args):
             'npv_since_baseline_raster'] = baseline_period_npv_raster
 
     task_graph.join()
-    if transitions:
+    if transition_years:
         execute_transition_analysis(transition_analysis_args)
 
     task_graph.close()
@@ -1717,34 +1693,24 @@ def validate(args, limit_to=None):
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 
     if ("landcover_snapshot_csv" not in invalid_keys and
-            "landcover_snapshot_csv" in sufficient_keys and
-            "baseline_lulc_year" not in invalid_keys and
-            "baseline_lulc_year" in sufficient_keys):
-        transitions = _extract_snapshots_from_table(args['landcover_snapshot_csv'])
+            "landcover_snapshot_csv" in sufficient_keys):
+        snapshots = _extract_snapshots_from_table(args['landcover_snapshot_csv'])
 
-        for transition_year, transition_raster_path in transitions.items():
+        for snapshot_year, snapshot_raster_path in snapshots.items():
             raster_error_message = validation.check_raster(
-                transition_raster_path)
+                snapshot_raster_path)
             if raster_error_message:
                 validation_warnings.append(
                     (['landcover_snapshot_csv'], (
-                        f"Transition raster for {transition_year} could not "
+                        f"Raster for snapshot {snapshot_year} could not "
                         f"be validated: {raster_error_message}")))
-
-        if min(set(transitions.keys())) < int(args['baseline_lulc_year']):
-            validation_warnings.append(
-                (['landcover_snapshot_csv'], ("Transition years must predate the "
-                                              "baseline lulc year.")))
 
         if ("analysis_year" not in invalid_keys
                 and "analysis_year" in sufficient_keys):
-            if max(set(transitions.keys())) > int(args['analysis_year']):
-                transition_years = ','.join(
-                    [str(year) for year in sorted(transitions.keys())])
+            if max(set(snapshots.keys())) > int(args['analysis_year']):
                 validation_warnings.append(
                     (['analysis_year'], (
-                        f"Transition years ({transition_years}) must "
-                        "all be <= the analysis year "
-                        f"({args['analysis_year']})")))
+                        f"Analysis year {args['analysis_year']} must be >= "
+                        f"the latest snapshot year ({max(snapshots.keys())})")))
 
     return validation_warnings

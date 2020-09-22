@@ -80,19 +80,9 @@ class CoastalBlueCarbon(model.InVESTModel):
                 'validator': self.validator,
             }
 
-        self.baseline_lulc_raster_path = inputs.File(
-            **_ui_keys('baseline_lulc_path'))
-        self.add_input(self.baseline_lulc_raster_path)
-
-        self.transitions_csv = inputs.File(**_ui_keys('transitions_csv'))
-        self.add_input(self.transitions_csv)
-
-        self.baseline_lulc_year = inputs.Text(
-            **_ui_keys('baseline_lulc_year'))
-        self.add_input(self.baseline_lulc_year)
-
-        self.analysis_year = inputs.Text(**_ui_keys('analysis_year'))
-        self.add_input(self.analysis_year)
+        self.snapshots_table = inputs.File(
+            **_ui_keys('landcover_snapshot_csv'))
+        self.add_input(self.snapshots_table)
 
         self.biophysical_table_path = inputs.File(
             **_ui_keys('biophysical_table_path'))
@@ -101,6 +91,9 @@ class CoastalBlueCarbon(model.InVESTModel):
         self.landcover_transitions_table = inputs.File(
             **_ui_keys('landcover_transitions_table'))
         self.add_input(self.landcover_transitions_table)
+
+        self.analysis_year = inputs.Text(**_ui_keys('analysis_year'))
+        self.add_input(self.analysis_year)
 
         self.do_economic_analysis = inputs.Container(
             args_key='do_economic_analysis',
@@ -139,10 +132,10 @@ class CoastalBlueCarbon(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.baseline_lulc_raster_path.args_key:
-                self.baseline_lulc_raster_path.value(),
-            self.transitions_csv.args_key: self.transitions_csv.value(),
-            self.baseline_lulc_year.args_key: self.baseline_lulc_year.value(),
+            self.snapshots_table.args_key:
+                self.snapshots_table.value(),
+            self.landcover_transitions_table.args_key:
+                self.landcover_transitions_table.value(),
             self.analysis_year.args_key: self.analysis_year.value(),
             self.biophysical_table_path.args_key:
                 self.biophysical_table_path.value(),

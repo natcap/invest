@@ -1257,8 +1257,11 @@ class TestCBC2(unittest.TestCase):
 
         snapshot_rasters_csv_path = os.path.join(
             target_dir, 'snapshot_rasters.csv')
+        baseline_year = 2000
         with open(snapshot_rasters_csv_path, 'w') as snapshot_rasters_csv:
             snapshot_rasters_csv.write('snapshot_year,raster_path\n')
+            snapshot_rasters_csv.write(
+                f'{baseline_year},{baseline_landcover_raster_path}\n')
             snapshot_rasters_csv.write(
                 f'2010,{snapshot_2010_raster_path}\n')
             snapshot_rasters_csv.write(
@@ -1268,8 +1271,6 @@ class TestCBC2(unittest.TestCase):
             'landcover_transitions_table': transition_matrix_path,
             'landcover_snapshot_csv': snapshot_rasters_csv_path,
             'biophysical_table_path': biophysical_table_path,
-            'baseline_lulc_path': baseline_landcover_raster_path,
-            'baseline_lulc_year': 2000,
             'analysis_year': 2030,
             'do_economic_analysis': True,
             'use_price_table': True,
@@ -1281,7 +1282,7 @@ class TestCBC2(unittest.TestCase):
         with open(args['price_table_path'], 'w') as price_table:
             price_table.write('year,price\n')
             prior_year_price = 1.0
-            for year in range(args['baseline_lulc_year'],
+            for year in range(baseline_year,
                               args['analysis_year']+1):
                 price = prior_year_price * 1.04
                 price_table.write(f'{year},{price}\n')
@@ -1356,8 +1357,14 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        del args['landcover_snapshot_csv']  # Remove transitions.
-        args['analysis_year'] = args['baseline_lulc_year'] + 10
+        prior_snapshots = coastal_blue_carbon2._extract_snapshots_from_table(
+            args['landcover_snapshot_csv'])
+        baseline_year = min(prior_snapshots.keys())
+        baseline_raster = prior_snapshots[baseline_year]
+        with open(args['landcover_snapshot_csv'], 'w') as snapshot_csv:
+            snapshot_csv.write('snapshot_year,raster_path\n')
+            snapshot_csv.write(f'{baseline_year},{baseline_raster}\n')
+        args['analysis_year'] = baseline_year + 10
 
         # Use valuation parameters rather than price table.
         args['use_price_table'] = False
@@ -1404,22 +1411,26 @@ class TestCBC2(unittest.TestCase):
         with open(invalid_raster_path, 'w') as raster:
             raster.write('not a raster')
 
+        # Write over the landcover snapshot CSV
+        prior_snapshots = coastal_blue_carbon2._extract_snapshots_from_table(
+            args['landcover_snapshot_csv'])
+        baseline_year = min(prior_snapshots)
         with open(args['landcover_snapshot_csv'], 'w') as snapshot_table:
             snapshot_table.write('snapshot_year,raster_path\n')
             snapshot_table.write(
-                f"{args['baseline_lulc_year']-3},{invalid_raster_path}")
+                f'{baseline_year},{prior_snapshots[baseline_year]}\n')
+            snapshot_table.write(
+                f"{baseline_year + 10},{invalid_raster_path}")
 
         # analysis year must be >= the last transition year.
-        args['analysis_year'] = args['baseline_lulc_year']-4
+        args['analysis_year'] = baseline_year
 
         validation_warnings = coastal_blue_carbon2.validate(args)
-        self.assertEquals(len(validation_warnings), 3)
+        self.assertEquals(len(validation_warnings), 2)
         self.assertIn(
-            f"Transition raster for {args['baseline_lulc_year']-3} could not "
+            f"Raster for snapshot {baseline_year + 10} could not "
             "be validated", validation_warnings[0][1])
         self.assertIn(
-            f"Transition years must predate the baseline",
+            "Analysis year 2000 must be >= the latest snapshot year "
+            "(2010)",
             validation_warnings[1][1])
-        self.assertIn(
-            f"Transition years (1997) must all be <= the analysis year (1996)",
-            validation_warnings[2][1])
