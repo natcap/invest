@@ -17,6 +17,8 @@ import Pyro4
 import numpy
 import pandas
 from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 import taskgraph
 
 from natcap.invest import utils
@@ -390,6 +392,55 @@ class TestRecServer(unittest.TestCase):
         # assert annual average PUD is the same as regression
         self.assertEqual(
             83.2, pud_poly_feature_queue.get()[1][0])
+
+    def test_local_calc_poly_pud_bad_aoi(self):
+        """Recreation test PUD calculation with missing AOI features."""
+        from natcap.invest.recreation import recmodel_server
+
+        recreation_server = recmodel_server.RecModel(
+            self.resampled_data_path,
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+
+        date_range = (
+            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2014-12-31'))
+
+        aoi_vector_path = os.path.join(self.workspace_dir, 'aoi.gpkg')
+        gpkg_driver = gdal.GetDriverByName('GPKG')
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
+        target_vector = gpkg_driver.Create(
+            aoi_vector_path, 0, 0, 0, gdal.GDT_Unknown)
+        target_layer = target_vector.CreateLayer(
+            'target_layer', srs, ogr.wkbUnknown)
+
+        # Testing with an AOI of 2 features, one is missing Geometry.
+        input_geom_list = [
+            None,
+            ogr.CreateGeometryFromWkt(
+                'POLYGON ((1 1, 1 0, 0 0, 0 1, 1 1))')]
+        poly_test_queue = queue.Queue()
+        poly_test_queue.put(1)  # gpkg FIDs start at 1
+        poly_test_queue.put(2)
+        target_layer.StartTransaction()
+        for geometry in input_geom_list:
+            feature = ogr.Feature(target_layer.GetLayerDefn())
+            feature.SetGeometry(geometry)
+            target_layer.CreateFeature(feature)
+        target_layer.CommitTransaction()
+        poly_test_queue.put('STOP')
+        target_layer = None
+        target_vector = None
+
+        pud_poly_feature_queue = queue.Queue()
+        recmodel_server._calc_poly_pud(
+            recreation_server.qt_pickle_filename,
+            aoi_vector_path, date_range, poly_test_queue,
+            pud_poly_feature_queue)
+
+        # assert PUD was calculated for the one good AOI feature.
+        self.assertEqual(
+            0.0, pud_poly_feature_queue.get()[1][0])
 
     def test_local_calc_existing_cached(self):
         """Recreation local PUD calculation on existing quadtree."""
