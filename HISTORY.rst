@@ -48,15 +48,38 @@ Unreleased Changes (3.9)
   * Include logging in python script generated from "Save to python script..."
     in the "Development" menu. Now logging messages from the model execution
     will show up when you run the script.
+* Coastal Blue Carbon
+  * Refactor of Coastal Blue Carbon that implements TaskGraph for task
+    management across the model and fixes a wide range of issues with the model
+    that were returning incorrect results in all cases.
+  * Corrected an issue with the model where available memory would be exhausted
+    on a large number of timesteps.
+  * In addition to the ``execute`` entrypoint, another entrypoint,
+    ``execute_transition_analysis`` has been added that allows access to the
+    transition analysis timeseries loop at a lower level.  This will enable
+    users comfortable with python to provide spatially-explicit maps of
+    accumulation rates, half lives and other parameters that can only be
+    provided via tables to ``execute``.
+  * Snapshot years and rasters, including the baseline year/raster, are now all
+    provided via a table mapping snapshot years to the path to a raster on
+    disk.  The baseline year is the earliest year of these.
+  * The model's "initial" and "lulc lookup" and "transient" tables have been
+    combined into a single "biophysical" table, indexed by LULC code/LULC class
+    name, that includes all of the columns from all of these former tables.
+  * The "analysis year" is now a required input that must be >= the final
+    snapshot year in the snapshots CSV.
+  * Litter can now accumulate at an annual rate if desired.
+  * The model now produces many more files, which allows for greater
+    flexibility in post-processing of model outputs.
 * Coastal Vulnerability
-  * 'shore_points_missing_geomorphology.gpkg' output file name now includes 
-    the suffix if any, and its one layer now is renamed from 
+  * 'shore_points_missing_geomorphology.gpkg' output file name now includes
+    the suffix if any, and its one layer now is renamed from
     'missing_geomorphology' to be the same as the file name (including suffix).
 * Delineateit
   * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
     'verified_geometries' to be the same as the file name (including suffix).
    * The layer in the 'snapped_outlets.gpkg' output is renamed from
-    'snapped' to be the same as the file name (including suffix).    
+    'snapped' to be the same as the file name (including suffix).
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under
