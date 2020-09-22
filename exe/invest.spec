@@ -10,8 +10,9 @@ from PyInstaller.compat import is_win, is_darwin
 current_dir = os.getcwd()  # assume we're building from the project root
 block_cipher = None
 exename = 'invest'
-mac_conda_env = '/usr/local/miniconda/envs/macbin-env'
-win_conda_env = 'C:\Miniconda\envs\winbin-env'
+mac_conda_env = os.path.join(
+    os.sep, 'usr', 'local', 'miniconda', 'envs', 'macbin-env')
+win_conda_env = os.path.join('C', os.sep, 'Miniconda', 'envs', 'winbin-env')
 
 kwargs = {
     'hookspath': [os.path.join(current_dir, 'exe', 'hooks')],
