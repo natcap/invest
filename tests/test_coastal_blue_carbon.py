@@ -22,7 +22,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TestPreprocessor(unittest.TestCase):
-    """Test Coastal Blue Carbon preprocessor library functions."""
+    """Test Coastal Blue Carbon preprocessor functions."""
 
     def setUp(self):
         """Create a temp directory for the workspace."""
@@ -36,7 +36,8 @@ class TestPreprocessor(unittest.TestCase):
         """CBC Preprocessor: Test on sample data."""
         from natcap.invest.coastal_blue_carbon import preprocessor
 
-        snapshot_csv_path = os.path.join(REGRESSION_DATA, 'inputs', 'snapshots.csv')
+        snapshot_csv_path = os.path.join(
+            REGRESSION_DATA, 'inputs', 'snapshots.csv')
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -140,37 +141,20 @@ class TestPreprocessor(unittest.TestCase):
             # Deliberately not testing the legend.
             self.assertEqual(transition_table.readline(), '\n')
 
-def make_raster_from_array(
-        base_array, base_raster_path, nodata_val=-1, gdal_type=gdal.GDT_Int32):
-    """Make a raster from an array on a designated path.
-
-    Args:
-        base_array (numpy.ndarray): the 2D array for making the raster.
-        nodata_val (int; float): nodata value for the raster.
-        gdal_type (gdal datatype; int): gdal datatype for the raster.
-        base_raster_path (str): the path for the raster to be created.
-
-    Returns:
-        None.
-    """
-    # Projection to user for generated sample data UTM Zone 10N
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(26910)
-    project_wkt = srs.ExportToWkt()
-    origin = (1180000, 690000)
-
-    pygeoprocessing.numpy_array_to_raster(
-        base_array, nodata_val, (1, -1), origin, project_wkt, base_raster_path)
-
 
 class TestCBC2(unittest.TestCase):
+    """Test Coastal Blue Carbon main model functions."""
+
     def setUp(self):
+        """Create a temp directory for the workspace."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Remove workspace after each test function."""
         shutil.rmtree(self.workspace_dir)
 
     def test_extract_shapshots(self):
+        """CBC: Extract snapshots from a snapshot CSV."""
         csv_path = os.path.join(self.workspace_dir, 'snapshots.csv')
 
         transition_years = (2000, 2010, 2020)
@@ -250,20 +234,17 @@ class TestCBC2(unittest.TestCase):
                 'soil-yearly-accumulation': 2,
                 'biomass-yearly-accumulation': 3,
                 'soil-high-impact-disturb': 4,
-                'biomass-high-impact-disturb': 5,
-            },
+                'biomass-high-impact-disturb': 5},
             2: {'lulc-class': 'b',
                 'soil-yearly-accumulation': 6,
                 'biomass-yearly-accumulation': 7,
                 'soil-high-impact-disturb': 8,
-                'biomass-high-impact-disturb': 9,
-            },
+                'biomass-high-impact-disturb': 9},
             3: {'lulc-class': 'c',
                 'soil-yearly-accumulation': 10,
                 'biomass-yearly-accumulation': 11,
                 'soil-high-impact-disturb': 12,
-                'biomass-high-impact-disturb': 13,
-            }
+                'biomass-high-impact-disturb': 13}
         }
 
         transition_csv_path = os.path.join(self.workspace_dir,
@@ -279,21 +260,22 @@ class TestCBC2(unittest.TestCase):
              coastal_blue_carbon._read_transition_matrix(
                  transition_csv_path, biophysical_table))
 
-        expected_biomass_disturbance = numpy.zeros((4,4), dtype=numpy.float32)
+        expected_biomass_disturbance = numpy.zeros((4, 4), dtype=numpy.float32)
         expected_biomass_disturbance[1, 3] = (
             biophysical_table[1]['biomass-high-impact-disturb'])
         numpy.testing.assert_allclose(
             expected_biomass_disturbance,
             biomass_disturbance_matrix.toarray())
 
-        expected_soil_disturbance = numpy.zeros((4,4), dtype=numpy.float32)
+        expected_soil_disturbance = numpy.zeros((4, 4), dtype=numpy.float32)
         expected_soil_disturbance[1, 3] = (
             biophysical_table[1]['soil-high-impact-disturb'])
         numpy.testing.assert_allclose(
             expected_soil_disturbance,
             soil_disturbance_matrix.toarray())
 
-        expected_biomass_accumulation = numpy.zeros((4,4), dtype=numpy.float32)
+        expected_biomass_accumulation = numpy.zeros(
+            (4, 4), dtype=numpy.float32)
         expected_biomass_accumulation[3, 1] = (
             biophysical_table[1]['biomass-yearly-accumulation'])
         expected_biomass_accumulation[1, 2] = (
@@ -304,7 +286,7 @@ class TestCBC2(unittest.TestCase):
             expected_biomass_accumulation,
             biomass_accumulation_matrix.toarray())
 
-        expected_soil_accumulation = numpy.zeros((4,4), dtype=numpy.float32)
+        expected_soil_accumulation = numpy.zeros((4, 4), dtype=numpy.float32)
         expected_soil_accumulation[3, 1] = (
             biophysical_table[1]['soil-yearly-accumulation'])
         expected_soil_accumulation[1, 2] = (

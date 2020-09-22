@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+"""InVEST Coastal Blue Carbon: Main Model."""
 import logging
 import os
 
@@ -202,9 +204,9 @@ def execute(args):
             suffix that will be added to each output filename.
         args['n_workers'] (int): (optional) If provided, the number of workers
             to pass to ``taskgraph``.
-        args['landcover_snapshot_csv'] (string): The path to a transitions CSV table
-            containing transition years and the LULC rasters representing that
-            year. Required for transition analysis.
+        args['landcover_snapshot_csv'] (string): The path to a transitions
+            CSV table containing transition years and the LULC rasters
+            representing that year. Required for transition analysis.
         args['analysis_year'] (int): the year of the final analysis.
         args['do_economic_analysis'] (bool): Whether to do valuation.
         args['use_price_table'] (bool): Whether to use a table of annual carbon
@@ -790,8 +792,7 @@ def execute_transition_analysis(args):
                           _calculate_disturbance_volume,
                           disturbance_vol_rasters[year][pool],
                           gdal.GDT_Float32,
-                          NODATA_FLOAT32
-                         ),
+                          NODATA_FLOAT32),
                     dependent_task_list=(
                         current_disturbance_vol_dependent_tasks),
                     target_path_list=[
@@ -1694,7 +1695,8 @@ def validate(args, limit_to=None):
 
     if ("landcover_snapshot_csv" not in invalid_keys and
             "landcover_snapshot_csv" in sufficient_keys):
-        snapshots = _extract_snapshots_from_table(args['landcover_snapshot_csv'])
+        snapshots = _extract_snapshots_from_table(
+            args['landcover_snapshot_csv'])
 
         for snapshot_year, snapshot_raster_path in snapshots.items():
             raster_error_message = validation.check_raster(
@@ -1711,6 +1713,7 @@ def validate(args, limit_to=None):
                 validation_warnings.append(
                     (['analysis_year'], (
                         f"Analysis year {args['analysis_year']} must be >= "
-                        f"the latest snapshot year ({max(snapshots.keys())})")))
+                        f"the latest snapshot year ({max(snapshots.keys())})"
+                    )))
 
     return validation_warnings
