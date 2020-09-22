@@ -12,6 +12,11 @@ block_cipher = None
 exename = 'invest'
 conda_env = os.environ['CONDA_PREFIX']
 
+if is_win:
+    proj_datas = ((os.path.join(conda_env, 'Library/share/proj'), 'proj'))
+else:
+    proj_datas = ((os.path.join(conda_env, 'share/proj'), 'proj'))
+
 kwargs = {
     'hookspath': [os.path.join(current_dir, 'exe', 'hooks')],
     'excludes': None,
@@ -27,7 +32,7 @@ kwargs = {
         'rtree',  # mac builds aren't picking up rtree by default.
         'pkg_resources.py2_warn'
     ],
-    'datas': [('qt.conf', '.')],
+    'datas': [('qt.conf', '.'), proj_datas],
     'cipher': block_cipher,
 }
 
@@ -43,8 +48,6 @@ if is_darwin:
     a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
         glob.glob(os.path.join(conda_env, 'lib', 'libspatialindex*.dylib'))]
-
-    a.datas += [(os.path.join(conda_env, 'share/proj'), 'proj')]
 elif is_win:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/
@@ -60,9 +63,6 @@ elif is_win:
     a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
         glob.glob(os.path.join(conda_env, 'Library/bin/spatialindex*.dll'))]
-
-    a.datas += [(os.path.join(conda_env, 'Library/share/proj'), 'proj')]
-
     # .exe extension is required if we're on windows.
     exename += '.exe'
 
