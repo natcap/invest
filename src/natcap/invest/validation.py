@@ -786,7 +786,13 @@ def validate(args, spec, spatial_overlap_opts=None):
     invalid_keys = set()
     sufficient_keys = set(args.keys()).difference(insufficient_keys)
     for key in sufficient_keys.difference(excluded_keys):
-        parameter_spec = spec[key]
+        # Extra args that don't exist in the ARGS_SPEC are okay
+        # we don't need to try to validate them
+        try:
+            parameter_spec = spec[key]
+        except KeyError:
+            LOGGER.debug(f'Provided key {key} does not exist in ARGS_SPEC')
+            continue
         # If no validation options specified, assume defaults.
         try:
             validation_options = parameter_spec['validation_options']

@@ -553,7 +553,9 @@ def build_lookup_from_csv(
     return lookup_dict
 
 
-def read_csv_to_dataframe(path, to_lower=False, sep=None, encoding=None, engine='python', **kwargs):
+def read_csv_to_dataframe(
+        path, to_lower=False, sep=None, encoding=None, engine='python',
+        **kwargs):
     """Return a dataframe representation of the CSV.
 
     Wrapper around ``pandas.read_csv`` that standardizes the column names by
@@ -709,7 +711,7 @@ def _assert_vectors_equal(
         actual_projection = actual_layer.GetSpatialRef()
         actual_projection_wkt = actual_projection.ExportToWkt()
         if expected_projection_wkt != actual_projection_wkt:
-            raise AssertionError (
+            raise AssertionError(
                 "Vector projections are not the same. \n"
                 f"Expected projection wkt: {expected_projection_wkt}. \n"
                 f"Actual projection wkt: {actual_projection_wkt}. ")
@@ -718,7 +720,7 @@ def _assert_vectors_equal(
         actual_feat_count = actual_layer.GetFeatureCount()
         expected_feat_count = expected_layer.GetFeatureCount()
         if expected_feat_count != actual_feat_count:
-            raise AssertionError (
+            raise AssertionError(
                 "Vector feature counts are not the same. \n"
                 f"Expected feature count: {expected_feat_count}. \n"
                 f"Actual feature count: {actual_feat_count}. ")
@@ -727,7 +729,7 @@ def _assert_vectors_equal(
         expected_field_names = [field.name for field in expected_layer.schema]
         actual_field_names = [field.name for field in actual_layer.schema]
         if sorted(expected_field_names) != sorted(actual_field_names):
-            raise AssertionError (
+            raise AssertionError(
                 "Vector field names are not the same. \n"
                 f"Expected field names: {sorted(expected_field_names)}. \n"
                 f"Actual field names: {sorted(actual_field_names)}. ")
@@ -751,20 +753,20 @@ def _assert_vectors_equal(
                         if not numpy.allclose(numpy.array([av]),
                                               numpy.array([ev]),
                                               atol=field_value_atol):
-                            raise AssertionError (
+                            raise AssertionError(
                                 "Vector field values are not equal: \n"
                                 f"Expected value: {ev}. \n"
                                 f"Actual value: {av}. ")
                     # String and other comparison
                     else:
                         if av != ev:
-                            raise AssertionError (
+                            raise AssertionError(
                                 "Vector field values are not equal. \n"
                                 f"Expected value : {ev}. \n"
                                 f"Actual value : {av}. ")
                 else:
                     if ev is not None:
-                        raise AssertionError (
+                        raise AssertionError(
                             "Vector field values are not equal: \n"
                             f"Expected value: {ev}. \n"
                             f"Actual value: {av}. ")
@@ -776,7 +778,7 @@ def _assert_vectors_equal(
             expected_geom_shapely = loads(expected_geom_wkt)
             actual_geom_shapely = loads(actual_geom_wkt)
             if not expected_geom_shapely.almost_equals(actual_geom_shapely):
-                raise AssertionError (
+                raise AssertionError(
                     "Vector geometry assertion fail. \n"
                     f"Expected geometry: {expected_geom_wkt}. \n"
                     f"Actual geometry: {actual_geom_wkt}. ")
@@ -806,3 +808,60 @@ def has_utf8_bom(textfile_path):
     with open(textfile_path, 'rb') as file_obj:
         first_line = file_obj.readline()
         return first_line.startswith(codecs.BOM_UTF8)
+
+
+def reclassify_raster(
+        raster_path_band, value_map, target_raster_path, target_datatype,
+        target_nodata, error_details):
+    """A wrapper function for calling ``pygeoprocessing.reclassify_raster``.
+
+    This wrapper function is helpful when added as a ``TaskGraph.task`` so
+    a better error message can be provided to the users if a
+    ``pygeoprocessing.ReclassificationMissingValuesError`` is raised.
+
+    Args:
+        raster_path_band (tuple): a tuple including file path to a raster
+            and the band index to operate over. ex: (path, band_index)
+        value_map (dictionary): a dictionary of values of
+            {source_value: dest_value, ...} where source_value's type is the
+            same as the values in ``base_raster_path`` at band ``band_index``.
+            Must contain at least one value.
+        target_raster_path (string): target raster output path; overwritten if
+            it exists
+        target_datatype (gdal type): the numerical type for the target raster
+        target_nodata (numerical type): the nodata value for the target raster
+            Must be the same type as target_datatype
+        error_details (dict): a dictionary with key value pairs that provide
+            more context for a raised
+            ``pygeoprocessing.ReclassificationMissingValuesError``.
+            keys must be {'raster_name', 'column_name', 'table_name'}. Values
+            each key represent:
+                'raster_name' - string for the raster name being reclassified
+                'column_name' - name of the table column that ``value_map``
+                    dictionary keys came from.
+                'table_name' - table name that ``value_map`` came from.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError if ``values_required`` is ``True`` and a pixel value from
+        ``raster_path_band`` is not a key in ``value_map``.
+    """
+    # Error early if 'error_details' keys are invalid
+    raster_name = error_details['raster_name']
+    column_name = error_details['column_name']
+    table_name = error_details['table_name']
+
+    try:
+        pygeoprocessing.reclassify_raster(
+            raster_path_band, value_map, target_raster_path, target_datatype,
+            target_nodata, values_required=True)
+    except pygeoprocessing.ReclassificationMissingValuesError as err:
+        error_message = (
+                f"Values in the {raster_name} raster were found that are not"
+                f" represented under the '{column_name}' column of the"
+                f" {table_name} table. The missing values found in the"
+                f" {raster_name} raster but not the table are:"
+                f" {err.missing_values}.")
+        raise ValueError(error_message)

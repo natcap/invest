@@ -702,14 +702,15 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
-    def test_climate_zones_regression(self):
-        """SWY climate zone regression test on sample data.
+    def test_climate_zones_missing_cz_id(self):
+        """SWY climate zone regression test fails on bad cz table data.
 
-        Executes SWY in climate zones mode and checks that the output files are
-        generated and that the aggregate shapefile fields are the same as the
-        regression case.
+        Executes SWY in climate zones mode and checks that the test fails
+        when a climate zone raster value is not present in the climate
+        zone table.
         """
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        import pandas
 
         # use predefined directory so test can clean up files during teardown
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
@@ -724,21 +725,59 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_gradient_raster(cz_ras_path)
         args['climate_zone_raster_path'] = cz_ras_path
 
+        # remove row from the climate zone table so cz raster value is missing
+        bad_cz_table_path = os.path.join(
+            self.workspace_dir, 'bad_climate_zone_table.csv')
+
+        cz_df = pandas.read_csv(args['climate_zone_table_path'])
+        cz_df = cz_df[cz_df['cz_id'] != 1]
+        cz_df.to_csv(bad_cz_table_path)
+        cz_df = None
+        args['climate_zone_table_path'] = bad_cz_table_path
+
         args['user_defined_climate_zones'] = True
         args['user_defined_local_recharge'] = False
         args['monthly_alpha'] = False
         args['results_suffix'] = 'cz'
 
-        seasonal_water_yield.execute(args)
+        with self.assertRaises(ValueError) as context:
+            seasonal_water_yield.execute(args)
+        self.assertTrue(
+            ("The missing values found in the Climate Zone raster but not the"
+             " table are: [1]") in str(context.exception))
 
-        # generate aggregated results csv table for assertion
-        agg_results_csv_path = os.path.join(args['workspace_dir'],
-                                            'agg_results_cz.csv')
-        make_agg_results_csv(agg_results_csv_path, climate_zones=True)
+    def test_biophysical_table_missing_lucode(self):
+        """SWY test bad biophysical table with missing LULC value."""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        import pygeoprocessing
 
-        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results_swy_cz.shp'),
-            agg_results_csv_path)
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = False
+        args['results_suffix'] = ''
+
+        # add a LULC value not found in biophysical csv
+        lulc_new_path = os.path.join(self.workspace_dir, 'lulc_new.tif')
+        lulc_info = pygeoprocessing.get_raster_info(args['lulc_raster_path'])
+        lulc_array = gdal.OpenEx(args['lulc_raster_path']).ReadAsArray()
+        lulc_array[0][0] = 2
+        pygeoprocessing.numpy_array_to_raster(
+            lulc_array, lulc_info['nodata'][0], lulc_info['pixel_size'], 
+            (lulc_info['geotransform'][0], lulc_info['geotransform'][3]), 
+            lulc_info['projection_wkt'], lulc_new_path)
+
+        lulc_array = None
+        args['lulc_raster_path'] = lulc_new_path
+
+        with self.assertRaises(ValueError) as context:
+            seasonal_water_yield.execute(args)
+        self.assertTrue(
+            ("The missing values found in the LULC raster but not the"
+             " table are: [2]") in str(context.exception))
 
     def test_user_recharge(self):
         """SWY user recharge regression test on sample data.
