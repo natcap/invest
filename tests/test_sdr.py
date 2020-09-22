@@ -344,6 +344,41 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             sdr.execute(args)
 
+    def test_missing_lulc_value(self):
+        """SDR test for ValueError when LULC value not found in table."""
+        from natcap.invest.sdr import sdr
+        import pandas
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+
+        gpkg_driver = ogr.GetDriverByName('GPKG')
+        base_vector = ogr.Open(args['watersheds_path'])
+        target_watersheds_path = os.path.join(
+            args['workspace_dir'], 'input_watersheds.gpkg')
+        target_vector = gpkg_driver.CopyDataSource(
+            base_vector, target_watersheds_path)
+        base_vector = None
+        target_vector = None
+        args['watersheds_path'] = target_watersheds_path
+
+        # remove a row from the biophysical table so that lulc value is missing
+        bad_biophysical_path = os.path.join(
+            self.workspace_dir, 'bad_biophysical_table.csv')
+
+        bio_df = pandas.read_csv(args['biophysical_table_path'])
+        bio_df = bio_df[bio_df['lucode'] != 2]
+        bio_df.to_csv(bad_biophysical_path)
+        bio_df = None
+        args['biophysical_table_path'] = bad_biophysical_path
+
+        with self.assertRaises(ValueError) as context:
+            sdr.execute(args)
+        self.assertTrue(
+            "The missing values found in the LULC raster but not the table"
+            " are: [2.]" in str(context.exception))
+
     @staticmethod
     def _assert_regression_results_equal(
             workspace_dir, file_list_path, result_vector_path,

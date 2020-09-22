@@ -229,10 +229,10 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 74.37604,
-                'deg_sum_f_regression.tif': 143.99506,
-                'quality_c_regression.tif': 7499.6436,
-                'quality_f_regression.tif': 4999.8823,
+                'deg_sum_c_regression.tif': 18.91135,
+                'deg_sum_f_regression.tif': 33.931896, 
+                'quality_c_regression.tif': 7499.983,
+                'quality_f_regression.tif': 4999.9893,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
@@ -293,10 +293,10 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 86.17549,
-                'deg_sum_f_regression.tif': 161.4637,
-                'quality_c_regression.tif': 7499.381,
-                'quality_f_regression.tif': 4999.723,
+                'deg_sum_c_regression.tif': 27.153614,
+                'deg_sum_f_regression.tif': 46.279358, 
+                'quality_c_regression.tif': 7499.9414,
+                'quality_f_regression.tif': 4999.955,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
@@ -354,10 +354,10 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 86.17549,
-                'deg_sum_f_regression.tif': 161.4637,
-                'quality_c_regression.tif': 7499.381,
-                'quality_f_regression.tif': 4999.723,
+                'deg_sum_c_regression.tif': 27.153614,
+                'deg_sum_f_regression.tif': 46.279358, 
+                'quality_c_regression.tif': 7499.9414,
+                'quality_f_regression.tif': 4999.955,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
@@ -416,10 +416,10 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 86.17549,
-                'deg_sum_f_regression.tif': 161.4637,
-                'quality_c_regression.tif': 7499.381,
-                'quality_f_regression.tif': 4999.723,
+                'deg_sum_c_regression.tif': 27.153614,
+                'deg_sum_f_regression.tif': 46.279358, 
+                'quality_c_regression.tif': 7499.9414,
+                'quality_f_regression.tif': 4999.955,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
@@ -559,10 +559,10 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 86.17549,
-                'deg_sum_f_regression.tif': 161.4637,
-                'quality_c_regression.tif': 7499.381,
-                'quality_f_regression.tif': 4999.723,
+                'deg_sum_c_regression.tif': 27.153614,
+                'deg_sum_f_regression.tif': 46.279358, 
+                'quality_c_regression.tif': 7499.9414,
+                'quality_f_regression.tif': 4999.955,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000
         }.items():
@@ -840,10 +840,10 @@ class HabitatQualityTests(unittest.TestCase):
         try:
             habitat_quality.execute(args)
             self.assertTrue(True)
-        except:
+        except Exception as e:
             self.fail("HQ failed when using threat data CSV missing BASE_PATH"
-                      " column.")
-    
+                      f" column. \n {str(e)}")
+
     def test_habitat_quality_no_fut_column(self):
         """Habitat Quality: no future LULC and no column should pass."""
         from natcap.invest import habitat_quality
@@ -890,10 +890,10 @@ class HabitatQualityTests(unittest.TestCase):
         try:
             habitat_quality.execute(args)
             self.assertTrue(True)
-        except:
+        except Exception as e:
             self.fail("HQ failed when using threat data CSV missing FUT_PATH"
-                      " column.")
-    
+                      f" column. \n {str(e)}")
+
     def test_habitat_quality_bad_rasters(self):
         """Habitat Quality: raise error on threats that aren't real rasters."""
         from natcap.invest import habitat_quality
@@ -982,7 +982,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'quality_c.tif'),
-            7496.7466)
+            7499.524)
 
     def test_habitat_quality_case_insensitivty(self):
         """Habitat Quality: with table columns that have camel case."""
@@ -1030,7 +1030,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'quality_c.tif'),
-            7496.7466)
+            7499.524)
 
     def test_habitat_quality_lulc_baseline_current(self):
         """Habitat Quality: on missing future LULC raster."""
@@ -1075,7 +1075,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'quality_c.tif'),
-            7496.7466)
+            7499.524)
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'rarity_c.tif'),
             2500.000000)
@@ -1139,13 +1139,11 @@ class HabitatQualityTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             habitat_quality.execute(args)
 
-        actual_message = str(cm.exception)
-        self.assertTrue(
-            'The following land cover codes were found in ' in
-            actual_message, actual_message)
-        # 2, 3 are the missing landcover codes.
+        # 2 is the missing landcover codes.
         # Raster nodata is 255 and should NOT appear in this list.
-        self.assertTrue('{2, 3}' in actual_message, actual_message)
+        self.assertTrue(
+            "The missing values found in the LULC_c raster but not the table"
+            " are: [2]" in str(cm.exception))
 
     def test_habitat_quality_validate(self):
         """Habitat Quality: validate raise exception as expected."""
@@ -2053,7 +2051,7 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             "Fields are missing from this table: ['DECAY']" in
             validate_result[0][1], validate_result[0][1])
-    
+
     def test_habitat_quality_validate_missing_base_column(self):
         """Habitat Quality: test validate for a missing base column."""
         from natcap.invest import habitat_quality
@@ -2105,7 +2103,7 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             "The column 'base_path' was not found" in
             validate_result[0][1], validate_result[0][1])
-    
+
     def test_habitat_quality_validate_missing_fut_column(self):
         """Habitat Quality: test validate for a missing fut column."""
         from natcap.invest import habitat_quality
