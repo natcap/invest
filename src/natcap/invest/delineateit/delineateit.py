@@ -912,20 +912,33 @@ def _find_block_pour_points(flow_dir_block, edges, raster_info):
         raster_info (dict):
     """
     
-    flow_dir_block[flow_dir_block == raster_info['nodata'][0]] = TMP_NODATA
+    # flow_dir_block[flow_dir_block == raster_info['nodata'][0]] = TMP_NODATA
+    # pour_point_block = delineateit_core._calculate_pour_point_array(
+    #     flow_dir_block,
+    #     edges)
 
-    # Calculate pour points
-    pour_point_block = delineateit_core._calculate_pour_point_array2(
+
+
+    # # Calculate pour points
+    # pour_point_block = delineateit_core._calculate_pour_point_array2(
+    #     flow_dir_block.astype(numpy.intc), 
+    #     edges, 
+    #     raster_info['nodata'][0])
+    # # Add any pour points found in this block as (x, y) pairs
+    # # Use a set so that any duplicates in the overlap areas
+    # # won't be double-counted
+    # ys, xs = numpy.where(pour_point_block == 1)
+    # return set(zip(xs, ys))
+
+
+
+    pour_points_list = delineateit_core.python_wrapper3(
         flow_dir_block.astype(numpy.intc), 
         edges, 
-        TMP_NODATA)
+        raster_info['nodata'][0])
+    return set(pour_points_list)
 
-    # Add any pour points found in this block as (x, y) pairs
-    # Use a set so that any duplicates in the overlap areas
-    # won't be double-counted
-    ys, xs = numpy.where(pour_point_block == 1)
-    return set(zip(xs, ys))
-
+    
 def _expand_and_pad_block(block, raster_info):
     """
     Expand block by a 1-pixel margin and mark edges.
