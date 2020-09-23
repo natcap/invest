@@ -72,6 +72,15 @@ class Delineateit(model.InVESTModel):
                 "snapped.  MultiPoints will also not be snapped."),
             validator=self.validator)
         self.snap_points_container.add_input(self.snap_distance)
+        self.detect_pour_points = inputs.Checkbox(
+            args_key='detect_pour_points',
+            helptext=(
+                'If this box is checked, the pour point detection algorithm'
+                'will run. The model will have an additional output file, '
+                'pour_points.gpkg, which is a point vector.'),
+            label='Detect pour points')
+        self.add_input(self.detect_pour_points)
+        self.detect_pour_points.set_value(False)
 
     def _enable_point_snapping_container(self, input_valid):
         outlet_vector_path = self.outlet_vector_path.value()

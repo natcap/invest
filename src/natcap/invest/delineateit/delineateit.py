@@ -100,6 +100,14 @@ ARGS_SPEC = {
                 "delineation.  If ``False``, an invalid geometry "
                 "will cause DelineateIt to crash."),
             "name": "Crash on invalid geometries"
+        },
+        "detect_pour_points": {
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "If ``True``, the pour point detection algorithm will run, "
+                "creating a point vector file pour_points.gpkg."),
+            "name": "Detect pour points"
         }
     }
 }
@@ -112,6 +120,7 @@ _OUTPUT_FILES = {
     'streams': 'streams.tif',
     'snapped_outlets': 'snapped_outlets.gpkg',
     'watersheds': 'watersheds.gpkg',
+    'pour_points': 'pour_points.gpkg'
 }
 
 
@@ -162,6 +171,8 @@ def execute(args):
             If ``False``, this tool will crash if an invalid geometry is
             found.  If ``True``, invalid geometries will be left out of
             the vector to be delineated.  Default: True
+        args['detect_pour_points'] (bool): Whether to run the pour point
+            detection algorithm. Default: False
         args['n_workers'] (int): The number of worker processes to use with
             taskgraph. Defaults to -1 (no parallelism).
 
@@ -221,8 +232,19 @@ def execute(args):
         task_name='check_geometries',
         hash_algorithm='md5',
         copy_duplicate_artifact=True)
-    outlet_vector_path = file_registry['preprocessed_geometries']
 
+    if 'detect_pour_points' in args and args['detect_pour_points']:
+        pour_points_task = graph.add_task(
+            detect_pour_points,
+            args=((file_registry['flow_dir_d8'], 1),
+                  file_registry['pour_points']),
+            dependent_task_list=[flow_dir_task],
+            target_path_list=[file_registry['pour_points']],
+            task_name='detect_pour_points',
+            hash_algorithm='md5',
+            copy_duplicate_artifacts=True)
+
+    outlet_vector_path = file_registry['preprocessed_geometries']
     delineation_dependent_tasks = [flow_dir_task, check_geometries_task]
     if 'snap_points' in args and args['snap_points']:
         flow_accumulation_task = graph.add_task(
@@ -611,9 +633,7 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
 TMP_NODATA = 100
 FILL_VALUE = 101
 
-
-
-def identify_pour_points(flow_direction_raster_path, target_vector_path):
+def detect_pour_points(flow_direction_raster_path, target_vector_path):
     """
     Create a pour point vector from D8 flow direction raster.
 
@@ -1017,29 +1037,6 @@ def _convert_numpy_coords_to_geotransform(coords, origin, pixel_size):
         transformed_y = origin[1] + (y + 0.5) * pixel_size[1]
         transformed_coords.add((transformed_x, transformed_y))
     return transformed_coords
-
-# def _write_to_point_vector(pour_point_set, raster_info):
-#     """Save a list of points to a point vector.
-    
-#     Args:
-#         pour_point_set (set): set of (x, y) tuples representing
-#             point coordinates in the same coordinate system as 
-#             the flow direction raster.
-
-#     Returns:
-#         None
-
-#     """
-    
-# if __name__ == '__main__':
-#     identify_pour_points('/Users/emily/invest/test_flow_direction.tif', '/Users/emily/invest/test_pour_points_output.gpkg')
-
-
-            
-
-
-
-
 
 
 
