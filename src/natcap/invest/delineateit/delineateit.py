@@ -619,20 +619,6 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
     points_vector = None
 
 
-
-
-
-
-
-
-# for this algorithm I'm using two different nodata values
-# because there are two, replace the original nodata value with TMP_NODATA
-# to be sure that the values are different.
-# the flow direction array gets padded with a border of TMP_NODATA, so that
-# 
-TMP_NODATA = 100
-FILL_VALUE = 101
-
 def detect_pour_points(flow_direction_raster_path, target_vector_path):
     """
     Create a pour point vector from D8 flow direction raster.
@@ -652,13 +638,9 @@ def detect_pour_points(flow_direction_raster_path, target_vector_path):
     Returns:
         None
     """
-
     raster_info = pygeoprocessing.get_raster_info(flow_direction_raster_path)
-
-    
-
-    pour_point_set = _find_raster_pour_points(flow_direction_raster_path)
-    print(len(pour_point_set))
+    pour_point_set = _find_raster_pour_points(flow_direction_raster_path, 
+                                              raster_info)
 
     # use same spatial reference as the input
     aoi_spatial_reference = osr.SpatialReference()
@@ -692,73 +674,23 @@ def detect_pour_points(flow_direction_raster_path, target_vector_path):
     target_layer = None
     target_vector = None
 
-def _calculate_pour_point_array(flow_dir_array, edges):
-    """
-    Return a binary array indicating which pixels are pour points.
 
-    Args:
-        flow_dir_array (numpy.ndarray): a 2D array of D8 flow
-            direction values (0 - 7) and possiby the nodata value.
-        edges (dict): has boolean keys 'top', 'left', 'bottom', 'right'
-            indicating whether or not each edge is an edge of the raster.
-
-    Returns:
-        numpy.ndarray of the same shape as ``flow_direction_array``.
-        Each element is 1 if that pixel is a pour point, 0 if not,
-        nodata if it cannot be determined.
-    """
-
-    footprint = [
-        [1, 1, 1],
-        [1, 1, 1],
-        [1, 1, 1]
-    ]
-
-    if edges[0]:
-        border = numpy.full(flow_dir_array.shape[1], TMP_NODATA)
-        flow_dir_array = numpy.vstack([border, flow_dir_array])
-    if edges[1]:
-        border = numpy.full(flow_dir_array.shape[0], TMP_NODATA)
-        flow_dir_array = numpy.column_stack([border, flow_dir_array])
-    if edges[2]:
-        border = numpy.full(flow_dir_array.shape[1], TMP_NODATA)
-        flow_dir_array = numpy.vstack([flow_dir_array, border])
-    if edges[3]:
-        border = numpy.full(flow_dir_array.shape[0], TMP_NODATA)
-        flow_dir_array = numpy.column_stack([flow_dir_array, border])
-
-    pour_point_array = ndimage.generic_filter(
-                            flow_dir_array,
-                            delineateit_core.is_pour_point, 
-                            footprint=footprint, 
-                            mode='constant', 
-                            cval=FILL_VALUE,
-                            extra_arguments=(FILL_VALUE, TMP_NODATA))
-
-    ys, xs = numpy.where(pour_point_array == 1)
-    if edges[0]:
-        ys = ys - 1
-    if edges[1]:
-        xs = xs - 1
-    return set(zip(xs, ys))
-
-
-def _find_raster_pour_points(flow_direction_raster_path):
+def _find_raster_pour_points(flow_direction_raster_path, raster_info):
     """
     Memory-safe pour point calculation from a flow direction raster.
     
     Args:
         flow_direction_raster_path (string): path to flow direction raster
+        raster_info (dict): value of ``pygeoprocessing.get_raster_info(
+            flow_direction_raster_path)``. Avoiding redoing this function call
+            since it's used in the calling function ``detect_pour_points``.
 
     Returns:
-        set of (x, y) coordinate tuples 
+        set of (x, y) coordinate tuples of pour points, in the same coordinate
+        system as the input raster.
     """
 
-    # Read in the block from the flow direction raster
-    raster_info = pygeoprocessing.get_raster_info(flow_direction_raster_path)
-    width, height = raster_info['raster_size']
-    nodata = raster_info['nodata'][0]
-
+    # Open the flow direction raster band
     raster = gdal.OpenEx(flow_direction_raster_path, gdal.OF_RASTER)
     if raster is None:
         raise ValueError(
@@ -766,21 +698,24 @@ def _find_raster_pour_points(flow_direction_raster_path):
     band = raster.GetRasterBand(1)
 
     pour_point_set = set()
-    i = 0
+    # Read in flow direction data and find pour points one block at a time
     for block in pygeoprocessing.iterblocks((flow_direction_raster_path, 1),
-                                            offset_only=True):
-        # print(i)
-        i += 1
-        block, edges = _expand_and_find_edges(block, raster_info)
+                                            offset_only=True): 
+        # Expand each block by a 1-pixel-wide margin so that they overlap
+        # Keep track of which block edges are raster edges
+        block, edges = _expand_and_find_edges(block, raster_info['raster_size'])
         flow_dir_block = band.ReadAsArray(**block)
-        
-        for x, y in _find_block_pour_points2(flow_dir_block, edges, raster_info):
-            # Add the offsets so that all points reference the same coordinate
-            # system (such that the upper-left corner of the raster is (0, 0),
-            # and each pixel is 1x1).
+        new_pour_points = delineateit_core.calculate_pour_point_array(
+            flow_dir_block.astype(numpy.intc), 
+            edges, 
+            raster_info['nodata'][0])
+
+        # Add the offsets so that points from all blocks reference the same 
+        # coordinate system (such that the upper-left corner of the raster is 
+        # (0, 0), and each pixel is 1x1).
+        for x, y in new_pour_points:
             pour_point_set.add((x + block['xoff'], y + block['yoff']))
-
-
+            
     raster = None
     band = None
 
@@ -790,35 +725,7 @@ def _find_raster_pour_points(flow_direction_raster_path):
         pour_point_set, origin, raster_info['pixel_size'])
 
 
-# about 255 seconds to run on colombia raster
-def _find_block_pour_points(flow_dir_block, edges, raster_info):
-    """
-    Return set of (x, y) pour points in a given block.
-
-    Args:
-        flow_dir_block (numpy.ndarray): a 2D array of D8 flow
-            direction values (0 - 7) and possiby the nodata value.
-        raster_info (dict):
-    """
-    
-    flow_dir_block[flow_dir_block == raster_info['nodata'][0]] = TMP_NODATA
-    pour_point_set = _calculate_pour_point_array(
-        flow_dir_block,
-        edges)
-    return pour_point_set
-    
-
-# about 2.5 seconds to run on colombia raster
-def _find_block_pour_points2(flow_dir_block, edges, raster_info):
-
-    pour_points_list = delineateit_core._calculate_pour_point_array4(
-        flow_dir_block.astype(numpy.intc), 
-        edges, 
-        raster_info['nodata'][0])
-    return set(pour_points_list)
-
-
-def _expand_and_find_edges(block, raster_info):
+def _expand_and_find_edges(block, raster_size):
     """
     Expand block by a 1-pixel margin and mark edges.
 
@@ -831,19 +738,16 @@ def _expand_and_find_edges(block, raster_info):
         block (dict): describes the dimensions of a raster block, as yielded
             by ``pygeoprocessing.iterblocks``. Must have the keys 
             'xoff', 'yoff', 'win_xsize', and 'win_ysize'.
-        raster_info (dict): info from ``pygeoprocessing.get_raster_info``.
-            Must have the key 'raster_size'
+        raster_size (tuple): (x, y) tuple giving the dimensions of the raster
+            which the block came from.
 
     Returns:
-        tuple (dict, dict):
-            - tuple[0]: modified ``block``. Has the original keys 'xoff', 'yoff', 
-            'win_xsize', and 'win_ysize', which have been incremented or 
-            decremented to make the blocks overlap.
-            - tuple[1]: Edge dict with boolean keys 'top', 'left', 'bottom', 
-            'right', indicating whether each block edge is an edge of the 
-            raster or not.
+        tuple (dict, list): First element is modified ``block``, expanded by a
+            1-pixel-wide margin. Second element is a binary list indicating if
+            each edge of the block is an edge of the raster, in the order 
+            [top, left, bottom, right].
     """
-
+    width, height = raster_size
     # Expand each block by a one-pixel-wide margin, if possible. 
     # This way the blocks will overlap so the watershed 
     # calculation will be continuous.
@@ -853,13 +757,12 @@ def _expand_and_find_edges(block, raster_info):
     if block['yoff'] > 0:
         block['yoff'] -= 1
         block['win_ysize'] += 1
-    if block['xoff'] + block['win_xsize'] < raster_info['raster_size'][0]:
+    if block['xoff'] + block['win_xsize'] < width:
         block['win_xsize'] += 1
-    if block['yoff'] + block['win_ysize'] < raster_info['raster_size'][1]:
+    if block['yoff'] + block['win_ysize'] < height:
         block['win_ysize'] += 1
 
     # Add fields that indicate whether each edge is an edge of the raster
-    width, height = raster_info['raster_size']
     edges = numpy.empty(4, dtype=numpy.intc)
     # edges order: top, left, bottom, right
     edges[0] = (block['yoff'] == 0)
@@ -897,7 +800,6 @@ def _convert_numpy_coords_to_geotransform(coords, origin, pixel_size):
         transformed_y = origin[1] + (y + 0.5) * pixel_size[1]
         transformed_coords.add((transformed_x, transformed_y))
     return transformed_coords
-
 
 
 @validation.invest_validator

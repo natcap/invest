@@ -347,8 +347,6 @@ class DelineateItTests(unittest.TestCase):
         target_layer = None
         target_vector = None
 
-
-
     def test_detect_pour_points(self):
         from natcap.invest.delineateit import delineateit
 
@@ -370,43 +368,17 @@ class DelineateItTests(unittest.TestCase):
         expected_points = [
             (277713.1562500205, 9941874.499999935),
             (277713.1562500205, 9941859.499999935)]
-        print(points)
 
         self.assertTrue(numpy.isclose(points[0][0], expected_points[0][0]))
         self.assertTrue(numpy.isclose(points[0][1], expected_points[0][1]))
         self.assertTrue(numpy.isclose(points[1][0], expected_points[1][0]))
         self.assertTrue(numpy.isclose(points[1][1], expected_points[1][1]))
 
-
-    def test_is_pour_point(self):
-        from natcap.invest.delineateit import delineateit
-
-        a = delineateit.TMP_NODATA
-        b = delineateit.FILL_VALUE
-
-        kernel_1 = numpy.array(
-            [a, a, a, 
-             a, 2, 4, 
-             a, 2, 4])
-        kernel_2 = numpy.array(
-            [0, 0, b, 
-             0, 0, b, 
-             a, a, b])
-        kernel_3 = numpy.array(
-            [a, a, a, 
-             4, 6, 1, 
-             3, 3, 3])
-
-        self.assertEqual(delineateit._is_pour_point(kernel_1), 1)
-        self.assertEqual(delineateit._is_pour_point(kernel_2), a)
-        self.assertEqual(delineateit._is_pour_point(kernel_3), 0)
-
-
     def test_calculate_pour_point_array(self):
         from natcap.invest.delineateit import delineateit, delineateit_core
 
-        a = delineateit.TMP_NODATA
-        b = delineateit.FILL_VALUE
+        a = 100  # nodata value
+
         # at this point the flow direction array will already have been
         # buffered with a border of nodata
         flow_dir_array = numpy.array([
@@ -420,22 +392,15 @@ class DelineateItTests(unittest.TestCase):
 
         expected_pour_points = {(2, 1)}
 
-        output = delineateit._calculate_pour_point_array(flow_dir_array, edges)
+        output = delineateit_core.calculate_pour_point_array(flow_dir_array, edges, a)
         self.assertTrue(numpy.array_equal(
             output,
             expected_pour_points))
 
-        output = delineateit_core._calculate_pour_point_array2(flow_dir_array, edges, a)
-        self.assertTrue(numpy.array_equal(
-            output,
-            expected_pour_points))
-
-        
     def test_expand_and_find_edges(self):
         from natcap.invest.delineateit import delineateit
 
-        raster_info = {'raster_size': (10, 4), 'nodata': (delineateit.TMP_NODATA,)}
-
+        raster_size = (10, 4)
         blocks = [
             {'xoff': 0, 'yoff': 0, 'win_xsize': 4, 'win_ysize': 4},
             {'xoff': 4, 'yoff': 0, 'win_xsize': 4, 'win_ysize': 4},
@@ -447,28 +412,23 @@ class DelineateItTests(unittest.TestCase):
             {'xoff': 3, 'yoff': 0, 'win_xsize': 6, 'win_ysize': 4},
             {'xoff': 7, 'yoff': 0, 'win_xsize': 3, 'win_ysize': 4}
         ]
-
         expected_edges = [
             [1, 1, 1, 0],  # top, left, bottom, right
             [1, 0, 1, 0],
             [1, 0, 1, 1]
         ]
 
-
         for in_block, expected_block, expected_edges in zip(blocks, 
                                                             expected_blocks, 
                                                             expected_edges):
-            block, edges = delineateit._expand_and_find_edges(in_block, raster_info)
-            print(block, edges)
+            block, edges = delineateit._expand_and_find_edges(in_block, raster_size)
             self.assertTrue(numpy.array_equal(block, expected_block))
             self.assertTrue(numpy.array_equal(edges, expected_edges))
-
-
 
     def test_find_pour_points_by_block(self):
         from natcap.invest.delineateit import delineateit
 
-        a = delineateit.TMP_NODATA
+        a = 100  # nodata value
         flow_dir_array = numpy.array([
             [0, 0, 0, 0, 7, 7, 7, 1, 6, 6],
             [2, 3, 4, 5, 6, 7, 0, 1, 1, 2],
@@ -476,6 +436,12 @@ class DelineateItTests(unittest.TestCase):
             [2, 1, 1, 1, 2, 6, 4, 1, a, a],
             [1, 1, 0, 0, 0, 0, a, a, a, a]
         ], dtype=numpy.int8)
+
+        raster_info = {
+            'raster_size': (10, 4), 
+            'pixel_size': (1, 1), 
+            'nodata': (a,),
+            'geotransform': [0, 0, 0, 0, 0, 0]}
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
@@ -504,27 +470,9 @@ class DelineateItTests(unittest.TestCase):
                     'win_xsize': win_xsize,
                     'win_ysize': 5}
 
-
         with mock.patch(
             'natcap.invest.delineateit.delineateit.pygeoprocessing.iterblocks', 
             mock_iterblocks):
-            pour_points = delineateit._find_raster_pour_points(raster_path)
-            print(sorted(list(pour_points)))
-            print(sorted(list(expected_pour_points)))
+            pour_points = delineateit._find_raster_pour_points(raster_path, 
+                                                               raster_info)
             self.assertEqual(pour_points, expected_pour_points)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
