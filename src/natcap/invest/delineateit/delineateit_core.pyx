@@ -9,11 +9,42 @@ cimport cython
 from libcpp.list cimport list as clist
 from libcpp.pair cimport pair as cpair
 
-# from Cython.Compiler.Options import get_directive_defaults
-# directive_defaults = get_directive_defaults()
+@cython.boundscheck(False)  # Deactivate bounds checking
+cpdef int is_pour_point(double[:] kernel, int fill_value, int tmp_nodata):
+    """
+    Determine if pixel is a pour point given its neighborhood.
 
-# directive_defaults['linetrace'] = True
-# directive_defaults['binding'] = True
+    Args:
+        kernel (list): list of 9 integers representing a 3x3 
+            kernel from a flow direction array:
+            0 1 2
+            3 4 5  -->  [0,1,2,3,4,5,6,7,8]
+            6 7 8
+            Used to determine if the center element, at index 4, is a
+            pour point based on the surrounding elements.
+
+    Returns:
+        integer: 1 if kernel[4] is a pour point, 0 if not, 
+            nodata if it cannot be determined.
+    """
+
+    # 3 2 1       0 1 2 
+    # 4 x 0  -->  3 4 5 
+    # 5 6 7       6 7 8 
+
+    cdef int* convert = [5, 2, 1, 0, 3, 6, 7, 8]
+
+    for i in range(9):
+        if kernel[i] == fill_value:
+            return tmp_nodata
+
+    if kernel[4] == tmp_nodata:
+        return tmp_nodata
+    else:
+        return kernel[convert[int(kernel[4])]] == tmp_nodata
+
+
+
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing.
@@ -102,8 +133,10 @@ the
                     else:
                         pour_point_array_view[row, col] = 0
 
+    # convert the binary array to a set of (x, y) coordinates
+    ys, xs = numpy.where(pour_point_array == 1)
+    return set(zip(xs, ys))
 
-    return pour_point_array
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing.
@@ -223,7 +256,7 @@ the
     # iterate over each pixel
     for row in range(height):
         for col in range(width):
-
+            
             # get the flow direction [0-7] for this pixel
             flow_dir = flow_dir_array[row, col]
             if flow_dir != nodata:
@@ -237,23 +270,24 @@ the
                     # this is a pour point. Otherwise, we can't say whether it is
                     # because the necessary information isn't in this block.
                     if edges[0]:  # top edge
-                        pour_points.push_back(cpair[int, int](row, col))
+                        pour_points.push_back(cpair[int, int](col, row))
                 elif sink_col == -1:
                     if edges[1]:  # left edge
-                        pour_points.push_back(cpair[int, int](row, col))
+                        pour_points.push_back(cpair[int, int](col, row))
                 elif sink_row == height:
                     if edges[2]:  # bottom edge
-                        pour_points.push_back(cpair[int, int](row, col))
+                        pour_points.push_back(cpair[int, int](col, row))
                 elif sink_col == width:
                     if edges[3]:  # right edge
-                        pour_points.push_back(cpair[int, int](row, col))
+                        pour_points.push_back(cpair[int, int](col, row))
 
                 # if we get to here, the point (sink_row, sink_col)  
                 # is known to be within the bounds of the array,
                 # so it's safe to index 
                 elif flow_dir_array[sink_row, sink_col] == nodata:
-                    pour_points.push_back(cpair[int, int](row, col))
+                    pour_points.push_back(cpair[int, int](col, row))
 
+    # return set of (x, y) coordinates referenced to this block array
     return pour_points
 
 

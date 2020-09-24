@@ -90,6 +90,13 @@ setup(
     ],
     ext_modules=[
         Extension(
+            name="natcap.invest.delineateit.delineateit_core",
+            sources=['src/natcap/invest/delineateit/delineateit_core.pyx'],
+            include_dirs=[numpy.get_include()],
+            extra_compile_args=compiler_and_linker_args,
+            extra_link_args=compiler_and_linker_args,
+            language="c++"),
+        Extension(
             name="natcap.invest.recreation.out_of_core_quadtree",
             sources=[
                 'src/natcap/invest/recreation/out_of_core_quadtree.pyx'],

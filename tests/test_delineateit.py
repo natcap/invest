@@ -349,13 +349,13 @@ class DelineateItTests(unittest.TestCase):
 
 
 
-    def test_identify_pour_points(self):
+    def test_detect_pour_points(self):
         from natcap.invest.delineateit import delineateit
 
         input_path = '/Users/emily/invest/test_flow_direction.tif'
         output_path = os.path.join(self.workspace_dir, 'point_vector.gpkg')
 
-        delineateit.identify_pour_points(input_path, output_path)
+        delineateit.detect_pour_points(input_path, output_path)
 
         vector = gdal.OpenEx(output_path, gdal.OF_VECTOR)
         layer = vector.GetLayer()
@@ -370,6 +370,7 @@ class DelineateItTests(unittest.TestCase):
         expected_points = [
             (277713.1562500205, 9941874.499999935),
             (277713.1562500205, 9941859.499999935)]
+        print(points)
 
         self.assertTrue(numpy.isclose(points[0][0], expected_points[0][0]))
         self.assertTrue(numpy.isclose(points[0][1], expected_points[0][1]))
@@ -401,8 +402,8 @@ class DelineateItTests(unittest.TestCase):
         self.assertEqual(delineateit._is_pour_point(kernel_3), 0)
 
 
-    def test_calculate_pour_point_array2(self):
-        from natcap.invest.delineateit import delineateit
+    def test_calculate_pour_point_array(self):
+        from natcap.invest.delineateit import delineateit, delineateit_core
 
         a = delineateit.TMP_NODATA
         b = delineateit.FILL_VALUE
@@ -413,50 +414,27 @@ class DelineateItTests(unittest.TestCase):
             [6, 6, 6, 4],
             [0, 1, a, 0],
             [a, 2, 3, 4]
-        ])
+        ], dtype=numpy.intc)
 
-        edges = {'top': True, 'left': True, 'bottom': False, 'right': False}
+        edges = numpy.array([1, 1, 0, 0], dtype=numpy.intc)  # top, left, bottom, right
 
-        expected_pour_point_array1 = numpy.array([
-            [0, 0, 0, a],
-            [0, 0, 1, a],
-            [0, 0, a, a],
-            [a, a, a, a]
-        ], dtype=numpy.int8)
-
-        expected_pour_point_array2 = numpy.array([
-            [0, 0, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, a, a],
-            [a, 0, 0, 0]
-        ], dtype=numpy.int8)
+        expected_pour_points = {(2, 1)}
 
         output = delineateit._calculate_pour_point_array(flow_dir_array, edges)
-        print(output)
         self.assertTrue(numpy.array_equal(
             output,
-            expected_pour_point_array1))
+            expected_pour_points))
 
-        output = delineateit._calculate_pour_point_array2(flow_dir_array, edges)
-        print(output.astype(numpy.int8))
+        output = delineateit_core._calculate_pour_point_array2(flow_dir_array, edges, a)
         self.assertTrue(numpy.array_equal(
-            output.astype(numpy.int8),
-            expected_pour_point_array2))
+            output,
+            expected_pour_points))
 
         
-    def test_expand_and_pad_block(self):
+    def test_expand_and_find_edges(self):
         from natcap.invest.delineateit import delineateit
 
-        a = delineateit.TMP_NODATA
-
-        # flow_dir_array = numpy.array([
-        #     [0, 0, 0, 0, 7, 7, 7, 1, 6, 6],
-        #     [2, 3, 4, 5, 6, 7, 0, 1, 1, 2],
-        #     [2, 2, 2, 2, 0, a, a, 3, 3, a],
-        #     [2, 1, 1, 1, 1, 1, 1, 1, a, a]
-        # ], dtype=numpy.int8)
-
-        raster_info = {'raster_size': (10, 4), 'nodata': (a,)}
+        raster_info = {'raster_size': (10, 4), 'nodata': (delineateit.TMP_NODATA,)}
 
         blocks = [
             {'xoff': 0, 'yoff': 0, 'win_xsize': 4, 'win_ysize': 4},
@@ -471,16 +449,16 @@ class DelineateItTests(unittest.TestCase):
         ]
 
         expected_edges = [
-            {'top': True, 'left': True, 'bottom': True, 'right': False},
-            {'top': True, 'left': False, 'bottom': True, 'right': False},
-            {'top': True, 'left': False, 'bottom': True, 'right': True}
+            [1, 1, 1, 0],  # top, left, bottom, right
+            [1, 0, 1, 0],
+            [1, 0, 1, 1]
         ]
 
 
         for in_block, expected_block, expected_edges in zip(blocks, 
                                                             expected_blocks, 
                                                             expected_edges):
-            block, edges = delineateit._expand_and_pad_block(in_block, raster_info)
+            block, edges = delineateit._expand_and_find_edges(in_block, raster_info)
             print(block, edges)
             self.assertTrue(numpy.array_equal(block, expected_block))
             self.assertTrue(numpy.array_equal(edges, expected_edges))
