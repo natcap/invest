@@ -1,7 +1,7 @@
 # encoding=UTF-8
 
 from natcap.invest.ui import model, inputs
-from natcap.invest import delineateit
+from natcap.invest.delineateit import delineateit
 
 
 class Delineateit(model.InVESTModel):
@@ -21,6 +21,16 @@ class Delineateit(model.InVESTModel):
                 "for each cell."),
             validator=self.validator)
         self.add_input(self.dem_path)
+
+        self.outlet_vector_container = inputs.Container(
+            label=('Use your own geometries to delineate watersheds from, '
+                   'instead of automatically detected pour points.'),
+            expandable=True,
+            expanded=False,
+            interactive=False,
+            args_key='outlet_vector')
+        self.add_input(self.outlet_vector_container)
+
         self.outlet_vector_path = inputs.File(
             args_key='outlet_vector_path',
             helptext=(
@@ -28,9 +38,10 @@ class Delineateit(model.InVESTModel):
                 "outlets such as municipal water intakes or lakes."),
             label='Outlet Features (Vector)',
             validator=self.validator)
-        self.add_input(self.outlet_vector_path)
+        self.outlet_vector_container.add_input(self.outlet_vector_path)
         self.outlet_vector_path.value_changed.connect(
             self._enable_point_snapping_container)
+
         self.skip_invalid_geometry = inputs.Checkbox(
             args_key='skip_invalid_geometry',
             helptext=(
@@ -72,16 +83,7 @@ class Delineateit(model.InVESTModel):
                 "snapped.  MultiPoints will also not be snapped."),
             validator=self.validator)
         self.snap_points_container.add_input(self.snap_distance)
-        self.detect_pour_points = inputs.Checkbox(
-            args_key='detect_pour_points',
-            helptext=(
-                'If this box is checked, the pour point detection algorithm'
-                'will run. The model will have an additional output file, '
-                'pour_points.gpkg, which is a point vector.'),
-            label='Detect pour points')
-        self.add_input(self.detect_pour_points)
-        self.detect_pour_points.set_value(False)
-
+        
     def _enable_point_snapping_container(self, input_valid):
         outlet_vector_path = self.outlet_vector_path.value()
         if delineateit._vector_may_contain_points(outlet_vector_path):
@@ -95,6 +97,7 @@ class Delineateit(model.InVESTModel):
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
             self.dem_path.args_key: self.dem_path.value(),
+            self.use_outlet_vector.args_key: self.use_outlet_vector.value(),
             self.outlet_vector_path.args_key: (
                 self.outlet_vector_path.value()),
             self.snap_points_container.args_key: (
