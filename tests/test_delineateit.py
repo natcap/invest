@@ -74,14 +74,17 @@ class DelineateItTests(unittest.TestCase):
         from natcap.invest.delineateit import delineateit
         missing_keys = {}
         validation_warnings = delineateit.validate(missing_keys)
-        self.assertEqual(len(validation_warnings), 1)
-        self.assertEqual(len(validation_warnings[0][0]), 3)
+        self.assertEqual(len(validation_warnings), 2)
+        self.assertTrue('dem_path' in validation_warnings[0][0])
+        self.assertTrue('workspace_dir' in validation_warnings[0][0])
+        self.assertEqual(validation_warnings[1][0], ['outlet_vector_path'])
 
         missing_values_args = {
             'workspace_dir': '',
             'dem_path': None,
             'outlet_vector_path': '',
             'snap_points': False,
+            'detect_pour_points': True
         }
         validation_warnings = delineateit.validate(missing_values_args)
         self.assertEqual(len(validation_warnings), 1)
@@ -349,11 +352,12 @@ class DelineateItTests(unittest.TestCase):
 
     def test_detect_pour_points(self):
         from natcap.invest.delineateit import delineateit
-
-        input_path = '/Users/emily/invest/test_flow_direction.tif'
+ 
+        # create a flow direction raster from the sample DEM
+        flow_dir_path = os.path.join(REGRESSION_DATA, 'input/flow_dir_gura.tif')
         output_path = os.path.join(self.workspace_dir, 'point_vector.gpkg')
 
-        delineateit.detect_pour_points(input_path, output_path)
+        delineateit.detect_pour_points((flow_dir_path, 1), output_path)
 
         vector = gdal.OpenEx(output_path, gdal.OF_VECTOR)
         layer = vector.GetLayer()
@@ -473,6 +477,6 @@ class DelineateItTests(unittest.TestCase):
         with mock.patch(
             'natcap.invest.delineateit.delineateit.pygeoprocessing.iterblocks', 
             mock_iterblocks):
-            pour_points = delineateit._find_raster_pour_points(raster_path, 
+            pour_points = delineateit._find_raster_pour_points((raster_path, 1),
                                                                raster_info)
             self.assertEqual(pour_points, expected_pour_points)
