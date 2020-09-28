@@ -52,7 +52,7 @@ class DelineateItTests(unittest.TestCase):
 
         vector = gdal.OpenEx(os.path.join(args['workspace_dir'],
                                           'watersheds_w.gpkg'), gdal.OF_VECTOR)
-        layer = vector.GetLayer('watersheds')
+        layer = vector.GetLayer('watersheds_w')  # includes suffix
         self.assertEqual(layer.GetFeatureCount(), 3)
 
         expected_areas_by_id = {

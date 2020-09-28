@@ -184,7 +184,7 @@ def execute(args):
     production, and observed crop yields, a nutrient table, and a clipped
     observed map.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
@@ -304,6 +304,10 @@ def execute(args):
             x for x in list(crop_climate_percentile_table.values())[0]
             if x != 'climate_bin']
 
+        reclassify_error_details = {
+            'raster_name': f'{crop_name} Climate Bin',
+            'column_name': 'climate_bin',
+            'table_name': f'Climate {crop_name} Percentile Yield'}
         for yield_percentile_id in yield_percentile_headers:
             LOGGER.info("Map %s to climate bins.", yield_percentile_id)
             interpolated_yield_percentile_raster_path = os.path.join(
@@ -321,11 +325,11 @@ def execute(args):
                 _COARSE_YIELD_PERCENTILE_FILE_PATTERN % (
                     crop_name, yield_percentile_id, file_suffix))
             create_coarse_yield_percentile_task = task_graph.add_task(
-                func=pygeoprocessing.reclassify_raster,
+                func=utils.reclassify_raster,
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_percentile_yield,
                       coarse_yield_percentile_raster_path, gdal.GDT_Float32,
-                      _NODATA_YIELD),
+                      _NODATA_YIELD, reclassify_error_details),
                 target_path_list=[coarse_yield_percentile_raster_path],
                 dependent_task_list=[crop_climate_bin_task],
                 task_name='create_coarse_yield_percentile_%s_%s' % (
@@ -346,7 +350,8 @@ def execute(args):
                 dependent_task_list=[create_coarse_yield_percentile_task],
                 task_name='create_interpolated_yield_percentile_%s_%s' % (
                     crop_name, yield_percentile_id))
-            dependent_task_list.append(create_interpolated_yield_percentile_task)
+            dependent_task_list.append(
+                create_interpolated_yield_percentile_task)
 
             LOGGER.info(
                 "Calculate yield for %s at %s", crop_name,
@@ -366,7 +371,8 @@ def execute(args):
                       percentile_crop_production_raster_path,
                       gdal.GDT_Float32, _NODATA_YIELD),
                 target_path_list=[percentile_crop_production_raster_path],
-                dependent_task_list=[create_interpolated_yield_percentile_task],
+                dependent_task_list=[
+                    create_interpolated_yield_percentile_task],
                 task_name='create_percentile_production_%s_%s' % (
                     crop_name, yield_percentile_id))
             dependent_task_list.append(create_percentile_production_task)
@@ -491,7 +497,7 @@ def _crop_production_op(
         lulc_array, yield_array, landcover_nodata, crop_lucode, pixel_area_ha):
     """Mask in yields that overlap with `crop_lucode`.
 
-    Parameters:
+    Args:
         lulc_array (numpy.ndarray): landcover raster values
         yield_array (numpy.ndarray): interpolated yield raster values
         landcover_nodata (float): extracted from landcover raster values
@@ -518,7 +524,7 @@ def _crop_production_op(
 def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     """Reclassify observed_yield nodata to zero.
 
-    Parameters:
+    Args:
         observed_yield_array (numpy.ndarray): raster values
         observed_yield_nodata (float): raster nodata value
 
@@ -531,7 +537,8 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result[:] = 0.0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
-        valid_mask = ~numpy.isclose(observed_yield_array, observed_yield_nodata)
+        valid_mask = ~numpy.isclose(
+            observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
 
@@ -541,7 +548,7 @@ def _mask_observed_yield_op(
         landcover_nodata, crop_lucode, pixel_area_ha):
     """Mask total observed yield to crop lulc type.
 
-    Parameters:
+    Args:
         lulc_array (numpy.ndarray): landcover raster values
         observed_yield_array (numpy.ndarray): yield raster values
         observed_yield_nodata (float): yield raster nodata value
@@ -574,7 +581,7 @@ def tabulate_results(
 
     This function includes all the operations that write to results_table.csv.
 
-    Parameters:
+    Args:
         nutrient_table (dict): a lookup of nutrient values by crop in the
             form of nutrient_table[<crop>][<nutrient>].
         yield_percentile_headers (list): list of strings indicating percentiles
@@ -620,7 +627,8 @@ def tabulate_results(
                 _OBSERVED_PRODUCTION_FILE_PATTERN % (
                     crop_name, file_suffix))
 
-            LOGGER.info("Calculating production area and summing observed yield.")
+            LOGGER.info(
+                "Calculating production area and summing observed yield.")
             observed_yield_nodata = pygeoprocessing.get_raster_info(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
@@ -630,9 +638,10 @@ def tabulate_results(
                 # if nodata value undefined, assume all pixels are valid
                 valid_mask = slice(None)
                 if observed_yield_nodata is not None:
-                    valid_mask = ~numpy.isclose(yield_block, observed_yield_nodata)
-                production_pixel_count += numpy.count_nonzero(valid_mask & (
-                                                              yield_block > 0.0))
+                    valid_mask = ~numpy.isclose(
+                        yield_block, observed_yield_nodata)
+                production_pixel_count += numpy.count_nonzero(
+                    valid_mask & (yield_block > 0.0))
                 yield_sum += numpy.sum(yield_block[valid_mask])
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
@@ -649,7 +658,8 @@ def tabulate_results(
                         (yield_percentile_raster_path, 1)):
                     # _NODATA_YIELD will always have a value (defined above)
                     yield_sum += numpy.sum(
-                        yield_block[~numpy.isclose(yield_block, _NODATA_YIELD)])
+                        yield_block[~numpy.isclose(
+                            yield_block, _NODATA_YIELD)])
                 production_lookup[yield_percentile_id] = yield_sum
                 result_table.write(",%f" % yield_sum)
 
@@ -694,7 +704,7 @@ def aggregate_to_polygons(
     production and nutrient information for each polygon in
     base_aggregate_vector_path.
 
-    Parameters:
+    Args:
         base_aggregate_vector_path (string): path to polygon vector
         target_aggregate_vector_path (string):
             path to re-projected copy of polygon vector
@@ -806,7 +816,7 @@ def aggregate_to_polygons(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

@@ -230,7 +230,7 @@ env:
 # of pip don't think CWD is a valid package.
 install: $(DIST_DIR)/natcap.invest%.whl
 	-$(RMDIR) natcap.invest.egg-info
-	$(PIP) install --isolated --upgrade --only-binary natcap.invest --find-links=dist natcap.invest
+	$(PIP) install --isolated --upgrade --no-index --only-binary natcap.invest --find-links=dist natcap.invest
 
 
 # Bulid python packages and put them in dist/

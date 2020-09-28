@@ -303,7 +303,10 @@ def execute(args):
         args=((file_registry['flow_dir_d8'], 1),
               outlet_vector_path,
               file_registry['watersheds']),
-        kwargs={'working_dir': output_directory},
+        kwargs={'working_dir': output_directory,
+                'target_layer_name':
+                    os.path.splitext(
+                        os.path.basename(file_registry['watersheds']))[0]},
         target_path_list=[file_registry['watersheds']],
         dependent_task_list=delineation_dependent_tasks,
         task_name='delineate_watersheds_single_worker',
@@ -368,7 +371,7 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     valid_pixels = slice(None)
     if src_nodata is not None:
         valid_pixels = ~numpy.isclose(flow_accum, src_nodata)
-    
+
     over_threshold = flow_accum > threshold
     out_matrix[valid_pixels & over_threshold] = 1
     out_matrix[valid_pixels & ~over_threshold] = 0
@@ -424,8 +427,9 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
     gpkg_driver = gdal.GetDriverByName('GPKG')
     target_vector = gpkg_driver.Create(target_vector_path, 0, 0, 0,
                                        gdal.GDT_Unknown)
+    layer_name = os.path.splitext(os.path.basename(target_vector_path))[0]
     target_layer = target_vector.CreateLayer(
-        'verified_geometries', dem_srs, ogr.wkbUnknown)  # Use source layer type?
+        layer_name, dem_srs, ogr.wkbUnknown)  # Use source layer type?
 
     outflow_vector = gdal.OpenEx(outlet_vector_path, gdal.OF_VECTOR)
     outflow_layer = outflow_vector.GetLayer()
@@ -538,8 +542,10 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
     driver = gdal.GetDriverByName('GPKG')
     snapped_vector = driver.Create(snapped_points_vector_path, 0, 0, 0,
                                    gdal.GDT_Unknown)
+    layer_name = os.path.splitext(
+        os.path.basename(snapped_points_vector_path))[0]
     snapped_layer = snapped_vector.CreateLayer(
-        'snapped', points_layer.GetSpatialRef(), points_layer.GetGeomType())
+        layer_name, points_layer.GetSpatialRef(), points_layer.GetGeomType())
     snapped_layer.CreateFields(points_layer.schema)
     snapped_layer_defn = snapped_layer.GetLayerDefn()
 

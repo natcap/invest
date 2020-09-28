@@ -210,7 +210,7 @@ def execute(args):
     This model will take a landcover (crop cover?), N, P, and K map and
     produce modeled yields, and a nutrient table.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
@@ -364,6 +364,10 @@ def execute(args):
             x for x in list(crop_regression_table.values())[0]
             if x != 'climate_bin']
 
+        reclassify_error_details = {
+            'raster_name': f'{crop_name} Climate Bin',
+            'column_name': 'climate_bin',
+            'table_name': f'Climate {crop_name} Regression Yield'}
         regression_parameter_raster_path_lookup = {}
         for yield_regression_id in yield_regression_headers:
             # there are extra headers in that table
@@ -386,11 +390,12 @@ def execute(args):
                 _COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN % (
                     crop_name, yield_regression_id, file_suffix))
             create_coarse_regression_parameter_task = task_graph.add_task(
-                func=pygeoprocessing.reclassify_raster,
+                func=utils.reclassify_raster,
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_regression_value,
-                      coarse_regression_parameter_raster_path, gdal.GDT_Float32,
-                      _NODATA_YIELD),
+                      coarse_regression_parameter_raster_path,
+                      gdal.GDT_Float32, _NODATA_YIELD,
+                      reclassify_error_details),
                 target_path_list=[coarse_regression_parameter_raster_path],
                 dependent_task_list=[crop_climate_bin_task],
                 task_name='create_coarse_regression_parameter_%s_%s' % (
@@ -644,7 +649,7 @@ def _min_op(y_n, y_p, y_k):
 def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     """Reclassify observed_yield nodata to zero.
 
-    Parameters:
+    Args:
         observed_yield_array (numpy.ndarray): raster values
         observed_yield_nodata (float): raster nodata value
 
@@ -657,7 +662,8 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result[:] = 0.0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
-        valid_mask = ~numpy.isclose(observed_yield_array, observed_yield_nodata)
+        valid_mask = ~numpy.isclose(
+            observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
 
@@ -667,7 +673,7 @@ def _mask_observed_yield_op(
         landcover_nodata, crop_lucode, pixel_area_ha):
     """Mask total observed yield to crop lulc type.
 
-    Parameters:
+    Args:
         lulc_array (numpy.ndarray): landcover raster values
         observed_yield_array (numpy.ndarray): yield raster values
         observed_yield_nodata (float): yield raster nodata value
@@ -700,7 +706,7 @@ def tabulate_regression_results(
 
     This function includes all the operations that write to results_table.csv.
 
-    Parameters:
+    Args:
         nutrient_table (dict): a lookup of nutrient values by crop in the
             form of nutrient_table[<crop>][<nutrient>].
         crop_to_landcover_table (dict): landcover codes keyed by crop names
@@ -734,7 +740,8 @@ def tabulate_regression_results(
                 _OBSERVED_PRODUCTION_FILE_PATTERN % (
                     crop_name, file_suffix))
 
-            LOGGER.info("Calculating production area and summing observed yield.")
+            LOGGER.info(
+                "Calculating production area and summing observed yield.")
             observed_yield_nodata = pygeoprocessing.get_raster_info(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
@@ -744,7 +751,8 @@ def tabulate_regression_results(
                 # if nodata value undefined, assume all pixels are valid
                 valid_mask = slice(None)
                 if observed_yield_nodata is not None:
-                    valid_mask = ~numpy.isclose(yield_block, observed_yield_nodata)
+                    valid_mask = ~numpy.isclose(
+                        yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
                                           valid_mask & (yield_block > 0.0))
                 yield_sum += numpy.sum(yield_block[valid_mask])
@@ -805,7 +813,7 @@ def aggregate_regression_results_to_polygons(
     production and nutrient information for each polygon in
     base_aggregate_vector_path.
 
-    Parameters:
+    Args:
         base_aggregate_vector_path (string): path to polygon vector
         target_aggregate_vector_path (string):
             path to re-projected copy of polygon vector
@@ -909,7 +917,7 @@ def aggregate_regression_results_to_polygons(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation
