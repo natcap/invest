@@ -20,20 +20,27 @@ ifeq ($(OS),Windows_NT)
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_SCRIPTS = $(ENV)\Scripts
 	ENV_ACTIVATE = $(ENV_SCRIPTS)\activate
-	CP := powershell.exe Copy-Item
-	COPYDIR := $(CP) -Recurse
-	MKDIR := powershell.exe mkdir -Force -Path
-	RM := powershell.exe Remove-Item -Force -Recurse -Path
-	RMDIR := cmd /C "rmdir /S /Q"
+	#CP := powershell.exe Copy-Item
+	CP := cp 
+	#COPYDIR := $(CP) -Recurse
+	COPYDIR := $(CP) -r
+	#MKDIR := powershell.exe mkdir -Force -Path
+	MKDIR := mkdir -p
+	#RM := powershell.exe Remove-Item -Force -Recurse -Path
+	RM := rm -r
+	#RMDIR := cmd /C "rmdir /S /Q"
+	RMDIR := $(RM)
 	# Windows doesn't install a python3 binary, just python.
 	PYTHON = python
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
 	MAKE := make
-	# Since moving to GitHub actions for build workflows, it makes sense 
-	# to use the bash shell for more consistent command runs
-	#SHELL := powershell.exe
+	# Powershell has been inconsistent for allowing make commands to be
+	# ignored on failure. Many times if a command writes to std error 
+	# powershell interprets that as a failure and exits. Bash shells are 
+	# widely available on Windows now, especially through git-bash
 	SHELL := /usr/bin/bash
-	BASHLIKE_SHELL_COMMAND := cmd.exe /C
+	#BASHLIKE_SHELL_COMMAND := cmd.exe /C
+	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	.DEFAULT_GOAL := windows_installer
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
 	/ := '\'
