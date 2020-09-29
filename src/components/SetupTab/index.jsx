@@ -60,8 +60,20 @@ function initializeArgValues(argsSpec, argsDict) {
   Object.keys(argsSpec).forEach((argkey) => {
     argsValidation[argkey] = {};
     if (argkey === 'n_workers') { return; }
+    // When initializing with undefined values, assign defaults so that,
+    // a) values are handled well by the html inputs and
+    // b) the object exported on "Save" or "Execute" includes defaults.
+    let value;
+    if (argsSpec[argkey].type === 'boolean') {
+      value = argsDict[argkey] || false;
+    } else if (argsSpec[argkey].type === 'option_string') {
+      value = argsDict[argkey]
+        || argsSpec[argkey].validation_options.options[0]; // default to first
+    } else {
+      value = argsDict[argkey] || '';
+    }
     argsValues[argkey] = {
-      value: argsDict[argkey],
+      value: value,
       touched: !initIsEmpty, // touch them only if initializing with values
     };
   });
@@ -150,7 +162,6 @@ export default class SetupTab extends React.Component {
         );
       }
     });
-
     this.setState({
       argsValues: argsValues,
       argsValidation: argsValidation,
@@ -176,7 +187,9 @@ export default class SetupTab extends React.Component {
   }
 
   wrapArgsToJsonFile(datastackPath) {
-    this.props.argsToJsonFile(datastackPath, this.state.argsValues);
+    this.props.argsToJsonFile(
+      datastackPath, argsDictFromObject(this.state.argsValues)
+    );
   }
 
   wrapInvestExecute() {

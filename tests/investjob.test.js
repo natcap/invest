@@ -81,8 +81,18 @@ describe('Save model setup tests', () => {
     const saveButton = await findByText('Save parameters to JSON')
     fireEvent.click(saveButton);
     await waitFor(() => {
-      expect(Object.keys(writeParametersToFile.mock.results[0].value).includes(
-        ['parameterSetPath', 'moduleName', 'args', 'relativePaths']))
+      const results = writeParametersToFile.mock.results[0].value
+      expect(Object.keys(results)).toEqual(expect.arrayContaining(
+        ['parameterSetPath', 'moduleName', 'relativePaths', 'args']
+      ));
+      const args = JSON.parse(results.args);
+      const argKeys = Object.keys(args);
+      const expectedKeys = Object.keys(spec.args);
+      expectedKeys.push('n_workers'); // never in the spec, always in the args dict
+      expect(argKeys).toEqual(expect.arrayContaining(expectedKeys));
+      argKeys.forEach((key) => {
+        expect(typeof args[key]).toBe('string');
+      });
       expect(writeParametersToFile).toHaveBeenCalledTimes(1)
     })
   })
