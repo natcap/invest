@@ -59,7 +59,7 @@ jobs:
               shell: bash -l {0}
               run: |
                   conda upgrade -y pip setuptools
-                  conda install toml requests
+                  conda install toml requests nomkl
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
@@ -189,7 +189,7 @@ jobs:
               shell: bash -l {0}
               run: |
                   conda upgrade -y pip setuptools
-                  conda install toml requests
+                  conda install toml requests nomkl
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
