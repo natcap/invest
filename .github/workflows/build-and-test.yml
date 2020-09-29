@@ -126,14 +126,13 @@ jobs:
               if: github.event_name != 'pull_request'
               shell: bash -l {0}
               run: |
-                  # setup-gcloud action adds 'gsutil' to the PATH
-                  GSUTIL_PATH="gsutil"
                   # Specify which python version we want to use (it's the one
                   # we're using in actions/setup-miniconda)
                   export CLOUDSDK_PYTHON=$(which python)
                   export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
-                  make GSUTIL=$GSUTIL_PATH deploy
+                  # setup-gcloud action adds 'gsutil' to the PATH
+                  make GSUTIL="gsutil" deploy
 
     test-source-distribution:
         name: "Check sdist"
@@ -211,14 +210,13 @@ jobs:
               if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == '3.7'
               shell: bash -l {0}
               run: |
-                  # setup-gcloud action adds 'gsutil' to the PATH
-                  GSUTIL_PATH="gsutil"
                   # Specify which python version we want to use (it's the one
                   # we're using in actions/setup-miniconda)
                   export CLOUDSDK_PYTHON=$(which python)
                   export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
-                  make GSUTIL=$GSUTIL_PATH deploy
+                  # setup-gcloud action adds 'gsutil' to the PATH
+                  make GSUTIL="gsutil" deploy
 
     validate-sampledata:
         name: "Validate sample datastacks"
