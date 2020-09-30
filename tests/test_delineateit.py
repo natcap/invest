@@ -394,40 +394,19 @@ class DelineateItTests(unittest.TestCase):
 
         edges = numpy.array([1, 1, 0, 0], dtype=numpy.intc)  # top, left, bottom, right
 
-        expected_pour_points = {(2, 1)}
+        expected_pour_points = {(6.25, 5.25)}
 
-        output = delineateit_core.calculate_pour_point_array(flow_dir_array, edges, a)
+        output = delineateit_core.calculate_pour_point_array(
+            flow_dir_array, 
+            edges, 
+            nodata=a,
+            offset=(0, 0),
+            origin=(5, 3),
+            pixel_size=(0.5, 1.5))
+
         self.assertTrue(numpy.array_equal(
             output,
             expected_pour_points))
-
-    def test_expand_and_find_edges(self):
-        from natcap.invest.delineateit import delineateit
-
-        raster_size = (10, 4)
-        blocks = [
-            {'xoff': 0, 'yoff': 0, 'win_xsize': 4, 'win_ysize': 4},
-            {'xoff': 4, 'yoff': 0, 'win_xsize': 4, 'win_ysize': 4},
-            {'xoff': 8, 'yoff': 0, 'win_xsize': 2, 'win_ysize': 4}
-        ] 
-
-        expected_blocks = [
-            {'xoff': 0, 'yoff': 0, 'win_xsize': 5, 'win_ysize': 4},
-            {'xoff': 3, 'yoff': 0, 'win_xsize': 6, 'win_ysize': 4},
-            {'xoff': 7, 'yoff': 0, 'win_xsize': 3, 'win_ysize': 4}
-        ]
-        expected_edges = [
-            [1, 1, 1, 0],  # top, left, bottom, right
-            [1, 0, 1, 0],
-            [1, 0, 1, 1]
-        ]
-
-        for in_block, expected_block, expected_edges in zip(blocks, 
-                                                            expected_blocks, 
-                                                            expected_edges):
-            block, edges = delineateit._expand_and_find_edges(in_block, raster_size)
-            self.assertTrue(numpy.array_equal(block, expected_block))
-            self.assertTrue(numpy.array_equal(edges, expected_edges))
 
     def test_find_pour_points_by_block(self):
         from natcap.invest.delineateit import delineateit
@@ -450,6 +429,9 @@ class DelineateItTests(unittest.TestCase):
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
         projection_wkt = srs.ExportToWkt()
+        gtiff_creation_tuple_options = ('GTIFF', (
+            'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
+            'BLOCKXSIZE=4', 'BLOCKYSIZE=5'))
 
         raster_path = os.path.join(self.workspace_dir, 'small_raster.tif')
         pygeoprocessing.numpy_array_to_raster(
@@ -458,25 +440,30 @@ class DelineateItTests(unittest.TestCase):
             (1, 1),
             (0, 0),
             projection_wkt,
-            raster_path
+            raster_path,
+            
         )
 
         expected_pour_points = {(7.5, 0.5), (5.5, 1.5), (4.5, 2.5), (5.5, 4.5)}
 
-        # Mock iterblocks so that we can test with an array smaller than 128x128
-        def mock_iterblocks(*args, **kwargs):
-            xoffs = [0, 4, 8]
-            win_xsizes = [4, 4, 2]
-            for xoff, win_xsize in zip(xoffs, win_xsizes):
-                yield {
-                    'xoff': xoff, 
-                    'yoff': 0,
-                    'win_xsize': win_xsize,
-                    'win_ysize': 5}
-
-        with mock.patch(
-            'natcap.invest.delineateit.delineateit.pygeoprocessing.iterblocks', 
-            mock_iterblocks):
-            pour_points = delineateit._find_raster_pour_points((raster_path, 1),
+        pour_points = delineateit._find_raster_pour_points((raster_path, 1),
                                                                raster_info)
-            self.assertEqual(pour_points, expected_pour_points)
+        self.assertEqual(pour_points, expected_pour_points)
+
+        # # Mock iterblocks so that we can test with an array smaller than 128x128
+        # def mock_iterblocks(*args, **kwargs):
+        #     xoffs = [0, 4, 8]
+        #     win_xsizes = [4, 4, 2]
+        #     for xoff, win_xsize in zip(xoffs, win_xsizes):
+        #         yield {
+        #             'xoff': xoff, 
+        #             'yoff': 0,
+        #             'win_xsize': win_xsize,
+        #             'win_ysize': 5}
+
+        # with mock.patch(
+        #     'natcap.invest.delineateit.delineateit.pygeoprocessing.iterblocks', 
+        #     mock_iterblocks):
+        #     pour_points = delineateit._find_raster_pour_points((raster_path, 1),
+        #                                                        raster_info)
+        #     self.assertEqual(pour_points, expected_pour_points)

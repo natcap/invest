@@ -156,7 +156,8 @@ def execute(args):
             'Working with the DEM' section of the InVEST User's Guide for more
             information. (required)
         args['outlet_vector_path'] (string):  This is a vector representing
-            geometries that the watersheds should be built around. (required)
+            geometries that the watersheds should be built around. Required if 
+            ``args['detect_pour_points']`` is False; not used otherwise.
         args['snap_points'] (bool): Whether to snap point geometries to the
             nearest stream pixel.  If ``True``, ``args['flow_threshold']``
             and ``args['snap_distance']`` must also be defined.
@@ -172,7 +173,8 @@ def execute(args):
             found.  If ``True``, invalid geometries will be left out of
             the vector to be delineated.  Default: True
         args['detect_pour_points'] (bool): Whether to run the pour point
-            detection algorithm. Default: False
+            detection algorithm. If True, detected pour points are used instead 
+            of outlet_vector_path geometries. Default: False
         args['n_workers'] (int): The number of worker processes to use with
             taskgraph. Defaults to -1 (no parallelism).
 
@@ -665,7 +667,6 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
     target_layer = target_vector.CreateLayer(
         layer_name, aoi_spatial_reference, ogr.wkbPoint)
     target_defn = target_layer.GetLayerDefn()
-    print('saving points to ', target_vector_path)
 
     # It's important to have a user-facing unique ID field for post-processing
     # (e.g. table-joins) that is not the FID. FIDs are not stable across file
@@ -703,7 +704,6 @@ def _find_raster_pour_points(flow_dir_raster_path_band, raster_info):
         set of (x, y) coordinate tuples of pour points, in the same coordinate
         system as the input raster.
     """
-
     flow_dir_raster_path, band_index = flow_dir_raster_path_band
     # Open the flow direction raster band
     raster = gdal.OpenEx(flow_dir_raster_path, gdal.OF_RASTER)
@@ -711,110 +711,52 @@ def _find_raster_pour_points(flow_dir_raster_path_band, raster_info):
         raise ValueError(
             "Raster at %s could not be opened." % flow_dir_raster_path)
     band = raster.GetRasterBand(band_index)
+    width, height = raster_info['raster_size']
 
-    pour_point_set = set()
+    pour_points = set()
     # Read in flow direction data and find pour points one block at a time
-    for block in pygeoprocessing.iterblocks((flow_dir_raster_path, band_index),
+    for offsets in pygeoprocessing.iterblocks((flow_dir_raster_path, band_index),
                                             offset_only=True): 
-        # Expand each block by a 1-pixel-wide margin so that they overlap
-        # Keep track of which block edges are raster edges
-        block, edges = _expand_and_find_edges(block, raster_info['raster_size'])
-        flow_dir_block = band.ReadAsArray(**block)
-        new_pour_points = delineateit_core.calculate_pour_point_array(
-            flow_dir_block.astype(numpy.intc), 
-            edges, 
-            raster_info['nodata'][0])
+        # Expand each block by a one-pixel-wide margin, if possible. 
+        # This way the blocks will overlap so the watershed 
+        # calculation will be continuous.
+        if offsets['xoff'] > 0:
+            offsets['xoff'] -= 1
+            offsets['win_xsize'] += 1
+        if offsets['yoff'] > 0:
+            offsets['yoff'] -= 1
+            offsets['win_ysize'] += 1
+        if offsets['xoff'] + offsets['win_xsize'] < width:
+            offsets['win_xsize'] += 1
+        if offsets['yoff'] + offsets['win_ysize'] < height:
+            offsets['win_ysize'] += 1
 
-        # Add the offsets so that points from all blocks reference the same 
-        # coordinate system (such that the upper-left corner of the raster is 
-        # (0, 0), and each pixel is 1x1).
-        for x, y in new_pour_points:
-            pour_point_set.add((x + block['xoff'], y + block['yoff']))
+        # Keep track of which block edges are raster edges
+        edges = numpy.empty(4, dtype=numpy.intc)
+        # edges order: top, left, bottom, right
+        edges[0] = (offsets['yoff'] == 0)
+        edges[1] = (offsets['xoff'] == 0)
+        edges[2] = (offsets['yoff'] + offsets['win_ysize'] == height)
+        edges[3] = (offsets['xoff'] + offsets['win_xsize'] == width)
+
+        flow_dir_block = band.ReadAsArray(**offsets)
+        pour_points = pour_points.union(
+            delineateit_core.calculate_pour_point_array(
+                # numpy.intc is equivalent to an int in C (normally int32 or 
+                # int64). This way it can be passed directly into a memoryview 
+                # (int[:, :]) in the Cython function.
+                flow_dir_block.astype(numpy.intc), 
+                edges, 
+                nodata=raster_info['nodata'][band_index - 1],
+                offset=(offsets['xoff'], offsets['yoff']),
+                origin=(raster_info['geotransform'][0], 
+                        raster_info['geotransform'][3]),
+                pixel_size=raster_info['pixel_size']))
             
     raster = None
     band = None
 
-    # Return coordinates in the same coordinate system as the input raster
-    origin = (raster_info['geotransform'][0], raster_info['geotransform'][3])
-    return _convert_numpy_coords_to_geotransform(
-        pour_point_set, origin, raster_info['pixel_size'])
-
-
-def _expand_and_find_edges(block, raster_size):
-    """
-    Expand block by a 1-pixel margin and mark edges.
-
-    This function modifies the block dictionary, which is yielded from
-    ``pygeoprocessing.iterblocks``. It doesn't actually read from the raster.
-    Expand the given block by a 1-pixel-wide margin in each direction where
-    that is possible.
-
-    Args:
-        block (dict): describes the dimensions of a raster block, as yielded
-            by ``pygeoprocessing.iterblocks``. Must have the keys 
-            'xoff', 'yoff', 'win_xsize', and 'win_ysize'.
-        raster_size (tuple): (x, y) tuple giving the dimensions of the raster
-            which the block came from.
-
-    Returns:
-        tuple (dict, list): First element is modified ``block``, expanded by a
-            1-pixel-wide margin. Second element is a binary list indicating if
-            each edge of the block is an edge of the raster, in the order 
-            [top, left, bottom, right].
-    """
-    width, height = raster_size
-    # Expand each block by a one-pixel-wide margin, if possible. 
-    # This way the blocks will overlap so the watershed 
-    # calculation will be continuous.
-    if block['xoff'] > 0:
-        block['xoff'] -= 1
-        block['win_xsize'] += 1
-    if block['yoff'] > 0:
-        block['yoff'] -= 1
-        block['win_ysize'] += 1
-    if block['xoff'] + block['win_xsize'] < width:
-        block['win_xsize'] += 1
-    if block['yoff'] + block['win_ysize'] < height:
-        block['win_ysize'] += 1
-
-    # Add fields that indicate whether each edge is an edge of the raster
-    edges = numpy.empty(4, dtype=numpy.intc)
-    # edges order: top, left, bottom, right
-    edges[0] = (block['yoff'] == 0)
-    edges[1] = (block['xoff'] == 0)
-    edges[2] = (block['yoff'] + block['win_ysize'] == height)
-    edges[3] = (block['xoff'] + block['win_xsize'] == width)
-
-    return block, edges
-
-
-def _convert_numpy_coords_to_geotransform(coords, origin, pixel_size):
-    """
-    Convert array index coordinates to a geotransform.
-
-    Args:
-        coords (set): set of (x, y) integer coordinate tuples. These are
-            referenced to the entire raster as a numpy array: (0, 0) is the
-            upper-left pixel, (raster_width, raster_height) is at
-            the bottom-right.
-        origin (tuple): (x, y) coordinate tuple of the location of the 
-            upper-left corner of the raster in the desired geotransform.
-        pixel_size (tuple): (x_size, y_size) tuple giving the dimensions of
-            a pixel in the desired geotransform.
-
-    Returns:
-        set of (x, y) coordinate tuples that have been converted to the
-            given geotransform's coordinate system.
-    """
-         
-    transformed_coords = set()
-
-    for x, y in coords:
-        # +0.5 so that the point is centered in the pixel
-        transformed_x = origin[0] + (x + 0.5) * pixel_size[0]
-        transformed_y = origin[1] + (y + 0.5) * pixel_size[1]
-        transformed_coords.add((transformed_x, transformed_y))
-    return transformed_coords
+    return pour_points
 
 
 @validation.invest_validator

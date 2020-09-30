@@ -104,6 +104,7 @@ class Delineateit(model.InVESTModel):
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
             self.dem_path.args_key: self.dem_path.value(),
+            self.detect_pour_points.args_key: self.detect_pour_points.value(),
             self.outlet_vector_path.args_key: (
                 self.outlet_vector_path.value()),
             self.snap_points_container.args_key: (
