@@ -89,7 +89,6 @@ export default class InvestJob extends React.Component {
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
-
     this.investRun = undefined;
   }
 
@@ -121,16 +120,11 @@ export default class InvestJob extends React.Component {
    *   as a javascript object
    */
   async argsToJsonFile(datastackPath, argsValues) {
-    // The n_workers value always needs to be inserted into args
-    const argsValuesCopy = {
-      ...argsValues, n_workers: this.props.investSettings.nWorkers
-    };
-
     const payload = {
       parameterSetPath: datastackPath,
       moduleName: this.state.modelSpec.module,
       relativePaths: false,
-      args: JSON.stringify(argsValuesCopy),
+      args: JSON.stringify(argsValues),
     };
     await writeParametersToFile(payload);
   }
@@ -348,6 +342,7 @@ export default class InvestJob extends React.Component {
                   argsInitValues={this.props.argsInitValues}
                   investExecute={this.investExecute}
                   argsToJsonFile={this.argsToJsonFile}
+                  nWorkers={this.props.investSettings.nWorkers}
                 />
               </TabPane>
               <TabPane eventKey="log" title="Log">

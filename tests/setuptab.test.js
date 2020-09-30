@@ -39,6 +39,7 @@ function renderSetupFromSpec(spec, uiSpec={}) {
       argsInitValues={undefined}
       investExecute={() => {}}
       argsToJsonFile={() => {}}
+      nWorkers={'-1'}
     />);
   return {
     findByText,
@@ -283,6 +284,7 @@ describe('UI spec functionality', () => {
     // even though React demands an onChange handler for controlled checkbox inputs.
     // https://github.com/testing-library/react-testing-library/issues/156
     fireEvent.click(controller, { target: { value: "true" } })
+    // controller.click();
 
     // Now everything should be visible/enabled.
     await waitFor(() => {
