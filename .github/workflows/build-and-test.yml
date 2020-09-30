@@ -85,7 +85,7 @@ jobs:
               shell: bash -l {0}
               run: |
                   conda upgrade -y pip setuptools
-                  conda install toml twine ${{ matrix.numpy }} nomkl
+                  conda install toml twine ${{ matrix.numpy }}
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build wheel
@@ -161,7 +161,7 @@ jobs:
               shell: bash -l {0}
               run: |
                   conda upgrade -y pip setuptools
-                  conda install toml twine nomkl
+                  conda install toml twine
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   python ./scripts/convert-requirements-to-conda-yml.py \
                     requirements.txt > requirements-all.yml
@@ -245,7 +245,7 @@ jobs:
             - name: Install dependencies
               shell: bash -l {0}
               run: |
-                  conda install pytest requests nomkl
+                  conda install pytest requests
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   conda upgrade -y pip wheel
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
@@ -298,7 +298,7 @@ jobs:
             - name: Install dependencies
               shell: bash -l {0}
               run: |
-                  conda install requests nomkl
+                  conda install requests
                   conda upgrade -y pip setuptools
                   python ./scripts/convert-requirements-to-conda-yml.py \
                     requirements.txt requirements-dev.txt \
