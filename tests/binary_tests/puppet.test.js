@@ -1,17 +1,45 @@
+import fs from 'fs';
+import path from 'path';
 import glob from 'glob';
 import { remote } from 'electron';
 import { spawn } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
-jest.setTimeout(60000)
+import { cleanupDir } from '../../src/utils'
+
+jest.setTimeout(25000) // I observe this test takes ~15 seconds.
 
 const PORT = 9009;
-// const binaryPath = glob.sync('/home/dmf/Downloads/invest-desktop_*')[0]
 const binaryPath = '/home/dmf/projects/invest-workbench/dist/linux-unpacked/invest-electron'
-const SAMPLE_DATA_JSON = 'home/dmf/projects/invest/data/invest-sample-data/coastal_vuln_grandbahama.invs.json'
+const TMP_DIR = fs.mkdtempSync('tests/data/_')
+const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson')
 let electronProcess;
 let browser;
+
+function makeAOI() {
+  const geojson = {
+    "type": "FeatureCollection",
+    "name": "aoi",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": { "id": 1 },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [ [
+            [ -123, 45 ],
+            [ -123, 45.2 ],
+            [ -122.8, 45.2 ],
+            [ -122.8, 45 ],
+            [ -123, 45 ]
+          ] ]
+        }
+      }
+    ]
+  }
+  fs.writeFileSync(TMP_AOI_PATH, JSON.stringify(geojson))
+}
 
 beforeAll(async () => {
   electronProcess = spawn(
@@ -24,33 +52,35 @@ beforeAll(async () => {
     browserURL: `http://localhost:${PORT}`,
     defaultViewport: { width: 1000, height: 800 },
   });
-  // browser = await puppeteer.launch({
-  //   executeablePath: binaryPath,
-  // }) 
+  makeAOI()
 })
 
-// afterAll(async () => {
-//   await browser.close() 
-//   electronProcess.kill()
-// })
+afterAll(async () => {
+  cleanupDir(TMP_DIR);
+  await browser.close();
+  electronProcess.kill();
+})
 
-test('something', async () => {
-  const { getByText, findByText } = queries;
-  await new Promise(resolve => { setTimeout(resolve, 1000) });
-  // console.log(browser.isConnected());
-  const page = (await browser.pages())[0];
+test('Run a real invest model', async () => {
+  const { findByText, findByLabelText } = queries;
+  await waitFor(() => {
+    expect(browser.isConnected()).toBeTruthy();
+  })
+  let page = (await browser.pages())[0];
   const doc = await getDocument(page);
-  // const button = await getByText(doc, 'Load Parameters');
-  // // console.log(button);
-  // const mockDialogData = {
-  //   filePaths: [SAMPLE_DATA_JSON]
-  // }
-  // remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
-  // button.click();
-  const recentJobCard = await findByText(
-    doc, '/home/dmf/projects/invest-workbench/runs/rec-sample544'
-  );
-  recentJobCard.click();
+
+  // Setting up Recreation model because it has very few data requirements
+  const button = await findByText(doc, /Visitation/);
+  button.click()
+  const workspace = await findByLabelText(doc, /Workspace/);
+  await workspace.type(TMP_DIR, { delay: 10 })
+  const aoi = await findByLabelText(doc, /Area of Interest/);
+  await aoi.type(TMP_AOI_PATH, { delay: 10 })
+  const startYear = await findByLabelText(doc, /Start Year/);
+  await startYear.type('2008', { delay: 10 })
+  const endYear = await findByLabelText(doc, /End Year/);
+  await endYear.type('2012', { delay: 10 })
+  
   const executeButton = await findByText(doc, 'Execute');
   // Button is disabled until validation completes
   await waitFor(async () => {
@@ -61,12 +91,18 @@ test('something', async () => {
   })  
   
   executeButton.click();
-  // await new Promise(resolve => { setTimeout(resolve, 5000) });
   const logTab = await findByText(doc, 'Log');
+  // Log tab is not active until after the invest logfile is opened
   await waitFor(async () => {
     const prop = await logTab.getProperty('className');
     const vals = await prop.jsonValue();
     expect(vals.includes('active')).toBeTruthy();
-    // expect(false).toBeTruthy()
+  })
+
+  const cancelButton = await findByText(doc, 'Cancel Run');
+  cancelButton.click();
+  await waitFor(async () => {
+    expect(await findByText(doc, 'Run Canceled'));
+    expect(await findByText(doc, 'Open Workspace'));
   })
 })
