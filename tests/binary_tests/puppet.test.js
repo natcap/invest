@@ -16,6 +16,8 @@ const PORT = 9009;
 const binaryPath = glob.sync('./dist/invest-desktop_*')[0]
 // const binaryPath = glob.sync('/home/dmf/Downloads/invest-desktop_*')[0]
 console.log(binaryPath)
+fs.accessSync(binaryPath, fs.constants.X_OK)
+// console.log(fs.accessSync(binaryPath, fs.constants.X_OK))
 const TMP_DIR = fs.mkdtempSync('tests/data/_')
 const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson')
 let electronProcess;
@@ -45,6 +47,8 @@ function makeAOI() {
   fs.writeFileSync(TMP_AOI_PATH, JSON.stringify(geojson))
 }
 
+// errors are not thrown from an async beforeAll
+// https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
   fs.accessSync(binaryPath, fs.constants.X_OK)
 
