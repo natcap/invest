@@ -16,8 +16,11 @@
     "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js"
   },
   "build": {
-    "asarUnpack": [
-      "build/invest/"
+    "extraResources": [
+      {
+        "from":"build/invest",
+        "to":"invest"
+      }
     ],
     "appId": "NaturalCapitalProject.Invest.Desktop",
     "productName": "InVEST Desktop",
