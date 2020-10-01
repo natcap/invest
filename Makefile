@@ -66,7 +66,7 @@ else
 	endif
 endif
 
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs conda
 ifeq ($(OS),Windows_NT)
 	REQUIRED_PROGRAMS += makensis
 endif
