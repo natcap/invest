@@ -60,8 +60,13 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  try {
+    await browser.close();
+  } catch (error) {
+    console.log(binaryPath);
+    console.error(error);
+  }
   cleanupDir(TMP_DIR);
-  await browser.close();
   electronProcess.kill();
 })
 
