@@ -102,16 +102,6 @@ jobs:
     - name: NPM Install
       run: npm install
 
-    # - name: Install sample data for binary tests
-    #   shell: bash -l {0}
-    #   working-directory: ./invest
-    #   run: make fetch
-
-      # Also run all tests on the build dir code?
-    - name: Run tests that require binaries
-      shell: bash -l {0}
-      run: npm run test-binaries
-
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
       if: ${{ always() }}
@@ -122,6 +112,11 @@ jobs:
         # If the commit is tagged with a version (e.g. "v1.0.0"),
         # release the app after building
         release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      # Also run all tests on the build dir code?
+    - name: Run tests that require binaries
+      shell: bash -l {0}
+      run: npm run test-binaries
     
     - name: Upload installer artifacts
       uses: actions/upload-artifact@v2-preview
