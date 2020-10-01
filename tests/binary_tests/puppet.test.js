@@ -1,23 +1,20 @@
 import fs from 'fs';
 import path from 'path';
 import glob from 'glob';
+import fetch from 'node-fetch';
 import { remote } from 'electron';
 import { spawn } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
 import { cleanupDir } from '../../src/utils'
-// import { build } from '../../package.json';
 
 jest.setTimeout(25000) // I observe this test takes ~15 seconds.
 
 const PORT = 9009;
-// const binaryPath = glob.sync('./dist/linux-unpacked/invest-electron')[0]
 const binaryPath = glob.sync('./dist/invest-desktop_*')[0]
-// const binaryPath = glob.sync('/home/dmf/Downloads/invest-desktop_*')[0]
 console.log(binaryPath)
 fs.accessSync(binaryPath, fs.constants.X_OK)
-// console.log(fs.accessSync(binaryPath, fs.constants.X_OK))
 const TMP_DIR = fs.mkdtempSync('tests/data/_')
 const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson')
 let electronProcess;
@@ -50,16 +47,17 @@ function makeAOI() {
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
-  fs.accessSync(binaryPath, fs.constants.X_OK)
-
   electronProcess = spawn(
     binaryPath, [`--remote-debugging-port=${PORT}`],
     { shell: true },
   );
 
   await new Promise(resolve => { setTimeout(resolve, 5000) });
+  const res = await fetch(`http://localhost:${PORT}/json/version`);
+  const data = JSON.parse(await res.text());
   browser = await puppeteer.connect({
-    browserURL: `http://localhost:${PORT}`,
+    browserWSEndpoint: data.webSocketDebuggerUrl,  // this works
+    // browserURL: `http://localhost:${PORT}`,     // this also works
     defaultViewport: { width: 1000, height: 800 },
   });
   makeAOI()
