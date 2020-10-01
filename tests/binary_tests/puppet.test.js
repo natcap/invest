@@ -7,11 +7,13 @@ import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
 import { cleanupDir } from '../../src/utils'
+// import { build } from '../../package.json';
 
 jest.setTimeout(25000) // I observe this test takes ~15 seconds.
 
 const PORT = 9009;
-const binaryPath = '/home/dmf/projects/invest-workbench/dist/linux-unpacked/invest-electron'
+// const binaryPath = glob.sync('./dist/linux-unpacked/invest-electron')[0]
+const binaryPath = glob.sync('./dist/invest-desktop*')[0]
 const TMP_DIR = fs.mkdtempSync('tests/data/_')
 const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson')
 let electronProcess;
