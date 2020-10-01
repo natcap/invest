@@ -21,6 +21,7 @@ POOL_LITTER = 'litter'
 NODATA_FLOAT32 = float(numpy.finfo(numpy.float32).min)
 NODATA_UINT16 = int(numpy.iinfo(numpy.uint16).max)
 
+# Rasters written to the intermediate directory
 STOCKS_RASTER_PATTERN = 'stocks-{pool}-{year}{suffix}.tif'
 ACCUMULATION_RASTER_PATTERN = 'accumulation-{pool}-{year}{suffix}.tif'
 HALF_LIFE_RASTER_PATTERN = 'halflife-{pool}-{year}{suffix}.tif'
@@ -30,9 +31,13 @@ DISTURBANCE_MAGNITUDE_RASTER_PATTERN = (
 EMISSIONS_RASTER_PATTERN = 'emissions-{pool}-{year}{suffix}.tif'
 YEAR_OF_DIST_RASTER_PATTERN = (
     'year-of-latest-disturbance-{pool}-{year}{suffix}.tif')
+ALIGNED_LULC_RASTER_PATTERN = (
+    'aligned_lulc_{snapshot_type}_{year}{suffix}.tif')
 NET_SEQUESTRATION_RASTER_PATTERN = (
     'net-sequestration-{pool}-{year}{suffix}.tif')
 TOTAL_STOCKS_RASTER_PATTERN = 'total-carbon-stocks-{year}{suffix}.tif'
+
+# Rasters written to the output directory
 VALUE_RASTER_PATTERN = 'valuation-{year}{suffix}.tif'
 EMISSIONS_SINCE_TRANSITION_RASTER_PATTERN = (
     'carbon-emissions-between-{start_year}-and-{end_year}{suffix}.tif')
@@ -267,7 +272,8 @@ def execute(args):
     aligned_lulc_paths = {}
     aligned_paths = [os.path.join(
         intermediate_dir,
-        f'aligned_lulc_baseline_{baseline_lulc_year}{suffix}.tif')]
+        ALIGNED_LULC_RASTER_PATTERN.format(
+            snapshot_type='baseline', year=baseline_lulc_year, suffix=suffix))]
     aligned_lulc_paths[baseline_lulc_year] = aligned_paths[0]
     for snapshot_year in snapshots:
         if snapshot_year == baseline_lulc_year:
@@ -277,7 +283,9 @@ def execute(args):
         aligned_paths.append(
             os.path.join(
                 intermediate_dir,
-                f'aligned_lulc_snapshot_{snapshot_year}{suffix}.tif'))
+                ALIGNED_LULC_RASTER_PATTERN.format(
+                    snapshot_type='snapshot', year=snapshot_year,
+                    suffix=suffix)))
         aligned_lulc_paths[snapshot_year] = aligned_paths[-1]
 
     prices = None
