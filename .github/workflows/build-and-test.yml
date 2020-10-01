@@ -85,7 +85,8 @@ jobs:
               shell: bash -l {0}
               run: |
                   conda upgrade -y pip setuptools
-                  conda install toml twine ${{ matrix.numpy }}
+                  pip install ${{ matrix.numpy }} scipy
+                  conda install toml twine
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build wheel
