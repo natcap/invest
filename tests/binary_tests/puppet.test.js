@@ -46,6 +46,8 @@ function makeAOI() {
 }
 
 beforeAll(async () => {
+  fs.accessSync(binaryPath, fs.constants.X_OK)
+
   electronProcess = spawn(
     binaryPath, [`--remote-debugging-port=${PORT}`],
     { shell: true },
