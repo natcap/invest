@@ -62,8 +62,8 @@ class NDRTests(unittest.TestCase):
         """
         from natcap.invest.ndr import ndr
 
-        raster_xsize = 512
-        raster_ysize = 512
+        raster_xsize = 1124 
+        raster_ysize = 512 
         float64_raster_path = os.path.join(
             self.workspace_dir, 'float64_raster.tif')
         driver = gdal.GetDriverByName('GTiff')
@@ -74,7 +74,7 @@ class NDRTests(unittest.TestCase):
         band = raster.GetRasterBand(1)
         band.SetNoDataValue(source_nodata)
         source_array = numpy.empty(
-            (raster_xsize, raster_ysize), dtype=numpy.float64)
+            (raster_ysize, raster_xsize), dtype=numpy.float64)
         source_array[0:256][:] = 5.5  # Something, anything.
         source_array[256:][:] = source_nodata
         band.WriteArray(source_array)
@@ -91,13 +91,13 @@ class NDRTests(unittest.TestCase):
 
         normalized_array = gdal.OpenEx(normalized_raster_path).ReadAsArray()
         expected_array = numpy.empty(
-            (raster_xsize, raster_ysize), dtype=numpy.float32)
+            (raster_ysize, raster_xsize), dtype=numpy.float32)
         expected_array[0:256][:] = 1.
         expected_array[256:][:] = normalized_raster_nodata
 
         # Assert that the output values match the target nodata value
         self.assertEqual(
-            131072,  # Nodata pixels
+            287744,  # Nodata pixels
             numpy.count_nonzero(
                 numpy.isclose(normalized_array, normalized_raster_nodata)))
 
