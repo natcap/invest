@@ -331,17 +331,8 @@ def execute(args):
     biophysical_parameters = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'code')
 
-    (biomass_disturb_matrix, soil_disturb_matrix,
-        biomass_accum_matrix, soil_accum_matrix) = _read_transition_matrix(
+    (disturbance_matrices, accumulation_matrices) = _read_transition_matrix(
         args['landcover_transitions_table'], biophysical_parameters)
-    disturbance_matrices = {
-        'soil': soil_disturb_matrix,
-        'biomass': biomass_disturb_matrix
-    }
-    accumulation_matrices = {
-        'soil': soil_accum_matrix,
-        'biomass': biomass_accum_matrix,
-    }
 
     # Baseline stocks are simply reclassified.
     # Baseline accumulation are simply reclassified
@@ -1435,21 +1426,11 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
             soil and biomass carbon pools.
 
     Returns:
-        Four ``scipy.sparse.dok_matrix`` objects of type ``numpy.float32`` are
-        returned:
-
-            1. ``biomass_disturbance_matrix`` where nonzero floating-point
-                values represent the disturbance magnitudes for the biomass
-                carbon pool for this transition.
-            2. ``soil_disturbance_matrix`` where nonzero floating-point
-                values represent the disturbance magnitudes for the soil
-                carbon pool for this transition.
-            3. ``biomass_accumulation_matrix`` where nonzero floating-point
-                values represent the rates of accumulation in the biomass
-                carbon pool for this transition.
-            4. ``soil_accumulation_matrix`` where nonzero floating-point values
-                represent the rates of accumulation in the soil carbon pool for
-                this transition.
+        Two ``dict``s, each of which maps string keys "soil" and "disturbance"
+        to ``scipy.sparse.dok_matrix`` objects of numpy.float32.  The first
+        such dict contains disturbance magnitudes for the pool for each
+        landcover transition, and the second contains accumulation rates for
+        the pool for the landcover transition.
     """
     table = utils.read_csv_to_dataframe(transition_csv_path, index_col=False)
 
@@ -1516,8 +1497,16 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
                     biophysical_dict[to_lucode][
                         'biomass-yearly-accumulation'])
 
-    return (biomass_disturbance_matrix, soil_disturbance_matrix,
-            biomass_accumulation_matrix, soil_accumulation_matrix)
+    disturbance_matrices = {
+        'soil': soil_disturbance_matrix,
+        'biomass': biomass_disturbance_matrix
+    }
+    accumulation_matrices = {
+        'soil': soil_accumulation_matrix,
+        'biomass': biomass_accumulation_matrix,
+    }
+
+    return (disturbance_matrices, accumulation_matrices)
 
 
 def _reclassify_accumulation_transition(

@@ -259,8 +259,7 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('b,,NCC,accum\n')
             transition_csv.write('c,accum,,NCC')
 
-        (biomass_disturbance_matrix, soil_disturbance_matrix,
-         biomass_accumulation_matrix, soil_accumulation_matrix) = (
+        disturbance_matrices, accumulation_matrices = (
              coastal_blue_carbon._read_transition_matrix(
                  transition_csv_path, biophysical_table))
 
@@ -269,14 +268,14 @@ class TestCBC2(unittest.TestCase):
             biophysical_table[1]['biomass-high-impact-disturb'])
         numpy.testing.assert_allclose(
             expected_biomass_disturbance,
-            biomass_disturbance_matrix.toarray())
+            disturbance_matrices['biomass'].toarray())
 
         expected_soil_disturbance = numpy.zeros((4, 4), dtype=numpy.float32)
         expected_soil_disturbance[1, 3] = (
             biophysical_table[1]['soil-high-impact-disturb'])
         numpy.testing.assert_allclose(
             expected_soil_disturbance,
-            soil_disturbance_matrix.toarray())
+            disturbance_matrices['soil'].toarray())
 
         expected_biomass_accumulation = numpy.zeros(
             (4, 4), dtype=numpy.float32)
@@ -288,7 +287,7 @@ class TestCBC2(unittest.TestCase):
             biophysical_table[3]['biomass-yearly-accumulation'])
         numpy.testing.assert_allclose(
             expected_biomass_accumulation,
-            biomass_accumulation_matrix.toarray())
+            accumulation_matrices['biomass'].toarray())
 
         expected_soil_accumulation = numpy.zeros((4, 4), dtype=numpy.float32)
         expected_soil_accumulation[3, 1] = (
@@ -299,7 +298,7 @@ class TestCBC2(unittest.TestCase):
             biophysical_table[3]['soil-yearly-accumulation'])
         numpy.testing.assert_allclose(
             expected_soil_accumulation,
-            soil_accumulation_matrix.toarray())
+            accumulation_matrices['soil'].toarray())
 
     def test_emissions(self):
         """CBC: Check emissions calculations."""
