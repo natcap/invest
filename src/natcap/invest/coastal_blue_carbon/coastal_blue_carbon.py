@@ -238,22 +238,8 @@ def execute(args):
         ``None``.
 
     """
-    suffix = utils.make_suffix_string(args, 'results_suffix')
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    taskgraph_cache_dir = os.path.join(intermediate_dir, 'task_cache')
-
-    utils.make_directories([output_dir, intermediate_dir, taskgraph_cache_dir])
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(
-        taskgraph_cache_dir, n_workers, reporting_interval=5.0)
+    task_graph, n_workers, intermediate_dir, output_dir, suffix = (
+        _set_up_workspace(args))
 
     snapshots = _extract_snapshots_from_table(args['landcover_snapshot_csv'])
 
@@ -576,6 +562,61 @@ def execute(args):
     task_graph.join()
 
 
+def _set_up_workspace(args):
+    """Set up the workspce for a Coastal Blue Carbon model run.
+
+    Since the CBC model has two intended entrypoints, this allows for us to
+    have consistent workspace layouts without duplicating the configuration
+    between the two functions.
+
+    Args:
+        args (dict): A dict containing containing the necessary keys.
+        args['workspace_dir'] (string): the path to a workspace directory where
+            outputs should be written.
+        args['results_suffix'] (string): Optional.  If provided, this string
+            will be inserted into all filenames produced, just before the file
+            extension.
+        args['n_workers'] (int): (optional) If provided, the number of workers
+            to pass to ``taskgraph``.
+
+    Returns:
+        A 5-element tuple containing:
+
+            * ``task_graph`` - a ``taskgraph.TaskGraph`` object.
+            * ``n_workers`` - the int ``n_workers`` parameter used
+            * ``intermediate_dir`` - the path to the intermediate directory on
+                disk.  This directory is created in this function if it does
+                not already exist.
+            * ``output_dir`` - the path to the output directory on disk.  This
+                directory is created in this function if it does not already
+                exist.
+            * ``suffix`` - the suffix string, derived from the user-provided
+                suffix, if it was provided.
+    """
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
+
+    taskgraph_cache_dir = os.path.join(
+        args['workspace_dir'], TASKGRAPH_CACHE_DIR_NAME)
+    task_graph = taskgraph.TaskGraph(
+        taskgraph_cache_dir, n_workers, reporting_interval=5.0)
+
+    suffix = utils.make_suffix_string(args, 'results_suffix')
+    intermediate_dir = os.path.join(
+        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
+    output_dir = os.path.join(
+        args['workspace_dir'], OUTPUT_DIR_NAME)
+
+    utils.make_directories([output_dir, intermediate_dir, taskgraph_cache_dir])
+
+    return task_graph, n_workers, intermediate_dir, output_dir, suffix
+
+
 def execute_transition_analysis(args):
     """Execute a transition analysis.
 
@@ -655,24 +696,8 @@ def execute_transition_analysis(args):
         ``None``.
 
     """
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-
-    taskgraph_cache_dir = os.path.join(
-        args['workspace_dir'], TASKGRAPH_CACHE_DIR_NAME)
-    task_graph = taskgraph.TaskGraph(
-        taskgraph_cache_dir, n_workers)
-
-    suffix = utils.make_suffix_string(args, 'results_suffix')
-    intermediate_dir = os.path.join(
-        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
-    output_dir = os.path.join(
-        args['workspace_dir'], OUTPUT_DIR_NAME)
+    task_graph, n_workers, intermediate_dir, output_dir, suffix = (
+        _set_up_workspace(args))
 
     transition_years = set([int(year) for year in args['transition_years']])
     disturbance_magnitude_rasters = args['disturbance_magnitude_rasters']
