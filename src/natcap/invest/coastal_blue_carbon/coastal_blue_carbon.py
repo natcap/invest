@@ -290,7 +290,7 @@ def execute(args):
     transition_years.remove(baseline_lulc_year)
 
     prices = None
-    if args.get('do_economic_analysis', None) not in ('', None):
+    if args.get('do_economic_analysis', False):  # Do if truthy
         if args.get('use_price_table', False):
             prices = {
                 year: values['price'] for (year, values) in
