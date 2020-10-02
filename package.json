@@ -1,6 +1,6 @@
 {
-  "name": "invest-electron",
-  "productName": "invest-electron",
+  "name": "invest-workbench",
+  "productName": "InVEST Workbench",
   "version": "0.1.0-alpha",
   "description": "My Electron application description",
   "main": "src/main.js",
@@ -22,9 +22,9 @@
         "to": "invest"
       }
     ],
-    "appId": "NaturalCapitalProject.Invest.Desktop",
-    "productName": "InVEST Desktop",
-    "artifactName": "invest-desktop_${os}_${arch}_${version}.${ext}",
+    "appId": "NaturalCapitalProject.Invest.Workbench",
+    "productName": "InVEST Workbench",
+    "artifactName": "invest-workbench_${os}_${arch}_${version}.${ext}",
     "mac": {
       "category": "public.app-category.business",
       "icon": "build/icon.png",
@@ -38,7 +38,7 @@
       "category": "Science"
     },
     "win": {
-      "target": "nsis",
+      "target": "portable",
       "icon": "build/icon.png"
     },
     "files": [
