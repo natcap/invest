@@ -47,9 +47,9 @@ jobs:
                 os: [windows-latest, macos-latest]
                 include:
                     - python-version: 3.7
-                      numpy: "numpy~=1.15"
+                      numpy: "numpy=1.15"  # fuzzy assertion in conda is single '='
                     - python-version: 3.8
-                      numpy: "numpy~=1.15"
+                      numpy: "numpy=1.16"
         steps:
             - uses: actions/checkout@v2
               with:
@@ -86,7 +86,8 @@ jobs:
               run: |
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  python -m pip install ${{ matrix.numpy }} scipy
+                  conda install ${{ matrix.numpy }}
+                  python -m pip install scipy
                   conda install toml twine
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
