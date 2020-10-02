@@ -289,30 +289,6 @@ def execute(args):
     transition_years = set(aligned_lulc_paths.keys())
     transition_years.remove(baseline_lulc_year)
 
-    prices = None
-    if args.get('do_economic_analysis', False):  # Do if truthy
-        if args.get('use_price_table', False):
-            prices = {
-                year: values['price'] for (year, values) in
-                utils.build_lookup_from_csv(
-                    args['price_table_path'], 'year').items()}
-        else:
-            inflation_rate = float(args['inflation_rate']) * 0.01
-            annual_price = float(args['price'])
-
-            if transition_years:
-                max_year = max(transition_years.union(set([analysis_year])))
-            else:
-                max_year = analysis_year
-
-            prices = {}
-            for timestep_index, year in enumerate(
-                    range(baseline_lulc_year, max_year + 1)):
-                prices[year] = (
-                    ((1 + inflation_rate) ** timestep_index) *
-                    annual_price)
-        discount_rate = float(args['discount_rate']) * 0.01
-
     alignment_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(sorted(snapshots.values(),
@@ -533,8 +509,6 @@ def execute(args):
         'disturbance_magnitude_rasters': disturbance_magnitude_rasters,
         'half_life_rasters': halflife_rasters,
         'annual_rate_of_accumulation_rasters': yearly_accum_rasters,
-        'carbon_prices_per_year': prices,
-        'discount_rate': discount_rate,
         'analysis_year': analysis_year,
         'do_economic_analysis': args.get('do_economic_analysis', False),
         'baseline_lulc_raster': aligned_lulc_paths[baseline_lulc_year],
@@ -549,7 +523,30 @@ def execute(args):
         }
     }
 
-    if args.get('do_economic_analysis', False):
+    prices = None
+    if args.get('do_economic_analysis', False):  # Do if truthy
+        if args.get('use_price_table', False):
+            prices = {
+                year: values['price'] for (year, values) in
+                utils.build_lookup_from_csv(
+                    args['price_table_path'], 'year').items()}
+        else:
+            inflation_rate = float(args['inflation_rate']) * 0.01
+            annual_price = float(args['price'])
+
+            if transition_years:
+                max_year = max(transition_years.union(set([analysis_year])))
+            else:
+                max_year = analysis_year
+
+            prices = {}
+            for timestep_index, year in enumerate(
+                    range(baseline_lulc_year, max_year + 1)):
+                prices[year] = (
+                    ((1 + inflation_rate) ** timestep_index) *
+                    annual_price)
+        discount_rate = float(args['discount_rate']) * 0.01
+
         baseline_period_npv_raster = os.path.join(
             output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
                 year=end_of_baseline_period, suffix=suffix))
@@ -564,8 +561,12 @@ def execute(args):
             dependent_task_list=[baseline_net_seq_task],
             target_path_list=[baseline_period_npv_raster],
             task_name='baseline period NPV')
-        transition_analysis_args[
-            'npv_since_baseline_raster'] = baseline_period_npv_raster
+
+        transition_analysis_args.update({
+            'npv_since_baseline_raster': baseline_period_npv_raster,
+            'carbon_prices_per_year': prices,
+            'discount_rate': discount_rate,
+        })
 
     task_graph.join()
     if transition_years:
