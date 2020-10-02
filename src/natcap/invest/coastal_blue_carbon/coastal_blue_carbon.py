@@ -265,28 +265,29 @@ def execute(args):
     min_pixel_size = numpy.min(numpy.abs(baseline_lulc_info['pixel_size']))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
-    transition_years = set()
     analysis_year = int(args['analysis_year'])
 
-    base_paths = [baseline_lulc_path]
-    aligned_lulc_paths = {}
-    aligned_paths = [os.path.join(
-        intermediate_dir,
-        ALIGNED_LULC_RASTER_PATTERN.format(
-            snapshot_type='baseline', year=baseline_lulc_year, suffix=suffix))]
-    aligned_lulc_paths[baseline_lulc_year] = aligned_paths[0]
+    aligned_lulc_paths = {
+        baseline_lulc_year: os.path.join(
+            intermediate_dir,
+            ALIGNED_LULC_RASTER_PATTERN.format(
+                snapshot_type='baseline', year=baseline_lulc_year, suffix=suffix))
+    }
+
     for snapshot_year in snapshots:
+        # We just created a baseline year, so don't re-create the path.
         if snapshot_year == baseline_lulc_year:
             continue
-        base_paths.append(snapshots[snapshot_year])
-        transition_years.add(snapshot_year)
-        aligned_paths.append(
-            os.path.join(
-                intermediate_dir,
-                ALIGNED_LULC_RASTER_PATTERN.format(
-                    snapshot_type='snapshot', year=snapshot_year,
-                    suffix=suffix)))
-        aligned_lulc_paths[snapshot_year] = aligned_paths[-1]
+
+        aligned_path = os.path.join(
+            intermediate_dir,
+            ALIGNED_LULC_RASTER_PATTERN.format(
+                snapshot_type='snapshot', year=snapshot_year,
+                suffix=suffix))
+        aligned_lulc_paths[snapshot_year] = aligned_path
+
+    transition_years = set(aligned_lulc_paths.keys())
+    transition_years.remove(baseline_lulc_year)
 
     prices = None
     if ('do_economic_analysis' in args and
@@ -311,16 +312,19 @@ def execute(args):
                 prices[year] = (
                     ((1 + inflation_rate) ** timestep_index) *
                     annual_price)
-
         discount_rate = float(args['discount_rate']) * 0.01
 
     alignment_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(base_paths, aligned_paths, ['nearest']*len(base_paths),
+        args=(sorted(snapshots.values(),
+                     key=lambda x:x[0]),  # sort by snapshot year
+              sorted(aligned_lulc_paths.values(),
+                     key=lambda x: x[0]),  # sort by snapshot year
+              ['nearest']*len(aligned_lulc_paths),
               target_pixel_size, 'intersection'),
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
-        target_path_list=aligned_paths,
+        target_path_list=aligned_lulc_paths.values(),
         task_name='Align input landcover rasters.')
 
     # We're assuming that the LULC initial variables and the carbon pool
