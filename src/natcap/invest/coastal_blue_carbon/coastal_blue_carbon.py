@@ -290,8 +290,7 @@ def execute(args):
     transition_years.remove(baseline_lulc_year)
 
     prices = None
-    if ('do_economic_analysis' in args and
-            args['do_economic_analysis'] not in ('', None)):
+    if args.get('do_economic_analysis', None) not in ('', None):
         if args.get('use_price_table', False):
             prices = {
                 year: values['price'] for (year, values) in
@@ -560,7 +559,7 @@ def execute(args):
         }
     }
 
-    if ('do_economic_analysis' in args and args['do_economic_analysis']):
+    if args.get('do_economic_analysis', False):
         baseline_period_npv_raster = os.path.join(
             output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
                 year=end_of_baseline_period, suffix=suffix))
@@ -690,7 +689,7 @@ def execute_transition_analysis(args):
     yearly_accum_rasters = args['annual_rate_of_accumulation_rasters']
 
     prices = None
-    if 'carbon_prices_per_year' in args and args['carbon_prices_per_year']:
+    if args.get('carbon_prices_per_year', None):
         prices = {int(year): float(price)
                   for (year, price) in args['carbon_prices_per_year'].items()}
     discount_rate = float(args['discount_rate'])
