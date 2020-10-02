@@ -3,16 +3,21 @@ import path from 'path';
 import glob from 'glob';
 import fetch from 'node-fetch';
 import { remote } from 'electron';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
 import { cleanupDir } from '../../src/utils'
 
 jest.setTimeout(25000) // I observe this test takes ~15 seconds.
-
 const PORT = 9009;
-const binaryPath = glob.sync('./dist/invest-desktop_*')[0]
+
+let binaryPath = glob.sync('./dist/invest-desktop_*')[0]
+if (binaryPath.endsWith('.zip')) {
+  // The MacOS exe needs to be extracted first
+  spawnSync('unzip', [binaryPath, '-d', './dist/'])
+  binaryPath = glob.sync('./dist/invest-desktop_*.app')[0]
+}
 console.log(binaryPath)
 fs.accessSync(binaryPath, fs.constants.X_OK)
 const TMP_DIR = fs.mkdtempSync('tests/data/_')

@@ -18,8 +18,8 @@
   "build": {
     "extraResources": [
       {
-        "from":"build/invest",
-        "to":"invest"
+        "from": "build/invest",
+        "to": "invest"
       }
     ],
     "appId": "NaturalCapitalProject.Invest.Desktop",
