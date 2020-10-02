@@ -58,6 +58,7 @@ jobs:
             - name: Install python dependencies
               shell: bash -l {0}
               run: |
+                  pip install numpy scipy
                   conda upgrade -y pip setuptools
                   conda install toml requests
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
