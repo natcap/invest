@@ -770,6 +770,8 @@ def execute_transition_analysis(args):
         for pool in (POOL_SOIL, POOL_BIOMASS):
             # Calculate stocks from last year's stock plus last year's net
             # sequestration.
+            # Stock rasters from ``year`` represent the carbon stocks present
+            # at the very beginning of ``year``.
             stock_rasters[year][pool] = os.path.join(
                 intermediate_dir,
                 STOCKS_RASTER_PATTERN.format(
@@ -808,8 +810,7 @@ def execute_transition_analysis(args):
                 current_disturbance_vol_tasks[pool] = task_graph.add_task(
                     func=pygeoprocessing.raster_calculator,
                     args=([(disturbance_magnitude_rasters[year][pool], 1),
-                           # TODO: why is this using prior year's stocks?
-                           (stock_rasters[year-1][pool], 1)],
+                           (stock_rasters[year][pool], 1)],
                           _calculate_disturbance_volume,
                           disturbance_vol_rasters[year][pool],
                           gdal.GDT_Float32,

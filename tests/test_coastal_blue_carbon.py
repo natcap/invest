@@ -472,7 +472,7 @@ class TestCBC2(unittest.TestCase):
             raster = None
 
         expected_sequestration_2010_to_2020 = numpy.array(
-            [[-176.9792, 73.5]], dtype=numpy.float32)
+            [[-179.84901, 73.5]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output',
             ('total-net-carbon-sequestration-between-'
@@ -486,7 +486,7 @@ class TestCBC2(unittest.TestCase):
             raster = None
 
         expected_sequestration_2020_to_2030 = numpy.array(
-            [[73.5, -25.828205]], dtype=numpy.float32)
+            [[73.5, -28.698004]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output',
             ('total-net-carbon-sequestration-between-'
@@ -516,7 +516,7 @@ class TestCBC2(unittest.TestCase):
             raster = None
 
         expected_net_present_value_at_2030 = numpy.array(
-            [[-373.67245, 891.60846]], dtype=numpy.float32)
+            [[-427.3467, 837.93445]], dtype=numpy.float32)
         raster_path = os.path.join(
             args['workspace_dir'], 'output', 'net-present-value-at-2030.tif')
         try:
