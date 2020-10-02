@@ -338,7 +338,6 @@ def execute(args):
     # Baseline accumulation are simply reclassified
     # There are no emissions, so net sequestration is only from accumulation.
     # Value can still be calculated from the net sequestration.
-    end_of_baseline_period = baseline_lulc_year
     if transition_years:
         end_of_baseline_period = min(transition_years)
     else:
