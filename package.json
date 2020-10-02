@@ -1,6 +1,6 @@
 {
   "name": "invest-workbench",
-  "productName": "InVEST Workbench",
+  "productName": "invest-workbench",
   "version": "0.1.0-alpha",
   "description": "My Electron application description",
   "main": "src/main.js",

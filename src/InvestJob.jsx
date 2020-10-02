@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { spawn, execFile } from 'child_process';
+import { spawn, exec } from 'child_process';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -185,11 +185,11 @@ export default class InvestJob extends React.Component {
       `-d ${datastackPath}`,
     ];
     // let investRun;
-    if (process.platform !== 'foo') {
+    if (process.platform !== 'win32') {
       this.investRun = spawn(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
         shell: true, // without shell, IOError when datastack.py loads json
-        detached: true, // we want invest to terminate when this shell terminates
+        detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
       });
       this.investRun.terminate = () => {
         if (this.state.jobStatus === 'running') {
@@ -197,9 +197,16 @@ export default class InvestJob extends React.Component {
         }
       };
     } else {
-      this.investRun = execFile(path.basename(investExe), cmdArgs, {
+      this.investRun = spawn(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
+        shell: true,
       });
+      this.investRun.terminate = () => {
+        if (this.state.jobStatus === 'running') {
+          exec(`taskkill /pid ${this.investRun.pid} /t /f`)
+        }
+      };
+      console.log(this.investRun)
     }
 
     // There's no general way to know that a spawned process started,
