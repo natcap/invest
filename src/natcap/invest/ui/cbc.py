@@ -1,8 +1,32 @@
 # coding=UTF-8
 
+import functools
+
 from natcap.invest.ui import model, inputs
 from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
 from natcap.invest.coastal_blue_carbon import preprocessor
+
+
+def _create_input_kwargs_from_args_spec(args_key, validator):
+    """Helper function to return kwargs for most model inputs.
+
+    Args:
+        args_key: The args key of the input from which a kwargs
+            dict is being built.
+        validator: The validator callable to provide to the ``validator`` kwarg
+            for the input.
+
+    Returns:
+        A dict of ``kwargs`` to explode to an ``inputs.GriddedInput``
+        object at creation time.
+    """
+    model_spec = coastal_blue_carbon.ARGS_SPEC['args']
+    return {
+        'args_key': args_key,
+        'helptext': model_spec[args_key]['about'],
+        'label': model_spec[args_key]['name'],
+        'validator': validator,
+    }
 
 
 class CoastalBlueCarbonPreprocessor(model.InVESTModel):
@@ -14,24 +38,10 @@ class CoastalBlueCarbonPreprocessor(model.InVESTModel):
             validator=preprocessor.validate,
             localdoc='coastal_blue_carbon.html')
 
-        def _ui_keys(args_key):
-            """Helper function to return kwargs for most model inputs.
+        _ui_keys = functools.partial(
+            _create_input_kwargs_from_args_spec,
+            validator=self.validator)
 
-            Args:
-                args_key: The args key of the input from which a kwargs
-                    dict is being built.
-
-            Returns:
-                A dict of ``kwargs`` to explode to an ``inputs.GriddedInput``
-                object at creation time.
-            """
-            model_spec = preprocessor.ARGS_SPEC['args']
-            return {
-                'args_key': args_key,
-                'helptext': model_spec[args_key]['about'],
-                'label': model_spec[args_key]['name'],
-                'validator': self.validator,
-            }
         self.lulc_snapshot_csv = inputs.File(
             **_ui_keys('landcover_snapshot_csv'))
         self.add_input(self.lulc_snapshot_csv)
@@ -60,24 +70,9 @@ class CoastalBlueCarbon(model.InVESTModel):
             validator=coastal_blue_carbon.validate,
             localdoc='coastal_blue_carbon.html')
 
-        def _ui_keys(args_key):
-            """Helper function to return kwargs for most model inputs.
-
-            Args:
-                args_key: The args key of the input from which a kwargs
-                    dict is being built.
-
-            Returns:
-                A dict of ``kwargs`` to explode to an ``inputs.GriddedInput``
-                object at creation time.
-            """
-            model_spec = coastal_blue_carbon.ARGS_SPEC['args']
-            return {
-                'args_key': args_key,
-                'helptext': model_spec[args_key]['about'],
-                'label': model_spec[args_key]['name'],
-                'validator': self.validator,
-            }
+        _ui_keys = functools.partial(
+            _create_input_kwargs_from_args_spec,
+            validator=self.validator)
 
         self.snapshots_table = inputs.File(
             **_ui_keys('landcover_snapshot_csv'))
