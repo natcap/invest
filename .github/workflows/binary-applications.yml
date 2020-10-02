@@ -58,7 +58,7 @@ jobs:
             - name: Install python dependencies
               shell: bash -l {0}
               run: |
-                  pip install scipy  # install scipy w/out MKL
+                  python -m pip install "scipy<1.5"  # install scipy w/out MKL
                   conda install nomkl # ensure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install toml requests
