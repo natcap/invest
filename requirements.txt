@@ -19,7 +19,7 @@ numpy>=1.11.0,!=1.16.0
 Rtree>=0.8.2,!=0.9.1
 scipy>=0.16.1,<1.5.0 # pip-only
 Shapely>=1.6.4,<1.7.0
-pygeoprocessing>=2.1.1
+pygeoprocessing>=2.1.1 # pip-only
 taskgraph[niced_processes]==0.9.1
 psutil>=5.6.6
 chardet>=3.0.4
