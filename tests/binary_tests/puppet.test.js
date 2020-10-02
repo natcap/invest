@@ -12,11 +12,12 @@ import { cleanupDir } from '../../src/utils'
 jest.setTimeout(25000) // I observe this test takes ~15 seconds.
 const PORT = 9009;
 
-let binaryPath = glob.sync('./dist/invest-desktop_*')[0]
+let binaryPath = glob.sync('./dist/invest-workbench_*@(zip|exe|AppImage)')[0]
+// let binaryPath = glob.sync('./dist/*-unpacked/invest-workbench_*@(zip|exe|AppImage)')[0]
 if (binaryPath.endsWith('.zip')) {
   // The MacOS exe needs to be extracted first
   spawnSync('unzip', [binaryPath, '-d', './dist/'])
-  binaryPath = glob.sync('./dist/invest-desktop_*.app')[0]
+  binaryPath = glob.sync('./dist/*.app')[0]
 }
 console.log(binaryPath)
 fs.accessSync(binaryPath, fs.constants.X_OK)
