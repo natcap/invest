@@ -909,7 +909,7 @@ def execute_transition_analysis(args):
             target_path_list=[total_carbon_rasters[year]],
             task_name=f'Calculating total carbon stocks in {year}')
 
-        # If in the last year before a transition of the last year before the
+        # If in the last year before a transition or the last year before the
         # final year of the analysis (which might not be a transition):
         #  * sum emissions since last transition
         #  * sum accumulation since last transition
