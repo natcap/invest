@@ -503,7 +503,7 @@ def execute(args):
 
     transition_analysis_args = {
         'workspace_dir': args['workspace_dir'],
-        'suffix': suffix,
+        'results_suffix': suffix,
         'n_workers': n_workers,
         'transition_years': transition_years,
         'disturbance_magnitude_rasters': disturbance_magnitude_rasters,
@@ -616,7 +616,7 @@ def execute_transition_analysis(args):
     Args:
         args['workspace_dir'] (string): The path to a workspace directory where
             outputs should be written.
-        args['suffix'] (string): If provided, a string suffix that will be
+        args['results_suffix'] (string): If provided, a string suffix that will be
             added to each output filename. Optional.
         args['n_workers'] (int):  The number of workers that ``taskgraph`` may
             use.
@@ -668,7 +668,7 @@ def execute_transition_analysis(args):
     task_graph = taskgraph.TaskGraph(
         taskgraph_cache_dir, n_workers)
 
-    suffix = args.get('suffix', '')
+    suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
     output_dir = os.path.join(
