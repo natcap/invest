@@ -84,8 +84,9 @@ jobs:
             - name: Install build dependencies
               shell: bash -l {0}
               run: |
+                  conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  pip install ${{ matrix.numpy }} scipy
+                  python -m pip install ${{ matrix.numpy }} scipy
                   conda install toml twine
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
@@ -161,6 +162,7 @@ jobs:
             - name: Install dependencies
               shell: bash -l {0}
               run: |
+                  conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install toml twine
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
@@ -246,6 +248,7 @@ jobs:
             - name: Install dependencies
               shell: bash -l {0}
               run: |
+                  conda install nomkl # make sure numpy w/out mkl
                   conda install pytest requests
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   conda upgrade -y pip wheel
@@ -299,6 +302,7 @@ jobs:
             - name: Install dependencies
               shell: bash -l {0}
               run: |
+                  conda install nomkl  # make sure numpy w/out mkl
                   conda install requests
                   conda upgrade -y pip setuptools
                   python ./scripts/convert-requirements-to-conda-yml.py \

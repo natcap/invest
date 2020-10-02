@@ -20,15 +20,10 @@ ifeq ($(OS),Windows_NT)
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_SCRIPTS = $(ENV)\Scripts
 	ENV_ACTIVATE = $(ENV_SCRIPTS)\activate
-	#CP := powershell.exe Copy-Item
 	CP := cp 
-	#COPYDIR := $(CP) -Recurse
 	COPYDIR := $(CP) -r
-	#MKDIR := powershell.exe mkdir -Force -Path
 	MKDIR := mkdir -p
-	#RM := powershell.exe Remove-Item -Force -Recurse -Path
 	RM := rm -r
-	#RMDIR := cmd /C "rmdir /S /Q"
 	RMDIR := $(RM)
 	# Windows doesn't install a python3 binary, just python.
 	PYTHON = python
@@ -39,7 +34,6 @@ ifeq ($(OS),Windows_NT)
 	# powershell interprets that as a failure and exits. Bash shells are 
 	# widely available on Windows now, especially through git-bash
 	SHELL := /usr/bin/bash
-	#BASHLIKE_SHELL_COMMAND := cmd.exe /C
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	.DEFAULT_GOAL := windows_installer
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
@@ -259,7 +253,8 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-rm -r $(BUILD_DIR)/pyi-build
 	-rm -r $(INVEST_BINARIES_DIR)
 	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
-	# $(PYTHON) -m pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt
+	# wrapping conda command in powershell since some windows bash shells
+	# don't have access to conda command.
 	powershell.exe -Command "conda list --export > $(INVEST_BINARIES_DIR)/package_versions.txt"
 	$(INVEST_BINARIES_DIR)/invest list
 
