@@ -300,10 +300,9 @@ def execute(args):
             inflation_rate = float(args['inflation_rate']) * 0.01
             annual_price = float(args['price'])
 
-            try:
+            if transition_years:
                 max_year = max(transition_years.union(set([analysis_year])))
-            except ValueError:
-                # When transition_years is an empty sequence.
+            else:
                 max_year = analysis_year
 
             prices = {}
