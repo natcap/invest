@@ -274,7 +274,10 @@ def execute(args):
         args=((file_registry['flow_dir_d8'], 1),
               outlet_vector_path,
               file_registry['watersheds']),
-        kwargs={'working_dir': output_directory},
+        kwargs={'working_dir': output_directory,
+                'target_layer_name':
+                    os.path.splitext(
+                        os.path.basename(file_registry['watersheds']))[0]},
         target_path_list=[file_registry['watersheds']],
         dependent_task_list=delineation_dependent_tasks,
         task_name='delineate_watersheds_single_worker',
@@ -339,7 +342,7 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     valid_pixels = slice(None)
     if src_nodata is not None:
         valid_pixels = ~numpy.isclose(flow_accum, src_nodata)
-    
+
     over_threshold = flow_accum > threshold
     out_matrix[valid_pixels & over_threshold] = 1
     out_matrix[valid_pixels & ~over_threshold] = 0

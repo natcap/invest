@@ -78,8 +78,10 @@ Unreleased Changes (3.9)
 * Delineateit
   * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
     'verified_geometries' to be the same as the file name (including suffix).
-   * The layer in the 'snapped_outlets.gpkg' output is renamed from
+  * The layer in the 'snapped_outlets.gpkg' output is renamed from
     'snapped' to be the same as the file name (including suffix).
+  * The layer in the 'watersheds.gpkg' output has been renamed from
+    'watersheds' to match the name of the vector file (including the suffix).
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under
