@@ -184,7 +184,6 @@ export default class InvestJob extends React.Component {
       '--headless',
       `-d ${datastackPath}`,
     ];
-    // let investRun;
     if (process.platform !== 'win32') {
       this.investRun = spawn(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
@@ -193,6 +192,7 @@ export default class InvestJob extends React.Component {
       });
       this.investRun.terminate = () => {
         if (this.state.jobStatus === 'running') {
+          // the '-' prefix on pid sends signal to children as well
           process.kill(-this.investRun.pid, 'SIGTERM');
         }
       };
@@ -203,6 +203,7 @@ export default class InvestJob extends React.Component {
       });
       this.investRun.terminate = () => {
         if (this.state.jobStatus === 'running') {
+          // the process.kill with '-' did not do the job on windows
           exec(`taskkill /pid ${this.investRun.pid} /t /f`)
         }
       };
