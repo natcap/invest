@@ -12,8 +12,10 @@ import { cleanupDir } from '../../src/utils'
 jest.setTimeout(25000) // I observe this test takes ~15 seconds.
 const PORT = 9009;
 
-let binaryPath = glob.sync('./dist/invest-workbench_*@(zip|exe|AppImage)')[0]
-// let binaryPath = glob.sync('./dist/*-unpacked/invest-workbench_*@(zip|exe|AppImage)')[0]
+// let binaryPath = glob.sync('./dist/invest-workbench_*@(zip|exe|AppImage)')[0]
+// For ease of automated testing, run the app from the 'unpacked' directory
+// to avoid need to install first on windows
+let binaryPath = glob.sync('./dist/*-unpacked/InVEST*@(zip|exe|AppImage)')[0]
 if (binaryPath.endsWith('.zip')) {
   // The MacOS exe needs to be extracted first
   spawnSync('unzip', [binaryPath, '-d', './dist/'])
@@ -57,7 +59,6 @@ beforeAll(async () => {
     binaryPath, [`--remote-debugging-port=${PORT}`],
     { shell: true },
   );
-
   await new Promise(resolve => { setTimeout(resolve, 5000) });
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());

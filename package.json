@@ -38,7 +38,7 @@
       "category": "Science"
     },
     "win": {
-      "target": "portable",
+      "target": "nsis",
       "icon": "build/icon.png"
     },
     "files": [
