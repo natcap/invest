@@ -9,7 +9,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest]
         node-version: [12.x]
 
     steps:
@@ -119,8 +119,11 @@ jobs:
       run: npm run test-flask-app
 
     - name: Test electron application
+      # uses: GabrielBB/xvfb-action@v1
       shell: bash -l {0}
       run: npm run test-electron-app
+      env:
+        CI: true
     
     - name: Upload installer artifacts
       uses: actions/upload-artifact@v2-preview
