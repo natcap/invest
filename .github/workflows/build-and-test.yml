@@ -86,9 +86,7 @@ jobs:
               run: |
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  conda install ${{ matrix.numpy }}
-                  python -m pip install scipy
-                  conda install toml twine
+                  conda install ${{ matrix.numpy }} toml twine
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build wheel
