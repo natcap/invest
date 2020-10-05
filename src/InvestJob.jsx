@@ -196,18 +196,20 @@ export default class InvestJob extends React.Component {
           process.kill(-this.investRun.pid, 'SIGTERM');
         }
       };
-    } else {
+    } else {  // windows
       this.investRun = spawn(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
         shell: true,
       });
       this.investRun.terminate = () => {
         if (this.state.jobStatus === 'running') {
-          // the process.kill with '-' did not do the job on windows
+          // process.kill(-this.investRun.pid, 'SIGTERM'); // does not kill
+          // this.investRun.kill(); // does not kill
+          // This kills, but no chance to handle it and show 'Run Cancelled'
           exec(`taskkill /pid ${this.investRun.pid} /t /f`)
+          // exec(`taskkill /pid ${this.investRun.pid} /t`) // does not kill
         }
       };
-      console.log(this.investRun)
     }
 
     // There's no general way to know that a spawned process started,

@@ -7,7 +7,8 @@ import { spawn, spawnSync } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
-import { cleanupDir } from '../../src/utils'
+import { cleanupDir } from '../../src/utils';
+import { getFlaskIsReady } from '../../src/server_requests';
 
 jest.setTimeout(25000) // I observe this test takes ~15 seconds.
 const PORT = 9009;
@@ -56,10 +57,10 @@ function makeAOI() {
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
   electronProcess = spawn(
-    binaryPath, [`--remote-debugging-port=${PORT}`],
+    `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
     { shell: true },
   );
-  await new Promise(resolve => { setTimeout(resolve, 5000) });
+  await getFlaskIsReady(); // so we don't make the next fetch too early
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
   browser = await puppeteer.connect({
@@ -122,7 +123,7 @@ test('Run a real invest model', async () => {
   const cancelButton = await findByText(doc, 'Cancel Run');
   cancelButton.click();
   await waitFor(async () => {
-    expect(await findByText(doc, 'Run Canceled'));
     expect(await findByText(doc, 'Open Workspace'));
+    expect(await findByText(doc, 'Run Canceled'));
   })
 })
