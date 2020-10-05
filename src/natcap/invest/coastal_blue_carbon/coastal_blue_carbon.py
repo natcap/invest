@@ -281,7 +281,7 @@ def execute(args):
                      key=lambda x:x[0]),  # sort by snapshot year
               sorted(aligned_lulc_paths.values(),
                      key=lambda x: x[0]),  # sort by snapshot year
-              ['nearest']*len(aligned_lulc_paths),
+              ['near']*len(aligned_lulc_paths),
               target_pixel_size, 'intersection'),
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
@@ -1688,7 +1688,7 @@ def _extract_snapshots_from_table(csv_path):
         raster_path = row['raster_path']
         if not os.path.isabs(raster_path):
             raster_path = os.path.join(os.path.dirname(csv_path), raster_path)
-        output_dict[int(index)] = raster_path
+        output_dict[int(index)] = os.path.abspath(raster_path)
 
     return output_dict
 

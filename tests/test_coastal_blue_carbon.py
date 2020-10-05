@@ -153,7 +153,7 @@ class TestCBC2(unittest.TestCase):
         """Remove workspace after each test function."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_extract_shapshots(self):
+    def test_extract_snapshots(self):
         """CBC: Extract snapshots from a snapshot CSV."""
         csv_path = os.path.join(self.workspace_dir, 'snapshots.csv')
 

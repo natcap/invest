@@ -118,13 +118,16 @@ def execute(args):
                 pygeoprocessing.get_raster_info(raster_path)['pixel_size'])[0],
             min_pixel_size)
 
+    baseline_srs_wkt = pygeoprocessing.get_raster_info(
+        snapshots_dict[min(snapshots_dict.keys())])['projection_wkt']
     alignment_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(source_snapshot_paths,
               aligned_snapshot_paths,
-              ['nearest']*len(source_snapshot_paths),
+              (['near']*len(source_snapshot_paths)),
               (min_pixel_size, -min_pixel_size),
               'intersection'),
+        kwargs={'target_projection_wkt': baseline_srs_wkt},
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
         target_path_list=aligned_snapshot_paths,
