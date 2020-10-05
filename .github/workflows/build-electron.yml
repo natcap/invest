@@ -122,6 +122,6 @@ jobs:
       uses: actions/upload-artifact@v2-preview
       if: ${{ always() }}
       with:
-        name: invest-desktop-${{ matrix.os }}
-        path: dist/invest-desktop_*
+        name: invest-workbench-${{ matrix.os }}
+        path: dist/invest-workbench_*
 
