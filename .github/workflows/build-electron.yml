@@ -114,9 +114,13 @@ jobs:
         release: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
       # Also run all tests on the build dir code?
-    - name: Run tests that require binaries
+    - name: Test flask app binaries
       shell: bash -l {0}
-      run: npm run test-binaries
+      run: npm run test-flask-app
+
+    - name: Test electron application
+      shell: bash -l {0}
+      run: npm run test-electron-app
     
     - name: Upload installer artifacts
       uses: actions/upload-artifact@v2-preview
@@ -124,4 +128,3 @@ jobs:
       with:
         name: invest-workbench-${{ matrix.os }}
         path: dist/invest-workbench_*
-

@@ -8,8 +8,9 @@
   "scripts": {
     "start": "cross-env FLASK_APP=src/server.py npx electron . --dev",
     "lint": "eslint --cache --color --ext .jsx,.js src",
-    "test": "cross-env DEBUG_PRINT_LIMIT=10 jest --verbose tests/*.test.js",
-    "test-binaries": "jest tests/binary_tests/*",
+    "test": "jest --testMatch **/tests/*.test.js",
+    "test-flask-app": "jest --testMatch **/tests/binary_tests/flaskapp.test.js",
+    "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
     "postinstall": "electron-builder install-app-deps",
     "build": "npx ./build.js",
     "dist": "electron-builder -c.extraMetadata.main=build/main.js",
@@ -47,6 +48,7 @@
     ]
   },
   "jest": {
+    "verbose": true,
     "collectCoverage": true,
     "testEnvironment": "jest-environment-jsdom-sixteen"
   },
