@@ -255,7 +255,7 @@ def execute(args):
 
     try:
         analysis_year = int(args['analysis_year'])
-    except KeyError, TypeError, ValueError:
+    except (KeyError, TypeError, ValueError):
         # KeyError when not present in args
         # ValueError when an empty string.
         # TypeError when is None.
