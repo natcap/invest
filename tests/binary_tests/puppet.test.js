@@ -60,7 +60,8 @@ beforeAll(async () => {
     `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
     { shell: true },
   );
-  await getFlaskIsReady(); // so we don't make the next fetch too early
+  // so we don't make the next fetch too early
+  await new Promise(resolve => setTimeout(resolve, 5000)) 
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
   browser = await puppeteer.connect({
