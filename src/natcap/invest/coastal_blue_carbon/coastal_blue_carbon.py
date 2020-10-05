@@ -79,11 +79,13 @@ ARGS_SPEC = {
         },
         "analysis_year": {
             "type": "number",
-            "required": True,
+            "required": False,
             "name": "Analysis Year",
             "about": (
                 "An analysis year extends the transient analysis "
-                "beyond the transition years."),
+                "beyond the transition years. If not provided, the "
+                "analysis will halt at the final transition year."
+            ),
         },
         "biophysical_table_path": {
             "name": "Biophysical Table",
@@ -251,7 +253,10 @@ def execute(args):
     min_pixel_size = numpy.min(numpy.abs(baseline_lulc_info['pixel_size']))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
-    analysis_year = int(args['analysis_year'])
+    try:
+        analysis_year = int(args['analysis_year'])
+    except KeyError:
+        analysis_year = max(snapshots.keys())
 
     aligned_lulc_paths = {
         baseline_lulc_year: os.path.join(
