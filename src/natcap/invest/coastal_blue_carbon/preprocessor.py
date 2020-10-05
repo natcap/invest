@@ -56,13 +56,6 @@ ALIGNED_LULC_RASTER_TEMPLATE = 'aligned_lulc_{year}{suffix}.tif'
 TRANSITION_TABLE = 'carbon_pool_transition_template{suffix}.csv'
 BIOPHYSICAL_TABLE = 'carbon_biophysical_table_template{suffix}.csv'
 
-_OUTPUT = {
-    'aligned_lulc_template': 'aligned_lulc_%s.tif',
-    'transitions': 'transitions.csv',
-    'carbon_pool_initial_template': 'carbon_pool_initial_template.csv',
-    'carbon_pool_transient_template': 'carbon_pool_transient_template.csv'
-}
-
 
 def execute(args):
     """Coastal Blue Carbon Preprocessor.
