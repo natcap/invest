@@ -34,6 +34,7 @@ ifeq ($(OS),Windows_NT)
 	# powershell interprets that as a failure and exits. Bash shells are 
 	# widely available on Windows now, especially through git-bash
 	SHELL := /usr/bin/bash
+	CONDA := conda.bat
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	.DEFAULT_GOAL := windows_installer
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
@@ -42,6 +43,7 @@ else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
 	SHELL := /bin/bash
+	CONDA := conda
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	CP := cp
 	COPYDIR := $(CP) -r
@@ -222,8 +224,8 @@ env:
 		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
     else
 		$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
-		conda create -p $(ENV) -y -c conda-forge
-		conda env update -p $(ENV) --file requirements-all.yml
+		$(CONDA) create -p $(ENV) -y -c conda-forge
+		$(CONDA) env update -p $(ENV) --file requirements-all.yml
 		$(BASHLIKE_SHELL_COMMAND) "source activate ./$(ENV) && $(MAKE) install"
     endif
 
@@ -253,9 +255,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-rm -r $(BUILD_DIR)/pyi-build
 	-rm -r $(INVEST_BINARIES_DIR)
 	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
-	# wrapping conda command in powershell since some windows bash shells
-	# don't have access to conda command.
-	powershell.exe -Command "conda list --export > $(INVEST_BINARIES_DIR)/package_versions.txt"
+	$(CONDA) list --export > $(INVEST_BINARIES_DIR)/package_versions.txt
 	$(INVEST_BINARIES_DIR)/invest list
 
 # Documentation.
