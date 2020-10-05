@@ -72,7 +72,8 @@ ARGS_SPEC = {
                 "to a raster file on disk representing the landcover raster "
                 "representing the state of the landscape in that year. "
                 "Landcover codes match those in the biophysical table and in "
-                "the landcover transitions table."
+                "the landcover transitions table. All rasters represented in "
+                "this table must be linearly projected in meters."
             ),
             "name": "Landcover Snapshots Table",
         },
@@ -1719,7 +1720,7 @@ def validate(args, limit_to=None):
 
         for snapshot_year, snapshot_raster_path in snapshots.items():
             raster_error_message = validation.check_raster(
-                snapshot_raster_path)
+                snapshot_raster_path, projected=True, projection_units='m')
             if raster_error_message:
                 validation_warnings.append(
                     (['landcover_snapshot_csv'], (
