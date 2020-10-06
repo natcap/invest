@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := c2e75c7f2d79d5f6f1bca7a220c0e185ae561dfb
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := bcad34fe7d88bad3c0d1e7e56d432fd342423667
+GIT_UG_REPO_REV              := 89d0015a76f806fb17bfd9ff24f8b208705d5f4a
 
 
 ENV = env
