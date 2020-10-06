@@ -6,15 +6,18 @@ import * as server_requests from '../../src/server_requests';
 import { findInvestBinaries, createPythonFlaskProcess } from '../../src/main_helpers';
 import { argsDictFromObject } from '../../src/utils';
 
-jest.setTimeout(250000)
+jest.setTimeout(250000) // This test is slow in CI
 
 const isDevMode = true // otherwise need to mock process.resourcesPath
 beforeAll(async () => {
 	const binaries = await findInvestBinaries(isDevMode);
   createPythonFlaskProcess(binaries.server, isDevMode);
-  // The following doesn't really work in this context because
-  // errors thrown in beforeAll don't stop the tests from running
-  await server_requests.getFlaskIsReady({retries: 101})
+  // In the CI the flask app takes more than 10x as long to startup.
+  // Especially so on macos.
+  // So, allowing many retries, especially because the error
+  // that is thrown if all retries fail is swallowed by jest
+  // and tests try to run anyway.
+  await server_requests.getFlaskIsReady({retries: 201})
 })
 
 afterAll(async () => {
