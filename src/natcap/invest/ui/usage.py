@@ -130,15 +130,13 @@ def _calculate_args_bounding_box(args_dict):
             # Using gdal.OpenEx to check if an input is spatial caused the
             # model to hang sometimes (possible race condition), so only
             # get the bounding box of inputs that are known to be spatial.
-            if (args_spec[key]['type'] == 'raster' or
-                args_spec[key]['type'] == 'vector'):
-                with utils.capture_gdal_logging():
-                    if gdal.OpenEx(arg, gdal.OF_RASTER) is not None:
-                        spatial_info = pygeoprocessing.get_raster_info(arg)
-                    else:
-                        # If it isn't a raster, it should be a vector!
-                        spatial_info = pygeoprocessing.get_vector_info(arg)
-
+            spatial_info = None
+            if args_spec[key]['type'] == 'raster':
+                spatial_info = pygeoprocessing.get_raster_info(value)
+            elif args_spec[key]['type'] == 'vector':
+                spatial_info = pygeoprocessing.get_vector_info(value)
+                        
+            if spatial_info:
                 local_bb = [0., 0., 0., 0.]
                 local_bb = spatial_info['bounding_box']
                 projection_wkt = spatial_info['projection_wkt']

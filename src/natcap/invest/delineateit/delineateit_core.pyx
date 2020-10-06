@@ -81,41 +81,29 @@ the
                     # if this edge of the block is an edge of the raster, 
                     # this is a pour point. Otherwise, we can't say whether it is
                     # because the necessary information isn't in this block.
-                    if edges[0]:  # top edge
-                        # this is ugly and repetitive, but simpler than trying
-                        # to keep track of whether a pour point has been 
-                        # assigned until the end
-                        pour_points.insert(cpair[double, double](
-                            # +0.5 so that the point is centered in the pixel
-                            (col + offset.first + 0.5) * pixel_size.first + origin.first,
-                            (row + offset.second + 0.5) * pixel_size.second + origin.second))
+                    if not edges[0]:  # top edge
+                        continue
                 elif sink_col == -1:
-                    if edges[1]:  # left edge
-                        pour_points.insert(cpair[double, double](
-                            # +0.5 so that the point is centered in the pixel
-                            (col + offset.first + 0.5) * pixel_size.first + origin.first,
-                            (row + offset.second + 0.5) * pixel_size.second + origin.second))
+                    if not edges[1]:  # left edge
+                        continue
                 elif sink_row == height:
-                    if edges[2]:  # bottom edge
-                        pour_points.insert(cpair[double, double](
-                            # +0.5 so that the point is centered in the pixel
-                            (col + offset.first + 0.5) * pixel_size.first + origin.first,
-                            (row + offset.second + 0.5) * pixel_size.second + origin.second))
+                    if not edges[2]:  # bottom edge
+                        continue
                 elif sink_col == width:
-                    if edges[3]:  # right edge
-                        pour_points.insert(cpair[double, double](
-                            # +0.5 so that the point is centered in the pixel
-                            (col + offset.first + 0.5) * pixel_size.first + origin.first,
-                            (row + offset.second + 0.5) * pixel_size.second + origin.second))
+                    if not edges[3]:  # right edge
+                        continue
 
-                # if we get to here, the point (sink_row, sink_col)  
-                # is known to be within the bounds of the array,
-                # so it's safe to index 
-                elif flow_dir_array[sink_row, sink_col] == nodata:
-                    pour_points.insert(cpair[double, double](
-                        # +0.5 so that the point is centered in the pixel
-                        (col + offset.first + 0.5) * pixel_size.first + origin.first,
-                        (row + offset.second + 0.5) * pixel_size.second + origin.second))
+                # if we get to here without having continued, the point 
+                # (sink_row, sink_col) is known to be within the bounds of 
+                # the array, so it's safe to index 
+                elif flow_dir_array[sink_row, sink_col] != nodata:
+                    continue
+                
+                # if none of the above conditions passed, this is a pour point
+                pour_points.insert(cpair[double, double](
+                    # +0.5 so that the point is centered in the pixel
+                    (col + offset.first + 0.5) * pixel_size.first + origin.first,
+                    (row + offset.second + 0.5) * pixel_size.second + origin.second))
 
     # return set of (x, y) coordinates referenced to the same coordinate system
     # as the original raster
