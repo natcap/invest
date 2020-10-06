@@ -60,6 +60,9 @@ beforeAll(async () => {
     `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
     { shell: true },
   );
+  electronProcess.stderr.on('data', (data) => {
+    console.log(`${data}`)
+  });
   // so we don't make the next fetch too early
   await new Promise(resolve => setTimeout(resolve, 5000)) 
   const res = await fetch(`http://localhost:${PORT}/json/version`);
@@ -85,6 +88,7 @@ afterAll(async () => {
 
 test('Run a real invest model', async () => {
   const { findByText, findByLabelText } = queries;
+  console.log(browser);
   await waitFor(() => {
     expect(browser.isConnected()).toBeTruthy();
   })
