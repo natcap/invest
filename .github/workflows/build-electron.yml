@@ -9,7 +9,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, macos-latest]
         node-version: [12.x]
 
     steps:
