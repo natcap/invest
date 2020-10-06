@@ -1,10 +1,10 @@
-name: Run jest tests in NodeJS
+name: Run integration tests in NodeJS
 
 on: [push, pull_request]
 
 jobs:
   run-tests:
-    name: "run jest tests"
+    name: "run integration tests"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
