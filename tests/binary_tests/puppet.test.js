@@ -10,7 +10,7 @@ import { getDocument, queries, waitFor } from 'pptr-testing-library';
 import { cleanupDir } from '../../src/utils';
 import { getFlaskIsReady } from '../../src/server_requests';
 
-jest.setTimeout(25000) // I observe this test takes ~15 seconds.
+jest.setTimeout(250000) // I observe this test takes ~15 seconds.
 const PORT = 9009;
 
 // let binaryPath = glob.sync('./dist/invest-workbench_*@(zip|exe|AppImage)')[0]
@@ -89,9 +89,9 @@ afterAll(async () => {
 test('Run a real invest model', async () => {
   const { findByText, findByLabelText } = queries;
   console.log(browser);
-  // await waitFor(() => {
-  //   expect(browser.isConnected()).toBeTruthy();
-  // })
+  await waitFor(() => {
+    expect(browser.isConnected()).toBeTruthy();
+  })
   let page = (await browser.pages())[0];
   const doc = await getDocument(page);
 
