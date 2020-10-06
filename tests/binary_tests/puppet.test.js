@@ -19,12 +19,12 @@ const PORT = 9009;
 let binaryPath;
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
-  console.log(glob.sync('./dist/mac/*'))
-  binaryPath = glob.sync('./dist/mac/InVEST*')[0]
+  console.log(glob.sync('./dist/mac/*.app/Contents/MacOS/*'))
+  binaryPath = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*')[0]
 } else if (process.platform === 'win32') {
   binaryPath = glob.sync('./dist/win-unpacked/InVEST*.exe')[0]
 } else {
-  binaryPath = glob.sync('./dist/linux-unpacked/InVEST*.AppImage')[0]
+  binaryPath = './dist/linux-unpacked/invest-workbench'
 }
 // if (binaryPath.endsWith('.zip')) {
 //   // The MacOS exe needs to be extracted first
