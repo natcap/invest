@@ -89,9 +89,9 @@ afterAll(async () => {
 test('Run a real invest model', async () => {
   const { findByText, findByLabelText } = queries;
   console.log(browser);
-  await waitFor(() => {
-    expect(browser.isConnected()).toBeTruthy();
-  })
+  // await waitFor(() => {
+  //   expect(browser.isConnected()).toBeTruthy();
+  // })
   let page = (await browser.pages())[0];
   const doc = await getDocument(page);
 
