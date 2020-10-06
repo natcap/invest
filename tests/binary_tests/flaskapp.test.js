@@ -5,8 +5,6 @@ import fetch from 'node-fetch';
 import * as server_requests from '../../src/server_requests';
 import { findInvestBinaries, createPythonFlaskProcess } from '../../src/main_helpers';
 import { argsDictFromObject } from '../../src/utils';
-import dotenv from 'dotenv';
-dotenv.config();
 
 jest.setTimeout(250000)
 
