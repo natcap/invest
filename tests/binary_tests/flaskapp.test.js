@@ -8,9 +8,10 @@ import { argsDictFromObject } from '../../src/utils';
 
 jest.setTimeout(250000)
 
+const isDevMode = true // otherwise need to mock process.resourcesPath
 beforeAll(async () => {
-	const binaries = await findInvestBinaries(true); // trues force devMode
-  createPythonFlaskProcess(binaries.server, true);
+	const binaries = await findInvestBinaries(isDevMode);
+  createPythonFlaskProcess(binaries.server, isDevMode);
   await server_requests.getFlaskIsReady()
 })
 
