@@ -110,6 +110,8 @@ def _calculate_args_bounding_box(args, args_spec):
         bb_out = [op(x, y) for op, x, y in zip(comparison_ops, bb1, bb2)]
         return bb_out
 
+    bb_intersection = None
+    bb_union = None
     for key, value in args.items():
         # Using gdal.OpenEx to check if an input is spatial caused the
         # model to hang sometimes (possible race condition), so only
