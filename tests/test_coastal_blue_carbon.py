@@ -447,6 +447,24 @@ class TestCBC2(unittest.TestCase):
                 price_table.write(f'{year},{price}\n')
         return args
 
+    def test_duplicate_lulc_classes(self):
+        """CBC: Raise an execption if duplicate lulc-classes."""
+        args = TestCBC2._create_model_args(self.workspace_dir)
+        args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
+        with open(args['biophysical_table_path'], 'r') as table:
+            lines = table.readlines()
+
+        with open(args['biophysical_table_path'], 'a') as table:
+            last_line_contents = lines[-1].strip().split(',')
+            last_line_contents[0] = '3'  # assign a new code
+            table.write(','.join(last_line_contents))
+
+        with self.assertRaises(ValueError) as context:
+            coastal_blue_carbon.execute(args)
+
+        self.assertIn("`lulc-class` column must be unique",
+                      str(context.exception))
+
     def test_model(self):
         """CBC: Test the model's execution."""
         args = TestCBC2._create_model_args(self.workspace_dir)

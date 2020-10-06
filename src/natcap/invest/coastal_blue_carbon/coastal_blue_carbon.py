@@ -261,6 +261,21 @@ def execute(args):
         # TypeError when is None.
         analysis_year = max(snapshots.keys())
 
+    # We're assuming that the LULC initial variables and the carbon pool
+    # transient table are combined into a single lookup table.
+    biophysical_parameters = utils.build_lookup_from_csv(
+        args['biophysical_table_path'], 'code')
+
+    # LULC Classnames are critical to the transition mapping, so they must be
+    # unique.  This check is here in ``execute`` because it's possible that
+    # someone might have a LOT of classes in their biophysical table.
+    unique_lulc_classnames = set(
+        params['lulc-class'] for params in biophysical_parameters.values())
+    if len(unique_lulc_classnames) != len(biophysical_parameters):
+        raise ValueError(
+            "All values in `lulc-class` column must be unique, but "
+            "duplicates were found.")
+
     aligned_lulc_paths = {
         baseline_lulc_year: os.path.join(
             intermediate_dir,
@@ -295,11 +310,6 @@ def execute(args):
         copy_duplicate_artifact=True,
         target_path_list=aligned_lulc_paths.values(),
         task_name='Align input landcover rasters.')
-
-    # We're assuming that the LULC initial variables and the carbon pool
-    # transient table are combined into a single lookup table.
-    biophysical_parameters = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'code')
 
     (disturbance_matrices, accumulation_matrices) = _read_transition_matrix(
         args['landcover_transitions_table'], biophysical_parameters)
