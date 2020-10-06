@@ -16,6 +16,7 @@ const PORT = 9009;
 // let binaryPath = glob.sync('./dist/invest-workbench_*@(zip|exe|AppImage)')[0]
 // For ease of automated testing, run the app from the 'unpacked' directory
 // to avoid need to install first on windows
+console.log(glob.sync('./dist/*-unpacked/*'))
 let binaryPath = glob.sync('./dist/*-unpacked/InVEST*@(zip|exe|AppImage)')[0]
 if (binaryPath.endsWith('.zip')) {
   // The MacOS exe needs to be extracted first
