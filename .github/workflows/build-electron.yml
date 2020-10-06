@@ -120,8 +120,8 @@ jobs:
 
     - name: Test electron app with puppeteer
       uses: GabrielBB/xvfb-action@v1
-      shell: bash -l {0}
       with:
+        shell: bash -l {0}
         run: npm run test-electron-app
         env:
           CI: true
