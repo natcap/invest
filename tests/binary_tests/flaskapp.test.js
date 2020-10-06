@@ -16,8 +16,8 @@ beforeAll(async () => {
   await server_requests.getFlaskIsReady()
 })
 
-afterAll(() => {
-  server_requests.shutdownPythonProcess()
+afterAll(async () => {
+  await server_requests.shutdownPythonProcess()
 })
 
 test('invest list items have expected properties', async () => {
