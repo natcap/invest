@@ -119,7 +119,7 @@ jobs:
       run: npm run test-flask-app
 
     - name: Test electron application
-      # uses: GabrielBB/xvfb-action@v1
+      uses: GabrielBB/xvfb-action@v1
       shell: bash -l {0}
       run: npm run test-electron-app
       env:
