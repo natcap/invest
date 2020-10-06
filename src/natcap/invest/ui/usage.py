@@ -10,6 +10,7 @@ import sys
 import threading
 import traceback
 import uuid
+import importlib
 
 from urllib.request import urlopen, Request
 from urllib.parse import urlencode
@@ -106,7 +107,7 @@ def _calculate_args_bounding_box(args_dict):
         bb_out = [op(x, y) for op, x, y in zip(comparison_ops, bb1, bb2)]
         return bb_out
 
-    def _merge_local_bounding_boxes(arg, bb_intersection=None, bb_union=None):
+    def _merge_local_bounding_boxes(args, args_spec, bb_intersection=None, bb_union=None):
         """Traverse nested dictionary to merge bounding boxes of GIS types.
 
         Args:
@@ -123,34 +124,14 @@ def _calculate_args_bounding_box(args_dict):
             inputs.  None, None if no arguments were GIS data types and input
             bounding boxes are None.
         """
-        def _is_spatial(arg):
-            if isinstance(arg, str) and os.path.exists(arg):
-                with utils.capture_gdal_logging():
-                    dataset = gdal.OpenEx(arg)
-                    if dataset is not None:
-                        # OGR opens CSV files.  For now, we should not
-                        # consider these to be vectors.
-                        driver_name = dataset.GetDriver().ShortName
-                        if driver_name == 'CSV':
-                            return False
-                        return True
-            return False
 
-        if isinstance(arg, dict):
-            # if dict, grab the bb's for all the members in it
-            for value in arg.values():
-                bb_intersection, bb_union = _merge_local_bounding_boxes(
-                    value, bb_intersection, bb_union)
-        elif isinstance(arg, list):
-            # if list, grab the bb's for all the members in it
-            for value in arg:
-                bb_intersection, bb_union = _merge_local_bounding_boxes(
-                    value, bb_intersection, bb_union)
-        else:
-            # singular value, test if GIS type, if not, don't update bb's
-            # this is an undefined bounding box that gets returned when ogr
-            # opens a table only
-            if _is_spatial(arg):
+        
+        for key, value in args.items():
+            # Using gdal.OpenEx to check if an input is spatial caused the
+            # model to hang sometimes (possible race condition), so only
+            # get the bounding box of inputs that are known to be spatial.
+            if (args_spec[key]['type'] == 'raster' or
+                args_spec[key]['type'] == 'vector'):
                 with utils.capture_gdal_logging():
                     if gdal.OpenEx(arg, gdal.OF_RASTER) is not None:
                         spatial_info = pygeoprocessing.get_raster_info(arg)
@@ -188,6 +169,9 @@ def _calculate_args_bounding_box(args_dict):
                     # bother with the local_bb at all
                     LOGGER.exception('Error when transforming coordinates: %s',
                                      transform_error)
+            else:
+                LOGGER.debug(f'Arg {key}: {value} of type {args_spec[key]["type"]} '
+                              'excluded from bounding box calculation')
 
         return bb_intersection, bb_union
 
@@ -252,9 +236,11 @@ def _log_model(model_name, model_args, session_id=None):
         md5.update(json.dumps(data).encode('utf-8'))
         return md5.hexdigest()
 
+    args_spec = importlib.import_module(model_name).ARGS_SPEC
+
     try:
         bounding_box_intersection, bounding_box_union = (
-            _calculate_args_bounding_box(model_args))
+            _calculate_args_bounding_box(model_args, args_spec))
 
         payload = {
             'model_name': model_name,
