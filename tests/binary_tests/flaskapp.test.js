@@ -12,7 +12,9 @@ const isDevMode = true // otherwise need to mock process.resourcesPath
 beforeAll(async () => {
 	const binaries = await findInvestBinaries(isDevMode);
   createPythonFlaskProcess(binaries.server, isDevMode);
-  await server_requests.getFlaskIsReady()
+  // The following doesn't really work in this context because
+  // errors thrown in beforeAll don't stop the tests from running
+  await server_requests.getFlaskIsReady({retries: 101})
 })
 
 afterAll(async () => {
