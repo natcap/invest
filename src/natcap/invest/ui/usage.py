@@ -50,6 +50,7 @@ def log_run(module, args):
     log_thread = threading.Thread(
         target=_log_model, args=(module, args, session_id),
         name=_USAGE_LOGGING_THREAD_NAME)
+    LOGGER.info('Starting usage logging thread')
     log_thread.start()
 
     try:
@@ -66,11 +67,12 @@ def log_run(module, args):
         log_exit_thread.start()
 
 
-def _calculate_args_bounding_box(args_dict):
+def _calculate_args_bounding_box(args, args_spec):
     """Calculate the bounding boxes of any GIS types found in `args_dict`.
 
     Args:
-        args_dict (dict): a string key and any value pair dictionary.
+        args (dict): a string key and any value pair dictionary.
+        args_spec (dict): the model ARGS_SPEC describing args
 
     Returns:
         bb_intersection, bb_union tuple that's either the lat/lng bounding
@@ -78,6 +80,7 @@ def _calculate_args_bounding_box(args_dict):
             in args_dict.  If no GIS types are present, this is a (None, None)
             tuple.
     """
+
     def _merge_bounding_boxes(bb1, bb2, mode):
         """Merge two bounding boxes through union or intersection.
 
@@ -107,73 +110,52 @@ def _calculate_args_bounding_box(args_dict):
         bb_out = [op(x, y) for op, x, y in zip(comparison_ops, bb1, bb2)]
         return bb_out
 
-    def _merge_local_bounding_boxes(args, args_spec, bb_intersection=None, bb_union=None):
-        """Traverse nested dictionary to merge bounding boxes of GIS types.
+    for key, value in args.items():
+        # Using gdal.OpenEx to check if an input is spatial caused the
+        # model to hang sometimes (possible race condition), so only
+        # get the bounding box of inputs that are known to be spatial.
+        spatial_info = None
+        if args_spec['args'][key]['type'] == 'raster':
+            spatial_info = pygeoprocessing.get_raster_info(value)
+        elif args_spec['args'][key]['type'] == 'vector':
+            spatial_info = pygeoprocessing.get_vector_info(value)
+                    
+        if spatial_info:
+            local_bb = [0., 0., 0., 0.]
+            local_bb = spatial_info['bounding_box']
+            projection_wkt = spatial_info['projection_wkt']
+            spatial_ref = osr.SpatialReference()
+            spatial_ref.ImportFromWkt(projection_wkt)
 
-        Args:
-            arg (dict): contains string keys and pairs that might be files to
-                gis types.  They can be any other type, including dictionaries.
-            bb_intersection (list or None): if list, has the form
-                [xmin, ymin, xmax, ymax], where coordinates are in lng, lat
-            bb_union (list or None): if list, has the form
-                [xmin, ymin, xmax, ymax], where coordinates are in lng, lat
+            try:
+                # means there's a GIS type with a well defined bounding box
+                # create transform, and reproject local bounding box to
+                # lat/lng
+                lat_lng_ref = osr.SpatialReference()
+                lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
+                to_lat_trans = utils.create_coordinate_transformer(
+                    spatial_ref, lat_lng_ref)
+                for point_index in [0, 2]:
+                    local_bb[point_index], local_bb[point_index + 1], _ = (
+                        to_lat_trans.TransformPoint(
+                            local_bb[point_index],
+                            local_bb[point_index+1]))
 
-        Returns:
-            (intersection, union) bounding box tuples of all filepaths to GIS
-            data types found in the dictionary and bb_intersection and bb_union
-            inputs.  None, None if no arguments were GIS data types and input
-            bounding boxes are None.
-        """
+                bb_intersection = _merge_bounding_boxes(
+                    local_bb, bb_intersection, 'intersection')
+                bb_union = _merge_bounding_boxes(
+                    local_bb, bb_union, 'union')
+            except Exception as transform_error:
+                # All kinds of exceptions from bad transforms or CSV files
+                # or dbf files could get us to this point, just don't
+                # bother with the local_bb at all
+                LOGGER.exception('Error when transforming coordinates: %s',
+                                 transform_error)
+        else:
+            LOGGER.debug(f'Arg {key} of type {args_spec["args"][key]["type"]} '
+                          'excluded from bounding box calculation')
 
-        
-        for key, value in args.items():
-            # Using gdal.OpenEx to check if an input is spatial caused the
-            # model to hang sometimes (possible race condition), so only
-            # get the bounding box of inputs that are known to be spatial.
-            spatial_info = None
-            if args_spec[key]['type'] == 'raster':
-                spatial_info = pygeoprocessing.get_raster_info(value)
-            elif args_spec[key]['type'] == 'vector':
-                spatial_info = pygeoprocessing.get_vector_info(value)
-                        
-            if spatial_info:
-                local_bb = [0., 0., 0., 0.]
-                local_bb = spatial_info['bounding_box']
-                projection_wkt = spatial_info['projection_wkt']
-                spatial_ref = osr.SpatialReference()
-                spatial_ref.ImportFromWkt(projection_wkt)
-
-                try:
-                    # means there's a GIS type with a well defined bounding box
-                    # create transform, and reproject local bounding box to
-                    # lat/lng
-                    lat_lng_ref = osr.SpatialReference()
-                    lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
-                    to_lat_trans = utils.create_coordinate_transformer(
-                        spatial_ref, lat_lng_ref)
-                    for point_index in [0, 2]:
-                        local_bb[point_index], local_bb[point_index + 1], _ = (
-                            to_lat_trans.TransformPoint(
-                                local_bb[point_index],
-                                local_bb[point_index+1]))
-
-                    bb_intersection = _merge_bounding_boxes(
-                        local_bb, bb_intersection, 'intersection')
-                    bb_union = _merge_bounding_boxes(
-                        local_bb, bb_union, 'union')
-                except Exception as transform_error:
-                    # All kinds of exceptions from bad transforms or CSV files
-                    # or dbf files could get us to this point, just don't
-                    # bother with the local_bb at all
-                    LOGGER.exception('Error when transforming coordinates: %s',
-                                     transform_error)
-            else:
-                LOGGER.debug(f'Arg {key}: {value} of type {args_spec[key]["type"]} '
-                              'excluded from bounding box calculation')
-
-        return bb_intersection, bb_union
-
-    return _merge_local_bounding_boxes(args_dict)
+    return bb_intersection, bb_union
 
 
 def _log_exit_status(session_id, status):
@@ -237,6 +219,7 @@ def _log_model(model_name, model_args, session_id=None):
     args_spec = importlib.import_module(model_name).ARGS_SPEC
 
     try:
+        logger.warn('calculating bounding box')
         bounding_box_intersection, bounding_box_union = (
             _calculate_args_bounding_box(model_args, args_spec))
 
