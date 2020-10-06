@@ -118,13 +118,13 @@ jobs:
       shell: bash -l {0}
       run: npm run test-flask-app
 
-    - name: Use a X virtual frame buffer
-      uses: GabrielBB/xvfb-action@v1
     - name: Test electron app with puppeteer
+      uses: GabrielBB/xvfb-action@v1
       shell: bash -l {0}
-      run: npm run test-electron-app
-      env:
-        CI: true
+      with:
+        run: npm run test-electron-app
+        env:
+          CI: true
     
     - name: Upload installer artifacts
       uses: actions/upload-artifact@v2-preview
