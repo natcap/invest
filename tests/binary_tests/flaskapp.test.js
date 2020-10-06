@@ -8,9 +8,7 @@ import { argsDictFromObject } from '../../src/utils';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// These won't run in the same CI as the rest of our tests
-// because we don't have the python env available.
-// We can have the python env available during the build & dist CI,
+jest.setTimeout(250000)
 
 beforeAll(async () => {
 	const binaries = await findInvestBinaries(true); // trues force devMode
