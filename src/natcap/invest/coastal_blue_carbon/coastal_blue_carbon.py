@@ -1170,7 +1170,7 @@ def _calculate_npv(
             valid_pixels = numpy.ones(npv.shape, dtype=numpy.bool)
             for matrix in sequestration_matrices:
                 valid_pixels &= ~numpy.isclose(matrix, NODATA_FLOAT32)
-                matrix_sum += matrix
+                matrix_sum[valid_pixels] += matrix[valid_pixels]
 
             npv[valid_pixels] = (
                 matrix_sum[valid_pixels] * valuation_factor)
