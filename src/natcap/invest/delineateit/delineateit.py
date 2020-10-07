@@ -7,7 +7,6 @@ import math
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-from scipy import ndimage
 import shapely.errors
 import shapely.geometry
 import shapely.wkb
@@ -653,8 +652,7 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
         None
     """
     raster_info = pygeoprocessing.get_raster_info(flow_dir_raster_path_band[0])
-    pour_point_set = _find_raster_pour_points(flow_dir_raster_path_band, 
-                                              raster_info)
+    pour_point_set = _find_raster_pour_points(flow_dir_raster_path_band)
 
     # use same spatial reference as the input
     aoi_spatial_reference = osr.SpatialReference()
@@ -689,22 +687,20 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
     target_vector = None
 
 
-def _find_raster_pour_points(flow_dir_raster_path_band, raster_info):
+def _find_raster_pour_points(flow_dir_raster_path_band):
     """
     Memory-safe pour point calculation from a flow direction raster.
     
     Args:
         flow_dir_raster_path_band (tuple): tuple of (raster path, band index)
             indicating the flow direction raster to use.
-        raster_info (dict): value of ``pygeoprocessing.get_raster_info(
-            flow_dir_raster_path)``. Avoiding redoing this function call
-            since it's used in the calling function ``detect_pour_points``.
 
     Returns:
         set of (x, y) coordinate tuples of pour points, in the same coordinate
         system as the input raster.
     """
     flow_dir_raster_path, band_index = flow_dir_raster_path_band
+    raster_info = pygeoprocessing.get_raster_info(flow_dir_raster_path)
     # Open the flow direction raster band
     raster = gdal.OpenEx(flow_dir_raster_path, gdal.OF_RASTER)
     if raster is None:

@@ -39,7 +39,6 @@ cpdef cset[cpair[double, double]] calculate_pour_point_array(
             coordinate system. This is equivalent to:
             ``pygeoprocessing.get_raster_info(flow_dir_raster)['pixel_size']``.
 
-the 
     Returns:
         set of (x, y) coordinates representing pour points in the coordinate
         system of the original raster. C type cset[cpair[double, double]] is 

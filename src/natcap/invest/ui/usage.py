@@ -50,7 +50,6 @@ def log_run(module, args):
     log_thread = threading.Thread(
         target=_log_model, args=(module, args, session_id),
         name=_USAGE_LOGGING_THREAD_NAME)
-    LOGGER.info('Starting usage logging thread')
     log_thread.start()
 
     try:
@@ -221,7 +220,6 @@ def _log_model(model_name, model_args, session_id=None):
     args_spec = importlib.import_module(model_name).ARGS_SPEC
 
     try:
-        logger.warn('calculating bounding box')
         bounding_box_intersection, bounding_box_union = (
             _calculate_args_bounding_box(model_args, args_spec))
 
