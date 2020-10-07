@@ -1152,7 +1152,7 @@ def _calculate_npv(
 
     """
     for target_raster_year, target_raster_path in sorted(
-            target_raster_years_and_paths.items(), key=lambda x: x[0]):
+            target_raster_years_and_paths.items()):
 
         valuation_factor = 0
         for years_since_baseline, year in enumerate(
