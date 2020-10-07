@@ -10,7 +10,7 @@ import { getDocument, queries, waitFor } from 'pptr-testing-library';
 import { cleanupDir } from '../../src/utils';
 import { getFlaskIsReady } from '../../src/server_requests';
 
-jest.setTimeout(250000) // This test takes ~15 seconds, but longer in CI
+jest.setTimeout(40000) // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
 
 // For ease of automated testing, run the app from the 'unpacked' directory
@@ -132,6 +132,8 @@ test('Run a real invest model', async () => {
   cancelButton.click();
   await waitFor(async () => {
     expect(await findByText(doc, 'Open Workspace'));
+    // Not working on Windows because taskkill does not
+    // give the app a chance to handle the signal
     // expect(await findByText(doc, 'Run Canceled'));
   })
 })
