@@ -820,15 +820,6 @@ def execute_transition_analysis(args):
     discount_rate = float(args['discount_rate'])
     baseline_lulc_year = int(args['baseline_lulc_year'])
 
-    # ASSUMPTIONS
-    #
-    # This rebuild assumes that this timeseries analysis is ONLY taking place
-    # for the transitions at hand.  Everything that happens between the
-    # baseline year and the first transition isn't all that interesting since
-    # the only thing that can happen is accumulation. That can be modeled with
-    # a few raster calculator operations.  Everything within this loop is way
-    # more interesting and tricky to get right, hence the need for an extra
-    # function.
     stock_rasters = {
         (min(transition_years) - 1): {
             POOL_SOIL: args['stocks_at_first_transition'][POOL_SOIL],
