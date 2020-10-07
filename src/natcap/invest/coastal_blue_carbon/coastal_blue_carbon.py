@@ -1017,11 +1017,13 @@ def execute_transition_analysis(args):
         if (year + 1) in transition_years or (year + 1) == final_year:
             emissions_rasters_since_transition = []
             net_seq_rasters_since_transition = []
-            for _year in range(current_transition_year, year + 1):
+            for year_after_transition in range(
+                    current_transition_year, year + 1):
                 emissions_rasters_since_transition.extend(
-                    list(emissions_rasters[_year].values()))
+                    list(emissions_rasters[year_after_transition].values()))
                 net_seq_rasters_since_transition.extend(
-                    list(net_sequestration_rasters[_year].values()))
+                    list(net_sequestration_rasters[
+                        year_after_transition].values()))
 
             emissions_since_last_transition_raster = os.path.join(
                 output_dir, EMISSIONS_SINCE_TRANSITION_RASTER_PATTERN.format(
