@@ -32,6 +32,11 @@ jobs:
         ref: refs/tags/${{env.INVEST_VERSION}}
         path: ./invest
 
+    - name: Install libspatialindex for ubuntu
+      if: matrix.os == 'ubuntu-latest'
+      run:
+        sudo apt-get install libspatialindex-dev
+
     - name: Set up conda for non-Windows
       uses: goanpeca/setup-miniconda@v1.1.2
       if: matrix.os != 'windows-latest'
