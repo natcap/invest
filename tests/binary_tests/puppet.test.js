@@ -13,7 +13,6 @@ import { getFlaskIsReady } from '../../src/server_requests';
 jest.setTimeout(250000) // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
 
-// let binaryPath = glob.sync('./dist/invest-workbench_*@(zip|exe|AppImage)')[0]
 // For ease of automated testing, run the app from the 'unpacked' directory
 // to avoid need to install first on windows or extract on mac.
 let binaryPath;
@@ -26,11 +25,7 @@ if (process.platform === 'darwin') {
 } else {
   binaryPath = './dist/linux-unpacked/invest-workbench'
 }
-// if (binaryPath.endsWith('.zip')) {
-//   // The MacOS exe needs to be extracted first
-//   spawnSync('unzip', [binaryPath, '-d', './dist/'])
-//   binaryPath = glob.sync('./dist/*.app')[0]
-// }
+
 console.log(binaryPath)
 fs.accessSync(binaryPath, fs.constants.X_OK)
 const TMP_DIR = fs.mkdtempSync('tests/data/_')
@@ -73,7 +68,7 @@ beforeAll(async () => {
     console.log(`${data}`)
   });
   // so we don't make the next fetch too early
-  await new Promise(resolve => setTimeout(resolve, 120000)) 
+  await new Promise(resolve => setTimeout(resolve, 5000)) 
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
   browser = await puppeteer.connect({
@@ -97,7 +92,6 @@ afterAll(async () => {
 
 test('Run a real invest model', async () => {
   const { findByText, findByLabelText } = queries;
-  console.log(browser);
   await waitFor(() => {
     expect(browser.isConnected()).toBeTruthy();
   })
