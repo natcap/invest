@@ -169,12 +169,9 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
     transition_pairs = set()
     for block_offsets in pygeoprocessing.iterblocks((lulc_snapshot_list[0], 1),
                                                     offset_only=True):
-        # TODO: make this loop more efficient by not reading in each raster
-        # twice
-        for from_raster, to_raster in zip(lulc_snapshot_list[:-1],
-                                          lulc_snapshot_list[1:]):
-            from_array, from_nodata = _read_block(from_raster, block_offsets)
-            to_array, to_nodata = _read_block(to_raster, block_offsets)
+        from_array, from_nodata = _read_block(lulc_snapshot_list[0], block_offsets)
+        for raster_path in lulc_snapshot_list[1:]:
+            to_array, to_nodata = _read_block(raster_path, block_offsets)
 
             # This comparison assumes that our landcover rasters are of an
             # integer type.  When int matrices, we can compare directly to
@@ -184,6 +181,10 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
             transition_pairs = transition_pairs.union(
                 set(zip(from_array[valid_pixels].flatten(),
                         to_array[valid_pixels].flatten())))
+
+            # Swap the arrays around to use the current 'to_array', 'to_nodata'
+            # as the 'from_array', 'from_nodata' in the next iteration.
+            from_array, from_nodata = (to_array, to_nodata)
 
     # Mapping of whether the from, to landcover types are coastal blue carbon
     # habitats to the string carbon transition type.
