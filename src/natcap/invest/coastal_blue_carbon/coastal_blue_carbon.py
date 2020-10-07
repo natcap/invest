@@ -371,7 +371,8 @@ def execute(args):
         baseline_lulc_year: os.path.join(
             intermediate_dir,
             ALIGNED_LULC_RASTER_PATTERN.format(
-                snapshot_type='baseline', year=baseline_lulc_year, suffix=suffix))
+                snapshot_type='baseline', year=baseline_lulc_year,
+                suffix=suffix))
     }
 
     for snapshot_year in snapshots:
@@ -392,7 +393,7 @@ def execute(args):
     alignment_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(sorted(snapshots.values(),
-                     key=lambda x:x[0]),  # sort by snapshot year
+                     key=lambda x: x[0]),  # sort by snapshot year
               sorted(aligned_lulc_paths.values(),
                      key=lambda x: x[0]),  # sort by snapshot year
               ['near']*len(aligned_lulc_paths),
@@ -766,8 +767,8 @@ def execute_transition_analysis(args):
     Args:
         args['workspace_dir'] (string): The path to a workspace directory where
             outputs should be written.
-        args['results_suffix'] (string): If provided, a string suffix that will be
-            added to each output filename. Optional.
+        args['results_suffix'] (string): If provided, a string suffix that will
+            be added to each output filename. Optional.
         args['n_workers'] (int):  The number of workers that ``taskgraph`` may
             use.
         args['transition_years'] (set): A python set of int years in which a
