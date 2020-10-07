@@ -1829,7 +1829,7 @@ def validate(args, limit_to=None):
 
         for snapshot_year, snapshot_raster_path in snapshots.items():
             raster_error_message = validation.check_raster(
-                snapshot_raster_path, projected=True, projection_units='m')
+                snapshot_raster_path)
             if raster_error_message:
                 validation_warnings.append(
                     (['landcover_snapshot_csv'], (
