@@ -883,7 +883,7 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
 
         valid_mask = slice(None)
         if base_nodata is not None:
-            valid_mask = ~numpy.isclose(raster_block, base_nodata)
+            valid_mask = ~numpy.isclose(array, base_nodata)
         result[valid_mask] = array[valid_mask]
         if value_mean != 0:
             result[valid_mask] /= value_mean
