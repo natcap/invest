@@ -1241,8 +1241,6 @@ def _calculate_accumulation_over_time(
         annual_litter_matrix, n_years):
     """Calculate the total accumulation over a period of years.
 
-    This is a shortcut for adding up 3 rasters per year over n years.
-
     Args:
         annual_biomass_matrix (numpy.array): A float32 matrix of the annual
             rate of biomass accumulation.
