@@ -1600,7 +1600,15 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
     # maps of the spatial values per transition to the timeseries analysis
     # function.
     for index, row in table.iterrows():
-        from_lucode = lulc_class_to_lucode[row['lulc-class'].lower()]
+        # If the user is using the template, all rows have some sort of values
+        # in them until the blank row before the legend.  If we find that row,
+        # we can break out of the loop.
+        if row.isnull().all():
+            LOGGER.info(f"Halting transition table parsing on row {index}; "
+                        "blank line encountered.")
+            break
+
+        from_lucode = lulc_class_to_lucode[str(row['lulc-class']).lower()]
 
         for colname, field_value in row.items():
             if colname == 'lulc-class':
