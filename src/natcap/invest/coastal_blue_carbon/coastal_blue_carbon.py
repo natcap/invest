@@ -163,8 +163,7 @@ ARGS_SPEC = {
                 "to a raster file on disk representing the landcover raster "
                 "representing the state of the landscape in that year. "
                 "Landcover codes match those in the biophysical table and in "
-                "the landcover transitions table. All rasters represented in "
-                "this table must be linearly projected in meters."
+                "the landcover transitions table."
             ),
             "name": "Landcover Snapshots Table",
         },
