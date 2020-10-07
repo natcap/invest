@@ -48,17 +48,13 @@ invest_pyz = PYZ(invest_a.pure, invest_a.zipped_data, cipher=block_cipher)
 server_pyz = PYZ(server_a.pure, server_a.zipped_data, cipher=block_cipher)
 
 # Create the executable file.
-if is_darwin:
-    # add rtree dependency dynamic libraries from conda environment
-    invest_a.binaries += [
-        (os.path.basename(name), name, 'BINARY') for name in
-        glob.glob(os.path.join(conda_env, 'lib/libspatialindex*.dylib'))]
-elif is_linux:
+if not is_win:
     # add rtree dependency dynamic libraries from conda environment
     invest_a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
         glob.glob(os.path.join(conda_env, 'lib/libspatialindex*'))]
-elif is_win:
+    print(invest_a.binaries)
+else:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/
     # Supposed to gather the mscvr/p DLLs from the local system before
