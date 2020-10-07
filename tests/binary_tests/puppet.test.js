@@ -73,7 +73,7 @@ beforeAll(async () => {
     console.log(`${data}`)
   });
   // so we don't make the next fetch too early
-  await new Promise(resolve => setTimeout(resolve, 5000)) 
+  await new Promise(resolve => setTimeout(resolve, 120000)) 
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
   browser = await puppeteer.connect({

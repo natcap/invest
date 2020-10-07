@@ -119,9 +119,8 @@ jobs:
       run: npm run test-flask-app
 
     - name: Test electron app with puppeteer
-      uses: GabrielBB/xvfb-action@v1
-      with:
-        run: npm run test-electron-app
+      shell: bash -l {0}
+      run: npm run test-electron-app
     
     - name: Upload installer artifacts
       uses: actions/upload-artifact@v2-preview
