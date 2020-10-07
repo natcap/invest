@@ -392,10 +392,8 @@ def execute(args):
 
     alignment_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(sorted(snapshots.values(),
-                     key=lambda x: x[0]),  # sort by snapshot year
-              sorted(aligned_lulc_paths.values(),
-                     key=lambda x: x[0]),  # sort by snapshot year
+        args=([path for (year, path) in sorted(snapshots.items())],
+              [path for (year, path) in sorted(aligned_lulc_paths.items())],
               ['near']*len(aligned_lulc_paths),
               target_pixel_size, 'intersection'),
         hash_algorithm='md5',
