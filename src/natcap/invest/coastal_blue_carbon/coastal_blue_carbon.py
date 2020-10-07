@@ -1,5 +1,96 @@
 # -*- coding: utf-8 -*-
-"""InVEST Coastal Blue Carbon: Main Model."""
+"""InVEST Coastal Blue Carbon: Main Model.
+
+Implementation Notes
+--------------------
+
+Comparison with the Prior Implementation
+========================================
+
+This model is a timeseries analysis, where we iterate through each year in the
+timeseries and track the state of carbon over time: the state of carbon
+stocks, net sequestration, rates of accumulation, carbon emitted, etc, all for
+each relevant carbon pool.  A lot of files are produced in both the
+intermediate and output directories in the target workspace.
+
+While some of these operations could be summarized per transition (which would
+result in fewer files produced), this implementation avoids such summary.  This
+is because the implementation that this file replaces did just that, and there
+were a number of issues that arose from that implementation:
+
+    1. **Unbounded memory consumption**
+       This model has no upper bound on how many years the timeseries can
+       operate over. So even if we were to have each task operating on only
+       those years between transitions, even that number could be very large
+       and exhaust available memory. We had many issues with memory usage in
+       the prior model, and iterating over lots of files is the safest
+       general-case solution for a timeseries model with an unbounded number of
+       years.
+    2. **In practice, the intermediate rasters are useful for analyses**
+       The prior implementation wrote as few rasters out as it could, which
+       ultimately ended up making it harder for some of our partner
+       organizations to to the science they needed. By providing all these
+       intermediate rasters, we allow our users to do their own analytics and
+       summaries on how carbon stocks change over time, which would have been
+       game-changing to our colleagues in analyses past.
+    3. **Debugging multidimensional arrays is time-consuming and tricky**
+       The prior implementation used 3D arrays (m x n x n_years) for its
+       analysis, which was more concise to implement but so incredibly
+       difficult to debug when there were issues. If we were to only output a
+       few summary rasters per transition year, we would still have these 3D
+       arrays, and debugging would be much trickier. Admittedly, there's
+       probably a way to make all this much easier to debug than the prior
+       implementation, but even if we were to do so, we'd still have the
+       unbounded-array-size problem, mentioned in point 1.
+
+The implementation as stated plays it safe, writing out individual rasters per
+component per timestep.  There's a lot of bookkeeping as a result, but the
+final model is consistent with development standards, correct (according to the
+model's specification in the InVEST User's guide) and will be easier to
+maintain and debug as issues arise.
+
+"Advanced" Mode
+===============
+
+The Coastal Blue Carbon model as specified in the User's Guide is tied to the
+landcover classifications provided by the user, and only offers an interesting
+perspective on carbon stored when a landcover class transitions to another
+landcover class.  This approach seriously hampers the ability to model spatial
+carbon distributions.
+
+In response to this shortcoming, the model now offers an 'advanced' entrypoint,
+where a user can provide their own maps of spatial parameters, such as rates of
+accumulation, half-lives of carbon, and other parameters for finer-grained
+control.  See the docstring for ``execute_transition_analysis`` for more
+information.
+
+Units of Inputs and Outputs
+===========================
+
+The units of carbon in the model's inputs and outputs are, across the board,
+density of CO2-equivalent per hectare.  Megatonnes of CO2-equivalent per Ha are
+the units specified in the user's guide, but any such density could be used as
+no conversion of units takes place in the model.
+
+There has been some conversation within the Natural Capital Project staff of
+whether to convert this carbon density per hectare to carbon density per pixel,
+for consistency with the rest of InVEST (which often displays metrics per
+pixel), and also for easier aggregation of spatial metrics such as total carbon
+sequestered in the landscape.  The carbon density per hectare has been retained
+here for several reasons:
+
+    1. Many carbon scientists, including on the NatCap staff, prefer to work
+       directly with carbon densities.
+    2. Converting from CO2E/Ha to CO2E/pixel is an easy calculation should the
+       conversion be desired, and can be done via a raster calculator call in
+       any GIS software.
+    3. Using rates of CO2E/Ha allows for the model to operate on landscapes
+       where pixels might be non-square, or may vary in size over space such as
+       in lat/long coordinate systems.  In such systems, converting to units
+       per pixel would be nontrivial due to the area of a pixel varying across
+       the raster.  Thus, using rates per hectare enables the model to be used
+       across very large areas without modification.
+"""
 import logging
 import os
 
