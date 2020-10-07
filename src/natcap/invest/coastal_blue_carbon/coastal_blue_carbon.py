@@ -286,7 +286,8 @@ ARGS_SPEC = {
             "about": (
                 "The discount rate on future valuations of "
                 "sequestered carbon, compounded yearly.  A "
-                "value of 5 would represent a 5% discount."),
+                "value of 5 would represent a 5% discount, and -10 "
+                "would represent a -10% discount."),
         },
     }
 }
@@ -1138,7 +1139,8 @@ def _calculate_npv(
             share the same projected CRS and have identical dimensions.
         prices_by_year (dict): A dict mapping int years between the baseline
             year and the final year.
-        discount_rate (float): The discount rate (between 0 and 1).
+        discount_rate (float): The discount rate.  A rate of 0.1 indicates 10%
+            discount.
         baseline_year (int): The year of the baseline scenario.
         target_raster_years_and_paths (dict): A dict mapping int years to
             string paths indicating where the target rasters should be written.
