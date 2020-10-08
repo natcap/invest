@@ -53,7 +53,6 @@ if not is_win:
     invest_a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
         glob.glob(os.path.join(conda_env, 'lib/libspatialindex*'))]
-    print(invest_a.binaries)
 else:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/

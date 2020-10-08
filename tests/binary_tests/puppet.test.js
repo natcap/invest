@@ -18,7 +18,6 @@ const PORT = 9009;
 let binaryPath;
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
-  console.log(glob.sync('./dist/mac/*.app/Contents/MacOS/*'))
   binaryPath = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*')[0]
 } else if (process.platform === 'win32') {
   binaryPath = glob.sync('./dist/win-unpacked/InVEST*.exe')[0]

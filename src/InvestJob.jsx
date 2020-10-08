@@ -296,7 +296,6 @@ export default class InvestJob extends React.Component {
       jobStatus,
       logfile,
       logStdErr,
-      subprocessPID,
     } = this.state;
 
     const logDisabled = (!logfile);
