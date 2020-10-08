@@ -52,6 +52,7 @@ export default class LogTab extends React.Component {
     this.tail = null;
     this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
     this.tailLogfile = this.tailLogfile.bind(this);
+    this.unwatchLogfile = this.unwatchLogfile.bind(this);
   }
 
   componentDidMount() {
@@ -71,13 +72,8 @@ export default class LogTab extends React.Component {
   }
 
   componentWillUnmount() {
-    if (this.tail) {
-      try {
-        this.tail.unwatch();
-      } catch (error) {
-        logger.error(error.stack);
-      }
-    }
+    // This does not trigger on browser window close
+    this.unwatchLogfile()
   }
 
   tailLogfile(logfile) {
@@ -104,6 +100,17 @@ export default class LogTab extends React.Component {
 
   handleOpenWorkspace() {
     shell.showItemInFolder(this.props.logfile);
+  }
+
+  unwatchLogfile() {
+    if (this.tail) {
+      try {
+        logger.debug(`unwatching file: ${this.tail.filename}`);
+        this.tail.unwatch();
+      } catch (error) {
+        logger.error(error.stack);
+      }
+    }
   }
 
   render() {
@@ -133,6 +140,7 @@ export default class LogTab extends React.Component {
         </Alert>
       );
     } else if (jobStatus === 'error') {
+      this.unwatchLogfile();
       ModelStatusAlert = (
         <Alert className="py-4 mt-3" variant="danger">
           {this.props.logStdErr}
@@ -140,6 +148,7 @@ export default class LogTab extends React.Component {
         </Alert>
       );
     } else if (jobStatus === 'success') {
+      this.unwatchLogfile();
       ModelStatusAlert = (
         <Alert className="py-4 mt-3" variant="success">
           <span>Model Completed</span>
@@ -147,6 +156,7 @@ export default class LogTab extends React.Component {
         </Alert>
       );
     } else if (jobStatus === 'canceled') {
+      this.unwatchLogfile();
       ModelStatusAlert = (
         <Alert className="py-4 mt-3" variant="warning">
           <span>Run Canceled</span>

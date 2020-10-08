@@ -219,6 +219,7 @@ export default class InvestJob extends React.Component {
         job.logfile = await findMostRecentLogfile(job.workspace.directory);
         // TODO: handle case when job.logfile is still undefined?
         // Could be if some stdout is emitted before a logfile exists.
+        logger.debug(`invest logging to: ${job.logfile}`);
         job.status = 'running';
         this.setState(
           {
@@ -239,6 +240,7 @@ export default class InvestJob extends React.Component {
     // in which case it's useful to logger.debug too.
     let stderr = Object.assign('', this.state.logStdErr);
     this.investRun.stderr.on('data', (data) => {
+      logger.debug(`${data}`)
       stderr += `${data}`;
       this.setState({
         logStdErr: stderr,
