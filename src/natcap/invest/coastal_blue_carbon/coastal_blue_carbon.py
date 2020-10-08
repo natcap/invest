@@ -1530,7 +1530,7 @@ def _sum_n_rasters(
                 LOGGER.info(f'Summation {percent_complete}% complete')
                 last_log_time = time.time()
 
-            array = band.ReadAsArray(**block_info).astype(numpy.float32)
+            array = band.ReadAsArray(**block_info)
 
             if band_nodata is not None:
                 valid_pixels &= (~numpy.isclose(array, band_nodata))
@@ -1555,6 +1555,7 @@ def _sum_n_rasters(
     source_rasters = None
     band = None
 
+    target_band.ComputeStatistics(0)
     target_band = None
     target_raster = None
 
