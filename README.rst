@@ -39,6 +39,10 @@ Run ``make check`` to test if all required dependencies are installed on your sy
 OS-specific installation instructions are found either online at
 http://invest.readthedocs.io/en/latest/installing.html or locally at ``doc/api-docs/installing.rst``.
 
+.. note::
+    The ``make`` commands for InVEST require a BASH shell environment. Windows
+    users can use Git Bash within the Git for Windows suite. More infomration
+    can be found at https://gitforwindows.org
 
 NSIS-specific requirements
 ++++++++++++++++++++++++++
