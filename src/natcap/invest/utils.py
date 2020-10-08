@@ -482,11 +482,6 @@ def build_lookup_from_csv(
         KeyError
             If ``key_field`` is not present during ``set_index`` call.
     """
-    # Check if the file encoding is UTF-8 BOM first
-    encoding = None
-    if has_utf8_bom(table_path):
-        encoding = 'utf-8-sig'
-
     # Reassign to avoid mutation
     col_list = column_list
     # if a list of columns are provided to use and return, make sure
@@ -494,20 +489,19 @@ def build_lookup_from_csv(
     if col_list and key_field not in col_list:
         col_list.append(key_field)
 
-    table = pandas.read_csv(
-        table_path, sep=None, index_col=False, engine='python',
-        encoding=encoding)
-    # strip column names to prevent indexing errors
-    # when users accidentally include leading/trailing whitespace
-    table.columns = table.columns.str.strip()
+    table = read_csv_to_dataframe(
+        table_path, to_lower=to_lower, sep=None, index_col=False,
+        engine='python')
 
     # if 'to_lower`, case handling is done before trying to access the data.
+    # the columns are stripped of leading/trailing whitespace in
+    # ``read_csv_to_dataframe``, and also lowercased if ``to_lower`` so we only
+    # need to convert the rest of the table.
     if to_lower:
         key_field = key_field.lower()
         # lowercase column names
         if col_list:
             col_list = [col.lower() for col in col_list]
-        table.columns = table.columns.str.lower()
         # lowercase values
         table = table.applymap(
             lambda x: x.lower() if isinstance(x, str) else x)
