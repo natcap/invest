@@ -20,11 +20,11 @@ ifeq ($(OS),Windows_NT)
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_SCRIPTS = $(ENV)\Scripts
 	ENV_ACTIVATE = $(ENV_SCRIPTS)\activate
-	CP := cp 
+	CP := cp
 	COPYDIR := $(CP) -r
 	MKDIR := mkdir -p
-	RM := rm -r
-	RMDIR := $(RM)
+	RM := rm
+	RMDIR := $(RM) -r
 	# Windows doesn't install a python3 binary, just python.
 	PYTHON = python
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
@@ -37,7 +37,7 @@ ifeq ($(OS),Windows_NT)
 	CONDA := conda.bat
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	.DEFAULT_GOAL := windows_installer
-	RM_DATA_DIR := $(RM) $(DATA_DIR)
+	RM_DATA_DIR := $(RMDIR) $(DATA_DIR)
 	/ := '\'
 else
 	NULL := /dev/null
@@ -48,12 +48,12 @@ else
 	CP := cp
 	COPYDIR := $(CP) -r
 	MKDIR := mkdir -p
-	RM := rm -r
-	RMDIR := $(RM)
+	RM := rm
+	RMDIR := $(RM) -r
 	/ := /
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python3
-	RM_DATA_DIR := yes | rm -r $(DATA_DIR)
+	RM_DATA_DIR := yes | $(RMDIR) $(DATA_DIR)
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
 		.DEFAULT_GOAL := mac_installer
@@ -252,8 +252,8 @@ $(DIST_DIR)/natcap.invest%.zip: | $(DIST_DIR)
 # on Windows as the .exe extension is assumed.
 binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
-	-rm -r $(BUILD_DIR)/pyi-build
-	-rm -r $(INVEST_BINARIES_DIR)
+	-$(RMDIR) $(BUILD_DIR)/pyi-build
+	-$(RMDIR) $(INVEST_BINARIES_DIR)
 	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
 	$(CONDA) list --export > $(INVEST_BINARIES_DIR)/package_versions.txt
 	$(INVEST_BINARIES_DIR)/invest list
@@ -273,7 +273,7 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
 	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
-	-rm -r $(USERGUIDE_HTML_DIR)
+	-$(RMDIR) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
 $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
@@ -330,7 +330,7 @@ $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
 WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(INSTALLER_NAME_FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 windows_installer: $(WINDOWS_INSTALLER_FILE)
 $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vcredist_x86.exe | $(GIT_SAMPLE_DATA_REPO_PATH)
-	-rm $(WINDOWS_INSTALLER_FILE)
+	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
@@ -356,15 +356,15 @@ signcode:
 	# On some OS (including our build container), osslsigncode fails with Bus error if we overwrite the binary when signing.
 	osslsigncode -certs $(BUILD_DIR)/$(CERT_FILE) -key $(BUILD_DIR)/$(KEY_FILE) -pass $(CERT_KEY_PASS) -in $(BIN_TO_SIGN) -out "signed.exe"
 	mv "signed.exe" $(BIN_TO_SIGN)
-	rm $(BUILD_DIR)/$(CERT_FILE)
-	rm $(BUILD_DIR)/$(KEY_FILE)
+	$(RM) $(BUILD_DIR)/$(CERT_FILE)
+	$(RM) $(BUILD_DIR)/$(KEY_FILE)
 	@echo "Installer was signed with osslsigncode"
 
 P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
 signcode_windows:
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
-	-rm $(BUILD_DIR)/$(P12_FILE)
+	-$(RM) $(BUILD_DIR)/$(P12_FILE)
 	@echo "Installer was signed with signtool"
 
 deploy:
