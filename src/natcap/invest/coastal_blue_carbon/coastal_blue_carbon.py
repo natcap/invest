@@ -93,6 +93,7 @@ here for several reasons:
 """
 import logging
 import os
+import time
 
 import numpy
 import pygeoprocessing
@@ -1497,6 +1498,20 @@ def _sum_n_rasters(
     target_raster = gdal.OpenEx(
         target_raster_path, gdal.GA_Update | gdal.OF_RASTER)
     target_band = target_raster.GetRasterBand(1)
+
+    source_rasters = []
+    for raster_path in raster_path_list:
+        raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
+        band = raster.GetRasterBand(1)
+        band_nodata = band.GetNoDataValue()
+        source_rasters.append((raster, band, band_nodata))
+
+    n_pixels_to_process = (
+        (target_raster.RasterXSize * target_raster.RasterYSize) *
+        len(source_rasters))
+    n_pixels_processed = 0
+    last_log_time = time.time()
+
     for block_info in pygeoprocessing.iterblocks(
             (raster_path_list[0], 1), offset_only=True):
 
@@ -1508,10 +1523,12 @@ def _sum_n_rasters(
         # Assume everything is valid until proven otherwise
         valid_pixels = numpy.ones(sum_array.shape, dtype=numpy.bool)
         pixels_touched = numpy.zeros(sum_array.shape, dtype=numpy.bool)
-        for raster_path in raster_path_list:
-            raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
-            band = raster.GetRasterBand(1)
-            band_nodata = band.GetNoDataValue()
+        for _, band, band_nodata in source_rasters:
+            if time.time() - last_log_time >= 5.0:
+                percent_complete = round(
+                    n_pixels_processed / n_pixels_to_process, 4)*100
+                LOGGER.info(f'Summation {percent_complete}% complete')
+                last_log_time = time.time()
 
             array = band.ReadAsArray(**block_info).astype(numpy.float32)
 
@@ -1520,6 +1537,7 @@ def _sum_n_rasters(
 
             sum_array[valid_pixels] += array[valid_pixels]
             pixels_touched[valid_pixels] = 1
+            n_pixels_processed += sum_array.size
 
         if allow_pixel_stacks_with_nodata:
             sum_array[~pixels_touched] = NODATA_FLOAT32
@@ -1528,6 +1546,14 @@ def _sum_n_rasters(
 
         target_band.WriteArray(
             sum_array, block_info['xoff'], block_info['yoff'])
+
+    LOGGER.info('Summation 100.00% complete')
+
+    # Be as explicit as possible in closing these attributes
+    for raster_tuple in source_rasters:
+        raster_tuple = None
+    source_rasters = None
+    band = None
 
     target_band = None
     target_raster = None
