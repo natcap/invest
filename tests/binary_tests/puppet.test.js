@@ -68,7 +68,7 @@ beforeAll(async () => {
     console.log(`${data}`)
   });
   // so we don't make the next fetch too early
-  await new Promise(resolve => setTimeout(resolve, 5000)) 
+  await new Promise(resolve => setTimeout(resolve, 5000))
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
   browser = await puppeteer.connect({
@@ -86,8 +86,10 @@ afterAll(async () => {
     console.log(binaryPath);
     console.error(error);
   }
+  await new Promise(resolve => setTimeout(resolve, 1000))
   cleanupDir(TMP_DIR);
-  electronProcess.kill();
+  const wasKilled = electronProcess.kill();
+  console.log(`electron process was killed: ${wasKilled}`)
 })
 
 test('Run a real invest model', async () => {

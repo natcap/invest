@@ -73,7 +73,7 @@ export default class LogTab extends React.Component {
 
   componentWillUnmount() {
     // This does not trigger on browser window close
-    this.unwatchLogfile()
+    this.unwatchLogfile();
   }
 
   tailLogfile(logfile) {
