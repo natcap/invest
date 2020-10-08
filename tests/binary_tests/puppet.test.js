@@ -10,7 +10,7 @@ import { getDocument, queries, waitFor } from 'pptr-testing-library';
 import { cleanupDir } from '../../src/utils';
 import { getFlaskIsReady } from '../../src/server_requests';
 
-jest.setTimeout(40000) // This test takes ~15 seconds, but longer in CI
+jest.setTimeout(120000) // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
 
 // For ease of automated testing, run the app from the 'unpacked' directory
