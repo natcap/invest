@@ -303,9 +303,9 @@ class TestCBC2(unittest.TestCase):
     def test_emissions(self):
         """CBC: Check emissions calculations."""
         volume_disturbed_carbon = numpy.array(
-            [[5.5, coastal_blue_carbon.NODATA_FLOAT32]], dtype=numpy.float32)
+            [[5.5, coastal_blue_carbon.NODATA_FLOAT32_MIN]], dtype=numpy.float32)
         year_last_disturbed = numpy.array(
-            [[10, coastal_blue_carbon.NODATA_UINT16]], dtype=numpy.uint16)
+            [[10, coastal_blue_carbon.NODATA_UINT16_MAX]], dtype=numpy.uint16)
         half_life = numpy.array([[7.5, 7.5]], dtype=numpy.float32)
         current_year = 15
 
@@ -315,7 +315,7 @@ class TestCBC2(unittest.TestCase):
 
         # Calculated by hand.
         expected_array = numpy.array([
-            [0.3058625, coastal_blue_carbon.NODATA_FLOAT32]],
+            [0.3058625, coastal_blue_carbon.NODATA_FLOAT32_MIN]],
             dtype=numpy.float32)
         numpy.testing.assert_allclose(
             result_matrix, expected_array, rtol=1E-6)
@@ -340,7 +340,7 @@ class TestCBC2(unittest.TestCase):
         coastal_blue_carbon._sum_n_rasters(
             [raster_a_path, raster_b_path], target_path)
 
-        nodata = coastal_blue_carbon.NODATA_FLOAT32
+        nodata = coastal_blue_carbon.NODATA_FLOAT32_MIN
         try:
             raster = gdal.OpenEx(target_path)
             numpy.testing.assert_allclose(

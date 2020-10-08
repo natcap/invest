@@ -110,8 +110,8 @@ LOGGER = logging.getLogger(__name__)
 POOL_SOIL = 'soil'
 POOL_BIOMASS = 'biomass'
 POOL_LITTER = 'litter'
-NODATA_FLOAT32 = float(numpy.finfo(numpy.float32).min)
-NODATA_UINT16 = int(numpy.iinfo(numpy.uint16).max)
+NODATA_FLOAT32_MIN = float(numpy.finfo(numpy.float32).min)
+NODATA_UINT16_MAX = int(numpy.iinfo(numpy.uint16).max)
 
 # Rasters written to the intermediate directory
 STOCKS_RASTER_PATTERN = 'stocks-{pool}-{year}{suffix}.tif'
@@ -433,7 +433,7 @@ def execute(args):
                     in biophysical_parameters.items()},
                 stock_rasters[baseline_lulc_year][pool],
                 gdal.GDT_Float32,
-                NODATA_FLOAT32),
+                NODATA_FLOAT32_MIN),
             dependent_task_list=[alignment_task],
             target_path_list=[stock_rasters[baseline_lulc_year][pool]],
             task_name=f'Mapping initial {pool} carbon stocks')
@@ -452,7 +452,7 @@ def execute(args):
                     in biophysical_parameters.items()},
                 yearly_accum_rasters[pool],
                 gdal.GDT_Float32,
-                NODATA_FLOAT32),
+                NODATA_FLOAT32_MIN),
             dependent_task_list=[alignment_task],
             target_path_list=[yearly_accum_rasters[pool]],
             task_name=(
@@ -493,7 +493,7 @@ def execute(args):
               _calculate_accumulation_over_time,
               total_net_sequestration_for_baseline_period,
               gdal.GDT_Float32,
-              NODATA_FLOAT32),
+              NODATA_FLOAT32_MIN),
         target_path_list=[total_net_sequestration_for_baseline_period],
         task_name=(
             'Calculate accumulation between baseline year and final year'))
@@ -524,7 +524,7 @@ def execute(args):
                         in biophysical_parameters.items()},
                     halflife_rasters[current_transition_year][pool],
                     gdal.GDT_Float32,
-                    NODATA_FLOAT32),
+                    NODATA_FLOAT32_MIN),
                 dependent_task_list=[alignment_task],
                 target_path_list=[
                     halflife_rasters[current_transition_year][pool]],
@@ -587,7 +587,7 @@ def execute(args):
                    biophysical_parameters.items()},
                   yearly_accum_rasters[current_transition_year][POOL_LITTER],
                   gdal.GDT_Float32,
-                  NODATA_FLOAT32),
+                  NODATA_FLOAT32_MIN),
             dependent_task_list=[alignment_task],
             target_path_list=[
                 yearly_accum_rasters[current_transition_year][pool]],
@@ -749,7 +749,7 @@ def execute_transition_analysis(args):
             coordinate system and have identical dimensions and pixel sizes.
         * All rasters provided to this function are assumed to be 32-bit
             floating-point rasters with a nodata value matching this module's
-            ``NODATA_FLOAT32`` attribute.
+            ``NODATA_FLOAT32_MIN`` attribute.
         * All data structures provided to this function that use pools as an
             index assume that the pools are strings matching the ``POOL_SOIL``,
             ``POOL_BIOMASS`` and ``POOL_LITTER`` attributes of this module.
@@ -917,7 +917,7 @@ def execute_transition_analysis(args):
                           _calculate_disturbance_volume,
                           disturbance_vol_rasters[year][pool],
                           gdal.GDT_Float32,
-                          NODATA_FLOAT32),
+                          NODATA_FLOAT32_MIN),
                     dependent_task_list=(
                         current_disturbance_vol_dependent_tasks),
                     target_path_list=[
@@ -972,7 +972,7 @@ def execute_transition_analysis(args):
                     _calculate_emissions,
                     emissions_rasters[year][pool],
                     gdal.GDT_Float32,
-                    NODATA_FLOAT32),
+                    NODATA_FLOAT32_MIN),
                 dependent_task_list=[
                     current_disturbance_vol_tasks[pool],
                     current_year_of_disturbance_tasks[pool]],
@@ -1112,19 +1112,19 @@ def _calculate_disturbance_volume(disturbance_magnitude_matrix, stock_matrix):
 
     Args:
         disturbance_magnitude_matrix (numpy.array): A float32 matrix of the
-            magnitude of a disturbance.  Nodata values must be NODATA_FLOAT32.
+            magnitude of a disturbance.  Nodata values must be NODATA_FLOAT32_MIN.
         stock_matrix (numpy.array): A float32 matrix of the stocks present at
-            the time of disturbance.  Nodata values must be NODATA_FLOAT32.
+            the time of disturbance.  Nodata values must be NODATA_FLOAT32_MIN.
 
     Returns:
         A numpy float32 matrix of disturbance volume.
     """
     disturbed_carbon_volume = numpy.empty(disturbance_magnitude_matrix.shape,
                                           dtype=numpy.float32)
-    disturbed_carbon_volume[:] = NODATA_FLOAT32
+    disturbed_carbon_volume[:] = NODATA_FLOAT32_MIN
     valid_pixels = (~numpy.isclose(disturbance_magnitude_matrix,
-                                   NODATA_FLOAT32) &
-                    ~numpy.isclose(stock_matrix, NODATA_FLOAT32))
+                                   NODATA_FLOAT32_MIN) &
+                    ~numpy.isclose(stock_matrix, NODATA_FLOAT32_MIN))
     disturbed_carbon_volume[valid_pixels] = (
         disturbance_magnitude_matrix[valid_pixels] *
         stock_matrix[valid_pixels])
@@ -1168,12 +1168,12 @@ def _calculate_npv(
         def _npv(*sequestration_matrices):
             npv = numpy.empty(sequestration_matrices[0].shape,
                               dtype=numpy.float32)
-            npv[:] = NODATA_FLOAT32
+            npv[:] = NODATA_FLOAT32_MIN
 
             matrix_sum = numpy.zeros(npv.shape, dtype=numpy.float32)
             valid_pixels = numpy.ones(npv.shape, dtype=numpy.bool)
             for matrix in sequestration_matrices:
-                valid_pixels &= ~numpy.isclose(matrix, NODATA_FLOAT32)
+                valid_pixels &= ~numpy.isclose(matrix, NODATA_FLOAT32_MIN)
                 matrix_sum[valid_pixels] += matrix[valid_pixels]
 
             npv[valid_pixels] = (
@@ -1186,7 +1186,7 @@ def _calculate_npv(
 
         pygeoprocessing.raster_calculator(
             raster_path_band_tuples, _npv, target_raster_path,
-            gdal.GDT_Float32, NODATA_FLOAT32)
+            gdal.GDT_Float32, NODATA_FLOAT32_MIN)
 
 
 def _calculate_stocks_after_baseline_period(
@@ -1222,7 +1222,7 @@ def _calculate_stocks_after_baseline_period(
 
     def _calculate_accumulation_over_years(baseline_matrix, accum_matrix):
         target_matrix = numpy.empty(baseline_matrix.shape, dtype=numpy.float32)
-        target_matrix[:] = NODATA_FLOAT32
+        target_matrix[:] = NODATA_FLOAT32_MIN
 
         valid_pixels = (~numpy.isclose(baseline_matrix, baseline_nodata) &
                         ~numpy.isclose(accum_matrix, accum_nodata))
@@ -1237,7 +1237,7 @@ def _calculate_stocks_after_baseline_period(
         [(baseline_stock_raster_path, 1),
          (yearly_accumulation_raster_path, 1)],
         _calculate_accumulation_over_years, target_raster_path,
-        gdal.GDT_Float32, NODATA_FLOAT32)
+        gdal.GDT_Float32, NODATA_FLOAT32_MIN)
 
 
 def _calculate_accumulation_over_time(
@@ -1262,12 +1262,12 @@ def _calculate_accumulation_over_time(
     """
     target_matrix = numpy.empty(annual_biomass_matrix.shape,
                                 dtype=numpy.float32)
-    target_matrix[:] = NODATA_FLOAT32
+    target_matrix[:] = NODATA_FLOAT32_MIN
 
     valid_pixels = (
-        ~numpy.isclose(annual_biomass_matrix, NODATA_FLOAT32) &
-        ~numpy.isclose(annual_soil_matrix, NODATA_FLOAT32) &
-        ~numpy.isclose(annual_litter_matrix, NODATA_FLOAT32))
+        ~numpy.isclose(annual_biomass_matrix, NODATA_FLOAT32_MIN) &
+        ~numpy.isclose(annual_soil_matrix, NODATA_FLOAT32_MIN) &
+        ~numpy.isclose(annual_litter_matrix, NODATA_FLOAT32_MIN))
 
     target_matrix[valid_pixels] = (
         (annual_biomass_matrix[valid_pixels] +
@@ -1317,7 +1317,7 @@ def _track_latest_transition_year(
         """Raster_calculator op for tracking the latest transition year."""
         target_matrix = numpy.empty(
             current_disturbance_vol_matrix.shape, dtype=numpy.uint16)
-        target_matrix[:] = NODATA_UINT16
+        target_matrix[:] = NODATA_UINT16_MAX
 
         # If this is None, then we don't have any previously disturbed pixels
         # and everything disturbed in this timestep is newly disturbed.
@@ -1344,7 +1344,7 @@ def _track_latest_transition_year(
     pygeoprocessing.raster_calculator(
         [(current_disturbance_vol_raster_path, 1),
          known_transition_years_tuple], _track_transition_year, target_path,
-        gdal.GDT_UInt16, NODATA_UINT16)
+        gdal.GDT_UInt16, NODATA_UINT16_MAX)
 
 
 def _calculate_net_sequestration(
@@ -1406,13 +1406,13 @@ def _calculate_net_sequestration(
             valid_emissions_pixels] * -1
 
         invalid_pixels = ~(valid_accumulation_pixels | valid_emissions_pixels)
-        target_matrix[invalid_pixels] = NODATA_FLOAT32
+        target_matrix[invalid_pixels] = NODATA_FLOAT32_MIN
         return target_matrix
 
     pygeoprocessing.raster_calculator(
         [(accumulation_raster_path, 1), (emissions_raster_path, 1)],
         _record_sequestration, target_raster_path, gdal.GDT_Float32,
-        NODATA_FLOAT32)
+        NODATA_FLOAT32_MIN)
 
 
 def _calculate_emissions(
@@ -1434,15 +1434,15 @@ def _calculate_emissions(
     """
     emissions_matrix = numpy.empty(
         carbon_disturbed_matrix.shape, dtype=numpy.float32)
-    emissions_matrix[:] = NODATA_FLOAT32
+    emissions_matrix[:] = NODATA_FLOAT32_MIN
 
     # Landcovers with a carbon half-life of 0 will be assumed to have no
     # emissions.
     zero_half_life = numpy.isclose(carbon_half_life_matrix, 0.0)
 
     valid_pixels = (
-        (~numpy.isclose(carbon_disturbed_matrix, NODATA_FLOAT32)) &
-        (year_of_last_disturbance_matrix != NODATA_UINT16) &
+        (~numpy.isclose(carbon_disturbed_matrix, NODATA_FLOAT32_MIN)) &
+        (year_of_last_disturbance_matrix != NODATA_UINT16_MAX) &
         (~zero_half_life))
 
     # Emissions happen immediately.
@@ -1493,7 +1493,7 @@ def _sum_n_rasters(
                 target_raster_path)
     pygeoprocessing.new_raster_from_base(
         raster_path_list[0], target_raster_path, gdal.GDT_Float32,
-        [NODATA_FLOAT32])
+        [NODATA_FLOAT32_MIN])
 
     target_raster = gdal.OpenEx(
         target_raster_path, gdal.GA_Update | gdal.OF_RASTER)
@@ -1540,9 +1540,9 @@ def _sum_n_rasters(
             n_pixels_processed += sum_array.size
 
         if allow_pixel_stacks_with_nodata:
-            sum_array[~pixels_touched] = NODATA_FLOAT32
+            sum_array[~pixels_touched] = NODATA_FLOAT32_MIN
         else:
-            sum_array[~valid_pixels] = NODATA_FLOAT32
+            sum_array[~valid_pixels] = NODATA_FLOAT32_MIN
 
         target_band.WriteArray(
             sum_array, block_info['xoff'], block_info['yoff'])
@@ -1733,7 +1733,7 @@ def _reclassify_accumulation_transition(
         """Pygeoprocessing op to reclassify accumulation."""
         output_matrix = numpy.empty(landuse_transition_from_matrix.shape,
                                     dtype=numpy.float32)
-        output_matrix[:] = NODATA_FLOAT32
+        output_matrix[:] = NODATA_FLOAT32_MIN
 
         valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
                                   dtype=numpy.bool)
@@ -1753,7 +1753,7 @@ def _reclassify_accumulation_transition(
             (landuse_transition_to_raster, 1),
             (accumulation_rate_matrix, 'raw')],
         _reclassify_accumulation, target_raster_path, gdal.GDT_Float32,
-        NODATA_FLOAT32)
+        NODATA_FLOAT32_MIN)
 
 
 def _reclassify_disturbance_magnitude(
@@ -1795,7 +1795,7 @@ def _reclassify_disturbance_magnitude(
         """Pygeoprocessing op to reclassify disturbances."""
         output_matrix = numpy.empty(landuse_transition_from_matrix.shape,
                                     dtype=numpy.float32)
-        output_matrix[:] = NODATA_FLOAT32
+        output_matrix[:] = NODATA_FLOAT32_MIN
 
         valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
                                   dtype=numpy.bool)
@@ -1815,7 +1815,7 @@ def _reclassify_disturbance_magnitude(
     pygeoprocessing.raster_calculator(
         [(landuse_transition_from_raster, 1),
             (landuse_transition_to_raster, 1)], _reclassify_disturbance,
-        target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32)
+        target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32_MIN)
 
 
 def _extract_snapshots_from_table(csv_path):
