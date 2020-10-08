@@ -90,7 +90,7 @@ def make_lulc_raster(lulc_ras_path):
         None.
     """
     size = 100
-    lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
+    lulc_array = numpy.zeros((size, size), dtype=numpy.int16)
     lulc_array[size // 2:, :] = 1
     make_raster_from_array(lulc_array, lulc_ras_path)
 
@@ -764,7 +764,10 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         lulc_new_path = os.path.join(self.workspace_dir, 'lulc_new.tif')
         lulc_info = pygeoprocessing.get_raster_info(args['lulc_raster_path'])
         lulc_array = gdal.OpenEx(args['lulc_raster_path']).ReadAsArray()
-        lulc_array[0][0] = 2
+        lulc_array[0][0] = 321
+        # set a nodata value to make sure nodatas are handled correctly when
+        # reclassifying
+        lulc_array[0][1] = lulc_info['nodata'][0]
         pygeoprocessing.numpy_array_to_raster(
             lulc_array, lulc_info['nodata'][0], lulc_info['pixel_size'], 
             (lulc_info['geotransform'][0], lulc_info['geotransform'][3]), 
@@ -777,7 +780,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             seasonal_water_yield.execute(args)
         self.assertTrue(
             ("The missing values found in the LULC raster but not the"
-             " table are: [2]") in str(context.exception))
+             " table are: [321]") in str(context.exception))
 
     def test_user_recharge(self):
         """SWY user recharge regression test on sample data.
