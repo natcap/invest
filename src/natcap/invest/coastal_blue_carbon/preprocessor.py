@@ -140,13 +140,13 @@ def execute(args):
         dependent_task_list=[alignment_task],
         task_name='Determine transitions and write transition table')
 
-    # Creating this table should be cheap, so it's not in a task.
-    # This is only likely to be expensive if the user provided a landcover
-    # lookup with many many rows. If that happens, this tool will have other
-    # problems (like exploding memory in the transition table creation).
     target_biophysical_table_path = os.path.join(
         output_dir, BIOPHYSICAL_TABLE.format(suffix=suffix))
-    _create_biophysical_table(landcover_table, target_biophysical_table_path)
+    _ = task_graph.add_task(
+        func=_create_biophysical_table,
+        args=(landcover_table, target_biophysical_table_path),
+        target_path_list=[target_biophysical_table_path],
+        task_name='Write biophysical table template')
 
     task_graph.close()
     task_graph.join()
