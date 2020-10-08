@@ -813,10 +813,13 @@ def execute_transition_analysis(args):
     yearly_accum_rasters = args['annual_rate_of_accumulation_rasters']
 
     prices = None
-    if args.get('carbon_prices_per_year', None):
-        prices = {int(year): float(price)
-                  for (year, price) in args['carbon_prices_per_year'].items()}
-    discount_rate = float(args['discount_rate'])
+    discount_rate = None
+    do_economic_analysis = args.get('do_economic_analysis', False)
+    if do_economic_analysis:
+        if args.get('carbon_prices_per_year', None):
+            prices = {int(year): float(price)
+                      for (year, price) in args['carbon_prices_per_year'].items()}
+        discount_rate = float(args['discount_rate'])
     baseline_lulc_year = int(args['baseline_lulc_year'])
 
     stock_rasters = {
@@ -1078,25 +1081,26 @@ def execute_transition_analysis(args):
         task_name=(
              'Calculate total net carbon sequestration across all years'))
 
-    # Calculate Net Present Value for each of the transition years, relative to
-    # the baseline.
-    target_npv_paths = {}
-    for transition_year in (
-            sorted(set(transition_years).union(set([final_year])))[1:]):
-        target_npv_paths[transition_year] = os.path.join(
-            output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
-                year=transition_year, suffix=suffix))
-    _ = task_graph.add_task(
-        func=_calculate_npv,
-        args=(summary_net_sequestration_raster_paths,
-              prices,
-              discount_rate,
-              baseline_lulc_year,
-              target_npv_paths),
-        dependent_task_list=summary_net_sequestration_tasks,
-        target_path_list=list(target_npv_paths.values()),
-        task_name=(
-            'Calculate total net carbon sequestration across all years'))
+    if do_economic_analysis:
+        # Calculate Net Present Value for each of the transition years, relative to
+        # the baseline.
+        target_npv_paths = {}
+        for transition_year in (
+                sorted(set(transition_years).union(set([final_year])))[1:]):
+            target_npv_paths[transition_year] = os.path.join(
+                output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
+                    year=transition_year, suffix=suffix))
+        _ = task_graph.add_task(
+            func=_calculate_npv,
+            args=(summary_net_sequestration_raster_paths,
+                  prices,
+                  discount_rate,
+                  baseline_lulc_year,
+                  target_npv_paths),
+            dependent_task_list=summary_net_sequestration_tasks,
+            target_path_list=list(target_npv_paths.values()),
+            task_name=(
+                'Calculate total net carbon sequestration across all years'))
 
     task_graph.close()
     task_graph.join()
@@ -1563,7 +1567,8 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
     lulc_class_to_lucode = {}
     max_lucode = 0
     for (lucode, values) in biophysical_dict.items():
-        lulc_class_to_lucode[values['lulc-class']] = lucode
+        lulc_class_to_lucode[
+            str(values['lulc-class']).strip().lower()] = lucode
         max_lucode = max(max_lucode, lucode)
 
     # Load up a sparse matrix with the transitions to save on memory usage.
@@ -1599,13 +1604,32 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
                         "blank line encountered.")
             break
 
-        from_lucode = lulc_class_to_lucode[str(row['lulc-class']).lower()]
+        # Strip any whitespace to eliminate leading/trailing whitespace
+        row = row.str.strip()
+
+        try:
+            from_colname = str(row['lulc-class']).lower()
+            from_lucode = lulc_class_to_lucode[from_colname]
+        except KeyError:
+            raise ValueError("The transition table's 'lulc-class' column has "
+                             f"a value, '{from_colname}', that was expected "
+                             "in the biophysical table but could not be "
+                             "found.")
 
         for colname, field_value in row.items():
-            if colname == 'lulc-class':
+            to_colname = str(colname).strip().lower()
+
+            # Skip the top row, only contains headers.
+            if to_colname == 'lulc-class':
                 continue
 
-            to_lucode = lulc_class_to_lucode[colname.lower()]
+            try:
+                to_lucode = lulc_class_to_lucode[to_colname]
+            except KeyError:
+                raise ValueError("The transition table's header row has a "
+                                 f"column name, '{to_colname}', that was "
+                                 "expected in the biophysical table, but "
+                                 "could not be found.")
 
             # Only set values where the transition HAS a value.
             # Takes advantage of the sparse characteristic of the model.
