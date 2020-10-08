@@ -34,6 +34,8 @@ def execute(args):
     --Biophysical Arguments--
     args: a python dictionary containing the following data:
     args['workspace_dir']- The directory in which to place all result files.
+    args['results_suffix'] (string): (optional) string to append to any
+        output file names
     args['ff_farm_file']- An open shape file containing the locations of
         individual fisheries
     args['farm_ID']- column heading used to describe individual farms. Used to
@@ -82,13 +84,14 @@ def execute(args):
     """
     LOGGER.debug("FROM CORE: %s" % args['farm_op_dict'])
     output_dir = os.path.join(args['workspace_dir'], 'output')
+    file_suffix = args['results_suffix']
 
     cycle_history = calc_farm_cycles(
         args['outplant_buffer'], args['g_param_a'], args['g_param_b'],
         args['g_param_tau'], args['water_temp_dict'], args['farm_op_dict'],
         float(args['duration']))
 
-    out_path = os.path.join(output_dir, 'Finfish_Harvest.shp')
+    out_path = os.path.join(output_dir, f'Finfish_Harvest{file_suffix}.shp')
     if os.path.isfile(out_path):
         # Remove so we can re-create.
         os.remove(out_path)
@@ -162,8 +165,9 @@ def execute(args):
         uncertainty_stats = compute_uncertainty_data(
             args, output_dir)
 
+    html_uri = os.path.join(output_dir, f"Harvest_Results{file_suffix}.html")
     create_HTML_table(
-        output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, farms_npv,
+        html_uri, args, cycle_history, sum_hrv_weight, hrv_weight, farms_npv,
         value_history, uncertainty_stats)
 
 
@@ -489,13 +493,12 @@ def do_monte_carlo_simulation(args):
     return results
 
 
-def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
+def create_HTML_table(output_html_path, args, cycle_history, sum_hrv_weight,
                       hrv_weight, farms_npv, value_history,
                       uncertainty_stats):
     """
     Inputs:
-        output_dir: The directory in which we will be creating our .html file
-            output.
+        output_html_path: The output html file path.
         cycle_history: dictionary mapping farm ID->list of tuples, each of
             which contains 3 things- (day of outplanting, day of harvest,
                 harvest weight of a single fish in grams)
@@ -529,9 +532,7 @@ def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
 
         Returns nothing.
     """
-    html_uri = os.path.join(output_dir,
-                            ("Harvest_Results.html"))
-    doc = html.HTMLDocument(html_uri, 'Marine InVEST',
+    doc = html.HTMLDocument(output_html_path, 'Marine InVEST',
                             'Aquaculture Model (Finfish Harvest)')
 
     doc.write_paragraph(
