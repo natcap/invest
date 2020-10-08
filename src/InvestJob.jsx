@@ -206,7 +206,7 @@ export default class InvestJob extends React.Component {
           // process.kill(-this.investRun.pid, 'SIGTERM'); // does not kill
           // this.investRun.kill(); // does not kill
           // This kills, but no chance to handle it and show 'Run Cancelled'
-          exec(`taskkill /pid ${this.investRun.pid} /t /f`)
+          exec(`taskkill /pid ${this.investRun.pid} /t /f`);
           // exec(`taskkill /pid ${this.investRun.pid} /t`) // does not kill
         }
       };
