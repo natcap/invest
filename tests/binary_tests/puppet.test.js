@@ -3,7 +3,7 @@ import path from 'path';
 import glob from 'glob';
 import fetch from 'node-fetch';
 import { remote } from 'electron';
-import { spawn, spawnSync } from 'child_process';
+import { spawn } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
@@ -86,8 +86,18 @@ afterAll(async () => {
     console.log(binaryPath);
     console.error(error);
   }
-  await new Promise(resolve => setTimeout(resolve, 1000))
   cleanupDir(TMP_DIR);
+  // I thought this business would be necessary to kill the spawned shell
+  // process running electron - since that's how we kill a similar spawned
+  // subprocess in the app, but actually it is not.
+  // if (electronProcess.pid) {
+  //   console.log(electronProcess.pid)
+  //   if (process.platform !== 'win32') {
+  //     process.kill(-electronProcess.pid, 'SIGTERM');
+  //   } else {
+  //     exec(`taskkill /pid ${electronProcess.pid} /t /f`)
+  //   }
+  // }
   const wasKilled = electronProcess.kill();
   console.log(`electron process was killed: ${wasKilled}`)
 })
@@ -134,8 +144,8 @@ test('Run a real invest model', async () => {
   cancelButton.click();
   await waitFor(async () => {
     expect(await findByText(doc, 'Open Workspace'));
-    // Not working on Windows because taskkill does not
-    // give the app a chance to handle the signal
-    // expect(await findByText(doc, 'Run Canceled'));
+    // Failing on Windows because taskkill does not
+    // give the app a chance to handle the signal:
+    expect(await findByText(doc, 'Run Canceled'));
   })
 })
