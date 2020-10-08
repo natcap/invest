@@ -1527,7 +1527,7 @@ def _sum_n_rasters(
             if time.time() - last_log_time >= 5.0:
                 percent_complete = round(
                     n_pixels_processed / n_pixels_to_process, 4)*100
-                LOGGER.info(f'Summation {percent_complete}% complete')
+                LOGGER.info(f'Summation {percent_complete:.2f}% complete')
                 last_log_time = time.time()
 
             array = band.ReadAsArray(**block_info)
