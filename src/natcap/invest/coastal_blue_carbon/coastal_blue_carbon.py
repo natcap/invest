@@ -495,6 +495,10 @@ def execute(args):
               gdal.GDT_Float32,
               NODATA_FLOAT32_MIN),
         target_path_list=[total_net_sequestration_for_baseline_period],
+        dependent_task_list=[
+            baseline_accum_tasks[POOL_BIOMASS],
+            baseline_accum_tasks[POOL_SOIL],
+            baseline_accum_tasks[POOL_LITTER]],
         task_name=(
             'Calculate accumulation between baseline year and final year'))
 
@@ -590,7 +594,7 @@ def execute(args):
                   NODATA_FLOAT32_MIN),
             dependent_task_list=[alignment_task],
             target_path_list=[
-                yearly_accum_rasters[current_transition_year][pool]],
+                yearly_accum_rasters[current_transition_year][POOL_LITTER]],
             task_name=(
                 f'Mapping litter accumulation for {current_transition_year}'))
 
@@ -1036,6 +1040,9 @@ def execute_transition_analysis(args):
                 func=_sum_n_rasters,
                 args=(emissions_rasters_since_transition,
                       emissions_since_last_transition_raster),
+                kwargs={
+                    'allow_pixel_stacks_with_nodata': True,
+                },
                 dependent_task_list=[current_emissions_tasks[pool]],
                 target_path_list=[emissions_since_last_transition_raster],
                 task_name=(
@@ -1499,16 +1506,9 @@ def _sum_n_rasters(
         target_raster_path, gdal.GA_Update | gdal.OF_RASTER)
     target_band = target_raster.GetRasterBand(1)
 
-    source_rasters = []
-    for raster_path in raster_path_list:
-        raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
-        band = raster.GetRasterBand(1)
-        band_nodata = band.GetNoDataValue()
-        source_rasters.append((raster, band, band_nodata))
-
     n_pixels_to_process = (
         (target_raster.RasterXSize * target_raster.RasterYSize) *
-        len(source_rasters))
+        len(raster_path_list))
     n_pixels_processed = 0
     last_log_time = time.time()
 
@@ -1523,14 +1523,15 @@ def _sum_n_rasters(
         # Assume everything is valid until proven otherwise
         valid_pixels = numpy.ones(sum_array.shape, dtype=numpy.bool)
         pixels_touched = numpy.zeros(sum_array.shape, dtype=numpy.bool)
-        for _, band, band_nodata in source_rasters:
+        for raster_path in raster_path_list:
             if time.time() - last_log_time >= 5.0:
                 percent_complete = round(
                     n_pixels_processed / n_pixels_to_process, 4)*100
                 LOGGER.info(f'Summation {percent_complete:.2f}% complete')
                 last_log_time = time.time()
 
-            array = band.ReadAsArray(**block_info)
+            array, band_nodata = _read_block_from_raster(
+                raster_path, block_info)
 
             if band_nodata is not None:
                 valid_pixels &= (~numpy.isclose(array, band_nodata))
@@ -1548,12 +1549,6 @@ def _sum_n_rasters(
             sum_array, block_info['xoff'], block_info['yoff'])
 
     LOGGER.info('Summation 100.00% complete')
-
-    # Be as explicit as possible in closing these attributes
-    for raster_tuple in source_rasters:
-        raster_tuple = None
-    source_rasters = None
-    band = None
 
     target_band.ComputeStatistics(0)
     target_band = None
@@ -1850,6 +1845,31 @@ def _extract_snapshots_from_table(csv_path):
         output_dict[int(index)] = os.path.abspath(raster_path)
 
     return output_dict
+
+
+def _read_block_from_raster(raster_path, offset_dict):
+    """Read a block (or chunk) of a raster.
+
+    Args:
+        raster_path (string): The path to a GDAL raster on disk.  The first
+            band will be used.
+        offset_dict (dict): A dict of the kwargs needed to pass to
+            ``ReadAsArray`` to retrieve a portion of the raster, once it's
+            opened.
+
+    Returns:
+        A 2-tuple of (array, nodata)
+
+    """
+    try:
+        raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
+        band = raster.GetRasterBand(1)
+        array = band.ReadAsArray(**offset_dict)
+        nodata = band.GetNoDataValue()
+    finally:
+        band = None
+        raster = None
+    return array, nodata
 
 
 @validation.invest_validator

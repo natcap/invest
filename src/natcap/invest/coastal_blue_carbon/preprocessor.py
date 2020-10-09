@@ -173,17 +173,6 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
     Returns:
         ``None``.
     """
-    def _read_block(raster_path, offset_dict):
-        try:
-            raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
-            band = raster.GetRasterBand(1)
-            array = band.ReadAsArray(**offset_dict)
-            nodata = band.GetNoDataValue()
-        finally:
-            band = None
-            raster = None
-        return array, nodata
-
     n_rows, n_cols = pygeoprocessing.get_raster_info(
         lulc_snapshot_list[0])['raster_size']
     n_pixels_total = (n_rows * n_cols) * len(lulc_snapshot_list)
@@ -193,14 +182,16 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
     last_log_time = time.time()
     for block_offsets in pygeoprocessing.iterblocks((lulc_snapshot_list[0], 1),
                                                     offset_only=True):
-        from_array, from_nodata = _read_block(lulc_snapshot_list[0], block_offsets)
+        from_array, from_nodata = coastal_blue_carbon._read_block_from_raster(
+            lulc_snapshot_list[0], block_offsets)
         for raster_path in lulc_snapshot_list[1:]:
             if time.time() - last_log_time >= 5.0:
                 percent_complete = n_pixels_processed / n_pixels_total
                 LOGGER.info(
                     "Determining landcover transitions, "
                     f"{percent_complete:.2f}% complete.")
-            to_array, to_nodata = _read_block(raster_path, block_offsets)
+            to_array, to_nodata = coastal_blue_carbon._read_block_from_raster(
+                raster_path, block_offsets)
 
             # This comparison assumes that our landcover rasters are of an
             # integer type.  When int matrices, we can compare directly to
