@@ -35,32 +35,35 @@
 Unreleased Changes (3.9)
 ------------------------
 * General:
-  * Deprecating GDAL 2 and adding support for GDAL 3.
-  * Adding function in utils.py to handle InVEST coordindate transformations.
-  * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
-    * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
-    * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to
-      ``projection_wkt``.
-  * Improve consistency and context for error messages related to raster
-    reclassification across models by using ``utils.reclassify_raster``.
-  * Fixed bug that was causing a TypeError when certain input rasters had an
-    undefined nodata value. Undefined nodata values should now work everywhere.
-  * Include logging in python script generated from "Save to python script..."
-    in the "Development" menu. Now logging messages from the model execution
-    will show up when you run the script.
-  * InVEST is now a 64-bit binary built against Python 3.7.
-  * Adding Python 3.8 support for InVEST testing.
+    * Deprecating GDAL 2 and adding support for GDAL 3.
+    * Adding function in utils.py to handle InVEST coordindate transformations.
+    * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
+      * ``convolve_2d()`` keyword ``ignore_nodata`` to 
+        ``ignore_nodata_and_edges``.
+      * ``get_raster_info()`` / ``get_vector_info()`` keyword ``projection`` to
+        ``projection_wkt``.
+    * Improve consistency and context for error messages related to raster
+      reclassification across models by using ``utils.reclassify_raster``.
+    * Fixed bug that was causing a TypeError when certain input rasters had an
+      undefined nodata value. Undefined nodata values should now work
+      everywhere.
+    * Include logging in python script generated from 
+      "Save to python script..." in the "Development" menu. Now logging
+      messages from the model execution will show up when you run the script.
+    * InVEST is now a 64-bit binary built against Python 3.7.
+    * Adding Python 3.8 support for InVEST testing.
 * Coastal Vulnerability
-  * 'shore_points_missing_geomorphology.gpkg' output file name now includes
-    the suffix if any, and its one layer now is renamed from
-    'missing_geomorphology' to be the same as the file name (including suffix).
+    * 'shore_points_missing_geomorphology.gpkg' output file name now includes
+      the suffix if any, and its one layer now is renamed from
+      'missing_geomorphology' to be the same as the file name
+      (including suffix).
 * Delineateit
-  * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
-    'verified_geometries' to be the same as the file name (including suffix).
-  * The layer in the 'snapped_outlets.gpkg' output is renamed from
-    'snapped' to be the same as the file name (including suffix).
-  * The layer in the 'watersheds.gpkg' output has been renamed from
-    'watersheds' to match the name of the vector file (including the suffix).
+    * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
+      'verified_geometries' to be the same as the file name (including suffix).
+    * The layer in the 'snapped_outlets.gpkg' output is renamed from
+      'snapped' to be the same as the file name (including suffix).
+    * The layer in the 'watersheds.gpkg' output has been renamed from
+      'watersheds' to match the name of the vector file (including the suffix).
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under
@@ -85,9 +88,9 @@ Unreleased Changes (3.9)
       on the edges to decay more quickly. The area of study should have
       adequate boundaries to account for these edge effects.
 * SDR:
-  * Fixing an issue where the LS factor should be capped to an upstream area of
-    333^2 m^2. In previous versions the LS factor was erroniously capped to
-    "333" leading to high export spikes in some pixels.
+    * Fixing an issue where the LS factor should be capped to an upstream area
+      of 333^2 m^2. In previous versions the LS factor was erroniously capped
+      to "333" leading to high export spikes in some pixels.
 
 ..
 ..
