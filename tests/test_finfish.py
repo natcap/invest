@@ -86,6 +86,33 @@ class FinfishTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest.shp'),
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'))
 
+    def test_finfish_full_run_suffix(self):
+        """Finfish: regression test to run model with suffix."""
+        import natcap.invest.finfish_aquaculture.finfish_aquaculture
+        from natcap.invest.utils import _assert_vectors_equal
+
+        args = FinfishTests.generate_base_args(self.workspace_dir)
+        args['discount'] = 0.000192
+        args['do_valuation'] = True
+        args['frac_p'] = 0.3
+        args['num_monte_carlo_runs'] = 10
+        args['p_per_kg'] = 2.25
+        args['results_suffix'] = 'test'
+
+        _make_harvest_shp(self.workspace_dir)  # to test if it's recreated
+
+        natcap.invest.finfish_aquaculture.finfish_aquaculture.execute(args)
+        expected_shp_path = os.path.join(
+            self.workspace_dir, 'output', 'Finfish_Harvest_test.shp')
+        expected_html_path = os.path.join(
+            self.workspace_dir, 'output', 'Harvest_Results_test.html')
+        self.assertTrue(
+            os.path.isfile(expected_shp_path),
+            'Finfish path with suffix failed.')
+        self.assertTrue(
+            os.path.isfile(expected_html_path),
+            'Finfish path with suffix failed.')
+
     def test_finfish_mc_no_valuation(self):
         """Finfish: run model with MC analysis and no valuation."""
         import natcap.invest.finfish_aquaculture.finfish_aquaculture
