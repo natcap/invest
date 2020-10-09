@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Preprocessor."""
+import time
 import os
 import logging
 
@@ -154,7 +155,24 @@ def execute(args):
 
 def _create_transition_table(landcover_table, lulc_snapshot_list,
                              target_table_path):
+    """Create the transition table from a series of landcover snapshots.
 
+    Args:
+        landcover_table (dict): A dict mapping integer landcover codes to dict
+            values indicating the landcover class name in the ``lulc-class``
+            field and ``True`` or ``False`` under the
+            ``is_coastal_blue_carbon_habitat`` key.
+        lulc_snapshot_list (list): A list of string paths to GDAL rasters on
+            disk.  All rasters must have the same spatial reference, pixel size
+            and dimensions and must also all be integer rasters, where all
+            non-nodata pixel values must be represented in the
+            ``landcover_table`` dict.
+        target_table_path (string): A string path to where the target
+            transition table should be written.
+
+    Returns:
+        ``None``.
+    """
     def _read_block(raster_path, offset_dict):
         try:
             raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
@@ -166,11 +184,22 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
             raster = None
         return array, nodata
 
+    n_rows, n_cols = pygeoprocessing.get_raster_info(
+        lulc_snapshot_list[0])['raster_size']
+    n_pixels_total = (n_rows * n_cols) * len(lulc_snapshot_list)
+    n_pixels_processed = 0
+
     transition_pairs = set()
+    last_log_time = time.time()
     for block_offsets in pygeoprocessing.iterblocks((lulc_snapshot_list[0], 1),
                                                     offset_only=True):
         from_array, from_nodata = _read_block(lulc_snapshot_list[0], block_offsets)
         for raster_path in lulc_snapshot_list[1:]:
+            if time.time() - last_log_time >= 5.0:
+                percent_complete = n_pixels_processed / n_pixels_total
+                LOGGER.info(
+                    "Determining landcover transitions, "
+                    f"{percent_complete:.2f}% complete.")
             to_array, to_nodata = _read_block(raster_path, block_offsets)
 
             # This comparison assumes that our landcover rasters are of an
@@ -185,6 +214,8 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
             # Swap the arrays around to use the current 'to_array', 'to_nodata'
             # as the 'from_array', 'from_nodata' in the next iteration.
             from_array, from_nodata = (to_array, to_nodata)
+            n_pixels_processed += to_array.size
+    LOGGER.info("Determining landcover transitions, 100.00%% complete.")
 
     # Mapping of whether the from, to landcover types are coastal blue carbon
     # habitats to the string carbon transition type.
