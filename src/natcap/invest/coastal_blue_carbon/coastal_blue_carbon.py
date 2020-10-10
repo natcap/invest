@@ -853,9 +853,8 @@ def execute_transition_analysis(args):
     current_disturbance_vol_tasks = {}
     prior_stock_tasks = {}
     current_year_of_disturbance_tasks = {}
-    current_emissions_tasks = {}
-    prior_net_sequestration_tasks = {}
-    current_net_sequestration_tasks = {}
+    emissions_tasks = {}
+    net_sequestration_tasks = {}
     valuation_tasks = {}
 
     first_transition_year = min(transition_years)
@@ -873,6 +872,8 @@ def execute_transition_analysis(args):
         emissions_rasters[year] = {}
         year_of_disturbance_rasters[year] = {}
         valuation_tasks[year] = {}
+        emissions_tasks[year] = {}
+        net_sequestration_tasks[year] = {}
 
         for pool in (POOL_SOIL, POOL_BIOMASS):
             # Calculate stocks from last year's stock plus last year's net
@@ -889,7 +890,7 @@ def execute_transition_analysis(args):
             else:
                 current_stock_dependent_tasks = [
                     prior_stock_tasks[pool],
-                    prior_net_sequestration_tasks[pool]]
+                    net_sequestration_tasks[year-1][pool]]
                 current_disturbance_vol_dependent_tasks = [
                     prior_stock_tasks[pool]]
 
@@ -923,7 +924,8 @@ def execute_transition_analysis(args):
                           gdal.GDT_Float32,
                           NODATA_FLOAT32_MIN),
                     dependent_task_list=(
-                        current_disturbance_vol_dependent_tasks),
+                        current_disturbance_vol_dependent_tasks + [
+                            current_stock_tasks[pool]]),
                     target_path_list=[
                         disturbance_vol_rasters[year][pool]],
                     task_name=(
@@ -964,7 +966,7 @@ def execute_transition_analysis(args):
             emissions_rasters[year][pool] = os.path.join(
                 intermediate_dir, EMISSIONS_RASTER_PATTERN.format(
                     pool=pool, year=year, suffix=suffix))
-            current_emissions_tasks[pool] = task_graph.add_task(
+            emissions_tasks[year][pool] = task_graph.add_task(
                 func=pygeoprocessing.raster_calculator,
                 args=(
                     [(disturbance_vol_rasters[
@@ -990,12 +992,12 @@ def execute_transition_analysis(args):
             net_sequestration_rasters[year][pool] = os.path.join(
                 intermediate_dir, NET_SEQUESTRATION_RASTER_PATTERN.format(
                     pool=pool, year=year, suffix=suffix))
-            current_net_sequestration_tasks[pool] = task_graph.add_task(
+            net_sequestration_tasks[year][pool] = task_graph.add_task(
                 func=_calculate_net_sequestration,
                 args=(yearly_accum_rasters[current_transition_year][pool],
                       emissions_rasters[year][pool],
                       net_sequestration_rasters[year][pool]),
-                dependent_task_list=[current_emissions_tasks[pool]],
+                dependent_task_list=[emissions_tasks[year][pool]],
                 target_path_list=[net_sequestration_rasters[year][pool]],
                 task_name=(
                     f'Calculating net sequestration for {pool} in {year}'))
@@ -1023,13 +1025,20 @@ def execute_transition_analysis(args):
         #  * sum net sequestration since last transition
         if (year + 1) in transition_years or (year + 1) == final_year:
             emissions_rasters_since_transition = []
+            emissions_tasks_since_transition = []
             net_seq_rasters_since_transition = []
+            net_seq_tasks_since_transition = []
             for year_after_transition in range(
                     current_transition_year, year + 1):
                 emissions_rasters_since_transition.extend(
                     list(emissions_rasters[year_after_transition].values()))
+                emissions_tasks_since_transition.extend(
+                    list(emissions_tasks[year_after_transition].values()))
                 net_seq_rasters_since_transition.extend(
                     list(net_sequestration_rasters[
+                        year_after_transition].values()))
+                net_seq_tasks_since_transition.extend(
+                    list(net_sequestration_tasks[
                         year_after_transition].values()))
 
             emissions_since_last_transition_raster = os.path.join(
@@ -1043,7 +1052,7 @@ def execute_transition_analysis(args):
                 kwargs={
                     'allow_pixel_stacks_with_nodata': True,
                 },
-                dependent_task_list=[current_emissions_tasks[pool]],
+                dependent_task_list=emissions_tasks_since_transition,
                 target_path_list=[emissions_since_last_transition_raster],
                 task_name=(
                     f'Sum emissions between {current_transition_year} '
@@ -1058,8 +1067,7 @@ def execute_transition_analysis(args):
                 func=_sum_n_rasters,
                 args=(net_seq_rasters_since_transition,
                       net_carbon_sequestration_since_last_transition),
-                dependent_task_list=list(
-                    current_net_sequestration_tasks.values()),
+                dependent_task_list=net_seq_tasks_since_transition,
                 target_path_list=[
                     net_carbon_sequestration_since_last_transition],
                 task_name=(
@@ -1071,7 +1079,6 @@ def execute_transition_analysis(args):
         # These are the few sets of tasks that we care about referring to from
         # the prior year.
         prior_stock_tasks = current_stock_tasks
-        prior_net_sequestration_tasks = current_net_sequestration_tasks
 
     # Calculate total net sequestration
     total_net_sequestration_raster_path = os.path.join(
@@ -1498,6 +1505,7 @@ def _sum_n_rasters(
     """
     LOGGER.info('Summing %s rasters to %s', len(raster_path_list),
                 target_raster_path)
+    LOGGER.debug('Attempting to open %s', raster_path_list[0])
     pygeoprocessing.new_raster_from_base(
         raster_path_list[0], target_raster_path, gdal.GDT_Float32,
         [NODATA_FLOAT32_MIN])
