@@ -45,6 +45,7 @@ describe('Save InVEST Model Setup Buttons', () => {
 
   const spec = {
     module: 'natcap.invest.foo',
+    model_name: 'Foo Model',
     args: {
       workspace: { 
         name: 'Workspace',
