@@ -5,10 +5,10 @@ import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
-import DropdownButton from 'react-bootstrap/DropdownButton';
 
 import ArgsForm from './ArgsForm';
-import SaveFileButton from '../SaveFileButton';
+import SaveParametersButtons from './SaveParametersButtons';
+// import SaveFileButton from '../SaveFileButton';
 import { fetchValidation, saveToPython } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 
@@ -344,37 +344,18 @@ export default class SetupTab extends React.Component {
             updateArgValues={this.updateArgValues}
             batchUpdateArgs={this.batchUpdateArgs}
           />
-          <Row className="fixed-bottom setup-tab-footer">
-            <Col sm="3">
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={this.wrapInvestExecute}
-                disabled={!argsValid}
-              >
-                Execute
-              </Button>
-            </Col>
-            <Col cm="8">
-              <DropdownButton
-                id="dropdown-basic-button"
-                title="Save Parameters"
-                renderMenuOnMount // w/o this, items inaccessible in jsdom test env
-                className="mx-3 float-right"
-              >
-                <SaveFileButton
-                  title="Save parameters to JSON"
-                  defaultTargetPath="invest_args.json"
-                  func={this.wrapArgsToJsonFile}
-                />
-                <SaveFileButton
-                  title="Save to Python script"
-                  defaultTargetPath="execute_invest.py"
-                  func={this.savePythonScript}
-                />
-              </DropdownButton>
-            </Col>
-          </Row>
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={this.wrapInvestExecute}
+            disabled={!argsValid}
+          >
+            Execute
+          </Button>
+          <SaveParametersButtons
+            savePythonScript={this.savePythonScript}
+            wrapArgsToJsonFile={this.wrapArgsToJsonFile}
+          />
         </Container>
       );
     }
