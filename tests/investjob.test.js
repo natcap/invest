@@ -110,6 +110,9 @@ describe('Save InVEST Model Setup Buttons', () => {
       expect(Object.keys(results)).toEqual(expect.arrayContaining(
         ['parameterSetPath', 'moduleName', 'relativePaths', 'args']
       ));
+      Object.keys(results).forEach(key => {
+        expect(results[key]).not.toBe(undefined);
+      });
       const args = JSON.parse(results.args);
       const argKeys = Object.keys(args);
       expect(argKeys).toEqual(expect.arrayContaining(expectedArgKeys));
@@ -142,6 +145,9 @@ describe('Save InVEST Model Setup Buttons', () => {
       expect(Object.keys(results)).toEqual(expect.arrayContaining(
         ['filepath', 'modelname', 'pyname', 'args']
       ));
+      Object.keys(results).forEach(key => {
+        expect(results[key]).not.toBe(undefined);
+      });
       const args = JSON.parse(results.args);
       const argKeys = Object.keys(args);
       expect(argKeys).toEqual(expect.arrayContaining(expectedArgKeys));
