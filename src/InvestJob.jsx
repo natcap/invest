@@ -290,7 +290,6 @@ export default class InvestJob extends React.Component {
     const {
       activeTab,
       modelSpec,
-      modelName,
       argsSpec,
       uiSpec,
       jobStatus,
@@ -321,6 +320,7 @@ export default class InvestJob extends React.Component {
                   Setup
                 </Nav.Link>
               </Nav.Item>
+              <div id='setup-sidebar-children'/>
               <Nav.Item>
                 <Nav.Link eventKey="log" disabled={logDisabled}>
                   { this.state.jobStatus === 'running'
@@ -347,7 +347,7 @@ export default class InvestJob extends React.Component {
               <TabPane eventKey="setup" title="Setup">
                 <SetupTab
                   pyModuleName={modelSpec.module}
-                  modelName={modelName}
+                  modelName={modelSpec.model_name}
                   argsSpec={argsSpec}
                   uiSpec={uiSpec}
                   argsInitValues={this.props.argsInitValues}
