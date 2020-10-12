@@ -712,7 +712,7 @@ def _find_raster_pour_points(flow_dir_raster_path_band):
     pour_points = set()
     # Read in flow direction data and find pour points one block at a time
     for offsets in pygeoprocessing.iterblocks((flow_dir_raster_path, band_index),
-                                            offset_only=True): 
+                                               offset_only=True): 
         # Expand each block by a one-pixel-wide margin, if possible. 
         # This way the blocks will overlap so the watershed 
         # calculation will be continuous.

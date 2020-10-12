@@ -1,5 +1,4 @@
-# coding: utf-8
-# cython: language_level=2
+# cython: language_level=3
 import numpy
 import pygeoprocessing
 cimport numpy
