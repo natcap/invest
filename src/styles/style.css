@@ -104,7 +104,7 @@ input[type=radio]{
 
 /* SetupTab styles */
 
-#sidebar-footer {
+.sidebar-footer {
 	position:absolute;
 	bottom: 0rem;
 	width: inherit;
