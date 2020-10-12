@@ -502,11 +502,11 @@ def _file_len(file_path):
             ['wc', '-l', file_path], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
     except OSError as e:
-        LOGGER.warn(repr(e))
+        LOGGER.warning(repr(e))
         return -1
     result, err = wc_process.communicate()
     if wc_process.returncode != 0:
-        LOGGER.warn(err)
+        LOGGER.warning(err)
         return -1
     return int(result.strip().split()[0])
 
