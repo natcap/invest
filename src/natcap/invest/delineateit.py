@@ -432,19 +432,19 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
                     "for details and try re-running with repaired geometry."
                     % feature.GetFID())
             else:
-                LOGGER.warn(
+                LOGGER.warning(
                     "The geometry at feature %s is invalid and will not be "
                     "included in the set of features to be delineated.",
                     feature.GetFID())
                 continue
 
         if shapely_geom.is_empty:
-            LOGGER.warn('Feature %s has no geometry. Skipping', feature.GetFID())
+            LOGGER.warning('Feature %s has no geometry. Skipping', feature.GetFID())
             continue
 
         shapely_bbox = shapely.geometry.box(*shapely_geom.bounds)
         if not dem_bbox.intersects(shapely_bbox):
-            LOGGER.warn('Feature %s does not intersect the DEM. Skipping.',
+            LOGGER.warning('Feature %s does not intersect the DEM. Skipping.',
                          feature.GetFID())
             continue
 
@@ -545,7 +545,7 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         y_index = (point.y - geotransform[3]) // geotransform[5]
         if (x_index < 0 or x_index > n_cols or
                 y_index < 0 or y_index > n_rows):
-            LOGGER.warn('Encountered a point that was outside the bounds of '
+            LOGGER.warning('Encountered a point that was outside the bounds of '
                         'the stream raster.  FID:%s at %s',
                         point_feature.GetFID(), point)
             continue
