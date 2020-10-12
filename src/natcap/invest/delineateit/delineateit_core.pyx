@@ -73,7 +73,6 @@ cpdef cset[cpair[double, double]] calculate_pour_point_array(
                 sink_row = row + row_offsets[flow_dir]
                 sink_col = col + col_offsets[flow_dir]
 
-                is_pour_point = 0
                 # if the row index is -1, the pixel is flowing off of the block
                 if sink_row == -1:
                     # if this edge of the block is an edge of the raster, 

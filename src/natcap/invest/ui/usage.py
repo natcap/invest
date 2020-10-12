@@ -122,7 +122,6 @@ def _calculate_args_bounding_box(args, args_spec):
             spatial_info = pygeoprocessing.get_vector_info(value)
                     
         if spatial_info:
-            local_bb = [0., 0., 0., 0.]
             local_bb = spatial_info['bounding_box']
             projection_wkt = spatial_info['projection_wkt']
             spatial_ref = osr.SpatialReference()

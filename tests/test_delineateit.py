@@ -423,9 +423,6 @@ class DelineateItTests(unittest.TestCase):
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)
         projection_wkt = srs.ExportToWkt()
-        gtiff_creation_tuple_options = ('GTIFF', (
-            'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
-            'BLOCKXSIZE=4', 'BLOCKYSIZE=5'))
 
         raster_path = os.path.join(self.workspace_dir, 'small_raster.tif')
         pygeoprocessing.numpy_array_to_raster(
@@ -434,8 +431,7 @@ class DelineateItTests(unittest.TestCase):
             (1, 1),
             (0, 0),
             projection_wkt,
-            raster_path,
-            
+            raster_path
         )
 
         expected_pour_points = {(7.5, 0.5), (5.5, 1.5), (4.5, 2.5), (5.5, 4.5)}
