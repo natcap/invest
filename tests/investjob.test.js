@@ -36,6 +36,7 @@ function renderInvestJob() {
     ...utils
   } = render(
     <InvestJob
+      navID='carbon456asdf'
       investExe=''
       modelRunName='carbon'
       argsInitValues={undefined}

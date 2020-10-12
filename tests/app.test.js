@@ -175,7 +175,12 @@ describe('Various ways to open and close InVEST models', () => {
   })
 
   test('Opening and closing multiple InVEST models', async () => {
-    const { findByText, findByTitle, findAllByText } = render(
+    const {
+      findByText,
+      findByTitle,
+      findAllByText,
+      queryByText,
+    } = render(
       <App
         jobDatabase={'foodb.json'}
         investExe='foo'
@@ -185,9 +190,13 @@ describe('Various ways to open and close InVEST models', () => {
     // Open first model
     const modelA = await findByText(MOCK_MODEL_LIST_KEY);
     fireEvent.click(modelA);
-    const tabPanelA = await findByTitle(MOCK_MODEL_RUN_NAME)
+    const tabPanelA = await findByTitle(MOCK_MODEL_RUN_NAME);
     const setupTabA = await within(tabPanelA).findByText('Setup');
     expect(setupTabA.classList.contains('active')).toBeTruthy();  
+    const executeButtonA = within(tabPanelA).queryByText('Execute');
+    expect(executeButtonA).toBeInTheDocument();
+    const saveButtonsA = within(tabPanelA).queryByText('Save Parameters');
+    expect(saveButtonsA).toBeInTheDocument();
     expect(getSpec).toHaveBeenCalledTimes(1);
 
     // Open another model (via Load button for convenience)
@@ -207,7 +216,11 @@ describe('Various ways to open and close InVEST models', () => {
     fireEvent.click(loadButton);
     const tabPanelB = await findByTitle(mockDatastack.model_run_name);
     const setupTabB = await within(tabPanelB).findByText('Setup');
-    expect(setupTabB.classList.contains('active')).toBeTruthy();  
+    expect(setupTabB.classList.contains('active')).toBeTruthy();
+    const executeButtonB = within(tabPanelB).queryByText('Execute');
+    expect(executeButtonB).toBeInTheDocument();
+    const saveButtonsB = within(tabPanelB).queryByText('Save Parameters');
+    expect(saveButtonsB).toBeInTheDocument();
     expect(getSpec).toHaveBeenCalledTimes(2);
 
     // Close one open model

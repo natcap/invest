@@ -334,7 +334,12 @@ export default class SetupTab extends React.Component {
       sortedArgKeys,
     } = this.state;
     if (argsValues) {
-      const { argsSpec, pyModuleName } = this.props;
+      const {
+        argsSpec,
+        pyModuleName,
+        sidebarSetupElementId,
+        sidebarFooterElementId,
+      } = this.props;
       return (
         <Container fluid>
           <ArgsForm
@@ -347,10 +352,12 @@ export default class SetupTab extends React.Component {
             batchUpdateArgs={this.batchUpdateArgs}
           />
           <SaveParametersButtons
+            elId={sidebarSetupElementId}
             savePythonScript={this.savePythonScript}
             wrapArgsToJsonFile={this.wrapArgsToJsonFile}
           />
           <ExecuteButton
+            elId={sidebarFooterElementId}
             disabled={!argsValid}
             wrapInvestExecute={this.wrapInvestExecute}
           />

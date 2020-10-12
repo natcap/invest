@@ -9,7 +9,7 @@ import SaveFileButton from '../../SaveFileButton';
 
 export class SaveParametersButtons extends React.Component {
   render() {
-    const siblingNode = document.getElementById('setup-sidebar-children');
+    const siblingNode = document.getElementById(this.props.elId);
     if (siblingNode) {
       return ReactDOM.createPortal(
         (
@@ -39,7 +39,7 @@ export class SaveParametersButtons extends React.Component {
 
 export class ExecuteButton extends React.Component {
   render() {
-    const siblingNode = document.getElementById('sidebar-footer');
+    const siblingNode = document.getElementById(this.props.elId);
     if (siblingNode) {
       return ReactDOM.createPortal(
         (

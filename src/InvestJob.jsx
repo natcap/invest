@@ -297,12 +297,15 @@ export default class InvestJob extends React.Component {
       logStdErr,
     } = this.state;
 
-    const logDisabled = (!logfile);
-
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
       return (<div />);
     }
+
+    const logDisabled = (!logfile);
+    const { navID } = this.props;
+    const sidebarSetupElementId = `sidebar-setup-${navID}`;
+    const sidebarFooterElementId = `sidebar-footer-${navID}`;
 
     return (
       <TabContainer activeKey={activeTab}>
@@ -320,7 +323,9 @@ export default class InvestJob extends React.Component {
                   Setup
                 </Nav.Link>
               </Nav.Item>
-              <div id="setup-sidebar-children" />
+              <div
+                id={sidebarSetupElementId}
+              />
               <Nav.Item>
                 <Nav.Link eventKey="log" disabled={logDisabled}>
                   { this.state.jobStatus === 'running'
@@ -342,8 +347,8 @@ export default class InvestJob extends React.Component {
               </Nav.Item>
             </Nav>
             <div
-              id="sidebar-footer"
-              className="flex-column"
+              id={sidebarFooterElementId}
+              className="flex-column sidebar-footer"
             />
           </Col>
           <Col sm={9}>
@@ -358,6 +363,8 @@ export default class InvestJob extends React.Component {
                   investExecute={this.investExecute}
                   argsToJsonFile={this.argsToJsonFile}
                   nWorkers={this.props.investSettings.nWorkers}
+                  sidebarSetupElementId={sidebarSetupElementId}
+                  sidebarFooterElementId={sidebarFooterElementId}
                 />
               </TabPane>
               <TabPane eventKey="log" title="Log">

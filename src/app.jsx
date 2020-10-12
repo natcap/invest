@@ -209,6 +209,7 @@ export default class App extends React.Component {
           title={job.modelRunName}
         >
           <InvestJob
+            navID={job.navID}
             investExe={investExe}
             modelRunName={job.modelRunName}
             argsInitValues={job.argsValues}
