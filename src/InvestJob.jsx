@@ -320,7 +320,7 @@ export default class InvestJob extends React.Component {
                   Setup
                 </Nav.Link>
               </Nav.Item>
-              <div id='setup-sidebar-children'/>
+              <div id="setup-sidebar-children" />
               <Nav.Item>
                 <Nav.Link eventKey="log" disabled={logDisabled}>
                   { this.state.jobStatus === 'running'
@@ -341,6 +341,10 @@ export default class InvestJob extends React.Component {
                 </Nav.Link>
               </Nav.Item>
             </Nav>
+            <div
+              id="sidebar-footer"
+              className="flex-column"
+            />
           </Col>
           <Col sm={9}>
             <TabContent className="mt-3">

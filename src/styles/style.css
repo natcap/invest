@@ -104,11 +104,14 @@ input[type=radio]{
 
 /* SetupTab styles */
 
-.setup-tab-footer {
-	padding-left: 2rem;
+#sidebar-footer {
+	position:absolute;
+	bottom: 0rem;
+	width: inherit;
+	/*padding-left: 2rem;
 	padding-right: 2rem;
 	padding-top: 1rem;
-	padding-bottom: 1rem;
+	padding-bottom: 1rem;*/
 }
 
 .args-form {

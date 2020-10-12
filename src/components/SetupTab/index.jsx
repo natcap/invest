@@ -7,7 +7,9 @@ import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
 
 import ArgsForm from './ArgsForm';
-import SaveParametersButtons from './SaveParametersButtons';
+import {
+  ExecuteButton, SaveParametersButtons
+} from './SaveParametersButtons';
 // import SaveFileButton from '../SaveFileButton';
 import { fetchValidation, saveToPython } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
@@ -344,17 +346,13 @@ export default class SetupTab extends React.Component {
             updateArgValues={this.updateArgValues}
             batchUpdateArgs={this.batchUpdateArgs}
           />
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={this.wrapInvestExecute}
-            disabled={!argsValid}
-          >
-            Execute
-          </Button>
           <SaveParametersButtons
             savePythonScript={this.savePythonScript}
             wrapArgsToJsonFile={this.wrapArgsToJsonFile}
+          />
+          <ExecuteButton
+            disabled={!argsValid}
+            wrapInvestExecute={this.wrapInvestExecute}
           />
         </Container>
       );

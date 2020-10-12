@@ -2,21 +2,22 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
 
+import Button from 'react-bootstrap/Button';
 import DropdownButton from 'react-bootstrap/DropdownButton';
 
 import SaveFileButton from '../../SaveFileButton';
 
-export default class SaveParametersButtons extends React.Component {
+export class SaveParametersButtons extends React.Component {
   render() {
-    const sidebarNode = document.getElementById('setup-sidebar-children');
-    if (sidebarNode) {
+    const siblingNode = document.getElementById('setup-sidebar-children');
+    if (siblingNode) {
       return ReactDOM.createPortal(
         (
           <DropdownButton
             id="dropdown-basic-button"
+            className="mx-3 float-right"
             title="Save Parameters"
             renderMenuOnMount // w/o this, items inaccessible in jsdom test env
-            className="mx-3 float-right"
           >
             <SaveFileButton
               title="Save parameters to JSON"
@@ -29,9 +30,31 @@ export default class SaveParametersButtons extends React.Component {
               func={this.props.savePythonScript}
             />
           </DropdownButton>
-        ), sidebarNode
+        ), siblingNode
       );
     }
-    return (<div/>);
+    return (<div />);
+  }
+}
+
+export class ExecuteButton extends React.Component {
+  render() {
+    const siblingNode = document.getElementById('sidebar-footer');
+    if (siblingNode) {
+      return ReactDOM.createPortal(
+        (
+          <Button
+            block
+            variant="primary"
+            size="lg"
+            onClick={this.props.wrapInvestExecute}
+            disabled={this.props.disabled}
+          >
+            Execute
+          </Button>
+        ), siblingNode
+      );
+    }
+    return (<div />);
   }
 }
