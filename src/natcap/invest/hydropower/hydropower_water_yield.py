@@ -960,8 +960,8 @@ def compute_watershed_valuation(watershed_results_vector_path, val_dict):
 def compute_rsupply_volume(watershed_results_vector_path):
     """Calculate the total realized water supply volume.
 
-    And the mean realized water supply volume per hectare for the given sheds.
-    Output units in cubic meters and cubic meters per hectare respectively.
+    And the mean realized water supply volume per pixel for the given sheds.
+    Output units in cubic meters and cubic meters per pixel respectively.
 
     Args:
         watershed_results_vector_path (string): a path to a vector that
