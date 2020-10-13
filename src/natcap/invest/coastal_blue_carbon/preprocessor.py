@@ -178,20 +178,29 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
     n_pixels_total = (n_rows * n_cols) * len(lulc_snapshot_list)
     n_pixels_processed = 0
 
+    raster_tuple_list = []
+    for raster_path in lulc_snapshot_list:
+        raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
+        band = raster.GetRasterBand(1)
+        nodata = band.GetNoDataValue()
+        raster_tuple_list.append((raster, band, nodata))
+
     transition_pairs = set()
     last_log_time = time.time()
     for block_offsets in pygeoprocessing.iterblocks((lulc_snapshot_list[0], 1),
                                                     offset_only=True):
-        from_array, from_nodata = coastal_blue_carbon._read_block_from_raster(
-            lulc_snapshot_list[0], block_offsets)
-        for raster_path in lulc_snapshot_list[1:]:
+        _, from_band, from_nodata = raster_tuple_list[0]
+        from_array = from_band.ReadAsArray(**block_offsets)
+        from_band = None
+
+        for (_, to_band, to_nodata) in raster_tuple_list[1:]:
             if time.time() - last_log_time >= 5.0:
                 percent_complete = n_pixels_processed / n_pixels_total
                 LOGGER.info(
                     "Determining landcover transitions, "
                     f"{percent_complete:.2f}% complete.")
-            to_array, to_nodata = coastal_blue_carbon._read_block_from_raster(
-                raster_path, block_offsets)
+
+            to_array = to_band.ReadAsArray(**block_offsets)
 
             # This comparison assumes that our landcover rasters are of an
             # integer type.  When int matrices, we can compare directly to
@@ -206,6 +215,8 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
             # as the 'from_array', 'from_nodata' in the next iteration.
             from_array, from_nodata = (to_array, to_nodata)
             n_pixels_processed += to_array.size
+    raster_tuple_list = None
+    to_band = None
     LOGGER.info("Determining landcover transitions, 100.00%% complete.")
 
     # Mapping of whether the from, to landcover types are coastal blue carbon

@@ -1520,6 +1520,13 @@ def _sum_n_rasters(
     n_pixels_processed = 0
     last_log_time = time.time()
 
+    raster_tuple_list = []
+    for raster_path in raster_path_list:
+        raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
+        band = raster.GetRasterBand(1)
+        nodata = band.GetNoDataValue()
+        raster_tuple_list.append((raster, band, nodata))
+
     for block_info in pygeoprocessing.iterblocks(
             (raster_path_list[0], 1), offset_only=True):
 
@@ -1531,18 +1538,16 @@ def _sum_n_rasters(
         # Assume everything is valid until proven otherwise
         valid_pixels = numpy.ones(sum_array.shape, dtype=numpy.bool)
         pixels_touched = numpy.zeros(sum_array.shape, dtype=numpy.bool)
-        for raster_path in raster_path_list:
+        for (_, band, nodata) in raster_tuple_list:
             if time.time() - last_log_time >= 5.0:
                 percent_complete = round(
                     n_pixels_processed / n_pixels_to_process, 4)*100
                 LOGGER.info(f'Summation {percent_complete:.2f}% complete')
                 last_log_time = time.time()
 
-            array, band_nodata = _read_block_from_raster(
-                raster_path, block_info)
-
-            if band_nodata is not None:
-                valid_pixels &= (~numpy.isclose(array, band_nodata))
+            array = band.ReadAsArray(**block_info)
+            if nodata is not None:
+                valid_pixels &= ~numpy.isclose(array, nodata)
 
             sum_array[valid_pixels] += array[valid_pixels]
             pixels_touched[valid_pixels] = 1
@@ -1557,6 +1562,8 @@ def _sum_n_rasters(
             sum_array, block_info['xoff'], block_info['yoff'])
 
     LOGGER.info('Summation 100.00% complete')
+
+    raster_list = None
 
     target_band.ComputeStatistics(0)
     target_band = None
@@ -1853,31 +1860,6 @@ def _extract_snapshots_from_table(csv_path):
         output_dict[int(index)] = os.path.abspath(raster_path)
 
     return output_dict
-
-
-def _read_block_from_raster(raster_path, offset_dict):
-    """Read a block (or chunk) of a raster.
-
-    Args:
-        raster_path (string): The path to a GDAL raster on disk.  The first
-            band will be used.
-        offset_dict (dict): A dict of the kwargs needed to pass to
-            ``ReadAsArray`` to retrieve a portion of the raster, once it's
-            opened.
-
-    Returns:
-        A 2-tuple of (array, nodata)
-
-    """
-    try:
-        raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
-        band = raster.GetRasterBand(1)
-        array = band.ReadAsArray(**offset_dict)
-        nodata = band.GetNoDataValue()
-    finally:
-        band = None
-        raster = None
-    return array, nodata
 
 
 @validation.invest_validator
