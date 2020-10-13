@@ -182,7 +182,7 @@ export default class InvestJob extends React.Component {
       'run',
       job.modelRunName,
       '--headless',
-      `-d ${datastackPath}`,
+      `-d "${datastackPath}"`,
     ];
     if (process.platform !== 'win32') {
       this.investRun = spawn(path.basename(investExe), cmdArgs, {
@@ -211,6 +211,7 @@ export default class InvestJob extends React.Component {
         }
       };
     }
+    logger.debug(this.investRun.spawnargs);
 
     // There's no general way to know that a spawned process started,
     // so this logic when listening for stdout seems like the way.
