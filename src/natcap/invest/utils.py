@@ -191,7 +191,8 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
     """
     try:
         if os.path.exists(logfile):
-            LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
+            LOGGER.warning('Logfile %s exists and will be overwritten',
+                           logfile)
     except SystemError:
         # This started happening in Windows tests:
         #  SystemError: <built-in function stat> returned NULL without

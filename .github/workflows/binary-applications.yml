@@ -32,7 +32,7 @@ jobs:
         runs-on: windows-latest
         env:
             PYTHON_VERSION: 3.7
-            PYTHON_ARCH: x86
+            PYTHON_ARCH: x64
         steps:
             - uses: actions/checkout@v2
               with:
@@ -47,21 +47,26 @@ jobs:
                   path: ~\AppData\Local\pip\Cache
                   key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
-            - name: Set up python
-              uses: actions/setup-python@v1
+            - name: Setup conda environment
+              uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  python-version: ${{ env.PYTHON_VERSION }}
-                  architecture: ${{ env.PYTHON_ARCH }}
+                  activate-environment: winbin-env
+                  auto-update-conda: true
+                  python-version: 3.7
+                  channels: conda-forge
 
             - name: Install python dependencies
-              shell: powershell
-              env:
-                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
-                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
-                  PIP_PREFER_BINARY: 1
+              shell: bash -l {0}
               run: |
-                  python -m pip install --upgrade pip pytest setuptools
-                  python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt
+                  conda install nomkl # make sure numpy is w/out MKL
+                  conda upgrade -y pip setuptools
+                  conda install toml requests
+                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                        requirements.txt \
+                        requirements-dev.txt \
+                        requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
                   python -m pip install .
 
             - name: Install build dependencies
@@ -72,7 +77,7 @@ jobs:
                   ./ci/windows-ci-binary-install.ps1
 
             - name: Clone sample data repo (non-lfs)
-              shell: bash
+              shell: bash -l {0}
               run: |
                   GIT_URL=$(make jprint-GIT_SAMPLE_DATA_REPO)
                   LOCALPATH=$(make jprint-GIT_SAMPLE_DATA_REPO_PATH)
@@ -84,14 +89,11 @@ jobs:
                   GIT_LFS_SKIP_SMUDGE=1 git clone $GIT_URL $LOCALPATH
                   git -C $LOCALPATH checkout $GIT_REV
 
-            - name: Build user's Guide
-              run: make userguide
-
-            - name: Build windows binaries
-              run: make binaries
-
-            - name: Build installer
-              run: make windows_installer
+            - name: Build userguide, binaries, installer
+              shell: bash -l {0}
+              run: |
+                  # This builds the users guide, binaries, and installer
+                  make windows_installer
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
@@ -104,38 +106,36 @@ jobs:
             - name: Sign binaries
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
-              shell: powershell
+              shell: bash -l {0}
               run: |
                 # figure out the path to signtool.exe (it keeps changing with SDK updates)
-                $env:SIGNTOOL_PATH = @(Get-ChildItem -Path 'C:\Program Files (x86)\\Windows Kits\\10' `
-                    -Include 'signtool.exe' -File -Recurse `
-                    -ErrorAction SilentlyContinue)[0] | Select-Object -ExpandProperty FullName
-                $env:INSTALLER_BINARY = @(gci 'dist/*.exe')[0] | Select-Object -ExpandProperty FullName
-                $env:GSUTIL_PATH = (Get-Command gsutil).path
+                SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
+                INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.exe' | head -n 1)
 
                 # Specify which python version we want to use (it's the one we're using
                 # in actions/setup-python.
-                $env:CLOUDSDK_PYTHON = (Get-Command python).path
-                $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
+                export CLOUDSDK_PYTHON=$(which python)
+                export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
-                make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} `
-                        GSUTIL=$env:GSUTIL_PATH `
-                        BIN_TO_SIGN=$env:INSTALLER_BINARY `
-                        SIGNTOOL=$env:SIGNTOOL_PATH `
-                    signcode_windows
+                # setup-gcloud adds 'gsutil' to PATH
+                make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} \
+                        GSUTIL="gsutil" \
+                        BIN_TO_SIGN="$INSTALLER_BINARY" \
+                        SIGNTOOL="$SIGNTOOL_PATH" \
+                        signcode_windows
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
+              shell: bash -l {0}
               run: |
-                  $env:GSUTIL_PATH = (Get-Command gsutil).path
+                  # Specify which python version we want to use (it's the one
+                  # we're using in actions/setup-miniconda)
+                  export CLOUDSDK_PYTHON=$(which python)
+                  export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
-                  # Specify which python version we want to use (it's the one we're using
-                  # in actions/setup-python.
-                  $env:CLOUDSDK_PYTHON = (Get-Command python).path
-                  $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
-
-                  make GSUTIL=$env:GSUTIL_PATH deploy
+                  # setup-gcloud adds 'gsutil' to PATH
+                  make GSUTIL="gsutil" deploy
 
             - name: Upload installer artifact
               if: always()
@@ -156,7 +156,7 @@ jobs:
         runs-on: macos-10.15
         env:
             PYTHON_VERSION: 3.7
-            PYTHON_ARCH: x86
+            PYTHON_ARCH: x64
         steps:
             - uses: actions/checkout@v2
               with:
@@ -176,10 +176,10 @@ jobs:
                   path: ~/opt/anaconda3
                   key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
 
-            - name: Set up conda
+            - name: Setup conda environment
               uses: goanpeca/setup-miniconda@v1.1.2
               with:
-                  activate-environment: mac-env  # This is also hardcoded in Pyinstaller's invest.spec
+                  activate-environment: macbin-env
                   auto-update-conda: true
                   python-version: 3.7
                   channels: conda-forge

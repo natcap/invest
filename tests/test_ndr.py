@@ -62,44 +62,44 @@ class NDRTests(unittest.TestCase):
         """
         from natcap.invest.ndr import ndr
 
-        float64_raster_path = os.path.join(self.workspace_dir,
-                                           'float64_raster.tif')
+        raster_xsize = 1124 
+        raster_ysize = 512 
+        float64_raster_path = os.path.join(
+            self.workspace_dir, 'float64_raster.tif')
         driver = gdal.GetDriverByName('GTiff')
-        raster = driver.Create(float64_raster_path,
-                               4,  # xsize
-                               4,  # ysize
-                               1,  # n_bands
-                               gdal.GDT_Float64)
+        raster = driver.Create(
+            float64_raster_path, raster_xsize, raster_ysize, 1,
+            gdal.GDT_Float64)
         source_nodata = -1.797693e+308  # taken from user's data
         band = raster.GetRasterBand(1)
         band.SetNoDataValue(source_nodata)
-        source_array = numpy.empty((4, 4), dtype=numpy.float64)
-        source_array[0:2][:] = 5.5  # Something, anything.
-        source_array[2:][:] = source_nodata
+        source_array = numpy.empty(
+            (raster_ysize, raster_xsize), dtype=numpy.float64)
+        source_array[0:256][:] = 5.5  # Something, anything.
+        source_array[256:][:] = source_nodata
         band.WriteArray(source_array)
         band = None
         raster = None
         driver = None
 
-        normalized_raster_path = os.path.join(self.workspace_dir,
-                                              'normalized.tif')
+        normalized_raster_path = os.path.join(
+            self.workspace_dir, 'normalized.tif')
         ndr._normalize_raster((float64_raster_path, 1), normalized_raster_path)
 
         normalized_raster_nodata = pygeoprocessing.get_raster_info(
             normalized_raster_path)['nodata'][0]
 
         normalized_array = gdal.OpenEx(normalized_raster_path).ReadAsArray()
-        expected_array = numpy.array(
-            [[1., 1., 1., 1.],
-             [1., 1., 1., 1.],
-             [normalized_raster_nodata]*4,
-             [normalized_raster_nodata]*4], dtype=numpy.float32)
+        expected_array = numpy.empty(
+            (raster_ysize, raster_xsize), dtype=numpy.float32)
+        expected_array[0:256][:] = 1.
+        expected_array[256:][:] = normalized_raster_nodata
 
         # Assert that the output values match the target nodata value
         self.assertEqual(
-            8,  # Nodata pixels
-            numpy.count_nonzero(numpy.isclose(normalized_array,
-                                              normalized_raster_nodata)))
+            287744,  # Nodata pixels
+            numpy.count_nonzero(
+                numpy.isclose(normalized_array, normalized_raster_nodata)))
 
         numpy.testing.assert_allclose(
             normalized_array, expected_array, rtol=0, atol=1e-6)
