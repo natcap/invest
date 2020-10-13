@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
-import DropdownButton from 'react-bootstrap/DropdownButton';
 
 import SaveFileButton from '../../SaveFileButton';
 
@@ -13,14 +12,9 @@ export class SaveParametersButtons extends React.Component {
     if (siblingNode) {
       return ReactDOM.createPortal(
         (
-          <DropdownButton
-            id="dropdown-basic-button"
-            className="mx-3 float-right"
-            title="Save Parameters"
-            renderMenuOnMount // w/o this, items inaccessible in jsdom test env
-          >
+          <React.Fragment>
             <SaveFileButton
-              title="Save parameters to JSON"
+              title="Save to JSON"
               defaultTargetPath="invest_args.json"
               func={this.props.wrapArgsToJsonFile}
             />
@@ -29,7 +23,7 @@ export class SaveParametersButtons extends React.Component {
               defaultTargetPath="execute_invest.py"
               func={this.props.savePythonScript}
             />
-          </DropdownButton>
+          </React.Fragment>
         ), siblingNode
       );
     }

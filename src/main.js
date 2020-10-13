@@ -56,6 +56,10 @@ const createWindow = async () => {
   mainWindow.loadURL(`file://${__dirname}/index.html`);
 
   // Open the DevTools.
+  // The timing of this is fussy due a chromium bug. It seems to only
+  // come up if there is an unrelated uncaught exception during page load.
+  // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
+  // https://github.com/electron/electron/issues/23662
   mainWindow.webContents.on('did-frame-finish-load', async () => {
     if (isDevMode) {
       const {

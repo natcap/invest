@@ -195,8 +195,9 @@ describe('Various ways to open and close InVEST models', () => {
     expect(setupTabA.classList.contains('active')).toBeTruthy();  
     const executeButtonA = within(tabPanelA).queryByText('Execute');
     expect(executeButtonA).toBeInTheDocument();
-    const saveButtonsA = within(tabPanelA).queryByText('Save Parameters');
-    expect(saveButtonsA).toBeInTheDocument();
+    within(tabPanelA).queryAllByText(/Save to/).forEach(saveButton => {
+      expect(saveButton).toBeInTheDocument();
+    })
     expect(getSpec).toHaveBeenCalledTimes(1);
 
     // Open another model (via Load button for convenience)
@@ -219,8 +220,9 @@ describe('Various ways to open and close InVEST models', () => {
     expect(setupTabB.classList.contains('active')).toBeTruthy();
     const executeButtonB = within(tabPanelB).queryByText('Execute');
     expect(executeButtonB).toBeInTheDocument();
-    const saveButtonsB = within(tabPanelB).queryByText('Save Parameters');
-    expect(saveButtonsB).toBeInTheDocument();
+    within(tabPanelB).queryAllByText(/Save to/).forEach(saveButton => {
+      expect(saveButton).toBeInTheDocument();
+    })
     expect(getSpec).toHaveBeenCalledTimes(2);
 
     // Close one open model
@@ -476,7 +478,6 @@ describe('InVEST subprocess testing', () => {
   test('user terminates process - expect log display', async () => {
     const spy = jest.spyOn(InvestJob.prototype, 'terminateInvestProcess')
       .mockImplementation(() => {
-        console.log('click handler')
         mockInvestProc.emit('exit', null)
       })
 

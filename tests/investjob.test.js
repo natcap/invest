@@ -114,9 +114,7 @@ describe('Save InVEST Model Setup Buttons', () => {
 
     const { findByText } = renderInvestJob();
 
-    const saveDropdown = await findByText('Save Parameters')
-    fireEvent.click(saveDropdown);
-    const saveButton = await findByText('Save parameters to JSON')
+    const saveButton = await findByText('Save to JSON')
     fireEvent.click(saveButton);
     
     await waitFor(() => {
@@ -149,8 +147,6 @@ describe('Save InVEST Model Setup Buttons', () => {
 
     const { findByText } = renderInvestJob()
 
-    const saveDropdown = await findByText('Save Parameters')
-    fireEvent.click(saveDropdown)
     const saveButton = await findByText('Save to Python script')
     fireEvent.click(saveButton);
 
@@ -186,9 +182,7 @@ describe('Save InVEST Model Setup Buttons', () => {
 
     const { findByText } = renderInvestJob()
     
-    const saveDropdown = await findByText('Save Parameters')
-    fireEvent.click(saveDropdown);
-    const saveButton = await findByText('Save parameters to JSON')
+    const saveButton = await findByText('Save to JSON')
     fireEvent.click(saveButton);
 
     // These are the calls that would have triggered if a file was selected
@@ -210,8 +204,6 @@ describe('Save InVEST Model Setup Buttons', () => {
 
     const { findByText } = renderInvestJob()
     
-    const saveDropdown = await findByText('Save Parameters')
-    fireEvent.click(saveDropdown); // click the dropdown to mount the next button
     const saveButton = await findByText('Save to Python script')
     fireEvent.click(saveButton);
 
