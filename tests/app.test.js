@@ -49,7 +49,7 @@ describe('Various ways to open and close InVEST models', () => {
   })
 
   test('Clicking an invest model button renders SetupTab', async () => {
-    const { findByText } = render(
+    const { findByText, findByRole } = render(
       <App
         jobDatabase={'foodb.json'}
         investExe='foo'
@@ -58,10 +58,9 @@ describe('Various ways to open and close InVEST models', () => {
 
     const carbon = await findByText('Carbon');
     fireEvent.click(carbon);
-    const executeButton = await findByText('Execute');
+    const executeButton = await findByRole('button', {name: /Execute/});
+    expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
-    expect(executeButton).toBeTruthy();
-    expect(executeButton).toBeDisabled();  // depends on the mocked fetchValidation
     expect(setupTab.classList.contains('active')).toBeTruthy();  
     expect(getSpec).toHaveBeenCalledTimes(1);
   })
@@ -94,7 +93,7 @@ describe('Various ways to open and close InVEST models', () => {
     fs.writeFileSync(mockJobDataPath, JSON.stringify(job), 'utf8');
     fs.writeFileSync(mockJobDatabasePath, JSON.stringify(mockRecentJobsDB), 'utf8');
 
-    const { findByText, findByLabelText } = render(
+    const { findByText, findByLabelText, findByRole } = render(
       <App
         jobDatabase={mockJobDatabasePath}
         investExe='foo'
@@ -105,10 +104,9 @@ describe('Various ways to open and close InVEST models', () => {
       mockRecentJobsDB[mockJobId].workspace.directory
     );
     fireEvent.click(recentJobCard);
-    const executeButton = await findByText('Execute');
+    const executeButton = await findByRole('button', {name: /Execute/});
+    expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
-    expect(executeButton).toBeTruthy();
-    expect(executeButton).toBeDisabled(); // depends on the mocked fetchValidation
     expect(setupTab.classList.contains('active')).toBeTruthy();
 
     // Expect some arg values that were loaded from the saved job:
@@ -132,7 +130,7 @@ describe('Various ways to open and close InVEST models', () => {
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
     fetchDatastackFromFile.mockResolvedValue(mockDatastack)
     
-    const { findByText, findByLabelText } = render(
+    const { findByText, findByLabelText, findByRole } = render(
       <App
         jobDatabase={'foodb.json'}
         investExe='foo'
@@ -141,10 +139,10 @@ describe('Various ways to open and close InVEST models', () => {
 
     const loadButton = await findByText('Load Parameters');
     fireEvent.click(loadButton);
-    const executeButton = await findByText('Execute');
+    const executeButton = await findByRole('button', {name: /Execute/});
+    expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
     const input = await findByLabelText(/Carbon Pools/);
-    expect(executeButton).toBeDisabled();  // depends on the mocked fetchValidation
     expect(setupTab.classList.contains('active')).toBeTruthy();
     expect(input).toHaveValue(mockDatastack.args.carbon_pools_path)
   })
@@ -193,8 +191,8 @@ describe('Various ways to open and close InVEST models', () => {
     const tabPanelA = await findByTitle(MOCK_MODEL_RUN_NAME);
     const setupTabA = await within(tabPanelA).findByText('Setup');
     expect(setupTabA.classList.contains('active')).toBeTruthy();  
-    const executeButtonA = within(tabPanelA).queryByText('Execute');
-    expect(executeButtonA).toBeInTheDocument();
+    expect(within(tabPanelA).queryByRole('button', {name: /Execute/}))
+      .toBeInTheDocument();
     within(tabPanelA).queryAllByText(/Save to/).forEach(saveButton => {
       expect(saveButton).toBeInTheDocument();
     })
@@ -218,8 +216,8 @@ describe('Various ways to open and close InVEST models', () => {
     const tabPanelB = await findByTitle(mockDatastack.model_run_name);
     const setupTabB = await within(tabPanelB).findByText('Setup');
     expect(setupTabB.classList.contains('active')).toBeTruthy();
-    const executeButtonB = within(tabPanelB).queryByText('Execute');
-    expect(executeButtonB).toBeInTheDocument();
+    expect(within(tabPanelB).queryByRole('button', {name: /Execute/}))
+      .toBeInTheDocument();
     within(tabPanelB).queryAllByText(/Save to/).forEach(saveButton => {
       expect(saveButton).toBeInTheDocument();
     })
@@ -398,7 +396,9 @@ describe('InVEST subprocess testing', () => {
   })
   
   test('exit without error - expect log display', async () => {
-    const { findByText, findByLabelText, queryByText, unmount } = render(
+    const {
+      findByText, findByLabelText, findByRole, queryByText, unmount
+    } = render(
       <App
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
@@ -409,8 +409,11 @@ describe('InVEST subprocess testing', () => {
       RegExp(`${spec.args.workspace_dir.name}`)
     );
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
-    const execute = await findByText('Execute');
+    const execute = await findByRole('button', {name: /Execute/});
     fireEvent.click(execute);
+    await waitFor(() => {
+      expect(execute).toBeDisabled();
+    })
     
     // stdout listener is how the app knows the process started
     mockInvestProc.stdout.push('hello from stdout');
@@ -425,6 +428,7 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc.emit('exit', 0)  // 0 - exit w/o error
     expect(await findByText('Model Completed')).toBeInTheDocument();
     expect(await findByText('Open Workspace')).toBeEnabled();
+    expect(execute).toBeEnabled();
 
     // A recent job card should be rendered
     const cardText = await within(
@@ -439,7 +443,9 @@ describe('InVEST subprocess testing', () => {
   })
 
   test('exit with error - expect log display', async () => {
-    const { findByText, findByLabelText, unmount, ...utils } = render(
+    const {
+      findByText, findByLabelText, findByRole, unmount, ...utils
+    } = render(
       <App
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
@@ -450,7 +456,7 @@ describe('InVEST subprocess testing', () => {
       RegExp(`${spec.args.workspace_dir.name}`))
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
     
-    const execute = await findByText('Execute');
+    const execute = await findByRole('button', {name: /Execute/});
     fireEvent.click(execute);
     
     const errorMessage = 'fail'
@@ -481,7 +487,9 @@ describe('InVEST subprocess testing', () => {
         mockInvestProc.emit('exit', null)
       })
 
-    const { findByText, findByLabelText, unmount, ...utils } = render(
+    const {
+      findByText, findByLabelText, findByRole, unmount, ...utils
+    } = render(
       <App
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
@@ -492,7 +500,7 @@ describe('InVEST subprocess testing', () => {
       RegExp(`${spec.args.workspace_dir.name}`))
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
     
-    const execute = await findByText('Execute');
+    const execute = await findByRole('button', {name: /Execute/});
     fireEvent.click(execute);
     
     // stdout listener is how the app knows the process started

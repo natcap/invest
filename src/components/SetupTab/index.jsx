@@ -2,9 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 import Container from 'react-bootstrap/Container';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
-import Button from 'react-bootstrap/Button';
+import Spinner from 'react-bootstrap/Spinner';
 
 import ArgsForm from './ArgsForm';
 import {
@@ -339,7 +337,24 @@ export default class SetupTab extends React.Component {
         pyModuleName,
         sidebarSetupElementId,
         sidebarFooterElementId,
+        isRunning,
       } = this.props;
+
+      const buttonText = (
+        <span>
+          {isRunning
+            && (
+              <Spinner
+                animation="border"
+                size="sm"
+                role="status"
+                aria-hidden="true"
+              />
+            )}
+          Execute
+        </span>
+      );
+
       return (
         <Container fluid>
           <ArgsForm
@@ -358,8 +373,9 @@ export default class SetupTab extends React.Component {
           />
           <ExecuteButton
             elId={sidebarFooterElementId}
-            disabled={!argsValid}
+            disabled={!argsValid || isRunning}
             wrapInvestExecute={this.wrapInvestExecute}
+            buttonText={buttonText}
           />
         </Container>
       );

@@ -44,7 +44,7 @@ export class ExecuteButton extends React.Component {
             onClick={this.props.wrapInvestExecute}
             disabled={this.props.disabled}
           >
-            Execute
+            {this.props.buttonText}
           </Button>
         ), siblingNode
       );

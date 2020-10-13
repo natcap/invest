@@ -102,7 +102,13 @@ input[type=radio]{
 	padding-left: 1.25rem;
 }
 
-/* SetupTab styles */
+.sidebar-setup {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	align-items: flex-start;
+	padding-left: 2rem;
+}
 
 .sidebar-footer {
 	position:absolute;
@@ -114,6 +120,7 @@ input[type=radio]{
 	padding-bottom: 1rem;*/
 }
 
+/* SetupTab styles */
 .args-form {
 	height: 85vh;
 	overflow-y: auto;

@@ -32,6 +32,7 @@ function renderInvestJob() {
     findByText,
     findAllByText,
     findByLabelText,
+    findByRole,
     queryAllByText,
     ...utils
   } = render(
@@ -49,6 +50,7 @@ function renderInvestJob() {
     findByText,
     findAllByText,
     findByLabelText,
+    findByRole,
     queryAllByText,
     utils
   }
@@ -257,10 +259,12 @@ describe('InVEST Execute Button', () => {
       findByText,
       findAllByText,
       findByLabelText,
+      findByRole,
       queryAllByText
     } = renderInvestJob();
 
-    expect(await findByText('Execute')).toBeDisabled();
+    const executeButton = await findByRole('button', {name: /Execute/});
+    expect(executeButton).toBeDisabled();
     // The inputs are invalid so the invalid feedback message is present.
     // But, the inputs have not yet been touched, so the message is hidden
     // by CSS 'display: none'. Unfortunately, the bootstrap stylesheet is
@@ -281,7 +285,9 @@ describe('InVEST Execute Button', () => {
     fetchValidation.mockResolvedValue([])
     fireEvent.change(a, { target: { value: 'foo' } })
     fireEvent.change(b, { target: { value: 1 } })
-    expect(await findByText('Execute')).toBeEnabled();
+    await waitFor(() => {
+      expect(executeButton).toBeEnabled();
+    })
     // Now that inputs are valid, feedback message should be cleared:
     // Note: Can't put this inside wait - it will timeout waiting to be not null.
     // But it does rely on waiting for the change event to propogate. 
@@ -294,7 +300,9 @@ describe('InVEST Execute Button', () => {
     invalidFeedback = 'must be a number';
     fetchValidation.mockResolvedValue([[['b'], invalidFeedback]])
     fireEvent.change(b, { target: { value: 'one' } })  // triggers validation
-    expect(await findByText('Execute')).toBeDisabled();
+    await waitFor(() => {
+      expect(executeButton).toBeDisabled();
+    })
     expect(await findByText(invalidFeedback, { exact: false })).toBeInTheDocument()
     // fetchValidation.mockReset();
   })

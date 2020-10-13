@@ -166,8 +166,14 @@ export default class InvestJob extends React.Component {
       argsValues: argsValues,
       workspace: workspace,
       logfile: undefined,
-      status: undefined,
+      status: 'running',
     };
+
+    // Setting this very early in the click handler so the Execute button
+    // can display an appropriate visual cue when it's clicked
+    this.setState({
+      jobStatus: job.status,
+    });
 
     // Write a temporary datastack json for passing to invest CLI
     const tempDir = fs.mkdtempSync(path.join(
@@ -220,11 +226,11 @@ export default class InvestJob extends React.Component {
         // TODO: handle case when job.logfile is still undefined?
         // Could be if some stdout is emitted before a logfile exists.
         logger.debug(`invest logging to: ${job.logfile}`);
-        job.status = 'running';
+        // job.status = 'running';
         this.setState(
           {
             logfile: job.logfile,
-            jobStatus: job.status,
+            // jobStatus: job.status,
           }, () => {
             this.switchTabs('log');
             saveJob(job);
@@ -240,7 +246,7 @@ export default class InvestJob extends React.Component {
     // in which case it's useful to logger.debug too.
     let stderr = Object.assign('', this.state.logStdErr);
     this.investRun.stderr.on('data', (data) => {
-      logger.debug(`${data}`)
+      logger.debug(`${data}`);
       stderr += `${data}`;
       this.setState({
         logStdErr: stderr,
@@ -302,6 +308,7 @@ export default class InvestJob extends React.Component {
       return (<div />);
     }
 
+    const isRunning = jobStatus === 'running';
     const logDisabled = (!logfile);
     const { navID } = this.props;
     const sidebarSetupElementId = `sidebar-setup-${navID}`;
@@ -325,10 +332,11 @@ export default class InvestJob extends React.Component {
               </Nav.Item>
               <div
                 id={sidebarSetupElementId}
+                className="sidebar-setup"
               />
               <Nav.Item>
                 <Nav.Link eventKey="log" disabled={logDisabled}>
-                  { this.state.jobStatus === 'running'
+                  { isRunning
                   && (
                     <Spinner
                       animation="border"
@@ -365,6 +373,7 @@ export default class InvestJob extends React.Component {
                   nWorkers={this.props.investSettings.nWorkers}
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
+                  isRunning={isRunning}
                 />
               </TabPane>
               <TabPane eventKey="log" title="Log">
