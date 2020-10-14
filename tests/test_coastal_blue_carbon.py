@@ -228,6 +228,63 @@ class TestCBC2(unittest.TestCase):
         finally:
             raster = None
 
+    def test_read_invalid_transition_matrix(self):
+        """CBC: Test exceptions in invalid transition structure."""
+        # The full biophysical table will have much, much more information.  To
+        # keep the test simple, I'm only tracking the columns I know I'll need
+        # in this function.
+        biophysical_table = {
+            1: {'lulc-class': 'a',
+                'soil-yearly-accumulation': 2,
+                'biomass-yearly-accumulation': 3,
+                'soil-high-impact-disturb': 4,
+                'biomass-high-impact-disturb': 5},
+            2: {'lulc-class': 'b',
+                'soil-yearly-accumulation': 6,
+                'biomass-yearly-accumulation': 7,
+                'soil-high-impact-disturb': 8,
+                'biomass-high-impact-disturb': 9},
+            3: {'lulc-class': 'c',
+                'soil-yearly-accumulation': 10,
+                'biomass-yearly-accumulation': 11,
+                'soil-high-impact-disturb': 12,
+                'biomass-high-impact-disturb': 13}
+        }
+
+        transition_csv_path = os.path.join(self.workspace_dir,
+                                           'transitions.csv')
+        with open(transition_csv_path, 'w') as transition_csv:
+            transition_csv.write('lulc-class,a,b,c\n')
+            transition_csv.write('missing code,NCC,accum,high-impact-disturb\n')
+            transition_csv.write('b,,NCC,accum\n')
+            transition_csv.write('c,accum,,NCC\n')
+            transition_csv.write(',,,\n')
+            transition_csv.write(',legend,,')  # simulate legend
+
+        with self.assertRaises(ValueError) as cm:
+            disturbance_matrices, accumulation_matrices = (
+                 coastal_blue_carbon._read_transition_matrix(
+                     transition_csv_path, biophysical_table))
+
+        self.assertIn("'lulc-class' column has a value, 'missing code'",
+                      str(cm.exception))
+
+        with open(transition_csv_path, 'w') as transition_csv:
+            transition_csv.write('lulc-class,missing code,b,c\n')
+            transition_csv.write('a,NCC,accum,high-impact-disturb\n')
+            transition_csv.write('b,,NCC,accum\n')
+            transition_csv.write('c,accum,,NCC\n')
+            transition_csv.write(',,,\n')
+            transition_csv.write(',legend,,')  # simulate legend
+
+        with self.assertRaises(ValueError) as cm:
+            disturbance_matrices, accumulation_matrices = (
+                 coastal_blue_carbon._read_transition_matrix(
+                     transition_csv_path, biophysical_table))
+
+        self.assertIn("The transition table's header row has a column name, "
+                      "'missing code',", str(cm.exception))
+
     def test_read_transition_matrix(self):
         """CBC: Test transition matrix reading."""
         # The full biophysical table will have much, much more information.  To
