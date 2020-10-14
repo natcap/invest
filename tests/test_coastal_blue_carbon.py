@@ -257,7 +257,9 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('lulc-class,a,b,c\n')
             transition_csv.write('a,NCC,accum,high-impact-disturb\n')
             transition_csv.write('b,,NCC,accum\n')
-            transition_csv.write('c,accum,,NCC')
+            transition_csv.write('c,accum,,NCC\n')
+            transition_csv.write(',,,\n')
+            transition_csv.write(',legend,,')  # simulate legend
 
         disturbance_matrices, accumulation_matrices = (
              coastal_blue_carbon._read_transition_matrix(
