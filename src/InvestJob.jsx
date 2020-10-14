@@ -361,7 +361,7 @@ export default class InvestJob extends React.Component {
           </Col>
           <Col sm={9}>
             <TabContent className="mt-3">
-              <TabPane eventKey="setup" title="Setup">
+              <TabPane eventKey="setup" title="Setup" className="main-pane">
                 <SetupTab
                   pyModuleName={modelSpec.module}
                   modelName={modelSpec.model_name}
@@ -376,7 +376,7 @@ export default class InvestJob extends React.Component {
                   isRunning={isRunning}
                 />
               </TabPane>
-              <TabPane eventKey="log" title="Log">
+              <TabPane eventKey="log" title="Log" className="main-pane">
                 <LogTab
                   jobStatus={jobStatus}
                   logfile={logfile}
@@ -384,7 +384,7 @@ export default class InvestJob extends React.Component {
                   terminateInvestProcess={this.terminateInvestProcess}
                 />
               </TabPane>
-              <TabPane eventKey="resources" title="Resources">
+              <TabPane eventKey="resources" title="Resources" className="main-pane">
                 <ResourcesTab
                   modelName={modelSpec.model_name}
                   docs={modelSpec.userguide_html}

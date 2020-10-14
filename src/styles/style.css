@@ -21,9 +21,17 @@
 	color: gray;
 }
 
+.main-pane {
+	border-color: gray;
+	border-style: solid;
+	background-color: ghostwhite;
+}
+
 .tab-content {
-	padding-left: 2rem;
-	padding-right: 2rem;
+	margin-left: 2rem;
+	margin-right: 2rem;
+	padding-left: 0rem;
+	padding-right: 0rem;
 }
 
 .close-tab {
@@ -144,3 +152,14 @@ input[type=radio]{
 	font-family: monospace;
 	font-size:1.3rem;
 }
+
+/* Log Tab */
+#log-display {
+  white-space: pre-line;
+  max-height: 75%;
+  overflow-y: scroll;
+};
+/*
+#log-alert {
+
+}*/

@@ -14,12 +14,6 @@ import { getLogger } from '../../logger';
 
 const logger = getLogger(__filename.split('/').slice(-2).join('/'));
 
-const logStyle = {
-  whiteSpace: 'pre-line',
-  maxHeight: '700px',
-  overflowY: 'scroll',
-};
-
 class LogDisplay extends React.Component {
   constructor(props) {
     super(props);
@@ -32,7 +26,7 @@ class LogDisplay extends React.Component {
 
   render() {
     return (
-      <Col ref={this.content} style={logStyle}>
+      <Col id="log-display" ref={this.content}>
         {this.props.logdata}
       </Col>
     );
@@ -170,7 +164,7 @@ export default class LogTab extends React.Component {
         <Row>
           <LogDisplay logdata={this.state.logdata} />
         </Row>
-        <Row>
+        <Row id="log-alert">
           <Col>
             {ModelStatusAlert}
           </Col>
