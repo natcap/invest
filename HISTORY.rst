@@ -82,6 +82,9 @@ Unreleased Changes (3.9)
       value. Now, the decay does not ignore those nodata edges causing values
       on the edges to decay more quickly. The area of study should have
       adequate boundaries to account for these edge effects.
+* Seasonal Water Yield
+    * Fixed a bug where precip or eto rasters of ``GDT_Float64`` with values
+      greater than 32-bit would overflow to ``-inf``.
 * SDR:
   * Fixing an issue where the LS factor should be capped to an upstream area of
     333^2 m^2. In previous versions the LS factor was erroniously capped to
