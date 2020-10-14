@@ -315,9 +315,9 @@ export default class InvestJob extends React.Component {
     const sidebarFooterElementId = `sidebar-footer-${navID}`;
 
     return (
-      <TabContainer activeKey={activeTab}>
+      <TabContainer activeKey={activeTab} id="invest-tab">
         <Row>
-          <Col sm={3}>
+          <Col sm={3} className="invest-sidebar-col">
             <Nav
               variant="pills"
               id="vertical tabs"
@@ -359,9 +359,9 @@ export default class InvestJob extends React.Component {
               className="flex-column sidebar-footer"
             />
           </Col>
-          <Col sm={9}>
+          <Col sm={9} className="invest-main-col">
             <TabContent className="mt-3">
-              <TabPane eventKey="setup" title="Setup" className="main-pane">
+              <TabPane eventKey="setup" title="Setup">
                 <SetupTab
                   pyModuleName={modelSpec.module}
                   modelName={modelSpec.model_name}
@@ -376,7 +376,7 @@ export default class InvestJob extends React.Component {
                   isRunning={isRunning}
                 />
               </TabPane>
-              <TabPane eventKey="log" title="Log" className="main-pane">
+              <TabPane eventKey="log" title="Log">
                 <LogTab
                   jobStatus={jobStatus}
                   logfile={logfile}

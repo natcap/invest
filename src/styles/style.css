@@ -1,3 +1,5 @@
+/*Top Navigation*/
+
 .navbar {
 	padding-bottom: 0;
 }
@@ -21,18 +23,37 @@
 	color: gray;
 }
 
-.main-pane {
+/*Main Layout*/
+
+#top-tab-content .tab-pane {
+	padding-top: 12px;
+}
+
+.invest-sidebar-col {
+	/*padding-top: 12px;*/
+}
+
+.invest-main-col {
+	/*padding-top: 12px;*/
+	padding-left: 2rem;
+	padding-right: 2rem;
+	height: 85vh;
+	/*overflow: auto;*/
+}
+
+.invest-main-col .tab-pane {
 	border-color: gray;
 	border-style: solid;
 	background-color: ghostwhite;
 }
 
-.tab-content {
+/*.tab-content {
+	margin-top: 12px;
 	margin-left: 2rem;
 	margin-right: 2rem;
 	padding-left: 0rem;
 	padding-right: 0rem;
-}
+}*/
 
 .close-tab {
 	margin-left: 0.5rem;
@@ -42,11 +63,22 @@
 	border-color: #6c757d;
 }
 
-/* Default sized Radio buttons are too small */
-input[type=radio]{
-  transform:scale(2.0);
-  padding-left: 0.5rem;
-  margin-right: 0.5rem;
+.sidebar-setup {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	align-items: flex-start;
+	padding-left: 2rem;
+}
+
+.sidebar-footer {
+	position:absolute;
+	bottom: 0rem;
+	width: inherit;
+	/*padding-left: 2rem;
+	padding-right: 2rem;
+	padding-top: 1rem;
+	padding-bottom: 1rem;*/
 }
 
 /* HomeTab styles */
@@ -110,31 +142,29 @@ input[type=radio]{
 	padding-left: 1.25rem;
 }
 
-.sidebar-setup {
-	display: flex;
-	flex-direction: column;
-	flex-wrap: nowrap;
-	align-items: flex-start;
-	padding-left: 2rem;
-}
-
-.sidebar-footer {
-	position:absolute;
-	bottom: 0rem;
-	width: inherit;
-	/*padding-left: 2rem;
-	padding-right: 2rem;
-	padding-top: 1rem;
-	padding-bottom: 1rem;*/
-}
-
-/* SetupTab styles */
+/* Setup Tab */
 .args-form {
 	height: 85vh;
 	overflow-y: auto;
-	overflow-x: hidden;
+	/*overflow-x: hidden;*/
 }
 
+/* Log Tab */
+#log-display {
+	/*flex: 1;*/
+	overflow: auto;
+  white-space: pre-line;
+	height: 75vh;
+  /*min-height: 0;*/
+  /*max-height: 75%;*/
+  /*overflow-y: scroll;*/
+};
+
+#log-alert {
+	height: 10vh;
+}
+
+/* Forms */
 .arg-group {
 	margin-top: 2.0rem;
 	margin-bottom: 2.0rem;
@@ -153,13 +183,9 @@ input[type=radio]{
 	font-size:1.3rem;
 }
 
-/* Log Tab */
-#log-display {
-  white-space: pre-line;
-  max-height: 75%;
-  overflow-y: scroll;
-};
-/*
-#log-alert {
-
-}*/
+/* Default sized Radio buttons are too small */
+input[type=radio]{
+  transform:scale(2.0);
+  padding-left: 0.5rem;
+  margin-right: 0.5rem;
+}
