@@ -34,6 +34,9 @@
 .. :changelog:
 Unreleased Changes (3.9)
 ------------------------
+* Annual Water Yield:
+    * Fixing bug that limited ``rsupply`` result when ``wyield_mn`` or
+      ``consump_mn`` was 0.
 * General:
     * Deprecating GDAL 2 and adding support for GDAL 3.
     * Adding function in utils.py to handle InVEST coordindate transformations.
