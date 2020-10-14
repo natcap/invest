@@ -1,9 +1,10 @@
-"""InVEST Finfish Aquaculture"""
+"""InVEST Finfish Aquaculture."""
 import os
 import csv
 import logging
 
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
+from .. import utils
 from .. import validation
 
 
@@ -15,6 +16,7 @@ ARGS_SPEC = {
     "userguide_html": "marine_fish.html",
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
         "ff_farm_loc": {
             "name": "Finfish Farm Location",
             "about": (
@@ -206,6 +208,8 @@ def execute(args):
     Args:
         workspace_dir (string): The directory in which to place all result
             files.
+        results_suffix (string): (optional) string to append to any
+            output file names
         ff_farm_loc (string): URI that points to a shape file of fishery
             locations
         farm_ID (string): column heading used to describe individual farms.
@@ -238,6 +242,7 @@ def execute(args):
 
         {
             'workspace_dir': 'path/to/workspace_dir',
+            'results_suffix': 'test',
             'ff_farm_loc': 'path/to/shapefile',
             'farm_ID': 'FarmID'
             'g_param_a': 0.038,
@@ -257,22 +262,23 @@ def execute(args):
         }
 
     """
-
-    #initialize new dictionary of purely biophysical/general arguments which
-    #will be passed to the aquaculture core module. Then get desirable
-    #arguments that are being passed in, and load them into the biophysical
-    #dictionary.
+    # initialize new dictionary of purely biophysical/general arguments which
+    # will be passed to the aquaculture core module. Then get desirable
+    # arguments that are being passed in, and load them into the biophysical
+    # dictionary.
 
     ff_aqua_args = {}
 
     workspace = args['workspace_dir']
     output_dir = workspace + os.sep + 'output'
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     if not (os.path.exists(output_dir)):
         LOGGER.debug('Creating output directory')
         os.makedirs(output_dir)
 
     ff_aqua_args['workspace_dir'] = args['workspace_dir']
+    ff_aqua_args['results_suffix'] = file_suffix
     ff_aqua_args['ff_farm_file'] = args['ff_farm_loc']
     ff_aqua_args['farm_ID'] = args['farm_ID']
     ff_aqua_args['outplant_buffer'] = int(args['outplant_buffer'])
@@ -282,19 +288,20 @@ def execute(args):
 
     if args['use_uncertainty']:
         LOGGER.debug('Adding uncertainty parameters')
-        ff_aqua_args['num_monte_carlo_runs'] = int(args['num_monte_carlo_runs'])
+        ff_aqua_args['num_monte_carlo_runs'] = int(
+            args['num_monte_carlo_runs'])
         for key in ['g_param_a_sd', 'g_param_b_sd']:
             ff_aqua_args[key] = float(args[key])
 
-    #Both CSVs are being pulled in, but need to do some maintenance to remove
-    #undesirable information before they can be passed into core
+    # Both CSVs are being pulled in, but need to do some maintenance to remove
+    # undesirable information before they can be passed into core
 
     format_ops_table(args['farm_op_tbl'], "Farm #:", ff_aqua_args)
     format_temp_table(args['water_temp_tbl'], ff_aqua_args)
 
     ff_aqua_args['do_valuation'] = args['do_valuation']
 
-    #Valuation arguments
+    # Valuation arguments
     key = 'do_valuation'
 
     if ff_aqua_args['do_valuation'] is True:
@@ -304,8 +311,8 @@ def execute(args):
         ff_aqua_args['frac_p'] = float(args['frac_p'])
         ff_aqua_args['discount'] = float(args['discount'])
 
-    #Fire up the biophysical function in finfish_aquaculture_core with the
-    #gathered arguments
+    # Fire up the biophysical function in finfish_aquaculture_core with the
+    # gathered arguments
     LOGGER.debug('Starting finfish model')
     finfish_aquaculture_core.execute(ff_aqua_args)
 
@@ -332,16 +339,15 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
 
     Returns nothing.
     """
-
-    #NOTE: Have to do some explicit calls to strings here. This is BAD. Don't
-    #do it if you don't have to. THESE EXPLICIT STRINGS COME FROM THE "Farm
-    #Operations" table.
+    # NOTE: Have to do some explicit calls to strings here. This is BAD. Don't
+    # do it if you don't have to. THESE EXPLICIT STRINGS COME FROM THE "Farm
+    # Operations" table.
 
     new_dict_op = {}
     csv_file = open(op_path)
 
-    #this will be separate arguments that are passed along straight into
-    #biophysical_args
+    # this will be separate arguments that are passed along straight into
+    # biophysical_args
     general_ops = {}
     line = None
 
@@ -367,11 +373,11 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
         if 'Duration of simulation (years)' in split_line[0]:
             general_ops['duration'] = split_line[1]
 
-    #this is explicitly telling it the fields that I want to get data for
-    #want to remove the 'Total Value' field, since there is not data inside
-    #there, then tell the dictreader to set up a reader with dictionaries of
-    #only those fields, where the overarching dictionary uses the Farm ID as
-    #the key for each of the sub dictionaries
+    # this is explicitly telling it the fields that I want to get data for
+    # want to remove the 'Total Value' field, since there is not data inside
+    # there, then tell the dictreader to set up a reader with dictionaries of
+    # only those fields, where the overarching dictionary uses the Farm ID as
+    # the key for each of the sub dictionaries
     fieldnames = line.split(delim)
 
     reader = csv.DictReader(
@@ -393,7 +399,7 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
 
     ff_aqua_args['farm_op_dict'] = new_dict_op
 
-    #add the gen args in
+    # add the gen args in
     for key in general_ops.keys():
         ff_aqua_args[key] = general_ops[key]
 
@@ -416,22 +422,21 @@ def format_temp_table(temp_path, ff_aqua_args):
 
     Returns nothing.
     """
-
-    #EXPLICIT STRINGS FROM "Temp_Daily"
+    # EXPLICIT STRINGS FROM "Temp_Daily"
     water_temp_file = open(temp_path)
 
     new_dict_temp = {}
     line = None
 
-    #This allows us to dynamically determine if the CSV file is comma
-    #separated, or semicolon separated.
+    # This allows us to dynamically determine if the CSV file is comma
+    # separated, or semicolon separated.
     dialect = csv.Sniffer().sniff(water_temp_file.read())
     water_temp_file.seek(0)
     delim = dialect.delimiter
     end_line = dialect.lineterminator
 
-    #The farm ID numbers that fall under this column heading in the CSV will
-    #be used as the keys in the second level of the dictionary.
+    # The farm ID numbers that fall under this column heading in the CSV will
+    # be used as the keys in the second level of the dictionary.
     day_marker = 'Day #'
 
     while True:
@@ -439,8 +444,8 @@ def format_temp_table(temp_path, ff_aqua_args):
         if day_marker in line:
             break
 
-    #this is explicitly telling it the fields that I want to get data for, and
-    #am removing the Day/Month Field Since it's unnecessary
+    # this is explicitly telling it the fields that I want to get data for, and
+    # am removing the Day/Month Field Since it's unnecessary
     fieldnames = line.split(delim)
 
     reader = csv.DictReader(
@@ -458,7 +463,7 @@ def format_temp_table(temp_path, ff_aqua_args):
 
         del sub_dict['Day/Month']
 
-        #Subtract 1 here so that the day in the temp table allows for % 365
+        # Subtract 1 here so that the day in the temp table allows for % 365
         new_dict_temp[str(int(row[day_marker]) - 1)] = sub_dict
 
     ff_aqua_args['water_temp_dict'] = new_dict_temp

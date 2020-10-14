@@ -1004,14 +1004,16 @@ def _calculate_curve_number_raster(
     lulc_to_soil = {}
     lulc_nodata = pygeoprocessing.get_raster_info(
         lulc_raster_path)['nodata'][0]
+
+    lucodes = list(biophysical_table)
+    if lulc_nodata is not None:
+        lucodes.append(lulc_nodata)
+
     for soil_id, soil_column in map_soil_type_to_header.items():
         lulc_to_soil[soil_id] = {
             'lulc_values': [],
             'cn_values': []
         }
-        lucodes = list(biophysical_table)
-        if lulc_nodata is not None:
-            lucodes.append(lulc_nodata)
 
         for lucode in sorted(lucodes):
             if lucode != lulc_nodata:
@@ -1033,7 +1035,7 @@ def _calculate_curve_number_raster(
                         dtype=numpy.float32))
 
     # Use set of table lucodes in cn_op
-    lucodes_set = set(list(biophysical_table))
+    lucodes_set = set(lucodes)
 
     def cn_op(lulc_array, soil_group_array):
         """Map lulc code and soil to a curve number."""
@@ -1159,7 +1161,7 @@ def _aggregate_recharge(
                 if pixel_count != 0:
                     value = (aggregate_stats[poly_index]['sum'] / pixel_count)
                 else:
-                    LOGGER.warn(
+                    LOGGER.warning(
                         "no coverage for polygon %s", ', '.join(
                             [str(poly_feat.GetField(_)) for _ in range(
                                 poly_feat.GetFieldCount())]))

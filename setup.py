@@ -82,8 +82,8 @@ setup(
         'Operating System :: Microsoft',
         'Operating System :: POSIX',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Programming Language :: Cython',
         'License :: OSI Approved :: BSD License',
         'Topic :: Scientific/Engineering :: GIS'

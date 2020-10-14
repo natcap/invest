@@ -403,7 +403,7 @@ def execute(args):
             if os.path.exists(tmp_filename):
                 os.remove(tmp_filename)
         except OSError as os_error:
-            LOGGER.warn(
+            LOGGER.warning(
                 "Can't remove temporary file: %s\nOriginal Exception:\n%s",
                 file_registry[tmp_filename_key], os_error)
 
