@@ -465,6 +465,75 @@ class TestCBC2(unittest.TestCase):
         self.assertIn("`lulc-class` column must be unique",
                       str(context.exception))
 
+    def test_model_no_analysis_year_no_price_table(self):
+        """CBC: Test the model's execution."""
+        args = TestCBC2._create_model_args(self.workspace_dir)
+        args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
+        del args['analysis_year']  # final year is 2020.
+        args['use_price_table'] = False
+        args['inflation_rate'] = 5
+        args['price'] = 10.0
+
+        coastal_blue_carbon.execute(args)
+
+        # Sample values calculated by hand.  Pixel 0 only accumulates.  Pixel 1
+        # has no accumulation (per the biophysical table) and also has no
+        # emissions.
+        expected_sequestration_2000_to_2010 = numpy.array(
+            [[83.5, 0]], dtype=numpy.float32)
+        raster_path = os.path.join(
+            args['workspace_dir'], 'output',
+            ('total-net-carbon-sequestration-between-'
+                '2000-and-2010.tif'))
+        try:
+            raster = gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_sequestration_2000_to_2010)
+        finally:
+            raster = None
+
+        expected_sequestration_2010_to_2020 = numpy.array(
+            [[-179.84901, 73.5]], dtype=numpy.float32)
+        raster_path = os.path.join(
+            args['workspace_dir'], 'output',
+            ('total-net-carbon-sequestration-between-'
+                '2010-and-2020.tif'))
+        try:
+            raster = gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_sequestration_2010_to_2020, rtol=1e-6)
+        finally:
+            raster = None
+
+        # Total sequestration is the sum of all the previous sequestration.
+        expected_total_sequestration = (
+            expected_sequestration_2000_to_2010 +
+            expected_sequestration_2010_to_2020)
+        raster_path = os.path.join(
+            args['workspace_dir'], 'output',
+            'total-net-carbon-sequestration.tif')
+        try:
+            raster = gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_total_sequestration, rtol=1e-6)
+        finally:
+            raster = None
+
+        expected_net_present_value_at_2020 = numpy.array(
+            [[-21135.857,  16123.521]], dtype=numpy.float32)
+        raster_path = os.path.join(
+            args['workspace_dir'], 'output', 'net-present-value-at-2020.tif')
+        try:
+            raster = gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_net_present_value_at_2020, rtol=1e-6)
+        finally:
+            raster = None
+
     def test_model(self):
         """CBC: Test the model's execution."""
         args = TestCBC2._create_model_args(self.workspace_dir)
