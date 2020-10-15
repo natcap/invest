@@ -25,7 +25,7 @@
 
 /*Main Layout*/
 
-#top-tab-content .tab-pane {
+#top-tab-content.tab-content {
 	padding-top: 16px;
 }
 
@@ -60,10 +60,11 @@
 	/*overflow: auto;*/
 }
 
-.invest-main-col .tab-pane {
+.invest-main-col .tab-content {
 	border-color: gray;
 	border-style: solid;
 	background-color: ghostwhite;
+	padding-left: 2rem;
 }
 
 /*.tab-content {
@@ -147,7 +148,7 @@
 .args-form {
 	height: 85vh;
 	overflow-y: auto;
-	/*overflow-x: hidden;*/
+	overflow-x: hidden;
 }
 
 /* Log Tab */
