@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 
 import Container from 'react-bootstrap/Container';
 import Spinner from 'react-bootstrap/Spinner';
+import Row from 'react-bootstrap/Row';
 
 import ArgsForm from './ArgsForm';
 import {
@@ -356,16 +357,18 @@ export default class SetupTab extends React.Component {
       );
 
       return (
-        <React.Fragment>
-          <ArgsForm
-            argsSpec={argsSpec}
-            argsValues={argsValues}
-            argsValidation={argsValidation}
-            sortedArgKeys={sortedArgKeys}
-            pyModuleName={pyModuleName}
-            updateArgValues={this.updateArgValues}
-            batchUpdateArgs={this.batchUpdateArgs}
-          />
+        <Container fluid>
+          <Row>
+            <ArgsForm
+              argsSpec={argsSpec}
+              argsValues={argsValues}
+              argsValidation={argsValidation}
+              sortedArgKeys={sortedArgKeys}
+              pyModuleName={pyModuleName}
+              updateArgValues={this.updateArgValues}
+              batchUpdateArgs={this.batchUpdateArgs}
+            />
+          </Row>
           <SaveParametersButtons
             elId={sidebarSetupElementId}
             savePythonScript={this.savePythonScript}
@@ -377,7 +380,7 @@ export default class SetupTab extends React.Component {
             wrapInvestExecute={this.wrapInvestExecute}
             buttonText={buttonText}
           />
-        </React.Fragment>
+        </Container>
       );
     }
     // The SetupTab remains disabled in this route, so no need

@@ -160,7 +160,7 @@ export default class LogTab extends React.Component {
     }
 
     return (
-      <Container>
+      <Container fluid>
         <Row>
           <LogDisplay logdata={this.state.logdata} />
         </Row>

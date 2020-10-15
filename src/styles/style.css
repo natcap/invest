@@ -23,11 +23,13 @@
 	color: gray;
 }
 
-/*Main Layout*/
+/*Top Layout*/
 
 #top-tab-content.tab-content {
 	padding-top: 16px;
 }
+
+/*InVEST Model Layout*/
 
 .invest-sidebar-col {
 	/*display: flex;*/
@@ -67,14 +69,6 @@
 	padding-left: 2rem;
 }
 
-/*.tab-content {
-	margin-top: 12px;
-	margin-left: 2rem;
-	margin-right: 2rem;
-	padding-left: 0rem;
-	padding-right: 0rem;
-}*/
-
 .close-tab {
 	margin-left: 0.5rem;
 	border-color: transparent;
@@ -83,7 +77,7 @@
 	border-color: #6c757d;
 }
 
-/* HomeTab styles */
+/* HomeTab */
 
 .invest-list-table {
 	display: block;
@@ -147,6 +141,7 @@
 /* Setup Tab */
 .args-form {
 	height: 85vh;
+	width: 100%;
 	overflow-y: auto;
 	overflow-x: hidden;
 }
