@@ -26,11 +26,30 @@
 /*Main Layout*/
 
 #top-tab-content .tab-pane {
-	padding-top: 12px;
+	padding-top: 16px;
 }
 
 .invest-sidebar-col {
+	/*display: flex;*/
 	/*padding-top: 12px;*/
+}
+
+.sidebar-setup {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	align-items: flex-start;
+	padding-left: 2rem;
+}
+
+.sidebar-footer {
+	position: absolute;
+	bottom: 0rem;
+	right: 0;
+	left: 0;
+	width: inherit;
+	padding-left: inherit;
+	padding-right: inherit;
 }
 
 .invest-main-col {
@@ -61,24 +80,6 @@
 }
 .close-tab:hover, .close-tab:focus, .close-tab:active {
 	border-color: #6c757d;
-}
-
-.sidebar-setup {
-	display: flex;
-	flex-direction: column;
-	flex-wrap: nowrap;
-	align-items: flex-start;
-	padding-left: 2rem;
-}
-
-.sidebar-footer {
-	position:absolute;
-	bottom: 0rem;
-	width: inherit;
-	/*padding-left: 2rem;
-	padding-right: 2rem;
-	padding-top: 1rem;
-	padding-bottom: 1rem;*/
 }
 
 /* HomeTab styles */

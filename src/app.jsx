@@ -249,7 +249,7 @@ export default class App extends React.Component {
             investSettings={investSettings}
           />
         </Navbar>
-        <TabContent className="mt-3" id="top-tab-content">
+        <TabContent id="top-tab-content">
           <TabPane eventKey="home" title="Home">
             <HomeTab
               investList={investList}

@@ -356,7 +356,7 @@ export default class SetupTab extends React.Component {
       );
 
       return (
-        <Container fluid>
+        <React.Fragment>
           <ArgsForm
             argsSpec={argsSpec}
             argsValues={argsValues}
@@ -377,7 +377,7 @@ export default class SetupTab extends React.Component {
             wrapInvestExecute={this.wrapInvestExecute}
             buttonText={buttonText}
           />
-        </Container>
+        </React.Fragment>
       );
     }
     // The SetupTab remains disabled in this route, so no need

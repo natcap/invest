@@ -360,7 +360,7 @@ export default class InvestJob extends React.Component {
             />
           </Col>
           <Col sm={9} className="invest-main-col">
-            <TabContent className="mt-3">
+            <TabContent>
               <TabPane eventKey="setup" title="Setup">
                 <SetupTab
                   pyModuleName={modelSpec.module}
