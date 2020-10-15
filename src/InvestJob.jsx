@@ -382,6 +382,7 @@ export default class InvestJob extends React.Component {
                   logfile={logfile}
                   logStdErr={logStdErr}
                   terminateInvestProcess={this.terminateInvestProcess}
+                  pyModuleName={modelSpec.module}
                 />
               </TabPane>
               <TabPane eventKey="resources" title="Resources" className="main-pane">

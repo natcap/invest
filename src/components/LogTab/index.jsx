@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { Tail } from 'tail';
 import os from 'os';
 import { shell } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import sanitizeHtml from 'sanitize-html';
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -27,7 +28,10 @@ class LogDisplay extends React.Component {
   render() {
     return (
       <Col id="log-display" ref={this.content}>
-        {this.props.logdata}
+        <div
+          id="log-text"
+          dangerouslySetInnerHTML={{ __html: this.props.logdata }}
+        />
       </Col>
     );
   }
@@ -59,9 +63,13 @@ export default class LogTab extends React.Component {
   componentDidUpdate(prevProps) {
     // Re-executing a model will generate a new logfile
     // so need to update to tail the new file.
-    const { logfile } = this.props;
+    const { logfile, jobStatus } = this.props;
     if (logfile && (prevProps.logfile !== logfile)) {
       this.tailLogfile(logfile);
+    }
+    if ((jobStatus !== 'running') && (prevProps.jobStatus !== jobStatus)) {
+      // status changed from running to anything else
+      this.unwatchLogfile();
     }
   }
 
@@ -71,13 +79,29 @@ export default class LogTab extends React.Component {
   }
 
   tailLogfile(logfile) {
+    const primaryLogger = `${
+      this.props.pyModuleName
+    }`.split('.').slice(-1)[0];
     try {
       this.tail = new Tail(logfile, {
         fromBeginning: true,
       });
       let logdata = Object.assign('', this.state.logdata);
       this.tail.on('line', (data) => {
-        logdata += `${data}${os.EOL}`;
+        const dataString = `${data}${os.EOL}`;
+        let markup;
+        if (dataString.includes(`${primaryLogger}.`)) {
+          markup = `<p class="invest-log-primary">${dataString}</p>`;
+        } else {
+          markup = dataString;
+        }
+        logdata += sanitizeHtml(markup, {
+          allowedTags: ['p'],
+          allowedAttributes: {
+            p: ['class']
+          },
+        });
+        // logdata += `${data}${os.EOL}`;
         this.setState({ logdata: logdata });
       });
       this.tail.on('error', (error) => {
@@ -134,25 +158,25 @@ export default class LogTab extends React.Component {
         </Alert>
       );
     } else if (jobStatus === 'error') {
-      this.unwatchLogfile();
+      // this.unwatchLogfile();
       ModelStatusAlert = (
-        <Alert className="py-4 mt-3" variant="danger">
+        <Alert className="py-4" variant="danger">
           {this.props.logStdErr}
           {WorkspaceButton}
         </Alert>
       );
     } else if (jobStatus === 'success') {
-      this.unwatchLogfile();
+      // this.unwatchLogfile();
       ModelStatusAlert = (
-        <Alert className="py-4 mt-3" variant="success">
+        <Alert className="py-4" variant="success">
           <span>Model Completed</span>
           {WorkspaceButton}
         </Alert>
       );
     } else if (jobStatus === 'canceled') {
-      this.unwatchLogfile();
+      // this.unwatchLogfile();
       ModelStatusAlert = (
-        <Alert className="py-4 mt-3" variant="warning">
+        <Alert className="py-4" variant="warning">
           <span>Run Canceled</span>
           {WorkspaceButton}
         </Alert>
@@ -164,8 +188,8 @@ export default class LogTab extends React.Component {
         <Row>
           <LogDisplay logdata={this.state.logdata} />
         </Row>
-        <Row id="log-alert">
-          <Col>
+        <Row>
+          <Col id="log-alert">
             {ModelStatusAlert}
           </Col>
         </Row>

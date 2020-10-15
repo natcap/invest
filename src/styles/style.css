@@ -33,7 +33,7 @@
 
 .invest-sidebar-col {
 	/*display: flex;*/
-	/*padding-top: 12px;*/
+	/*padding-top: 16px;*/
 }
 
 .sidebar-setup {
@@ -56,17 +56,17 @@
 
 .invest-main-col {
 	/*padding-top: 12px;*/
-	padding-left: 2rem;
-	padding-right: 2rem;
+	/*padding-left: 2rem;*/
+	/*padding-right: 2rem;*/
 	height: 85vh;
 	/*overflow: auto;*/
 }
 
 .invest-main-col .tab-content {
-	border-color: gray;
-	border-style: solid;
+	/*border-color: gray;*/
+	/*border-style: solid;*/
 	background-color: ghostwhite;
-	padding-left: 2rem;
+	/*padding-left: 2rem;*/
 }
 
 .close-tab {
@@ -142,6 +142,7 @@
 .args-form {
 	height: 85vh;
 	width: 100%;
+	margin-left: 2rem;
 	overflow-y: auto;
 	overflow-x: hidden;
 }
@@ -155,10 +156,26 @@
   /*min-height: 0;*/
   /*max-height: 75%;*/
   /*overflow-y: scroll;*/
-};
+  background-color: #000;
+}
+
+#log-text {
+	font-family: monospace;
+	font-size:1.2rem;
+	color: #d3d3d3;
+}
+
+#log-text .invest-log-primary {
+	color: #fff;
+	font-size: 1.3rem;
+	margin-top: 0.25rem;
+	margin-bottom: 0.25rem;
+}
 
 #log-alert {
 	height: 10vh;
+	padding-left: inherit;
+	padding-right: inherit;
 }
 
 /* Forms */
