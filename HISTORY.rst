@@ -55,6 +55,7 @@ Unreleased Changes (3.9)
       messages from the model execution will show up when you run the script.
     * InVEST is now a 64-bit binary built against Python 3.7.
     * Adding Python 3.8 support for InVEST testing.
+    * Fixing model documentation links for Windows.
 * Coastal Vulnerability
     * 'shore_points_missing_geomorphology.gpkg' output file name now includes
       the suffix if any, and its one layer now is renamed from

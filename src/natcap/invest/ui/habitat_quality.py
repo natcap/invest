@@ -11,7 +11,7 @@ class HabitatQuality(model.InVESTModel):
             label='Habitat Quality',
             target=natcap.invest.habitat_quality.execute,
             validator=natcap.invest.habitat_quality.validate,
-            localdoc='../documentation/habitat_quality.html')
+            localdoc='habitat_quality.html')
         self.current_landcover = inputs.File(
             args_key='lulc_cur_path',
             helptext=(
