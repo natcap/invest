@@ -241,7 +241,7 @@ export default class InvestJob extends React.Component {
     // in which case it's useful to logger.debug too.
     let stderr = Object.assign('', this.state.logStdErr);
     this.investRun.stderr.on('data', (data) => {
-      logger.debug(`${data}`)
+      logger.debug(`${data}`);
       stderr += `${data}`;
       this.setState({
         logStdErr: stderr,
@@ -251,13 +251,12 @@ export default class InvestJob extends React.Component {
     // Set some state when the invest process exits and update the app's
     // persistent database by calling saveJob.
     this.investRun.on('exit', (code) => {
-      // TODO: there are non-zero exit cases that should be handled
-      // differently from one-another, but right now they are all exit code 1.
-      // E.g. this state update is designed with a model crash in mind,
-      // not a fail to launch
+      logger.debug(code);
       if (code === 0) {
         job.status = 'success';
-      } else if (code === 1) {
+      } else if (code > 0) {
+        // The invest CLI exits w/ 1 when it catches errors,
+        // but models exit w/ 255 when errors raise from execute()
         job.status = 'error';
       } else {
         // code is null if the process was killed
