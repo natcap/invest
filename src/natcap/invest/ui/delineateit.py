@@ -1,7 +1,7 @@
 # encoding=UTF-8
 
 from natcap.invest.ui import model, inputs
-from natcap.invest import delineateit
+from natcap.invest.delineateit import delineateit
 
 
 class Delineateit(model.InVESTModel):
@@ -21,6 +21,18 @@ class Delineateit(model.InVESTModel):
                 "for each cell."),
             validator=self.validator)
         self.add_input(self.dem_path)
+
+        self.detect_pour_points = inputs.Checkbox(
+            args_key='detect_pour_points',
+            helptext=(
+                'If this box is checked, run pour point detection algorithm. '
+                'Use detected pour points instead of outlet geometries.'),
+            label='Detect pour points'
+        )
+        self.add_input(self.detect_pour_points)
+        self.detect_pour_points.sufficiency_changed.connect(
+            self.on_detect_pour_points_changed)
+
         self.outlet_vector_path = inputs.File(
             args_key='outlet_vector_path',
             helptext=(
@@ -73,6 +85,12 @@ class Delineateit(model.InVESTModel):
             validator=self.validator)
         self.snap_points_container.add_input(self.snap_distance)
 
+    def on_detect_pour_points_changed(self, value):
+        """Change interactivity of other inputs given boolean signal value"""
+        self.outlet_vector_path.set_interactive(not value)
+        self.skip_invalid_geometry.set_interactive(not value)
+        self.snap_points_container.set_interactive(value)
+
     def _enable_point_snapping_container(self, input_valid):
         outlet_vector_path = self.outlet_vector_path.value()
         if delineateit._vector_may_contain_points(outlet_vector_path):
@@ -86,8 +104,7 @@ class Delineateit(model.InVESTModel):
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
             self.dem_path.args_key: self.dem_path.value(),
-            self.outlet_vector_path.args_key: (
-                self.outlet_vector_path.value()),
+            self.detect_pour_points.args_key: self.detect_pour_points.value(),
             self.snap_points_container.args_key: (
                 self.snap_points_container.value()),
             self.flow_threshold.args_key: self.flow_threshold.value(),
@@ -95,5 +112,11 @@ class Delineateit(model.InVESTModel):
             self.skip_invalid_geometry.args_key: (
                 self.skip_invalid_geometry.value()),
         }
+        # If the outlet_vector_path input is grayed out but still has a value,
+        # validation will still check that it overlaps the DEM.
+        # To avoid this, only include it if it's going to be used.
+        if self.detect_pour_points.value() == False:
+            args[self.outlet_vector_path.args_key] = self.outlet_vector_path.value()
+
 
         return args

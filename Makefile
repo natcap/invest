@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := bece33debc049afffcfff0128a265ccb3d859ef4
+GIT_SAMPLE_DATA_REPO_REV    := e9bf37762255535f7c74edb8139847edd1866702
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
 GIT_TEST_DATA_REPO_REV      := c2e75c7f2d79d5f6f1bca7a220c0e185ae561dfb
 
-GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
-GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 21b1934b78da1a4123125c8883d5e6b7693c5507
+GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
+GIT_UG_REPO_PATH            := doc/users-guide
+GIT_UG_REPO_REV             := ecba3c77928fc1e72f5c49ffa315aea2a39c78a1
 
 
 ENV = env

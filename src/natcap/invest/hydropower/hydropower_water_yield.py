@@ -833,7 +833,6 @@ def fractp_op(
         (awc / precip[valid_mask]) * seasonality_constant) + 1.25
     # Capping to 5.0 to set to upper limit if exceeded
     climate_w[climate_w > 5.0] = 5.0
-    # climate_w = numpy.where(climate_w > 5.0, 5.0, climate_w)
 
     # Compute evapotranspiration partition of the water balance
     aet_p = (
@@ -928,7 +927,7 @@ def compute_watershed_valuation(watershed_results_vector_path, val_dict):
 
         # there won't be a rsupply_vl value if the polygon feature only
         # covers nodata raster values, so check before doing math.
-        if rsupply_vl:
+        if rsupply_vl is not None:
             # Get the valuation parameters for watershed 'ws_id'
             val_row = val_dict[ws_id]
 
@@ -960,8 +959,8 @@ def compute_watershed_valuation(watershed_results_vector_path, val_dict):
 def compute_rsupply_volume(watershed_results_vector_path):
     """Calculate the total realized water supply volume.
 
-    And the mean realized water supply volume per hectare for the given sheds.
-    Output units in cubic meters and cubic meters per hectare respectively.
+    And the mean realized water supply volume per pixel for the given sheds.
+    Output units in cubic meters and cubic meters per pixel respectively.
 
     Args:
         watershed_results_vector_path (string): a path to a vector that
@@ -1000,7 +999,7 @@ def compute_rsupply_volume(watershed_results_vector_path):
         # Calculate realized supply
         # these values won't exist if the polygon feature only
         # covers nodata raster values, so check before doing math.
-        if wyield_mn and consump_mn:
+        if wyield_mn is not None and consump_mn is not None:
             rsupply_vol = wyield - consump_vol
             rsupply_mn = wyield_mn - consump_mn
 
@@ -1045,7 +1044,7 @@ def compute_water_yield_volume(watershed_results_vector_path):
         wyield_mn = feat.GetField('wyield_mn')
         # there won't be a wyield_mn value if the polygon feature only
         # covers nodata raster values, so check before doing math.
-        if wyield_mn:
+        if wyield_mn is not None:
             geom = feat.GetGeometryRef()
             # Calculate water yield volume,
             # 1000 is for converting the mm of wyield to meters

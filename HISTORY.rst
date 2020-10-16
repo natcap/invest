@@ -34,6 +34,9 @@
 .. :changelog:
 Unreleased Changes (3.9)
 ------------------------
+* Annual Water Yield:
+    * Fixing bug that limited ``rsupply`` result when ``wyield_mn`` or
+      ``consump_mn`` was 0.
 * General:
     * Deprecating GDAL 2 and adding support for GDAL 3.
     * Adding function in utils.py to handle InVEST coordindate transformations.
@@ -87,6 +90,8 @@ Unreleased Changes (3.9)
       'snapped' to be the same as the file name (including suffix).
     * The layer in the 'watersheds.gpkg' output has been renamed from
       'watersheds' to match the name of the vector file (including the suffix).
+    * Added pour point detection option as an alternative to providing an 
+      outlet features vector.
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under

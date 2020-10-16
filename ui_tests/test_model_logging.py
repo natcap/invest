@@ -61,9 +61,18 @@ class ModelLoggingTests(unittest.TestCase):
             'not_a_gis_input': 'foobar'
         }
 
+        args_spec = {
+            'args': {
+                'raster': {'type': 'raster'},
+                'vector': {'type': 'vector'},
+                'not_a_gis_input': {'type': 'freestyle_string'}
+            }
+        }
+
         output_logfile = os.path.join(self.workspace_dir, 'logfile.txt')
         with utils.log_to_file(output_logfile):
-            bb_inter, bb_union = usage._calculate_args_bounding_box(model_args)
+            bb_inter, bb_union = usage._calculate_args_bounding_box(
+                model_args, args_spec)
 
         numpy.testing.assert_allclose(
             bb_inter, [-87.234108, -85.526151, -87.233424, -85.526205])
