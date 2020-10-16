@@ -268,6 +268,11 @@ export default class InvestJob extends React.Component {
 
   terminateInvestProcess() {
     this.investRun.terminate();
+    // this replaces any stderr that might exist, but that's
+    // okay since the user requested terminating the process.
+    this.setState({
+      logStdErr: 'Run Canceled',
+    });
   }
 
   /** Change the tab that is currently visible.

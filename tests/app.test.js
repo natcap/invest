@@ -463,7 +463,6 @@ describe('InVEST subprocess testing', () => {
   test('user terminates process - expect log display', async () => {
     const spy = jest.spyOn(InvestJob.prototype, 'terminateInvestProcess')
       .mockImplementation(() => {
-        console.log('click handler')
         mockInvestProc.emit('exit', null)
       })
 
