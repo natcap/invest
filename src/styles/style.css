@@ -177,6 +177,11 @@ body {
 	margin-bottom: 0.25rem;
 }
 
+#log-text .invest-log-error {
+	color: #ffc0cb;
+	margin-bottom: 0rem;
+}
+
 #log-alert {
 	height: 10vh;
 	padding-left: inherit;

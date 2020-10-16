@@ -14,6 +14,8 @@ import Button from 'react-bootstrap/Button';
 import { getLogger } from '../../logger';
 
 const logger = getLogger(__filename.split('/').slice(-2).join('/'));
+//2020-10-16 07:13:04,325
+const INVEST_LOG_PATTERN = /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}/; 
 
 class LogDisplay extends React.Component {
   constructor(props) {
@@ -90,10 +92,14 @@ export default class LogTab extends React.Component {
       this.tail.on('line', (data) => {
         const dataString = `${data}${os.EOL}`;
         let markup;
-        if (dataString.includes(`${primaryLogger}.`)) {
-          markup = `<p class="invest-log-primary">${dataString}</p>`;
+        if (INVEST_LOG_PATTERN.test(dataString)) {
+          if (dataString.includes(`${primaryLogger}.`)) {
+            markup = `<p class="invest-log-primary">${dataString}</p>`;
+          } else {
+            markup = dataString;
+          }
         } else {
-          markup = dataString;
+          markup = `<p class="invest-log-error">${dataString}</p>`;
         }
         logdata += sanitizeHtml(markup, {
           allowedTags: ['p'],
@@ -159,9 +165,16 @@ export default class LogTab extends React.Component {
       );
     } else if (jobStatus === 'error') {
       // this.unwatchLogfile();
+      let lastCall = '';
+      let i = 1;
+      while (!lastCall) {
+        [lastCall] = `${this.props.logStdErr}`
+          .split(`${os.EOL}`).splice(-1 * i);
+        i += 1;
+      }
       ModelStatusAlert = (
         <Alert className="py-4" variant="danger">
-          {this.props.logStdErr}
+          {lastCall}
           {WorkspaceButton}
         </Alert>
       );

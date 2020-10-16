@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import crypto from 'crypto';
 import { spawn, exec } from 'child_process';
 import React from 'react';
@@ -248,7 +249,7 @@ export default class InvestJob extends React.Component {
     let stderr = Object.assign('', this.state.logStdErr);
     this.investRun.stderr.on('data', (data) => {
       logger.debug(`${data}`);
-      stderr += `${data}`;
+      stderr += `${data}${os.EOL}`;
       this.setState({
         logStdErr: stderr,
       });
