@@ -94,6 +94,7 @@ here for several reasons:
 import logging
 import os
 import time
+import shutil
 
 import numpy
 import pygeoprocessing
@@ -597,8 +598,62 @@ def execute(args):
                 yearly_accum_rasters[current_transition_year][POOL_LITTER]],
             task_name=(
                 f'Mapping litter accumulation for {current_transition_year}'))
-
         prior_transition_year = current_transition_year
+
+    # This is broken out into a separate loop because we need to add on the
+    # analysis year.  Rolling all of this into the prior loop is less readable
+    # overall, even if it would reduce the number of loop iterations slightly.
+    total_accumulation_rasters = {}
+    total_accumulation_tasks = {}
+    prior_transition_year = baseline_lulc_year
+    for current_transition_year in sorted(transition_years) + [analysis_year]:
+        total_accumulation_rasters[current_transition_year] = os.path.join(
+            output_dir, ACCUMULATION_SINCE_TRANSITION_RASTER_PATTERN.format(
+                start_year=prior_transition_year,
+                end_year=current_transition_year, suffix=suffix))
+        total_accumulation_tasks[current_transition_year] = task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=([(yearly_accum_rasters[
+                        prior_transition_year][POOL_BIOMASS], 1),
+                   (yearly_accum_rasters[
+                       prior_transition_year][POOL_SOIL], 1),
+                   (yearly_accum_rasters[
+                       prior_transition_year][POOL_LITTER], 1),
+                   (current_transition_year - prior_transition_year, 'raw')],
+                  _calculate_accumulation_over_time,
+                  total_accumulation_rasters[current_transition_year],
+                  gdal.GDT_Float32,
+                  NODATA_FLOAT32_MIN),
+            target_path_list=[
+                total_accumulation_rasters[current_transition_year],
+            ],
+            dependent_task_list=[
+                baseline_accum_tasks[prior_transition_year][POOL_BIOMASS],
+                baseline_accum_tasks[prior_transition_year][POOL_SOIL],
+                baseline_accum_tasks[prior_transition_year][POOL_LITTER]],
+            task_name=(
+                f'Calculate accumulation between {prior_transition_year} and '
+                f'{current_transition_year}'))
+        prior_transition_year = current_transition_year
+
+    # Total sequestration for the baseline period is just total accumulation
+    # by another name, so just copy the file over.
+    total_net_sequestration_for_baseline_period = (
+        os.path.join(
+            output_dir, TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
+                start_year=baseline_lulc_year, end_year=end_of_baseline_period,
+                suffix=suffix)))
+    baseline_net_seq_task = task_graph.add_task(
+        func=shutil.copyfile,
+        args=(total_accumulation_rasters[end_of_baseline_period],
+              total_net_sequestration_for_baseline_period),
+        target_path_list=[
+            total_net_sequestration_for_baseline_period],
+        dependent_task_list=[
+            total_accumulation_tasks[end_of_baseline_period]],
+        task_name=(
+            f'Calculate accumulation between {baseline_lulc_year} and '
+            f'{end_of_baseline_period}'))
 
     transition_analysis_args = {
         'workspace_dir': args['workspace_dir'],
