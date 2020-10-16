@@ -188,7 +188,7 @@ export default class InvestJob extends React.Component {
       'run',
       job.modelRunName,
       '--headless',
-      `-d ${datastackPath}`,
+      `-d "${datastackPath}"`,
     ];
     if (process.platform !== 'win32') {
       this.investRun = spawn(path.basename(investExe), cmdArgs, {
@@ -217,6 +217,7 @@ export default class InvestJob extends React.Component {
         }
       };
     }
+    logger.debug(this.investRun.spawnargs);
 
     // There's no general way to know that a spawned process started,
     // so this logic when listening for stdout seems like the way.
@@ -256,13 +257,12 @@ export default class InvestJob extends React.Component {
     // Set some state when the invest process exits and update the app's
     // persistent database by calling saveJob.
     this.investRun.on('exit', (code) => {
-      // TODO: there are non-zero exit cases that should be handled
-      // differently from one-another, but right now they are all exit code 1.
-      // E.g. this state update is designed with a model crash in mind,
-      // not a fail to launch
+      logger.debug(code);
       if (code === 0) {
         job.status = 'success';
-      } else if (code === 1) {
+      } else if (code > 0) {
+        // The invest CLI exits w/ 1 when it catches errors,
+        // but models exit w/ 255 when errors raise from execute()
         job.status = 'error';
       } else {
         // code is null if the process was killed
