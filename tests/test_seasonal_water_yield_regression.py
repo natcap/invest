@@ -679,7 +679,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         new_raster = None
         driver = None
 
-        # set precip nodata values to something extremely small
+        # set precip nodata values to a large, negative 64bit value.
         nodata = numpy.finfo(numpy.float64).min
         precip_nodata_dir = os.path.join(
             self.workspace_dir, 'precip_nodata_dir')
