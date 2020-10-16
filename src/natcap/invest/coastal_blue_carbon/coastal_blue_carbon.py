@@ -420,8 +420,12 @@ def execute(args):
         end_of_baseline_period-1: {},
     }
     baseline_stock_tasks = {}
-    baseline_accum_tasks = {}
-    yearly_accum_rasters = {}
+    yearly_accum_rasters = {
+        baseline_lulc_year: {},
+    }
+    yearly_accum_tasks = {
+        baseline_lulc_year: {}
+    }
     for pool in (POOL_BIOMASS, POOL_LITTER, POOL_SOIL):
         stock_rasters[baseline_lulc_year][pool] = os.path.join(
             intermediate_dir, STOCKS_RASTER_PATTERN.format(
@@ -441,21 +445,21 @@ def execute(args):
 
         # Initial accumulation values are a simple reclassification
         # rather than a mapping by the transition.
-        yearly_accum_rasters[pool] = os.path.join(
+        yearly_accum_rasters[baseline_lulc_year][pool] = os.path.join(
             intermediate_dir, ACCUMULATION_RASTER_PATTERN.format(
                 pool=pool, year=baseline_lulc_year, suffix=suffix))
-        baseline_accum_tasks[pool] = task_graph.add_task(
+        yearly_accum_tasks[baseline_lulc_year][pool] = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=(
                 (aligned_lulc_paths[baseline_lulc_year], 1),
                 {lucode: values[f'{pool}-yearly-accumulation']
                     for (lucode, values)
                     in biophysical_parameters.items()},
-                yearly_accum_rasters[pool],
+                yearly_accum_rasters[baseline_lulc_year][pool],
                 gdal.GDT_Float32,
                 NODATA_FLOAT32_MIN),
             dependent_task_list=[alignment_task],
-            target_path_list=[yearly_accum_rasters[pool]],
+            target_path_list=[yearly_accum_rasters[baseline_lulc_year][pool]],
             task_name=(
                 f'Mapping {pool} carbon accumulation for '
                 f'{baseline_lulc_year}'))
@@ -469,11 +473,11 @@ def execute(args):
             baseline_stock_tasks[pool] = task_graph.add_task(
                 func=_calculate_stocks_after_baseline_period,
                 args=(stock_rasters[baseline_lulc_year][pool],
-                      yearly_accum_rasters[pool],
+                      yearly_accum_rasters[baseline_lulc_year][pool],
                       (end_of_baseline_period - baseline_lulc_year),
                       stock_rasters[end_of_baseline_period-1][pool]),
                 dependent_task_list=[
-                    baseline_accum_tasks[pool], pool_stock_task],
+                    yearly_accum_tasks[baseline_lulc_year][pool], pool_stock_task],
                 target_path_list=[
                     stock_rasters[end_of_baseline_period-1][pool]],
                 task_name=(
@@ -487,9 +491,9 @@ def execute(args):
                 suffix=suffix)))
     baseline_net_seq_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(yearly_accum_rasters[POOL_BIOMASS], 1),
-               (yearly_accum_rasters[POOL_SOIL], 1),
-               (yearly_accum_rasters[POOL_LITTER], 1),
+        args=([(yearly_accum_rasters[baseline_lulc_year][POOL_BIOMASS], 1),
+               (yearly_accum_rasters[baseline_lulc_year][POOL_SOIL], 1),
+               (yearly_accum_rasters[baseline_lulc_year][POOL_LITTER], 1),
                (end_of_baseline_period - baseline_lulc_year, 'raw')],
               _calculate_accumulation_over_time,
               total_net_sequestration_for_baseline_period,
@@ -497,9 +501,9 @@ def execute(args):
               NODATA_FLOAT32_MIN),
         target_path_list=[total_net_sequestration_for_baseline_period],
         dependent_task_list=[
-            baseline_accum_tasks[POOL_BIOMASS],
-            baseline_accum_tasks[POOL_SOIL],
-            baseline_accum_tasks[POOL_LITTER]],
+            yearly_accum_tasks[baseline_lulc_year][POOL_BIOMASS],
+            yearly_accum_tasks[baseline_lulc_year][POOL_SOIL],
+            yearly_accum_tasks[baseline_lulc_year][POOL_LITTER]],
         task_name=(
             'Calculate accumulation between baseline year and final year'))
 
@@ -509,6 +513,7 @@ def execute(args):
     prior_transition_year = baseline_lulc_year
     for current_transition_year in sorted(transition_years):
         yearly_accum_rasters[current_transition_year] = {}
+        yearly_accum_tasks[current_transition_year] = {}
         halflife_rasters[current_transition_year] = {}
         disturbance_magnitude_rasters[current_transition_year] = {}
 
@@ -542,7 +547,7 @@ def execute(args):
             yearly_accum_rasters[current_transition_year][pool] = os.path.join(
                 intermediate_dir, ACCUMULATION_RASTER_PATTERN.format(
                     pool=pool, year=current_transition_year, suffix=suffix))
-            _ = task_graph.add_task(
+            yearly_accum_tasks[current_transition_year][pool]= task_graph.add_task(
                 func=_reclassify_accumulation_transition,
                 args=(aligned_lulc_paths[prior_transition_year],
                       aligned_lulc_paths[current_transition_year],
@@ -584,7 +589,7 @@ def execute(args):
             current_transition_year][POOL_LITTER] = os.path.join(
             intermediate_dir, ACCUMULATION_RASTER_PATTERN.format(
                 pool=POOL_LITTER, year=current_transition_year, suffix=suffix))
-        _ = task_graph.add_task(
+        yearly_accum_tasks[current_transition_year][POOL_LITTER] = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=((aligned_lulc_paths[current_transition_year], 1),
                   {lucode: values[f'{POOL_LITTER}-yearly-accumulation']
@@ -603,7 +608,7 @@ def execute(args):
     # This is broken out into a separate loop because we need to add on the
     # analysis year.  Rolling all of this into the prior loop is less readable
     # overall, even if it would reduce the number of loop iterations slightly.
-    total_accumulation_rasters = {}
+    total_accumulation_rasters = {}  # Across all 3 pools
     total_accumulation_tasks = {}
     prior_transition_year = baseline_lulc_year
     for current_transition_year in sorted(transition_years) + [analysis_year]:
@@ -628,9 +633,9 @@ def execute(args):
                 total_accumulation_rasters[current_transition_year],
             ],
             dependent_task_list=[
-                baseline_accum_tasks[prior_transition_year][POOL_BIOMASS],
-                baseline_accum_tasks[prior_transition_year][POOL_SOIL],
-                baseline_accum_tasks[prior_transition_year][POOL_LITTER]],
+                yearly_accum_tasks[prior_transition_year][POOL_BIOMASS],
+                yearly_accum_tasks[prior_transition_year][POOL_SOIL],
+                yearly_accum_tasks[prior_transition_year][POOL_LITTER]],
             task_name=(
                 f'Calculate accumulation between {prior_transition_year} and '
                 f'{current_transition_year}'))
@@ -889,13 +894,22 @@ def execute_transition_analysis(args):
             POOL_LITTER: args['stocks_at_first_transition'][POOL_LITTER],
         }
     }
+
+    # Net sequestration across the baseline period is, in fact, just the
+    # accumulation across the baseline period.  Therefore, the annual rate of
+    # net sequestration for (first transition year)-1 is the same as in the
+    # baseline year.
     net_sequestration_rasters = {
         (min(transition_years) - 1): {
-            POOL_SOIL: args['annual_rate_of_accumulation_rasters'][POOL_SOIL],
+            POOL_SOIL: (
+                args['annual_rate_of_accumulation_rasters'][
+                    baseline_lulc_year][POOL_SOIL]),
             POOL_BIOMASS: (
-                args['annual_rate_of_accumulation_rasters'][POOL_BIOMASS]),
+                args['annual_rate_of_accumulation_rasters'][
+                    baseline_lulc_year][POOL_BIOMASS]),
             POOL_LITTER: (
-                args['annual_rate_of_accumulation_rasters'][POOL_LITTER]),
+                args['annual_rate_of_accumulation_rasters'][
+                    baseline_lulc_year][POOL_LITTER]),
         }
     }
     disturbance_vol_rasters = {}
