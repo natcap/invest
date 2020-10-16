@@ -1,3 +1,7 @@
+body {
+	--invest-green: #148F68;
+}
+
 /*Top Navigation*/
 
 .navbar {
@@ -86,7 +90,7 @@
 }
 
 .invest-button {
-	color: #148F68;
+	color: var(--invest-green);
 	font-weight: 600;
 }
 
@@ -114,6 +118,7 @@
 }
 
 .card-header {
+	background-color: var(--invest-green);
 	color: white;
 	font-weight: 700;
 	padding-left: 1.25rem;
@@ -167,7 +172,7 @@
 
 #log-text .invest-log-primary {
 	color: #fff;
-	font-size: 1.3rem;
+	font-size: 1.2rem;
 	margin-top: 0.25rem;
 	margin-bottom: 0.25rem;
 }

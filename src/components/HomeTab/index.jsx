@@ -145,9 +145,9 @@ class RecentInvestJobs extends React.PureComponent {
       const { suffix } = metadata.workspace;
       const { status, description, humanTime } = metadata;
 
-      const headerStyle = {
-        backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
-      };
+      // const headerStyle = {
+      //   backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
+      // };
       recentButtons.push(
         <Card
           className="text-left recent-job-card"
@@ -156,7 +156,7 @@ class RecentInvestJobs extends React.PureComponent {
           onClick={() => this.handleClick(jobDataPath)}
         >
           <Card.Body>
-            <Card.Header as="h4" style={headerStyle}>
+            <Card.Header as="h4">
               {model}
               {status === 'running'
                 && (
