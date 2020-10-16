@@ -490,7 +490,6 @@ describe('InVEST subprocess testing', () => {
       .toBeInTheDocument();
     const cancelButton = await findByText('Cancel Run');
     fireEvent.click(cancelButton);
-    expect(await findByText('Run Canceled')).toBeInTheDocument();
     expect(await findByText('Open Workspace')).toBeEnabled();
     // A recent job card should be rendered
     const cardText = await within(
