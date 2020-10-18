@@ -175,7 +175,7 @@ class RecentInvestJobs extends React.PureComponent {
               <span className="text-mono">{workspaceDir}</span>
             </Card.Title>
             <Card.Title>
-              <span className="text-heading">{ suffix && 'Suffix: ' }</span>
+              <span className="text-heading">{'Suffix: '}</span>
               <span className="text-mono">{suffix}</span>
             </Card.Title>
             <Card.Text>{description || <em>no description</em>}</Card.Text>
