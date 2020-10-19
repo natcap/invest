@@ -36,8 +36,23 @@ body {
 /*InVEST Model Layout*/
 
 .invest-sidebar-col {
-	/*display: flex;*/
-	/*padding-top: 16px;*/
+/*	display: flex;
+*/	/*padding-top: 16px;*/
+	padding-right: 0rem;
+}
+
+.invest-sidebar-col .nav-link {
+	background-color: #fff;
+}
+
+.invest-sidebar-col .nav-link.active {
+	color: #000;
+	background-color: ghostwhite;
+	border-right: 5px solid var(--invest-green);
+	border-radius: 0rem;
+	/*border-right-color: green;
+	border-right: solid;
+	border-right-width: 5px;*/
 }
 
 .sidebar-setup {
@@ -53,14 +68,16 @@ body {
 	bottom: 0rem;
 	right: 0;
 	left: 0;
-	width: inherit;
+	margin-right:2rem;
+	margin-left:2rem;
+	/*width: inherit;*/
 	padding-left: inherit;
 	padding-right: inherit;
 }
 
 .invest-main-col {
 	/*padding-top: 12px;*/
-	/*padding-left: 2rem;*/
+	padding-left: 0rem;
 	/*padding-right: 2rem;*/
 	height: 85vh;
 	/*overflow: auto;*/
@@ -161,13 +178,13 @@ body {
   /*min-height: 0;*/
   /*max-height: 75%;*/
   /*overflow-y: scroll;*/
-  background-color: #000;
+  background-color: #191919;
 }
 
 #log-text {
 	font-family: monospace;
 	font-size:1.2rem;
-	color: #d3d3d3;
+	color: #e5e5e5;
 }
 
 #log-text .invest-log-primary {
@@ -178,7 +195,7 @@ body {
 }
 
 #log-text .invest-log-error {
-	color: #ffc0cb;
+	color: #ffbd33;
 	margin-bottom: 0rem;
 }
 
