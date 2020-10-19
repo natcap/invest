@@ -187,16 +187,7 @@ export default class LogTab extends React.Component {
           {WorkspaceButton}
         </Alert>
       );
-    } else if (jobStatus === 'canceled') {
-      // this.unwatchLogfile();
-      ModelStatusAlert = (
-        <Alert className="py-4" variant="warning">
-          <span>Run Canceled</span>
-          {WorkspaceButton}
-        </Alert>
-      );
     }
-
     return (
       <Container fluid>
         <Row>

@@ -142,9 +142,7 @@ test('Run a real invest model', async () => {
   const cancelButton = await findByText(doc, 'Cancel Run');
   cancelButton.click();
   await waitFor(async () => {
-    expect(await findByText(doc, 'Open Workspace'));
-    // Failing on Windows because taskkill does not
-    // give the app a chance to handle the signal:
     expect(await findByText(doc, 'Run Canceled'));
+    expect(await findByText(doc, 'Open Workspace'));
   })
 })

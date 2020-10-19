@@ -83,7 +83,7 @@ export default class InvestJob extends React.Component {
       argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
       logfile: null, // path to the invest logfile associated with invest job
       logStdErr: null, // stderr data from the invest subprocess
-      jobStatus: null, // 'running', 'error', 'success', 'canceled'
+      jobStatus: null, // 'running', 'error', 'success'
     };
 
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
@@ -212,11 +212,7 @@ export default class InvestJob extends React.Component {
       });
       this.investRun.terminate = () => {
         if (this.state.jobStatus === 'running') {
-          // process.kill(-this.investRun.pid, 'SIGTERM'); // does not kill
-          // this.investRun.kill(); // does not kill
-          // This kills, but no chance to handle it and show 'Run Cancelled'
           exec(`taskkill /pid ${this.investRun.pid} /t /f`);
-          // exec(`taskkill /pid ${this.investRun.pid} /t`) // does not kill
         }
       };
     }
@@ -263,14 +259,12 @@ export default class InvestJob extends React.Component {
       logger.debug(code);
       if (code === 0) {
         job.status = 'success';
-      } else if (code > 0) {
-        // The invest CLI exits w/ 1 when it catches errors,
-        // but models exit w/ 255 when errors raise from execute()
-        job.status = 'error';
       } else {
-        // code is null if the process was killed
-        // ideally we could send a special code for that instead.
-        job.status = 'canceled';
+        // Invest CLI exits w/ code 1 when it catches errors,
+        // Models exit w/ code 255 (on all OS?) when errors raise from execute()
+        // Windows taskkill yields exit code 1
+        // Non-windows process.kill yields exit code null
+        job.status = 'error';
       }
       this.setState({
         jobStatus: job.status,
@@ -283,6 +277,11 @@ export default class InvestJob extends React.Component {
 
   terminateInvestProcess() {
     this.investRun.terminate();
+    // this replaces any stderr that might exist, but that's
+    // okay since the user requested terminating the process.
+    this.setState({
+      logStdErr: 'Run Canceled',
+    });
   }
 
   /** Change the tab that is currently visible.
