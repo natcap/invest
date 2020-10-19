@@ -189,7 +189,7 @@ body {
 	/*flex: 1;*/
 	overflow: auto;
   white-space: pre-line;
-	height: 75vh;
+	height: 85vh;
   /*min-height: 0;*/
   /*max-height: 75%;*/
   /*overflow-y: scroll;*/
@@ -237,6 +237,11 @@ body {
 .form-control {
 	font-family: monospace;
 	font-size:1.3rem;
+}
+
+input[type=text]::placeholder {
+	font-style: italic;
+	color: #a5a5a5;
 }
 
 /* Default sized Radio buttons are too small */

@@ -5,6 +5,7 @@ import Container from 'react-bootstrap/Container';
 import Spinner from 'react-bootstrap/Spinner';
 import Row from 'react-bootstrap/Row';
 
+import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
 import {
   ExecuteButton, SaveParametersButtons
@@ -369,17 +370,19 @@ export default class SetupTab extends React.Component {
               batchUpdateArgs={this.batchUpdateArgs}
             />
           </Row>
-          <SaveParametersButtons
-            elId={sidebarSetupElementId}
-            savePythonScript={this.savePythonScript}
-            wrapArgsToJsonFile={this.wrapArgsToJsonFile}
-          />
-          <ExecuteButton
-            elId={sidebarFooterElementId}
-            disabled={!argsValid || isRunning}
-            wrapInvestExecute={this.wrapInvestExecute}
-            buttonText={buttonText}
-          />
+          <Portal elId={sidebarSetupElementId}>
+            <SaveParametersButtons
+              savePythonScript={this.savePythonScript}
+              wrapArgsToJsonFile={this.wrapArgsToJsonFile}
+            />
+          </Portal>
+          <Portal elId={sidebarFooterElementId}>
+            <ExecuteButton
+              disabled={!argsValid || isRunning}
+              wrapInvestExecute={this.wrapInvestExecute}
+              buttonText={buttonText}
+            />
+          </Portal>
         </Container>
       );
     }

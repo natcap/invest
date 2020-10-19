@@ -11,6 +11,7 @@ import Container from 'react-bootstrap/Container';
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 
+import Portal from '../Portal';
 import { getLogger } from '../../logger';
 
 const logger = getLogger(__filename.split('/').slice(-2).join('/'));
@@ -201,11 +202,9 @@ export default class LogTab extends React.Component {
         <Row>
           <LogDisplay logdata={this.state.logdata} />
         </Row>
-        <Row>
-          <Col id="log-alert">
-            {ModelStatusAlert}
-          </Col>
-        </Row>
+        <Portal id="log-alert" elId={this.props.sidebarFooterElementId}>
+          {ModelStatusAlert}
+        </Portal>
       </Container>
     );
   }
