@@ -74,7 +74,7 @@ jobs:
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
             - name: Setup conda environment
-              uses: goanpeca/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v1.7.0
               with:
                   activate-environment: ${{ matrix.os }}-test-env
                   auto-update-conda: true
@@ -151,7 +151,7 @@ jobs:
               run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Setup conda environment
-              uses: goanpeca/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v1.7.0
               with:
                   activate-environment: source-env
                   auto-update-conda: true
@@ -237,7 +237,7 @@ jobs:
                   key: windows-py37-pipcache-sampledata-${{ hashfiles('requirements.txt') }}
 
             - name: Setup conda environment
-              uses: goanpeca/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v1.7.0
               with:
                   activate-environment: validate-env
                   auto-update-conda: true
@@ -291,7 +291,7 @@ jobs:
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
             - name: Setup conda environment
-              uses: goanpeca/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v1.7.0
               with:
                   activate-environment: ui-env
                   auto-update-conda: true
