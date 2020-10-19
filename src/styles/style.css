@@ -1,16 +1,29 @@
 body {
 	--invest-green: #148F68;
+	--navbar-height: 65px;
 }
 
 /*Top Navigation*/
 
 .navbar {
 	padding-bottom: 0;
+	height: var(--navbar-height);
 }
 
+/*.navbar.nav-tabs .nav-item .nav-link {
+  padding-right: 2rem;
+  padding-left: 2rem;
+  padding-bottom: 1rem;
+}*/
+
 .navbar-light .navbar-nav .nav-link {
-    padding-right: 2rem;
-    padding-left: 2rem;
+	background-color: transparent;
+  padding-right: 2rem;
+  padding-left: 2rem;
+}
+
+.navbar-light .navbar-nav .nav-link.active {
+	background-color: lightgray;
 }
 
 .nav-link {
@@ -102,7 +115,7 @@ body {
 
 .invest-list-table {
 	display: block;
-	height: 90vh;
+	height: 87vh;
 	overflow-y: auto;
 }
 
@@ -115,6 +128,8 @@ body {
 	display: flex;
 	flex-wrap: wrap;
 	flex-direction: row;
+	height: 87vh;
+	overflow-y: auto;
 }
 
 /* cards can expand to fill space, via flex,

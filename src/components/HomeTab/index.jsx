@@ -65,14 +65,14 @@ export default class HomeTab extends React.PureComponent {
 
     return (
       <Row>
-        <Col md={5}>
-          <Table size="sm" className="invest-list-table">
+        <Col md={5} className="invest-list-table">
+          <Table size="sm">
             <tbody>
               {investButtons}
             </tbody>
           </Table>
         </Col>
-        <Col md={7}>
+        <Col md={7} className="recent-job-card-group">
           <RecentInvestJobs
             openInvestModel={this.props.openInvestModel}
             recentJobs={recentJobs}
@@ -145,9 +145,6 @@ class RecentInvestJobs extends React.PureComponent {
       const { suffix } = metadata.workspace;
       const { status, description, humanTime } = metadata;
 
-      // const headerStyle = {
-      //   backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
-      // };
       recentButtons.push(
         <Card
           className="text-left recent-job-card"
@@ -194,7 +191,7 @@ class RecentInvestJobs extends React.PureComponent {
           ? (
             <CardGroup
               aria-labelledby="recent-job-card-group"
-              className="recent-job-card-group"
+              // className="recent-job-card-group"
             >
               {recentButtons}
             </CardGroup>

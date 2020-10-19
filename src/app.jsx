@@ -225,8 +225,7 @@ export default class App extends React.Component {
       <TabContainer activeKey={activeTab}>
         <Navbar bg="light" expand="lg">
           <Nav
-            variant="tabs"
-            id="controlled-tab-example"
+            variant="pills"
             className="mr-auto"
             activeKey={activeTab}
             onSelect={this.switchTabs}
