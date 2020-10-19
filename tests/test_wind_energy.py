@@ -339,10 +339,15 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
+        #self.workspace_dir = os.path.join(
+        #    'C:', os.sep, 'Users', 'ddenu', 'Workspace', 'NatCap', 'scratch-space',
+        #    'gdal-312-test')
+        #os.makedirs(self.workspace_dir)
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
+        #pass
 
     @staticmethod
     def generate_base_args(workspace_dir):
@@ -527,8 +532,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
+            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
+            'npv_US_millions.tif']
 
         for raster_path in raster_results:
             model_array = pygeoprocessing.raster_to_numpy_array(
@@ -571,8 +576,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
+            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
+            'npv_US_millions.tif']
 
         for raster_path in raster_results:
             model_array = pygeoprocessing.raster_to_numpy_array(

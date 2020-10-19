@@ -68,7 +68,7 @@ class UCMTests(unittest.TestCase):
             'avg_cc': 0.222150472947109,
             'avg_tmp_v': 37.325275675470998,
             'avg_tmp_an': 2.325275675470998,
-            'avd_eng_cn': 3520212.4242880843,
+            'avd_eng_cn': 3520213.280928277,
             'avg_wbgt_v': 32.60417266705069,
             'avg_ltls_v': 75.000000000000000,
             'avg_hvls_v': 75.000000000000000,
@@ -89,7 +89,8 @@ class UCMTests(unittest.TestCase):
 
         # Assert that the decimal value of the energy savings value is what we
         # expect.
-        expected_energy_sav = 3564033.336855425
+        expected_energy_sav = 3564034.496484185
+
         energy_sav = 0.0
         n_nonetype = 0
         stats_vector_path = (
@@ -203,7 +204,7 @@ class UCMTests(unittest.TestCase):
             'avg_cc': 0.428302583240327,
             'avg_tmp_v': 36.60869797039769,
             'avg_tmp_an': 1.608697970397692,
-            'avd_eng_cn': 7240099.951768191,
+            'avd_eng_cn': 7240015.1958200345,
             'avg_wbgt_v': 31.91108630952381,
             'avg_ltls_v': 28.744239631336406,
             'avg_hvls_v': 75.000000000000000,
