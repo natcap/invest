@@ -1161,7 +1161,7 @@ def _aggregate_recharge(
                 if pixel_count != 0:
                     value = (aggregate_stats[poly_index]['sum'] / pixel_count)
                 else:
-                    LOGGER.warn(
+                    LOGGER.warning(
                         "no coverage for polygon %s", ', '.join(
                             [str(poly_feat.GetField(_)) for _ in range(
                                 poly_feat.GetFieldCount())]))

@@ -252,7 +252,7 @@ def execute(args):
                       with the response polygon in projected units of AOI
                     * 'polygon_area': area of the polygon contained within
                       response polygon in projected units of AOI
-                    * 'polygon_percent_coverage': percent (0-100) of area of 
+                    * 'polygon_percent_coverage': percent (0-100) of area of
                       overlap between the predictor and each AOI grid cell
 
         args['scenario_predictor_table_path'] (string): (optional) if
@@ -863,7 +863,7 @@ def _raster_sum_mean(
         str(fid): stats for fid, stats in aggregate_results.items()
         if stats['count'] != 0}
     if not aggregate_results:
-        LOGGER.warn('raster predictor does not intersect with vector AOI')
+        LOGGER.warning('raster predictor does not intersect with vector AOI')
         # Create an empty file so that Taskgraph has its target file.
         predictor_results = {}
         with open(predictor_target_path, 'w') as jsonfile:
@@ -1302,7 +1302,7 @@ def _build_regression(
                 data_matrix[:, 1:].T, data_matrix[:, 1:])))
         se_est = numpy.sqrt(var_est)
     else:
-        LOGGER.warn("Linear model is under constrained with DOF=%d", dof)
+        LOGGER.warning("Linear model is under constrained with DOF=%d", dof)
         std_err = sigma2 = numpy.nan
         se_est = var_est = [numpy.nan] * data_matrix.shape[1]
     return predictor_names, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est
@@ -1365,7 +1365,7 @@ def _calculate_scenario(
                     feature.GetField(str(predictor_id)))
         except TypeError as e:
             # TypeError will happen if GetField returned None
-            LOGGER.warn(
+            LOGGER.warning(
                 'incomplete predictor data for feature_id %d, \
                 not estimating PUD_EST' % feature_id)
             feature = None
@@ -1496,7 +1496,7 @@ def _validate_same_projection(base_vector_path, table_path):
             layer = None
             vector = None
         if not base_ref.IsSame(ref):
-            LOGGER.warn(
+            LOGGER.warning(
                 "%s might have a different projection than the base AOI "
                 "\nbase:%s\ncurrent:%s", path, base_ref.ExportToPrettyWkt(),
                 ref.ExportToPrettyWkt())
@@ -1512,7 +1512,7 @@ def _validate_predictor_types(table_path):
 
     Args:
         table_path (string): path to a csv table that has at least
-            the field 'type' 
+            the field 'type'
 
     Returns:
         None
@@ -1525,7 +1525,7 @@ def _validate_predictor_types(table_path):
     # ignore leading/trailing whitespace because it will be removed
     # when the type values are used
     type_list = set([type.strip() for type in df['type']])
-    valid_types = set({'raster_mean', 'raster_sum', 'point_count', 
+    valid_types = set({'raster_mean', 'raster_sum', 'point_count',
                    'point_nearest_distance', 'line_intersect_length',
                    'polygon_area_coverage', 'polygon_percent_coverage'})
     difference = type_list.difference(valid_types)
