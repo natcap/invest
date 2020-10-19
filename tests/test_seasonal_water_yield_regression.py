@@ -769,8 +769,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         # reclassifying
         lulc_array[0][1] = lulc_info['nodata'][0]
         pygeoprocessing.numpy_array_to_raster(
-            lulc_array, lulc_info['nodata'][0], lulc_info['pixel_size'], 
-            (lulc_info['geotransform'][0], lulc_info['geotransform'][3]), 
+            lulc_array, lulc_info['nodata'][0], lulc_info['pixel_size'],
+            (lulc_info['geotransform'][0], lulc_info['geotransform'][3]),
             lulc_info['projection_wkt'], lulc_new_path)
 
         lulc_array = None
@@ -869,10 +869,10 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # set up tiny raster arrays to test
         precip_array = numpy.array([
-            [10, 10], 
+            [10, 10],
             [10, 10]], dtype=numpy.float32)
         lulc_array = numpy.array([
-            [1, 1], 
+            [1, 1],
             [2, 2]], dtype=numpy.float32)
         cn_array = numpy.array([
             [40, 40],
@@ -881,10 +881,10 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             [15, 15],
             [2.5, 2.5]], dtype=numpy.float32)
         n_events_array = numpy.array([
-            [10, 10], 
+            [10, 10],
             [1, 1]], dtype=numpy.float32)
         stream_mask = numpy.array([
-            [0, 0], 
+            [0, 0],
             [0, 0]], dtype=numpy.float32)
 
         expected_quickflow_array = numpy.array([
@@ -919,7 +919,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # save the quickflow results raster to quickflow.tif
         seasonal_water_yield._calculate_monthly_quick_flow(
-            precip_path, lulc_path, cn_path, n_events_path, stream_path, 
+            precip_path, lulc_path, cn_path, n_events_path, stream_path,
             si_path, output_path)
         # read the raster output back in to a numpy array
         quickflow_array = pygeoprocessing.raster_to_numpy_array(output_path)
@@ -933,10 +933,10 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # set up tiny raster arrays to test
         precip_array = numpy.array([
-            [10, 10], 
+            [10, 10],
             [10, 10]], dtype=numpy.float32)
         et0_array = numpy.array([
-            [100, 100], 
+            [100, 100],
             [200, 200]], dtype=numpy.float32)
         quickflow_array = numpy.array([
             [-4.8e-36, -4.822e-36],
@@ -948,7 +948,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             [1, 1],
             [1, 1]], dtype=numpy.float32)
         stream_mask = numpy.array([
-            [0, 0], 
+            [0, 0],
             [0, 0]], dtype=numpy.float32)
 
         precip_path = os.path.join(self.workspace_dir, 'precip.tif')
@@ -978,13 +978,16 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                 array, -1, (1, -1), (1180000, 690000), project_wkt, path)
 
         # arbitrary values for alpha, beta, gamma, etc.
-        # not verifying the output, just making sure there are no errors 
+        # not verifying the output, just making sure there are no errors
         seasonal_water_yield_core.calculate_local_recharge(
             [precip_path for i in range(12)], [et0_path for i in range(12)],
-            [quickflow_path for i in range(12)], flow_dir_path, 
-            [kc_path for i in range(12)], {i: 0.5 for i in range(12)}, 0.5, 
-            0.5, stream_path, 'target_li_path.tif', 'target_li_avail_path.tif',
-            'target_l_sum_avail_path.tif', 'target_aet_path.tif')
+            [quickflow_path for i in range(12)], flow_dir_path,
+            [kc_path for i in range(12)], {i: 0.5 for i in range(12)}, 0.5,
+            0.5, stream_path,
+            os.path.join(self.workspace_dir, 'target_li_path.tif'),
+            os.path.join(self.workspace_dir, 'target_li_avail_path.tif'),
+            os.path.join(self.workspace_dir, 'target_l_sum_avail_path.tif'),
+            os.path.join(self.workspace_dir, 'target_aet_path.tif'))
 
 
 class SWYValidationTests(unittest.TestCase):
