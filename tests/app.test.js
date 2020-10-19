@@ -56,7 +56,7 @@ describe('Various ways to open and close InVEST models', () => {
       />
     );
 
-    const carbon = await findByText('Carbon');
+    const carbon = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});
     fireEvent.click(carbon);
     const executeButton = await findByRole('button', {name: /Execute/});
     expect(executeButton).toBeDisabled();
@@ -176,6 +176,7 @@ describe('Various ways to open and close InVEST models', () => {
     const {
       findByText,
       findByTitle,
+      findByRole,
       findAllByText,
       queryByText,
     } = render(
@@ -186,9 +187,9 @@ describe('Various ways to open and close InVEST models', () => {
     );
 
     // Open first model
-    const modelA = await findByText(MOCK_MODEL_LIST_KEY);
+    const modelA = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});
     fireEvent.click(modelA);
-    const tabPanelA = await findByTitle(MOCK_MODEL_RUN_NAME);
+    const tabPanelA = await findByTitle(MOCK_MODEL_LIST_KEY);
     const setupTabA = await within(tabPanelA).findByText('Setup');
     expect(setupTabA.classList.contains('active')).toBeTruthy();  
     expect(within(tabPanelA).queryByRole('button', {name: /Execute/}))
@@ -205,6 +206,7 @@ describe('Various ways to open and close InVEST models', () => {
     const mockDatastack = {
       module_name: 'natcap.invest.party',
       model_run_name: 'party',
+      model_human_name: 'Party Time',
       args: {
         carbon_pools_path: "Carbon/carbon_pools_willamette.csv", 
       }
@@ -213,7 +215,7 @@ describe('Various ways to open and close InVEST models', () => {
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
     const loadButton = await findByText('Load Parameters');
     fireEvent.click(loadButton);
-    const tabPanelB = await findByTitle(mockDatastack.model_run_name);
+    const tabPanelB = await findByTitle(mockDatastack.model_human_name);
     const setupTabB = await within(tabPanelB).findByText('Setup');
     expect(setupTabB.classList.contains('active')).toBeTruthy();
     expect(within(tabPanelB).queryByRole('button', {name: /Execute/}))
@@ -403,7 +405,7 @@ describe('InVEST subprocess testing', () => {
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
 
-    const carbon = await findByText('Carbon');
+    const carbon = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       RegExp(`${spec.args.workspace_dir.name}`)
@@ -450,7 +452,7 @@ describe('InVEST subprocess testing', () => {
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
 
-    const carbon = await findByText('Carbon');
+    const carbon = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       RegExp(`${spec.args.workspace_dir.name}`))
@@ -494,7 +496,7 @@ describe('InVEST subprocess testing', () => {
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
 
-    const carbon = await findByText('Carbon');
+    const carbon = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       RegExp(`${spec.args.workspace_dir.name}`))

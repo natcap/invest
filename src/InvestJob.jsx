@@ -146,6 +146,7 @@ export default class InvestJob extends React.Component {
       investExe,
       investSettings,
       modelRunName,
+      modelHumanName,
       saveJob,
     } = this.props;
 
@@ -164,6 +165,7 @@ export default class InvestJob extends React.Component {
     const job = {
       jobID: jobID,
       modelRunName: modelRunName,
+      modelHumanName: modelHumanName,
       argsValues: argsValues,
       workspace: workspace,
       logfile: undefined,

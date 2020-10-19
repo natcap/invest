@@ -1,10 +1,11 @@
+import codecs
+import collections
+from datetime import datetime
 import importlib
 import json
 import logging
-import codecs
-import textwrap
 import pprint
-from datetime import datetime
+import textwrap
 
 from flask import Flask
 from flask import request
@@ -17,8 +18,12 @@ LOGGER = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Lookup names to pass to `invest run` based on python module names
+_UI_META = collections.namedtuple('UIMeta', ['run_name', 'human_name'])
 MODULE_MODELRUN_MAP = {
-    v.pyname: k for k, v in natcap.invest.cli._MODEL_UIS.items()}
+    v.pyname: _UI_META(
+        run_name=k,
+        human_name=v.humanname)
+    for k, v in natcap.invest.cli._MODEL_UIS.items()}
 
 
 def shutdown_server():
@@ -76,7 +81,7 @@ def get_invest_validate():
     Body (JSON string):
         model_module: string (e.g. natcap.invest.carbon)
         args: JSON string of InVEST model args keys and values
-    
+
     Returns:
         A JSON string.
     """
@@ -100,22 +105,23 @@ def post_datastack_file():
     """Extracts InVEST model args from json, logfiles, or datastacks.
 
     Body (JSON string): path to file
-    
+
     Returns:
         A JSON string.
     """
     filepath = request.get_json()
     stack_type, stack_info = natcap.invest.datastack.get_datastack_info(
         filepath)
-    model_run_name = MODULE_MODELRUN_MAP[stack_info.model_name]
-    LOGGER.debug(model_run_name)
+    run_name, human_name = MODULE_MODELRUN_MAP[stack_info.model_name]
     result_dict = {
         'type': stack_type,
         'args': stack_info.args,
         'module_name': stack_info.model_name,
-        'model_run_name': model_run_name,
+        'model_run_name': run_name,
+        'model_human_name': human_name,
         'invest_version': stack_info.invest_version
     }
+    LOGGER.debug(result_dict)
     return json.dumps(result_dict)
 
 

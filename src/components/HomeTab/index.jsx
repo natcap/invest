@@ -11,20 +11,6 @@ import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
-// these are bootstrap codes for colors
-// const STATUS_COLOR_MAP = {
-//   running: 'warning',
-//   error: 'danger',
-//   success: 'success'
-// }
-
-// These are the same colors as above
-const STATUS_COLOR_MAP = {
-  running: 'rgba(23, 162, 184, 0.7)',
-  error: 'rgba(220, 53, 69, 0.7)',
-  success: '#148F68', // invest green
-};
-
 /**
  * Renders a table of buttons for each invest model and
  * a list of cards for each cached invest job.
@@ -36,8 +22,10 @@ export default class HomeTab extends React.PureComponent {
   }
 
   handleClick(event) {
-    const modelRunName = event.target.value;
-    this.props.openInvestModel(modelRunName);
+    const { value } = event.target;
+    const { investList, openInvestModel } = this.props;
+    const modelRunName = investList[value].internal_name;
+    openInvestModel(modelRunName, value);
   }
 
   render() {
@@ -52,7 +40,7 @@ export default class HomeTab extends React.PureComponent {
               className="invest-button"
               block
               size="lg"
-              value={investList[model].internal_name}
+              value={model}
               onClick={this.handleClick}
               variant="link"
             >
@@ -113,6 +101,7 @@ class RecentInvestJobs extends React.PureComponent {
     );
     this.props.openInvestModel(
       jobData.modelRunName,
+      jobData.modelHumanName,
       jobData.argsValues,
       jobData.logfile,
       jobData.status,
