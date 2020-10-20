@@ -195,7 +195,6 @@ export default class App extends React.Component {
               {job.modelHumanName}
               <Button
                 className="close-tab"
-                variant="outline-secondary"
                 onClick={() => this.closeInvestModel(job.navID)}
               >
                 x

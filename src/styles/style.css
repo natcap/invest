@@ -8,6 +8,7 @@ body {
 .navbar {
 	padding-bottom: 0;
 	height: var(--navbar-height);
+	border-bottom: 3px solid #ffc107;
 }
 
 /*.navbar.nav-tabs .nav-item .nav-link {
@@ -32,12 +33,30 @@ body {
 	font-weight: 550;
 }
 
-.navbar-brand {
-	font-style: italic;
+.navbar .navbar-brand {
+	color: var(--invest-green);
 	font-weight: 600;
-	font-size: 1.5rem;
-	letter-spacing: 2px;
-	color: gray;
+	font-size: 2.0rem;
+	letter-spacing: 1px;
+	pointer-events: none;
+}
+
+.navbar .btn {
+	background-color: #6c757d;
+	color: #ffffff;
+	font-weight: 600;
+	font-size: 1.2rem;
+}
+
+.close-tab.btn {
+	background-color: transparent;
+	border-color: transparent;
+	color: #6c757d;
+	margin-left: 0.5rem;
+	padding: 3px;
+}
+.close-tab:hover, .close-tab:focus, .close-tab:active {
+	border-color: #6c757d;
 }
 
 /*Top Layout*/
@@ -101,14 +120,6 @@ body {
 	/*border-style: solid;*/
 	background-color: ghostwhite;
 	/*padding-left: 2rem;*/
-}
-
-.close-tab {
-	margin-left: 0.5rem;
-	border-color: transparent;
-}
-.close-tab:hover, .close-tab:focus, .close-tab:active {
-	border-color: #6c757d;
 }
 
 /* HomeTab */
