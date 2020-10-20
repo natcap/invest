@@ -142,8 +142,8 @@ def make_eto_rasters(eto_dir_path):
     """
     size = 100
     for month in range(1, 13):
-        eto_raster_path = os.path.join(eto_dir_path,
-                                       'eto' + str(month) + '.tif')
+        eto_raster_path = os.path.join(
+            eto_dir_path, 'eto' + str(month) + '.tif')
         eto_array = numpy.full((size, size), month, dtype=numpy.int32)
         make_raster_from_array(eto_array, eto_raster_path)
 
@@ -159,8 +159,8 @@ def make_precip_rasters(precip_dir_path):
     """
     size = 100
     for month in range(1, 13):
-        precip_raster_path = os.path.join(precip_dir_path,
-                                          'precip_mm_' + str(month) + '.tif')
+        precip_raster_path = os.path.join(
+            precip_dir_path, 'precip_mm_' + str(month) + '.tif')
         precip_array = numpy.full((size, size), month + 10, dtype=numpy.int32)
         make_raster_from_array(precip_array, precip_raster_path)
 
@@ -644,6 +644,78 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         agg_results_csv_path = os.path.join(
             args['workspace_dir'], 'agg_results_base.csv')
         make_agg_results_csv(agg_results_csv_path)
+
+        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
+            agg_results_csv_path)
+
+    def test_base_regression_nodata_inf(self):
+        """SWY base regression test on sample data with really small nodata.
+
+        Executes SWY in default mode and checks that the output files are
+        generated and that the aggregate shapefile fields are the same as the
+        regression case.
+        """
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+
+        # Ensure the model can pass when a nodata value is not defined.
+        size = 100
+        lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
+        lulc_array[size // 2:, :] = 1
+
+        driver = gdal.GetDriverByName('GTiff')
+        new_raster = driver.Create(
+            args['lulc_raster_path'], lulc_array.shape[0],
+            lulc_array.shape[1], 1, gdal.GDT_Byte)
+        band = new_raster.GetRasterBand(1)
+        band.WriteArray(lulc_array)
+        geotransform = [1180000, 1, 0, 690000, 0, -1]
+        new_raster.SetGeoTransform(geotransform)
+        band = None
+        new_raster = None
+        driver = None
+
+        # set precip nodata values to a large, negative 64bit value.
+        nodata = numpy.finfo(numpy.float64).min
+        precip_nodata_dir = os.path.join(
+            self.workspace_dir, 'precip_nodata_dir')
+        os.makedirs(precip_nodata_dir)
+        size = 100
+        for month in range(1, 13):
+            precip_raster_path = os.path.join(
+                precip_nodata_dir, 'precip_mm_' + str(month) + '.tif')
+            precip_array = numpy.full(
+                (size, size), month + 10, dtype=numpy.float64)
+            precip_array[size - 1, :] = nodata
+
+            srs = osr.SpatialReference()
+            srs.ImportFromEPSG(26910)  # UTM Zone 10N
+            project_wkt = srs.ExportToWkt()
+
+            # Each pixel is 1x1 m
+            pygeoprocessing.numpy_array_to_raster(
+                precip_array, nodata, (1, -1), (1180000, 690000), project_wkt,
+                precip_raster_path)
+
+        args['precip_dir'] = precip_nodata_dir
+
+        # make args explicit that this is a base run of SWY
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = False
+        args['results_suffix'] = ''
+
+        seasonal_water_yield.execute(args)
+
+        # generate aggregated results csv table for assertion
+        agg_results_csv_path = os.path.join(
+            args['workspace_dir'], 'agg_results_base.csv')
+        with open(agg_results_csv_path, 'w') as open_table:
+            open_table.write('0,1.0,50.076062\n')
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
