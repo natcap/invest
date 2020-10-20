@@ -31,7 +31,7 @@ export default class LoadButton extends React.Component {
       <Button
         className="mx-3"
         onClick={this.browseFile}
-        variant="primary"
+        variant="outline-dark"
       >
         Load Parameters
       </Button>

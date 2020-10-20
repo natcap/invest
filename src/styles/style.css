@@ -8,7 +8,8 @@ body {
 .navbar {
 	padding-bottom: 0;
 	height: var(--navbar-height);
-	border-bottom: 3px solid #ffc107;
+	border-bottom: 3px solid var(--invest-green);
+	background-color: #fff
 }
 
 /*.navbar.nav-tabs .nav-item .nav-link {
@@ -21,10 +22,11 @@ body {
 	background-color: transparent;
   padding-right: 2rem;
   padding-left: 2rem;
+  color: #999999;
 }
 
 .navbar-light .navbar-nav .nav-link.active {
-	background-color: lightgray;
+	background-color: ghostwhite;
 }
 
 .nav-link {
@@ -53,7 +55,10 @@ body {
 	border-color: transparent;
 	color: #6c757d;
 	margin-left: 0.5rem;
-	padding: 3px;
+	padding-left: 1rem;
+	padding-right: 1rem;
+	padding-top: 0.25rem;
+	padding-bottom: 0.25rem;
 }
 .close-tab:hover, .close-tab:focus, .close-tab:active {
 	border-color: #6c757d;
@@ -263,8 +268,17 @@ input[type=text]::placeholder {
 }
 
 /* Default sized Radio buttons are too small */
-input[type=radio]{
+.form-check-inline .form-check-input {
+	transform:scale(2.0);
+	margin-left: 1rem;
+}
+/*input[type=radio]{
   transform:scale(2.0);
   padding-left: 0.5rem;
   margin-right: 0.5rem;
+}*/
+
+.form-check-label {
+	padding-left: 0.5rem;
+	padding-right: 1re
 }

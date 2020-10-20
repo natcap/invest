@@ -195,6 +195,7 @@ export default class App extends React.Component {
               {job.modelHumanName}
               <Button
                 className="close-tab"
+                variant="outline-dark"
                 onClick={() => this.closeInvestModel(job.navID)}
               >
                 x
@@ -225,7 +226,7 @@ export default class App extends React.Component {
     });
     return (
       <TabContainer activeKey={activeTab}>
-        <Navbar bg="light" expand="lg">
+        <Navbar expand="lg">
           <Nav
             variant="pills"
             className="mr-auto"
