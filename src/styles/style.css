@@ -112,6 +112,12 @@ body {
 	padding-right: inherit;
 }
 
+.sidebar-footer .btn-primary {
+	font-size: 1.5rem;
+	font-weight: 600;
+	letter-spacing: 0.1rem;
+}
+
 .invest-main-col {
 	/*padding-top: 12px;*/
 	padding-left: 0rem;
@@ -241,6 +247,8 @@ body {
 .invest-sidebar-col .alert .btn {
 	flex: 1;
 	margin-top: 1rem;
+	font-size: 1.1rem;
+	letter-spacing: 0.03rem;
 }
 
 /* Forms */
@@ -272,13 +280,8 @@ input[type=text]::placeholder {
 	transform:scale(2.0);
 	margin-left: 1rem;
 }
-/*input[type=radio]{
-  transform:scale(2.0);
-  padding-left: 0.5rem;
-  margin-right: 0.5rem;
-}*/
 
 .form-check-label {
 	padding-left: 0.5rem;
-	padding-right: 1re
+	padding-right: 1rem;
 }

@@ -25,7 +25,7 @@ export class SaveParametersButtons extends React.Component {
   }
 }
 
-export class ExecuteButton extends React.Component {
+export class RunButton extends React.Component {
   render() {
     return (
       <Button

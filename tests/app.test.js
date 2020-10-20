@@ -31,7 +31,7 @@ const MOCK_INVEST_LIST = {
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 
 afterAll(() => {
-  // cache dir accumulates files when Execute is clicked
+  // cache dir accumulates files when Run is clicked
   fs.readdirSync(fileRegistry.CACHE_DIR).forEach(filename => {
     fs.unlinkSync(path.join(fileRegistry.CACHE_DIR, filename))
   })
@@ -58,7 +58,7 @@ describe('Various ways to open and close InVEST models', () => {
 
     const carbon = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});
     fireEvent.click(carbon);
-    const executeButton = await findByRole('button', {name: /Execute/});
+    const executeButton = await findByRole('button', {name: /Run/});
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
     expect(setupTab.classList.contains('active')).toBeTruthy();  
@@ -104,7 +104,7 @@ describe('Various ways to open and close InVEST models', () => {
       mockRecentJobsDB[mockJobId].workspace.directory
     );
     fireEvent.click(recentJobCard);
-    const executeButton = await findByRole('button', {name: /Execute/});
+    const executeButton = await findByRole('button', {name: /Run/});
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
     expect(setupTab.classList.contains('active')).toBeTruthy();
@@ -139,7 +139,7 @@ describe('Various ways to open and close InVEST models', () => {
 
     const loadButton = await findByText('Load Parameters');
     fireEvent.click(loadButton);
-    const executeButton = await findByRole('button', {name: /Execute/});
+    const executeButton = await findByRole('button', {name: /Run/});
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
     const input = await findByLabelText(/Carbon Pools/);
@@ -192,7 +192,7 @@ describe('Various ways to open and close InVEST models', () => {
     const tabPanelA = await findByTitle(MOCK_MODEL_LIST_KEY);
     const setupTabA = await within(tabPanelA).findByText('Setup');
     expect(setupTabA.classList.contains('active')).toBeTruthy();  
-    expect(within(tabPanelA).queryByRole('button', {name: /Execute/}))
+    expect(within(tabPanelA).queryByRole('button', {name: /Run/}))
       .toBeInTheDocument();
     within(tabPanelA).queryAllByText(/Save to/).forEach(saveButton => {
       expect(saveButton).toBeInTheDocument();
@@ -218,7 +218,7 @@ describe('Various ways to open and close InVEST models', () => {
     const tabPanelB = await findByTitle(mockDatastack.model_human_name);
     const setupTabB = await within(tabPanelB).findByText('Setup');
     expect(setupTabB.classList.contains('active')).toBeTruthy();
-    expect(within(tabPanelB).queryByRole('button', {name: /Execute/}))
+    expect(within(tabPanelB).queryByRole('button', {name: /Run/}))
       .toBeInTheDocument();
     within(tabPanelB).queryAllByText(/Save to/).forEach(saveButton => {
       expect(saveButton).toBeInTheDocument();
@@ -411,7 +411,7 @@ describe('InVEST subprocess testing', () => {
       RegExp(`${spec.args.workspace_dir.name}`)
     );
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
-    const execute = await findByRole('button', {name: /Execute/});
+    const execute = await findByRole('button', {name: /Run/});
     fireEvent.click(execute);
     await waitFor(() => {
       expect(execute).toBeDisabled();
@@ -458,7 +458,7 @@ describe('InVEST subprocess testing', () => {
       RegExp(`${spec.args.workspace_dir.name}`))
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
     
-    const execute = await findByRole('button', {name: /Execute/});
+    const execute = await findByRole('button', {name: /Run/});
     fireEvent.click(execute);
     
     const errorMessage = 'fail'
@@ -502,7 +502,7 @@ describe('InVEST subprocess testing', () => {
       RegExp(`${spec.args.workspace_dir.name}`))
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
     
-    const execute = await findByRole('button', {name: /Execute/});
+    const execute = await findByRole('button', {name: /Run/});
     fireEvent.click(execute);
     
     // stdout listener is how the app knows the process started

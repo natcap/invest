@@ -8,9 +8,8 @@ import Row from 'react-bootstrap/Row';
 import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
 import {
-  ExecuteButton, SaveParametersButtons
+  RunButton, SaveParametersButtons
 } from './SaveParametersButtons';
-// import SaveFileButton from '../SaveFileButton';
 import { fetchValidation, saveToPython } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 
@@ -353,7 +352,7 @@ export default class SetupTab extends React.Component {
                 aria-hidden="true"
               />
             )}
-          Execute
+          Run
         </span>
       );
 
@@ -377,7 +376,7 @@ export default class SetupTab extends React.Component {
             />
           </Portal>
           <Portal elId={sidebarFooterElementId}>
-            <ExecuteButton
+            <RunButton
               disabled={!argsValid || isRunning}
               wrapInvestExecute={this.wrapInvestExecute}
               buttonText={buttonText}

@@ -121,16 +121,16 @@ test('Run a real invest model', async () => {
   const endYear = await findByLabelText(doc, /End Year/);
   await endYear.type('2012', { delay: 10 })
   
-  const executeButton = await findByText(doc, 'Execute');
+  const runButton = await findByText(doc, 'Run');
   // Button is disabled until validation completes
   await waitFor(async () => {
     const isEnabled = await page.evaluate((button) => {
       return !button.disabled
-    }, executeButton)
+    }, runButton)
     expect(isEnabled).toBeTruthy()
   })  
   
-  executeButton.click();
+  runButton.click();
   const logTab = await findByText(doc, 'Log');
   // Log tab is not active until after the invest logfile is opened
   await waitFor(async () => {

@@ -215,7 +215,7 @@ describe('Save InVEST Model Setup Buttons', () => {
   })
 })
 
-describe('InVEST Execute Button', () => {
+describe('InVEST Run Button', () => {
 
   const spec = {
     module: 'natcap.invest.foo',
@@ -245,12 +245,12 @@ describe('InVEST Execute Button', () => {
   });
 
 
-  test('Changing inputs trigger validation & enable/disable Execute', async () => {
+  test('Changing inputs trigger validation & enable/disable Run', async () => {
     /*
     This tests that changes to input values trigger validation. 
     The fetchValidation return value is always mocked, but then this
     also tests that validation results correctly enable/disable the 
-    Execute button and display feedback messages on invalid inputs.
+    Run button and display feedback messages on invalid inputs.
     */
     let invalidFeedback = 'is a required key'
     fetchValidation.mockResolvedValue([[['a', 'b'], invalidFeedback]])
@@ -263,8 +263,8 @@ describe('InVEST Execute Button', () => {
       queryAllByText
     } = renderInvestJob();
 
-    const executeButton = await findByRole('button', {name: /Execute/});
-    expect(executeButton).toBeDisabled();
+    const runButton = await findByRole('button', {name: /Run/});
+    expect(runButton).toBeDisabled();
     // The inputs are invalid so the invalid feedback message is present.
     // But, the inputs have not yet been touched, so the message is hidden
     // by CSS 'display: none'. Unfortunately, the bootstrap stylesheet is
@@ -281,12 +281,12 @@ describe('InVEST Execute Button', () => {
     const b = await findByLabelText(RegExp(`${spec.args.b.name}`))
     const c = await findByLabelText(RegExp(`${spec.args.c.name}`))
 
-    // These new values will be valid - Execute should enable
+    // These new values will be valid - Run should enable
     fetchValidation.mockResolvedValue([])
     fireEvent.change(a, { target: { value: 'foo' } })
     fireEvent.change(b, { target: { value: 1 } })
     await waitFor(() => {
-      expect(executeButton).toBeEnabled();
+      expect(runButton).toBeEnabled();
     })
     // Now that inputs are valid, feedback message should be cleared:
     // Note: Can't put this inside wait - it will timeout waiting to be not null.
@@ -296,12 +296,12 @@ describe('InVEST Execute Button', () => {
       expect(element).toBeNull()
     })
 
-    // This new value will be invalid - Execute should disable again
+    // This new value will be invalid - Run should disable again
     invalidFeedback = 'must be a number';
     fetchValidation.mockResolvedValue([[['b'], invalidFeedback]])
     fireEvent.change(b, { target: { value: 'one' } })  // triggers validation
     await waitFor(() => {
-      expect(executeButton).toBeDisabled();
+      expect(runButton).toBeDisabled();
     })
     expect(await findByText(invalidFeedback, { exact: false })).toBeInTheDocument()
     // fetchValidation.mockReset();
