@@ -11,6 +11,10 @@ import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
+import { getLogger } from '../../logger';
+
+const logger = getLogger(__filename.split('/').slice(-2).join('/'));
+
 /**
  * Renders a table of buttons for each invest model and
  * a list of cards for each cached invest job.
@@ -113,19 +117,19 @@ class RecentInvestJobs extends React.PureComponent {
     const recentButtons = [];
     const { recentJobs } = this.props;
     recentJobs.forEach((job) => {
-      // These properties are required, if they don't exist,
-      // the job's data was corrupted and should be skipped
-      let jobID;
-      let metadata;
       let model;
       let workspaceDir;
       let jobDataPath;
+      const [jobID, metadata] = job;
+      // The following properties are required. If they don't exist,
+      // the recent job's data was corrupted and should be skipped over.
+      if (jobID === undefined) { return; }
       try {
-        [jobID, metadata] = job;
         model = metadata.model;
         workspaceDir = metadata.workspace.directory;
         jobDataPath = metadata.jobDataPath;
       } catch (error) {
+        logger.error(error);
         return;
       }
 
