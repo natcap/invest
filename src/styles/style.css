@@ -275,9 +275,17 @@ body {
 	color: lightgray;
 }
 
-.form-control {
+.args-form .form-control {
 	font-family: monospace;
 	font-size:1.3rem;
+}
+
+.args-form .form-control[type=text] {
+	/* In order to keep the important part of long filepaths visible
+	https://stackoverflow.com/questions/38222696/issue-with-the-direction-rtl-css-property */
+	direction: rtl;
+	text-align: left;
+	unicode-bidi: plaintext;
 }
 
 input[type=text]::placeholder {
