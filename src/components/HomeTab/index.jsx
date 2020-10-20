@@ -191,13 +191,13 @@ class RecentInvestJobs extends React.PureComponent {
 
     return (
       <Container>
-        <label htmlFor="recent-job-card-group">
-          <h4>Recent InVEST Runs:</h4>
-        </label>
+        <h4 id="recent-job-card-group">
+          Recent InVEST Runs:
+        </h4>
         {recentButtons.length
           ? (
             <CardGroup
-              id="recent-job-card-group"
+              aria-labelledby="recent-job-card-group"
               className="recent-job-card-group"
             >
               {recentButtons}

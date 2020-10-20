@@ -59,9 +59,26 @@ function initializeArgValues(argsSpec, argsDict) {
   const argsValues = {};
   Object.keys(argsSpec).forEach((argkey) => {
     argsValidation[argkey] = {};
-    if (argkey === 'n_workers') { return; }
+    // 'hidden' args should not be assigned default values by the UI.
+    // They are hidden because they rarely need to be parameterized
+    // by the user, and the default is probably hardcoded into the
+    // invest model (e.g. Rec model's 'port' & 'hostname' args).
+    if (argkey === 'n_workers'
+      || argsSpec[argkey].order === 'hidden') { return; }
+    // When initializing with undefined values, assign defaults so that,
+    // a) values are handled well by the html inputs and
+    // b) the object exported to JSON on "Save" or "Execute" includes defaults.
+    let value;
+    if (argsSpec[argkey].type === 'boolean') {
+      value = argsDict[argkey] || false;
+    } else if (argsSpec[argkey].type === 'option_string') {
+      value = argsDict[argkey]
+        || argsSpec[argkey].validation_options.options[0]; // default to first
+    } else {
+      value = argsDict[argkey] || '';
+    }
     argsValues[argkey] = {
-      value: argsDict[argkey],
+      value: value,
       touched: !initIsEmpty, // touch them only if initializing with values
     };
   });
@@ -85,6 +102,7 @@ export default class SetupTab extends React.Component {
     this.investValidate = this.investValidate.bind(this);
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
+    this.insertNWorkers = this.insertNWorkers.bind(this);
   }
 
   componentDidMount() {
@@ -150,7 +168,6 @@ export default class SetupTab extends React.Component {
         );
       }
     });
-
     this.setState({
       argsValues: argsValues,
       argsValidation: argsValidation,
@@ -159,28 +176,47 @@ export default class SetupTab extends React.Component {
     // }
   }
 
+  /**
+   * n_workers is a special invest arg stored in global settings
+   * 
+   * @param  {object} argsValues - of the shape returned by `initializeArgValues`.
+   * @returns {object} copy of original argsValues with an n_workers property.
+   */
+  insertNWorkers(argsValues) {
+    return {
+      ...argsValues,
+      n_workers: { value: this.props.nWorkers }
+    };
+  }
+
   /** Save the current invest arguments to a python script via datastack.py API.
    *
    * @param {string} filepath - desired path to the python script
    * @returns {undefined}
    */
   savePythonScript(filepath) {
-    const argsDict = argsDictFromObject(this.state.argsValues);
+    const { modelName, pyModuleName } = this.props;
+    const argsValues = this.insertNWorkers(this.state.argsValues);
+    const argsDict = argsDictFromObject(argsValues);
     const payload = {
       filepath: filepath,
-      modelname: this.props.modelName,
-      pyname: this.props.pyModuleName,
+      modelname: modelName,
+      pyname: pyModuleName,
       args: JSON.stringify(argsDict),
     };
     saveToPython(payload);
   }
 
   wrapArgsToJsonFile(datastackPath) {
-    this.props.argsToJsonFile(datastackPath, this.state.argsValues);
+    const argsValues = this.insertNWorkers(this.state.argsValues);
+    this.props.argsToJsonFile(
+      datastackPath, argsDictFromObject(argsValues)
+    );
   }
 
   wrapInvestExecute() {
-    this.props.investExecute(argsDictFromObject(this.state.argsValues));
+    const argsValues = this.insertNWorkers(this.state.argsValues);
+    this.props.investExecute(argsDictFromObject(argsValues));
   }
 
   /** Update state with arg values as they change. And validate the args.
@@ -229,12 +265,12 @@ export default class SetupTab extends React.Component {
     }, () => this.investValidate(this.state.argsValues));
   }
 
+  /** Validate an arguments dictionary using the InVEST model's validate function.
+   *
+   * @param {object} argsValues - of the shape returned by `initializeArgValues`.
+   * @returns undefined
+   */
   async investValidate(argsValues) {
-    /** Validate an arguments dictionary using the InVEST model's validate function.
-     *
-     * @param {object} args_dict_string - a JSON.stringify'ed object of model argument
-     *    keys and values.
-     */
     const { argsSpec, pyModuleName } = this.props;
     // const { argsValidation } = this.state;
     const argsValidation = Object.assign({}, this.state.argsValidation);
@@ -361,4 +397,5 @@ SetupTab.propTypes = {
   argsInitValues: PropTypes.object,
   argsToJsonFile: PropTypes.func.isRequired,
   investExecute: PropTypes.func.isRequired,
+  nWorkers: PropTypes.string.isRequired,
 };

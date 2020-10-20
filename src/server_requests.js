@@ -24,8 +24,8 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
         if (error.code === 'ECONNREFUSED') {
           while (i < retries) {
             i++;
-            // Try every 100ms, usually takes about 1 second to startup.
-            await new Promise((resolve) => setTimeout(resolve, 100));
+            // Try every X ms, usually takes a couple seconds to startup.
+            await new Promise((resolve) => setTimeout(resolve, 300));
             logger.debug(`retry # ${i}`);
             return await getFlaskIsReady({ i: i, retries: retries });
           }

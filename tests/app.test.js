@@ -11,6 +11,7 @@ import { remote } from 'electron';
 import { fireEvent, render, waitFor, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
+import InvestJob from '../src/InvestJob';
 import App from '../src/app';
 import { 
   getInvestList, getSpec, fetchValidation, fetchDatastackFromFile
@@ -396,10 +397,8 @@ describe('InVEST subprocess testing', () => {
     const execute = await findByText('Execute');
     fireEvent.click(execute);
     
-    // Emit some stdout because our program listens for stdout
-    // in order to know the invest subprocess has spawned,
-    // signalling that an invest logfile now exists in the workspace.
-    mockInvestProc.stdout.push('hello from stdout')
+    // stdout listener is how the app knows the process started
+    mockInvestProc.stdout.push('hello from stdout');
     const logTab = await findByText('Log');
     expect(logTab.classList.contains('active')).toBeTruthy();
     // some text from the logfile should be rendered:
@@ -408,7 +407,7 @@ describe('InVEST subprocess testing', () => {
     expect(queryByText('Model Completed')).toBeNull()
     expect(queryByText('Open Workspace')).toBeNull()
     
-    mockInvestProc.emit('close', 0)  // 0 - exit w/o error
+    mockInvestProc.emit('exit', 0)  // 0 - exit w/o error
     expect(await findByText('Model Completed')).toBeInTheDocument();
     expect(await findByText('Open Workspace')).toBeEnabled();
 
@@ -449,7 +448,7 @@ describe('InVEST subprocess testing', () => {
     expect(await findByText(dummyTextToLog, { exact: false }))
       .toBeInTheDocument();
     await new Promise(resolve => setTimeout(resolve, 2000))
-    mockInvestProc.emit('close', 1)  // 1 - exit w/ error
+    mockInvestProc.emit('exit', 1)  // 1 - exit w/ error
     // stderr text should be rendered in a red alert
     expect(await findByText(errorMessage)).toHaveClass('alert-danger');
     expect(await findByText('Open Workspace')).toBeEnabled();
@@ -459,5 +458,44 @@ describe('InVEST subprocess testing', () => {
     ).findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
     unmount();
+  })
+
+  test('user terminates process - expect log display', async () => {
+    const spy = jest.spyOn(InvestJob.prototype, 'terminateInvestProcess')
+      .mockImplementation(() => {
+        mockInvestProc.emit('exit', null)
+      })
+
+    const { findByText, findByLabelText, unmount, ...utils } = render(
+      <App
+        jobDatabase={fileRegistry.JOBS_DATABASE}
+        investExe='foo'/>);
+
+    const carbon = await findByText('Carbon');
+    fireEvent.click(carbon);
+    const workspaceInput = await findByLabelText(
+      RegExp(`${spec.args.workspace_dir.name}`))
+    fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
+    
+    const execute = await findByText('Execute');
+    fireEvent.click(execute);
+    
+    // stdout listener is how the app knows the process started
+    mockInvestProc.stdout.push('hello from stdout');
+    const logTab = await findByText('Log');
+    expect(logTab.classList.contains('active')).toBeTruthy();
+    // some text from the logfile should be rendered:
+    expect(await findByText(dummyTextToLog, { exact: false }))
+      .toBeInTheDocument();
+    const cancelButton = await findByText('Cancel Run');
+    fireEvent.click(cancelButton);
+    expect(await findByText('Open Workspace')).toBeEnabled();
+    // A recent job card should be rendered
+    const cardText = await within(
+      await findByLabelText('Recent InVEST Runs:')
+    ).findByText(`${path.resolve(fakeWorkspace)}`);
+    expect(cardText).toBeInTheDocument();
+    unmount();
+    spy.mockRestore();
   })
 })

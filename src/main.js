@@ -16,6 +16,9 @@ const {
 const {
   findInvestBinaries, createPythonFlaskProcess
 } = require('./main_helpers');
+const { getLogger } = require('./logger');
+
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const PORT = (process.env.PORT || '5000').trim();
 
@@ -45,6 +48,7 @@ const createWindow = async () => {
     useContentSize: true,
     webPreferences: {
       nodeIntegration: true,
+      enableRemoteModule: true,
     },
   });
 
@@ -63,11 +67,18 @@ const createWindow = async () => {
   });
 
   // Emitted when the window is closed.
-  mainWindow.on('closed', () => {
+  mainWindow.on('closed', async () => {
     // Dereference the window object, usually you would store windows
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
     mainWindow = null;
+    // We shouldn't need to shutdown flask here, as it will be
+    // shutdown on the window-all-closed listener, but that one
+    // is not triggering in the puppeteer test on linux.
+    if (process.platform !== 'darwin') {
+      logger.debug('requesting flask shutdown on main window close');
+      await shutdownPythonProcess();
+    }
   });
 };
 
@@ -89,6 +100,7 @@ app.on('window-all-closed', async () => {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
+    logger.debug('requesting flask shutdown on window-all-closed');
     // It's crucial to await here, otherwise the parent
     // process dies before flask has time to kill its server.
     await shutdownPythonProcess();
@@ -99,6 +111,7 @@ app.on('window-all-closed', async () => {
 // TODO: I haven't actually tested this yet on MacOS
 app.on('will-quit', async () => {
   if (process.platform === 'darwin') {
+    logger.debug('requesting flask shutdown on MacOS will-quit');
     await shutdownPythonProcess();
   }
 });

@@ -1,3 +1,5 @@
+import path from 'path';
+import fs from 'fs';
 import React from 'react';
 import { remote } from 'electron';
 import { fireEvent, render, waitFor } from '@testing-library/react';
@@ -5,9 +7,9 @@ import '@testing-library/jest-dom';
 
 import InvestJob from '../src/InvestJob';
 import SetupTab from '../src/components/SetupTab';
+jest.mock('../src/server_requests');
 import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation, fetchDatastackFromFile } from '../src/server_requests';
-jest.mock('../src/server_requests');
 import { fileRegistry } from '../src/constants';
 
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
@@ -39,28 +41,50 @@ function renderInvestJob() {
   return { findByText, findByLabelText, utils }
 }
 
-describe('Save model setup tests', () => {
+describe('Save InVEST Model Setup Buttons', () => {
+
+  const spec = {
+    module: 'natcap.invest.foo',
+    args: {
+      workspace: { 
+        name: 'Workspace',
+        type: 'directory',
+        about: 'this is a workspace'
+      },
+      port: {
+        name: 'Port',
+        type: 'number',
+      }
+    }
+  };
+
+  const uiSpecFilePath = path.join(
+    fileRegistry.INVEST_UI_DATA, `${spec.module}.json`
+  );
+  const uiSpec = {
+    workspace: { order: 0.1 },
+    port: { order: 'hidden' }
+  }
+  fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
+
+  // args expected to be in the saved JSON / Python dictionary
+  const expectedArgKeys = [];
+  Object.keys(spec.args).forEach((key) => {
+    if (uiSpec[key].order !== 'hidden') { expectedArgKeys.push(key) }
+  })
+  expectedArgKeys.push('n_workers'); // never in the spec, always in the args dict
+
+  getSpec.mockResolvedValue(spec)
+  fetchValidation.mockResolvedValue([]);
 
   afterAll(() => {
+    fs.unlinkSync(uiSpecFilePath);
     jest.resetAllMocks();
     // Careful with reset because "resetting a spy results
     // in a function with no return value". I had been using spies to observe
     // function calls, but not to mock return values. Spies used for that 
     // purpose should be 'restored' not 'reset'. Do that inside the test as-needed.
-  })
-
-  const spec = {
-    module: 'natcap.invest.foo',
-    args: {
-      arg: { 
-        name: 'Workspace',
-        type: 'directory',
-        about: 'this is a workspace'
-      }
-    }
-  };
-  getSpec.mockResolvedValue(spec)
-  fetchValidation.mockResolvedValue([]);
+  });
 
   test('SaveParametersButton: requests endpoint with correct payload ', async () => {
     // mock the server call, instead just returning
@@ -80,9 +104,18 @@ describe('Save model setup tests', () => {
     fireEvent.click(saveDropdown);
     const saveButton = await findByText('Save parameters to JSON')
     fireEvent.click(saveButton);
+    
     await waitFor(() => {
-      expect(Object.keys(writeParametersToFile.mock.results[0].value).includes(
-        ['parameterSetPath', 'moduleName', 'args', 'relativePaths']))
+      const results = writeParametersToFile.mock.results[0].value
+      expect(Object.keys(results)).toEqual(expect.arrayContaining(
+        ['parameterSetPath', 'moduleName', 'relativePaths', 'args']
+      ));
+      const args = JSON.parse(results.args);
+      const argKeys = Object.keys(args);
+      expect(argKeys).toEqual(expect.arrayContaining(expectedArgKeys));
+      argKeys.forEach((key) => {
+        expect(typeof args[key]).toBe('string');
+      });
       expect(writeParametersToFile).toHaveBeenCalledTimes(1)
     })
   })
@@ -105,8 +138,16 @@ describe('Save model setup tests', () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(Object.keys(saveToPython.mock.results[0].value).includes(
-        ['filepath', 'modelname', 'pyname', 'args']))
+      const results = saveToPython.mock.results[0].value
+      expect(Object.keys(results)).toEqual(expect.arrayContaining(
+        ['filepath', 'modelname', 'pyname', 'args']
+      ));
+      const args = JSON.parse(results.args);
+      const argKeys = Object.keys(args);
+      expect(argKeys).toEqual(expect.arrayContaining(expectedArgKeys));
+      argKeys.forEach((key) => {
+        expect(typeof args[key]).toBe('string');
+      });
       expect(saveToPython).toHaveBeenCalledTimes(1)
     })
   })

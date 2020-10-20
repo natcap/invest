@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -88,6 +88,8 @@ export default class InvestJob extends React.Component {
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
+    this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
+    this.investRun = undefined;
   }
 
   async componentDidMount() {
@@ -118,16 +120,11 @@ export default class InvestJob extends React.Component {
    *   as a javascript object
    */
   async argsToJsonFile(datastackPath, argsValues) {
-    // The n_workers value always needs to be inserted into args
-    const argsValuesCopy = {
-      ...argsValues, n_workers: this.props.investSettings.nWorkers
-    };
-
     const payload = {
       parameterSetPath: datastackPath,
       moduleName: this.state.modelSpec.module,
       relativePaths: false,
-      args: JSON.stringify(argsValuesCopy),
+      args: JSON.stringify(argsValues),
     };
     await writeParametersToFile(payload);
   }
@@ -185,20 +182,41 @@ export default class InvestJob extends React.Component {
       'run',
       job.modelRunName,
       '--headless',
-      `-d ${datastackPath}`,
+      `-d "${datastackPath}"`,
     ];
-    const investRun = spawn(path.basename(investExe), cmdArgs, {
-      env: { PATH: path.dirname(investExe) },
-      shell: true, // without true, IOError when datastack.py loads json
-    });
+    if (process.platform !== 'win32') {
+      this.investRun = spawn(path.basename(investExe), cmdArgs, {
+        env: { PATH: path.dirname(investExe) },
+        shell: true, // without shell, IOError when datastack.py loads json
+        detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
+      });
+      this.investRun.terminate = () => {
+        if (this.state.jobStatus === 'running') {
+          // the '-' prefix on pid sends signal to children as well
+          process.kill(-this.investRun.pid, 'SIGTERM');
+        }
+      };
+    } else {  // windows
+      this.investRun = spawn(path.basename(investExe), cmdArgs, {
+        env: { PATH: path.dirname(investExe) },
+        shell: true,
+      });
+      this.investRun.terminate = () => {
+        if (this.state.jobStatus === 'running') {
+          exec(`taskkill /pid ${this.investRun.pid} /t /f`);
+        }
+      };
+    }
+    logger.debug(this.investRun.spawnargs);
 
     // There's no general way to know that a spawned process started,
     // so this logic when listening for stdout seems like the way.
-    investRun.stdout.on('data', async () => {
+    this.investRun.stdout.on('data', async () => {
       if (!job.logfile) {
         job.logfile = await findMostRecentLogfile(job.workspace.directory);
         // TODO: handle case when job.logfile is still undefined?
         // Could be if some stdout is emitted before a logfile exists.
+        logger.debug(`invest logging to: ${job.logfile}`);
         job.status = 'running';
         this.setState(
           {
@@ -218,7 +236,8 @@ export default class InvestJob extends React.Component {
     // invest CLI or even the shell, rather than the invest model,
     // in which case it's useful to logger.debug too.
     let stderr = Object.assign('', this.state.logStdErr);
-    investRun.stderr.on('data', (data) => {
+    this.investRun.stderr.on('data', (data) => {
+      logger.debug(`${data}`);
       stderr += `${data}`;
       this.setState({
         logStdErr: stderr,
@@ -227,18 +246,32 @@ export default class InvestJob extends React.Component {
 
     // Set some state when the invest process exits and update the app's
     // persistent database by calling saveJob.
-    investRun.on('close', (code) => {
-      // TODO: there are non-zero exit cases that should be handled
-      // differently from one-another, but right now they are all exit code 1.
-      // E.g. this state update is designed with a model crash in mind,
-      // not a fail to launch
-      job.status = (code === 0 ? 'success' : 'error');
+    this.investRun.on('exit', (code) => {
+      logger.debug(code);
+      if (code === 0) {
+        job.status = 'success';
+      } else {
+        // Invest CLI exits w/ code 1 when it catches errors,
+        // Models exit w/ code 255 (on all OS?) when errors raise from execute()
+        // Windows taskkill yields exit code 1
+        // Non-windows process.kill yields exit code null
+        job.status = 'error';
+      }
       this.setState({
         jobStatus: job.status,
       }, () => {
         saveJob(job);
         cleanupDir(tempDir);
       });
+    });
+  }
+
+  terminateInvestProcess() {
+    this.investRun.terminate();
+    // this replaces any stderr that might exist, but that's
+    // okay since the user requested terminating the process.
+    this.setState({
+      logStdErr: 'Run Canceled',
     });
   }
 
@@ -319,6 +352,7 @@ export default class InvestJob extends React.Component {
                   argsInitValues={this.props.argsInitValues}
                   investExecute={this.investExecute}
                   argsToJsonFile={this.argsToJsonFile}
+                  nWorkers={this.props.investSettings.nWorkers}
                 />
               </TabPane>
               <TabPane eventKey="log" title="Log">
@@ -326,6 +360,7 @@ export default class InvestJob extends React.Component {
                   jobStatus={jobStatus}
                   logfile={logfile}
                   logStdErr={logStdErr}
+                  terminateInvestProcess={this.terminateInvestProcess}
                 />
               </TabPane>
               <TabPane eventKey="resources" title="Resources">

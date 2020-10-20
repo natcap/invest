@@ -1,4 +1,4 @@
-name: Build and Release
+name: Build, Test Binaries, & Release
 
 on: [push, pull_request]
 
@@ -9,7 +9,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
         node-version: [12.x]
 
     steps:
@@ -32,11 +32,16 @@ jobs:
         ref: refs/tags/${{env.INVEST_VERSION}}
         path: ./invest
 
+    - name: Install libspatialindex for ubuntu
+      if: matrix.os == 'ubuntu-latest'
+      run:
+        sudo apt-get install libspatialindex-dev
+
     - name: Set up conda for non-Windows
       uses: goanpeca/setup-miniconda@v1.1.2
       if: matrix.os != 'windows-latest'
       with:
-        activate-environment: invest-env  # This is also hardcoded in Pyinstaller's invest.spec
+        activate-environment: invest-env
         auto-update-conda: true
         python-version: 3.7
         channels: conda-forge
@@ -92,8 +97,7 @@ jobs:
     - name: Install natcap.invest python package
       shell: bash -l {0}
       working-directory: ./invest
-      run: |
-          make install
+      run: make install
 
     - name: Freeze Python environment
       shell: bash -l {0}
@@ -102,12 +106,6 @@ jobs:
 
     - name: NPM Install
       run: npm install
-
-      # Also run all tests on the build dir code?
-
-    - name: Run tests that require binaries
-      shell: bash -l {0}
-      run: npm run test-binaries
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
@@ -119,11 +117,20 @@ jobs:
         # If the commit is tagged with a version (e.g. "v1.0.0"),
         # release the app after building
         release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      # Also run all tests on the build dir code?
+    - name: Test flask app binaries
+      shell: bash -l {0}
+      run: npm run test-flask-app
+
+    - name: Test electron app with puppeteer
+      uses: GabrielBB/xvfb-action@v1
+      with:
+        run: npm run test-electron-app
     
     - name: Upload installer artifacts
       uses: actions/upload-artifact@v2-preview
       if: ${{ always() }}
       with:
-        name: invest-desktop-${{ matrix.os }}
-        path: dist/invest-desktop_*
-
+        name: invest-workbench-${{ matrix.os }}
+        path: dist/invest-workbench_*

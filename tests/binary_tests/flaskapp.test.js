@@ -1,25 +1,26 @@
 import fs from 'fs';
 import readline from 'readline';
-import { spawn, spawnSync } from 'child_process';
 import fetch from 'node-fetch';
 import * as server_requests from '../../src/server_requests';
 import { findInvestBinaries, createPythonFlaskProcess } from '../../src/main_helpers';
 import { argsDictFromObject } from '../../src/utils';
-import dotenv from 'dotenv';
-dotenv.config();
 
-// These won't run in the same CI as the rest of our tests
-// because we don't have the python env available.
-// We can have the python env available during the build & dist CI,
+jest.setTimeout(250000) // This test is slow in CI
 
+const isDevMode = true // otherwise need to mock process.resourcesPath
 beforeAll(async () => {
-	const binaries = await findInvestBinaries(true); // trues force devMode
-  createPythonFlaskProcess(binaries.server, true);
-  await server_requests.getFlaskIsReady()
+	const binaries = await findInvestBinaries(isDevMode);
+  createPythonFlaskProcess(binaries.server, isDevMode);
+  // In the CI the flask app takes more than 10x as long to startup.
+  // Especially so on macos.
+  // So, allowing many retries, especially because the error
+  // that is thrown if all retries fail is swallowed by jest
+  // and tests try to run anyway.
+  await server_requests.getFlaskIsReady({retries: 201})
 })
 
-afterAll(() => {
-  server_requests.shutdownPythonProcess()
+afterAll(async () => {
+  await server_requests.shutdownPythonProcess()
 })
 
 test('invest list items have expected properties', async () => {

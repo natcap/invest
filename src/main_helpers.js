@@ -37,11 +37,16 @@ export function findInvestBinaries(isDevMode) {
 
     // C) point to binaries included in this app's installation.
     } else {
-      const binaryPath = path.join(
-        process.resourcesPath, 'app.asar.unpacked', 'build', 'invest'
-      );
+      const binaryPath = path.join(process.resourcesPath, 'invest');
       serverExe = path.join(binaryPath, `server${ext}`);
       investExe = path.join(binaryPath, `invest${ext}`);
+    }
+    try {
+      fs.accessSync(serverExe, fs.constants.X_OK);
+      fs.accessSync(investExe, fs.constants.X_OK);
+    } catch (error) {
+      logger.error(error);
+      throw error;
     }
     logger.info(`Found invest binaries ${investExe} and ${serverExe}`);
     resolve({ invest: investExe, server: serverExe });
