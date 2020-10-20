@@ -220,7 +220,7 @@ body {
 
 #log-text {
 	font-family: monospace;
-	font-size:1.2rem;
+	font-size:1.3rem;
 	color: #e5e5e5;
 }
 
@@ -232,7 +232,7 @@ body {
 }
 
 #log-text .invest-log-error {
-	color: #ffbd33;
+	color: #ffc13e;
 	margin-bottom: 0rem;
 }
 
@@ -284,4 +284,8 @@ input[type=text]::placeholder {
 .form-check-label {
 	padding-left: 0.5rem;
 	padding-right: 1rem;
+}
+
+.invalid-feedback {
+	font-size: 1.05rem;
 }
