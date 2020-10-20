@@ -214,10 +214,17 @@ body {
 	margin-bottom: 0rem;
 }
 
-#log-alert {
-	height: 10vh;
-	padding-left: inherit;
-	padding-right: inherit;
+.invest-sidebar-col .alert {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	order: -1;
+	/*height: 10vh;*/
+}
+
+.invest-sidebar-col .alert .btn {
+	flex: 1;
+	margin-top: 1rem;
 }
 
 /* Forms */

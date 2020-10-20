@@ -143,7 +143,6 @@ export default class LogTab extends React.Component {
     let ModelStatusAlert;
     const WorkspaceButton = (
       <Button
-        className="float-right float-bottom"
         variant="outline-dark"
         onClick={this.handleOpenWorkspace}
         disabled={jobStatus === 'running'}
@@ -152,38 +151,45 @@ export default class LogTab extends React.Component {
       </Button>
     );
 
+    const CancelButton = (
+      <Button
+        variant="outline-dark"
+        onClick={this.props.terminateInvestProcess}
+      >
+        Cancel Run
+      </Button>
+    );
+
     if (jobStatus === 'running') {
       ModelStatusAlert = (
-        <Alert className="py-4 mt-3" variant="secondary">
-          <Button
-            className="float-right float-bottom"
-            variant="outline-dark"
-            onClick={this.props.terminateInvestProcess}
-          >
-            Cancel Run
-          </Button>
+        <Alert variant="secondary">
+          {CancelButton}
         </Alert>
       );
     } else if (jobStatus === 'error') {
-      // this.unwatchLogfile();
       let lastCall = '';
-      let i = 1;
-      while (!lastCall) {
-        [lastCall] = `${this.props.logStdErr}`
-          .split(`${os.EOL}`).splice(-1 * i);
-        i += 1;
+      if (this.props.logStdErr) {
+        let i = 1;
+        while (!lastCall) {
+          [lastCall] = `${this.props.logStdErr}`
+            .split(`${os.EOL}`).splice(-1 * i);
+          i += 1;
+        }
+      } else {
+        // Placeholder for a recent job re-loaded, logStdErr data doesn't persist.
+        lastCall = 'Error (see Log for details)';
       }
+
       ModelStatusAlert = (
-        <Alert className="py-4" variant="danger">
+        <Alert variant="danger">
           {lastCall}
           {WorkspaceButton}
         </Alert>
       );
     } else if (jobStatus === 'success') {
-      // this.unwatchLogfile();
       ModelStatusAlert = (
-        <Alert className="py-4" variant="success">
-          <span>Model Completed</span>
+        <Alert variant="success">
+          Model Complete
           {WorkspaceButton}
         </Alert>
       );
