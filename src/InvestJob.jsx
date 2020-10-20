@@ -312,7 +312,7 @@ export default class InvestJob extends React.Component {
 
     const isRunning = jobStatus === 'running';
     const logDisabled = (!logfile);
-    const { navID } = this.props;
+    const { navID, modelRunName } = this.props;
     const sidebarSetupElementId = `sidebar-setup-${navID}`;
     const sidebarFooterElementId = `sidebar-footer-${navID}`;
 
@@ -321,9 +321,9 @@ export default class InvestJob extends React.Component {
         <Row>
           <Col sm={3} className="invest-sidebar-col">
             <Nav
-              variant="pills"
-              id="vertical tabs"
               className="flex-column"
+              id="vertical tabs"
+              variant="pills"
               activeKey={activeTab}
               onSelect={this.switchTabs}
             >
@@ -333,8 +333,8 @@ export default class InvestJob extends React.Component {
                 </Nav.Link>
               </Nav.Item>
               <div
-                id={sidebarSetupElementId}
                 className="sidebar-setup"
+                id={sidebarSetupElementId}
               />
               <Nav.Item>
                 <Nav.Link eventKey="log" disabled={logDisabled}>
@@ -350,15 +350,16 @@ export default class InvestJob extends React.Component {
                   Log
                 </Nav.Link>
               </Nav.Item>
-              <Nav.Item>
-                <Nav.Link eventKey="resources">
-                  Resources
-                </Nav.Link>
-              </Nav.Item>
             </Nav>
+            <Row className="flex-column">
+              <ResourcesTab
+                moduleName={modelRunName}
+                docs={modelSpec.userguide_html}
+              />
+            </Row>
             <div
-              id={sidebarFooterElementId}
               className="flex-column sidebar-footer"
+              id={sidebarFooterElementId}
             />
           </Col>
           <Col sm={9} className="invest-main-col">
@@ -386,12 +387,6 @@ export default class InvestJob extends React.Component {
                   terminateInvestProcess={this.terminateInvestProcess}
                   pyModuleName={modelSpec.module}
                   sidebarFooterElementId={sidebarFooterElementId}
-                />
-              </TabPane>
-              <TabPane eventKey="resources" title="Resources" className="main-pane">
-                <ResourcesTab
-                  modelName={modelSpec.model_name}
-                  docs={modelSpec.userguide_html}
                 />
               </TabPane>
             </TabContent>
