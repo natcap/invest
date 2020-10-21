@@ -1,0 +1,98 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "wind_data_path": {
+        "order": null
+    },
+    "aoi_vector_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "valuation_container": {
+        "order": null,
+        "ui_control": [
+            "foundation_cost",
+            "grid_points_path",
+            "wind_price",
+            "wind_schedule",
+            "rate_change",
+            "discount_rate",
+            "avg_grid_distance",
+            "price_table"
+        ]
+    },
+    "grid_points_path": {
+        "order": null,
+        "ui_option": "disable",
+        "ui_control": [
+            "avg_grid_distance"
+        ]
+    },
+    "bathymetry_path": {
+        "order": null
+    },
+    "land_polygon_vector_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "min_distance": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "max_distance": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "global_wind_parameters_path": {
+        "order": null
+    },
+    "turbine_parameters_path": {
+        "order": null
+    },
+    "number_of_turbines": {
+        "order": null
+    },
+    "min_depth": {
+        "order": null
+    },
+    "max_depth": {
+        "order": null
+    },
+    "foundation_cost": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "discount_rate": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "avg_grid_distance": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "price_table": {
+        "order": null,
+        "ui_option": "disable",
+        "ui_control": [
+            "rate_change",
+            "wind_price",
+            "wind_schedule"
+        ]
+    },
+    "wind_schedule": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "wind_price": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "rate_change": {
+        "order": null,
+        "ui_option": "disable"
+    }
+}

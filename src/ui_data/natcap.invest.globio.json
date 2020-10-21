@@ -1,0 +1,60 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "predefined_globio": {
+        "order": null,
+        "ui_control": [
+            "lulc_to_globio_table_path",
+            "globio_lulc_path",
+            "potential_vegetation_path",
+            "primary_threshold",
+            "lulc_path",
+            "pasture_path",
+            "pasture_threshold"
+        ]
+    },
+    "lulc_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "lulc_to_globio_table_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "infrastructure_dir": {
+        "order": null
+    },
+    "pasture_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "potential_vegetation_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "pasture_threshold": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "intensification_fraction": {
+        "order": null
+    },
+    "primary_threshold": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "msa_parameters_path": {
+        "order": null
+    },
+    "aoi_path": {
+        "order": null
+    },
+    "globio_lulc_path": {
+        "order": null,
+        "ui_option": "disable"
+    }
+}

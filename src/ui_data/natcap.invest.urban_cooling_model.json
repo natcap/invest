@@ -1,0 +1,64 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "lulc_raster_path": {
+        "order": null
+    },
+    "ref_eto_raster_path": {
+        "order": null
+    },
+    "aoi_vector_path": {
+        "order": null
+    },
+    "biophysical_table_path": {
+        "order": null
+    },
+    "green_area_cooling_distance": {
+        "order": null
+    },
+    "t_air_average_radius": {
+        "order": null
+    },
+    "t_ref": {
+        "order": null
+    },
+    "uhi_max": {
+        "order": null
+    },
+    "do_valuation": {
+        "order": null,
+        "ui_control": [
+            "energy_consumption_table_path",
+            "building_vector_path",
+            "avg_rel_humidity"
+        ]
+    },
+    "avg_rel_humidity": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "building_vector_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "energy_consumption_table_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "cc_method": {
+        "order": null
+    },
+    "cc_weight_shade": {
+        "order": null
+    },
+    "cc_weight_albedo": {
+        "order": null
+    },
+    "cc_weight_eti": {
+        "order": null
+    }
+}
