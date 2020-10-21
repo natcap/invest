@@ -48,6 +48,10 @@ if is_darwin:
     a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
         glob.glob(os.path.join(conda_env, 'lib', 'libspatialindex*.dylib'))]
+    # add shapely dependency geos from conda environment
+    a.binaries += [
+        (os.path.basename(name), name, 'BINARY') for name in
+        glob.glob(os.path.join(conda_env, 'lib', 'libgeos_*.dylib'))]
 elif is_win:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/

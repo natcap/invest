@@ -1055,8 +1055,11 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             [precip_path for i in range(12)], [et0_path for i in range(12)],
             [quickflow_path for i in range(12)], flow_dir_path,
             [kc_path for i in range(12)], {i: 0.5 for i in range(12)}, 0.5,
-            0.5, stream_path, 'target_li_path.tif', 'target_li_avail_path.tif',
-            'target_l_sum_avail_path.tif', 'target_aet_path.tif')
+            0.5, stream_path,
+            os.path.join(self.workspace_dir, 'target_li_path.tif'),
+            os.path.join(self.workspace_dir, 'target_li_avail_path.tif'),
+            os.path.join(self.workspace_dir, 'target_l_sum_avail_path.tif'),
+            os.path.join(self.workspace_dir, 'target_aet_path.tif'))
 
 
 class SWYValidationTests(unittest.TestCase):
