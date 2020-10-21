@@ -1,0 +1,46 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "wave_base_data_path": {
+        "order": null
+    },
+    "analysis_area_path": {
+        "order": null
+    },
+    "aoi_path": {
+        "order": null
+    },
+    "machine_perf_path": {
+        "order": null
+    },
+    "machine_param_path": {
+        "order": null
+    },
+    "dem_path": {
+        "order": null
+    },
+    "valuation_container": {
+        "order": null,
+        "ui_control": [
+            "machine_econ_path",
+            "number_of_machines",
+            "land_gridPts_path"
+        ]
+    },
+    "land_gridPts_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "machine_econ_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "number_of_machines": {
+        "order": null,
+        "ui_option": "disable"
+    }
+}

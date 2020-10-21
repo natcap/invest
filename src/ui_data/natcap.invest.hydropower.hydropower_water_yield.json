@@ -1,0 +1,41 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "lulc_path": {
+        "order": null
+    },
+    "depth_to_root_rest_layer_path": {
+        "order": null
+    },
+    "precipitation_path": {
+        "order": null
+    },
+    "pawc_path": {
+        "order": null
+    },
+    "eto_path": {
+        "order": null
+    },
+    "watersheds_path": {
+        "order": null
+    },
+    "sub_watersheds_path": {
+        "order": null
+    },
+    "biophysical_table_path": {
+        "order": null
+    },
+    "seasonality_constant": {
+        "order": null
+    },
+    "demand_table_path": {
+        "order": null
+    },
+    "valuation_table_path": {
+        "order": null
+    }
+}

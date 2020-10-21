@@ -1,0 +1,20 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "landcover_raster_path": {
+        "order": null
+    },
+    "landcover_to_crop_table_path": {
+        "order": null
+    },
+    "aggregate_polygon_path": {
+        "order": null
+    },
+    "model_data_path": {
+        "order": null
+    }
+}

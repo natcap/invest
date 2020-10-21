@@ -1,0 +1,69 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "ff_farm_loc": {
+        "order": null
+    },
+    "farm_ID": {
+        "order": null
+    },
+    "g_param_a": {
+        "order": null
+    },
+    "g_param_b": {
+        "order": null
+    },
+    "g_param_tau": {
+        "order": null
+    },
+    "use_uncertainty": {
+        "order": null,
+        "ui_control": [
+            "g_param_b_sd",
+            "g_param_a_sd",
+            "num_monte_carlo_runs"
+        ]
+    },
+    "g_param_a_sd": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "g_param_b_sd": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "num_monte_carlo_runs": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "water_temp_tbl": {
+        "order": null
+    },
+    "farm_op_tbl": {
+        "order": null
+    },
+    "outplant_buffer": {
+        "order": null
+    },
+    "do_valuation": {
+        "order": null,
+        "ui_control": [
+            "frac_p",
+            "discount",
+            "p_per_kg"
+        ]
+    },
+    "p_per_kg": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "frac_p": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "discount": {
+        "order": null,
+        "ui_option": "disable"
+    }
+}

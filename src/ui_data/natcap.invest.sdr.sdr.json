@@ -1,0 +1,41 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "dem_path": {
+        "order": null
+    },
+    "erosivity_path": {
+        "order": null
+    },
+    "erodibility_path": {
+        "order": null
+    },
+    "lulc_path": {
+        "order": null
+    },
+    "watersheds_path": {
+        "order": null
+    },
+    "biophysical_table_path": {
+        "order": null
+    },
+    "threshold_flow_accumulation": {
+        "order": null
+    },
+    "k_param": {
+        "order": null
+    },
+    "sdr_max": {
+        "order": null
+    },
+    "ic_0_param": {
+        "order": null
+    },
+    "drainage_path": {
+        "order": null
+    }
+}

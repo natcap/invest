@@ -1,0 +1,39 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "n_nearest_model_points": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "compute_forest_edge_effects": {
+        "order": null,
+        "ui_control": [
+            "tropical_forest_edge_carbon_model_vector_path",
+            "biomass_to_carbon_conversion_factor"
+        ]
+    },
+    "aoi_vector_path": {
+        "order": null
+    },
+    "biophysical_table_path": {
+        "order": null
+    },
+    "lulc_raster_path": {
+        "order": null
+    },
+    "pools_to_calculate": {
+        "order": null
+    },
+    "tropical_forest_edge_carbon_model_vector_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "biomass_to_carbon_conversion_factor": {
+        "order": null,
+        "ui_option": "disable"
+    }
+}

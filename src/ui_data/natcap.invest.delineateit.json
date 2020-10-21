@@ -1,0 +1,32 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "dem_path": {
+        "order": null
+    },
+    "outlet_vector_path": {
+        "order": null
+    },
+    "snap_points": {
+        "order": null,
+        "ui_control": [
+            "flow_threshold",
+            "snap_distance"
+        ]
+    },
+    "flow_threshold": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "snap_distance": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "skip_invalid_geometry": {
+        "order": null
+    }
+}

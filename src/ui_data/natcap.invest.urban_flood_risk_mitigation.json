@@ -1,0 +1,33 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "aoi_watersheds_path": {
+        "order": null
+    },
+    "rainfall_depth": {
+        "order": null
+    },
+    "lulc_path": {
+        "order": null
+    },
+    "soils_hydrological_group_raster_path": {
+        "order": null
+    },
+    "curve_number_table_path": {
+        "order": null
+    },
+    "built_infrastructure_vector_path": {
+        "order": null,
+        "ui_control": [
+            "infrastructure_damage_loss_table_path"
+        ]
+    },
+    "infrastructure_damage_loss_table_path": {
+        "order": null,
+        "ui_option": "disable"
+    }
+}

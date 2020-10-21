@@ -1,0 +1,43 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "aoi_path": {
+        "order": null
+    },
+    "structure_path": {
+        "order": null
+    },
+    "dem_path": {
+        "order": null
+    },
+    "refraction": {
+        "order": null
+    },
+    "do_valuation": {
+        "order": null,
+        "ui_control": [
+            "a_coef",
+            "valuation_function",
+            "b_coef"
+        ]
+    },
+    "valuation_function": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "a_coef": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "b_coef": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "max_valuation_radius": {
+        "order": null
+    }
+}
