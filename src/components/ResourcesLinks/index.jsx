@@ -48,18 +48,16 @@ function handleClick(event) {
  * e.g. https://community.naturalcapitalproject.org/tag/carbon
  */
 export default function ResourcesTab(props) {
-  let userGuideURL;
-  let forumURL;
+  let userGuideURL = UG_ROOT;
+  let forumURL = FORUM_ROOT;
   const { docs, moduleName } = props;
-  if (docs && moduleName) {
+  const tagName = FORUM_TAGS[moduleName];
+  if (docs) {
     const docsName = path.basename(docs);
-    const tagName = FORUM_TAGS[moduleName];
     userGuideURL = `${path.join(UG_ROOT, docsName)}#data-needs`;
+  }
+  if (tagName) {
     forumURL = path.join(FORUM_ROOT, 'tags', tagName);
-  } else {
-    // No model has been selected yet, but general resources are useful
-    userGuideURL = UG_ROOT;
-    forumURL = FORUM_ROOT;
   }
   return (
     <React.Fragment>

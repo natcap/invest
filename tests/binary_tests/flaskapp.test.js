@@ -58,7 +58,7 @@ test('fetch invest validation', async () => {
   expect(results[0].length).toBe(2)
 })
 
-test.only('write parameters to file and parse them from file', async () => {
+test('write parameters to file and parse them from file', async () => {
   const spec = await server_requests.getSpec('carbon');
   const argsDict = argsDictFromObject(spec.args);
   const filepath = 'tests/data/foo.json';

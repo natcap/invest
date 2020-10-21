@@ -424,11 +424,11 @@ describe('InVEST subprocess testing', () => {
     // some text from the logfile should be rendered:
     expect(await findByText(dummyTextToLog, { exact: false }))
       .toBeInTheDocument();
-    expect(queryByText('Model Completed')).toBeNull()
+    expect(queryByText('Model Complete')).toBeNull()
     expect(queryByText('Open Workspace')).toBeNull()
     
     mockInvestProc.emit('exit', 0)  // 0 - exit w/o error
-    expect(await findByText('Model Completed')).toBeInTheDocument();
+    expect(await findByText('Model Complete')).toBeInTheDocument();
     expect(await findByText('Open Workspace')).toBeEnabled();
     expect(execute).toBeEnabled();
 
