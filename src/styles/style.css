@@ -1,6 +1,9 @@
 body {
 	--invest-green: #148F68;
 	--navbar-height: 65px;
+	background-color: rgba(0,0,0,0);
+	margin: 0;
+	padding: 1rem;
 }
 
 /*Top Navigation*/
@@ -11,12 +14,6 @@ body {
 	border-bottom: 3px solid var(--invest-green);
 	background-color: #fff
 }
-
-/*.navbar.nav-tabs .nav-item .nav-link {
-  padding-right: 2rem;
-  padding-left: 2rem;
-  padding-bottom: 1rem;
-}*/
 
 .navbar-light .navbar-nav .nav-link {
 	background-color: transparent;
@@ -73,8 +70,6 @@ body {
 /*InVEST Model Layout*/
 
 .invest-sidebar-col {
-/*	display: flex;
-*/	/*padding-top: 16px;*/
 	padding-right: 0rem;
 }
 
@@ -87,9 +82,6 @@ body {
 	background-color: ghostwhite;
 	border-right: 5px solid var(--invest-green);
 	border-radius: 0rem;
-	/*border-right-color: green;
-	border-right: solid;
-	border-right-width: 5px;*/
 }
 
 .sidebar-setup {
@@ -117,7 +109,6 @@ body {
 	left: 0;
 	margin-right:2rem;
 	margin-left:2rem;
-	/*width: inherit;*/
 	padding-left: inherit;
 	padding-right: inherit;
 }
@@ -129,18 +120,12 @@ body {
 }
 
 .invest-main-col {
-	/*padding-top: 12px;*/
 	padding-left: 0rem;
-	/*padding-right: 2rem;*/
 	height: 85vh;
-	/*overflow: auto;*/
 }
 
 .invest-main-col .tab-content {
-	/*border-color: gray;*/
-	/*border-style: solid;*/
 	background-color: ghostwhite;
-	/*padding-left: 2rem;*/
 }
 
 /* HomeTab */
@@ -178,7 +163,6 @@ body {
 .card-body {
 	width: inherit;
 	padding: 0;
-	/*margin-left: -7px;*/
 }
 
 .card-header {
@@ -218,13 +202,9 @@ body {
 
 /* Log Tab */
 #log-display {
-	/*flex: 1;*/
 	overflow: auto;
   white-space: pre-line;
 	height: 85vh;
-  /*min-height: 0;*/
-  /*max-height: 75%;*/
-  /*overflow-y: scroll;*/
   background-color: #191919;
 }
 
@@ -251,7 +231,6 @@ body {
 	flex-direction: column;
 	justify-content: center;
 	order: -1;
-	/*height: 10vh;*/
 }
 
 .invest-sidebar-col .alert .btn {
