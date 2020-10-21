@@ -6,3 +6,4 @@ include pyproject.toml
 include requirements.txt
 include requirements-dev.txt
 include requirements-gui.txt
+recursive-include invest_natcap/
