@@ -1,0 +1,35 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "base_lulc_path": {
+        "order": null
+    },
+    "replacment_lucode": {
+        "order": null
+    },
+    "area_to_convert": {
+        "order": null
+    },
+    "focal_landcover_codes": {
+        "order": null
+    },
+    "convertible_landcover_codes": {
+        "order": null
+    },
+    "n_fragmentation_steps": {
+        "order": null
+    },
+    "aoi_path": {
+        "order": null
+    },
+    "convert_farthest_from_edge": {
+        "order": null
+    },
+    "convert_nearest_to_edge": {
+        "order": null
+    }
+}

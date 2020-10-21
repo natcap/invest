@@ -1,0 +1,32 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "info_table_path": {
+        "order": null
+    },
+    "criteria_table_path": {
+        "order": null
+    },
+    "resolution": {
+        "order": null
+    },
+    "max_rating": {
+        "order": null
+    },
+    "risk_eq": {
+        "order": null
+    },
+    "decay_eq": {
+        "order": null
+    },
+    "aoi_vector_path": {
+        "order": null
+    },
+    "visualize_outputs": {
+        "order": null
+    }
+}

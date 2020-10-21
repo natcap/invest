@@ -1,0 +1,39 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "dem_path": {
+        "order": null
+    },
+    "dem_band_index": {
+        "order": null
+    },
+    "algorithm": {
+        "order": null
+    },
+    "calculate_flow_direction": {
+        "order": null
+    },
+    "calculate_flow_accumulation": {
+        "order": null
+    },
+    "calculate_stream_threshold": {
+        "order": null,
+        "ui_control": [
+            "threshold_flow_accumulation"
+        ]
+    },
+    "threshold_flow_accumulation": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "calculate_downstream_distance": {
+        "order": null
+    },
+    "calculate_slope": {
+        "order": null
+    }
+}

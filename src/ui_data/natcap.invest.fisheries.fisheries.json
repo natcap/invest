@@ -1,0 +1,81 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "aoi_vector_path": {
+        "order": null
+    },
+    "total_timesteps": {
+        "order": null
+    },
+    "population_type": {
+        "order": null
+    },
+    "sexsp": {
+        "order": null
+    },
+    "harvest_units": {
+        "order": null
+    },
+    "do_batch": {
+        "order": null,
+        "ui_control": [
+            "population_csv_dir",
+            "population_csv_path"
+        ]
+    },
+    "population_csv_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "population_csv_dir": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "spawn_units": {
+        "order": null
+    },
+    "total_init_recruits": {
+        "order": null
+    },
+    "recruitment_type": {
+        "order": null
+    },
+    "alpha": {
+        "order": null
+    },
+    "beta": {
+        "order": null
+    },
+    "total_recur_recruits": {
+        "order": null
+    },
+    "migr_cont": {
+        "order": null,
+        "ui_control": [
+            "migration_dir"
+        ]
+    },
+    "migration_dir": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "val_cont": {
+        "order": null,
+        "ui_control": [
+            "frac_post_process",
+            "unit_price"
+        ]
+    },
+    "frac_post_process": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "unit_price": {
+        "order": null,
+        "ui_option": "disable"
+    }
+}

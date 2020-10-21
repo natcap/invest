@@ -1,0 +1,84 @@
+{
+    "workspace_dir": {
+        "order": null
+    },
+    "results_suffix": {
+        "order": null
+    },
+    "threshold_flow_accumulation": {
+        "order": null
+    },
+    "et0_dir": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "user_defined_local_recharge": {
+        "order": null,
+        "ui_control": [
+            "l_path"
+        ]
+    },
+    "precip_dir": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "dem_raster_path": {
+        "order": null
+    },
+    "lulc_raster_path": {
+        "order": null
+    },
+    "soil_group_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "aoi_path": {
+        "order": null
+    },
+    "biophysical_table_path": {
+        "order": null
+    },
+    "rain_events_table_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "user_defined_climate_zones": {
+        "order": null,
+        "ui_control": [
+            "climate_zone_table_path",
+            "climate_zone_raster_path"
+        ]
+    },
+    "alpha_m": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "monthly_alpha": {
+        "order": null,
+        "ui_control": [
+            "monthly_alpha_path"
+        ]
+    },
+    "beta_i": {
+        "order": null
+    },
+    "gamma": {
+        "order": null
+    },
+    "l_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "climate_zone_table_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "climate_zone_raster_path": {
+        "order": null,
+        "ui_option": "disable"
+    },
+    "monthly_alpha_path": {
+        "order": null,
+        "ui_option": "disable"
+    }
+}
