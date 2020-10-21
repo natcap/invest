@@ -43,7 +43,7 @@ const createWindow = async () => {
   // Create the browser window.
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   mainWindow = new BrowserWindow({
-    width: width * 0.75,
+    width: width,
     height: height,
     useContentSize: true,
     webPreferences: {
