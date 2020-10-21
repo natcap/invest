@@ -343,6 +343,7 @@ export default class SetupTab extends React.Component {
 
       const buttonText = (
         <span>
+          Run
           {isRunning
             && (
               <Spinner
@@ -352,7 +353,6 @@ export default class SetupTab extends React.Component {
                 aria-hidden="true"
               />
             )}
-          Run
         </span>
       );
 

@@ -357,7 +357,7 @@ export default class InvestJob extends React.Component {
                 docs={modelSpec.userguide_html}
               />
             </Row>
-            <div
+            <Row
               className="flex-column sidebar-footer"
               id={sidebarFooterElementId}
             />
