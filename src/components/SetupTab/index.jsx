@@ -9,7 +9,7 @@ import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
 import {
   RunButton, SaveParametersButtons
-} from './SaveParametersButtons';
+} from './SetupButtons';
 import { fetchValidation, saveToPython } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 

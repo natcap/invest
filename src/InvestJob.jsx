@@ -16,7 +16,7 @@ import Spinner from 'react-bootstrap/Spinner';
 
 import SetupTab from './components/SetupTab';
 import LogTab from './components/LogTab';
-import ResourcesTab from './components/ResourcesTab';
+import ResourcesLinks from './components/ResourcesLinks';
 import {
   getSpec, writeParametersToFile
 } from './server_requests';
@@ -352,7 +352,7 @@ export default class InvestJob extends React.Component {
               </Nav.Item>
             </Nav>
             <Row className="flex-column">
-              <ResourcesTab
+              <ResourcesLinks
                 moduleName={modelRunName}
                 docs={modelSpec.userguide_html}
               />
