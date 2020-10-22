@@ -428,11 +428,14 @@ def execute(args):
     }
     total_stock_rasters = {}
     total_stock_tasks = {}
+    stock_tasks = {
+        baseline_lulc_year: {}
+    }
     for pool in (POOL_BIOMASS, POOL_LITTER, POOL_SOIL):
         stock_rasters[baseline_lulc_year][pool] = os.path.join(
             intermediate_dir, STOCKS_RASTER_PATTERN.format(
                 pool=pool, year=baseline_lulc_year, suffix=suffix))
-        pool_stock_task = task_graph.add_task(
+        stock_tasks[baseline_lulc_year][pool] = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=(
                 (aligned_lulc_paths[baseline_lulc_year], 1),
@@ -466,7 +469,23 @@ def execute(args):
                 f'Mapping {pool} carbon accumulation for '
                 f'{baseline_lulc_year}'))
 
-    stock_tasks = {}
+    total_stock_rasters[baseline_lulc_year] = os.path.join(
+        intermediate_dir, TOTAL_STOCKS_RASTER_PATTERN.format(
+            year=baseline_lulc_year, suffix=suffix))
+    total_stock_tasks[baseline_lulc_year] = task_graph.add_task(
+        func=_sum_n_rasters,
+        args=([stock_rasters[baseline_lulc_year][POOL_SOIL],
+               stock_rasters[baseline_lulc_year][POOL_BIOMASS],
+               yearly_accum_rasters[baseline_lulc_year][POOL_LITTER]],
+              total_stock_rasters[baseline_lulc_year]),
+        dependent_task_list=[
+            stock_tasks[baseline_lulc_year][POOL_SOIL],
+            stock_tasks[baseline_lulc_year][POOL_BIOMASS],
+            yearly_accum_tasks[baseline_lulc_year][POOL_LITTER],
+        ],
+        target_path_list=[total_stock_rasters[baseline_lulc_year]],
+        task_name=f'Calculating total carbon stocks in {baseline_lulc_year}')
+
     for year in range(baseline_lulc_year+1, end_of_baseline_period):
         stock_rasters[year] = {}
         stock_tasks[year] = {}
@@ -481,7 +500,8 @@ def execute(args):
                       (year - baseline_lulc_year),
                       stock_rasters[year][pool]),
                 dependent_task_list=[
-                    yearly_accum_tasks[baseline_lulc_year][pool], pool_stock_task],
+                    yearly_accum_tasks[baseline_lulc_year][pool],
+                    stock_tasks[baseline_lulc_year][pool]],
                 target_path_list=[stock_rasters[year][pool]],
                 task_name=f'Calculating {pool} stocks for {year}')
 
