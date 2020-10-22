@@ -426,6 +426,8 @@ def execute(args):
     yearly_accum_tasks = {
         baseline_lulc_year: {}
     }
+    total_stock_rasters = {}
+    total_stock_tasks = {}
     for pool in (POOL_BIOMASS, POOL_LITTER, POOL_SOIL):
         stock_rasters[baseline_lulc_year][pool] = os.path.join(
             intermediate_dir, STOCKS_RASTER_PATTERN.format(
@@ -464,42 +466,41 @@ def execute(args):
                 f'Mapping {pool} carbon accumulation for '
                 f'{baseline_lulc_year}'))
 
-        if end_of_baseline_period != baseline_lulc_year:
-            # The total stocks between baseline and the first year of interest
-            # is just a sum-and-multiply for each pool.
-            stock_rasters[end_of_baseline_period-1][pool] = os.path.join(
+    stock_tasks = {}
+    for year in range(baseline_lulc_year+1, end_of_baseline_period):
+        stock_rasters[year] = {}
+        stock_tasks[year] = {}
+        for pool in (POOL_SOIL, POOL_BIOMASS, POOL_LITTER):
+            stock_rasters[year][pool] = os.path.join(
                 STOCKS_RASTER_PATTERN.format(
-                    pool=pool, year=end_of_baseline_period-1, suffix=suffix))
-            baseline_stock_tasks[pool] = task_graph.add_task(
+                    pool=pool, year=year, suffix=suffix))
+            stock_tasks[year][pool] = task_graph.add_task(
                 func=_calculate_stocks_after_baseline_period,
                 args=(stock_rasters[baseline_lulc_year][pool],
                       yearly_accum_rasters[baseline_lulc_year][pool],
-                      (end_of_baseline_period - baseline_lulc_year),
-                      stock_rasters[end_of_baseline_period-1][pool]),
+                      (year - baseline_lulc_year),
+                      stock_rasters[year][pool]),
                 dependent_task_list=[
                     yearly_accum_tasks[baseline_lulc_year][pool], pool_stock_task],
-                target_path_list=[
-                    stock_rasters[end_of_baseline_period-1][pool]],
-                task_name=(
-                    f'Calculating {pool} stocks before the first transition '
-                    'or the analysis year'))
+                target_path_list=[stock_rasters[year][pool]],
+                task_name=f'Calculating {pool} stocks for {year}')
 
-    total_carbon_baseline_period = os.path.join(
-        intermediate_dir, TOTAL_STOCKS_RASTER_PATTERN.format(
-            year=end_of_baseline_period, suffix=suffix))
-    _ = task_graph.add_task(
-        func=_sum_n_rasters,
-        args=([stock_rasters[end_of_baseline_period-1][POOL_SOIL],
-               stock_rasters[end_of_baseline_period-1][POOL_BIOMASS],
-               yearly_accum_rasters[baseline_lulc_year][POOL_LITTER]],
-              total_carbon_baseline_period),
-        dependent_task_list=[
-            baseline_stock_tasks[POOL_SOIL],
-            baseline_stock_tasks[POOL_BIOMASS],
-            yearly_accum_tasks[baseline_lulc_year][POOL_LITTER],
-        ],
-        target_path_list=[total_carbon_baseline_period],
-        task_name=f'Calculating total carbon stocks in {end_of_baseline_period}')
+        total_stock_rasters[year] = os.path.join(
+            intermediate_dir, TOTAL_STOCKS_RASTER_PATTERN.format(
+                year=year, suffix=suffix))
+        total_stock_tasks[year] = task_graph.add_task(
+            func=_sum_n_rasters,
+            args=([stock_rasters[year][POOL_SOIL],
+                   stock_rasters[year][POOL_BIOMASS],
+                   yearly_accum_rasters[baseline_lulc_year][POOL_LITTER]],
+                  total_stock_rasters[year]),
+            dependent_task_list=[
+                stock_tasks[year][POOL_SOIL],
+                stock_tasks[year][POOL_BIOMASS],
+                yearly_accum_tasks[baseline_lulc_year][POOL_LITTER],
+            ],
+            target_path_list=[total_stock_rasters[year]],
+            task_name=f'Calculating total carbon stocks in {year}')
 
     total_net_sequestration_for_baseline_period = (
         os.path.join(
