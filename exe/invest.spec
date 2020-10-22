@@ -43,7 +43,11 @@ if is_darwin:
     # add rtree dependency dynamic libraries from conda environment
     a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
-        glob.glob(os.path.join(conda_env, 'lib/libspatialindex*.dylib'))]
+        itertools.chain(
+            glob.glob(os.path.join(conda_env, '**spatialindex*.*')),
+            glob.glob(os.path.join(conda_env, 'lib/libgeos*.dylib')),
+            glob.glob(os.path.join(conda_env, 'lib/libproj*.dylib')),
+        )]
 elif is_win:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/
@@ -70,10 +74,28 @@ exe = EXE(
 
 # Collect Files into Distributable Folder/File
 dist = COLLECT(
-        exe,
-        a.binaries,
-        a.zipfiles,
-        a.datas,
-        name="invest",  # name of the output folder
-        strip=False,
-        upx=False)
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    name="invest",  # name of the output folder
+    strip=False,
+    upx=False)
+
+app = BUNDLE(
+    dist,
+    name='InVEST.app',
+    icon=None,
+    bundle_identifier=None,
+    info_plist={
+        'CFBundleDisplayName': 'InVEST',
+        'CFBundleName': 'InVEST',
+        'CFBundleIdentifier': 'org.naturalcapitalproject.InVEST',
+        'CFBundleExecutable': 'MacOS/InVEST',
+        'CFBundleInfoDictionaryVersion': '6.0',
+        'CFBundlePackageType': 'AAPL',
+        'LSBackgroundOnly': '0',
+        'CFBundleIconFile': 'invest'
+    }
+)
+
