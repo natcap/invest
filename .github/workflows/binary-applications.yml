@@ -202,7 +202,6 @@ jobs:
             - name: Build binaries
               shell: bash -l {0}
               run: |
-                  make install
                   make mac_zipfile
 
             - name: Set up GCP
@@ -221,6 +220,12 @@ jobs:
               run: make deploy
 
             - name: Upload binaries artifact
+              uses: actions/upload-artifact@v2-preview
+              with:
+                  name: InVEST-mac-binaries
+                  path: dist/InVEST-*-mac.zip
+
+            - name: Upload DMG artifact
               uses: actions/upload-artifact@v2-preview
               with:
                   name: InVEST-mac-binaries
