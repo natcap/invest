@@ -484,6 +484,23 @@ def execute(args):
                     f'Calculating {pool} stocks before the first transition '
                     'or the analysis year'))
 
+    total_carbon_baseline_period = os.path.join(
+        intermediate_dir, TOTAL_STOCKS_RASTER_PATTERN.format(
+            year=end_of_baseline_period, suffix=suffix))
+    _ = task_graph.add_task(
+        func=_sum_n_rasters,
+        args=([stock_rasters[end_of_baseline_period-1][POOL_SOIL],
+               stock_rasters[end_of_baseline_period-1][POOL_BIOMASS],
+               yearly_accum_rasters[baseline_lulc_year][POOL_LITTER]],
+              total_carbon_baseline_period),
+        dependent_task_list=[
+            baseline_stock_tasks[POOL_SOIL],
+            baseline_stock_tasks[POOL_BIOMASS],
+            yearly_accum_tasks[baseline_lulc_year][POOL_LITTER],
+        ],
+        target_path_list=[total_carbon_baseline_period],
+        task_name=f'Calculating total carbon stocks in {end_of_baseline_period}')
+
     total_net_sequestration_for_baseline_period = (
         os.path.join(
             output_dir, TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
