@@ -246,8 +246,9 @@ $(DIST_DIR)/natcap.invest%.zip: | $(DIST_DIR)
 # The `invest list` is to test the binaries.  If something doesn't
 # import, we want to know right away.  No need to provide the `.exe` extension
 # on Windows as the .exe extension is assumed.
-binaries: $(INVEST_BINARIES_DIR)
+binaries: $(INVEST_BINARIES_DIR) $(MAC_APPLICATION_BUNDLE)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
+	echo "binaries"
 	-$(RMDIR) $(BUILD_DIR)/pyi-build
 	-$(RMDIR) $(INVEST_BINARIES_DIR)
 	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
@@ -329,12 +330,18 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) build/vc
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
-mac_installer: $(MAC_DISK_IMAGE_FILE)
+mac_installer: $(MAC_DISK_IMAGE_FILE) 
 $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
+	echo "mac_installer"
 	./installer/darwin/build_dmg.sh "$(VERSION)" "$(MAC_APPLICATION_BUNDLE)" "$(USERGUIDE_HTML_DIR)"
+
+mac_app: $(MAC_APPLICATION_BUNDLE)
+$(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR)
+	echo "mac_app"
 
 mac_zipfile: $(MAC_BINARIES_ZIP_FILE)
 $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
+	echo "mac_zipfile"
 	./installer/darwin/build_zip.sh "$(VERSION)" "$(MAC_APPLICATION_BUNDLE)" "$(USERGUIDE_HTML_DIR)"
 
 build/vcredist_x86.exe: | build
