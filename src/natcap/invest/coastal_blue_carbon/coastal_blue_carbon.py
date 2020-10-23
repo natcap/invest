@@ -141,6 +141,7 @@ TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN = (
 TOTAL_NET_SEQ_ALL_YEARS_RASTER_PATTERN = (
     'total-net-carbon-sequestration{suffix}.tif')
 NET_PRESENT_VALUE_RASTER_PATTERN = 'net-present-value-at-{year}{suffix}.tif'
+CARBON_STOCK_AT_YEAR_RASTER_PATTERN = 'carbon-stock-at-{year}{suffix}.tif'
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
@@ -486,7 +487,7 @@ def execute(args):
         target_path_list=[total_stock_rasters[baseline_lulc_year]],
         task_name=f'Calculating total carbon stocks in {baseline_lulc_year}')
 
-    for year in range(baseline_lulc_year+1, end_of_baseline_period):
+    for year in range(baseline_lulc_year+1, end_of_baseline_period+1):
         stock_rasters[year] = {}
         stock_tasks[year] = {}
         for pool in (POOL_SOIL, POOL_BIOMASS, POOL_LITTER):
@@ -768,6 +769,22 @@ def execute(args):
     task_graph.join()
     if transition_years:
         execute_transition_analysis(transition_analysis_args)
+    else:
+        # The stocks for the baseline period need to also be in the outputs
+        # directory.
+        stocks_at_end_of_baseline_period = os.path.join(
+            output_dir, CARBON_STOCK_AT_YEAR_RASTER_PATTERN.format(
+                    year=end_of_baseline_period, suffix=suffix))
+        _ = task_graph.add_task(
+            func=shutil.copyfile,
+            args=(total_stock_rasters[end_of_baseline_period],
+                  stocks_at_end_of_baseline_period),
+            target_path_list=[
+                stocks_at_end_of_baseline_period],
+            dependent_task_list=[
+                total_stock_tasks[end_of_baseline_period]],
+            task_name=(
+                f'Copy stocks for {end_of_baseline_period} to outputs'))
 
     task_graph.close()
     task_graph.join()
