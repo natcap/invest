@@ -487,6 +487,19 @@ def execute(args):
         target_path_list=[total_stock_rasters[baseline_lulc_year]],
         task_name=f'Calculating total carbon stocks in {baseline_lulc_year}')
 
+    output_stock_raster = os.path.join(
+        output_dir, CARBON_STOCK_AT_YEAR_RASTER_PATTERN.format(
+            year=baseline_lulc_year, suffix=suffix))
+    _ = task_graph.add_task(
+        func=shutil.copyfile,
+        args=(total_stock_rasters[baseline_lulc_year],
+              output_stock_raster),
+        target_path_list=[output_stock_raster],
+        dependent_task_list=[
+            total_stock_tasks[baseline_lulc_year]],
+        task_name=(
+            f'Copy stocks for {baseline_lulc_year} to outputs'))
+
     for year in range(baseline_lulc_year+1, end_of_baseline_period+1):
         stock_rasters[year] = {}
         stock_tasks[year] = {}
@@ -1130,7 +1143,7 @@ def execute_transition_analysis(args):
         total_carbon_rasters[year] = os.path.join(
             intermediate_dir, TOTAL_STOCKS_RASTER_PATTERN.format(
                 year=year, suffix=suffix))
-        _ = task_graph.add_task(
+        total_stocks_task = task_graph.add_task(
             func=_sum_n_rasters,
             args=([stock_rasters[year][POOL_SOIL],
                    stock_rasters[year][POOL_BIOMASS],
@@ -1141,6 +1154,21 @@ def execute_transition_analysis(args):
                 current_stock_tasks[POOL_BIOMASS]],
             target_path_list=[total_carbon_rasters[year]],
             task_name=f'Calculating total carbon stocks in {year}')
+
+        if year in transition_years.union(set([final_year])):
+            # Copy the current stock raster into the outputs directory.
+            output_stock_raster = os.path.join(
+                output_dir, CARBON_STOCK_AT_YEAR_RASTER_PATTERN.format(
+                    year=year, suffix=suffix))
+            _ = task_graph.add_task(
+                func=shutil.copyfile,
+                args=(total_carbon_rasters[year],
+                      output_stock_raster),
+                target_path_list=[output_stock_raster],
+                dependent_task_list=[
+                    total_stocks_task],
+                task_name=(
+                    f'Copy stocks for {year} to outputs'))
 
         # If in the last year before a transition or the last year before the
         # final year of the analysis (which might not be a transition):
