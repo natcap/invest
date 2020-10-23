@@ -206,6 +206,7 @@ jobs:
             - name: Build binaries
               shell: bash -l {0}
               run: |
+                  make mac_installer
                   make mac_zipfile
 
             - name: Set up GCP
