@@ -491,7 +491,7 @@ def execute(args):
         stock_tasks[year] = {}
         for pool in (POOL_SOIL, POOL_BIOMASS, POOL_LITTER):
             stock_rasters[year][pool] = os.path.join(
-                STOCKS_RASTER_PATTERN.format(
+                intermediate_dir, STOCKS_RASTER_PATTERN.format(
                     pool=pool, year=year, suffix=suffix))
             stock_tasks[year][pool] = task_graph.add_task(
                 func=_calculate_stocks_after_baseline_period,
