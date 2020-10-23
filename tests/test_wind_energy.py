@@ -527,8 +527,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
+            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
+            'npv_US_millions.tif']
 
         for raster_path in raster_results:
             model_array = pygeoprocessing.raster_to_numpy_array(
@@ -571,8 +571,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
+            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
+            'npv_US_millions.tif']
 
         for raster_path in raster_results:
             model_array = pygeoprocessing.raster_to_numpy_array(
