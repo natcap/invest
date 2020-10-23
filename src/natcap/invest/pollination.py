@@ -223,7 +223,7 @@ _EXPECTED_FARM_HEADERS = [
 def execute(args):
     """InVEST Pollination Model.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): a path to the output workspace folder.
             Will overwrite any files that exist if the path already exists.
         args['results_suffix'] (string): string appended to each output
@@ -342,14 +342,17 @@ def execute(args):
             task_name='reproject_farm_task',
             func=pygeoprocessing.reproject_vector,
             args=(
-                args['farm_vector_path'], landcover_raster_info['projection'],
-                farm_vector_path),
+                args['farm_vector_path'],
+                landcover_raster_info['projection_wkt'], farm_vector_path),
             target_path_list=[farm_vector_path])
 
     # calculate nesting_substrate_index[substrate] substrate maps
     # N(x, n) = ln(l(x), n)
     scenario_variables['nesting_substrate_index_path'] = {}
     landcover_substrate_index_tasks = {}
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Biophysical'}
     for substrate in scenario_variables['substrate_list']:
         nesting_substrate_index_path = os.path.join(
             intermediate_output_dir,
@@ -359,13 +362,12 @@ def execute(args):
 
         landcover_substrate_index_tasks[substrate] = task_graph.add_task(
             task_name='reclassify_to_substrate_%s' % substrate,
-            func=pygeoprocessing.reclassify_raster,
+            func=utils.reclassify_raster,
             args=(
                 (args['landcover_raster_path'], 1),
                 scenario_variables['landcover_substrate_index'][substrate],
                 nesting_substrate_index_path, gdal.GDT_Float32,
-                _INDEX_NODATA),
-            kwargs={'values_required': True},
+                _INDEX_NODATA, reclass_error_details),
             target_path_list=[nesting_substrate_index_path])
 
     # calculate farm_nesting_substrate_index[substrate] substrate maps
@@ -429,6 +431,9 @@ def execute(args):
 
     scenario_variables['relative_floral_abundance_index_path'] = {}
     relative_floral_abudance_task_map = {}
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Biophysical'}
     for season in scenario_variables['season_list']:
         # calculate relative_floral_abundance_index[season] per season
         # RA(l(x), j)
@@ -439,13 +444,12 @@ def execute(args):
 
         relative_floral_abudance_task = task_graph.add_task(
             task_name='reclassify_to_floral_abundance_%s' % season,
-            func=pygeoprocessing.reclassify_raster,
+            func=utils.reclassify_raster,
             args=(
                 (args['landcover_raster_path'], 1),
                 scenario_variables['landcover_floral_resources'][season],
                 relative_floral_abundance_index_path, gdal.GDT_Float32,
-                _INDEX_NODATA),
-            kwargs={'values_required': True},
+                _INDEX_NODATA, reclass_error_details),
             target_path_list=[relative_floral_abundance_index_path])
 
         # if there's a farm, rasterize floral resources over the top
@@ -580,7 +584,7 @@ def execute(args):
                 (local_foraging_effectiveness_path, 1), (kernel_path, 1),
                 floral_resources_index_path),
             kwargs={
-                'ignore_nodata': True,
+                'ignore_nodata_and_edges': True,
                 'mask_nodata': True,
                 'normalize_kernel': False,
                 },
@@ -621,7 +625,7 @@ def execute(args):
                 (pollinator_supply_index_path, 1), (kernel_path, 1),
                 convolve_ps_path),
             kwargs={
-                'ignore_nodata': True,
+                'ignore_nodata_and_edges': True,
                 'mask_nodata': True,
                 'normalize_kernel': False,
                 },
@@ -861,7 +865,7 @@ def _rasterize_vector_onto_base(
         target_raster_path, filter_string=None):
     """Rasterize attribute from vector onto a copy of base.
 
-    Parameters:
+    Args:
         base_raster_path (string): path to a base raster file
         attribute_id (string): id in `base_vector_path` to rasterize.
         target_raster_path (string): a copy of `base_raster_path` with
@@ -894,7 +898,7 @@ def _create_farm_result_vector(
         base_vector_path, target_vector_path):
     """Create a copy of `base_vector_path` and add FID field to it.
 
-    Parameters:
+    Args:
         base_vector_path (string): path to vector to copy
         target_vector_path (string): path to target vector that is a copy
             of the base, except for the new `fid_field_id` field that has
@@ -1175,7 +1179,7 @@ class _CalculateHabitatNestingIndex(object):
             target_habitat_nesting_index_path):
         """Define parameters necessary for HN(x,s) calculation.
 
-        Parameters:
+        Args:
             substrate_path_map (dict): map substrate name to substrate index
                 raster path. (N(x, n))
             species_substrate_index_map (dict): map substrate name to
@@ -1292,7 +1296,7 @@ class _PollinatorSupplyIndexOp(object):
     def __init__(self, species_abundance):
         """Create a closure for species abundance to multiply later.
 
-        Parameters:
+        Args:
             species_abundance (float): value to use in `__call__` when
                 calculating pollinator abundance.
 
@@ -1331,7 +1335,7 @@ class _MultByScalar(object):
     def __init__(self, scalar):
         """Create a closure for multiplying an array by a scalar.
 
-        Parameters:
+        Args:
             scalar (float): value to use in `__call__` when multiplying by
                 its parameter.
 
@@ -1449,7 +1453,7 @@ class _PYWOp(object):
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

@@ -1,7 +1,6 @@
 """InVEST Wind Energy model."""
 import logging
 import os
-import csv
 import pickle
 import shutil
 import tempfile
@@ -10,8 +9,6 @@ import math
 import numpy as np
 import pandas
 from scipy import integrate
-# required for py2exe to build
-from scipy.sparse.csgraph import _validation
 
 import shapely.wkb
 import shapely.wkt
@@ -134,7 +131,8 @@ ARGS_SPEC = {
             },
             "type": "number",
             "required": True,
-            "about": "An integer value indicating the number of wind turbines per wind farm.",
+            "about": "An integer value indicating the number of wind turbines"
+                     " per wind farm.",
             "name": "Number Of Turbines"
         },
         "min_depth": {
@@ -302,7 +300,6 @@ ARGS_SPEC = {
 }
 
 
-
 # The _SCALE_KEY is used in getting the right wind energy arguments that are
 # dependent on the hub height.
 _SCALE_KEY = 'LAM'
@@ -411,7 +408,6 @@ def execute(args):
         None
 
     """
-
     LOGGER.info('Starting the Wind Energy Model')
     invalid_parameters = validate(args)
     if invalid_parameters:
@@ -507,7 +503,8 @@ def execute(args):
             'Please make sure all the necessary fields are present and '
             'spelled correctly.' % missing_biophysical_params)
 
-    if 'valuation_container' not in args or args['valuation_container'] is False:
+    if ('valuation_container' not in args or
+            args['valuation_container'] is False):
         LOGGER.info('Valuation Not Selected')
     else:
         LOGGER.info(
@@ -550,9 +547,9 @@ def execute(args):
 
         # If Price Table provided use that for price of energy, validate inputs
         time = int(val_parameters_dict['time_period'])
-        if args["price_table"]:
-            wind_price_df = pandas.read_csv(args["wind_schedule"])
-            wind_price_df.columns = wind_price_df.columns.str.lower()
+        if args['price_table']:
+            wind_price_df = utils.read_csv_to_dataframe(
+                args['wind_schedule'], to_lower=True)
 
             year_count = len(wind_price_df['year'])
             if year_count != time + 1:
@@ -772,7 +769,8 @@ def execute(args):
     min_depth = abs(float(args['min_depth'])) * -1.0
     max_depth = abs(float(args['max_depth'])) * -1.0
 
-    # Create a mask for any values that are out of the range of the depth values
+    # Create a mask for any values that are out of the range of the depth
+    # values
     LOGGER.info('Creating Depth Mask')
     depth_mask_path = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
 
@@ -786,10 +784,10 @@ def execute(args):
         dependent_task_list=depth_mask_dependent_task_list)
 
     # Set paths for creating density and harvested rasters
-    temp_density_raster_path = os.path.join(inter_dir,
-                                            'temp_density%s.tif' % suffix)
-    temp_harvested_raster_path = os.path.join(inter_dir,
-                                              'temp_harvested%s.tif' % suffix)
+    temp_density_raster_path = os.path.join(
+        inter_dir, 'temp_density%s.tif' % suffix)
+    temp_harvested_raster_path = os.path.join(
+        inter_dir, 'temp_harvested%s.tif' % suffix)
 
     # Create rasters for density and harvested values
     LOGGER.info('Create Density Raster')
@@ -929,22 +927,19 @@ def execute(args):
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
         # Read the grid points csv, and convert it to land and grid dictionary
-        grid_land_df = pandas.read_csv(args['grid_points_path'])
-        # Convert column fields to upper cased to conform to the user's guide
-        grid_land_df.columns = [
-            field.upper() for field in grid_land_df.columns
-        ]
+        grid_land_df = utils.read_csv_to_dataframe(
+            args['grid_points_path'], to_lower=True)
 
         # Make separate dataframes based on 'TYPE'
         grid_df = grid_land_df.loc[(
-            grid_land_df['TYPE'].str.upper() == 'GRID')]
+            grid_land_df['type'].str.upper() == 'GRID')]
         land_df = grid_land_df.loc[(
-            grid_land_df['TYPE'].str.upper() == 'LAND')]
+            grid_land_df['type'].str.upper() == 'LAND')]
 
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
-        grid_df.set_index('ID', inplace=True)
+        grid_df.set_index('id', inplace=True)
         grid_dict = grid_df.to_dict('index')
-        land_df.set_index('ID', inplace=True)
+        land_df.set_index('id', inplace=True)
         land_dict = land_df.to_dict('index')
 
         grid_vector_path = os.path.join(inter_dir,
@@ -1143,7 +1138,7 @@ def _calculate_npv_levelized_rasters(
         val_parameters_dict, args, price_list):
     """Calculate NPV and levelized rasters from harvested and dist rasters.
 
-    Parameters:
+    Args:
         base_harvested_raster_path (str): a path to the raster that indicates
             the averaged energy output for a given period
 
@@ -1365,7 +1360,7 @@ def _calculate_npv_levelized_rasters(
 def _get_feature_count(base_vector_path):
     """Get feature count from vector and return it.
 
-    Parameters:
+    Args:
         base_vector_path (str): a path to the vector to get feature
             count from.
 
@@ -1385,7 +1380,7 @@ def _get_feature_count(base_vector_path):
 def _get_file_ext_and_driver_name(base_vector_path):
     """Get file extension and GDAL driver name from the vector path.
 
-    Parameters:
+    Args:
         base_path (str): a path to the vector file to get extension from.
 
     Returns:
@@ -1418,7 +1413,7 @@ def _depth_op(bath, min_depth, max_depth):
     The function takes a value and uses a range to determine if that falls
     within the range.
 
-    Parameters:
+    Args:
         bath (int): a value of either positive or negative
         min_depth (float): a value specifying the lower limit of the
             range. This value is set above
@@ -1441,9 +1436,9 @@ def _depth_op(bath, min_depth, max_depth):
 
 
 def _add_avg_dist_op(tmp_dist, mean_pixel_size, avg_grid_distance):
-    """Convert distances to meters and add in avg_grid_distance
+    """Convert distances to meters and add in avg_grid_distance.
 
-    Parameters:
+    Args:
         tmp_dist (np.array): an array of distances
         mean_pixel_size (float): the minimum absolute value of a pixel in
             meters
@@ -1465,9 +1460,9 @@ def _add_avg_dist_op(tmp_dist, mean_pixel_size, avg_grid_distance):
 
 def _create_aoi_raster(base_aoi_vector_path, target_aoi_raster_path,
                        target_pixel_size, target_sr_wkt, work_dir):
-    """Create an AOI raster from a vector with target pixel size and projection.
+    """Create an AOI raster from a vector w/ target pixel size and projection.
 
-    Parameters:
+    Args:
         base_aoi_vector_path (str): a path to the base AOI vector to create
             AOI raster from.
         target_aoi_raster_path (str): a path to the target AOI raster.
@@ -1482,7 +1477,7 @@ def _create_aoi_raster(base_aoi_vector_path, target_aoi_raster_path,
 
     """
     base_sr_wkt = pygeoprocessing.get_vector_info(
-        base_aoi_vector_path)['projection']
+        base_aoi_vector_path)['projection_wkt']
     if base_sr_wkt != target_sr_wkt:
         # Reproject clip vector to the spatial reference of the base vector.
         # Note: reproject_vector can be expensive if vector has many features.
@@ -1510,7 +1505,7 @@ def _mask_out_depth_dist(*rasters):
     Return the value of an item in the list if and only if all other values
     are not a nodata value.
 
-    Parameters:
+    Args:
         *rasters (list): a list of values as follows:
             rasters[0] - the density value (required)
             rasters[1] - the depth mask value (required)
@@ -1532,7 +1527,7 @@ def _mask_out_depth_dist(*rasters):
 def _calculate_carbon_op(harvested_arr, carbon_coef):
     """Calculate the carbon offset from harvested array.
 
-    Parameters:
+    Args:
         harvested_arr (np.array): an array of harvested energy values
         carbon_coef (float): the amount of CO2 not released into the
                 atmosphere
@@ -1562,7 +1557,7 @@ def _calculate_land_to_grid_distance(
     nearest polygon from a polygon shapefile. Both shapefiles must be
     projected in meters
 
-    Parameters:
+    Args:
         base_land_vector_path (str): a path to an OGR point geometry shapefile
             projected in meters
         base_grid_vector_path (str): a path to an OGR polygon shapefile
@@ -1641,7 +1636,7 @@ def _read_csv_wind_parameters(csv_path, parameter_list):
     The list of keys corresponds to the parameters names in 'csv_path' which
     are represented in the first column of the file.
 
-    Parameters:
+    Args:
         csv_path (str): a path to a CSV file where every row is a parameter
             with the parameter name in the first column followed by the value
             in the second column
@@ -1653,9 +1648,12 @@ def _read_csv_wind_parameters(csv_path, parameter_list):
             keys that have values pulled from 'csv_path'
 
     """
-    # use the parameters in the first column as indeces for the dataframe
-    wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0)
-    wind_param_df.index = wind_param_df.index.str.lower()
+    # use the parameters in the first column as indices for the dataframe
+    # this doesn't benefit from `utils.read_csv_to_dataframe` because there
+    # is no header to strip whitespace
+    # use sep=None, engine='python' to infer what the separator is
+    wind_param_df = pandas.read_csv(
+        csv_path, header=None, index_col=0, sep=None, engine='python')
     # only get the required parameters and leave out the rest
     wind_param_df = wind_param_df[wind_param_df.index.isin(parameter_list)]
     wind_dict = wind_param_df.to_dict()[1]
@@ -1667,7 +1665,7 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
                       target_raster_path):
     """Create a raster whose pixel values are bound by min and max distances.
 
-    Parameters:
+    Args:
         base_raster_path (str): path to a raster with distance values.
         min_dist (int): the minimum distance allowed in meters.
         max_dist (int): the maximum distance allowed in meters.
@@ -1705,7 +1703,7 @@ def _create_distance_raster(base_raster_path, base_vector_path,
     Create a raster where the pixel values represent the euclidean distance to
     the vector.
 
-    Parameters:
+    Args:
         base_raster_path (str): path to raster to create a new raster from.
         base_vector_path (str): path to vector to be rasterized.
         target_dist_raster_path (str): path to raster with distance transform.
@@ -1758,7 +1756,7 @@ def _create_distance_raster(base_raster_path, base_vector_path,
 def _read_csv_wind_data(wind_data_path, hub_height):
     """Unpack the csv wind data into a dictionary.
 
-    Parameters:
+    Args:
         wind_data_path (str): a path for the csv wind data file with header
             of: "LONG","LATI","LAM","K","REF"
         hub_height (int): the hub height to use for calculating Weibull
@@ -1769,7 +1767,7 @@ def _read_csv_wind_data(wind_data_path, hub_height):
             to dictionaries that hold wind data at that location.
 
     """
-    wind_point_df = pandas.read_csv(wind_data_path)
+    wind_point_df = utils.read_csv_to_dataframe(wind_data_path, to_lower=False)
 
     # Calculate scale value at new hub height given reference values.
     # See equation 3 in users guide
@@ -1787,7 +1785,7 @@ def _compute_density_harvested_fields(
         target_pickle_path):
     """Compute the density and harvested energy based on scale and shape keys.
 
-    Parameters:
+    Args:
         wind_dict (dict): a dictionary whose values are a dictionary with
             keys ``LAM``, ``LATI``, ``K``, ``LONG``, ``REF_LAM``, and ``REF``,
             and numbers indicating their corresponding values.
@@ -1842,7 +1840,7 @@ def _compute_density_harvested_fields(
     def _calc_weibull_probability(v_speed, k_shape, l_scale):
         """Calculate the Weibull probability function of variable v_speed.
 
-        Parameters:
+        Args:
             v_speed (int or float): a number representing wind speed
             k_shape (float): the shape parameter
             l_scale (float): the scale parameter of the distribution
@@ -1851,14 +1849,14 @@ def _compute_density_harvested_fields(
             a float
 
         """
-        return ((k_shape / l_scale) * (v_speed / l_scale)**
-                (k_shape - 1) * (math.exp(-1 * (v_speed / l_scale)**k_shape)))
+        return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
+                (math.exp(-1 * (v_speed / l_scale)**k_shape)))
 
     # Density wind energy function to integrate over
     def _calc_density_wind_energy(v_speed, k_shape, l_scale):
         """Calculate the probability density function of a Weibull variable.
 
-        Parameters:
+        Args:
             v_speed (int or float): a number representing wind speed
             k_shape (float): the shape parameter
             l_scale (float): the scale parameter of the distribution
@@ -1874,7 +1872,7 @@ def _compute_density_harvested_fields(
     def _calc_harvested_wind_energy(v_speed, k_shape, l_scale):
         """Calculate the harvested wind energy.
 
-        Parameters:
+        Args:
             v_speed (int or float): a number representing wind speed
             k_shape (float): the shape parameter
             l_scale (float): the scale parameter of the distribution
@@ -1937,13 +1935,14 @@ def _compute_density_harvested_fields(
         pickle.dump(wind_dict_copy, pickle_file)
 
 
-def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
+def _dictionary_to_point_vector(
+        base_dict_data, layer_name, target_vector_path):
     """Create a point shapefile from a dictionary.
 
     The point shapefile created is not projected and uses latitude and
         longitude for its geometry.
 
-    Parameters:
+    Args:
         base_dict_data (dict): a python dictionary with keys being unique id's
             that point to sub-dictionaries that have key-value pairs. These
             inner key-value pairs will represent the field-value pair for the
@@ -1975,7 +1974,7 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     source_sr = osr.SpatialReference()
     source_sr.SetWellKnownGeogCS("WGS84")
 
-    output_layer = target_vector.CreateLayer(str(layer_name), source_sr,
+    output_layer = target_vector.CreateLayer(layer_name, source_sr,
                                              ogr.wkbPoint)
 
     # Outer unique keys
@@ -2004,8 +2003,8 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     # For each inner dictionary (for each point) create a point and set its
     # fields
     for point_dict in base_dict_data.values():
-        latitude = float(point_dict['LATI'])
-        longitude = float(point_dict['LONG'])
+        latitude = float(point_dict['lati'])
+        longitude = float(point_dict['long'])
 
         geom = ogr.Geometry(ogr.wkbPoint)
         geom.AddPoint_2D(longitude, latitude)
@@ -2037,7 +2036,7 @@ def _get_suitable_projection_params(
             that describes the largest fitting bounding box around the original
             warped bounding box in ````new_epsg```` coordinate system.
 
-    Parameters:
+    Args:
         base_raster_path (str): path to base raster that might not be projected
         aoi_vector_path (str): path to base AOI vector that'll be used to
             clip the raster.
@@ -2052,18 +2051,18 @@ def _get_suitable_projection_params(
     aoi_vector_info = pygeoprocessing.get_vector_info(aoi_vector_path)
 
     base_raster_srs = osr.SpatialReference()
-    base_raster_srs.ImportFromWkt(base_raster_info['projection'])
+    base_raster_srs.ImportFromWkt(base_raster_info['projection_wkt'])
 
     if not base_raster_srs.IsProjected():
         wgs84_sr = osr.SpatialReference()
         wgs84_sr.ImportFromEPSG(4326)
         aoi_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
-            aoi_vector_info['bounding_box'], aoi_vector_info['projection'],
+            aoi_vector_info['bounding_box'], aoi_vector_info['projection_wkt'],
             wgs84_sr.ExportToWkt())
 
         base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
-            base_raster_info['bounding_box'], base_raster_info['projection'],
-            wgs84_sr.ExportToWkt())
+            base_raster_info['bounding_box'],
+            base_raster_info['projection_wkt'], wgs84_sr.ExportToWkt())
 
         target_bounding_box_wgs84 = pygeoprocessing.merge_bounding_box_list(
             [aoi_wgs84_bounding_box, base_raster_bounding_box], 'intersection')
@@ -2095,10 +2094,10 @@ def _get_suitable_projection_params(
     else:
         # If the base raster is already projected, transform the bounding
         # box from base raster and aoi vector bounding boxes
-        target_sr_wkt = base_raster_info['projection']
+        target_sr_wkt = base_raster_info['projection_wkt']
 
         aoi_bounding_box = pygeoprocessing.transform_bounding_box(
-            aoi_vector_info['bounding_box'], aoi_vector_info['projection'],
+            aoi_vector_info['bounding_box'], aoi_vector_info['projection_wkt'],
             target_sr_wkt)
 
         target_bounding_box = pygeoprocessing.merge_bounding_box_list(
@@ -2117,17 +2116,17 @@ def _get_suitable_projection_params(
 
 def _clip_to_projection_with_square_pixels(
         base_raster_path, clip_vector_path, target_raster_path,
-        target_sr_wkt, target_pixel_size, target_bounding_box):
+        target_projection_wkt, target_pixel_size, target_bounding_box):
     """Clip raster with vector into target projected coordinate system.
 
     If pixel size of target raster is not square, the minimum absolute value
     will be used for target_pixel_size.
 
-    Parameters:
+    Args:
         base_raster_path (str): path to base raster.
         clip_vector_path (str): path to base clip vector.
-        target_sr_wkt (str): a projection string used as the target projection
-            for warping the base raster.
+        target_projection_wkt (str): a projection string used as the target
+            projection for warping the base raster.
         target_pixel_size (tuple): a tuple of equal x, y pixel sizes in minimum
             absolute value.
         target_bounding_box (list): a list of the form [xmin, ymin, xmax, ymax]
@@ -2144,7 +2143,7 @@ def _clip_to_projection_with_square_pixels(
         target_raster_path,
         _TARGET_RESAMPLE_METHOD,
         target_bb=target_bounding_box,
-        target_sr_wkt=target_sr_wkt,
+        target_projection_wkt=target_projection_wkt,
         vector_mask_options={'mask_vector_path': clip_vector_path})
 
 
@@ -2155,7 +2154,7 @@ def _convert_degree_pixel_size_to_square_meters(pixel_size, center_lat):
     is not square, this function will use the minimum absolute value from the
     pixel dimension in the output meter_pixel_size_tuple.
 
-    Parameters:
+    Args:
         pixel_size (tuple): [xsize, ysize] in degrees (float).
         center_lat (float): latitude of the center of the pixel. Note this
             value +/- half the ``pixel-size`` must not exceed 90/-90 degrees
@@ -2195,7 +2194,7 @@ def _wind_data_to_point_vector(wind_data_pickle_path,
                                ref_projection_wkt=None):
     """Create a point shapefile given a dictionary of the wind data fields.
 
-    Parameters:
+    Args:
         wind_data_pickle_path (str): a path to the pickle file that has
             wind_dict_copy, where the keys are tuples of the lat/long
             coordinates:
@@ -2237,17 +2236,18 @@ def _wind_data_to_point_vector(wind_data_pickle_path,
         ref_sr = osr.SpatialReference(wkt=ref_projection_wkt)
         if ref_sr.IsProjected:
             # Get coordinate transformation between two projections
-            coord_trans = osr.CoordinateTransformation(target_sr, ref_sr)
+            coord_trans = utils.create_coordinate_transformer(
+                target_sr, ref_sr)
             need_geotranform = True
     else:
         need_geotranform = False
 
     if need_geotranform:
         target_layer = target_vector.CreateLayer(
-            str(layer_name), ref_sr, ogr.wkbPoint)
+            layer_name, ref_sr, ogr.wkbPoint)
     else:
         target_layer = target_vector.CreateLayer(
-            str(layer_name), target_sr, ogr.wkbPoint)
+            layer_name, target_sr, ogr.wkbPoint)
 
     # Construct a list of fields to add from the keys of the inner dictionary
     field_list = list(wind_data[list(wind_data.keys())[0]])
@@ -2302,7 +2302,7 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
                                target_vector_path, work_dir):
     """Clip a vector against an AOI and output result in AOI coordinates.
 
-    Parameters:
+    Args:
         base_vector_path (str): path to a base vector
         clip_vector_path (str): path to an AOI vector
         target_vector_path (str): desired output path to write the clipped
@@ -2319,9 +2319,9 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
 
     # Get the base and target spatial reference in Well Known Text
     base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
-        'projection']
+        'projection_wkt']
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
-        'projection']
+        'projection_wkt']
 
     # Create path for the reprojected shapefile
     clipped_vector_path = os.path.join(
@@ -2351,11 +2351,13 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
 
 def _clip_vector_by_vector(
         base_vector_path, clip_vector_path, target_vector_path, work_dir):
-    """Create a new target vector where base features are contained in the
+    """Clip a vector from another vector keeping features.
+
+    Create a new target vector where base features are contained in the
         polygon in clip_vector_path. Assumes all data are in the same
         projection.
 
-    Parameters:
+    Args:
         base_vector_path (str): path to a vector to clip.
         clip_vector_path (str): path to a polygon vector for clipping.
         target_vector_path (str): output path for the clipped vector.
@@ -2372,9 +2374,9 @@ def _clip_vector_by_vector(
 
     # Get the base and target spatial reference in Well Known Text
     base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
-        'projection']
+        'projection_wkt']
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
-        'projection']
+        'projection_wkt']
 
     if base_sr_wkt != target_sr_wkt:
         # Reproject clip vector to the spatial reference of the base vector.
@@ -2423,7 +2425,7 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     The distances are calculated based on the shortest distances of each point
     feature in 'base_point_vector_path' and each feature's 'L2G' field.
 
-    Parameters:
+    Args:
         base_point_vector_path (str): path to an OGR shapefile that has
             the desired features to get the distance from.
         base_raster_path (str): path to a GDAL raster that is used to
@@ -2517,7 +2519,7 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
             distance output that has the shortest distances combined with each
             features land to grid distance
 
-        Parameters:
+        Args:
             *grid_distances (numpy.ndarray): a variable number of numpy.ndarray
 
         Returns:
@@ -2549,7 +2551,7 @@ def _calculate_grid_dist_on_raster(grid_vector_path, harvested_masked_path,
     distance transform from those locations and converts from pixel distances
     to distance in meters.
 
-    Parameters:
+    Args:
         grid_vector_path (str) a path to an OGR shapefile that has the
             desired features to get the distance from.
         harvested_masked_path (str): a path to a GDAL raster that is used to
@@ -2580,7 +2582,7 @@ def _calculate_grid_dist_on_raster(grid_vector_path, harvested_masked_path,
     def _dist_meters_op(tmp_dist):
         """Multiply the pixel value of a raster by the mean pixel size.
 
-        Parameters:
+        Args:
             tmp_dist (np.array): an nd numpy array
 
         Returns:
@@ -2603,7 +2605,7 @@ def _calculate_grid_dist_on_raster(grid_vector_path, harvested_masked_path,
 def validate(args, limit_to=None):
     """Validate an input dictionary for Wind Energy.
 
-    Parameters:
+    Args:
         args (dict): The args dictionary.
 
         limit_to=None (str or None): If a str key, only this args parameter

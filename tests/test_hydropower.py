@@ -5,7 +5,8 @@ import shutil
 import os
 
 import pandas
-import pygeoprocessing.testing
+import numpy
+import pygeoprocessing
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower',
@@ -18,7 +19,7 @@ class HydropowerTests(unittest.TestCase):
     """Regression Tests for Annual Water Yield Hydropower Model."""
 
     def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
+        """Overriding setUp func. to create temporary workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
@@ -73,10 +74,62 @@ class HydropowerTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             hydropower_water_yield.execute(args)
         self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
+    
+    def test_missing_lulc_value(self):
+        """Hydro: catching missing LULC value in Biophysical table."""
+        from natcap.invest.hydropower import hydropower_water_yield
+
+        args = HydropowerTests.generate_base_args(self.workspace_dir)
+
+        # remove a row from the biophysical table so that lulc value is missing
+        bad_biophysical_path = os.path.join(
+            self.workspace_dir, 'bad_biophysical_table.csv')
+
+        bio_df = pandas.read_csv(args['biophysical_table_path'])
+        bio_df = bio_df[bio_df['lucode'] != 2]
+        bio_df.to_csv(bad_biophysical_path)
+        bio_df = None
+        
+        args['biophysical_table_path'] = bad_biophysical_path
+
+        with self.assertRaises(ValueError) as cm:
+            hydropower_water_yield.execute(args)
+        self.assertTrue(
+            "The missing values found in the LULC raster but not the table"
+            " are: [2]" in str(cm.exception))
+    
+    def test_missing_lulc_demand_value(self):
+        """Hydro: catching missing LULC value in Demand table."""
+        from natcap.invest.hydropower import hydropower_water_yield
+
+        args = HydropowerTests.generate_base_args(self.workspace_dir)
+        
+        args['demand_table_path'] = os.path.join(
+            SAMPLE_DATA, 'water_demand_table.csv')
+        args['sub_watersheds_path'] = os.path.join(
+            SAMPLE_DATA, 'subwatersheds.shp')
+
+        # remove a row from the biophysical table so that lulc value is missing
+        bad_demand_path = os.path.join(
+            self.workspace_dir, 'bad_demand_table.csv')
+
+        demand_df = pandas.read_csv(args['demand_table_path'])
+        demand_df = demand_df[demand_df['lucode'] != 2]
+        demand_df.to_csv(bad_demand_path)
+        demand_df = None
+        
+        args['demand_table_path'] = bad_demand_path
+
+        with self.assertRaises(ValueError) as cm:
+            hydropower_water_yield.execute(args)
+        self.assertTrue(
+            "The missing values found in the LULC raster but not the table"
+            " are: [2]" in str(cm.exception))
 
     def test_water_yield_subshed(self):
         """Hydro: testing water yield component only w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import utils
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
         args['sub_watersheds_path'] = os.path.join(
@@ -86,21 +139,22 @@ class HydropowerTests(unittest.TestCase):
 
         raster_results = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
+            model_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(
-                    args['workspace_dir'], 'output', 'per_pixel', raster_path),
+                    args['workspace_dir'], 'output', 'per_pixel', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(
-                    REGRESSION_DATA, raster_path.replace('_test', '')),
-                1e-6)
+                    REGRESSION_DATA, raster_path.replace('_test', '')))
+            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-03)
 
         vector_results = ['watershed_results_wyield_test.shp',
                           'subwatershed_results_wyield_test.shp']
         for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
+            utils._assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(
                     REGRESSION_DATA, 'water_yield', vector_path.replace(
-                        '_test', '')), 1e-3)
+                        '_test', '')))
 
         table_results = ['watershed_results_wyield_test.csv',
                          'subwatershed_results_wyield_test.csv']
@@ -116,6 +170,7 @@ class HydropowerTests(unittest.TestCase):
     def test_scarcity_subshed(self):
         """Hydro: testing Scarcity component w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import utils
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
         args['demand_table_path'] = os.path.join(
@@ -127,19 +182,19 @@ class HydropowerTests(unittest.TestCase):
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
+            model_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(
-                    args['workspace_dir'], 'output', 'per_pixel', raster_path),
-                os.path.join(REGRESSION_DATA, raster_path),
-                1e-6)
+                    args['workspace_dir'], 'output', 'per_pixel', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-03)
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
         for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
+            utils._assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'scarcity', vector_path),
-                1e-3)
+                os.path.join(REGRESSION_DATA, 'scarcity', vector_path))
 
         table_results = ['watershed_results_wyield.csv',
                          'subwatershed_results_wyield.csv']
@@ -153,6 +208,7 @@ class HydropowerTests(unittest.TestCase):
     def test_valuation_subshed(self):
         """Hydro: testing Valuation component w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import utils
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
         args['demand_table_path'] = os.path.join(
@@ -166,19 +222,19 @@ class HydropowerTests(unittest.TestCase):
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
         for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
+            model_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(
-                    args['workspace_dir'], 'output', 'per_pixel',
-                    raster_path), os.path.join(REGRESSION_DATA, raster_path),
-                1e-6)
+                    args['workspace_dir'], 'output', 'per_pixel', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array, 1e-03)
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
         for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
+            utils._assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'valuation', vector_path),
-                1e-3)
+                os.path.join(REGRESSION_DATA, 'valuation', vector_path))
 
         table_results = ['watershed_results_wyield.csv',
                          'subwatershed_results_wyield.csv']
@@ -243,8 +299,8 @@ class HydropowerTests(unittest.TestCase):
             hydropower_water_yield.execute(args_bad_biophysical_table)
         actual_message = str(cm.exception)
         self.assertTrue(
-            'did not have corresponding entries in the biophysical table' in
-            actual_message, actual_message)
+            "The missing values found in the LULC raster but not the table"
+            " are: [2 3]" in actual_message, actual_message)
 
         # ensure that a missing landcover code in the demand table will
         # raise an exception that's helpful
@@ -282,8 +338,8 @@ class HydropowerTests(unittest.TestCase):
             hydropower_water_yield.execute(args_bad_demand_table)
         actual_message = str(cm.exception)
         self.assertTrue(
-            'did not have corresponding entries in the water demand table' in
-            actual_message, actual_message)
+            "The missing values found in the LULC raster but not the table"
+            " are: [2 3]" in actual_message, actual_message)
 
         args_bad_valuation_table = args.copy()
         bad_valuation_path = os.path.join(

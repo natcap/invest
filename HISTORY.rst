@@ -1,11 +1,235 @@
+..
+  Changes should be grouped for readability.
+
+  InVEST model names:
+  - Carbon
+  - Coastal Blue Carbon
+  - Coastal Vulnerability
+  - Crop Production
+  - Delineateit
+  - Finfish
+  - Fisheries
+  - Forest Carbon Edge Effects
+  - Globio
+  - Habitat Quality
+  - HRA
+  - Annual Water Yield
+  - NDR
+  - Pollination
+  - Recreation
+  - Routedem
+  - Scenario Generator
+  - Scenic Quality
+  - SDR
+  - Seasonal Water Yield
+  - Urban Cooling
+  - Urban Flood Risk
+  - Wave Energy
+  - Wind Energy
+
+  Everything else:
+  - General
+
+
 .. :changelog:
+Unreleased Changes (3.9)
+------------------------
+* Annual Water Yield:
+    * Fixing bug that limited ``rsupply`` result when ``wyield_mn`` or
+      ``consump_mn`` was 0.
+* General:
+    * Deprecating GDAL 2 and adding support for GDAL 3.
+    * Adding function in utils.py to handle InVEST coordindate transformations.
+    * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
+      * ``convolve_2d()`` keyword ``ignore_nodata`` to 
+        ``ignore_nodata_and_edges``.
+      * ``get_raster_info()`` / ``get_vector_info()`` keyword ``projection`` to
+        ``projection_wkt``.
+    * Improve consistency and context for error messages related to raster
+      reclassification across models by using ``utils.reclassify_raster``.
+    * Fixed bug that was causing a TypeError when certain input rasters had an
+      undefined nodata value. Undefined nodata values should now work
+      everywhere.
+    * Include logging in python script generated from 
+      "Save to python script..." in the "Development" menu. Now logging
+      messages from the model execution will show up when you run the script.
+    * InVEST is now a 64-bit binary built against Python 3.7.
+    * Adding Python 3.8 support for InVEST testing.
+* Coastal Vulnerability
+    * 'shore_points_missing_geomorphology.gpkg' output file name now includes
+      the suffix if any, and its one layer now is renamed from
+      'missing_geomorphology' to be the same as the file name
+      (including suffix).
+* Delineateit
+    * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
+      'verified_geometries' to be the same as the file name (including suffix).
+    * The layer in the 'snapped_outlets.gpkg' output is renamed from
+      'snapped' to be the same as the file name (including suffix).
+    * The layer in the 'watersheds.gpkg' output has been renamed from
+      'watersheds' to match the name of the vector file (including the suffix).
+    * Added pour point detection option as an alternative to providing an 
+      outlet features vector.
+* Habitat Quality:
+    * Refactor of Habitat Quality that implements TaskGraph
+    * Threat files are now indicated in the Threat Table csv input under
+      required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``.
+    * Threat and Sensitivity column names are now case-insensitive.
+    * Sensitivity threat columns now match threat names from Threat Table
+      exactly, without the need for "L_". "L_" prefix is deprecated.
+    * Threat raster input folder has been removed.
+    * Validation enhancements that check whether threat raster paths are valid.
+    * HQ update to User's Guide.
+    * Changing sample data to reflect Threat Table csv input changes and
+      bumping revision.
+    * More comprehensive testing for Habitat Quality and validation.
+    * Checking if Threat raster values are between 0 and 1 range, raising
+      ValueError if not. No longer snapping values less than 0 to 0 and greater
+      than 1 to 1.
+    * Fixing bug that was setting Threat raster values to 1 even if they were
+      floats between 0 and 1.
+    * Updating how threats are decayed across distance. Before, nodata edges
+      were ignored causing values on the edges to maintain a higher threat
+      value. Now, the decay does not ignore those nodata edges causing values
+      on the edges to decay more quickly. The area of study should have
+      adequate boundaries to account for these edge effects.
+* SDR:
+    * Fixing an issue where the LS factor should be capped to an upstream area
+      of 333^2 m^2. In previous versions the LS factor was erroniously capped
+      to "333" leading to high export spikes in some pixels.
+* Finfish
+    * Fixed a bug where the suffix input was not being used for ouput paths.
 
-
+..
+..
 Unreleased Changes
 ------------------
-* SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
-  available standard C library definition.  This new definition helps to avoid
-  some compiler issues on Windows.
+* Hydropower
+    * Fixed bug that prevented validation from ever passing for this model.
+      Validation will allow extra keys in addition to those in the ARGS_SPEC.
+* Urban Flood Mitigation
+    * Fixed incorrect calculation of total quickflow volume.
+
+3.8.8 (2020-09-04)
+------------------
+* Coastal Vulnerability
+    * Improved handling of invalid AOI geometries to avoid crashing and instead
+      fix the geometry when possible and skip it otherwise.
+    * Added validation check that shows a warning if the SLR vector is not
+      a point or multipoint geometry.
+* Urban Cooling
+    * Energy units are now (correctly) expressed in kWh.  They were previously
+      (incorrectly) expressed in kW.
+    * Energy savings calculations now require that consumption is in units of
+      kWh/degree C/m^2 for each building class.
+    * Fixing an issue where blank values of the Cooling Coefficient weights
+      (shade, albedo, ETI) would raise an error.  Now, a default value for the
+      coefficient is assumed if any single value is left blank.
+* HRA
+    * Raise ValueError if habitat or stressor inputs are not projected.
+    * Make sample data rating filepaths work on Mac. If not on Windows and a rating
+      filepath isn't found, try replacing all backslashes with forward slashes.
+* Seasonal Water Yield
+    * Updated output file name from aggregated_results.shp to aggregated_results_swy.shp
+      for consistency with NDR and SDR
+* Datastack
+    * Saved datastack archives now use helpful identifying names for spatial input folders
+* Validation
+    * Fixed bug that caused fields activated by a checkbox to make validation fail,
+      even when the checkbox was unchecked.
+* General
+    * Input table column headers are now insensitive to leading/trailing whitespace in
+      most places.
+    * Modified the script that produces a conda environment file from InVEST's python
+      requirements file so that it includes the ``conda-forge`` channel in the file
+      itself.
+* Recreation
+    * Validate values in the type column of predictor tables early in execution. Raise
+      a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
+* Validation
+    * Set a 5-second timeout on validation functions that access a file. This will raise
+      a warning and prevent validation from slowing down the UI too much.
+
+3.8.7 (2020-07-17)
+------------------
+* General
+    * Fixed an issue where some users would be unable to launch InVEST binaries
+      on Windows.  This crash was due to a configuration issue in
+      ``PySide2==5.15.0`` that will be fixed in a future release of PySide2.
+* GLOBIO
+    * Fix a bug that mishandled combining infrastructure data when only one
+      infrastructure data was present.
+* Urban Flood Risk
+    * The output vector ``flood_risk_service.shp`` now includes a field,
+      ``flood_vol`` that is the sum of the modeled flood volume (from
+      ``Q_m3.tif``) within the AOI.
+    * Fieldnames in ``flood_risk_service.shp`` have been updated to more
+      closely match the variables they match as documented in the User's Guide
+      chapter.  Specifically, ``serv_bld`` is now ``serv.blt`` and ``aff_bld``
+      is now ``aff.bld``.
+    * ``Q_mm.tif`` has been moved from the intermediate directory into the
+      workspace.
+    * Fixed a bug in the flood volume (``Q_m3.tif``) calculations that was
+      producing incorrect values in all cases.
+    * Fixed a bug where input rasters with nodata values of 0 were not handled
+      properly.
+
+3.8.6 (2020-07-03)
+------------------
+* Crop Production
+    * Fixed critical bug in crop regression that caused incorrect yields in
+      all cases.
+
+3.8.5 (2020-06-26)
+------------------
+* General
+    * Fix bug in ``utils.build_lookup_from_csv`` that was allowing
+      ``key_field`` to be non unique and overwriting values.
+    * Fix bug in ``utils.build_lookup_from_csv`` where trailing commas caused
+      returned values to be malformed.
+    * Add optional argument ``column_list`` to ``utils.build_lookup_from_csv``
+      that takes a list of column names and only returns those in the
+      dictionary.
+    * Remove ``warn_if_missing`` argument from ``utils.build_lookup_from_csv``
+      and warning by default.
+* Scenic Quality
+    * Fixing an issue in Scenic Quality where the creation of the weighted sum
+      of visibility rasters could cause "Too Many Open Files" errors and/or
+      ``MemoryError`` when the model is run with many viewpoints.
+    * Progress logging has been added to several loops that may take a longer
+      time when the model is run with thousands of points at a time.
+    * A major part of the model's execution was optimized for speed,
+      particularly when the model is run with many, many points.
+* SDR:
+    * Removed the unused parameter ``args['target_pixel_size']`` from the SDR
+      ``execute`` docstring.
+* Urban Flood Risk Mitigation
+    * Fixed an issue where the output vector ``flood_risk_service.shp`` would
+      only be created when the built infrastructure vector was provided.  Now,
+      the ``flood_risk_service.shp`` vector is always created, but the fields
+      created differ depending on whether the built infrastructure input is
+      present during the model run.
+    * Fixed an issue where the model would crash if an infrastructure geometry
+      were invalid or absent.  Such features are now skipped.
+
+3.8.4 (2020-06-05)
+------------------
+* General:
+    * Advanced the ``Taskgraph`` version requirement to fix a bug where workspace
+      directories created by InVEST versions <=3.8.0 could not be re-used by more
+      recent InVEST versions.
+* NDR:
+    * The Start Menu shortcut on Windows and launcher label on Mac now have
+      consistent labels for NDR: "NDR: Nutrient Delivery Ratio".
+* SDR:
+    * The Start Menu shortcut on Windows and launcher label on Mac now have
+      consistent labels for SDR: "SDR: Sediment Delivery Ratio".
+
+3.8.3 (2020-05-29)
+------------------
+* sdr
+  * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
+    available standard C library definition. This new definition helps to avoid
+    some compiler issues on Windows.
 
 3.8.2 (2020-05-15)
 ------------------

@@ -250,10 +250,8 @@ ARGS_SPEC = {
 }
 
 
-
-
 _OUTPUT_BASE_FILES = {
-    'aggregate_vector_path': 'aggregated_results.shp',
+    'aggregate_vector_path': 'aggregated_results_swy.shp',
     'annual_precip_path': 'P.tif',
     'cn_path': 'CN.tif',
     'l_avail_path': 'L_avail.tif',
@@ -299,7 +297,7 @@ _TMP_BASE_FILES = {
 def execute(args):
     """Seasonal Water Yield.
 
-    Arguments:
+    Args:
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
@@ -366,6 +364,9 @@ def execute(args):
             use a single process, 0 will be non-blocking scheduling but
             single process, and >= 1 will make additional processes for
             parallel execution.
+
+    Returns:
+        None.
     """
     # This upgrades warnings to exceptions across this model.
     # I found this useful to catch all kinds of weird inputs to the model
@@ -381,7 +382,7 @@ def execute(args):
 def _execute(args):
     """Execute the seasonal water yield model.
 
-    Parameters:
+    Args:
         See the parameters for
         `natcap.invest.seasonal_water_yield.seasonal_wateryield.execute`.
 
@@ -587,6 +588,9 @@ def _execute(args):
         # user didn't predefine local recharge so calculate it
         LOGGER.info('loading number of monthly events')
         reclassify_n_events_task_list = []
+        reclass_error_details = {
+            'raster_name': 'Climate Zone', 'column_name': 'cz_id',
+            'table_name': 'Climate Zone'}
         for month_id in range(N_MONTHS):
             if args['user_defined_climate_zones']:
                 cz_rain_events_lookup = (
@@ -598,13 +602,13 @@ def _execute(args):
                     cz_id in cz_rain_events_lookup])
                 n_events_nodata = -1
                 n_events_task = task_graph.add_task(
-                    func=pygeoprocessing.reclassify_raster,
+                    func=utils.reclassify_raster,
                     args=(
                         (file_registry['cz_aligned_raster_path'], 1),
                         climate_zone_rain_events_month,
                         file_registry['n_events_path_list'][month_id],
-                        gdal.GDT_Float32, n_events_nodata),
-                    kwargs={'values_required': True},
+                        gdal.GDT_Float32, n_events_nodata,
+                        reclass_error_details),
                     target_path_list=[
                         file_registry['n_events_path_list'][month_id]],
                     dependent_task_list=[align_task],
@@ -655,7 +659,8 @@ def _execute(args):
                 func=_calculate_monthly_quick_flow,
                 args=(
                     file_registry['precip_path_aligned_list'][month_index],
-                    file_registry['lulc_aligned_path'], file_registry['cn_path'],
+                    file_registry['lulc_aligned_path'],
+                    file_registry['cn_path'],
                     file_registry['n_events_path_list'][month_index],
                     file_registry['stream_path'],
                     file_registry['si_path'],
@@ -680,17 +685,20 @@ def _execute(args):
 
         LOGGER.info('calculate local recharge')
         kc_task_list = []
+        reclass_error_details = {
+            'raster_name': 'LULC', 'column_name': 'lucode',
+            'table_name': 'Biophysical'}
         for month_index in range(N_MONTHS):
             kc_lookup = dict([
                 (lucode, biophysical_table[lucode]['kc_%d' % (month_index+1)])
                 for lucode in biophysical_table])
             kc_nodata = -1  # a reasonable nodata value
             kc_task = task_graph.add_task(
-                func=pygeoprocessing.reclassify_raster,
+                func=utils.reclassify_raster,
                 args=(
                     (file_registry['lulc_aligned_path'], 1), kc_lookup,
                     file_registry['kc_path_list'][month_index],
-                    gdal.GDT_Float32, kc_nodata),
+                    gdal.GDT_Float32, kc_nodata, reclass_error_details),
                 target_path_list=[file_registry['kc_path_list'][month_index]],
                 dependent_task_list=[align_task],
                 hash_algorithm='md5',
@@ -724,8 +732,7 @@ def _execute(args):
                 fill_pit_task, qf_task] + quick_flow_task_list,
             task_name='calculate local recharge')
 
-    #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
-
+    # calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
     if args['user_defined_local_recharge']:
         vri_dependent_task_list = [l_avail_task]
     else:
@@ -796,7 +803,7 @@ def _execute(args):
 def _calculate_vri(l_path, target_vri_path):
     """Calculate VRI as li_array / qb_sum.
 
-    Parameters:
+    Args:
         l_path (str): path to L raster.
         target_vri_path (str): path to output Vri raster.
 
@@ -834,7 +841,7 @@ def _calculate_vri(l_path, target_vri_path):
 def _calculate_annual_qfi(qfm_path_list, target_qf_path):
     """Calculate annual quickflow.
 
-    Parameters:
+    Args:
         qfm_path_list (list): list of monthly quickflow raster paths.
         target_qf_path (str): path to target annual quickflow raster.
 
@@ -865,7 +872,7 @@ def _calculate_monthly_quick_flow(
         stream_path, si_path, qf_monthly_path):
     """Calculate quick flow for a month.
 
-    Parameters:
+    Args:
         precip_path (string): path to file that correspond to monthly
             precipitation
         lulc_raster_path (string): path to landcover raster
@@ -893,7 +900,7 @@ def _calculate_monthly_quick_flow(
     def qf_op(p_im, s_i, n_events, stream_array):
         """Calculate quick flow as in Eq [1] in user's guide.
 
-        Parameters:
+        Args:
             p_im (numpy.array): precipitation at pixel i on month m
             s_i (numpy.array): factor that is 1000/CN_i - 10
                 (Equation 1b from user's guide)
@@ -905,10 +912,17 @@ def _calculate_monthly_quick_flow(
             quick flow (numpy.array)
 
         """
-        valid_mask = (
-            (~numpy.isclose(p_im, p_nodata)) & (~numpy.isclose(s_i, si_nodata)) &
-            (p_im != 0.0) & (stream_array != 1) &
-            (~numpy.isclose(n_events, n_events_nodata)) & (n_events > 0))
+        # s_i is an intermediate output which will always have a defined
+        # nodata value
+        valid_mask = ((p_im != 0.0) &
+                      (stream_array != 1) &
+                      (n_events > 0) &
+                      ~numpy.isclose(s_i, si_nodata))
+        if p_nodata is not None:
+            valid_mask &= ~numpy.isclose(p_im, p_nodata)
+        if n_events_nodata is not None:
+            valid_mask &= ~numpy.isclose(n_events, n_events_nodata)
+
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
@@ -940,14 +954,16 @@ def _calculate_monthly_quick_flow(
         # if precip is 0, then QF should be zero
         qf_im[(p_im == 0) | (n_events == 0)] = 0.0
         # if we're on a stream, set quickflow to the precipitation
-        valid_stream_precip_mask = (
-            (stream_array == 1) & (~numpy.isclose(p_im, p_nodata)))
+        valid_stream_precip_mask = stream_array == 1
+        if p_nodata is not None:
+            valid_stream_precip_mask &= ~numpy.isclose(p_im, p_nodata)
         qf_im[valid_stream_precip_mask] = p_im[valid_stream_precip_mask]
 
         # this handles some user cases where they don't have data defined on
-        # their landcover raster. It otherwise crashes later with some NaNs
+        # their landcover raster. It otherwise crashes later with some NaNs.
+        # more intermediate outputs with nodata values guaranteed to be defined
         qf_im[numpy.isclose(qf_im, qf_nodata) &
-              ~numpy.isclose(stream_array, stream_nodata)] = 0.0
+              (stream_array != stream_nodata)] = 0.0
         return qf_im
 
     pygeoprocessing.raster_calculator(
@@ -960,7 +976,7 @@ def _calculate_curve_number_raster(
         lulc_raster_path, soil_group_path, biophysical_table, cn_path):
     """Calculate the CN raster from the landcover and soil group rasters.
 
-    Parameters:
+    Args:
         lulc_raster_path (string): path to landcover raster
         soil_group_path (string): path to raster indicating soil group where
             pixel values are in [1,2,3,4]
@@ -988,14 +1004,16 @@ def _calculate_curve_number_raster(
     lulc_to_soil = {}
     lulc_nodata = pygeoprocessing.get_raster_info(
         lulc_raster_path)['nodata'][0]
+
+    lucodes = list(biophysical_table)
+    if lulc_nodata is not None:
+        lucodes.append(lulc_nodata)
+
     for soil_id, soil_column in map_soil_type_to_header.items():
         lulc_to_soil[soil_id] = {
             'lulc_values': [],
             'cn_values': []
         }
-        lucodes = list(biophysical_table)
-        if lulc_nodata is not None:
-            lucodes.append(lulc_nodata)
 
         for lucode in sorted(lucodes):
             if lucode != lulc_nodata:
@@ -1016,10 +1034,28 @@ def _calculate_curve_number_raster(
             numpy.array(lulc_to_soil[soil_id]['cn_values'],
                         dtype=numpy.float32))
 
+    # Use set of table lucodes in cn_op
+    lucodes_set = set(lucodes)
+
     def cn_op(lulc_array, soil_group_array):
         """Map lulc code and soil to a curve number."""
         cn_result = numpy.empty(lulc_array.shape)
         cn_result[:] = cn_nodata
+
+        # if lulc_array value not in lulc_to_soil[soil_group_id]['lulc_values']
+        # then numpy.digitize will not bin properly and cause an IndexError
+        # during the reshaping call
+        lulc_unique = set(numpy.unique(lulc_array))
+        if not lulc_unique.issubset(lucodes_set):
+            # cast to list to conform with similar error messages in InVEST
+            missing_lulc_values = sorted(lulc_unique.difference(lucodes_set))
+            error_message = (
+                "Values in the LULC raster were found that are not"
+                " represented under the 'lucode' key column of the"
+                " Biophysical table. The missing values found in the LULC"
+                f" raster but not the table are: {missing_lulc_values}.")
+            raise ValueError(error_message)
+
         for soil_group_id in numpy.unique(soil_group_array):
             if soil_group_id == soil_nodata:
                 continue
@@ -1042,7 +1078,7 @@ def _calculate_curve_number_raster(
 def _calculate_si_raster(cn_path, stream_path, si_path):
     """Calculate the S factor of the quickflow equation [1].
 
-    Parameters:
+    Args:
         cn_path (string): path to curve number raster
         stream_path (string): path to a stream raster (0, 1)
         si_path (string): path to output s_i raster
@@ -1077,7 +1113,7 @@ def _aggregate_recharge(
     Generates a new shapefile that's a copy of 'aoi_path' in sum values from L
     and Vri.
 
-    Parameters:
+    Args:
         aoi_path (string): path to shapefile that will be used to
             aggregate rasters
         l_path (string): path to (L) local recharge raster
@@ -1125,7 +1161,7 @@ def _aggregate_recharge(
                 if pixel_count != 0:
                     value = (aggregate_stats[poly_index]['sum'] / pixel_count)
                 else:
-                    LOGGER.warn(
+                    LOGGER.warning(
                         "no coverage for polygon %s", ', '.join(
                             [str(poly_feat.GetField(_)) for _ in range(
                                 poly_feat.GetFieldCount())]))
@@ -1163,7 +1199,7 @@ def _calculate_l_avail(l_path, gamma, target_l_avail_path):
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

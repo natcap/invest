@@ -108,7 +108,7 @@ class CropProductionTests(unittest.TestCase):
             raster_path, n, n, 1, gdal.GDT_Int32, options=[
                 'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
                 'BLOCKXSIZE=16', 'BLOCKYSIZE=16'])
-        new_raster.SetProjection(base_lulc_info['projection'])
+        new_raster.SetProjection(base_lulc_info['projection_wkt'])
         new_raster.SetGeoTransform([origin_x, 1.0, 0.0, origin_y, 0.0, -1.0])
         new_band = new_raster.GetRasterBand(1)
         array = numpy.array(range(n*n), dtype=numpy.int32).reshape((n, n))
@@ -157,6 +157,54 @@ class CropProductionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             crop_production_percentile.execute(args)
 
+    def test_crop_production_percentile_missing_climate_bin(self):
+        """Crop Production: test crop percentile with a missing climate bin."""
+        from natcap.invest import crop_production_percentile
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'results_suffix': '',
+            'landcover_raster_path': os.path.join(
+                SAMPLE_DATA_PATH, 'landcover.tif'),
+            'landcover_to_crop_table_path': os.path.join(
+                SAMPLE_DATA_PATH, 'landcover_to_crop_table.csv'),
+            'aggregate_polygon_path': os.path.join(
+                SAMPLE_DATA_PATH, 'aggregate_shape.shp'),
+            'model_data_path': MODEL_DATA_PATH,
+            'n_workers': '-1'
+        }
+
+        # copy model data directory to a temp location so that hard coded
+        # data paths can be altered for this test.
+        tmp_copy_model_data_path = os.path.join(
+            self.workspace_dir, 'tmp_model_data')
+
+        shutil.copytree(MODEL_DATA_PATH, tmp_copy_model_data_path)
+
+        # remove a row from the wheat percentile yield table so that a wheat
+        # climate bin value is missing
+        climate_bin_wheat_table_path = os.path.join(
+           MODEL_DATA_PATH, 'climate_percentile_yield_tables',
+           'wheat_percentile_yield_table.csv')
+
+        bad_climate_bin_wheat_table_path = os.path.join(
+           tmp_copy_model_data_path, 'climate_percentile_yield_tables',
+           'wheat_percentile_yield_table.csv')
+
+        os.remove(bad_climate_bin_wheat_table_path)
+
+        table_df = pandas.read_csv(climate_bin_wheat_table_path)
+        table_df = table_df[table_df['climate_bin'] != 40]
+        table_df.to_csv(bad_climate_bin_wheat_table_path)
+        table_df = None
+
+        args['model_data_path'] = tmp_copy_model_data_path
+        with self.assertRaises(ValueError) as context:
+            crop_production_percentile.execute(args)
+        self.assertTrue(
+            "The missing values found in the wheat Climate Bin raster but not"
+            " the table are: [40]" in str(context.exception))
+
     def test_crop_production_regression_bad_crop(self):
         """Crop Production: test crop regression with a bad crop name."""
         from natcap.invest import crop_production_regression
@@ -187,6 +235,60 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             crop_production_regression.execute(args)
+
+    def test_crop_production_regression_missing_climate_bin(self):
+        """Crop Production: test crop regression with a missing climate bin."""
+        from natcap.invest import crop_production_regression
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'results_suffix': '',
+            'landcover_raster_path': os.path.join(
+                SAMPLE_DATA_PATH, 'landcover.tif'),
+            'landcover_to_crop_table_path': os.path.join(
+                SAMPLE_DATA_PATH, 'landcover_to_crop_table.csv'),
+            'aggregate_polygon_path': os.path.join(
+                SAMPLE_DATA_PATH, 'aggregate_shape.shp'),
+            'aggregate_polygon_id': 'id',
+            'model_data_path': MODEL_DATA_PATH,
+            'fertilization_rate_table_path': os.path.join(
+                SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
+            'nitrogen_fertilization_rate': 29.6,
+            'phosphorous_fertilization_rate': 8.4,
+            'potassium_fertilization_rate': 14.2,
+            'n_workers': '-1'
+        }
+
+        # copy model data directory to a temp location so that hard coded
+        # data paths can be altered for this test.
+        tmp_copy_model_data_path = os.path.join(
+            self.workspace_dir, 'tmp_model_data')
+
+        shutil.copytree(MODEL_DATA_PATH, tmp_copy_model_data_path)
+
+        # remove a row from the wheat regression yield table so that a wheat
+        # climate bin value is missing
+        climate_bin_wheat_table_path = os.path.join(
+           MODEL_DATA_PATH, 'climate_regression_yield_tables',
+           'wheat_regression_yield_table.csv')
+
+        bad_climate_bin_wheat_table_path = os.path.join(
+           tmp_copy_model_data_path, 'climate_regression_yield_tables',
+           'wheat_regression_yield_table.csv')
+
+        os.remove(bad_climate_bin_wheat_table_path)
+
+        table_df = pandas.read_csv(climate_bin_wheat_table_path)
+        table_df = table_df[table_df['climate_bin'] != 40]
+        table_df.to_csv(bad_climate_bin_wheat_table_path)
+        table_df = None
+
+        args['model_data_path'] = tmp_copy_model_data_path
+        with self.assertRaises(ValueError) as context:
+            crop_production_regression.execute(args)
+        self.assertTrue(
+            "The missing values found in the wheat Climate Bin raster but not"
+            " the table are: [40]" in str(context.exception))
 
     def test_crop_production_regression(self):
         """Crop Production: test crop production regression model."""
@@ -272,7 +374,7 @@ class CropProductionTests(unittest.TestCase):
             raster_path, n, n, 1, gdal.GDT_Int32, options=[
                 'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
                 'BLOCKXSIZE=16', 'BLOCKYSIZE=16'])
-        new_raster.SetProjection(base_lulc_info['projection'])
+        new_raster.SetProjection(base_lulc_info['projection_wkt'])
         new_raster.SetGeoTransform([origin_x, 1.0, 0.0, origin_y, 0.0, -1.0])
         new_band = new_raster.GetRasterBand(1)
         array = numpy.array(range(n*n), dtype=numpy.int32).reshape((n, n))
@@ -319,7 +421,8 @@ class CropValidationTests(unittest.TestCase):
         from natcap.invest import crop_production_percentile
         from natcap.invest import validation
 
-        validation_errors = crop_production_percentile.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = crop_production_percentile.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(self.base_required_keys)
         self.assertEqual(invalid_keys, expected_missing_keys)
@@ -329,7 +432,8 @@ class CropValidationTests(unittest.TestCase):
         from natcap.invest import crop_production_regression
         from natcap.invest import validation
 
-        validation_errors = crop_production_regression.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = crop_production_regression.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys +

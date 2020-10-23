@@ -26,6 +26,7 @@ import shapely.geometry
 import shapely.prepared
 
 from ... import invest
+from .. import utils
 from natcap.invest.recreation import out_of_core_quadtree
 from . import recmodel_client
 
@@ -250,8 +251,8 @@ class RecModel(object):
         lat_lng_ref = osr.SpatialReference()
         lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
 
-        to_lat_trans = osr.CoordinateTransformation(aoi_ref, lat_lng_ref)
-        from_lat_trans = osr.CoordinateTransformation(lat_lng_ref, aoi_ref)
+        to_lat_trans = utils.create_coordinate_transformer(aoi_ref, lat_lng_ref)
+        from_lat_trans = utils.create_coordinate_transformer(lat_lng_ref, aoi_ref)
 
         # calculate x_min transformed by comparing the x coordinate at both
         # the top and bottom of the aoi extent and taking the minimum
@@ -501,11 +502,11 @@ def _file_len(file_path):
             ['wc', '-l', file_path], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
     except OSError as e:
-        LOGGER.warn(repr(e))
+        LOGGER.warning(repr(e))
         return -1
     result, err = wc_process.communicate()
     if wc_process.returncode != 0:
-        LOGGER.warn(err)
+        LOGGER.warning(err)
         return -1
     return int(result.strip().split()[0])
 
@@ -686,49 +687,54 @@ def _calc_poly_pud(
     LOGGER.info('local qt load took %.2fs', time.time() - start_time)
 
     aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
-    aoi_layer = aoi_vector.GetLayer()
+    if aoi_vector:
+        aoi_layer = aoi_vector.GetLayer()
 
-    for poly_id in iter(poly_test_queue.get, 'STOP'):
-        poly_feat = aoi_layer.GetFeature(poly_id)
-        poly_geom = poly_feat.GetGeometryRef()
-        poly_wkt = poly_geom.ExportToWkt()
-        try:
-            shapely_polygon = shapely.wkt.loads(poly_wkt)
-        except Exception:  # pylint: disable=broad-except
-            # We often get weird corrupt data, this lets us tolerate it
-            LOGGER.warn('error parsing poly, skipping')
-            continue
+        for poly_id in iter(poly_test_queue.get, 'STOP'):
+            try:
+                poly_feat = aoi_layer.GetFeature(poly_id)
+                poly_geom = poly_feat.GetGeometryRef()
+                poly_wkt = poly_geom.ExportToWkt()
+            except AttributeError as error:
+                LOGGER.warning('skipping feature that raised: %s', str(error))
+                continue
+            try:
+                shapely_polygon = shapely.wkt.loads(poly_wkt)
+            except Exception:  # pylint: disable=broad-except
+                # We often get weird corrupt data, this lets us tolerate it
+                LOGGER.warning('error parsing poly, skipping')
+                continue
 
-        poly_points = local_qt.get_intersecting_points_in_polygon(
-            shapely_polygon)
-        pud_set = set()
-        pud_monthly_set = collections.defaultdict(set)
+            poly_points = local_qt.get_intersecting_points_in_polygon(
+                shapely_polygon)
+            pud_set = set()
+            pud_monthly_set = collections.defaultdict(set)
 
-        for point_datetime, user_hash, _, _ in poly_points:
-            if date_range[0] <= point_datetime <= date_range[1]:
-                timetuple = point_datetime.tolist().timetuple()
+            for point_datetime, user_hash, _, _ in poly_points:
+                if date_range[0] <= point_datetime <= date_range[1]:
+                    timetuple = point_datetime.tolist().timetuple()
 
-                year = str(timetuple.tm_year)
-                month = str(timetuple.tm_mon)
-                day = str(timetuple.tm_mday)
-                pud_hash = str(user_hash) + '%s-%s-%s' % (year, month, day)
-                pud_set.add(pud_hash)
-                pud_monthly_set[month].add(pud_hash)
-                pud_monthly_set["%s-%s" % (year, month)].add(pud_hash)
+                    year = str(timetuple.tm_year)
+                    month = str(timetuple.tm_mon)
+                    day = str(timetuple.tm_mday)
+                    pud_hash = str(user_hash) + '%s-%s-%s' % (year, month, day)
+                    pud_set.add(pud_hash)
+                    pud_monthly_set[month].add(pud_hash)
+                    pud_monthly_set["%s-%s" % (year, month)].add(pud_hash)
 
-        # calculate the number of years and months between the max/min dates
-        # index 0 is annual and 1-12 are the months
-        pud_averages = [0.0] * 13
-        n_years = (
-            date_range[1].tolist().timetuple().tm_year -
-            date_range[0].tolist().timetuple().tm_year + 1)
-        pud_averages[0] = len(pud_set) / float(n_years)
-        for month_id in range(1, 13):
-            monthly_pud_set = pud_monthly_set[str(month_id)]
-            pud_averages[month_id] = (
-                len(monthly_pud_set) / float(n_years))
+            # calculate the number of years and months between the max/min dates
+            # index 0 is annual and 1-12 are the months
+            pud_averages = [0.0] * 13
+            n_years = (
+                date_range[1].tolist().timetuple().tm_year -
+                date_range[0].tolist().timetuple().tm_year + 1)
+            pud_averages[0] = len(pud_set) / float(n_years)
+            for month_id in range(1, 13):
+                monthly_pud_set = pud_monthly_set[str(month_id)]
+                pud_averages[month_id] = (
+                    len(monthly_pud_set) / float(n_years))
 
-        pud_poly_feature_queue.put((poly_id, pud_averages, pud_monthly_set))
+            pud_poly_feature_queue.put((poly_id, pud_averages, pud_monthly_set))
     pud_poly_feature_queue.put('STOP')
     aoi_layer = None
     gdal.Dataset.__swig_destroy__(aoi_vector)

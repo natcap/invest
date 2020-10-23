@@ -13,8 +13,8 @@ import numpy
 def make_simple_raster(base_raster_path, fill_val, nodata_val):
     """Create a 10x10 raster on designated path with fill value.
 
-    Parameters:
-        raster_path (str): the raster path for making the new raster.
+    Args:
+        base_raster_path (str): the raster path for making the new raster.
         fill_val (int): the value used for filling the raster.
         nodata_val (int or None): for defining a band's nodata value.
 
@@ -50,7 +50,7 @@ def make_simple_raster(base_raster_path, fill_val, nodata_val):
 def assert_raster_equal_value(base_raster_path, val_to_compare):
     """Assert that the entire output raster has the same value as specified.
 
-    Parameters:
+    Args:
         base_raster_path (str): the filepath of the raster to be asserted.
         val_to_compare (float): the value to be filled in the array to compare.
 
@@ -64,13 +64,13 @@ def assert_raster_equal_value(base_raster_path, val_to_compare):
 
     array_to_compare = numpy.empty(base_array.shape)
     array_to_compare.fill(val_to_compare)
-    numpy.testing.assert_almost_equal(base_array, array_to_compare)
+    numpy.testing.assert_allclose(base_array, array_to_compare, rtol=0, atol=1e-6)
 
 
 def make_pools_csv(pools_csv_path):
     """Create a carbon pools csv file with simplified land cover types.
 
-    Parameters:
+    Args:
         pools_csv_path (str): the path of carbon pool csv.
 
     Returns:
@@ -217,8 +217,12 @@ class CarbonTests(unittest.TestCase):
         make_pools_csv(args['carbon_pools_path'])
 
         # Value error should be raised with lulc code 200
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             carbon.execute(args)
+
+        self.assertTrue(
+            "The missing values found in the LULC raster but not the table"
+            " are: [200]" in str(cm.exception))
 
     def test_carbon_full_undefined_nodata(self):
         """Carbon: full model run when input raster nodata is None."""

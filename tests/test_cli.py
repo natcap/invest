@@ -1,9 +1,10 @@
+"""Module for Testing the InVEST cli framework."""
 import sys
 import os
 import shutil
 import tempfile
 import unittest
-from unittest.mock import patch
+import unittest.mock
 import contextlib
 import json
 
@@ -24,6 +25,7 @@ def redirect_stdout():
 
 
 class CLIHeadlessTests(unittest.TestCase):
+    """Headless Tests for CLI."""
     def setUp(self):
         """Use a temporary workspace for all tests in this class."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -149,9 +151,9 @@ class CLIHeadlessTests(unittest.TestCase):
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
             'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
-        with unittest.mock.patch(
-                'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute',
-                return_value=None) as patched_model:
+        target = (
+            'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute')
+        with unittest.mock.patch(target, return_value=None) as patched_model:
             cli.main([
                 'run',
                 'cbc',  # uses an alias
@@ -318,7 +320,10 @@ class CLIHeadlessTests(unittest.TestCase):
         stdout = stdout_stream.getvalue()
         stdout_json = json.loads(stdout)
         self.assertEqual(len(stdout_json), 1)
-        self.assertEqual(len(stdout_json['validation_results']), 4)
+        # migration path, aoi_vector_path, population_csv_path not found
+        # population_csv_dir is also incorrect, but shouldn't be marked
+        # invalid because do_batch is False
+        self.assertEqual(len(stdout_json['validation_results']), 3)
 
         # Validation returned successfully, so error code 0 even though there
         # are warnings.

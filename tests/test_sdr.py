@@ -27,17 +27,10 @@ def assert_expected_results_in_vector(expected_results, vector_path):
     watershed_results_layer = None
     watershed_results_feature = None
     for key in expected_results:
-        # numpy.testing.assert_almost_equal(
-        #     expected_results[key], actual_results[key], decimal=6)
-
-        # In order to pass with GDAL<2.3 and GDAL>2.3:
-        # asserting equality to 5 significant figures instead of 6 decimal
-        # places. GDAL 2.3 introduced new warping behavior yielding different
-        # pixel values when also using a smoothing interpolation method.
-        # Surprisingly, these differences are not washed out by an
-        # aggregation such as zonal statistics.
-        numpy.testing.assert_approx_equal(
-            actual_results[key], expected_results[key], significant=2)
+        # Using relative tolerance here because results with different
+        # orders of magnitude are tested
+        numpy.testing.assert_allclose(
+            actual_results[key], expected_results[key], rtol=0.000001, atol=0)
 
 
 class SDRTests(unittest.TestCase):
@@ -216,11 +209,12 @@ class SDRTests(unittest.TestCase):
         args['watersheds_path'] = target_watersheds_path
         sdr.execute(args)
         expected_results = {
-            'usle_tot': 12.69931602478,
-            'sed_retent': 402704.96875,
-            'sed_export': 0.7930983305,
-            'sed_dep': 8.58807754517,
+            'usle_tot': 12.04494380951,
+            'sed_retent': 367660.25,
+            'sed_export': 0.71140885353,
+            'sed_dep': 7.84880876541,
         }
+
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
         assert_expected_results_in_vector(expected_results, vector_path)
@@ -266,10 +260,11 @@ class SDRTests(unittest.TestCase):
 
         sdr.execute(args)
         expected_results = {
-            'sed_retent': 402704.96875,
-            'sed_export': 0.7930983305,
-            'usle_tot': 12.69931602478,
+            'sed_retent': 367660.25,
+            'sed_export': 0.71140885353,
+            'usle_tot': 12.04494380951,
         }
+
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
         # make args explicit that this is a base run of SWY
@@ -289,10 +284,11 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_retent': 345797.375,
-            'sed_export': 0.63070225716,
-            'usle_tot': 11.46732711792,
+            'sed_retent': 335578.875,
+            'sed_export': 0.60814452171,
+            'usle_tot': 11.43409824371,
         }
+
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
         assert_expected_results_in_vector(expected_results, vector_path)
@@ -313,10 +309,11 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_retent': 436809.59375,
-            'sed_export': 0.94600570202,
-            'usle_tot': 11.59875869751,
+            'sed_retent': 414067.65625,
+            'sed_export': 0.88248616457,
+            'usle_tot': 11.37281990051,
         }
+
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
         assert_expected_results_in_vector(expected_results, vector_path)
@@ -347,13 +344,48 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             sdr.execute(args)
 
+    def test_missing_lulc_value(self):
+        """SDR test for ValueError when LULC value not found in table."""
+        from natcap.invest.sdr import sdr
+        import pandas
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+
+        gpkg_driver = ogr.GetDriverByName('GPKG')
+        base_vector = ogr.Open(args['watersheds_path'])
+        target_watersheds_path = os.path.join(
+            args['workspace_dir'], 'input_watersheds.gpkg')
+        target_vector = gpkg_driver.CopyDataSource(
+            base_vector, target_watersheds_path)
+        base_vector = None
+        target_vector = None
+        args['watersheds_path'] = target_watersheds_path
+
+        # remove a row from the biophysical table so that lulc value is missing
+        bad_biophysical_path = os.path.join(
+            self.workspace_dir, 'bad_biophysical_table.csv')
+
+        bio_df = pandas.read_csv(args['biophysical_table_path'])
+        bio_df = bio_df[bio_df['lucode'] != 2]
+        bio_df.to_csv(bad_biophysical_path)
+        bio_df = None
+        args['biophysical_table_path'] = bad_biophysical_path
+
+        with self.assertRaises(ValueError) as context:
+            sdr.execute(args)
+        self.assertTrue(
+            "The missing values found in the LULC raster but not the table"
+            " are: [2.]" in str(context.exception))
+
     @staticmethod
     def _assert_regression_results_equal(
             workspace_dir, file_list_path, result_vector_path,
             agg_results_path):
         """Test workspace state against expected aggregate results.
 
-        Parameters:
+        Args:
             workspace_dir (string): path to the completed model workspace
             file_list_path (string): path to a file that has a list of all
                 the expected files relative to the workspace base
@@ -415,7 +447,7 @@ class SDRTests(unittest.TestCase):
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
 
-        Parameters:
+        Args:
             base_list_path (string): a path to a file that has one relative
                 file path per line.
             directory_path (string): a path to a directory whose contents will

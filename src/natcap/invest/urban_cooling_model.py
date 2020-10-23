@@ -177,7 +177,7 @@ ARGS_SPEC = {
             },
             "about": (
                 "A CSV table containing information on energy consumption "
-                "for various types of buildings, in kW/degC."
+                "for various types of buildings, in kWh/deg C/m^2."
             ),
         },
         "cc_method": {
@@ -246,7 +246,8 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output file names
         args['t_ref'] (str/float): reference air temperature.
-        args['lulc_raster_path'] (str): path to landcover raster.
+        args['lulc_raster_path'] (str): path to landcover raster.  This raster
+            must be in a linearly-projected CRS.
         args['ref_eto_raster_path'] (str): path to evapotranspiration raster.
         args['aoi_vector_path'] (str): path to desired AOI.
         args['biophysical_table_path'] (str): table to map landcover codes to
@@ -298,15 +299,29 @@ def execute(args):
         args['workspace_dir'], 'intermediate')
     utils.make_directories([args['workspace_dir'], intermediate_dir])
     biophysical_lucode_map = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'lucode', to_lower=True,
-        warn_if_missing=True)
+        args['biophysical_table_path'], 'lucode', to_lower=True)
 
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
     # weights.
-    cc_weight_shade_raw = float(args.get('cc_weight_shade', 0.6))
-    cc_weight_albedo_raw = float(args.get('cc_weight_albedo', 0.2))
-    cc_weight_eti_raw = float(args.get('cc_weight_eti', 0.2))
+    # TypeError when float(None)
+    # ValueError when float('')
+    # KeyError when the parameter is not present in the args dict.
+    try:
+        cc_weight_shade_raw = float(args['cc_weight_shade'])
+    except (ValueError, TypeError, KeyError):
+        cc_weight_shade_raw = 0.6
+
+    try:
+        cc_weight_albedo_raw = float(args['cc_weight_albedo'])
+    except (ValueError, TypeError, KeyError):
+        cc_weight_albedo_raw = 0.2
+
+    try:
+        cc_weight_eti_raw = float(args['cc_weight_eti'])
+    except (ValueError, TypeError, KeyError):
+        cc_weight_eti_raw = 0.2
+
     t_ref_raw = float(args['t_ref'])
     uhi_max_raw = float(args['uhi_max'])
     cc_weight_sum = sum(
@@ -354,7 +369,7 @@ def execute(args):
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
             'raster_align_index': 1,
-            'target_sr_wkt': lulc_raster_info['projection']},
+            'target_projection_wkt': lulc_raster_info['projection_wkt']},
         target_path_list=aligned_raster_path_list,
         task_name='align rasters')
 
@@ -365,6 +380,9 @@ def execute(args):
     else:
         reclassification_props += ('building_intensity',)
 
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Biophysical'}
     for prop in reclassification_props:
         prop_map = dict(
             (lucode, x[prop])
@@ -373,11 +391,10 @@ def execute(args):
         prop_raster_path = os.path.join(
             intermediate_dir, '%s%s.tif' % (prop, file_suffix))
         prop_task = task_graph.add_task(
-            func=pygeoprocessing.reclassify_raster,
+            func=utils.reclassify_raster,
             args=(
                 (aligned_lulc_raster_path, 1), prop_map, prop_raster_path,
-                gdal.GDT_Float32, TARGET_NODATA),
-            kwargs={'values_required': True},
+                gdal.GDT_Float32, TARGET_NODATA, reclass_error_details),
             target_path_list=[prop_raster_path],
             dependent_task_list=[align_task],
             task_name='reclassify to %s' % prop)
@@ -417,7 +434,7 @@ def execute(args):
             green_area_sum_raster_path),
         kwargs={
             'working_dir': intermediate_dir,
-            'ignore_nodata': True},
+            'ignore_nodata_and_edges': True},
         target_path_list=[green_area_sum_raster_path],
         dependent_task_list=[
             task_path_prop_map['green_area'][0],  # reclassed green area task
@@ -536,7 +553,7 @@ def execute(args):
     intermediate_uhi_result_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
-            args['aoi_vector_path'], lulc_raster_info['projection'],
+            args['aoi_vector_path'], lulc_raster_info['projection_wkt'],
             intermediate_aoi_vector_path),
         kwargs={'driver_name': 'ESRI Shapefile'},
         target_path_list=[intermediate_aoi_vector_path],
@@ -609,7 +626,8 @@ def execute(args):
         intermediate_building_vector_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(
-                args['building_vector_path'], lulc_raster_info['projection'],
+                args['building_vector_path'],
+                lulc_raster_info['projection_wkt'],
                 intermediate_building_vector_path),
             kwargs={'driver_name': 'ESRI Shapefile'},
             target_path_list=[intermediate_building_vector_path],
@@ -910,6 +928,8 @@ def calculate_energy_savings(
         target_building_vector_path (str): path to target vector that
             will contain the additional field 'energy_sav' calculated as
             ``consumption.increase(b) * ((T_(air,MAX)  - T_(air,i)))``.
+            This vector must be in a linearly projected spatial reference
+            system.
 
     Return:
         None.
@@ -936,6 +956,8 @@ def calculate_energy_savings(
     target_building_vector = gdal.OpenEx(
         target_building_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     target_building_layer = target_building_vector.GetLayer()
+    target_building_srs = target_building_layer.GetSpatialRef()
+    target_building_square_units = target_building_srs.GetLinearUnits() ** 2
     target_building_layer.CreateField(
         ogr.FieldDefn('energy_sav', ogr.OFTReal))
     target_building_layer.CreateField(
@@ -949,8 +971,7 @@ def calculate_energy_savings(
     type_field_index = fieldnames.index('type')
 
     energy_consumption_table = utils.build_lookup_from_csv(
-        energy_consumption_table_path, 'type', to_lower=True,
-        warn_if_missing=True)
+        energy_consumption_table_path, 'type', to_lower=True)
 
     target_building_layer.StartTransaction()
     last_time = time.time()
@@ -1000,12 +1021,14 @@ def calculate_energy_savings(
             # KeyError when cost column not present.
             building_cost = 1.0
 
-        # Calculate Equation 7: Energy Savings.
+        # Calculate Equations 8, 9: Energy Savings.
         # We'll only calculate energy savings if there were polygons with valid
         # stats that could be aggregated from t_air_mean.
         if t_air_mean:
+            building_area = target_feature.GetGeometryRef().Area()
+            building_area_m2 = building_area * target_building_square_units
             savings = (
-                consumption_increase * (
+                consumption_increase * building_area_m2 * (
                     t_ref_raw - t_air_mean + uhi_max) * building_cost)
             target_feature.SetField('energy_sav', savings)
 
@@ -1054,6 +1077,7 @@ def calc_t_air_nomix_op(t_ref_val, hm_array, uhi_max):
     """
     result = numpy.empty(hm_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
+    # TARGET_NODATA should never be None
     valid_mask = ~numpy.isclose(hm_array, TARGET_NODATA)
     result[valid_mask] = t_ref_val + (1-hm_array[valid_mask]) * uhi_max
     return result
@@ -1114,9 +1138,10 @@ def calc_eti_op(
     """Calculate ETI = (K_c * ET_0) / ET_max."""
     result = numpy.empty(kc_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = ~(
-        numpy.isclose(kc_array, kc_nodata) |
-        numpy.isclose(et0_array, et0_nodata))
+    # kc intermediate output should always have a nodata value defined
+    valid_mask = ~numpy.isclose(kc_array, kc_nodata)
+    if et0_nodata is not None:
+        valid_mask &= ~numpy.isclose(et0_array, et0_nodata)
     result[valid_mask] = (
         kc_array[valid_mask] * et0_array[valid_mask] / et_max)
     return result
@@ -1145,7 +1170,10 @@ def calculate_wbgt(
 
     def wbgt_op(avg_rel_humidity, t_air_array):
         wbgt = numpy.empty(t_air_array.shape, dtype=numpy.float32)
-        valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
+
+        valid_mask = slice(None)
+        if t_air_nodata is not None:
+            valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
         wbgt[:] = TARGET_NODATA
         t_air_valid = t_air_array[valid_mask]
         e_i = (
@@ -1366,7 +1394,7 @@ def convolve_2d_by_exponential(
     pygeoprocessing.convolve_2d(
         (signal_raster_path, 1), (exponential_kernel_path, 1),
         target_convolve_raster_path, working_dir=temporary_working_dir,
-        ignore_nodata=True)
+        ignore_nodata_and_edges=True)
     shutil.rmtree(temporary_working_dir)
 
 

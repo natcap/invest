@@ -39,6 +39,10 @@ Run ``make check`` to test if all required dependencies are installed on your sy
 OS-specific installation instructions are found either online at
 http://invest.readthedocs.io/en/latest/installing.html or locally at ``doc/api-docs/installing.rst``.
 
+.. note::
+    The ``make`` commands for InVEST require a BASH shell environment. Windows
+    users can use Git Bash within the Git for Windows suite. More infomration
+    can be found at https://gitforwindows.org
 
 NSIS-specific requirements
 ++++++++++++++++++++++++++
@@ -228,12 +232,12 @@ To run tests for user interface functionality::
 Changing how GNU make runs tests
 ++++++++++++++++++++++++++++++++
 
-The InVEST Makefile setup depends on ``nosetests`` and takes advantage of its
-plugins for line coverage and xunit reports.  You can force ``make`` to use a
-different test runner by setting a parameter at the command line.  For example,
-to run the tests with ``pytest``::
+The InVEST Makefile setup depends on ``pytest`` and ``coverage`` to display 
+line coverage and produce HTML and XML reports.  You can force ``make`` to use
+``coverage`` with a different test runner by setting a parameter at the 
+command line.  For example, to run the tests with ``nose``::
 
-    $ make TESTRUNNER=pytest test
+    $ make TESTRUNNER=nose test
 
 
 Running tests on installed binaries

@@ -4,7 +4,6 @@ import logging
 import collections
 import tempfile
 
-import pandas
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -39,7 +38,7 @@ ARGS_SPEC = {
         "predefined_globio": {
             "type": "boolean",
             "required": False,
-            "about": "if True then \"mode (b)\" else \"mode (a)\"",
+            "about": 'if True then "mode (b)" else "mode (a)"',
             "name": "Predefined land use map for GLOBIO"
         },
         "lulc_path": {
@@ -48,7 +47,9 @@ ARGS_SPEC = {
                 "projected": True,
             },
             "required": "not predefined_globio",
-            "about": "used in \"mode (a)\" path to a base landcover map with integer codes",
+            "about": (
+                'used in "mode (a)" path to a base landcover map with'
+                ' integer codes'),
             "name": "Land Use/Cover (Raster)"
         },
         "lulc_to_globio_table_path": {
@@ -72,10 +73,10 @@ ARGS_SPEC = {
             "type": "directory",
             "required": True,
             "about": (
-                "Used in \"mode (a) and (b)\" a path to a folder containing "
-                "maps of either GDAL compatible rasters or vectors. "
-                "These data will be used in the infrastructure "
-                "to calculation of MSA."),
+                'Used in "mode (a) and (b)" a path to a folder containing '
+                'maps of either GDAL compatible rasters or vectors. '
+                'These data will be used in the infrastructure '
+                'to calculation of MSA.'),
             "name": "Infrastructure Directory"
         },
         "pasture_path": {
@@ -84,7 +85,7 @@ ARGS_SPEC = {
                 "projected": True,
             },
             "required": "not predefined_globio",
-            "about": "used in \"mode (a)\" path to pasture raster",
+            "about": 'used in "mode (a)" path to pasture raster',
             "name": "Pasture (Raster)"
         },
         "potential_vegetation_path": {
@@ -93,7 +94,8 @@ ARGS_SPEC = {
                 "projected": True,
             },
             "required": "not predefined_globio",
-            "about": "used in \"mode (a)\" path to potential vegetation raster",
+            "about": (
+                'used in "mode (a)" path to potential vegetation raster'),
             "name": "Potential Vegetation (Raster)"
         },
         "pasture_threshold": {
@@ -102,7 +104,7 @@ ARGS_SPEC = {
             },
             "type": "number",
             "required": "not predefined_globio",
-            "about": "used in \"mode (a)\"",
+            "about": 'used in "mode (a)"',
             "name": "Pasture Threshold"
         },
         "intensification_fraction": {
@@ -122,7 +124,7 @@ ARGS_SPEC = {
             },
             "type": "number",
             "required": "not predefined_globio",
-            "about": "used in \"mode (a)\"",
+            "about": 'used in "mode (a)"',
             "name": "Primary Threshold"
         },
         "msa_parameters_path": {
@@ -155,7 +157,7 @@ ARGS_SPEC = {
             },
             "type": "raster",
             "required": "predefined_globio",
-            "about": "used in \"mode (b)\" path to predefined globio raster.",
+            "about": 'used in "mode (b)" path to predefined globio raster.',
             "name": "GLOBIO Classified Land Use"
         }
     }
@@ -171,7 +173,7 @@ def execute(args):
     map is generated.  These modes are used below to describe input
     parameters.
 
-    Parameters:
+    Args:
 
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
@@ -198,7 +200,8 @@ def execute(args):
             to a folder containing maps of either gdal compatible rasters or
             OGR compatible shapefiles.  These data will be used in the
             infrastructure to calculation of MSA.
-        args['pasture_path'] (string): used in "mode (a)" path to pasture raster
+        args['pasture_path'] (string): used in "mode (a)" path to pasture
+            raster
         args['potential_vegetation_path'] (string): used in "mode (a)" path to
             potential vegetation raster
         args['pasture_threshold'] (float): used in "mode (a)"
@@ -208,10 +211,10 @@ def execute(args):
         args['primary_threshold'] (float): used in "mode (a)"
         args['msa_parameters_path'] (string): path to MSA classification
             parameters
-        args['aoi_path'] (string): (optional) if it exists then final MSA raster
-            is summarized by AOI
-        args['globio_lulc_path'] (string): used in "mode (b)" path to predefined
-            globio raster.
+        args['aoi_path'] (string): (optional) if it exists then final MSA
+            raster is summarized by AOI
+        args['globio_lulc_path'] (string): used in "mode (b)" path to
+            predefined globio raster.
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process.
@@ -281,8 +284,8 @@ def execute(args):
         tmp_dir, 'combined_infrastructure%s.tif' % file_suffix)
     combine_infrastructure_task = task_graph.add_task(
         func=_collapse_infrastructure_layers,
-        args=(args['infrastructure_dir'], globio_lulc_path, infrastructure_path,
-              tmp_dir),
+        args=(args['infrastructure_dir'], globio_lulc_path,
+              infrastructure_path, tmp_dir),
         target_path_list=[infrastructure_path],
         dependent_task_list=calculate_globio_task_list,
         task_name='combine_infrastructure')
@@ -373,10 +376,14 @@ def execute(args):
     msa_lu_path = os.path.join(
         output_dir, 'msa_lu%s.tif' % file_suffix)
     LOGGER.info('calculate msa_lu')
+    reclass_error_details = {
+        'raster_name': 'GLOBIO LULC', 'column_name': 'MSA_type-msa_lu',
+        'table_name': 'MSA'}
     calculate_msa_lu_task = task_graph.add_task(
-        func=pygeoprocessing.reclassify_raster,
-        args=((globio_lulc_path, 1), msa_parameter_table['msa_lu'], msa_lu_path,
-              gdal.GDT_Float32, globio_nodata),
+        func=utils.reclassify_raster,
+        args=((globio_lulc_path, 1), msa_parameter_table['msa_lu'],
+              msa_lu_path, gdal.GDT_Float32, globio_nodata,
+              reclass_error_details),
         target_path_list=[msa_lu_path],
         dependent_task_list=calculate_globio_task_list,
         task_name='calculate_msa_lu')
@@ -413,7 +420,7 @@ def execute(args):
 def _summarize_results_in_aoi(aoi_path, summary_aoi_path, msa_path):
     """Aggregate MSA results to AOI polygons with zonal statistics.
 
-    Parameters:
+    Args:
         aoi_path (string): path to aoi shapefile containing polygons.
         summary_aoi_path (string):
             path to copy of aoi shapefile with summary stats added.
@@ -424,7 +431,8 @@ def _summarize_results_in_aoi(aoi_path, summary_aoi_path, msa_path):
 
     """
     # copy the aoi to an output shapefile
-    original_datasource = gdal.OpenEx(aoi_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
+    original_datasource = gdal.OpenEx(
+        aoi_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
     # Delete if existing shapefile with the same name
     if os.path.isfile(summary_aoi_path):
         os.remove(summary_aoi_path)
@@ -456,10 +464,12 @@ def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
     """Masking out natural areas."""
     # lulc_array and nodata could conceivably be a float here,
     # if it's the user-provided globio dataset
-    valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
     # landcover type 1 in the GLOBIO schema represents primary vegetation
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
     result[:] = primary_veg_mask_nodata
+    valid_mask = slice(None)
+    if globio_nodata is not None:
+        valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
     result[valid_mask] = lulc_array[valid_mask] == 1
     return result
 
@@ -482,7 +492,7 @@ def _msa_f_op(
 
     Bin ffqi values based on rules defined in msa_parameters.csv.
 
-    Parameters:
+    Args:
         primary_veg_smooth (array): float values representing ffqi.
         primary_veg_mask_nodata (int/float)
         msa_f_table (dict):
@@ -493,7 +503,6 @@ def _msa_f_op(
         Array with float values. One component of final MSA score.
 
     """
-    nodata_mask = numpy.isclose(primary_veg_mask_nodata, primary_veg_smooth)
     msa_f = numpy.empty(primary_veg_smooth.shape)
 
     less_than = msa_f_table.pop('<', None)
@@ -507,7 +516,10 @@ def _msa_f_op(
         msa_f[primary_veg_smooth < less_than[0]] = (
             less_than[1])
 
-    msa_f[nodata_mask] = msa_nodata
+    if msa_nodata is not None:
+        nodata_mask = numpy.isclose(primary_veg_smooth,
+                                    primary_veg_mask_nodata)
+        msa_f[nodata_mask] = msa_nodata
 
     return msa_f
 
@@ -520,7 +532,7 @@ def _msa_i_op(
     Bin distance_to_infrastructure values according to rules defined
     in msa_parameters.csv.
 
-    Parameters:
+    Args:
         lulc_array (array): integer values representing globio landcover codes.
         distance_to_infrastructure (array):
             float values measuring distance from nearest infrastructure present
@@ -571,12 +583,16 @@ def _msa_i_op(
 
 
 def _msa_op(msa_f, msa_lu, msa_i, globio_nodata):
-        """Calculate the MSA which is the product of the sub MSAs."""
-        result = numpy.empty_like(msa_f, dtype=numpy.float32)
-        result[:] = globio_nodata
+    """Calculate the MSA which is the product of the sub MSAs."""
+    result = numpy.empty_like(msa_f, dtype=numpy.float32)
+    result[:] = globio_nodata
+    valid_mask = slice(None)
+    if globio_nodata is not None:
         valid_mask = ~numpy.isclose(msa_f, globio_nodata)
-        result[valid_mask] = msa_f[valid_mask] * msa_lu[valid_mask] * msa_i[valid_mask]
-        return result
+    result[valid_mask] = (
+        msa_f[valid_mask] * msa_lu[valid_mask] * msa_i[valid_mask])
+    return result
+
 
 def make_gaussian_kernel_path(sigma, kernel_path):
     """Create a gaussian kernel raster."""
@@ -621,7 +637,7 @@ def load_msa_parameter_table(
         msa_parameter_table_filename, intensification_fraction):
     """Load parameter table to a dict that to define the MSA ranges.
 
-    Parameters:
+    Args:
         msa_parameter_table_filename (string): path to msa csv table
         intensification_fraction (float): a number between 0 and 1 indicating
             what level between msa_lu 8 and 9 to define the general GLOBIO
@@ -655,8 +671,8 @@ def load_msa_parameter_table(
             }
 
     """
-    msa_table = pandas.read_csv(
-        msa_parameter_table_filename, sep=None, engine='python')
+    msa_table = utils.read_csv_to_dataframe(
+        msa_parameter_table_filename, sep=None)
     msa_dict = collections.defaultdict(dict)
     for _, row in msa_table.iterrows():
         if row['Value'][0] in ['<', '>']:
@@ -685,7 +701,7 @@ def _calculate_globio_lulc_map(
         globio_lulc_path, globio_nodata, task_graph):
     """Translate a general landcover map into a GLOBIO version.
 
-    Parameters:
+    Args:
         lulc_to_globio_table_path (string): a table that maps arbitrary
             landcover values to globio equivalents.
         lulc_path (string): path to the raw landcover map.
@@ -728,10 +744,13 @@ def _calculate_globio_lulc_map(
 
     intermediate_globio_lulc_path = os.path.join(
         tmp_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Land Cover to GLOBIO Land Cover'}
     reclass_lulc_to_globio_task = task_graph.add_task(
-        func=pygeoprocessing.reclassify_raster,
+        func=utils.reclassify_raster,
         args=((lulc_path, 1), lulc_to_globio, intermediate_globio_lulc_path,
-              gdal.GDT_Int32, globio_nodata),
+              gdal.GDT_Int32, globio_nodata, reclass_error_details),
         target_path_list=[intermediate_globio_lulc_path],
         task_name='reclassify_lulc_to_globio')
 
@@ -809,7 +828,8 @@ def _calculate_globio_lulc_map(
 
 def _forest_area_mask_op(lulc_array, globio_nodata, forest_areas_nodata):
     """Masking out forest areas."""
-    valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
+    # comparing integers, numpy.isclose not needed
+    valid_mask = lulc_array != globio_nodata
     # landcover code 130 represents all MODIS forest codes which originate
     # as 1-5
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
@@ -836,7 +856,8 @@ def _create_globio_lulc_op(
     grass_shrub_result[:] = 5
 
     # man-made pasture
-    valid_pasture_mask = potential_vegetation_array[valid_mask][grass_shrub_mask] <= 8
+    valid_pasture_mask = (
+        potential_vegetation_array[valid_mask][grass_shrub_mask] <= 8)
     grass_shrub_result[valid_pasture_mask] = 6
 
     # primary vegetation
@@ -880,7 +901,7 @@ def _collapse_infrastructure_layers(
     indicates a region that has no layers that overlap but are still contained
     in the bounding box.
 
-    Parameters:
+    Args:
         infrastructure_dir (string): path to a directory containing maps of
             either gdal compatible rasters or OGR compatible shapefiles.
         base_raster_path (string): a path to a file that has the dimensions and
@@ -935,26 +956,32 @@ def _collapse_infrastructure_layers(
             "infrastructure directory didn't have any rasters or "
             "vectors at %s", infrastructure_dir)
 
-    infrastructure_nodata = -1
+    infrastructure_nodata = 255
 
     def _collapse_infrastructure_op(*infrastructure_array_list):
         """For each pixel, create mask 1 if all valid, else set to nodata."""
-        nodata_mask = (
-            numpy.isclose(
-                infrastructure_array_list[0], infrastructure_nodata_list[0]))
-        infrastructure_result = infrastructure_array_list[0] > 0
-        for index in range(1, len(infrastructure_array_list)):
-            current_nodata = numpy.isclose(
-                infrastructure_array_list[index],
-                infrastructure_nodata_list[index])
+        # Zeroes indicate where there's no infrastructure influence but not
+        # necessarily nodata
+        infrastructure_result = numpy.zeros(
+            infrastructure_array_list[0].shape, dtype=numpy.uint8)
 
-            infrastructure_result = (
-                infrastructure_result |
-                ((infrastructure_array_list[index] > 0) & ~current_nodata))
+        nodata_mask = numpy.full(infrastructure_array_list[0].shape, True)
+        infrastructure_mask = numpy.full(
+            infrastructure_array_list[0].shape, False)
 
-            nodata_mask = (
-                nodata_mask & current_nodata)
+        for index in range(len(infrastructure_array_list)):
+            # mark all pixels True that have infrastructure in this layer
+            infrastructure_mask |= infrastructure_array_list[index] > 0
+            if infrastructure_nodata_list[index] is not None:
+                # update nodata mask: intersection with this layer
+                nodata_mask &= numpy.isclose(infrastructure_array_list[index],
+                                             infrastructure_nodata_list[index])
+            # if nodata is None, every pixel in this layer has data,
+            # so the nodata_mask should be all False
+            else:
+                nodata_mask &= False
 
+        infrastructure_result[infrastructure_mask] = 1
         infrastructure_result[nodata_mask] = infrastructure_nodata
         return infrastructure_result
 
@@ -988,7 +1015,7 @@ def _collapse_infrastructure_layers(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

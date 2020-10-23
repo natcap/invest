@@ -1,6 +1,6 @@
-AUTO: merge $SOURCE_BRANCH into $RELEASE_BRANCH
+Merge $SOURCE_BRANCH into $RELEASE_BRANCH
 
-This PR was automatically generated in response to a push to `master`,
+This PR was automatically generated in response to a push to `main`,
 and is a chance to review any changes that will be included in the release
 branch before merging.  Under most circumstances, this PR will probably be
 a formality.  However, there are a few cases where we may need to do some
@@ -10,37 +10,43 @@ merge:
 ## There is a merge conflict in this PR
 
 1. Leave a comment on this PR about the merge conflict and close the PR.
-2. In your fork, make a new `pr-resolution` branch off of `$SOURCE_BRANCH`:
+2. In your fork, `git pull` the upstream `$SOURCE_BRANCH` and `$RELEASE_BRANCH`.
+3. Make a new `pr-resolution` branch off of `$RELEASE_BRANCH`:
    ```shell
    $ git checkout $SOURCE_BRANCH
-   $ git pull upstream $SOURCE_BRANCH  # Include the latest changes on the upstream master
+   $ git pull upstream $SOURCE_BRANCH  # Include the latest changes on the upstream main
+   $ git checkout $RELEASE_BRANCH
+   $ git pull upstream $RELEASE_BRANCH  # Include the latest changes on the upstream release
    $ git checkout -b pr-resolution
-   $ git merge $RELEASE_BRANCH
+   $ git merge $SOURCE_BRANCH
    ```
-3. Resolve the conflicts locally
-4. Commit the changes to `pr-resolution`.
-5. Create a PR from `pr-resolution` into `$RELEASE_BRANCH`, and include a link
+4. Resolve the conflicts locally
+5. Commit the changes to `pr-resolution`.
+6. Create a PR from `pr-resolution` into `$RELEASE_BRANCH`, and include a link
    to the origin PR in the description.
-6. When the PR is complete, delete the `pr-resolution` branch.  That will
+7. When the PR is complete, delete the `pr-resolution` branch.  That will
    help us avoid confusion and extra work down the road when we do this again.
 
 ## This PR contains content that should not be in `$RELEASE_BRANCH`
 
 1. Leave a comment on this PR about the content that should not be included
    and close the PR.
-2. In your fork, make a new `pr-resolution` branch off of `$SOURCE_BRANCH`:
+2. In your fork, `git pull` the upstream `$SOURCE_BRANCH` and `$RELEASE_BRANCH`.
+3. Make a new `pr-resolution` branch off of `$RELEASE_BRANCH`:
    ```shell
    $ git checkout $SOURCE_BRANCH
-   $ git pull upstream $SOURCE_BRANCH  # Include the latest changes on the upstream master
+   $ git pull upstream $SOURCE_BRANCH  # Include the latest changes on the upstream main
+   $ git checkout $RELEASE_BRANCH
+   $ git pull upstream $RELEASE_BRANCH  # Include the latest changes on the upstream release
    $ git checkout -b pr-resolution
-   $ git merge $RELEASE_BRANCH
+   $ git merge $SOURCE_BRANCH
    ```
-3. Handle the content that should not end up in `$RELEASE_BRANCH` however it
+4. Handle the content that should not end up in `$RELEASE_BRANCH` however it
    needs to be handled.
-4. Commit the updated content to `pr-resolution`.
-5. Create a PR from `pr-resolution` into `$RELEASE_BRANCH`, and include a link
+5. Commit the updated content to `pr-resolution`.
+6. Create a PR from `pr-resolution` into `$RELEASE_BRANCH`, and include a link
    to the origin PR in the description.
-6. When the PR is complete, delete the `pr-resolution` branch.  That will
+7. When the PR is complete, delete the `pr-resolution` branch.  That will
    help us avoid confusion and extra work down the road when we do this again.
 
 ## What happens if we accidentally merge something we shouldn't?
@@ -56,7 +62,7 @@ There are several possibilities for recovery if we get to such a state.
 ### Why was this PR created?
 
 The workflow defining this PR is located at
-`.github/workflows/auto-pr-from-master-into-releases.yml`.  In short, this PR
+`.github/workflows/auto-pr-from-main-into-releases.yml`.  In short, this PR
 was created because there was a push to `$SOURCE_BRANCH` that triggered this
 workflow.  Some events that can trigger this include:
 

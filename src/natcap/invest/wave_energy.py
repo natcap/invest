@@ -284,7 +284,7 @@ def execute(args):
     # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
-    machine_perf_data = pandas.read_csv(args['machine_perf_path'])
+    machine_perf_data = utils.read_csv_to_dataframe(args['machine_perf_path'])
     # Get the wave period fields, starting from the second column of the table
     machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
     # Build up the height field by taking the first column of the table
@@ -317,8 +317,9 @@ def execute(args):
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
-        grid_land_data = pandas.read_csv(args['land_gridPts_path'])
-        required_col_names = ['ID', 'TYPE', 'LAT', 'LONG', 'LOCATION']
+        grid_land_data = utils.read_csv_to_dataframe(
+            args['land_gridPts_path'], to_lower=True)
+        required_col_names = ['id', 'type', 'lat', 'long', 'location']
         grid_land_data, missing_grid_land_fields = _get_validated_dataframe(
             args['land_gridPts_path'], required_col_names)
         if missing_grid_land_fields:
@@ -465,8 +466,10 @@ def execute(args):
 
         # Get the size of the pixels in meters, to be used for creating
         # projected wave power and wave energy capacity rasters
-        coord_trans, coord_trans_opposite = _get_coordinate_transformation(
+        coord_trans = utils.create_coordinate_transformer(
             analysis_area_sr, aoi_sr)
+        coord_trans_opposite = utils.create_coordinate_transformer(
+                aoi_sr, analysis_area_sr)
         target_pixel_size = _pixel_size_helper(wave_vector_path, coord_trans,
                                                coord_trans_opposite, dem_path)
 
@@ -619,9 +622,9 @@ def execute(args):
         output_dir, 'GridPts_prj%s.shp' % file_suffix)
 
     grid_data = grid_land_data.loc[
-        grid_land_data['TYPE'].str.lower() == 'grid']
+        grid_land_data['type'].str.upper() == 'GRID']
     land_data = grid_land_data.loc[
-        grid_land_data['TYPE'].str.lower() == 'land']
+        grid_land_data['type'].str.upper() == 'LAND']
 
     grid_dict = grid_data.to_dict('index')
     land_dict = land_data.to_dict('index')
@@ -961,9 +964,7 @@ def _get_validated_dataframe(csv_path, field_list):
         missing_fields (list): missing fields as string format in dataframe.
 
     """
-    dataframe = pandas.read_csv(csv_path)
-    field_list = [field.upper() for field in field_list]
-    dataframe.columns = [col_name.upper() for col_name in dataframe.columns]
+    dataframe = utils.read_csv_to_dataframe(csv_path, to_lower=True)
     missing_fields = []
     for field in field_list:
         if field not in dataframe.columns:
@@ -1004,7 +1005,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     target_sr.ImportFromWkt(target_sr_wkt)
     # Get coordinate transformation from base spatial reference to target,
     # in order to transform wave points to target_sr
-    coord_trans, _ = _get_coordinate_transformation(base_sr, target_sr)
+    coord_trans = utils.create_coordinate_transformer(base_sr, target_sr)
 
     LOGGER.info('Creating new vector')
     output_driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
@@ -1029,8 +1030,8 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
     for point_dict in base_dict_data.values():
-        latitude = float(point_dict['LAT'])
-        longitude = float(point_dict['LONG'])
+        latitude = float(point_dict['lat'])
+        longitude = float(point_dict['long'])
         # When projecting to WGS84, extents -180 to 180 are used for longitude.
         # In case input longitude is from -360 to 0 convert
         if longitude < -180:
@@ -1206,10 +1207,9 @@ def _machine_csv_to_dict(machine_csv_path):
 
     """
     machine_dict = {}
-    machine_data = pandas.read_csv(machine_csv_path, index_col=0)
-    # make columns and indexes lowercased
-    machine_data.columns = machine_data.columns.str.lower()
-    # remove underscore from the keys
+    # make columns and indexes lowercased and strip whitespace
+    machine_data = utils.read_csv_to_dataframe(
+        machine_csv_path, to_lower=True, index_col=0)
     machine_data.index = machine_data.index.str.strip()
     machine_data.index = machine_data.index.str.lower()
 
@@ -1239,26 +1239,6 @@ def _get_vector_spatial_ref(base_vector_path):
     layer = None
     vector = None
     return spat_ref
-
-
-def _get_coordinate_transformation(source_sr, target_sr):
-    """Create coordinate transformations between two spatial references.
-
-    One transformation is from source to target, and the other from target to
-    source.
-
-    Parameters:
-        source_sr (osr.SpatialReference): A spatial reference
-        target_sr (osr.SpatialReference): A spatial reference
-
-    Returns:
-        A tuple: coord_trans (source to target) and coord_trans_opposite
-            (target to source)
-
-    """
-    coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-    coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
-    return (coord_trans, coord_trans_opposite)
 
 
 def _create_percentile_rasters(base_raster_path, target_raster_path,
@@ -1438,7 +1418,7 @@ def _clip_vector_by_vector(base_vector_path, clip_vector_path,
     def reproject_vector(base_vector_path, target_sr_wkt, temp_work_dir):
         """Reproject the vector to target projection."""
         base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
-            'projection']
+            'projection_wkt']
 
         if base_sr_wkt != target_sr_wkt:
             LOGGER.info(
@@ -1675,12 +1655,12 @@ def _index_raster_value_to_point_vector(
     # vector points are in the same projection as raster
     raster_sr = osr.SpatialReference()
     raster_sr.ImportFromWkt(
-        pygeoprocessing.get_raster_info(base_raster_path)['projection'])
+        pygeoprocessing.get_raster_info(base_raster_path)['projection_wkt'])
     vector_sr = osr.SpatialReference()
     vector_sr.ImportFromWkt(
         pygeoprocessing.get_vector_info(target_point_vector_path)[
-            'projection'])
-    vector_coord_trans = osr.CoordinateTransformation(vector_sr, raster_sr)
+            'projection_wkt'])
+    vector_coord_trans = utils.create_coordinate_transformer(vector_sr, raster_sr)
 
     # Initialize an R-Tree indexing object with point geom from base_vector
     def generator_function():

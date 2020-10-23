@@ -61,17 +61,29 @@ class UFRMTests(unittest.TestCase):
             args['workspace_dir'], 'flood_risk_service_Test1.shp'),
             gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
-        result_feature = next(result_layer)
-        result_val = result_feature.GetField('serv_bld')
+
+        # Check that all four expected fields are there.
+        self.assertEqual(
+            set(('aff.bld', 'serv.blt', 'rnf_rt_idx', 'rnf_rt_m3',
+                 'flood_vol')),
+            set(field.GetName() for field in result_layer.schema))
+
+        result_feature = result_layer.GetFeature(0)
+        for fieldname, expected_value in (
+                ('aff.bld', 187010830.32202843),
+                ('serv.blt', 13253546667257.65),
+                ('rnf_rt_idx', 0.70387527942),
+                ('rnf_rt_m3', 70870.4765625),
+                ('flood_vol', 29815.640625)):
+            result_val = result_feature.GetField(fieldname)
+            places_to_round = (
+                int(round(numpy.log(expected_value)/numpy.log(10)))-6)
+            self.assertAlmostEqual(
+                result_val, expected_value, places=-places_to_round)
+
         result_feature = None
         result_layer = None
         result_vector = None
-        # expected result observed from regression run.
-        expected_result = 13253546667257.65
-        places_to_round = (
-            int(round(numpy.log(expected_result)/numpy.log(10)))-6)
-        self.assertAlmostEqual(
-            result_val, expected_result, places=-places_to_round)
 
     def test_ufrm_regression_no_infrastructure(self):
         """UFRM: regression for no infrastructure."""
@@ -93,12 +105,34 @@ class UFRMTests(unittest.TestCase):
         expected_result = 156070.36
         self.assertAlmostEqual(result_sum, expected_result, places=0)
 
+        result_vector = gdal.OpenEx(os.path.join(
+            args['workspace_dir'], 'flood_risk_service_Test1.shp'),
+            gdal.OF_VECTOR)
+        result_layer = result_vector.GetLayer()
+        result_feature = result_layer.GetFeature(0)
+
+        # Check that only the two expected fields are there.
+        self.assertEqual(
+            set(('rnf_rt_idx', 'rnf_rt_m3', 'flood_vol')),
+            set(field.GetName() for field in result_layer.schema))
+
+        for fieldname, expected_value in (
+                ('rnf_rt_idx', 0.70387527942),
+                ('rnf_rt_m3', 70870.4765625),
+                ('flood_vol', 29815.640625)):
+            result_val = result_feature.GetField(fieldname)
+            places_to_round = (
+                int(round(numpy.log(expected_value)/numpy.log(10)))-6)
+            self.assertAlmostEqual(
+                result_val, expected_value, places=-places_to_round)
+
     def test_ufrm_value_error_on_bad_soil(self):
         """UFRM: assert exception on bad soil raster values."""
         from natcap.invest import urban_flood_risk_mitigation
         args = self._make_args()
 
-        bad_soil_raster = os.path.join(self.workspace_dir, 'bad_soilgroups.tif')
+        bad_soil_raster = os.path.join(
+            self.workspace_dir, 'bad_soilgroups.tif')
         value_map = {
             1: 1,
             2: 2,
@@ -113,8 +147,16 @@ class UFRMTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
             actual_message = str(cm.exception)
-            expected_message = 'Check that the Soil Group raster does not contain'
+            expected_message = (
+                'Check that the Soil Group raster does not contain')
             self.assertTrue(expected_message in actual_message)
+
+    def test_ufrm_invalid_validation(self):
+        """UFRM: assert validation error on bad args."""
+        from natcap.invest import urban_flood_risk_mitigation
+
+        with self.assertRaises(ValueError):
+            urban_flood_risk_mitigation.execute({})
 
     def test_validate(self):
         """UFRM: test validate function."""

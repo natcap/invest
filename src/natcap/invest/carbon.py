@@ -7,7 +7,6 @@ import time
 from functools import reduce
 
 from osgeo import gdal
-from osgeo import ogr
 import numpy
 import pygeoprocessing
 import taskgraph
@@ -201,7 +200,7 @@ def execute(args):
     The model can operate on a single scenario, a combined present and future
     scenario, as well as an additional REDD scenario.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): a path to the directory that will
             write output and other temporary files during calculation.
         args['results_suffix'] (string): appended to any output file name.
@@ -244,6 +243,7 @@ def execute(args):
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process.
+
     Returns:
         None.
     """
@@ -262,7 +262,8 @@ def execute(args):
     carbon_pool_table = utils.build_lookup_from_csv(
         args['carbon_pools_path'], 'lucode')
 
-    work_token_dir = os.path.join(intermediate_output_dir, '_taskgraph_working_dir')
+    work_token_dir = os.path.join(
+        intermediate_output_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -345,13 +346,15 @@ def execute(args):
         output_key = 'delta_cur_' + scenario_type
         LOGGER.info("Calculate sequestration scenario '%s'", output_key)
         storage_path_list = [
-            file_registry['tot_c_cur'], file_registry['tot_c_' + scenario_type]]
+            file_registry['tot_c_cur'],
+            file_registry['tot_c_' + scenario_type]]
 
         diff_rasters_task = graph.add_task(
             _diff_rasters,
             args=(storage_path_list, file_registry[output_key]),
             target_path_list=[file_registry[output_key]],
-            dependent_task_list=[sum_rasters_task_lookup['cur'],
+            dependent_task_list=[
+                sum_rasters_task_lookup['cur'],
                 sum_rasters_task_lookup[scenario_type]],
             task_name='diff_rasters_for_%s' % output_key)
         diff_rasters_task_lookup[scenario_type] = diff_rasters_task
@@ -386,7 +389,7 @@ def execute(args):
     tasks_to_report = (list(sum_rasters_task_lookup.values())
                        + list(diff_rasters_task_lookup.values())
                        + calculate_npv_tasks)
-    generate_report_task = graph.add_task(
+    _ = graph.add_task(
         _generate_report,
         args=(tifs_to_summarize, args, file_registry),
         target_path_list=[file_registry['html_report']],
@@ -400,7 +403,7 @@ def execute(args):
             if os.path.exists(tmp_filename):
                 os.remove(tmp_filename)
         except OSError as os_error:
-            LOGGER.warn(
+            LOGGER.warning(
                 "Can't remove temporary file: %s\nOriginal Exception:\n%s",
                 file_registry[tmp_filename_key], os_error)
 
@@ -418,7 +421,7 @@ def _generate_carbon_map(
         lulc_path, carbon_pool_by_type, out_carbon_stock_path):
     """Generate carbon stock raster by mapping LULC values to carbon pools.
 
-    Parameters:
+    Args:
         lulc_path (string): landcover raster with integer pixels.
         out_carbon_stock_path (string): path to output raster that will have
             pixels with carbon storage values in them with units of Mg*C
@@ -434,9 +437,12 @@ def _generate_carbon_map(
         (lulcid, stock * pixel_area / 10**4)
         for lulcid, stock in carbon_pool_by_type.items()])
 
-    pygeoprocessing.reclassify_raster(
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Carbon Pools'}
+    utils.reclassify_raster(
         (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
-        gdal.GDT_Float32, _CARBON_NODATA, values_required=True)
+        gdal.GDT_Float32, _CARBON_NODATA, reclass_error_details)
 
 
 def _sum_rasters(storage_path_list, output_sum_path):
@@ -480,7 +486,7 @@ def _calculate_valuation_constant(
         price_per_metric_ton_of_c):
     """Calculate a net present valuation constant to multiply carbon storage.
 
-    Parameters:
+    Args:
         lulc_cur_year (int): calendar year in present
         lulc_fut_year (int): calendar year in future
         discount_rate (float): annual discount rate as a percentage
@@ -506,12 +512,13 @@ def _calculate_valuation_constant(
 def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
     """Calculate net present value.
 
-    Parameters:
+    Args:
         delta_carbon_path (string): path to change in carbon storage over
             time.
         valuation_constant (float): value to multiply each carbon storage
             value by to calculate NPV.
         npv_out_path (string): path to output net present value raster.
+
     Returns:
         None.
     """
@@ -531,10 +538,11 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
 def _generate_report(raster_file_set, model_args, file_registry):
     """Generate a human readable HTML report of summary stats of model run.
 
-    Parameters:
+    Args:
         raster_file_set (set): paths to rasters that need summary stats.
         model_args (dict): InVEST argument dictionary.
         file_registry (dict): file path dictionary for InVEST workspace.
+
     Returns:
         None.
     """
@@ -577,9 +585,12 @@ def _generate_report(raster_file_set, model_args, file_registry):
             (file_registry['tot_c_fut'], 'Total fut', 'Mg of C'),
             (file_registry['tot_c_redd'], 'Total redd', 'Mg of C'),
             (file_registry['delta_cur_fut'], 'Change in C for fut', 'Mg of C'),
-            (file_registry['delta_cur_redd'], 'Change in C for redd', 'Mg of C'),
-            (file_registry['npv_fut'], 'Net present value from cur to fut', 'currency units'),
-            (file_registry['npv_redd'], 'Net present value from cur to redd', 'currency units'),
+            (file_registry['delta_cur_redd'],
+             'Change in C for redd', 'Mg of C'),
+            (file_registry['npv_fut'],
+             'Net present value from cur to fut', 'currency units'),
+            (file_registry['npv_redd'],
+             'Net present value from cur to redd', 'currency units'),
         ]
 
         for raster_uri, description, units in report:
@@ -596,7 +607,7 @@ def _generate_report(raster_file_set, model_args, file_registry):
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

@@ -10,7 +10,7 @@ LOGGER = logging.getLogger('natcap.invest.reporting.html')
 try:
     locale.setlocale(locale.LC_ALL, '')
 except Exception:
-    LOGGER.warn("couldn't set locale")
+    LOGGER.warning("couldn't set locale")
 
 
 class HTMLDocument(object):

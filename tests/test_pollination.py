@@ -5,9 +5,9 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import sampledata
+import pygeoprocessing
 from osgeo import ogr
+from osgeo import osr
 import shapely.geometry
 
 REGRESSION_DATA = os.path.join(
@@ -256,7 +256,8 @@ class PollinationTests(unittest.TestCase):
             temp_path, 'bad_biophysical_table.csv')
         with open(bad_biophysical_table_path, 'w') as bad_biophysical_table:
             bad_biophysical_table.write(
-                'lucode,nesting_cavity_availability_index,nesting_ground_index\n'
+                'lucode,nesting_cavity_availability_index,'
+                'nesting_ground_index\n'
                 '1,0.3,0.2\n')
         args = {
             'results_suffix': '',
@@ -272,6 +273,43 @@ class PollinationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             pollination.execute(args)
 
+    def test_pollination_missing_lulc_values(self):
+        """Pollination: testing that model detects missing lulc values."""
+        from natcap.invest import pollination
+        import pandas
+
+        temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
+
+        args = {
+            'results_suffix': '',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
+            'guild_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'guild_table.csv'),
+            'landcover_biophysical_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv'),
+            'farm_vector_path': os.path.join(
+                REGRESSION_DATA, 'input', 'farms.shp'),
+        }
+
+        bad_biophysical_table_path = os.path.join(
+            temp_path, 'bad_biophysical_table.csv')
+
+        bio_df = pandas.read_csv(args['landcover_biophysical_table_path'])
+        bio_df = bio_df[bio_df['lucode'] != 1]
+        bio_df.to_csv(bad_biophysical_table_path)
+        bio_df = None
+
+        args['landcover_biophysical_table_path'] = bad_biophysical_table_path
+
+        with self.assertRaises(ValueError) as cm:
+            pollination.execute(args)
+
+        self.assertTrue(
+            "The missing values found in the LULC raster but not the table"
+            " are: [1]" in str(cm.exception))
+
     def test_pollination_bad_cross_table_headers(self):
         """Pollination: ensure detection of missing headers in one table."""
         from natcap.invest import pollination
@@ -282,7 +320,8 @@ class PollinationTests(unittest.TestCase):
         # one table has only spring the other has only fall.
         with open(bad_biophysical_table_path, 'w') as bad_biophysical_table:
             bad_biophysical_table.write(
-                'lucode,nesting_cavity_availability_index,nesting_ground_index,floral_resources_spring_index\n'
+                'lucode,nesting_cavity_availability_index,'
+                'nesting_ground_index,floral_resources_spring_index\n'
                 '1,0.3,0.2,0.2\n')
         bad_guild_table_path = os.path.join(temp_path, 'bad_guild_table.csv')
         with open(bad_guild_table_path, 'w') as bad_guild_table:
@@ -315,17 +354,20 @@ class PollinationTests(unittest.TestCase):
 
         farm_shape_path = os.path.join(self.workspace_dir, 'point_farm.shp')
         # Create the point shapefile
-        srs = sampledata.SRS_WILLAMETTE
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+
         fields = {
-            'crop_type': 'string',
-            'half_sat': 'real',
-            'p_managed': 'real'}
+            'crop_type': ogr.OFTString,
+            'half_sat': ogr.OFTReal,
+            'p_managed': ogr.OFTReal}
         attrs = [
             {'crop_type': 'test', 'half_sat': 0.5, 'p_managed': 0.5}]
 
-        pygeoprocessing.testing.create_vector_on_disk(
-            point_geom, srs.projection, fields, attrs,
-            vector_format='ESRI Shapefile', filename=farm_shape_path)
+        pygeoprocessing.shapely_geometry_to_vector(
+            point_geom, farm_shape_path, projection_wkt, 'ESRI Shapefile',
+            fields=fields, attribute_list=attrs, ogr_geom_type=ogr.wkbPoint)
 
         args = {
             'results_suffix': '',
@@ -394,7 +436,7 @@ class PollinationTests(unittest.TestCase):
     def _test_same_files(base_file_list, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
 
-        Parameters:
+        Args:
             base_file_list (list): a list of relative file paths.
             directory_path (string): a path to a directory whose contents will
                 be checked against the files listed in `base_list_file`

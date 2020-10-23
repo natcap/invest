@@ -210,7 +210,7 @@ def execute(args):
     This model will take a landcover (crop cover?), N, P, and K map and
     produce modeled yields, and a nutrient table.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
@@ -319,7 +319,7 @@ def execute(args):
     wgs84srs.ImportFromEPSG(4326)  # EPSG4326 is WGS84 lat/lng
     landcover_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
         landcover_raster_info['bounding_box'],
-        landcover_raster_info['projection'], wgs84srs.ExportToWkt(),
+        landcover_raster_info['projection_wkt'], wgs84srs.ExportToWkt(),
         edge_samples=11)
 
     crop_lucode = None
@@ -354,8 +354,7 @@ def execute(args):
             args['model_data_path'], _REGRESSION_TABLE_PATTERN % crop_name)
 
         crop_regression_table = utils.build_lookup_from_csv(
-            crop_regression_table_path, 'climate_bin',
-            to_lower=True, warn_if_missing=False)
+            crop_regression_table_path, 'climate_bin', to_lower=True)
         for bin_id in crop_regression_table:
             for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 if crop_regression_table[bin_id][header.lower()] == '':
@@ -365,6 +364,10 @@ def execute(args):
             x for x in list(crop_regression_table.values())[0]
             if x != 'climate_bin']
 
+        reclassify_error_details = {
+            'raster_name': f'{crop_name} Climate Bin',
+            'column_name': 'climate_bin',
+            'table_name': f'Climate {crop_name} Regression Yield'}
         regression_parameter_raster_path_lookup = {}
         for yield_regression_id in yield_regression_headers:
             # there are extra headers in that table
@@ -387,11 +390,12 @@ def execute(args):
                 _COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN % (
                     crop_name, yield_regression_id, file_suffix))
             create_coarse_regression_parameter_task = task_graph.add_task(
-                func=pygeoprocessing.reclassify_raster,
+                func=utils.reclassify_raster,
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_regression_value,
-                      coarse_regression_parameter_raster_path, gdal.GDT_Float32,
-                      _NODATA_YIELD),
+                      coarse_regression_parameter_raster_path,
+                      gdal.GDT_Float32, _NODATA_YIELD,
+                      reclassify_error_details),
                 target_path_list=[coarse_regression_parameter_raster_path],
                 dependent_task_list=[crop_climate_bin_task],
                 task_name='create_coarse_regression_parameter_%s_%s' % (
@@ -407,7 +411,7 @@ def execute(args):
                       landcover_raster_info['pixel_size'],
                       regression_parameter_raster_path_lookup[yield_regression_id],
                       'cubicspline'),
-                kwargs={'target_sr_wkt': landcover_raster_info['projection'],
+                kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
                         'target_bb': landcover_raster_info['bounding_box']},
                 target_path_list=[
                     regression_parameter_raster_path_lookup[yield_regression_id]],
@@ -541,7 +545,7 @@ def execute(args):
             args=(zeroed_observed_yield_raster_path,
                   landcover_raster_info['pixel_size'],
                   interpolated_observed_yield_raster_path, 'cubicspline'),
-            kwargs={'target_sr_wkt': landcover_raster_info['projection'],
+            kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
                     'target_bb': landcover_raster_info['bounding_box']},
             target_path_list=[interpolated_observed_yield_raster_path],
             dependent_task_list=[nodata_to_zero_for_observed_yield_task],
@@ -573,7 +577,7 @@ def execute(args):
     LOGGER.info("Generating report table")
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
-    tabulate_results_task = task_graph.add_task(
+    _ = task_graph.add_task(
         func=tabulate_regression_results,
         args=(nutrient_table,
               crop_to_landcover_table, pixel_area_ha,
@@ -591,11 +595,11 @@ def execute(args):
             output_dir, _AGGREGATE_VECTOR_FILE_PATTERN % (file_suffix))
         aggregate_results_table_path = os.path.join(
             output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
-        aggregate_results_task = task_graph.add_task(
+        _ = task_graph.add_task(
             func=aggregate_regression_results_to_polygons,
             args=(args['aggregate_polygon_path'],
                   target_aggregate_vector_path,
-                  landcover_raster_info['projection'],
+                  landcover_raster_info['projection_wkt'],
                   crop_to_landcover_table, nutrient_table,
                   output_dir, file_suffix,
                   aggregate_results_table_path),
@@ -613,18 +617,18 @@ def _x_yield_op(
     """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC)).
 
     The regression model has identical mathematical equations for
-    the nitrogen, phosporous, and potassium.  The only difference is
-    the scalars in the equation (fertizlization rate and pixel area).
+    the nitrogen, phosphorous, and potassium.  The only difference is
+    the scalars in the equation (fertilization rate and pixel area).
     """
     result = numpy.empty(b_x.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
     valid_mask = (
         (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
         (lulc_array == crop_lucode))
-    result[valid_mask] = y_max[valid_mask] * (
+    result[valid_mask] = pixel_area_ha * y_max[valid_mask] * (
         1 - b_x[valid_mask] * numpy.exp(
-            -c_x[valid_mask] * fert_rate) *
-        pixel_area_ha)
+            -c_x[valid_mask] * fert_rate))
+
     return result
 
 
@@ -645,7 +649,7 @@ def _min_op(y_n, y_p, y_k):
 def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     """Reclassify observed_yield nodata to zero.
 
-    Parameters:
+    Args:
         observed_yield_array (numpy.ndarray): raster values
         observed_yield_nodata (float): raster nodata value
 
@@ -656,7 +660,10 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result = numpy.empty(
         observed_yield_array.shape, dtype=numpy.float32)
     result[:] = 0.0
-    valid_mask = ~numpy.isclose(observed_yield_array, observed_yield_nodata)
+    valid_mask = slice(None)
+    if observed_yield_nodata is not None:
+        valid_mask = ~numpy.isclose(
+            observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
 
@@ -666,7 +673,7 @@ def _mask_observed_yield_op(
         landcover_nodata, crop_lucode, pixel_area_ha):
     """Mask total observed yield to crop lulc type.
 
-    Parameters:
+    Args:
         lulc_array (numpy.ndarray): landcover raster values
         observed_yield_array (numpy.ndarray): yield raster values
         observed_yield_nodata (float): yield raster nodata value
@@ -699,7 +706,7 @@ def tabulate_regression_results(
 
     This function includes all the operations that write to results_table.csv.
 
-    Parameters:
+    Args:
         nutrient_table (dict): a lookup of nutrient values by crop in the
             form of nutrient_table[<crop>][<nutrient>].
         crop_to_landcover_table (dict): landcover codes keyed by crop names
@@ -707,7 +714,7 @@ def tabulate_regression_results(
         landcover_raster_path (string): path to landcover raster
         landcover_nodata (float): landcover raster nodata value
         output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to appened to any output filenames.
+        file_suffix (string): string to append to any output filenames.
         target_table_path (string): path to 'result_table.csv' in the output
             workspace
 
@@ -733,17 +740,22 @@ def tabulate_regression_results(
                 _OBSERVED_PRODUCTION_FILE_PATTERN % (
                     crop_name, file_suffix))
 
-            LOGGER.info("Calculating production area and summing observed yield.")
+            LOGGER.info(
+                "Calculating production area and summing observed yield.")
             observed_yield_nodata = pygeoprocessing.get_raster_info(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
                     (observed_production_raster_path, 1)):
+
+                # make a valid mask showing which pixels are not nodata
+                # if nodata value undefined, assume all pixels are valid
+                valid_mask = slice(None)
+                if observed_yield_nodata is not None:
+                    valid_mask = ~numpy.isclose(
+                        yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
-                    ~numpy.isclose(yield_block, observed_yield_nodata) &
-                    (yield_block > 0.0))
-                yield_sum += numpy.sum(
-                    yield_block[
-                        ~numpy.isclose(observed_yield_nodata, yield_block)])
+                                          valid_mask & (yield_block > 0.0))
+                yield_sum += numpy.sum(yield_block[valid_mask])
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
             result_table.write(',%f' % production_area)
@@ -756,6 +768,7 @@ def tabulate_regression_results(
             for _, yield_block in pygeoprocessing.iterblocks(
                     (crop_production_raster_path, 1)):
                 yield_sum += numpy.sum(
+                    # _NODATA_YIELD will always have a value (defined above)
                     yield_block[~numpy.isclose(yield_block, _NODATA_YIELD)])
             production_lookup['modeled'] = yield_sum
             result_table.write(",%f" % yield_sum)
@@ -800,7 +813,7 @@ def aggregate_regression_results_to_polygons(
     production and nutrient information for each polygon in
     base_aggregate_vector_path.
 
-    Parameters:
+    Args:
         base_aggregate_vector_path (string): path to polygon vector
         target_aggregate_vector_path (string):
             path to re-projected copy of polygon vector
@@ -809,7 +822,7 @@ def aggregate_regression_results_to_polygons(
         nutrient_table (dict): a lookup of nutrient values by crop in the
             form of nutrient_table[<crop>][<nutrient>].
         output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to appened to any output filenames.
+        file_suffix (string): string to append to any output filenames.
         target_aggregate_table_path (string): path to 'aggregate_results.csv'
             in the output workspace
 
@@ -904,7 +917,7 @@ def aggregate_regression_results_to_polygons(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

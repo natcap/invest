@@ -2,12 +2,11 @@
 import os
 import shutil
 import tempfile
-import re
 import unittest
 
 import numpy
-from osgeo import gdal, ogr, osr
-import pygeoprocessing.testing
+import pandas
+from osgeo import ogr, osr
 import pygeoprocessing
 from shapely.geometry import Point, LineString
 
@@ -23,7 +22,7 @@ EPSG_CODE = 26910
 def _make_simple_vector(target_vector_path, projected=True):
     """Make a 10x10 ogr rectangular geometry shapefile.
 
-    Parameters:
+    Args:
         target_vector_path (str): path to the output shapefile.
 
         projected (bool): if true, define projection information for the vector
@@ -69,9 +68,9 @@ def _make_simple_vector(target_vector_path, projected=True):
 
 
 def _make_rating_vector(target_vector_path):
-    """Make a 10x10 ogr rectangular geometry shapefile with `rating` field.
+    """Make a 10x10 ogr rectangular geometry shapefile with ``rating`` field.
 
-    Parameters:
+    Args:
         target_vector_path (str): path to the output shapefile.
 
     Returns:
@@ -119,15 +118,15 @@ def _make_rating_vector(target_vector_path):
 
 
 def _make_aoi_vector(target_vector_path, projected=True, subregion_field=True):
-    """Make a 20x20 ogr rectangular geometry shapefile with `rating` field.
+    """Make a 20x20 ogr rectangular geometry shapefile with ``rating`` field.
 
-    Parameters:
+    Args:
         target_vector_path (str): path to the output shapefile.
 
         projected (bool): if true, define projection information for the vector
             based on an ESPG code.
 
-        subregion_field (bool): if true, create a field called `name` in the
+        subregion_field (bool): if true, create a field called ``name`` in the
             layer, which represents subregions.
 
     Returns:
@@ -143,7 +142,7 @@ def _make_aoi_vector(target_vector_path, projected=True, subregion_field=True):
         srs.ImportFromEPSG(EPSG_CODE)  # Spatial reference UTM Zone 10N
     layer = vector.CreateLayer('layer', srs, ogr.wkbPolygon)
 
-    # Use `name` as field name to represent subregion field
+    # Use ``name`` as field name to represent subregion field
     field_name = 'name' if subregion_field else 'random'
 
     field = ogr.FieldDefn(field_name)
@@ -179,7 +178,7 @@ def _make_aoi_vector(target_vector_path, projected=True, subregion_field=True):
 def _make_raster_from_array(base_array, target_raster_path, projected=True):
     """Make a raster from an array on a designated path.
 
-    Parameters:
+    Args:
         array (numpy.ndarray): the 2D array for making the raster.
 
         raster_path (str): path to the output raster.
@@ -196,13 +195,8 @@ def _make_raster_from_array(base_array, target_raster_path, projected=True):
         srs.ImportFromEPSG(EPSG_CODE)  # UTM Zone 10N, unit = meter
     project_wkt = srs.ExportToWkt()
 
-    pygeoprocessing.testing.create_raster_on_disk(
-        band_matrices=[base_array],
-        origin=ORIGIN,
-        projection_wkt=project_wkt,
-        nodata=-1,
-        pixel_size=(1, -1),
-        filename=target_raster_path)
+    pygeoprocessing.numpy_array_to_raster(
+        base_array, -1, (1, -1), ORIGIN, project_wkt, target_raster_path)
 
 
 def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
@@ -210,7 +204,7 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
                    projected=True, rel_path=False):
     """Make a synthesized information csv on the designated path.
 
-    Parameters:
+    Args:
         info_table_path (str): path to the csv with information on habitats and
             stressors.
 
@@ -218,8 +212,8 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
 
         missing_columns (bool): if true, write wrong column headers to the CSV.
 
-        wrong_layer_type (bool): if true, write a type different from `habitat` or
-            `stressor`.
+        wrong_layer_type (bool): if true, write a type different from
+            ``habitat`` or ``stressor``.
 
         wrong_buffer_value (bool): if true, write a string to the buffer column
 
@@ -283,7 +277,8 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
             if projected:
                 _make_raster_from_array(array, abs_raster_path, projected=True)
             else:
-                _make_raster_from_array(array, abs_raster_path, projected=False)
+                _make_raster_from_array(
+                    array, abs_raster_path, projected=False)
 
             if rel_path:
                 rel_raster_path = os.path.relpath(
@@ -311,7 +306,7 @@ def _make_criteria_csv(
         rel_path=False):
     """Make a synthesized information CSV on the designated path.
 
-    Parameters:
+    Args:
 
         info_table_path (str): path to the CSV or Excel file with information
             on habitats and stressors.
@@ -322,15 +317,15 @@ def _make_criteria_csv(
         missing_criteria (bool): if true, let stressor_1 only have C criteria
             so that E criteria is missing.
 
-        missing_index (bool): if true, remove `HABITAT NAME` and `HABITAT
-            STRESSOR OVERLAP PROPERTIES` from the CSV file.
+        missing_index (bool): if true, remove ``HABITAT NAME`` and ``HABITAT
+            STRESSOR OVERLAP PROPERTIES`` from the CSV file.
 
-        missing_layer_names (bool): if true, rename `habitat_0` to `habitat`
-            and `stressor_1` to `stressor` to cause unmatched names between
-            criteria and info CSVs.
+        missing_layer_names (bool): if true, rename ``habitat_0`` to
+            ``habitat`` and ``stressor_1`` to ``stressor`` to cause unmatched
+            names between criteria and info CSVs.
 
         missing_criteria_header (bool): if true, remove the column header
-            `CRITERIA TYPE` from the CSV file.
+            ``CRITERIA TYPE`` from the CSV file.
 
         unknown_criteria (bool): if true, add a criteria row that belongs to
             no stressors.
@@ -380,15 +375,17 @@ def _make_criteria_csv(
         if rel_path:
             rel_rating_raster_path = os.path.relpath(
                 abs_rating_raster_path, workspace_dir)
-            table.write('"criteria 1",'+rel_rating_raster_path+',2,2,3,2,2,C\n')
+            table.write(
+                '"criteria 1",'+rel_rating_raster_path+',2,2,3,2,2,C\n')
         else:
-            table.write('"criteria 1",'+abs_rating_raster_path+',2,2,3,2,2,C\n')
+            table.write(
+                '"criteria 1",'+abs_rating_raster_path+',2,2,3,2,2,C\n')
         table.write('"criteria 2",0,2,2,1,2,2,C\n')
 
         if missing_index:
-            table.write('missing index\n')
+            table.write('missing index,,,,,,,\n')
         else:
-            table.write('HABITAT STRESSOR OVERLAP PROPERTIES\n')
+            table.write('HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,\n')
 
         if unknown_criteria:
             table.write('"extra criteria",1,2,2,0,2,2,E\n')
@@ -397,9 +394,11 @@ def _make_criteria_csv(
         if rel_path:
             rel_rating_vector_path = os.path.relpath(
                 abs_rating_vector_path, workspace_dir)
-            table.write('"criteria 3",2,2,2,'+rel_rating_vector_path+',2,2,C\n')
+            table.write(
+                '"criteria 3",2,2,2,'+rel_rating_vector_path+',2,2,C\n')
         else:
-            table.write('"criteria 3",2,2,2,'+abs_rating_vector_path+',2,2,C\n')
+            table.write(
+                '"criteria 3",2,2,2,'+abs_rating_vector_path+',2,2,C\n')
         table.write('"criteria 4",1,2,2,0,2,2,E\n')
 
         if missing_layer_names:
@@ -428,7 +427,7 @@ class HraUnitTests(unittest.TestCase):
     """Unit tests for the Wind Energy module."""
 
     def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
+        """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
@@ -439,7 +438,8 @@ class HraUnitTests(unittest.TestCase):
 
     def test_missing_criteria_header(self):
         """HRA: exception raised when missing criteria from criteria CSV."""
-        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe
+        from natcap.invest.hra import _get_overlap_dataframe
 
         # Create a criteria CSV that misses a criteria type
         bad_criteria_table_path = os.path.join(
@@ -461,7 +461,8 @@ class HraUnitTests(unittest.TestCase):
 
     def test_unknown_criteria_from_criteria_csv(self):
         """HRA: exception raised with unknown criteria from criteria CSV."""
-        from natcap.invest.hra import _get_criteria_dataframe, _get_attributes_from_df
+        from natcap.invest.hra import _get_criteria_dataframe
+        from natcap.invest.hra import _get_attributes_from_df
 
         # Create a criteria CSV that has a criteria row that shows up before
         # any stressors
@@ -480,7 +481,7 @@ class HraUnitTests(unittest.TestCase):
         self.assertTrue(expected_message in actual_message, actual_message)
 
     def test_missing_index_from_criteria_csv(self):
-        """HRA: correct error message when missing indexes from criteria CSV."""
+        """HRA: correct error msg when missing indexes from criteria CSV."""
         from natcap.invest.hra import _get_criteria_dataframe
 
         # Use a criteria CSV that misses two indexes
@@ -500,7 +501,7 @@ class HraUnitTests(unittest.TestCase):
             expected_message in actual_message, actual_message)
 
     def test_missing_criteria_header_from_criteria_csv(self):
-        """HRA: correct error message when missing indexes from criteria CSV."""
+        """HRA: correct error msg when missing indexes from criteria CSV."""
         from natcap.invest.hra import _get_criteria_dataframe
 
         # Use a criteria CSV that misses two indexes
@@ -536,8 +537,9 @@ class HraUnitTests(unittest.TestCase):
         copied_criteria_excel_path = os.path.join(
             self.workspace_dir, 'criteria_excel.xlsx')
         shutil.copyfile(criteria_excel_path, copied_criteria_excel_path)
-        out_df = _get_criteria_dataframe(copied_criteria_excel_path).astype(str)
-
+        out_df = _get_criteria_dataframe(
+                    copied_criteria_excel_path).astype(str)
+        
         self.assertTrue(
             out_df.equals(expected_df),
             'The dataframes from criteria CSV and excel files are different.')
@@ -634,7 +636,8 @@ class HraUnitTests(unittest.TestCase):
 
     def test_wrong_criteria_type_type(self):
         """HRA: exception raised when type is not C or E from criteria CSV."""
-        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe
+        from natcap.invest.hra import _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
         bad_criteria_table_path = os.path.join(
@@ -657,7 +660,8 @@ class HraUnitTests(unittest.TestCase):
 
     def test_wrong_weight_from_criteria_csv(self):
         """HRA: exception raised when weight is not a number from CSV."""
-        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe
+        from natcap.invest.hra import _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
         bad_criteria_table_path = os.path.join(
@@ -680,7 +684,8 @@ class HraUnitTests(unittest.TestCase):
 
     def test_large_rating_from_criteria_csv(self):
         """HRA: exception raised when rating is larger than maximum rating."""
-        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe
+        from natcap.invest.hra import _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
         bad_criteria_table_path = os.path.join(
@@ -711,9 +716,28 @@ class HraUnitTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
+    def test_to_abspath_change_separators(self):
+        """HRA: should replace backslashes with forward slashes on posix"""
+        from natcap.invest.hra import _to_abspath
+
+        relative_path = 'folder\\file.txt'
+        dir_path = self.workspace_dir
+        # separators are not changed on windows
+        if os.name == 'posix':
+            expected_path = os.path.join(dir_path, 'folder/file.txt')
+        else:
+            expected_path = os.path.join(dir_path, relative_path)
+        # create the file
+        os.mkdir(os.path.join(dir_path, 'folder'))
+        with open(expected_path, 'w') as file:
+            file.write('text')
+        # _to_abspath should find the file and return the modified path
+        self.assertEqual(_to_abspath(relative_path, dir_path), expected_path)
+
     def test_simplify_geometry(self):
         """HRA: test _simplify_geometry function."""
         from natcap.invest.hra import _simplify_geometry
+        from natcap.invest.utils import _assert_vectors_equal
 
         complicated_vector_path = os.path.join(
             TEST_DATA, 'complicated_vector.gpkg')
@@ -728,21 +752,23 @@ class HraUnitTests(unittest.TestCase):
         _simplify_geometry(
             complicated_vector_path, tolerance, target_simplified_vector_path)
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        _assert_vectors_equal(
             target_simplified_vector_path, expected_simplified_vector_path,
             1E-6)
 
     def test_simplify_geometry_points(self):
-        """HRA: test _simplify_geometry does not alter geometry given points."""
+        """HRA: test _simplify_geometry does not alter point geometries."""
         from natcap.invest.hra import _simplify_geometry
+        from natcap.invest.utils import _assert_vectors_equal
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(EPSG_CODE)
+        projection_wkt = srs.ExportToWkt()
         base_points_path = os.path.join(self.workspace_dir, 'base_points.gpkg')
         points = [Point(0.0, 0.0), Point(10.0, 10.0)]
-        pygeoprocessing.testing.sampledata.create_vector_on_disk(
-            points, srs.ExportToWkt(),
-            filename=base_points_path, vector_format='GPKG')
+        pygeoprocessing.shapely_geometry_to_vector(
+            points, base_points_path, projection_wkt, 'GPKG',
+            ogr_geom_type=ogr.wkbPoint)
 
         target_simplified_vector_path = os.path.join(
             self.workspace_dir, 'simplified_vector.gpkg')
@@ -751,21 +777,22 @@ class HraUnitTests(unittest.TestCase):
         _simplify_geometry(
             base_points_path, tolerance, target_simplified_vector_path)
 
-        pygeoprocessing.testing.assert_vectors_equal(
-            target_simplified_vector_path, base_points_path,
-            1E-6)
+        _assert_vectors_equal(
+            target_simplified_vector_path, base_points_path)
 
     def test_simplify_geometry_lines(self):
         """HRA: test _simplify_geometry does not alter geometry given lines."""
         from natcap.invest.hra import _simplify_geometry
+        from natcap.invest.utils import _assert_vectors_equal
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(EPSG_CODE)
+        projection_wkt = srs.ExportToWkt()
         base_lines_path = os.path.join(self.workspace_dir, 'base_lines.gpkg')
         lines = [LineString([(0.0, 0.0), (10.0, 10.0)])]
-        pygeoprocessing.testing.sampledata.create_vector_on_disk(
-            lines, srs.ExportToWkt(),
-            filename=base_lines_path, vector_format='GPKG')
+        pygeoprocessing.shapely_geometry_to_vector(
+            lines, base_lines_path, projection_wkt, 'GPKG',
+            ogr_geom_type=ogr.wkbLineString)
 
         target_simplified_vector_path = os.path.join(
             self.workspace_dir, 'simplified_vector.gpkg')
@@ -774,9 +801,8 @@ class HraUnitTests(unittest.TestCase):
         _simplify_geometry(
             base_lines_path, tolerance, target_simplified_vector_path)
 
-        pygeoprocessing.testing.assert_vectors_equal(
-            target_simplified_vector_path, base_lines_path,
-            1E-6)
+        _assert_vectors_equal(
+            target_simplified_vector_path, base_lines_path)
 
 
 class HraRegressionTests(unittest.TestCase):
@@ -794,7 +820,7 @@ class HraRegressionTests(unittest.TestCase):
 
     @staticmethod
     def generate_base_args(workspace_dir):
-        """Generate args dict that is consistent across all regression tests."""
+        """Generate args dict that's consistent across all regression tests."""
         args = {
             'workspace_dir': workspace_dir,
             'results_suffix': '',
@@ -812,8 +838,9 @@ class HraRegressionTests(unittest.TestCase):
         return args
 
     def test_hra_regression_euclidean_linear(self):
-        """HRA: regression testing synthetic data with linear, euclidean eqn."""
+        """HRA: regression testing synthetic data w/ linear, euclidean eqn."""
         import natcap.invest.hra
+        from natcap.invest.utils import _assert_vectors_equal
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         # Also test on GeoJSON outputs for visualization
@@ -824,7 +851,7 @@ class HraRegressionTests(unittest.TestCase):
             args['info_table_path'], args['workspace_dir'], rel_path=True)
         _make_criteria_csv(args['criteria_table_path'], args['workspace_dir'])
         _make_aoi_vector(args['aoi_vector_path'])
-        args['n_workers'] = ''  # tests empty string for `n_workers`
+        args['n_workers'] = ''  # tests empty string for ``n_workers``
 
         natcap.invest.hra.execute(args)
 
@@ -840,7 +867,8 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert rasters are equal
         output_raster_paths = [
-            os.path.join(args['workspace_dir'], 'outputs', raster_name + '.tif')
+            os.path.join(
+                args['workspace_dir'], 'outputs', raster_name + '.tif')
             for raster_name in output_rasters]
         expected_raster_paths = [os.path.join(
             TEST_DATA, raster_name + '_euc_lin.tif') for raster_name in
@@ -855,8 +883,9 @@ class HraRegressionTests(unittest.TestCase):
 
         for output_raster, expected_raster in zip(
                 output_raster_paths, expected_raster_paths):
-            pygeoprocessing.testing.assert_rasters_equal(
-                output_raster, expected_raster)
+            model_array = pygeoprocessing.raster_to_numpy_array(output_raster)
+            reg_array = pygeoprocessing.raster_to_numpy_array(expected_raster)
+            numpy.testing.assert_allclose(model_array, reg_array)
 
         # Assert GeoJSON vectors are equal
         output_vector_paths = [os.path.join(
@@ -868,16 +897,17 @@ class HraRegressionTests(unittest.TestCase):
 
         for output_vector, expected_vector in zip(
                 output_vector_paths, expected_vector_paths):
-            HraRegressionTests._assert_vectors_equal(
-                output_vector, expected_vector, precision=6)
+            _assert_vectors_equal(
+                output_vector, expected_vector, field_value_atol=1e-6)
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
             args['workspace_dir'], 'outputs', 'SUMMARY_STATISTICS.csv')
         expected_csv_path = os.path.join(
             TEST_DATA, 'SUMMARY_STATISTICS_euc_lin.csv')
-        pygeoprocessing.testing.assert_csv_equal(
-            output_csv_path, expected_csv_path, rel_tol=1E-6)
+        model_df = pandas.read_csv(output_csv_path)
+        reg_df = pandas.read_csv(expected_csv_path)
+        pandas.testing.assert_frame_equal(model_df, reg_df)
 
     def test_hra_no_subregion_multiplicative_exponential(self):
         """HRA: regression testing with exponential, multiplicative eqn."""
@@ -893,7 +923,7 @@ class HraRegressionTests(unittest.TestCase):
 
         aoi_vector_path = os.path.join(
             self.workspace_dir, 'no_subregion_aoi.shp')
-        # Test if `Total Region` gets written in output stats CSV
+        # Test if ``Total Region`` gets written in output stats CSV
         _make_aoi_vector(aoi_vector_path, subregion_field=False)
         args['aoi_vector_path'] = aoi_vector_path
 
@@ -921,16 +951,18 @@ class HraRegressionTests(unittest.TestCase):
 
         for output_raster, expected_raster in zip(
                 output_raster_paths, expected_raster_paths):
-            pygeoprocessing.testing.assert_rasters_equal(
-                output_raster, expected_raster)
+            model_array = pygeoprocessing.raster_to_numpy_array(output_raster)
+            reg_array = pygeoprocessing.raster_to_numpy_array(expected_raster)
+            numpy.testing.assert_allclose(model_array, reg_array)
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
             self.workspace_dir, 'outputs', 'SUMMARY_STATISTICS.csv')
         expected_csv_path = os.path.join(
             TEST_DATA, 'SUMMARY_STATISTICS_mul_exp.csv')
-        pygeoprocessing.testing.assert_csv_equal(
-            output_csv_path, expected_csv_path, rel_tol=1E-6)
+        model_df = pandas.read_csv(output_csv_path)
+        reg_df = pandas.read_csv(expected_csv_path)
+        pandas.testing.assert_frame_equal(model_df, reg_df)
 
     def test_aoi_no_projection(self):
         """HRA: testing AOI vector without projection."""
@@ -953,8 +985,8 @@ class HraRegressionTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
-    def test_layer_no_projection(self):
-        """HRA: testing habitats and stressors without projection."""
+    def test_layer_without_spatial_ref(self):
+        """HRA: test habitats and stressors w/out spatial references."""
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
@@ -963,13 +995,56 @@ class HraRegressionTests(unittest.TestCase):
 
         # Make unprojected files and write their filepaths to info csv.
         bad_info_table_path = os.path.join(self.workspace_dir, 'bad_info.csv')
-        _make_info_csv(bad_info_table_path, self.workspace_dir, projected=False)
+        _make_info_csv(
+            bad_info_table_path, self.workspace_dir, projected=False)
         args['info_table_path'] = bad_info_table_path
 
         with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
 
-        expected_message = 'The following layer does not have a projection'
+        expected_message = "The following layer does not have a spatial"
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
+
+    def test_non_projected_layers(self):
+        """HRA: test habitat and stressor layers that are not projected."""
+        import natcap.invest.hra
+
+        args = HraRegressionTests.generate_base_args(self.workspace_dir)
+        _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
+        _make_aoi_vector(args['aoi_vector_path'])
+
+        # Make projected files and write their filepaths to info csv.
+        info_table_path = os.path.join(self.workspace_dir, 'info.csv')
+        _make_info_csv(
+            info_table_path, self.workspace_dir, projected=True,
+            rel_path=False)
+
+        # create geographic spatial reference
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        wgs84_wkt = wgs84_srs.ExportToWkt()
+        # move created habitat vector to a sub directory so the reprojected
+        # file can be saved where the csv PATH expects it
+        tmp_out = os.path.join(self.workspace_dir, 'tmp_move')
+        os.mkdir(tmp_out)
+        for filename in os.listdir(self.workspace_dir):
+            if filename.startswith("habitat_0"):
+                shutil.move(
+                    os.path.join(self.workspace_dir, filename),
+                    os.path.join(tmp_out, filename))
+        habitat_path = os.path.join(tmp_out, 'habitat_0.shp')
+        habitat_wgs84_path = os.path.join(self.workspace_dir, 'habitat_0.shp')
+        # reproject habitat layer to geographic
+        pygeoprocessing.reproject_vector(
+            habitat_path, wgs84_wkt, habitat_wgs84_path)
+
+        args['info_table_path'] = info_table_path
+
+        with self.assertRaises(ValueError) as cm:
+            natcap.invest.hra.execute(args)
+
+        expected_message = "The following layer does not have a spatial"
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
@@ -1052,7 +1127,7 @@ class HraRegressionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
-        self.assertEquals(len(cm.exception.args), 1)
+        self.assertEqual(len(cm.exception.args), 1)
 
     def test_validate(self):
         """HRA: testing validation."""
@@ -1079,7 +1154,7 @@ class HraRegressionTests(unittest.TestCase):
         self.assertTrue(expected_error in validation_error_list)
 
     def test_validate_negative_resolution(self):
-        """HRA: testing validation with negative value in resolution in args."""
+        """HRA: testing validation w/ negative value in resolution in args."""
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
@@ -1089,56 +1164,3 @@ class HraRegressionTests(unittest.TestCase):
         expected_error = (['resolution'],
                           'Value does not meet condition value > 0')
         self.assertTrue(expected_error in validation_error_list)
-
-    @staticmethod
-    def _assert_vectors_equal(a_vector_path, b_vector_path, precision=6):
-        """Assert that geometries in two vectors are equal, order-insensitive.
-
-        Parameters:
-            a_vector_path (str): a path to a valid OGR vector.
-            b_vector_path (str): a path to a valid OGR vector.
-
-        Returns:
-            None.
-
-        Raises:
-            AssertionError when the two point geometries are not equal up to
-                desired precision (default is 1E-6).
-
-        """
-        a_vector = gdal.OpenEx(a_vector_path, gdal.OF_VECTOR)
-        a_layer = a_vector.GetLayer(0)
-        a_feat = a_layer.GetNextFeature()
-
-        b_vector = gdal.OpenEx(b_vector_path, gdal.OF_VECTOR)
-        b_layer = b_vector.GetLayer(0)
-        b_feat = b_layer.GetNextFeature()
-
-        while a_feat is not None:
-            # Get coordinates from geometry and store them in a list
-            a_geom = a_feat.GetGeometryRef()
-            a_geom_list = re.findall(r'\d+\.\d+', a_geom.ExportToWkt())
-            a_geom_list = [float(x) for x in a_geom_list]
-
-            b_geom = b_feat.GetGeometryRef()
-            b_geom_list = re.findall(r'\d+\.\d+', b_geom.ExportToWkt())
-            b_geom_list = [float(x) for x in b_geom_list]
-
-            try:
-                numpy.testing.assert_array_almost_equal(
-                    a_geom_list, b_geom_list, decimal=precision)
-            except AssertionError:
-                a_feature_fid = a_feat.GetFID()
-                b_feature_fid = b_feat.GetFID()
-                raise AssertionError('Geometries are not equal in feature %s, '
-                                     'regression feature %s in layer 0' %
-                                     (a_feature_fid, b_feature_fid))
-            a_feat = None
-            b_feat = None
-            a_feat = a_layer.GetNextFeature()
-            b_feat = b_layer.GetNextFeature()
-
-        a_layer = None
-        b_layer = None
-        a_vector = None
-        b_vector = None

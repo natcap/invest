@@ -49,6 +49,7 @@ setup(
         'natcap',
         'natcap.invest',
         'natcap.invest.coastal_blue_carbon',
+        'natcap.invest.delineateit',
         'natcap.invest.finfish_aquaculture',
         'natcap.invest.fisheries',
         'natcap.invest.hydropower',
@@ -69,6 +70,7 @@ setup(
     install_requires=_REQUIREMENTS,
     setup_requires=['setuptools_scm', 'numpy', 'cython'],
     license='BSD',
+    long_description_content_type='text/x-rst',
     zip_safe=False,
     keywords='gis invest',
     classifiers=[
@@ -80,13 +82,20 @@ setup(
         'Operating System :: Microsoft',
         'Operating System :: POSIX',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Programming Language :: Cython',
         'License :: OSI Approved :: BSD License',
         'Topic :: Scientific/Engineering :: GIS'
     ],
     ext_modules=[
+        Extension(
+            name="natcap.invest.delineateit.delineateit_core",
+            sources=['src/natcap/invest/delineateit/delineateit_core.pyx'],
+            include_dirs=[numpy.get_include()],
+            extra_compile_args=compiler_and_linker_args,
+            extra_link_args=compiler_and_linker_args,
+            language="c++"),
         Extension(
             name="natcap.invest.recreation.out_of_core_quadtree",
             sources=[

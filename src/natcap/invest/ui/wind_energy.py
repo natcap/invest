@@ -11,8 +11,7 @@ class WindEnergy(model.InVESTModel):
             label='Wind Energy',
             target=wind_energy.execute,
             validator=wind_energy.validate,
-            localdoc='wind_energy.html',
-            suffix_args_key='suffix'
+            localdoc='wind_energy.html'
         )
 
         self.wind_data = inputs.File(

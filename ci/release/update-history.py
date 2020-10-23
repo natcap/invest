@@ -55,12 +55,12 @@ def note_release_section(version, date_string):
 
     # If we can't find the Unreleased Changes section and this script is
     # running within a GitHub Actions run, that means that some commits were
-    # merged into Master since the last release but HISTORY.rst was not
+    # merged into main since the last release but HISTORY.rst was not
     # updated.  This is an error state.
     if not unreleased_changes_section_found:
         raise ValueError(
             'Could not find the Unreleased Changes section of HISTORY. '
-            'This can happen when there are commits on master since the '
+            'This can happen when there are commits on main since the '
             'latest tag but there are no changes recorded in HISTORY. '
         )
 
