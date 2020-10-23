@@ -15,8 +15,14 @@ import Portal from '../Portal';
 import { getLogger } from '../../logger';
 
 const logger = getLogger(__filename.split('/').slice(-2).join('/'));
-//2020-10-16 07:13:04,325
-const INVEST_LOG_PATTERN = /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}/; 
+const INVEST_LOG_PATTERN = '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}';
+// e.g. '2020-10-16 07:13:04,325 carbon.execute() ...'
+
+const LOG_TEXT_TAG = 'span';
+const ALLOWED_HTML_OPTIONS = {
+  allowedTags: [LOG_TEXT_TAG],
+  allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
+};
 
 class LogDisplay extends React.Component {
   constructor(props) {
@@ -44,6 +50,24 @@ LogDisplay.propTypes = {
   logdata: PropTypes.string,
 };
 
+/**
+ * Encapsulate text in html, assigning class based on text content.
+ *
+ * @param  {string} line - plaintext string
+ * @param  {object} patterns - of shape {string: RegExp}
+ * @returns {string} - sanitized html
+ */
+function markupLine(line, patterns) {
+  // eslint-disable-next-line
+  for (const [cls, pattern] of Object.entries(patterns)) {
+    if (pattern.test(line)) {
+      const markup = `<${LOG_TEXT_TAG} class="${cls}">${line}</${LOG_TEXT_TAG}>`;
+      return sanitizeHtml(markup, ALLOWED_HTML_OPTIONS);
+    }
+  }
+  return sanitizeHtml(line, ALLOWED_HTML_OPTIONS);
+}
+
 export default class LogTab extends React.Component {
   constructor(props) {
     super(props);
@@ -51,6 +75,16 @@ export default class LogTab extends React.Component {
       logdata: null,
     };
     this.tail = null;
+    const { pyModuleName } = this.props;
+    const primaryPyLogger = `${pyModuleName}`.split('.').slice(-1)[0];
+    const primaryPattern = new RegExp(
+      `${INVEST_LOG_PATTERN} ${primaryPyLogger}`
+    );
+    this.logPatterns = {
+      'invest-log-error': /(Traceback)|(^\s*[A-Z]{1}[a-z]*Error)|(ERROR)|(^\s\s*)/,
+      'invest-log-primary': primaryPattern,
+    };
+
     this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
     this.tailLogfile = this.tailLogfile.bind(this);
     this.unwatchLogfile = this.unwatchLogfile.bind(this);
@@ -82,34 +116,16 @@ export default class LogTab extends React.Component {
   }
 
   tailLogfile(logfile) {
-    const primaryLogger = `${
-      this.props.pyModuleName
-    }`.split('.').slice(-1)[0];
     try {
       this.tail = new Tail(logfile, {
         fromBeginning: true,
       });
-      let logdata = Object.assign('', this.state.logdata);
+      let markup = Object.assign('', this.state.logdata);
       this.tail.on('line', (data) => {
-        const dataString = `${data}${os.EOL}`;
-        let markup;
-        if (INVEST_LOG_PATTERN.test(dataString)) {
-          if (dataString.includes(`${primaryLogger}.`)) {
-            markup = `<p class="invest-log-primary">${dataString}</p>`;
-          } else {
-            markup = dataString;
-          }
-        } else {
-          markup = `<p class="invest-log-error">${dataString}</p>`;
-        }
-        logdata += sanitizeHtml(markup, {
-          allowedTags: ['p'],
-          allowedAttributes: {
-            p: ['class']
-          },
-        });
-        // logdata += `${data}${os.EOL}`;
-        this.setState({ logdata: logdata });
+        console.log(`${data}`);
+        const line = `${data}${os.EOL}`;
+        markup += markupLine(line, this.logPatterns);
+        this.setState({ logdata: markup });
       });
       this.tail.on('error', (error) => {
         logger.error(error);
