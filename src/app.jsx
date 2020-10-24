@@ -96,30 +96,13 @@ export default class App extends React.Component {
 
   /** Push data for a new InvestJob component to an array.
    *
-   * When this is called to load a "recent job", optional argsValues, logfile,
-   * and jobStatus parameters will be defined, otherwise they can be undefined.
-   *
-   * @param  {string} modelRunName - invest model name to be passed to `invest run`
-   * @param  {string} modelHumanName - the colloquial name of the invest model
-   * @param  {object} argsValues - an invest "args dictionary" with initial values
-   * @param  {string} logfile - path to an existing invest logfile
-   * @param  {string} jobStatus - indicates how the job exited, if it's a recent job.
    */
-  openInvestModel(modelRunName, modelHumanName, argsValues, logfile, jobStatus) {
+  openInvestModel(job) {
     const navID = crypto.randomBytes(16).toString('hex');
+    Object.assign(job, { navID: navID });
     this.setState((state) => ({
-      openJobs: [
-        ...state.openJobs,
-        {
-          modelRunName: modelRunName,
-          modelHumanName: modelHumanName,
-          argsValues: argsValues,
-          logfile: logfile,
-          status: jobStatus,
-          navID: navID,
-        },
-      ],
-    }), () => this.switchTabs(navID));
+      openJobs: [...state.openJobs, job],
+    }), () => this.switchTabs(job.navID));
   }
 
   /**
@@ -156,7 +139,7 @@ export default class App extends React.Component {
   saveJob(jobData) {
     const jsonContent = JSON.stringify(jobData);
     const filepath = path.join(
-      fileRegistry.CACHE_DIR, `${jobData.jobID}.json`
+      fileRegistry.CACHE_DIR, `${jobData.workspaceHash}.json`
     );
     fs.writeFile(filepath, jsonContent, 'utf8', (err) => {
       if (err) {
@@ -165,7 +148,7 @@ export default class App extends React.Component {
       }
     });
     const jobMetadata = {};
-    jobMetadata[jobData.jobID] = {
+    jobMetadata[jobData.workspaceHash] = {
       model: jobData.modelHumanName,
       workspace: jobData.workspace,
       humanTime: new Date().toLocaleString(),

@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import crypto from 'crypto';
 import { spawn, exec } from 'child_process';
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -25,6 +24,7 @@ import {
 } from './utils';
 import { fileRegistry } from './constants';
 import { getLogger } from './logger';
+import Job from './Job';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -148,32 +148,24 @@ export default class InvestJob extends React.Component {
       modelRunName,
       modelHumanName,
       saveJob,
+      navID,
     } = this.props;
 
-    // If the same model, workspace, and suffix are executed, invest
-    // will overwrite the previous outputs. So our recent jobs
-    // catalogue should overwite as well, and that's assured by this
-    // non-unique jobID.
     const workspace = {
       directory: path.resolve(argsValues.workspace_dir),
       suffix: argsValues.results_suffix,
     };
-    const jobID = crypto.createHash('sha1').update(
-      `${modelRunName}${JSON.stringify(workspace)}`
-    ).digest('hex');
 
-    const job = {
-      jobID: jobID,
-      modelRunName: modelRunName,
-      modelHumanName: modelHumanName,
-      argsValues: argsValues,
-      workspace: workspace,
-      logfile: undefined,
-      status: 'running',
-    };
+    const job = new Job(
+      modelRunName,
+      modelHumanName,
+      argsValues,
+      workspace
+    );
 
     // Setting this very early in the click handler so the Execute button
     // can display an appropriate visual cue when it's clicked
+    job.status = 'running';
     this.setState({
       jobStatus: job.status,
     });
@@ -185,9 +177,8 @@ export default class InvestJob extends React.Component {
     const datastackPath = path.join(tempDir, 'datastack.json');
     await this.argsToJsonFile(datastackPath, job.argsValues);
 
-    const verbosity = LOGLEVELMAP[investSettings.loggingLevel];
     const cmdArgs = [
-      verbosity,
+      LOGLEVELMAP[investSettings.loggingLevel],
       'run',
       job.modelRunName,
       '--headless',
@@ -205,7 +196,7 @@ export default class InvestJob extends React.Component {
           process.kill(-this.investRun.pid, 'SIGTERM');
         }
       };
-    } else {  // windows
+    } else { // windows
       this.investRun = spawn(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
         shell: true,
@@ -226,11 +217,9 @@ export default class InvestJob extends React.Component {
         // TODO: handle case when job.logfile is still undefined?
         // Could be if some stdout is emitted before a logfile exists.
         logger.debug(`invest logging to: ${job.logfile}`);
-        // job.status = 'running';
         this.setState(
           {
             logfile: job.logfile,
-            // jobStatus: job.status,
           }, () => {
             this.switchTabs('log');
             saveJob(job);
@@ -408,4 +397,5 @@ InvestJob.propTypes = {
     loggingLevel: PropTypes.string,
   }).isRequired,
   saveJob: PropTypes.func.isRequired,
+  navID: PropTypes.string.isRequired,
 };
