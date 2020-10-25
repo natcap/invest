@@ -35,7 +35,6 @@ export default class App extends React.Component {
       recentJobs: [],
       investSettings: {},
     };
-    this.setRecentJobs = this.setRecentJobs.bind(this);
     this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
@@ -61,20 +60,6 @@ export default class App extends React.Component {
         nWorkers: '-1',
         loggingLevel: 'INFO',
       },
-    });
-  }
-
-  /** Update the recent jobs list when a new invest job was saved.
-   * This triggers on InvestJob.saveState().
-   *
-   * @param {object} jobdata - the metadata describing an invest job.
-   */
-  async setRecentJobs(jobdata) {
-    const recentJobs = await updateRecentJobs(
-      jobdata, this.props.jobDatabase
-    );
-    this.setState({
-      recentJobs: recentJobs,
     });
   }
 
@@ -134,28 +119,16 @@ export default class App extends React.Component {
 
   /** Save data describing an invest job to a persistent JSON file.
    *
-   * @param {object} jobData - data that can be passed to openInvestModel
+   * @param {object} job - data that can be passed to openInvestModel
    */
-  saveJob(jobData) {
-    const jsonContent = JSON.stringify(jobData);
-    const filepath = path.join(
-      fileRegistry.CACHE_DIR, `${jobData.workspaceHash}.json`
+  async saveJob(job) {
+    const jobMetadata = job.save();
+    const recentJobs = await updateRecentJobs(
+      jobMetadata, this.props.jobDatabase
     );
-    fs.writeFile(filepath, jsonContent, 'utf8', (err) => {
-      if (err) {
-        logger.error('An error occured while writing JSON Object to File.');
-        return logger.error(err.stack);
-      }
+    this.setState({
+      recentJobs: recentJobs,
     });
-    const jobMetadata = {};
-    jobMetadata[jobData.workspaceHash] = {
-      model: jobData.modelHumanName,
-      workspace: jobData.workspace,
-      humanTime: new Date().toLocaleString(),
-      systemTime: new Date().getTime(),
-      jobDataPath: filepath,
-    };
-    this.setRecentJobs(jobMetadata, this.props.jobDatabase);
   }
 
   render() {
