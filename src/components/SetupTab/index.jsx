@@ -342,18 +342,19 @@ export default class SetupTab extends React.Component {
       } = this.props;
 
       const buttonText = (
-        <span>
-          Run
-          {isRunning
-            && (
+        isRunning
+          ? (
+            <span>
+              Running
               <Spinner
                 animation="border"
                 size="sm"
                 role="status"
                 aria-hidden="true"
               />
-            )}
-        </span>
+            </span>
+          )
+          : <span>Run</span>
       );
 
       return (
