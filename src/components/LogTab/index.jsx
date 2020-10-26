@@ -154,7 +154,12 @@ export default class LogTab extends React.Component {
   }
 
   render() {
-    const { jobStatus } = this.props;
+    const {
+      jobStatus,
+      logStdErr,
+      terminateInvestProcess,
+      sidebarFooterElementId,
+    } = this.props;
     let ModelStatusAlert;
     const WorkspaceButton = (
       <Button
@@ -169,7 +174,7 @@ export default class LogTab extends React.Component {
     const CancelButton = (
       <Button
         variant="outline-dark"
-        onClick={this.props.terminateInvestProcess}
+        onClick={terminateInvestProcess}
       >
         Cancel Run
       </Button>
@@ -183,10 +188,10 @@ export default class LogTab extends React.Component {
       );
     } else if (jobStatus === 'error') {
       let lastCall = '';
-      if (this.props.logStdErr) {
+      if (logStdErr) {
         let i = 1;
         while (!lastCall) {
-          [lastCall] = `${this.props.logStdErr}`
+          [lastCall] = `${logStdErr}`
             .split(`${os.EOL}`).splice(-1 * i);
           i += 1;
         }
@@ -214,7 +219,7 @@ export default class LogTab extends React.Component {
         <Row>
           <LogDisplay logdata={this.state.logdata} />
         </Row>
-        <Portal id="log-alert" elId={this.props.sidebarFooterElementId}>
+        <Portal id="log-alert" elId={sidebarFooterElementId}>
           {ModelStatusAlert}
         </Portal>
       </Container>
@@ -226,6 +231,9 @@ LogTab.propTypes = {
   jobStatus: PropTypes.string,
   logfile: PropTypes.string,
   logStdErr: PropTypes.string,
+  pyModuleName: PropTypes.string.isRequired,
+  terminateInvestProcess: PropTypes.func.isRequired,
+  sidebarFooterElementId: PropTypes.string.isRequired,
 };
 LogTab.defaultProps = {
   jobStatus: undefined,

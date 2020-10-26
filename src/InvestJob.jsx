@@ -400,6 +400,8 @@ export default class InvestJob extends React.Component {
 InvestJob.propTypes = {
   investExe: PropTypes.string.isRequired,
   modelRunName: PropTypes.string.isRequired,
+  modelHumanName: PropTypes.string.isRequired,
+  navID: PropTypes.string.isRequired,
   logfile: PropTypes.string,
   argsInitValues: PropTypes.object,
   jobStatus: PropTypes.string,

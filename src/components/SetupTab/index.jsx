@@ -273,9 +273,7 @@ export default class SetupTab extends React.Component {
    */
   async investValidate(argsValues) {
     const { argsSpec, pyModuleName } = this.props;
-    // const { argsValidation } = this.state;
     const argsValidation = Object.assign({}, this.state.argsValidation);
-    // const argsValid = Object.assign({}, this.state.argsValid);
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
       model_module: pyModuleName,
@@ -393,8 +391,8 @@ export default class SetupTab extends React.Component {
 }
 
 SetupTab.propTypes = {
-  pyModuleName: PropTypes.string,
-  modelName: PropTypes.string,
+  pyModuleName: PropTypes.string.isRequired,
+  modelName: PropTypes.string.isRequired,
   argsSpec: PropTypes.objectOf(
     PropTypes.shape({
       name: PropTypes.string,
@@ -406,4 +404,7 @@ SetupTab.propTypes = {
   argsToJsonFile: PropTypes.func.isRequired,
   investExecute: PropTypes.func.isRequired,
   nWorkers: PropTypes.string.isRequired,
+  sidebarSetupElementId: PropTypes.string.isRequired,
+  sidebarFooterElementId: PropTypes.string.isRequired,
+  isRunning: PropTypes.bool.isRequired,
 };
