@@ -13,12 +13,10 @@ export const remote = {
     showSaveDialog: jest.fn(),
   },
   app: mockApp,
-  // normally we have the command-line args passed to electron
-  // via `npm start` available through the remote.process module.
-  // The first two are built into npm start (I forget what they are).
-  // The third one we use and so must mock.
+  // there are checks for '--dev' in process.argv[2],
+  // but we don't need '--dev' when running tests.
   process: {
-    argv: ['', '', '--dev'],
+    argv: ['', '', '--foo']
   },
 };
 
