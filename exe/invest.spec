@@ -110,6 +110,6 @@ app = BUNDLE(
     }
 )
 print('after bundle')
-print(os.listdir(os.cwd()))
+print(os.listdir(os.getcwd()))
 print(os.listdir(os.path.join(os.getcwd(), 'dist')))
 
