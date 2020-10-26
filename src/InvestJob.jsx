@@ -338,6 +338,7 @@ export default class InvestJob extends React.Component {
               />
               <Nav.Item>
                 <Nav.Link eventKey="log" disabled={logDisabled}>
+                  Log
                   { isRunning
                   && (
                     <Spinner
@@ -347,7 +348,6 @@ export default class InvestJob extends React.Component {
                       aria-hidden="true"
                     />
                   )}
-                  Log
                 </Nav.Link>
               </Nav.Item>
             </Nav>

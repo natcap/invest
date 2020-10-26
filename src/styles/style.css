@@ -284,3 +284,9 @@ input[type=text]::placeholder {
 	font-size: 1.1rem;
 	letter-spacing: 0.03rem;
 }
+
+/* Misc */
+.spinner-border {
+	margin-left: 1rem;
+	margin-bottom: 0.25rem;
+}

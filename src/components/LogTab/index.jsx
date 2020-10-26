@@ -122,7 +122,6 @@ export default class LogTab extends React.Component {
       });
       let markup = Object.assign('', this.state.logdata);
       this.tail.on('line', (data) => {
-        console.log(`${data}`);
         const line = `${data}${os.EOL}`;
         markup += markupLine(line, this.logPatterns);
         this.setState({ logdata: markup });
