@@ -34,45 +34,90 @@
 .. :changelog:
 Unreleased Changes (3.9)
 ------------------------
+* Annual Water Yield:
+    * Fixing bug that limited ``rsupply`` result when ``wyield_mn`` or
+      ``consump_mn`` was 0.
 * General:
-  * Deprecating GDAL 2 and adding support for GDAL 3.
-  * Adding function in utils.py to handle InVEST coordindate transformations.
-  * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
-    * ``convolve_2d`` keyword ``ignore_nodata`` to ``ignore_nodata_and_edges``.
-    * ``get_raster_info`` / ``get_vector_info`` keyword ``projection`` to
-      ``projection_wkt``.
-  * Fixed bug that was causing a TypeError when certain input rasters had an
-    undefined nodata value. Undefined nodata values should now work everywhere.
+    * Deprecating GDAL 2 and adding support for GDAL 3.
+    * Adding function in utils.py to handle InVEST coordindate transformations.
+    * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
+      * ``convolve_2d()`` keyword ``ignore_nodata`` to 
+        ``ignore_nodata_and_edges``.
+      * ``get_raster_info()`` / ``get_vector_info()`` keyword ``projection`` to
+        ``projection_wkt``.
+    * Improve consistency and context for error messages related to raster
+      reclassification across models by using ``utils.reclassify_raster``.
+    * Fixed bug that was causing a TypeError when certain input rasters had an
+      undefined nodata value. Undefined nodata values should now work
+      everywhere.
+    * Include logging in python script generated from 
+      "Save to python script..." in the "Development" menu. Now logging
+      messages from the model execution will show up when you run the script.
+    * InVEST is now a 64-bit binary built against Python 3.7.
+    * Adding Python 3.8 support for InVEST testing.
+* Coastal Vulnerability
+    * 'shore_points_missing_geomorphology.gpkg' output file name now includes
+      the suffix if any, and its one layer now is renamed from
+      'missing_geomorphology' to be the same as the file name
+      (including suffix).
+* Delineateit
+    * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
+      'verified_geometries' to be the same as the file name (including suffix).
+    * The layer in the 'snapped_outlets.gpkg' output is renamed from
+      'snapped' to be the same as the file name (including suffix).
+    * The layer in the 'watersheds.gpkg' output has been renamed from
+      'watersheds' to match the name of the vector file (including the suffix).
+    * Added pour point detection option as an alternative to providing an 
+      outlet features vector.
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
-    * Threat files are now indicated in the Threat Table csv input under 
-      required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``. 
+    * Threat files are now indicated in the Threat Table csv input under
+      required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``.
     * Threat and Sensitivity column names are now case-insensitive.
-    * Sensitivity threat columns now match threat names from Threat Table 
+    * Sensitivity threat columns now match threat names from Threat Table
       exactly, without the need for "L_". "L_" prefix is deprecated.
     * Threat raster input folder has been removed.
     * Validation enhancements that check whether threat raster paths are valid.
     * HQ update to User's Guide.
-    * Changing sample data to reflect Threat Table csv input changes and 
+    * Changing sample data to reflect Threat Table csv input changes and
       bumping revision.
     * More comprehensive testing for Habitat Quality and validation.
-    * Checking if Threat raster values are between 0 and 1 range, raising 
+    * Checking if Threat raster values are between 0 and 1 range, raising
       ValueError if not. No longer snapping values less than 0 to 0 and greater
       than 1 to 1.
-    * Fixing bug that was setting Threat raster values to 1 even if they were 
+    * Fixing bug that was setting Threat raster values to 1 even if they were
       floats between 0 and 1.
+    * Updating how threats are decayed across distance. Before, nodata edges
+      were ignored causing values on the edges to maintain a higher threat
+      value. Now, the decay does not ignore those nodata edges causing values
+      on the edges to decay more quickly. The area of study should have
+      adequate boundaries to account for these edge effects.
+* Seasonal Water Yield
+    * Fixed a bug where precip or eto rasters of ``GDT_Float64`` with values
+      greater than 32-bit would overflow to ``-inf``.
 * SDR:
-  * Fixing an issue where the LS factor should be capped to an upstream area of
-    333^2 m^2. In previous versions the LS factor was erroniously capped to
-    "333" leading to high export spikes in some pixels.
+    * Fixing an issue where the LS factor should be capped to an upstream area
+      of 333^2 m^2. In previous versions the LS factor was erroniously capped
+      to "333" leading to high export spikes in some pixels.
+* Finfish
+    * Fixed a bug where the suffix input was not being used for ouput paths.
 
 ..
+..
 Unreleased Changes
+------------------
+* Hydropower
+    * Fixed bug that prevented validation from ever passing for this model.
+      Validation will allow extra keys in addition to those in the ARGS_SPEC.
+* Urban Flood Mitigation
+    * Fixed incorrect calculation of total quickflow volume.
+
+3.8.8 (2020-09-04)
 ------------------
 * Coastal Vulnerability
     * Improved handling of invalid AOI geometries to avoid crashing and instead
       fix the geometry when possible and skip it otherwise.
-    * Added validation check that shows a warning if the SLR vector is not 
+    * Added validation check that shows a warning if the SLR vector is not
       a point or multipoint geometry.
 * Urban Cooling
     * Energy units are now (correctly) expressed in kWh.  They were previously
@@ -92,7 +137,7 @@ Unreleased Changes
 * Datastack
     * Saved datastack archives now use helpful identifying names for spatial input folders
 * Validation
-    * Fixed bug that caused fields activated by a checkbox to make validation fail, 
+    * Fixed bug that caused fields activated by a checkbox to make validation fail,
       even when the checkbox was unchecked.
 * General
     * Input table column headers are now insensitive to leading/trailing whitespace in
@@ -103,6 +148,9 @@ Unreleased Changes
 * Recreation
     * Validate values in the type column of predictor tables early in execution. Raise
       a ValueError if a type value isn't valid (leading/trailing whitespace is okay).
+* Validation
+    * Set a 5-second timeout on validation functions that access a file. This will raise
+      a warning and prevent validation from slowing down the UI too much.
 
 3.8.7 (2020-07-17)
 ------------------

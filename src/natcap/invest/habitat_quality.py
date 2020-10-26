@@ -287,8 +287,6 @@ def execute(args):
     threat_path_dict = {}
     # store land cover and threat rasters in a list for convenient access
     lulc_and_threat_raster_list = []
-    # list for the unique lucode tasks
-    unique_lucode_task_list = []
     # list for checking threat values tasks
     threat_values_task_lookup = {}
     LOGGER.info("Validate threat rasters and collect unique LULC codes")
@@ -297,18 +295,10 @@ def execute(args):
                                 ('_f', 'lulc_fut_path'),
                                 ('_b', 'lulc_bas_path')):
         if lulc_args in args:
-            LOGGER.debug(f"Checking unique codes for {lulc_args}")
             lulc_path = args[lulc_args]
             lulc_path_dict[lulc_key] = lulc_path
             # save land cover paths in a list for alignment and resize
             lulc_and_threat_raster_list.append(lulc_path)
-
-            # save unique codes to check if it's missing in sensitivity table
-            unique_lucode_task = task_graph.add_task(
-                func=_collect_unique_lucodes,
-                args=((lulc_path, 1), ),
-                task_name=f'unique_lucodes{lulc_key}')
-            unique_lucode_task_list.append(unique_lucode_task)
 
             # add a key to the threat dictionary that associates all threat
             # rasters with this land cover
@@ -361,24 +351,6 @@ def execute(args):
                         'task': threat_values_task,
                         'path': threat_path_relative,
                         'table_col': threat_table_path_col}
-
-    LOGGER.info("Checking LULC codes against Sensitivity table")
-    # Assert sensitivity keys and unique lulc codes are equal sets.
-    raster_unique_lucodes = set()
-    for lucode_task in unique_lucode_task_list:
-        # get unique LULC codes by blocking on those tasks for returned results
-        raster_unique_lucodes.update(lucode_task.get())
-
-    # check if there's any lucode from the LULC rasters missing in the
-    # sensitivity table
-    table_unique_lucodes = set(sensitivity_dict.keys())
-    missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
-    if missing_lucodes:
-        raise ValueError(
-            'The following land cover codes were found in your landcover '
-            'rasters but not in your sensitivity table. Check your '
-            'sensitivity table to see if they are missing: '
-            f'{missing_lucodes}.')
 
     LOGGER.info("Checking threat raster values are valid ( 0 <= x <= 1 ).")
     # Assert that threat rasters have valid values.
@@ -463,7 +435,7 @@ def execute(args):
             },
         target_path_list=[access_raster_path],
         dependent_task_list=[align_task],
-        task_name=f'access_raster')
+        task_name='access_raster')
     access_task_list = [create_access_raster_task]
 
     if 'access_vector_path' in args:
@@ -477,7 +449,7 @@ def execute(args):
                 },
             target_path_list=[access_raster_path],
             dependent_task_list=[create_access_raster_task],
-            task_name=f'rasterize_access')
+            task_name='rasterize_access')
         access_task_list.append(rasterize_access_task)
 
     # calculate the weight sum which is the sum of all the threats' weights
@@ -498,13 +470,14 @@ def execute(args):
             intermediate_output_dir,
             f'habitat{lulc_key}{file_suffix}.tif')
 
+        reclass_error_details = {
+            'raster_name': f'LULC{lulc_key}', 'column_name': 'lucode',
+            'table_name': 'Sensitivity'}
         habitat_raster_task = task_graph.add_task(
-            func=pygeoprocessing.reclassify_raster,
+            func=utils.reclassify_raster,
             args=((lulc_path, 1), sensitivity_reclassify_habitat_dict,
-                  habitat_raster_path, gdal.GDT_Float32, _OUT_NODATA),
-            kwargs={
-                'values_required': True
-                },
+                  habitat_raster_path, gdal.GDT_Float32, _OUT_NODATA,
+                  reclass_error_details),
             dependent_task_list=[align_task],
             task_name=f'habitat_raster{lulc_key}')
 
@@ -564,7 +537,7 @@ def execute(args):
                       filtered_threat_raster_path),
                 kwargs={
                     'target_nodata': _OUT_NODATA,
-                    'ignore_nodata_and_edges': True,
+                    'ignore_nodata_and_edges': False,
                     'mask_nodata': False
                     },
                 target_path_list=[filtered_threat_raster_path],
@@ -582,13 +555,14 @@ def execute(args):
                 int(key): float(val[threat]) for key, val in
                 sensitivity_dict.items()}
 
+            reclass_error_details = {
+                'raster_name': 'LULC', 'column_name': 'lucode',
+                'table_name': 'Sensitivity'}
             sens_threat_task = task_graph.add_task(
-                func=pygeoprocessing.reclassify_raster,
+                func=utils.reclassify_raster,
                 args=((lulc_path, 1), sensitivity_reclassify_threat_dict,
-                      sens_raster_path, gdal.GDT_Float32, _OUT_NODATA),
-                kwargs={
-                    'values_required': True
-                    },
+                      sens_raster_path, gdal.GDT_Float32, _OUT_NODATA,
+                      reclass_error_details),
                 target_path_list=[sens_raster_path],
                 dependent_task_list=[align_task],
                 task_name=f'sens_raster_{decay_type}{lulc_key}_{threat}')
@@ -647,7 +621,7 @@ def execute(args):
             args=(deg_hab_raster_list, quality_path, ksq),
             target_path_list=[quality_path],
             dependent_task_list=[habitat_raster_task, total_degradation_task],
-            task_name=f'habitat_quality')
+            task_name='habitat_quality')
 
     # Compute Rarity if user supplied baseline raster
     if '_b' not in lulc_path_dict:
@@ -701,8 +675,8 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
         # might be *slightly* off of _OUT_NODATA but should still be
         # interpreted as nodata.
         # _OUT_NODATA (defined above) should never be None, so this is okay
-        valid_pixels = ~(numpy.isclose(degradation, _OUT_NODATA) |
-            numpy.isclose(habitat, _OUT_NODATA))
+        valid_pixels = ~(numpy.isclose(
+            degradation, _OUT_NODATA) | numpy.isclose(habitat, _OUT_NODATA))
 
         out_array[valid_pixels] = (
             habitat[valid_pixels] *
@@ -898,30 +872,6 @@ def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
     decay_func(max_dist_pixel, kernel_path)
 
 
-def _collect_unique_lucodes(raster_path_band):
-    """Get unique pixel values from raster and return Python set.
-
-    Args:
-        raster_path_band (tuple): a 2 tuple of the form
-            (filepath to raster, band index).
-
-    Returns:
-        None
-    """
-    raster_path = raster_path_band[0]
-    # declare a set to store unique codes from raster
-    raster_unique_lucodes = set()
-
-    for _, raster_block in pygeoprocessing.iterblocks(raster_path_band):
-        raster_unique_lucodes.update(numpy.unique(raster_block))
-
-    # Remove the nodata value from the set of landuser codes.
-    nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
-    raster_unique_lucodes.discard(nodata)
-
-    return raster_unique_lucodes
-
-
 def _raster_pixel_count(raster_path_band):
     """Count unique pixel values in single band raster.
 
@@ -1036,6 +986,7 @@ def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
 
     return values_valid
 
+
 def _validate_threat_path(threat_path, lulc_key):
     """Check ``threat_path`` is a valid raster file against ``lulc_key``.
 
@@ -1073,6 +1024,7 @@ def _validate_threat_path(threat_path, lulc_key):
             return "error"
         else:
             return None
+
 
 @validation.invest_validator
 def validate(args, limit_to=None):

@@ -217,8 +217,12 @@ class CarbonTests(unittest.TestCase):
         make_pools_csv(args['carbon_pools_path'])
 
         # Value error should be raised with lulc code 200
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             carbon.execute(args)
+
+        self.assertTrue(
+            "The missing values found in the LULC raster but not the table"
+            " are: [200]" in str(cm.exception))
 
     def test_carbon_full_undefined_nodata(self):
         """Carbon: full model run when input raster nodata is None."""

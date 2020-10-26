@@ -150,6 +150,46 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         expected_message = 'Could not interpret carbon pool value'
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
+    
+    def test_missing_lulc_value(self):
+        """Forest Carbon Edge: test with missing LULC value."""
+        from natcap.invest import forest_carbon_edge_effect
+        import pandas
+
+        args = {
+            'aoi_vector_path': os.path.join(
+                REGRESSION_DATA, 'input', 'small_aoi.shp'),
+            'biomass_to_carbon_conversion_factor': '0.47',
+            'biophysical_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'forest_edge_carbon_lu_table.csv'),
+            'compute_forest_edge_effects': True,
+            'lulc_raster_path': os.path.join(
+                REGRESSION_DATA, 'input', 'small_lulc.tif'),
+            'n_nearest_model_points': 10,
+            'pools_to_calculate': 'all',
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
+                REGRESSION_DATA, 'input', 'core_data',
+                'forest_carbon_edge_regression_model_parameters.shp'),
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1
+        }
+
+        bad_biophysical_table_path = os.path.join(
+            self.workspace_dir, 'bad_biophysical_table.csv')
+
+        bio_df = pandas.read_csv(args['biophysical_table_path'])
+        bio_df = bio_df[bio_df['lucode'] != 4]
+        bio_df.to_csv(bad_biophysical_table_path)
+        bio_df = None
+
+        args['biophysical_table_path'] = bad_biophysical_table_path
+        with self.assertRaises(ValueError) as cm:
+            forest_carbon_edge_effect.execute(args)
+        expected_message = (
+            "The missing values found in the LULC raster but not the table"
+            " are: [4.]")
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
 
     def test_missing_aoi(self):
         """Forest carbon edge: ensure missing AOI causes exception."""

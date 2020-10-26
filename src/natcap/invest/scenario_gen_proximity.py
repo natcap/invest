@@ -324,7 +324,7 @@ def _mask_raster_by_vector(
     try:
         shutil.rmtree(tmp_dir)
     except OSError:
-        LOGGER.warn("Unable to delete temporary file %s", mask_raster_path)
+        LOGGER.warning("Unable to delete temporary file %s", mask_raster_path)
 
 
 def _convert_landscape(
@@ -498,7 +498,7 @@ def _convert_landscape(
     try:
         shutil.rmtree(temp_dir)
     except OSError:
-        LOGGER.warn(
+        LOGGER.warning(
             "Could not delete temporary working directory '%s'", temp_dir)
 
 
