@@ -93,23 +93,23 @@ dist = COLLECT(
     upx=False)
 print('after collect')
 
-app = BUNDLE(
-    dist,
-    name='InVEST.app',
-    icon=None,
-    bundle_identifier=None,
-    info_plist={
-        'CFBundleDisplayName': 'InVEST',
-        'CFBundleName': 'InVEST',
-        'CFBundleIdentifier': 'org.naturalcapitalproject.InVEST',
-        'CFBundleExecutable': 'MacOS/InVEST',
-        'CFBundleInfoDictionaryVersion': '6.0',
-        'CFBundlePackageType': 'AAPL',
-        'LSBackgroundOnly': '0',
-        'CFBundleIconFile': 'invest'
-    }
-)
-print('after bundle')
+# app = BUNDLE(
+#     dist,
+#     name='InVEST.app',
+#     icon=None,
+#     bundle_identifier=None,
+#     info_plist={
+#         'CFBundleDisplayName': 'InVEST',
+#         'CFBundleName': 'InVEST',
+#         'CFBundleIdentifier': 'org.naturalcapitalproject.InVEST',
+#         'CFBundleExecutable': 'MacOS/InVEST',
+#         'CFBundleInfoDictionaryVersion': '6.0',
+#         'CFBundlePackageType': 'AAPL',
+#         'LSBackgroundOnly': '0',
+#         'CFBundleIconFile': 'invest'
+#     }
+# )
+# print('after bundle')
 print(os.listdir(os.getcwd()))
 print(os.listdir(os.path.join(os.getcwd(), 'dist')))
-
+print(os.listdir(os.path.join(os.getcwd(), 'dist', 'invest')))
