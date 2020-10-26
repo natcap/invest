@@ -5,6 +5,7 @@ import os
 import itertools
 import glob
 from PyInstaller.compat import is_win, is_darwin
+import subprocess
 
 # Global Variables
 current_dir = os.getcwd()  # assume we're building from the project root
@@ -113,3 +114,4 @@ print('after bundle')
 print(os.listdir(os.getcwd()))
 print(os.listdir(os.path.join(os.getcwd(), 'dist')))
 print(os.listdir(os.path.join(os.getcwd(), 'dist', 'invest')))
+subprocess.run(['find', '.', '-name', '*.app'], shell=True)
