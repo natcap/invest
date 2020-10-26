@@ -180,7 +180,6 @@ class RecentInvestJobs extends React.PureComponent {
           ? (
             <CardGroup
               aria-labelledby="recent-job-card-group"
-              // className="recent-job-card-group"
             >
               {recentButtons}
             </CardGroup>
@@ -199,4 +198,5 @@ class RecentInvestJobs extends React.PureComponent {
 
 RecentInvestJobs.propTypes = {
   recentJobs: PropTypes.array.isRequired,
+  openInvestModel: PropTypes.func.isRequired,
 };

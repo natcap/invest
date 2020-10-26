@@ -31,3 +31,8 @@ export default class Portal extends React.Component {
     return (<div />);
   }
 }
+
+Portal.propTypes = {
+  elId: PropTypes.string.isRequired,
+  children: PropTypes.node,
+};
