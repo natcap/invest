@@ -21,7 +21,7 @@ const INVEST_LIST = { [MODEL]: { internal_name: MODULE } };
 function renderSetupFromSpec(spec, uiSpec={}) {
   // some ARGS_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
-  if (!spec.model_name) { spec.model_name = 'Eco Model' }
+  if (!spec.modelName) { spec.modelName = 'Eco Model' }
   if (!spec.module) { spec.module = 'natcap.invest.dot' }
 
   const {
@@ -40,6 +40,9 @@ function renderSetupFromSpec(spec, uiSpec={}) {
       investExecute={() => {}}
       argsToJsonFile={() => {}}
       nWorkers={'-1'}
+      sidebarSetupElementId={'foo'}
+      sidebarFooterElementId={'foo'}
+      isRunning={false}
     />);
   return {
     findByText,

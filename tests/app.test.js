@@ -83,6 +83,7 @@ describe('Various ways to open and close InVEST models', () => {
     const job = {
       jobID: mockJobId,
       modelRunName: mockRecentJobsDB[mockJobId].model,
+      modelHumanName: mockRecentJobsDB[mockJobId].model,
       argsValues: {
         workspace_dir: mockRecentJobsDB[mockJobId].workspace.directory
       },
@@ -126,6 +127,7 @@ describe('Various ways to open and close InVEST models', () => {
       },
       module_name: 'natcap.invest.carbon',
       model_run_name: 'carbon',
+      model_human_name: 'Carbon',
     }
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
     fetchDatastackFromFile.mockResolvedValue(mockDatastack)

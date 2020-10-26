@@ -40,6 +40,7 @@ function renderInvestJob() {
       navID='carbon456asdf'
       investExe=''
       modelRunName='carbon'
+      modelHumanName='Carbon Model'
       argsInitValues={undefined}
       logfile={undefined}
       jobStatus={undefined}
