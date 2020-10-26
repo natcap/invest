@@ -70,6 +70,7 @@ elif is_win:
     # .exe extension is required if we're on windows.
     exename += '.exe'
 
+print('after analyiss')
 exe = EXE(
     pyz,
     a.scripts,
@@ -79,6 +80,7 @@ exe = EXE(
     strip=False,
     upx=False,
     console=True)
+print('after exe')
 
 # Collect Files into Distributable Folder/File
 dist = COLLECT(
@@ -89,6 +91,7 @@ dist = COLLECT(
     name="invest",  # name of the output folder
     strip=False,
     upx=False)
+print('after collect')
 
 app = BUNDLE(
     dist,
@@ -106,4 +109,5 @@ app = BUNDLE(
         'CFBundleIconFile': 'invest'
     }
 )
+print('after bundle')
 
