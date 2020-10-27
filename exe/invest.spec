@@ -103,7 +103,7 @@ app = BUNDLE(
         'CFBundleDisplayName': 'InVEST',
         'CFBundleName': 'InVEST',
         'CFBundleIdentifier': 'org.naturalcapitalproject.InVEST',
-        'CFBundleExecutable': 'MacOS/InVEST',
+        'CFBundleExecutable': 'MacOS/invest',
         'CFBundleInfoDictionaryVersion': '6.0',
         'CFBundlePackageType': 'AAPL',
         'LSBackgroundOnly': '0',
