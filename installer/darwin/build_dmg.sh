@@ -13,22 +13,18 @@ CONFIG_DIR="installer/darwin"
 title="InVEST ${1}"  # the name of the volume the DMG provides.
 finalDMGName="dist/InVEST-${1}.dmg"  # the name of the final DMG file.
 
-tempdir="invest_build_dmg_tmp"
-mkdir $tempdir
-
 # copy the docs into the dmg
 docsdir="$3"
 if [ -d $docsdir ]
 then
-    cp -r $docsdir $tempdir/documentation
+    cp -r $docsdir $2/documentation
 fi
 
 # Copy the release notes (HISTORY.rst) into the dmg as an HTML doc.
-pandoc HISTORY.rst -o $tempdir/HISTORY.html
+pandoc HISTORY.rst -o $2/HISTORY.html
 
-dmgbuild -Dinvestdir="$tempdir" -s $CONFIG_DIR/dmgconf.py "$title" "$finalDMGName"
+dmgbuild -Dinvestdir="$2" -s $CONFIG_DIR/dmgconf.py "$title" "$finalDMGName"
 
 find . -name "InVEST-${1}.dmg"
 
-rm -rf $tempdir
-    
+codesign --verbose --sign "Natural Capital Project Software Team" "$finalDMG"
