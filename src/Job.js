@@ -21,38 +21,59 @@ export default class Job {
   constructor(
     modelRunName, modelHumanName, argsValues, workspace, logfile, status
   ) {
+    this.metadata = {};
     if (workspace && modelRunName) {
-      this.workspaceHash = crypto.createHash('sha1').update(
+      this.metadata.workspaceHash = crypto.createHash('sha1').update(
         `${modelRunName}${JSON.stringify(workspace)}`
       ).digest('hex');
     }
-    this.modelRunName = modelRunName;
-    this.modelHumanName = modelHumanName;
-    this.argsValues = argsValues;
-    this.workspace = workspace;
-    this.logfile = logfile;
-    this.status = status;
+    this.metadata.modelRunName = modelRunName;
+    this.metadata.modelHumanName = modelHumanName;
+    this.metadata.argsValues = argsValues;
+    this.metadata.workspace = workspace;
+    this.metadata.logfile = logfile;
+    this.metadata.status = status;
+    this.metadata.humanTime = new Date().toLocaleString();
+    this.metadata.systemTime = new Date().getTime();
+
+    this.save = this.save.bind(this);
+    this.setProperty = this.setProperty.bind(this);
+  }
+
+  setProperty(key, value) {
+    this.metadata[key] = value;
   }
 
   save() {
-    const jsonContent = JSON.stringify(this);
-    const filepath = path.join(
-      fileRegistry.CACHE_DIR, `${this.workspaceHash}.json`
+    // const jsonContent = JSON.stringify(this.metadata);
+    // const filepath = path.join(
+    //   fileRegistry.CACHE_DIR, `${this.workspaceHash}.json`
+    // );
+    // fs.writeFile(filepath, jsonContent, 'utf8', (err) => {
+    //   if (err) {
+    //     logger.error('An error occured while writing JSON Object to File.');
+    //     return logger.error(err.stack);
+    //   }
+    // });
+    this.metadata.humanTime = new Date().toLocaleString();
+    this.metadata.systemTime = new Date().getTime();
+    window.localStorage.setItem(
+      this.metadata.workspaceHash, JSON.stringify(this.metadata)
     );
-    fs.writeFile(filepath, jsonContent, 'utf8', (err) => {
-      if (err) {
-        logger.error('An error occured while writing JSON Object to File.');
-        return logger.error(err.stack);
-      }
-    });
-    const jobMetadata = {};
-    jobMetadata[this.workspaceHash] = {
-      model: this.modelHumanName,
-      workspace: this.workspace,
-      humanTime: new Date().toLocaleString(),
-      systemTime: new Date().getTime(),
-      jobDataPath: filepath,
-    };
-    return jobMetadata;
+    const store = JSON.parse(window.localStorage);
+    const sortedMetadata = Object.entries(store).sort(
+      (a, b) => b[1].systemTime - a[1].systemTime
+    );
+    return sortedMetadata;
+
+    // const jobMetadata = {};
+    // jobMetadata[this.workspaceHash] = {
+    //   model: this.modelHumanName,
+    //   workspace: this.workspace,
+    //   humanTime: new Date().toLocaleString(),
+    //   systemTime: new Date().getTime(),
+    //   jobDataPath: filepath,
+    // };
+    // return jobMetadata;
   }
 }

@@ -165,9 +165,9 @@ export default class InvestJob extends React.Component {
 
     // Setting this very early in the click handler so the Execute button
     // can display an appropriate visual cue when it's clicked
-    job.status = 'running';
+    job.metadata.status = 'running';
     this.setState({
-      jobStatus: job.status,
+      jobStatus: job.metadata.status,
     });
 
     // Write a temporary datastack json for passing to invest CLI
@@ -175,12 +175,12 @@ export default class InvestJob extends React.Component {
       fileRegistry.TEMP_DIR, 'data-'
     ));
     const datastackPath = path.join(tempDir, 'datastack.json');
-    await this.argsToJsonFile(datastackPath, job.argsValues);
+    await this.argsToJsonFile(datastackPath, job.metadata.argsValues);
 
     const cmdArgs = [
       LOGLEVELMAP[investSettings.loggingLevel],
       'run',
-      job.modelRunName,
+      job.metadata.modelRunName,
       '--headless',
       `-d "${datastackPath}"`,
     ];
@@ -212,14 +212,14 @@ export default class InvestJob extends React.Component {
     // There's no general way to know that a spawned process started,
     // so this logic when listening for stdout seems like the way.
     this.investRun.stdout.on('data', async () => {
-      if (!job.logfile) {
-        job.logfile = await findMostRecentLogfile(job.workspace.directory);
+      if (!job.metadata.logfile) {
+        job.metadata.logfile = await findMostRecentLogfile(job.metadata.workspace.directory);
         // TODO: handle case when job.logfile is still undefined?
         // Could be if some stdout is emitted before a logfile exists.
-        logger.debug(`invest logging to: ${job.logfile}`);
+        logger.debug(`invest logging to: ${job.metadata.logfile}`);
         this.setState(
           {
-            logfile: job.logfile,
+            logfile: job.metadata.logfile,
           }, () => {
             this.switchTabs('log');
             saveJob(job);
@@ -247,16 +247,16 @@ export default class InvestJob extends React.Component {
     this.investRun.on('exit', (code) => {
       logger.debug(code);
       if (code === 0) {
-        job.status = 'success';
+        job.metadata.status = 'success';
       } else {
         // Invest CLI exits w/ code 1 when it catches errors,
         // Models exit w/ code 255 (on all OS?) when errors raise from execute()
         // Windows taskkill yields exit code 1
         // Non-windows process.kill yields exit code null
-        job.status = 'error';
+        job.metadata.status = 'error';
       }
       this.setState({
-        jobStatus: job.status,
+        jobStatus: job.metadata.status,
       }, () => {
         saveJob(job);
         cleanupDir(tempDir);

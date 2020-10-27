@@ -84,10 +84,11 @@ export default class App extends React.Component {
    */
   openInvestModel(job) {
     const navID = crypto.randomBytes(16).toString('hex');
-    Object.assign(job, { navID: navID });
+    const { metadata } = job;
+    Object.assign(metadata, { navID: navID });
     this.setState((state) => ({
-      openJobs: [...state.openJobs, job],
-    }), () => this.switchTabs(job.navID));
+      openJobs: [...state.openJobs, metadata],
+    }), () => this.switchTabs(metadata.navID));
   }
 
   /**
@@ -122,10 +123,12 @@ export default class App extends React.Component {
    * @param {object} job - data that can be passed to openInvestModel
    */
   async saveJob(job) {
-    const jobMetadata = job.save();
-    const recentJobs = await updateRecentJobs(
-      jobMetadata, this.props.jobDatabase
-    );
+    // const jobMetadata = job.save();
+    const recentJobs = job.save();
+    console.log(recentJobs);
+    // const recentJobs = await updateRecentJobs(
+    //   jobMetadata, this.props.jobDatabase
+    // );
     this.setState({
       recentJobs: recentJobs,
     });
@@ -144,6 +147,7 @@ export default class App extends React.Component {
     const investNavItems = [];
     const investTabPanes = [];
     openJobs.forEach((job) => {
+      console.log(job);
       investNavItems.push(
         <Nav.Item key={job.navID}>
           <Nav.Link eventKey={job.navID}>

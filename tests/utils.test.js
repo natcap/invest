@@ -60,10 +60,11 @@ test('Test loadRecentJobs returns correct order', async() => {
       "systemTime": 1243259376573.759,
     }
   }
-  const dir = setupDir()
-  const jobdbPath = path.join(dir, 'jobdb.json');
-  fs.writeFileSync(jobdbPath, JSON.stringify(jobData))
-  const jobs = await loadRecentJobs(jobdbPath);
+  // const dir = setupDir()
+  // const jobdbPath = path.join(dir, 'jobdb.json');
+  // fs.writeFileSync(jobdbPath, JSON.stringify(jobData))
+  // const jobs = await loadRecentJobs(jobdbPath);
+  const jobs = await loadRecentJobs(jobData);
   expect(jobs[0][0]).toEqual('carbon_setup')
   expect(jobs[1][0]).toEqual('duck')
   cleanupDir(dir)

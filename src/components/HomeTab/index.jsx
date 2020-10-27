@@ -113,6 +113,7 @@ class RecentInvestJobs extends React.PureComponent {
     const recentButtons = [];
     const { recentJobs } = this.props;
     recentJobs.forEach((job) => {
+      console.log(job);
       let model;
       let workspaceDir;
       let jobDataPath;

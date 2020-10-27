@@ -15,10 +15,11 @@ const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-
  * @param  {string} jobDatabasePath - path to a json file with jobs metadata.
  * @returns {Promise} - Resolves sorted array of jobs with metadata.
  */
-export function loadRecentJobs(jobDatabasePath) {
+export function loadRecentJobs(store) {
   return new Promise((resolve) => {
-    const db = JSON.parse(fs.readFileSync(jobDatabasePath, 'utf8'));
-    const sortedJobs = Object.entries(db).sort(
+    // const db = JSON.parse(fs.readFileSync(jobDatabasePath, 'utf8'));
+    // const db = window.localStorage;
+    const sortedJobs = Object.entries(store).sort(
       (a, b) => b[1].systemTime - a[1].systemTime
     );
     resolve(sortedJobs);
