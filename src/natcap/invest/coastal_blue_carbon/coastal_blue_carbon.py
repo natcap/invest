@@ -420,7 +420,6 @@ def execute(args):
         baseline_lulc_year: {},
         end_of_baseline_period-1: {},
     }
-    baseline_stock_tasks = {}
     yearly_accum_rasters = {
         baseline_lulc_year: {},
     }
@@ -987,12 +986,11 @@ def execute_transition_analysis(args):
     prior_transition_year = None
     current_transition_year = None
 
-    current_disturbance_vol_tasks = {}
     prior_stock_tasks = {}
-    current_year_of_disturbance_tasks = {}
     emissions_tasks = {}
     net_sequestration_tasks = {}
     valuation_tasks = {}
+    current_disturbance_vol_and_year_tasks = {}
 
     first_transition_year = min(transition_years)
     final_year = int(args['analysis_year'])
@@ -1023,13 +1021,10 @@ def execute_transition_analysis(args):
                     year=year, pool=pool, suffix=suffix))
             if year == first_transition_year:
                 current_stock_dependent_tasks = []
-                current_disturbance_vol_dependent_tasks = []
             else:
                 current_stock_dependent_tasks = [
                     prior_stock_tasks[pool],
                     net_sequestration_tasks[year-1][pool]]
-                current_disturbance_vol_dependent_tasks = [
-                    prior_stock_tasks[pool]]
 
             current_stock_tasks[pool] = task_graph.add_task(
                 func=_sum_n_rasters,
@@ -1048,26 +1043,6 @@ def execute_transition_analysis(args):
                     prior_transition_year = current_transition_year
                     current_transition_year = year
 
-                disturbance_vol_rasters[year][pool] = os.path.join(
-                    intermediate_dir,
-                    DISTURBANCE_VOL_RASTER_PATTERN.format(
-                        pool=pool, year=year, suffix=suffix))
-                current_disturbance_vol_tasks[pool] = task_graph.add_task(
-                    func=pygeoprocessing.raster_calculator,
-                    args=([(disturbance_magnitude_rasters[year][pool], 1),
-                           (stock_rasters[year][pool], 1)],
-                          _calculate_disturbance_volume,
-                          disturbance_vol_rasters[year][pool],
-                          gdal.GDT_Float32,
-                          NODATA_FLOAT32_MIN),
-                    dependent_task_list=(
-                        current_disturbance_vol_dependent_tasks + [
-                            current_stock_tasks[pool]]),
-                    target_path_list=[
-                        disturbance_vol_rasters[year][pool]],
-                    task_name=(
-                        f'Mapping {pool} carbon volume disturbed in {year}'))
-
                 # Year-of-disturbance rasters track the year of the most recent
                 # disturbance.  This is important because a disturbance could
                 # span multiple transition years.  This raster is derived from
@@ -1076,24 +1051,33 @@ def execute_transition_analysis(args):
                 year_of_disturbance_rasters[year][pool] = os.path.join(
                     intermediate_dir, YEAR_OF_DIST_RASTER_PATTERN.format(
                         pool=pool, year=year, suffix=suffix))
+                disturbance_vol_rasters[year][pool] = os.path.join(
+                    intermediate_dir,
+                    DISTURBANCE_VOL_RASTER_PATTERN.format(
+                        pool=pool, year=year, suffix=suffix))
+
                 if year == min(transition_years):
                     prior_transition_year_raster = None
                 else:
                     prior_transition_year_raster = year_of_disturbance_rasters[
                         prior_transition_year][pool]
-                current_year_of_disturbance_tasks[pool] = task_graph.add_task(
-                    func=_track_latest_transition_year,
-                    args=(disturbance_vol_rasters[year][pool],
-                          prior_transition_year_raster,
-                          year,
-                          year_of_disturbance_rasters[year][pool]),
-                    dependent_task_list=[
-                        current_disturbance_vol_tasks[pool]],
-                    target_path_list=[
-                        year_of_disturbance_rasters[year][pool]],
-                    task_name=(
-                        f'Track year of latest {pool} carbon disturbance as '
-                        f'of {year}'))
+                current_disturbance_vol_and_year_tasks[pool] = (
+                    task_graph.add_task(
+                        func=_track_disturbance,
+                        args=(disturbance_magnitude_rasters[year][pool],
+                              stock_rasters[year][pool],
+                              prior_transition_year_raster,
+                              year,
+                              disturbance_vol_rasters[year][pool],
+                              year_of_disturbance_rasters[year][pool]),
+                        dependent_task_list=[
+                            current_stock_tasks[pool]],
+                        target_path_list=[
+                            disturbance_vol_rasters[year][pool],
+                            year_of_disturbance_rasters[year][pool]],
+                        task_name=(
+                            'Track carbon volume and latest year of '
+                            f'disturbance for {pool} in {year}.')))
 
             # Calculate emissions (all years after 1st transition)
             # Emissions in this context are a function of:
@@ -1117,8 +1101,7 @@ def execute_transition_analysis(args):
                     gdal.GDT_Float32,
                     NODATA_FLOAT32_MIN),
                 dependent_task_list=[
-                    current_disturbance_vol_tasks[pool],
-                    current_year_of_disturbance_tasks[pool]],
+                    current_disturbance_vol_and_year_tasks[pool]],
                 target_path_list=[
                     emissions_rasters[year][pool]],
                 task_name=f'Mapping {pool} carbon emissions in {year}')
@@ -1513,6 +1496,92 @@ def _track_latest_transition_year(
         gdal.GDT_UInt16, NODATA_UINT16_MAX)
 
 
+# TODO: include prior disturbance volume raster
+def _track_disturbance(
+        disturbance_magnitude_raster_path, stock_raster_path,
+        year_of_disturbance_raster_path, current_year,
+        target_disturbance_volume_raster_path,
+        target_year_of_disturbance_raster_path):
+    # Create new rasters
+    # For block in iterblocks:
+    #   Determine the disturbance volume from the magnitude and stocks
+    #   Track the latest year of transition based on the disturbance
+    #   Write out both arrays to their respective matrices.
+
+    # NOTE: year_of_disturbance_raster_path might be None if this is the first
+    # transition.
+
+    pygeoprocessing.new_raster_from_base(
+        disturbance_magnitude_raster_path,
+        target_disturbance_volume_raster_path, gdal.GDT_Float32,
+        [NODATA_FLOAT32_MIN])
+
+    pygeoprocessing.new_raster_from_base(
+        disturbance_magnitude_raster_path,
+        target_year_of_disturbance_raster_path, gdal.GDT_UInt16,
+        [NODATA_UINT16_MAX])
+
+    target_disturbance_volume_raster = gdal.OpenEx(
+        target_disturbance_volume_raster_path,
+        gdal.OF_RASTER | gdal.GA_Update)
+    target_disturbance_volume_band = target_disturbance_volume_raster.GetRasterBand(1)
+
+    target_year_of_disturbance_raster = gdal.OpenEx(
+        target_year_of_disturbance_raster_path,
+        gdal.OF_RASTER | gdal.GA_Update)
+    target_year_of_disturbance_band = target_year_of_disturbance_raster.GetRasterBand(1)
+
+    stock_raster = gdal.OpenEx(stock_raster_path, gdal.OF_RASTER)
+    stock_band = stock_raster.GetRasterBand(1)
+
+    year_of_disturbance_raster = None
+    year_of_disturbance_band = None
+    if year_of_disturbance_raster_path:
+        year_of_disturbance_raster = gdal.OpenEx(
+            year_of_disturbance_raster_path, gdal.OF_RASTER | gdal.GA_Update)
+        year_of_disturbance_band = year_of_disturbance_raster.GetRasterBand(1)
+
+    for block_info, disturbance_magnitude_matrix in pygeoprocessing.iterblocks(
+            (disturbance_magnitude_raster_path, 1)):
+        year_last_disturbed = numpy.empty(
+            disturbance_magnitude_matrix.shape, dtype=numpy.uint16)
+        year_last_disturbed[:] = NODATA_UINT16_MAX
+
+        disturbed_carbon_volume = numpy.empty(
+            disturbance_magnitude_matrix.shape, dtype=numpy.float32)
+        disturbed_carbon_volume[:] = NODATA_FLOAT32_MIN
+
+        if year_of_disturbance_band:
+            known_transition_years_matrix = (
+                year_of_disturbance_band.ReadAsArray(**block_info))
+            pixels_previously_disturbed = (
+                known_transition_years_matrix != (NODATA_UINT16_MAX))
+            year_last_disturbed[pixels_previously_disturbed] = (
+                known_transition_years_matrix[pixels_previously_disturbed])
+
+        stock_matrix = stock_band.ReadAsArray(**block_info)
+        pixels_changed_this_year = (
+            ~numpy.isclose(disturbance_magnitude_matrix, NODATA_FLOAT32_MIN) &
+            ~numpy.isclose(disturbance_magnitude_matrix, 0.0) &
+            ~numpy.isclose(stock_matrix, NODATA_FLOAT32_MIN)
+        )
+
+        disturbed_carbon_volume[pixels_changed_this_year] = (
+            disturbance_magnitude_matrix[pixels_changed_this_year] *
+            stock_matrix[pixels_changed_this_year])
+        target_disturbance_volume_band.WriteArray(
+            disturbed_carbon_volume, block_info['xoff'], block_info['yoff'])
+
+        year_last_disturbed[pixels_changed_this_year] = current_year
+        target_year_of_disturbance_band.WriteArray(
+            year_last_disturbed, block_info['xoff'], block_info['yoff'])
+
+    year_of_disturbance_band = None
+    year_of_disturbance_raster = None
+    target_year_of_disturbance_band = None
+    target_year_of_disturbance_raster = None
+
+
 def _calculate_net_sequestration(
         accumulation_raster_path, emissions_raster_path, target_raster_path):
     """Calculate net sequestration for a given timestep and pool.
@@ -1714,8 +1783,6 @@ def _sum_n_rasters(
             sum_array, block_info['xoff'], block_info['yoff'])
 
     LOGGER.info('Summation 100.00% complete')
-
-    raster_list = None
 
     target_band.ComputeStatistics(0)
     target_band = None
