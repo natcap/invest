@@ -11,7 +11,7 @@
 
 CONFIG_DIR="installer/darwin"
 title="InVEST ${1}"  # the name of the volume the DMG provides.
-finalDMGName="dist/InVEST ${1}.dmg"  # the name of the final DMG file.
+finalDMGName="dist/InVEST-${1}.dmg"  # the name of the final DMG file.
 
 tempdir="invest_build_dmg_tmp"
 mkdir $tempdir
@@ -27,6 +27,8 @@ fi
 pandoc HISTORY.rst -o $tempdir/HISTORY.html
 
 dmgbuild -Dinvestdir="$tempdir" -s $CONFIG_DIR/dmgconf.py "$title" "$finalDMGName"
+
+find . -name "InVEST-${1}.dmg"
 
 rm -rf $tempdir
     
