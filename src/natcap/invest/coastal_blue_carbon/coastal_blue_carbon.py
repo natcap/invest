@@ -1058,14 +1058,18 @@ def execute_transition_analysis(args):
 
                 if year == min(transition_years):
                     prior_transition_year_raster = None
+                    prior_disturbance_vol_raster = None
                 else:
                     prior_transition_year_raster = year_of_disturbance_rasters[
+                        prior_transition_year][pool]
+                    prior_disturbance_vol_raster = disturbance_vol_rasters[
                         prior_transition_year][pool]
                 current_disturbance_vol_and_year_tasks[pool] = (
                     task_graph.add_task(
                         func=_track_disturbance,
                         args=(disturbance_magnitude_rasters[year][pool],
                               stock_rasters[year][pool],
+                              prior_disturbance_vol_raster,
                               prior_transition_year_raster,
                               year,
                               disturbance_vol_rasters[year][pool],
@@ -1496,9 +1500,9 @@ def _track_latest_transition_year(
         gdal.GDT_UInt16, NODATA_UINT16_MAX)
 
 
-# TODO: include prior disturbance volume raster
 def _track_disturbance(
         disturbance_magnitude_raster_path, stock_raster_path,
+        prior_disturbance_volume_raster_path,
         year_of_disturbance_raster_path, current_year,
         target_disturbance_volume_raster_path,
         target_year_of_disturbance_raster_path):
@@ -1541,6 +1545,12 @@ def _track_disturbance(
             year_of_disturbance_raster_path, gdal.OF_RASTER | gdal.GA_Update)
         year_of_disturbance_band = year_of_disturbance_raster.GetRasterBand(1)
 
+        prior_disturbance_volume_raster = gdal.OpenEx(
+            prior_disturbance_volume_raster_path, gdal.OF_RASTER)
+        prior_disturbance_volume_band = (
+            prior_disturbance_volume_raster.GetRasterBand(1))
+
+
     for block_info, disturbance_magnitude_matrix in pygeoprocessing.iterblocks(
             (disturbance_magnitude_raster_path, 1)):
         year_last_disturbed = numpy.empty(
@@ -1558,6 +1568,11 @@ def _track_disturbance(
                 known_transition_years_matrix != (NODATA_UINT16_MAX))
             year_last_disturbed[pixels_previously_disturbed] = (
                 known_transition_years_matrix[pixels_previously_disturbed])
+
+            prior_disturbance_volume_matrix = (
+                prior_disturbance_volume_band.ReadAsArray(**block_info))
+            disturbed_carbon_volume[pixels_previously_disturbed] = (
+                prior_disturbance_volume_matrix[pixels_previously_disturbed])
 
         stock_matrix = stock_band.ReadAsArray(**block_info)
         pixels_changed_this_year = (

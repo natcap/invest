@@ -800,7 +800,8 @@ class TestCBC2(unittest.TestCase):
 
         coastal_blue_carbon._track_disturbance(
             disturbance_magnitude_path, stocks_path,
-            None,  # No prior disturbances
+            None,  # No prior disturbance volume
+            None,  # No prior disturbance years
             current_year, target_disturbance_path, target_year_of_disturbance)
 
         try:
@@ -827,6 +828,7 @@ class TestCBC2(unittest.TestCase):
     def test_track_later_disturbance(self):
         """CBC: Track disturbances over time."""
         float32_nodata = coastal_blue_carbon.NODATA_FLOAT32_MIN
+        uint16_nodata = coastal_blue_carbon.NODATA_UINT16_MAX
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31 S
@@ -847,13 +849,20 @@ class TestCBC2(unittest.TestCase):
         pygeoprocessing.numpy_array_to_raster(
             stocks_matrix, -1, (2, -2), (2, -2), wkt, stocks_path)
 
-        uint16_nodata = coastal_blue_carbon.NODATA_UINT16_MAX
+        prior_disturbance_volume_path = os.path.join(
+            self.workspace_dir, 'prior_disturbance_vol.tif')
+        prior_disturbance_vol_matrix = numpy.array(
+            [[700, float32_nodata, 300]], numpy.float32)
+        pygeoprocessing.numpy_array_to_raster(
+            prior_disturbance_vol_matrix, float32_nodata, (2, -2), (2, -2),
+            wkt, prior_disturbance_volume_path)
+
         prior_year_disturbance_path = os.path.join(
             self.workspace_dir, 'prior_disturbance_years.tif')
-        prior_year_matrix = numpy.array(
+        prior_year_disturbance_matrix = numpy.array(
             [[2000, uint16_nodata, 1990]], numpy.uint16)
         pygeoprocessing.numpy_array_to_raster(
-            prior_year_disturbance_path, uint16_nodata, (2, -2), (2, -2), wkt,
+            prior_year_disturbance_matrix, uint16_nodata, (2, -2), (2, -2), wkt,
             prior_year_disturbance_path)
 
         target_disturbance_path = os.path.join(
@@ -861,14 +870,16 @@ class TestCBC2(unittest.TestCase):
         target_year_of_disturbance = os.path.join(
             self.workspace_dir, 'year_of_disturbance.tif')
 
+        current_year = 2010
         coastal_blue_carbon._track_disturbance(
             disturbance_magnitude_path, stocks_path,
-            prior_year_disturbance_path, current_year, target_disturbance_path,
-            target_year_of_disturbance)
+            prior_disturbance_volume_path,
+            prior_year_disturbance_path,
+            current_year, target_disturbance_path, target_year_of_disturbance)
 
         try:
             expected_disturbance = numpy.array(
-                [[5.0, float32_nodata, float32_nodata]], dtype=numpy.float32)
+                [[5.0, float32_nodata, 300]], dtype=numpy.float32)
             raster = gdal.OpenEx(target_disturbance_path)
             numpy.testing.assert_allclose(
                 raster.ReadAsArray(),
