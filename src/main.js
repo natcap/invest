@@ -8,8 +8,9 @@ if (isDevMode) {
 }
 
 const {
-  app, BrowserWindow, ipcMain, screen
+  app, BrowserWindow, ipcMain, screen, nativeTheme
 } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
+//    const { nativeTheme } = require("electron").remote;
 const {
   getFlaskIsReady, shutdownPythonProcess
 } = require('./server_requests');
@@ -39,6 +40,10 @@ const createWindow = async () => {
   createPythonFlaskProcess(binaries.server, isDevMode);
   // Wait for a response from the server before loading the app
   await getFlaskIsReady();
+
+  // always use light mode regardless of the OS/browser setting
+  // in the future we can add a dark theme
+  nativeTheme.themeSource = 'light';
 
   // Create the browser window.
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
