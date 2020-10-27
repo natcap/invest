@@ -236,7 +236,7 @@ jobs:
             - name: Upload DMG artifact
               uses: actions/upload-artifact@v2-preview
               with:
-                  name: InVEST-mac-binaries
+                  name: InVEST-dmg
                   path: dist/InVEST*.dmg
 
     build-sampledata:
