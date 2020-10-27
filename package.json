@@ -2,7 +2,7 @@
   "name": "invest-workbench",
   "productName": "invest-workbench",
   "version": "0.1.0-alpha",
-  "description": "My Electron application description",
+  "description": "Models that map and value the goods and services from nature that sustain and fulfill human life",
   "main": "src/main.js",
   "homepage": "./",
   "scripts": {
