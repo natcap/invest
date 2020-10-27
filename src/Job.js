@@ -18,6 +18,17 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
  * @param  {string} status - indicates how the job exited, if it's a recent job.
  */
 export default class Job {
+  static sortJobStore() {
+    const store = window.localStorage;
+    const parsedStore = Object.values(store).forEach(
+      (obj) => JSON.parse(obj)
+    );
+    const sorted = parsedStore.sort(
+      (a, b) => b[1].systemTime - a[1].systemTime
+    );
+    return sorted;
+  }
+
   constructor(
     modelRunName, modelHumanName, argsValues, workspace, logfile, status
   ) {
@@ -60,11 +71,11 @@ export default class Job {
     window.localStorage.setItem(
       this.metadata.workspaceHash, JSON.stringify(this.metadata)
     );
-    const store = JSON.parse(window.localStorage);
-    const sortedMetadata = Object.entries(store).sort(
-      (a, b) => b[1].systemTime - a[1].systemTime
-    );
-    return sortedMetadata;
+    // const store = window.localStorage;
+    // const sortedMetadata = Object.entries(store).sort(
+    //   (a, b) => b[1].systemTime - a[1].systemTime
+    // );
+    return Job.sortJobStore();
 
     // const jobMetadata = {};
     // jobMetadata[this.workspaceHash] = {

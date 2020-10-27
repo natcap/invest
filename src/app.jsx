@@ -19,6 +19,7 @@ import { getInvestList } from './server_requests';
 import { updateRecentJobs, loadRecentJobs } from './utils';
 import { fileRegistry } from './constants';
 import { getLogger } from './logger';
+import Job from './Job';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -46,10 +47,11 @@ export default class App extends React.Component {
   async componentDidMount() {
     const { jobDatabase } = this.props;
     const investList = await getInvestList();
-    let recentJobs = [];
-    if (fs.existsSync(jobDatabase)) {
-      recentJobs = await loadRecentJobs(jobDatabase);
-    }
+    // let recentJobs = [];
+    // if (fs.existsSync(jobDatabase)) {
+    //   recentJobs = await loadRecentJobs(jobDatabase);
+    // }
+    const recentJobs = Job.sortJobStore();
     // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?
 

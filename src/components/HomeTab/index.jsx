@@ -114,32 +114,21 @@ class RecentInvestJobs extends React.PureComponent {
     const { recentJobs } = this.props;
     recentJobs.forEach((job) => {
       console.log(job);
-      let model;
-      let workspaceDir;
-      let jobDataPath;
-      const [jobID, metadata] = job;
-      // The following properties are required. If they don't exist,
-      // the recent job's data was corrupted and should be skipped over.
-      if (jobID === undefined) { return; }
-      try {
-        model = metadata.model;
-        workspaceDir = metadata.workspace.directory;
-        jobDataPath = metadata.jobDataPath;
-      } catch (error) {
-        logger.error(error);
-        return;
-      }
+      // let model;
+      // let workspaceDir;
+      // let jobDataPath;
+      // const [jobID, metadata] = job;
 
       // These are optional and the rest of the render method
       // should be robust to undefined values
-      const { suffix } = metadata.workspace;
-      const { status, description, humanTime } = metadata;
+      // const { suffix } = metadata.workspace;
+      // const { status, description, humanTime } = metadata;
 
       recentButtons.push(
         <Card
           className="text-left recent-job-card"
           as="button"
-          key={jobID}
+          key={job.workspaceHash}
           onClick={() => this.handleClick(jobDataPath)}
         >
           <Card.Body>
