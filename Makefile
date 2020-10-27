@@ -117,7 +117,7 @@ USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
-MAC_APPLICATION_BUNDLE := "exe/dist/InVEST.app"
+MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
 .PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
@@ -343,6 +343,7 @@ $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_D
 mac_app: $(MAC_APPLICATION_BUNDLE)
 $(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR)
 	echo "mac_app"
+	./installer/darwin/build_app_bundle.sh "$(VERSION)" "$(INVEST_BINARIES_DIR)" "$(MAC_APPLICATION_BUNDLE)"
 
 mac_zipfile: $(MAC_BINARIES_ZIP_FILE)
 $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
