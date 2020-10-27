@@ -10,7 +10,6 @@ if (isDevMode) {
 const {
   app, BrowserWindow, ipcMain, screen, nativeTheme
 } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
-//    const { nativeTheme } = require("electron").remote;
 const {
   getFlaskIsReady, shutdownPythonProcess
 } = require('./server_requests');
