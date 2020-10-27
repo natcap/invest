@@ -226,11 +226,9 @@ export default class InvestJob extends React.Component {
         // TODO: handle case when job.logfile is still undefined?
         // Could be if some stdout is emitted before a logfile exists.
         logger.debug(`invest logging to: ${job.logfile}`);
-        // job.status = 'running';
         this.setState(
           {
             logfile: job.logfile,
-            // jobStatus: job.status,
           }, () => {
             this.switchTabs('log');
             saveJob(job);
