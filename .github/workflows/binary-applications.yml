@@ -237,7 +237,7 @@ jobs:
               uses: actions/upload-artifact@v2-preview
               with:
                   name: InVEST-mac-binaries
-                  path: dist/InVEST-*-mac.zip
+                  path: dist/InVEST*.dmg
 
     build-sampledata:
         name: Build sampledata archives
