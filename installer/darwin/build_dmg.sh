@@ -27,4 +27,4 @@ dmgbuild -Dinvestdir="$2" -s $CONFIG_DIR/dmgconf.py "$title" "$finalDMGName"
 
 find . -name "InVEST-${1}.dmg"
 
-codesign --verbose --sign "Natural Capital Project Software Team" "$finalDMG"
+# codesign --verbose --sign "Natural Capital Project Software Team" "$finalDMG"
