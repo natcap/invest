@@ -51,7 +51,8 @@ export default class App extends React.Component {
     // if (fs.existsSync(jobDatabase)) {
     //   recentJobs = await loadRecentJobs(jobDatabase);
     // }
-    const recentJobs = Job.sortJobStore();
+    await Job.init();
+    const recentJobs = await Job.getJobStore(); // why does this return a Promise?
     // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?
 
@@ -126,7 +127,7 @@ export default class App extends React.Component {
    */
   async saveJob(job) {
     // const jobMetadata = job.save();
-    const recentJobs = job.save();
+    const recentJobs = await job.save();
     console.log(recentJobs);
     // const recentJobs = await updateRecentJobs(
     //   jobMetadata, this.props.jobDatabase

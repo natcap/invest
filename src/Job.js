@@ -2,10 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
+import localforage from 'localforage';
+
 import { fileRegistry } from './constants';
 import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
+
+const INDEX = 'sortedJobs';
 
 /**
  * Create an object to hold properties associated with an Invest Job.
@@ -18,15 +22,34 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
  * @param  {string} status - indicates how the job exited, if it's a recent job.
  */
 export default class Job {
-  static sortJobStore() {
-    const store = window.localStorage;
-    const parsedStore = Object.values(store).forEach(
-      (obj) => JSON.parse(obj)
-    );
-    const sorted = parsedStore.sort(
-      (a, b) => b[1].systemTime - a[1].systemTime
-    );
-    return sorted;
+  static async init() {
+    const sortedKeys = await localforage.getItem(INDEX);
+    console.log(sortedKeys);
+    if (!await localforage.getItem(INDEX)) {
+      localforage.setItem(INDEX, []);
+    }
+  }
+
+  static async getJobStore() {
+    const jobs = [];
+    const sortedKeys = await localforage.getItem(INDEX);
+    console.log(sortedKeys);
+    if (sortedKeys) {
+      console.log(sortedKeys);
+      sortedKeys.forEach(async (workspaceHash) => {
+        jobs.push(await localforage.getItem(workspaceHash));
+      });
+    }
+    return jobs;
+    // const store = localforage;
+    // console.log(store);
+    // const parsedStore = Object.values(store).forEach(
+    //   (obj) => JSON.parse(obj)
+    // );
+    // const sorted = parsedStore.sort(
+    //   (a, b) => b[1].systemTime - a[1].systemTime
+    // );
+    // return sorted;
   }
 
   constructor(
@@ -55,7 +78,7 @@ export default class Job {
     this.metadata[key] = value;
   }
 
-  save() {
+  async save() {
     // const jsonContent = JSON.stringify(this.metadata);
     // const filepath = path.join(
     //   fileRegistry.CACHE_DIR, `${this.workspaceHash}.json`
@@ -68,14 +91,17 @@ export default class Job {
     // });
     this.metadata.humanTime = new Date().toLocaleString();
     this.metadata.systemTime = new Date().getTime();
-    window.localStorage.setItem(
-      this.metadata.workspaceHash, JSON.stringify(this.metadata)
+    const sortedKeys = await localforage.getItem(INDEX);
+    sortedKeys.unshift(this.metadata.workspaceHash);
+    localforage.setItem(INDEX, sortedKeys);
+    localforage.setItem(
+      this.metadata.workspaceHash, this.metadata
     );
     // const store = window.localStorage;
     // const sortedMetadata = Object.entries(store).sort(
     //   (a, b) => b[1].systemTime - a[1].systemTime
     // );
-    return Job.sortJobStore();
+    return Job.getJobStore();
 
     // const jobMetadata = {};
     // jobMetadata[this.workspaceHash] = {

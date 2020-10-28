@@ -67,6 +67,7 @@
     "glob": "^7.1.6",
     "google-palette": "^1.1.0",
     "leaflet": "^1.7.1",
+    "localforage": "^1.9.0",
     "node-fetch": "^2.6.1",
     "papaparse": "^5.3.0",
     "prop-types": "^15.7.2",

@@ -36,6 +36,7 @@ export default class HomeTab extends React.PureComponent {
 
   render() {
     const { investList, recentJobs } = this.props;
+    console.log(recentJobs);
     // A button in a table row for each model
     const investButtons = [];
     Object.keys(investList).forEach((model) => {
@@ -101,10 +102,10 @@ class RecentInvestJobs extends React.PureComponent {
     this.handleClick = this.handleClick.bind(this);
   }
 
-  handleClick(jobDataPath) {
-    const job = JSON.parse(
-      fs.readFileSync(jobDataPath, 'utf8')
-    );
+  handleClick(job) {
+    // const job = JSON.parse(
+    //   fs.readFileSync(jobDataPath, 'utf8')
+    // );
     this.props.openInvestModel(job);
   }
 
@@ -112,6 +113,7 @@ class RecentInvestJobs extends React.PureComponent {
     // Buttons to load each recently saved state
     const recentButtons = [];
     const { recentJobs } = this.props;
+    console.log(recentJobs);
     recentJobs.forEach((job) => {
       console.log(job);
       // let model;
@@ -129,12 +131,12 @@ class RecentInvestJobs extends React.PureComponent {
           className="text-left recent-job-card"
           as="button"
           key={job.workspaceHash}
-          onClick={() => this.handleClick(jobDataPath)}
+          onClick={() => this.handleClick(job)}
         >
           <Card.Body>
             <Card.Header as="h4">
-              {model}
-              {status === 'running'
+              {job.modelHumanName}
+              {job.status === 'running'
                 && (
                   <Spinner
                     as="span"
@@ -148,14 +150,14 @@ class RecentInvestJobs extends React.PureComponent {
             </Card.Header>
             <Card.Title>
               <span className="text-heading">{'Workspace: '}</span>
-              <span className="text-mono">{workspaceDir}</span>
+              <span className="text-mono">{job.workspace.directory}</span>
             </Card.Title>
             <Card.Title>
               <span className="text-heading">{'Suffix: '}</span>
-              <span className="text-mono">{suffix}</span>
+              <span className="text-mono">{job.workspace.suffix}</span>
             </Card.Title>
-            <Card.Text>{description || <em>no description</em>}</Card.Text>
-            <Card.Footer className="text-muted">{humanTime}</Card.Footer>
+            <Card.Text>{job.description || <em>no description</em>}</Card.Text>
+            <Card.Footer className="text-muted">{job.humanTime}</Card.Footer>
           </Card.Body>
         </Card>
       );
