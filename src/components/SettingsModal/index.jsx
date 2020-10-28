@@ -13,7 +13,10 @@ export default class SettingsModal extends React.Component {
     super(props);
     this.state = {
       show: false,
-      localSettings: {}
+      localSettings: {
+        nWorkers: '',
+        loggingLevel: ''
+      }
     };
 
     this.handleShow = this.handleShow.bind(this);
