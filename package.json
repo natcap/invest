@@ -50,7 +50,8 @@
   "jest": {
     "verbose": true,
     "collectCoverage": true,
-    "testEnvironment": "jest-environment-jsdom-sixteen"
+    "testEnvironment": "jest-environment-jsdom-sixteen",
+    "setupFiles": ["./tests/jest.overrides.js"]
   },
   "invest": {
     "version": "3.8.7"
