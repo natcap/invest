@@ -1260,30 +1260,6 @@ def execute_transition_analysis(args):
     task_graph.join()
 
 
-def _calculate_disturbance_volume(disturbance_magnitude_matrix, stock_matrix):
-    """Calculate disturbance volume.
-
-    Args:
-        disturbance_magnitude_matrix (numpy.array): A float32 matrix of the
-            magnitude of a disturbance.  Nodata values must be NODATA_FLOAT32_MIN.
-        stock_matrix (numpy.array): A float32 matrix of the stocks present at
-            the time of disturbance.  Nodata values must be NODATA_FLOAT32_MIN.
-
-    Returns:
-        A numpy float32 matrix of disturbance volume.
-    """
-    disturbed_carbon_volume = numpy.empty(disturbance_magnitude_matrix.shape,
-                                          dtype=numpy.float32)
-    disturbed_carbon_volume[:] = NODATA_FLOAT32_MIN
-    valid_pixels = (~numpy.isclose(disturbance_magnitude_matrix,
-                                   NODATA_FLOAT32_MIN) &
-                    ~numpy.isclose(stock_matrix, NODATA_FLOAT32_MIN))
-    disturbed_carbon_volume[valid_pixels] = (
-        disturbance_magnitude_matrix[valid_pixels] *
-        stock_matrix[valid_pixels])
-    return disturbed_carbon_volume
-
-
 def _calculate_npv(
         net_sequestration_rasters, prices_by_year, discount_rate,
         baseline_year, target_raster_years_and_paths):
@@ -1427,77 +1403,6 @@ def _calculate_accumulation_over_time(
             annual_soil_matrix[valid_pixels] +
             annual_litter_matrix[valid_pixels]) * n_years)
     return target_matrix
-
-
-def _track_latest_transition_year(
-        current_disturbance_vol_raster_path,
-        known_transition_years_raster_path,
-        current_transition_year,
-        target_path):
-    """Track the year of latest disturbance in a raster.
-
-    Args:
-        current_disturbance_vol_raster_path (string): The path to a raster on
-            disk representing the volume of carbon disturbed in the most recent
-            transition.  This raster must be a 32-bit floating-point raster.
-        known_transition_years_raster_path (string or None): If a string, the
-            path to the most recent raster of known transition years.  If
-            ``None``, we assume that this is the first year for which
-            transitions are being tracked.  This raster must be an unsigned
-            16-bit integer raster.
-        current_transition_year (int): The year of the transition that we are
-            tracking.
-        target_path (string): The path to a raster on disk where where the year
-            of the latest transition values will be tracked.
-
-    Returns:
-        ``None``.
-
-    """
-    current_disturbance_vol_nodata = pygeoprocessing.get_raster_info(
-        current_disturbance_vol_raster_path)['nodata'][0]
-
-    if known_transition_years_raster_path:
-        known_transition_years_nodata = pygeoprocessing.get_raster_info(
-            known_transition_years_raster_path)['nodata'][0]
-        known_transition_years_tuple = (
-            known_transition_years_raster_path, 1)
-    else:
-        known_transition_years_tuple = (None, 'raw')
-
-    def _track_transition_year(
-            current_disturbance_vol_matrix, known_transition_years_matrix):
-        """Raster_calculator op for tracking the latest transition year."""
-        target_matrix = numpy.empty(
-            current_disturbance_vol_matrix.shape, dtype=numpy.uint16)
-        target_matrix[:] = NODATA_UINT16_MAX
-
-        # If this is None, then we don't have any previously disturbed pixels
-        # and everything disturbed in this timestep is newly disturbed.
-        if known_transition_years_raster_path:
-            # Keep any years that are already known to be disturbed.
-            pixels_previously_disturbed = ~numpy.isclose(
-                known_transition_years_matrix, known_transition_years_nodata)
-            target_matrix[pixels_previously_disturbed] = (
-                known_transition_years_matrix[pixels_previously_disturbed])
-
-        # Track any pixels that are known to be disturbed in this current
-        # transition year.
-        # Exclude pixels that are nodata or effectively 0.
-        newly_disturbed_pixels = (
-            (~numpy.isclose(
-                current_disturbance_vol_matrix,
-                current_disturbance_vol_nodata)) &
-            (~numpy.isclose(current_disturbance_vol_matrix, 0.0)))
-
-        target_matrix[newly_disturbed_pixels] = current_transition_year
-
-        return target_matrix
-
-    pygeoprocessing.raster_calculator(
-        [(current_disturbance_vol_raster_path, 1),
-         known_transition_years_tuple], _track_transition_year, target_path,
-        gdal.GDT_UInt16, NODATA_UINT16_MAX)
 
 
 def _track_disturbance(
