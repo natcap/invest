@@ -106,7 +106,11 @@ Unreleased Changes (3.9)
 
 ..
 ..
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.9 (2020-09-15)
 ------------------
 * Hydropower
     * Fixed bug that prevented validation from ever passing for this model.
