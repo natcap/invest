@@ -6,6 +6,7 @@ import pprint
 import shutil
 import tempfile
 import unittest
+import glob
 
 import numpy
 from osgeo import gdal, osr
@@ -672,6 +673,44 @@ class TestCBC2(unittest.TestCase):
                 expected_net_present_value_at_2030, rtol=1e-6)
         finally:
             raster = None
+
+        # For emissions, make sure that each of the emissions sum rasters in
+        # the output folder match the sum of all annual emissions from the time
+        # period.
+        for emissions_raster_path in glob.glob(
+                os.path.join(args['workspace_dir'], 'output',
+                             'carbon-emissions-between-*.tif')):
+            try:
+                raster = gdal.OpenEx(emissions_raster_path)
+                band = raster.GetRasterBand(1)
+                emissions_in_period = band.ReadAsArray()
+            finally:
+                band = None
+                raster = None
+
+            basename = os.path.splitext(
+                os.path.basename(emissions_raster_path))[0]
+            parts = basename.split('-')
+            start_year = int(parts[3])
+            end_year = int(parts[5])
+
+            summed_emissions_over_time_period = numpy.array(
+                [[0.0, 0.0]], dtype=numpy.float32)
+            for year in range(start_year, end_year):
+                for pool in ('soil', 'biomass'):
+                    yearly_emissions_raster = os.path.join(
+                        args['workspace_dir'], 'intermediate',
+                        f'emissions-{pool}-{year}.tif')
+                    try:
+                        raster = gdal.OpenEx(yearly_emissions_raster)
+                        band = raster.GetRasterBand(1)
+                        summed_emissions_over_time_period += band.ReadAsArray()
+                    finally:
+                        band = None
+                        raster = None
+            numpy.testing.assert_allclose(
+                emissions_in_period,
+                summed_emissions_over_time_period)
 
     def test_model_no_transitions(self):
         """CBC: Test model without transitions.
