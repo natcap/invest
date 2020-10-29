@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import crypto from 'crypto';
 import { spawn, exec } from 'child_process';
 import React from 'react';
@@ -15,7 +16,7 @@ import Spinner from 'react-bootstrap/Spinner';
 
 import SetupTab from './components/SetupTab';
 import LogTab from './components/LogTab';
-import ResourcesTab from './components/ResourcesTab';
+import ResourcesLinks from './components/ResourcesLinks';
 import {
   getSpec, writeParametersToFile
 } from './server_requests';
@@ -145,6 +146,7 @@ export default class InvestJob extends React.Component {
       investExe,
       investSettings,
       modelRunName,
+      modelHumanName,
       saveJob,
     } = this.props;
 
@@ -163,11 +165,18 @@ export default class InvestJob extends React.Component {
     const job = {
       jobID: jobID,
       modelRunName: modelRunName,
+      modelHumanName: modelHumanName,
       argsValues: argsValues,
       workspace: workspace,
       logfile: undefined,
-      status: undefined,
+      status: 'running',
     };
+
+    // Setting this very early in the click handler so the Execute button
+    // can display an appropriate visual cue when it's clicked
+    this.setState({
+      jobStatus: job.status,
+    });
 
     // Write a temporary datastack json for passing to invest CLI
     const tempDir = fs.mkdtempSync(path.join(
@@ -217,11 +226,9 @@ export default class InvestJob extends React.Component {
         // TODO: handle case when job.logfile is still undefined?
         // Could be if some stdout is emitted before a logfile exists.
         logger.debug(`invest logging to: ${job.logfile}`);
-        job.status = 'running';
         this.setState(
           {
             logfile: job.logfile,
-            jobStatus: job.status,
           }, () => {
             this.switchTabs('log');
             saveJob(job);
@@ -238,7 +245,7 @@ export default class InvestJob extends React.Component {
     let stderr = Object.assign('', this.state.logStdErr);
     this.investRun.stderr.on('data', (data) => {
       logger.debug(`${data}`);
-      stderr += `${data}`;
+      stderr += `${data}${os.EOL}`;
       this.setState({
         logStdErr: stderr,
       });
@@ -289,7 +296,6 @@ export default class InvestJob extends React.Component {
     const {
       activeTab,
       modelSpec,
-      modelName,
       argsSpec,
       uiSpec,
       jobStatus,
@@ -297,21 +303,25 @@ export default class InvestJob extends React.Component {
       logStdErr,
     } = this.state;
 
-    const logDisabled = (!logfile);
-
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
       return (<div />);
     }
 
+    const isRunning = jobStatus === 'running';
+    const logDisabled = (!logfile);
+    const { navID, modelRunName } = this.props;
+    const sidebarSetupElementId = `sidebar-setup-${navID}`;
+    const sidebarFooterElementId = `sidebar-footer-${navID}`;
+
     return (
-      <TabContainer activeKey={activeTab}>
+      <TabContainer activeKey={activeTab} id="invest-tab">
         <Row>
-          <Col sm={3}>
+          <Col sm={3} className="invest-sidebar-col">
             <Nav
-              variant="pills"
-              id="vertical tabs"
               className="flex-column"
+              id="vertical tabs"
+              variant="pills"
               activeKey={activeTab}
               onSelect={this.switchTabs}
             >
@@ -320,9 +330,14 @@ export default class InvestJob extends React.Component {
                   Setup
                 </Nav.Link>
               </Nav.Item>
+              <div
+                className="sidebar-setup"
+                id={sidebarSetupElementId}
+              />
               <Nav.Item>
                 <Nav.Link eventKey="log" disabled={logDisabled}>
-                  { this.state.jobStatus === 'running'
+                  Log
+                  { isRunning
                   && (
                     <Spinner
                       animation="border"
@@ -331,28 +346,35 @@ export default class InvestJob extends React.Component {
                       aria-hidden="true"
                     />
                   )}
-                  Log
-                </Nav.Link>
-              </Nav.Item>
-              <Nav.Item>
-                <Nav.Link eventKey="resources">
-                  Resources
                 </Nav.Link>
               </Nav.Item>
             </Nav>
+            <Row className="flex-column">
+              <ResourcesLinks
+                moduleName={modelRunName}
+                docs={modelSpec.userguide_html}
+              />
+            </Row>
+            <Row
+              className="flex-column sidebar-footer"
+              id={sidebarFooterElementId}
+            />
           </Col>
-          <Col sm={9}>
-            <TabContent className="mt-3">
+          <Col sm={9} className="invest-main-col">
+            <TabContent>
               <TabPane eventKey="setup" title="Setup">
                 <SetupTab
                   pyModuleName={modelSpec.module}
-                  modelName={modelName}
+                  modelName={modelSpec.model_name}
                   argsSpec={argsSpec}
                   uiSpec={uiSpec}
                   argsInitValues={this.props.argsInitValues}
                   investExecute={this.investExecute}
                   argsToJsonFile={this.argsToJsonFile}
                   nWorkers={this.props.investSettings.nWorkers}
+                  sidebarSetupElementId={sidebarSetupElementId}
+                  sidebarFooterElementId={sidebarFooterElementId}
+                  isRunning={isRunning}
                 />
               </TabPane>
               <TabPane eventKey="log" title="Log">
@@ -361,12 +383,8 @@ export default class InvestJob extends React.Component {
                   logfile={logfile}
                   logStdErr={logStdErr}
                   terminateInvestProcess={this.terminateInvestProcess}
-                />
-              </TabPane>
-              <TabPane eventKey="resources" title="Resources">
-                <ResourcesTab
-                  modelName={modelSpec.model_name}
-                  docs={modelSpec.userguide_html}
+                  pyModuleName={modelSpec.module}
+                  sidebarFooterElementId={sidebarFooterElementId}
                 />
               </TabPane>
             </TabContent>
@@ -380,6 +398,8 @@ export default class InvestJob extends React.Component {
 InvestJob.propTypes = {
   investExe: PropTypes.string.isRequired,
   modelRunName: PropTypes.string.isRequired,
+  modelHumanName: PropTypes.string.isRequired,
+  navID: PropTypes.string.isRequired,
   logfile: PropTypes.string,
   argsInitValues: PropTypes.object,
   jobStatus: PropTypes.string,

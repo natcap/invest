@@ -15,20 +15,6 @@ import { getLogger } from '../../logger';
 
 const logger = getLogger(__filename.split('/').slice(-2).join('/'));
 
-// these are bootstrap codes for colors
-// const STATUS_COLOR_MAP = {
-//   running: 'warning',
-//   error: 'danger',
-//   success: 'success'
-// }
-
-// These are the same colors as above
-const STATUS_COLOR_MAP = {
-  running: 'rgba(23, 162, 184, 0.7)',
-  error: 'rgba(220, 53, 69, 0.7)',
-  success: '#148F68', // invest green
-};
-
 /**
  * Renders a table of buttons for each invest model and
  * a list of cards for each cached invest job.
@@ -40,8 +26,10 @@ export default class HomeTab extends React.PureComponent {
   }
 
   handleClick(event) {
-    const modelRunName = event.target.value;
-    this.props.openInvestModel(modelRunName);
+    const { value } = event.target;
+    const { investList, openInvestModel } = this.props;
+    const modelRunName = investList[value].internal_name;
+    openInvestModel(modelRunName, value);
   }
 
   render() {
@@ -56,7 +44,7 @@ export default class HomeTab extends React.PureComponent {
               className="invest-button"
               block
               size="lg"
-              value={investList[model].internal_name}
+              value={model}
               onClick={this.handleClick}
               variant="link"
             >
@@ -69,14 +57,14 @@ export default class HomeTab extends React.PureComponent {
 
     return (
       <Row>
-        <Col md={5}>
-          <Table size="sm" className="invest-list-table">
+        <Col md={5} className="invest-list-table">
+          <Table size="sm">
             <tbody>
               {investButtons}
             </tbody>
           </Table>
         </Col>
-        <Col md={7}>
+        <Col md={7} className="recent-job-card-group">
           <RecentInvestJobs
             openInvestModel={this.props.openInvestModel}
             recentJobs={recentJobs}
@@ -117,6 +105,7 @@ class RecentInvestJobs extends React.PureComponent {
     );
     this.props.openInvestModel(
       jobData.modelRunName,
+      jobData.modelHumanName,
       jobData.argsValues,
       jobData.logfile,
       jobData.status,
@@ -149,9 +138,6 @@ class RecentInvestJobs extends React.PureComponent {
       const { suffix } = metadata.workspace;
       const { status, description, humanTime } = metadata;
 
-      const headerStyle = {
-        backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
-      };
       recentButtons.push(
         <Card
           className="text-left recent-job-card"
@@ -160,7 +146,7 @@ class RecentInvestJobs extends React.PureComponent {
           onClick={() => this.handleClick(jobDataPath)}
         >
           <Card.Body>
-            <Card.Header as="h4" style={headerStyle}>
+            <Card.Header as="h4">
               {model}
               {status === 'running'
                 && (
@@ -179,7 +165,7 @@ class RecentInvestJobs extends React.PureComponent {
               <span className="text-mono">{workspaceDir}</span>
             </Card.Title>
             <Card.Title>
-              <span className="text-heading">{ suffix && 'Suffix: ' }</span>
+              <span className="text-heading">{'Suffix: '}</span>
               <span className="text-mono">{suffix}</span>
             </Card.Title>
             <Card.Text>{description || <em>no description</em>}</Card.Text>
@@ -198,7 +184,6 @@ class RecentInvestJobs extends React.PureComponent {
           ? (
             <CardGroup
               aria-labelledby="recent-job-card-group"
-              className="recent-job-card-group"
             >
               {recentButtons}
             </CardGroup>
@@ -217,4 +202,5 @@ class RecentInvestJobs extends React.PureComponent {
 
 RecentInvestJobs.propTypes = {
   recentJobs: PropTypes.array.isRequired,
+  openInvestModel: PropTypes.func.isRequired,
 };

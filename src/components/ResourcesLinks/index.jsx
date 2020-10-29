@@ -1,3 +1,4 @@
+import path from 'path';
 import React from 'react';
 import PropTypes from 'prop-types';
 import Electron from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
@@ -45,42 +46,34 @@ function handleClick(event) {
  * e.g. https://community.naturalcapitalproject.org/tag/carbon
  */
 export default function ResourcesTab(props) {
-  let userGuideURL;
-  let forumURL;
-  let name;
-
-  if (props.docs && props.modelName) {
-    userGuideURL = UG_ROOT + props.docs;
-    forumURL = `${FORUM_ROOT}tags/${FORUM_TAGS[props.modelName]}`;
-    name = props.modelName;
-  } else {
-    // No model has been selected yet, but general resources are useful
-    userGuideURL = UG_ROOT;
-    forumURL = FORUM_ROOT;
-    name = 'InVEST';
+  let userGuideURL = UG_ROOT;
+  let forumURL = FORUM_ROOT;
+  const { docs, moduleName } = props;
+  const tagName = FORUM_TAGS[moduleName];
+  if (docs) {
+    const docsName = path.basename(docs);
+    userGuideURL = `${path.join(UG_ROOT, docsName)}#data-needs`;
+  }
+  if (tagName) {
+    forumURL = path.join(FORUM_ROOT, 'tags', tagName);
   }
   return (
-    <div>
-      <h2>
-        <a href={userGuideURL} onClick={handleClick}>
-          {`User's Guide: ${name}`}
-        </a>
-      </h2>
-      <br />
-      <h2>
-        <a href={forumURL} onClick={handleClick}>
-          {`FAQ: ${name}`}
-        </a>
-      </h2>
-    </div>
+    <React.Fragment>
+      <a href={userGuideURL} onClick={handleClick}>
+        {"User's Guide"}
+      </a>
+      <a href={forumURL} onClick={handleClick}>
+        FAQ
+      </a>
+    </React.Fragment>
   );
 }
 
 ResourcesTab.propTypes = {
-  modelName: PropTypes.string,
+  moduleName: PropTypes.string,
   docs: PropTypes.string,
 };
 ResourcesTab.defaultProps = {
-  modelName: undefined,
+  moduleName: undefined,
   docs: '',
 };

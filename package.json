@@ -8,7 +8,7 @@
   "scripts": {
     "start": "cross-env FLASK_APP=src/server.py npx electron . --dev",
     "lint": "eslint --cache --color --ext .jsx,.js src",
-    "test": "jest --testMatch **/tests/*.test.js",
+    "test": "cross-env DEBUG_PRINT_LIMIT=10 jest --testMatch **/tests/*.test.js",
     "test-flask-app": "jest --runInBand --testMatch **/tests/binary_tests/flaskapp.test.js",
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
     "postinstall": "electron-builder install-app-deps",
@@ -53,7 +53,7 @@
     "testEnvironment": "jest-environment-jsdom-sixteen"
   },
   "invest": {
-    "version": "3.8.7"
+    "version": "3.8.9"
   },
   "keywords": [],
   "author": "dmf",
@@ -81,6 +81,7 @@
     "react-leaflet-choropleth": "^2.0.1",
     "react-redux": "^7.2.1",
     "redux": "^4.0.5",
+    "sanitize-html": "^2.1.0",
     "tail": "^2.0.4",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.0"

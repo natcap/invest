@@ -72,7 +72,11 @@ export default class SettingsModal extends React.Component {
 
     return (
       <React.Fragment>
-        <Button className="mx-3" variant="primary" onClick={this.handleShow}>
+        <Button
+          className="mx-3"
+          variant="outline-dark"
+          onClick={this.handleShow}
+        >
           Settings
         </Button>
 

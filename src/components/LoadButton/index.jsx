@@ -20,7 +20,9 @@ export default class LoadButton extends React.Component {
     const data = await remote.dialog.showOpenDialog();
     if (data.filePaths.length) {
       const datastack = await fetchDatastackFromFile(data.filePaths[0]);
-      this.props.openInvestModel(datastack.model_run_name, datastack.args);
+      this.props.openInvestModel(
+        datastack.model_run_name, datastack.model_human_name, datastack.args
+      );
     }
   }
 
@@ -29,7 +31,7 @@ export default class LoadButton extends React.Component {
       <Button
         className="mx-3"
         onClick={this.browseFile}
-        variant="primary"
+        variant="outline-dark"
       >
         Load Parameters
       </Button>

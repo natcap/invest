@@ -64,7 +64,7 @@ export default class ArgInput extends React.PureComponent {
         >
           <FormLabel argkey={argkey}>
             <span>
-              {argSpec.name} <em> ({typeLabel})</em>
+              {argSpec.name}
             </span>
           </FormLabel>
           <Col sm="8">
@@ -74,6 +74,7 @@ export default class ArgInput extends React.PureComponent {
                 id={argkey}
                 name={argkey}
                 type="text"
+                placeholder={typeLabel}
                 value={value || ''} // empty string is handled better than `undefined`
                 onChange={handleChange}
                 isValid={touched && isValid}

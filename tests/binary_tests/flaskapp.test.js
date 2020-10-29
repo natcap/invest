@@ -5,7 +5,12 @@ import * as server_requests from '../../src/server_requests';
 import { findInvestBinaries, createPythonFlaskProcess } from '../../src/main_helpers';
 import { argsDictFromObject } from '../../src/utils';
 
+// If SERVER path is configured in .env, this appends it to process.env
+const dotenv = require('dotenv');
+dotenv.config();
+
 jest.setTimeout(250000) // This test is slow in CI
+
 
 const isDevMode = true // otherwise need to mock process.resourcesPath
 beforeAll(async () => {
@@ -78,12 +83,14 @@ test('write parameters to file and parse them from file', async () => {
 
   // Second test the datastack is read and parsed
   const data2 = await server_requests.fetchDatastackFromFile(filepath);
+  console.log(data2)
   const expectedKeys2 = [
     'type',
     'args',
     'invest_version',
     'module_name',
     'model_run_name',
+    'model_human_name',
   ];
   expectedKeys2.forEach((key) => {
     expect(data2[key] !== undefined).toBe(true)

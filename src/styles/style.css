@@ -1,10 +1,29 @@
+body {
+	--invest-green: #148F68;
+	--navbar-height: 65px;
+	background-color: rgba(0,0,0,0);
+	margin: 0;
+	padding: 1rem;
+}
+
+/*Top Navigation*/
+
 .navbar {
 	padding-bottom: 0;
+	height: var(--navbar-height);
+	border-bottom: 3px solid var(--invest-green);
+	background-color: #fff
 }
 
 .navbar-light .navbar-nav .nav-link {
-    padding-right: 2rem;
-    padding-left: 2rem;
+	background-color: transparent;
+  padding-right: 2rem;
+  padding-left: 2rem;
+  color: #999999;
+}
+
+.navbar-light .navbar-nav .nav-link.active {
+	background-color: ghostwhite;
 }
 
 .nav-link {
@@ -13,44 +32,51 @@
 	font-weight: 550;
 }
 
-.navbar-brand {
-	font-style: italic;
+.navbar .navbar-brand {
+	color: var(--invest-green);
 	font-weight: 600;
-	font-size: 1.5rem;
-	letter-spacing: 2px;
-	color: gray;
+	font-size: 2.0rem;
+	letter-spacing: 1px;
+	pointer-events: none;
 }
 
-.tab-content {
-	padding-left: 2rem;
-	padding-right: 2rem;
+.navbar .btn {
+	background-color: #6c757d;
+	color: #ffffff;
+	font-weight: 600;
+	font-size: 1.2rem;
 }
 
-.close-tab {
-	margin-left: 0.5rem;
+.close-tab.btn {
+	background-color: transparent;
 	border-color: transparent;
+	color: #6c757d;
+	margin-left: 0.5rem;
+	padding-left: 1rem;
+	padding-right: 1rem;
+	padding-top: 0.25rem;
+	padding-bottom: 0.25rem;
 }
 .close-tab:hover, .close-tab:focus, .close-tab:active {
 	border-color: #6c757d;
 }
 
-/* Default sized Radio buttons are too small */
-input[type=radio]{
-  transform:scale(2.0);
-  padding-left: 0.5rem;
-  margin-right: 0.5rem;
+/*Top Level Tabs*/
+
+#top-tab-content.tab-content {
+	padding-top: 16px;
 }
 
-/* HomeTab styles */
+/* Home Tab */
 
 .invest-list-table {
 	display: block;
-	height: 90vh;
+	height: 87vh;
 	overflow-y: auto;
 }
 
 .invest-button {
-	color: #148F68;
+	color: var(--invest-green);
 	font-weight: 600;
 }
 
@@ -58,6 +84,8 @@ input[type=radio]{
 	display: flex;
 	flex-wrap: wrap;
 	flex-direction: row;
+	height: 87vh;
+	overflow-y: auto;
 }
 
 /* cards can expand to fill space, via flex,
@@ -74,10 +102,10 @@ input[type=radio]{
 .card-body {
 	width: inherit;
 	padding: 0;
-	/*margin-left: -7px;*/
 }
 
 .card-header {
+	background-color: var(--invest-green);
 	color: white;
 	font-weight: 700;
 	padding-left: 1.25rem;
@@ -102,21 +130,77 @@ input[type=radio]{
 	padding-left: 1.25rem;
 }
 
-/* SetupTab styles */
+/* InVEST Model Tab */
 
-.setup-tab-footer {
-	padding-left: 2rem;
-	padding-right: 2rem;
-	padding-top: 1rem;
-	padding-bottom: 1rem;
+.invest-sidebar-col {
+	padding-right: 0rem;
 }
 
+.invest-sidebar-col .nav-link {
+	background-color: #fff;
+}
+
+.invest-sidebar-col .nav-link.active {
+	color: #000;
+	background-color: ghostwhite;
+	border-right: 5px solid var(--invest-green);
+	border-radius: 0rem;
+}
+
+.sidebar-setup {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	align-items: flex-start;
+	padding-left: 2rem;
+}
+
+.invest-sidebar-col .row {
+	padding:inherit;
+}
+
+.invest-sidebar-col .row a {
+	padding:inherit;
+	font-size: 1.3rem;
+}
+
+
+.sidebar-footer {
+	position: absolute;
+	bottom: 0rem;
+	right: 0;
+	left: 0;
+	margin-right:2rem;
+	margin-left:2rem;
+	padding-left: inherit;
+	padding-right: inherit;
+}
+
+.sidebar-footer .btn-primary {
+	font-size: 1.5rem;
+	font-weight: 600;
+	letter-spacing: 0.1rem;
+}
+
+.invest-main-col {
+	padding-left: 0rem;
+	height: 85vh;
+}
+
+.invest-main-col .tab-content {
+	background-color: ghostwhite;
+}
+
+/* InVEST Setup Tab */
 .args-form {
 	height: 85vh;
+	width: 100%;
+	margin-left: 2rem;
 	overflow-y: auto;
 	overflow-x: hidden;
 }
 
+/* InVEST Argument Forms */
 .arg-group {
 	margin-top: 2.0rem;
 	margin-bottom: 2.0rem;
@@ -130,7 +214,79 @@ input[type=radio]{
 	color: lightgray;
 }
 
-.form-control {
+.args-form .form-control {
 	font-family: monospace;
 	font-size:1.3rem;
+}
+
+.args-form .form-control[type=text] {
+	/* In order to keep the important part of long filepaths visible
+	https://stackoverflow.com/questions/38222696/issue-with-the-direction-rtl-css-property */
+	direction: rtl;
+	text-align: left;
+	unicode-bidi: plaintext;
+}
+
+input[type=text]::placeholder {
+	font-style: italic;
+	color: #a5a5a5;
+}
+
+/* Default sized Radio buttons are too small */
+.form-check-inline .form-check-input {
+	transform:scale(2.0);
+	margin-left: 1rem;
+}
+
+.form-check-label {
+	padding-left: 0.5rem;
+	padding-right: 1rem;
+}
+
+.invalid-feedback {
+	font-size: 1.05rem;
+}
+
+/* InVEST Log Tab */
+#log-display {
+	overflow: auto;
+  white-space: pre-wrap;
+	height: 85vh;
+  background-color: #191919;
+}
+
+#log-text {
+	font-family: monospace;
+	font-size:1.3rem;
+	color: #e5e5e5;
+}
+
+#log-text .invest-log-primary {
+	color: #fff;
+	font-size: 1.2rem;
+}
+
+#log-text .invest-log-error {
+	color: #ffc13e;
+}
+
+.invest-sidebar-col .alert {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	order: -1;
+	font-size: 1.2rem;
+}
+
+.invest-sidebar-col .alert .btn {
+	flex: 1;
+	margin-top: 1rem;
+	font-size: 1.1rem;
+	letter-spacing: 0.03rem;
+}
+
+/* Misc */
+.spinner-border {
+	margin-left: 1rem;
+	margin-bottom: 0.25rem;
 }

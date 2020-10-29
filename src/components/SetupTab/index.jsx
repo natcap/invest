@@ -2,13 +2,14 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 import Container from 'react-bootstrap/Container';
+import Spinner from 'react-bootstrap/Spinner';
 import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
-import Button from 'react-bootstrap/Button';
-import DropdownButton from 'react-bootstrap/DropdownButton';
 
+import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
-import SaveFileButton from '../SaveFileButton';
+import {
+  RunButton, SaveParametersButtons
+} from './SetupButtons';
 import { fetchValidation, saveToPython } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 
@@ -272,9 +273,7 @@ export default class SetupTab extends React.Component {
    */
   async investValidate(argsValues) {
     const { argsSpec, pyModuleName } = this.props;
-    // const { argsValidation } = this.state;
     const argsValidation = Object.assign({}, this.state.argsValidation);
-    // const argsValid = Object.assign({}, this.state.argsValid);
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
       model_module: pyModuleName,
@@ -332,49 +331,56 @@ export default class SetupTab extends React.Component {
       sortedArgKeys,
     } = this.state;
     if (argsValues) {
-      const { argsSpec, pyModuleName } = this.props;
+      const {
+        argsSpec,
+        pyModuleName,
+        sidebarSetupElementId,
+        sidebarFooterElementId,
+        isRunning,
+      } = this.props;
+
+      const buttonText = (
+        isRunning
+          ? (
+            <span>
+              Running
+              <Spinner
+                animation="border"
+                size="sm"
+                role="status"
+                aria-hidden="true"
+              />
+            </span>
+          )
+          : <span>Run</span>
+      );
+
       return (
         <Container fluid>
-          <ArgsForm
-            argsSpec={argsSpec}
-            argsValues={argsValues}
-            argsValidation={argsValidation}
-            sortedArgKeys={sortedArgKeys}
-            pyModuleName={pyModuleName}
-            updateArgValues={this.updateArgValues}
-            batchUpdateArgs={this.batchUpdateArgs}
-          />
-          <Row className="fixed-bottom setup-tab-footer">
-            <Col sm="3">
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={this.wrapInvestExecute}
-                disabled={!argsValid}
-              >
-                Execute
-              </Button>
-            </Col>
-            <Col cm="8">
-              <DropdownButton
-                id="dropdown-basic-button"
-                title="Save Parameters"
-                renderMenuOnMount // w/o this, items inaccessible in jsdom test env
-                className="mx-3 float-right"
-              >
-                <SaveFileButton
-                  title="Save parameters to JSON"
-                  defaultTargetPath="invest_args.json"
-                  func={this.wrapArgsToJsonFile}
-                />
-                <SaveFileButton
-                  title="Save to Python script"
-                  defaultTargetPath="execute_invest.py"
-                  func={this.savePythonScript}
-                />
-              </DropdownButton>
-            </Col>
+          <Row>
+            <ArgsForm
+              argsSpec={argsSpec}
+              argsValues={argsValues}
+              argsValidation={argsValidation}
+              sortedArgKeys={sortedArgKeys}
+              pyModuleName={pyModuleName}
+              updateArgValues={this.updateArgValues}
+              batchUpdateArgs={this.batchUpdateArgs}
+            />
           </Row>
+          <Portal elId={sidebarSetupElementId}>
+            <SaveParametersButtons
+              savePythonScript={this.savePythonScript}
+              wrapArgsToJsonFile={this.wrapArgsToJsonFile}
+            />
+          </Portal>
+          <Portal elId={sidebarFooterElementId}>
+            <RunButton
+              disabled={!argsValid || isRunning}
+              wrapInvestExecute={this.wrapInvestExecute}
+              buttonText={buttonText}
+            />
+          </Portal>
         </Container>
       );
     }
@@ -385,8 +391,8 @@ export default class SetupTab extends React.Component {
 }
 
 SetupTab.propTypes = {
-  pyModuleName: PropTypes.string,
-  modelName: PropTypes.string,
+  pyModuleName: PropTypes.string.isRequired,
+  modelName: PropTypes.string.isRequired,
   argsSpec: PropTypes.objectOf(
     PropTypes.shape({
       name: PropTypes.string,
@@ -398,4 +404,7 @@ SetupTab.propTypes = {
   argsToJsonFile: PropTypes.func.isRequired,
   investExecute: PropTypes.func.isRequired,
   nWorkers: PropTypes.string.isRequired,
+  sidebarSetupElementId: PropTypes.string.isRequired,
+  sidebarFooterElementId: PropTypes.string.isRequired,
+  isRunning: PropTypes.bool.isRequired,
 };

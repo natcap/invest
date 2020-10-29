@@ -31,7 +31,7 @@ const MOCK_INVEST_LIST = {
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 
 afterAll(() => {
-  // cache dir accumulates files when Execute is clicked
+  // cache dir accumulates files when Run is clicked
   fs.readdirSync(fileRegistry.CACHE_DIR).forEach(filename => {
     fs.unlinkSync(path.join(fileRegistry.CACHE_DIR, filename))
   })
@@ -49,19 +49,18 @@ describe('Various ways to open and close InVEST models', () => {
   })
 
   test('Clicking an invest model button renders SetupTab', async () => {
-    const { findByText } = render(
+    const { findByText, findByRole } = render(
       <App
         jobDatabase={'foodb.json'}
         investExe='foo'
       />
     );
 
-    const carbon = await findByText('Carbon');
+    const carbon = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});
     fireEvent.click(carbon);
-    const executeButton = await findByText('Execute');
+    const executeButton = await findByRole('button', {name: /Run/});
+    expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
-    expect(executeButton).toBeTruthy();
-    expect(executeButton).toBeDisabled();  // depends on the mocked fetchValidation
     expect(setupTab.classList.contains('active')).toBeTruthy();  
     expect(getSpec).toHaveBeenCalledTimes(1);
   })
@@ -84,6 +83,7 @@ describe('Various ways to open and close InVEST models', () => {
     const job = {
       jobID: mockJobId,
       modelRunName: mockRecentJobsDB[mockJobId].model,
+      modelHumanName: mockRecentJobsDB[mockJobId].model,
       argsValues: {
         workspace_dir: mockRecentJobsDB[mockJobId].workspace.directory
       },
@@ -94,7 +94,7 @@ describe('Various ways to open and close InVEST models', () => {
     fs.writeFileSync(mockJobDataPath, JSON.stringify(job), 'utf8');
     fs.writeFileSync(mockJobDatabasePath, JSON.stringify(mockRecentJobsDB), 'utf8');
 
-    const { findByText, findByLabelText } = render(
+    const { findByText, findByLabelText, findByRole } = render(
       <App
         jobDatabase={mockJobDatabasePath}
         investExe='foo'
@@ -105,10 +105,9 @@ describe('Various ways to open and close InVEST models', () => {
       mockRecentJobsDB[mockJobId].workspace.directory
     );
     fireEvent.click(recentJobCard);
-    const executeButton = await findByText('Execute');
+    const executeButton = await findByRole('button', {name: /Run/});
+    expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
-    expect(executeButton).toBeTruthy();
-    expect(executeButton).toBeDisabled(); // depends on the mocked fetchValidation
     expect(setupTab.classList.contains('active')).toBeTruthy();
 
     // Expect some arg values that were loaded from the saved job:
@@ -128,11 +127,12 @@ describe('Various ways to open and close InVEST models', () => {
       },
       module_name: 'natcap.invest.carbon',
       model_run_name: 'carbon',
+      model_human_name: 'Carbon',
     }
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
     fetchDatastackFromFile.mockResolvedValue(mockDatastack)
     
-    const { findByText, findByLabelText } = render(
+    const { findByText, findByLabelText, findByRole } = render(
       <App
         jobDatabase={'foodb.json'}
         investExe='foo'
@@ -141,10 +141,10 @@ describe('Various ways to open and close InVEST models', () => {
 
     const loadButton = await findByText('Load Parameters');
     fireEvent.click(loadButton);
-    const executeButton = await findByText('Execute');
+    const executeButton = await findByRole('button', {name: /Run/});
+    expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
     const input = await findByLabelText(/Carbon Pools/);
-    expect(executeButton).toBeDisabled();  // depends on the mocked fetchValidation
     expect(setupTab.classList.contains('active')).toBeTruthy();
     expect(input).toHaveValue(mockDatastack.args.carbon_pools_path)
   })
@@ -175,7 +175,13 @@ describe('Various ways to open and close InVEST models', () => {
   })
 
   test('Opening and closing multiple InVEST models', async () => {
-    const { findByText, findByTitle, findAllByText } = render(
+    const {
+      findByText,
+      findByTitle,
+      findByRole,
+      findAllByText,
+      queryByText,
+    } = render(
       <App
         jobDatabase={'foodb.json'}
         investExe='foo'
@@ -183,11 +189,16 @@ describe('Various ways to open and close InVEST models', () => {
     );
 
     // Open first model
-    const modelA = await findByText(MOCK_MODEL_LIST_KEY);
+    const modelA = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});
     fireEvent.click(modelA);
-    const tabPanelA = await findByTitle(MOCK_MODEL_RUN_NAME)
+    const tabPanelA = await findByTitle(MOCK_MODEL_LIST_KEY);
     const setupTabA = await within(tabPanelA).findByText('Setup');
     expect(setupTabA.classList.contains('active')).toBeTruthy();  
+    expect(within(tabPanelA).queryByRole('button', {name: /Run/}))
+      .toBeInTheDocument();
+    within(tabPanelA).queryAllByText(/Save to/).forEach(saveButton => {
+      expect(saveButton).toBeInTheDocument();
+    })
     expect(getSpec).toHaveBeenCalledTimes(1);
 
     // Open another model (via Load button for convenience)
@@ -197,6 +208,7 @@ describe('Various ways to open and close InVEST models', () => {
     const mockDatastack = {
       module_name: 'natcap.invest.party',
       model_run_name: 'party',
+      model_human_name: 'Party Time',
       args: {
         carbon_pools_path: "Carbon/carbon_pools_willamette.csv", 
       }
@@ -205,9 +217,14 @@ describe('Various ways to open and close InVEST models', () => {
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
     const loadButton = await findByText('Load Parameters');
     fireEvent.click(loadButton);
-    const tabPanelB = await findByTitle(mockDatastack.model_run_name);
+    const tabPanelB = await findByTitle(mockDatastack.model_human_name);
     const setupTabB = await within(tabPanelB).findByText('Setup');
-    expect(setupTabB.classList.contains('active')).toBeTruthy();  
+    expect(setupTabB.classList.contains('active')).toBeTruthy();
+    expect(within(tabPanelB).queryByRole('button', {name: /Run/}))
+      .toBeInTheDocument();
+    within(tabPanelB).queryAllByText(/Save to/).forEach(saveButton => {
+      expect(saveButton).toBeInTheDocument();
+    })
     expect(getSpec).toHaveBeenCalledTimes(2);
 
     // Close one open model
@@ -383,19 +400,24 @@ describe('InVEST subprocess testing', () => {
   })
   
   test('exit without error - expect log display', async () => {
-    const { findByText, findByLabelText, queryByText, unmount } = render(
+    const {
+      findByText, findByLabelText, findByRole, queryByText, unmount
+    } = render(
       <App
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
 
-    const carbon = await findByText('Carbon');
+    const carbon = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       RegExp(`${spec.args.workspace_dir.name}`)
     );
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
-    const execute = await findByText('Execute');
+    const execute = await findByRole('button', {name: /Run/});
     fireEvent.click(execute);
+    await waitFor(() => {
+      expect(execute).toBeDisabled();
+    })
     
     // stdout listener is how the app knows the process started
     mockInvestProc.stdout.push('hello from stdout');
@@ -404,12 +426,13 @@ describe('InVEST subprocess testing', () => {
     // some text from the logfile should be rendered:
     expect(await findByText(dummyTextToLog, { exact: false }))
       .toBeInTheDocument();
-    expect(queryByText('Model Completed')).toBeNull()
+    expect(queryByText('Model Complete')).toBeNull()
     expect(queryByText('Open Workspace')).toBeNull()
     
     mockInvestProc.emit('exit', 0)  // 0 - exit w/o error
-    expect(await findByText('Model Completed')).toBeInTheDocument();
+    expect(await findByText('Model Complete')).toBeInTheDocument();
     expect(await findByText('Open Workspace')).toBeEnabled();
+    expect(execute).toBeEnabled();
 
     // A recent job card should be rendered
     const cardText = await within(
@@ -424,18 +447,20 @@ describe('InVEST subprocess testing', () => {
   })
 
   test('exit with error - expect log display', async () => {
-    const { findByText, findByLabelText, unmount, ...utils } = render(
+    const {
+      findByText, findByLabelText, findByRole, unmount, ...utils
+    } = render(
       <App
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
 
-    const carbon = await findByText('Carbon');
+    const carbon = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       RegExp(`${spec.args.workspace_dir.name}`))
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
     
-    const execute = await findByText('Execute');
+    const execute = await findByRole('button', {name: /Run/});
     fireEvent.click(execute);
     
     const errorMessage = 'fail'
@@ -466,18 +491,20 @@ describe('InVEST subprocess testing', () => {
         mockInvestProc.emit('exit', null)
       })
 
-    const { findByText, findByLabelText, unmount, ...utils } = render(
+    const {
+      findByText, findByLabelText, findByRole, unmount, ...utils
+    } = render(
       <App
         jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
 
-    const carbon = await findByText('Carbon');
+    const carbon = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       RegExp(`${spec.args.workspace_dir.name}`))
     fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } })
     
-    const execute = await findByText('Execute');
+    const execute = await findByRole('button', {name: /Run/});
     fireEvent.click(execute);
     
     // stdout listener is how the app knows the process started

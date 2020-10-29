@@ -99,18 +99,20 @@ export default class App extends React.Component {
    * When this is called to load a "recent job", optional argsValues, logfile,
    * and jobStatus parameters will be defined, otherwise they can be undefined.
    *
-   * @param  {string} modelRunName - invest model name as appears in `invest list`
+   * @param  {string} modelRunName - invest model name to be passed to `invest run`
+   * @param  {string} modelHumanName - the colloquial name of the invest model
    * @param  {object} argsValues - an invest "args dictionary" with initial values
    * @param  {string} logfile - path to an existing invest logfile
    * @param  {string} jobStatus - indicates how the job exited, if it's a recent job.
    */
-  openInvestModel(modelRunName, argsValues, logfile, jobStatus) {
+  openInvestModel(modelRunName, modelHumanName, argsValues, logfile, jobStatus) {
     const navID = crypto.randomBytes(16).toString('hex');
     this.setState((state) => ({
       openJobs: [
         ...state.openJobs,
         {
           modelRunName: modelRunName,
+          modelHumanName: modelHumanName,
           argsValues: argsValues,
           logfile: logfile,
           status: jobStatus,
@@ -164,7 +166,7 @@ export default class App extends React.Component {
     });
     const jobMetadata = {};
     jobMetadata[jobData.jobID] = {
-      model: jobData.modelRunName,
+      model: jobData.modelHumanName,
       workspace: jobData.workspace,
       humanTime: new Date().toLocaleString(),
       systemTime: new Date().getTime(),
@@ -190,10 +192,10 @@ export default class App extends React.Component {
         <Nav.Item key={job.navID}>
           <Nav.Link eventKey={job.navID}>
             <React.Fragment>
-              {job.modelRunName}
+              {job.modelHumanName}
               <Button
                 className="close-tab"
-                variant="outline-secondary"
+                variant="outline-dark"
                 onClick={() => this.closeInvestModel(job.navID)}
               >
                 x
@@ -206,11 +208,13 @@ export default class App extends React.Component {
         <TabPane
           key={job.navID}
           eventKey={job.navID}
-          title={job.modelRunName}
+          title={job.modelHumanName}
         >
           <InvestJob
+            navID={job.navID}
             investExe={investExe}
             modelRunName={job.modelRunName}
+            modelHumanName={job.modelHumanName}
             argsInitValues={job.argsValues}
             logfile={job.logfile}
             jobStatus={job.status}
@@ -222,10 +226,9 @@ export default class App extends React.Component {
     });
     return (
       <TabContainer activeKey={activeTab}>
-        <Navbar bg="light" expand="lg">
+        <Navbar expand="lg">
           <Nav
-            variant="tabs"
-            id="controlled-tab-example"
+            variant="pills"
             className="mr-auto"
             activeKey={activeTab}
             onSelect={this.switchTabs}
@@ -248,7 +251,7 @@ export default class App extends React.Component {
             investSettings={investSettings}
           />
         </Navbar>
-        <TabContent className="mt-3">
+        <TabContent id="top-tab-content">
           <TabPane eventKey="home" title="Home">
             <HomeTab
               investList={investList}
