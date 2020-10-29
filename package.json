@@ -6,7 +6,7 @@
   "main": "src/main.js",
   "homepage": "./",
   "scripts": {
-    "start": "cross-env FLASK_APP=src/server.py npx electron . --dev",
+    "start": "npx electron . --dev",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "cross-env DEBUG_PRINT_LIMIT=10 jest --testMatch **/tests/*.test.js",
     "test-flask-app": "jest --runInBand --testMatch **/tests/binary_tests/flaskapp.test.js",

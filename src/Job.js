@@ -1,10 +1,7 @@
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 
 import localforage from 'localforage';
 
-import { fileRegistry } from './constants';
 import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -23,33 +20,20 @@ const INDEX = 'sortedJobs';
  */
 export default class Job {
   static async init() {
-    const sortedKeys = await localforage.getItem(INDEX);
-    console.log(sortedKeys);
     if (!await localforage.getItem(INDEX)) {
       localforage.setItem(INDEX, []);
     }
   }
 
   static async getJobStore() {
-    const jobs = [];
+    let jobArray = [];
     const sortedKeys = await localforage.getItem(INDEX);
-    console.log(sortedKeys);
     if (sortedKeys) {
-      console.log(sortedKeys);
-      sortedKeys.forEach(async (workspaceHash) => {
-        jobs.push(await localforage.getItem(workspaceHash));
-      });
+      jobArray = await Promise.all(sortedKeys.map(
+        (key) => localforage.getItem(key)
+      ));
     }
-    return jobs;
-    // const store = localforage;
-    // console.log(store);
-    // const parsedStore = Object.values(store).forEach(
-    //   (obj) => JSON.parse(obj)
-    // );
-    // const sorted = parsedStore.sort(
-    //   (a, b) => b[1].systemTime - a[1].systemTime
-    // );
-    // return sorted;
+    return jobArray;
   }
 
   constructor(
@@ -79,38 +63,20 @@ export default class Job {
   }
 
   async save() {
-    // const jsonContent = JSON.stringify(this.metadata);
-    // const filepath = path.join(
-    //   fileRegistry.CACHE_DIR, `${this.workspaceHash}.json`
-    // );
-    // fs.writeFile(filepath, jsonContent, 'utf8', (err) => {
-    //   if (err) {
-    //     logger.error('An error occured while writing JSON Object to File.');
-    //     return logger.error(err.stack);
-    //   }
-    // });
     this.metadata.humanTime = new Date().toLocaleString();
     this.metadata.systemTime = new Date().getTime();
     const sortedKeys = await localforage.getItem(INDEX);
+    // If this key already exists, make sure not to duplicate it,
+    // and make sure to move it to the front
+    const idx = sortedKeys.indexOf(this.metadata.workspaceHash);
+    if (idx > 0) {
+      sortedKeys.splice(idx, 1);
+    }
     sortedKeys.unshift(this.metadata.workspaceHash);
     localforage.setItem(INDEX, sortedKeys);
     localforage.setItem(
       this.metadata.workspaceHash, this.metadata
     );
-    // const store = window.localStorage;
-    // const sortedMetadata = Object.entries(store).sort(
-    //   (a, b) => b[1].systemTime - a[1].systemTime
-    // );
     return Job.getJobStore();
-
-    // const jobMetadata = {};
-    // jobMetadata[this.workspaceHash] = {
-    //   model: this.modelHumanName,
-    //   workspace: this.workspace,
-    //   humanTime: new Date().toLocaleString(),
-    //   systemTime: new Date().getTime(),
-    //   jobDataPath: filepath,
-    // };
-    // return jobMetadata;
   }
 }

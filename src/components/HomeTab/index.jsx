@@ -113,7 +113,6 @@ class RecentInvestJobs extends React.PureComponent {
     // Buttons to load each recently saved state
     const recentButtons = [];
     const { recentJobs } = this.props;
-    console.log(recentJobs);
     recentJobs.forEach((job) => {
       console.log(job);
       // let model;
