@@ -36,7 +36,6 @@ export default class HomeTab extends React.PureComponent {
 
   render() {
     const { investList, recentJobs } = this.props;
-    console.log(recentJobs);
     // A button in a table row for each model
     const investButtons = [];
     Object.keys(investList).forEach((model) => {
@@ -103,9 +102,6 @@ class RecentInvestJobs extends React.PureComponent {
   }
 
   handleClick(job) {
-    // const job = JSON.parse(
-    //   fs.readFileSync(jobDataPath, 'utf8')
-    // );
     this.props.openInvestModel(job);
   }
 
@@ -114,17 +110,6 @@ class RecentInvestJobs extends React.PureComponent {
     const recentButtons = [];
     const { recentJobs } = this.props;
     recentJobs.forEach((job) => {
-      console.log(job);
-      // let model;
-      // let workspaceDir;
-      // let jobDataPath;
-      // const [jobID, metadata] = job;
-
-      // These are optional and the rest of the render method
-      // should be robust to undefined values
-      // const { suffix } = metadata.workspace;
-      // const { status, description, humanTime } = metadata;
-
       recentButtons.push(
         <Card
           className="text-left recent-job-card"
