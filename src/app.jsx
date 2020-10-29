@@ -16,8 +16,6 @@ import InvestJob from './InvestJob';
 import LoadButton from './components/LoadButton';
 import SettingsModal from './components/SettingsModal';
 import { getInvestList } from './server_requests';
-import { updateRecentJobs, loadRecentJobs } from './utils';
-import { fileRegistry } from './constants';
 import { getLogger } from './logger';
 import Job from './Job';
 
@@ -45,13 +43,8 @@ export default class App extends React.Component {
 
   /** Initialize the list of available invest models and recent invest jobs. */
   async componentDidMount() {
-    const { jobDatabase } = this.props;
     const investList = await getInvestList();
-    // let recentJobs = [];
-    // if (fs.existsSync(jobDatabase)) {
-    //   recentJobs = await loadRecentJobs(jobDatabase);
-    // }
-    await Job.init();
+    await Job.initDB();
     const recentJobs = await Job.getJobStore(); // why does this return a Promise?
     // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?
@@ -126,12 +119,7 @@ export default class App extends React.Component {
    * @param {object} job - data that can be passed to openInvestModel
    */
   async saveJob(job) {
-    // const jobMetadata = job.save();
     const recentJobs = await job.save();
-    console.log(recentJobs);
-    // const recentJobs = await updateRecentJobs(
-    //   jobMetadata, this.props.jobDatabase
-    // );
     this.setState({
       recentJobs: recentJobs,
     });
@@ -150,7 +138,6 @@ export default class App extends React.Component {
     const investNavItems = [];
     const investTabPanes = [];
     openJobs.forEach((job) => {
-      console.log(job);
       investNavItems.push(
         <Nav.Item key={job.navID}>
           <Nav.Link eventKey={job.navID}>
@@ -231,5 +218,4 @@ export default class App extends React.Component {
 
 App.propTypes = {
   investExe: PropTypes.string.isRequired,
-  jobDatabase: PropTypes.string,
 };

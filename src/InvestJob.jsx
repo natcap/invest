@@ -148,7 +148,6 @@ export default class InvestJob extends React.Component {
       modelRunName,
       modelHumanName,
       saveJob,
-      navID,
     } = this.props;
 
     const workspace = {
