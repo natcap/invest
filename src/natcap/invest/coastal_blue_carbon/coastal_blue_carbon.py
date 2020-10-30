@@ -1399,22 +1399,48 @@ def _calculate_accumulation_over_time(
     return target_matrix
 
 
-# TODO: make a docstring for this
 def _track_disturbance(
         disturbance_magnitude_raster_path, stock_raster_path,
         prior_disturbance_volume_raster_path,
         year_of_disturbance_raster_path, current_year,
         target_disturbance_volume_raster_path,
         target_year_of_disturbance_raster_path):
-    # Create new rasters
-    # For block in iterblocks:
-    #   Determine the disturbance volume from the magnitude and stocks
-    #   Track the latest year of transition based on the disturbance
-    #   Write out both arrays to their respective matrices.
+    """Track disturbance volume and year of latest disturbance.
 
-    # NOTE: year_of_disturbance_raster_path might be None if this is the first
-    # transition.
+    This function creates two interrelated rasters:
 
+        * A raster representing the volume of carbon disturbed in this pixel
+        * The year when the carbon was last disturbed in this pixel.
+
+    Because this model is a timeseries and it is possible for carbon
+    disturbances to happen in many years in the time range in question, the
+    pair of attributes (volume of carbon disturbed, when the carbon was
+    disturbed) must be tracked together.
+
+    Args:
+        disturbance_magnitude_raster_path (string): The path to a raster on
+            disk representing the magnitude of carbon disturbance in the
+            current year and current pool.
+        stock_raster_path (string): The path to a raster on disk representing
+            the carbon stocks present in the current pool at the beginning of
+            the current year.
+        prior_disturbance_volume_raster_path (string or None): If the current
+            disturbance is not the first disturbance, then this must be the
+            path to the disturbance volume raster from the prior year.  If
+            ``None``, then this represents that this year is the first
+            disturbance year.
+        year_of_disturbance_raster_path (string or None):  If the current
+            disturbance is not the first disturbance event, then this must
+            be the path to the prior year-of-disturbance raster.
+        current_year (int): The year of the current transition.
+        target_disturbance_volume_raster_path (string):  The path to the target
+            disturbance volume raster.
+        target_year_of_disturbance_raster_path (string):  The path to the
+            target year-of-disturbance raster.
+
+    Returns:
+        ``None``
+    """
     pygeoprocessing.new_raster_from_base(
         disturbance_magnitude_raster_path,
         target_disturbance_volume_raster_path, gdal.GDT_Float32,
