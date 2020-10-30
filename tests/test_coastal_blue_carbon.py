@@ -802,7 +802,7 @@ class TestCBC2(unittest.TestCase):
 
         try:
             expected_disturbance = numpy.array(
-                [[5.0, float32_nodata, float32_nodata]], dtype=numpy.float32)
+                [[5.0, float32_nodata, 0.0]], dtype=numpy.float32)
             raster = gdal.OpenEx(target_disturbance_path)
             numpy.testing.assert_allclose(
                 raster.ReadAsArray(),
