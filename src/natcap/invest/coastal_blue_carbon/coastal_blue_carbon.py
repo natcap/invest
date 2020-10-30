@@ -1188,9 +1188,6 @@ def execute_transition_analysis(args):
                 func=_sum_n_rasters,
                 args=(emissions_rasters_since_transition,
                       emissions_since_last_transition_raster),
-                kwargs={
-                    'allow_pixel_stacks_with_nodata': True,
-                },
                 dependent_task_list=emissions_tasks_since_transition,
                 target_path_list=[emissions_since_last_transition_raster],
                 task_name=(
@@ -1227,9 +1224,6 @@ def execute_transition_analysis(args):
         func=_sum_n_rasters,
         args=(list(summary_net_sequestration_raster_paths.values()),
               total_net_sequestration_raster_path),
-        kwargs={
-            'allow_pixel_stacks_with_nodata': True,
-        },
         dependent_task_list=summary_net_sequestration_tasks,
         target_path_list=[total_net_sequestration_raster_path],
         task_name=(
@@ -1405,6 +1399,7 @@ def _calculate_accumulation_over_time(
     return target_matrix
 
 
+# TODO: make a docstring for this
 def _track_disturbance(
         disturbance_magnitude_raster_path, stock_raster_path,
         prior_disturbance_volume_raster_path,
@@ -1623,8 +1618,7 @@ def _calculate_emissions(
 
 
 def _sum_n_rasters(
-        raster_path_list, target_raster_path,
-        allow_pixel_stacks_with_nodata=False):
+        raster_path_list, target_raster_path):
     """Sum an arbitrarily-large list of rasters in a memory-efficient manner.
 
     Args:
@@ -1633,12 +1627,6 @@ def _sum_n_rasters(
             projected coordinate system and to have identical dimensions.
         target_raster_path (string): The path to a raster on disk where the
             sum of rasters in ``raster_path_list`` will be stored.
-        allow_pixel_stacks_with_nodata=False (bool): Whether to tolerate pixel
-            stacks that contain nodata.  If ``True``, then the value of the sum
-            of a given pixel stack will simply not include the numeric value of
-            nodata for those pixels that match nodata.  If ``False``, the
-            entire pixel stack will be excluded if any pixels in the stack are
-            nodata.
 
     Returns:
         ``None``.
@@ -1677,7 +1665,6 @@ def _sum_n_rasters(
         sum_array[:] = 0.0
 
         # Assume everything is valid until proven otherwise
-        valid_pixels = numpy.ones(sum_array.shape, dtype=numpy.bool)
         pixels_touched = numpy.zeros(sum_array.shape, dtype=numpy.bool)
         for (_, band, nodata) in raster_tuple_list:
             if time.time() - last_log_time >= 5.0:
@@ -1687,22 +1674,21 @@ def _sum_n_rasters(
                 last_log_time = time.time()
 
             array = band.ReadAsArray(**block_info)
+            valid_pixels = slice(None)
             if nodata is not None:
-                valid_pixels &= ~numpy.isclose(array, nodata)
+                valid_pixels = ~numpy.isclose(array, nodata)
 
             sum_array[valid_pixels] += array[valid_pixels]
             pixels_touched[valid_pixels] = 1
-            n_pixels_processed += sum_array.size
+            n_pixels_processed += sum_array.size  # for logging
 
-        if allow_pixel_stacks_with_nodata:
-            sum_array[~pixels_touched] = NODATA_FLOAT32_MIN
-        else:
-            sum_array[~valid_pixels] = NODATA_FLOAT32_MIN
+        sum_array[~pixels_touched] = NODATA_FLOAT32_MIN
 
         target_band.WriteArray(
             sum_array, block_info['xoff'], block_info['yoff'])
 
     LOGGER.info('Summation 100.00% complete')
+    raster_tuple_list = None
 
     target_band.ComputeStatistics(0)
     target_band = None

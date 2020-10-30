@@ -338,36 +338,7 @@ class TestCBC2(unittest.TestCase):
             result_matrix, expected_array, rtol=1E-6)
 
     def test_add_rasters(self):
-        """CBC: Check that we can add two rasters."""
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31 S
-        wkt = srs.ExportToWkt()
-
-        raster_a_path = os.path.join(self.workspace_dir, 'a.tif')
-        pygeoprocessing.numpy_array_to_raster(
-            numpy.array([[5, 15, 12]], dtype=numpy.uint8),
-            15, (2, -2), (2, -2), wkt, raster_a_path)
-
-        raster_b_path = os.path.join(self.workspace_dir, 'b.tif')
-        pygeoprocessing.numpy_array_to_raster(
-            numpy.array([[3, 4, 5]], dtype=numpy.uint8),
-            5, (2, -2), (2, -2), wkt, raster_b_path)
-
-        target_path = os.path.join(self.workspace_dir, 'output.tif')
-        coastal_blue_carbon._sum_n_rasters(
-            [raster_a_path, raster_b_path], target_path)
-
-        nodata = coastal_blue_carbon.NODATA_FLOAT32_MIN
-        try:
-            raster = gdal.OpenEx(target_path)
-            numpy.testing.assert_allclose(
-                raster.ReadAsArray(),
-                numpy.array([[8, nodata, nodata]], dtype=numpy.float32))
-        finally:
-            raster = None
-
-    def test_add_rasters_with_nodata_in_stacks(self):
-        """CBC: Check that we can sum rasters, ignoring nodata."""
+        """CBC: Check that we can sum rasters."""
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31 S
         wkt = srs.ExportToWkt()
@@ -384,8 +355,7 @@ class TestCBC2(unittest.TestCase):
 
         target_path = os.path.join(self.workspace_dir, 'output.tif')
         coastal_blue_carbon._sum_n_rasters(
-            [raster_a_path, raster_b_path], target_path,
-            allow_pixel_stacks_with_nodata=True)
+            [raster_a_path, raster_b_path], target_path)
 
         nodata = coastal_blue_carbon.NODATA_FLOAT32_MIN
         try:
