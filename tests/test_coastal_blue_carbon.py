@@ -186,49 +186,6 @@ class TestCBC2(unittest.TestCase):
             extracted_transitions,
             dict(zip(transition_years, transition_rasters)))
 
-    def test_track_latest_transition_year(self):
-        """CBC: Track the latest disturbance year."""
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31 S
-        wkt = srs.ExportToWkt()
-
-        current_disturbance_vol_raster = os.path.join(
-            self.workspace_dir, 'cur_disturbance.tif')
-        current_disturbance_vol_matrix = numpy.array([
-            [5.0, 1.0],
-            [-1, 3.0]], dtype=numpy.float32)
-        pygeoprocessing.numpy_array_to_raster(
-            current_disturbance_vol_matrix, -1, (2, -2), (2, -2), wkt,
-            current_disturbance_vol_raster)
-
-        known_transition_years_raster = os.path.join(
-            self.workspace_dir, 'known_transition_years.tif')
-        known_transition_years_matrix = numpy.array([
-            [100, 100],
-            [5, 6]], dtype=numpy.uint16)
-        pygeoprocessing.numpy_array_to_raster(
-            known_transition_years_matrix, 100, (2, -2), (2, -2), wkt,
-            known_transition_years_raster)
-
-        target_raster_path = os.path.join(
-            self.workspace_dir, 'new_tracked_years.tif')
-        coastal_blue_carbon._track_latest_transition_year(
-            current_disturbance_vol_raster,
-            known_transition_years_raster,
-            11,  # current "year" being disturbed.
-            target_raster_path)
-
-        expected_array = numpy.array([
-            [11, 11],
-            [5, 11]], dtype=numpy.uint16)
-        try:
-            raster = gdal.OpenEx(target_raster_path)
-            numpy.testing.assert_allclose(
-                raster.ReadAsArray(),
-                expected_array)
-        finally:
-            raster = None
-
     def test_read_invalid_transition_matrix(self):
         """CBC: Test exceptions in invalid transition structure."""
         # The full biophysical table will have much, much more information.  To
