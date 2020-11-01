@@ -24,6 +24,7 @@ export default class Job {
     let jobArray = [];
     const sortedKeys = await localforage.getItem(KEYS_ARRAY);
     if (sortedKeys) {
+      logger.debug(`cached jobs include ${sortedKeys}`);
       jobArray = await Promise.all(sortedKeys.map(
         (key) => localforage.getItem(key)
       ));
@@ -40,34 +41,56 @@ export default class Job {
   * @param  {string} status - indicates how the job exited, if it's a recent job.
   */
   constructor(
-    modelRunName, modelHumanName, argsValues, workspace, logfile, status
+    {
+      modelRunName,
+      modelHumanName,
+      argsValues,
+      workspace,
+      logfile,
+      status,
+    }
   ) {
     this.metadata = {};
-    if (workspace && modelRunName) {
-      this.metadata.workspaceHash = crypto.createHash('sha1').update(
-        `${modelRunName}${JSON.stringify(workspace)}`
-      ).digest('hex');
-    }
-    this.metadata.modelRunName = modelRunName;
-    this.metadata.modelHumanName = modelHumanName;
+    this.metadata.modelRunName = modelRunName || '';
+    this.metadata.modelHumanName = modelHumanName || '';
     this.metadata.argsValues = argsValues;
     this.metadata.workspace = workspace;
     this.metadata.logfile = logfile;
     this.metadata.status = status;
     this.metadata.humanTime = new Date().toLocaleString();
-    this.metadata.systemTime = new Date().getTime();
 
     this.save = this.save.bind(this);
+    this.setProperty = this.setProperty.bind(this);
+    this.setWorkspaceHash = this.setWorkspaceHash.bind(this);
+  }
+
+  setWorkspaceHash() {
+    if (this.metadata.workspace && this.metadata.modelRunName) {
+      this.metadata.workspaceHash = crypto.createHash('sha1').update(
+        `${this.metadata.modelRunName}${JSON.stringify(this.metadata.workspace)}`
+      ).digest('hex');
+    } else {
+      throw Error('cannot hash a workspace that does not exist');
+    }
+  }
+
+  setProperty(key, value) {
+    this.metadata[key] = value;
+    if (key === 'workspace') {
+      this.setWorkspaceHash();
+    }
   }
 
   async save() {
+    if (!this.metadata.workspaceHash) {
+      throw Error('cannot save a job that has no workspaceHash');
+    }
     this.metadata.humanTime = new Date().toLocaleString();
-    this.metadata.systemTime = new Date().getTime();
-    const sortedKeys = await localforage.getItem(KEYS_ARRAY);
     // If this key already exists, make sure not to duplicate it,
     // and make sure to move it to the front
+    const sortedKeys = await localforage.getItem(KEYS_ARRAY);
     const idx = sortedKeys.indexOf(this.metadata.workspaceHash);
-    if (idx > 0) {
+    if (idx > -1) {
       sortedKeys.splice(idx, 1);
     }
     sortedKeys.unshift(this.metadata.workspaceHash);

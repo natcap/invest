@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -77,14 +75,14 @@ export default class App extends React.Component {
 
   /** Push data for a new InvestJob component to an array.
    *
+   * @param {Job} job - as constructed by new Job()
    */
   openInvestModel(job) {
     const navID = crypto.randomBytes(16).toString('hex');
-    const { metadata } = job;
-    Object.assign(metadata, { navID: navID });
+    job.setProperty('navID', navID);
     this.setState((state) => ({
-      openJobs: [...state.openJobs, metadata],
-    }), () => this.switchTabs(metadata.navID));
+      openJobs: [...state.openJobs, job],
+    }), () => this.switchTabs(navID));
   }
 
   /**
@@ -97,7 +95,7 @@ export default class App extends React.Component {
     let index;
     const { openJobs } = this.state;
     openJobs.forEach((job) => {
-      if (job.navID === navID) {
+      if (job.metadata.navID === navID) {
         index = openJobs.indexOf(job);
         openJobs.splice(index, 1);
       }
@@ -119,6 +117,7 @@ export default class App extends React.Component {
    * @param {object} job - data that can be passed to openInvestModel
    */
   async saveJob(job) {
+    // TODO: can we have this component listen for DB changes instead?
     const recentJobs = await job.save();
     this.setState({
       recentJobs: recentJobs,
@@ -139,14 +138,14 @@ export default class App extends React.Component {
     const investTabPanes = [];
     openJobs.forEach((job) => {
       investNavItems.push(
-        <Nav.Item key={job.navID}>
-          <Nav.Link eventKey={job.navID}>
+        <Nav.Item key={job.metadata.navID}>
+          <Nav.Link eventKey={job.metadata.navID}>
             <React.Fragment>
-              {job.modelHumanName}
+              {job.metadata.modelHumanName}
               <Button
                 className="close-tab"
                 variant="outline-dark"
-                onClick={() => this.closeInvestModel(job.navID)}
+                onClick={() => this.closeInvestModel(job.metadata.navID)}
               >
                 x
               </Button>
@@ -156,18 +155,13 @@ export default class App extends React.Component {
       );
       investTabPanes.push(
         <TabPane
-          key={job.navID}
-          eventKey={job.navID}
-          title={job.modelHumanName}
+          key={job.metadata.navID}
+          eventKey={job.metadata.navID}
+          title={job.metadata.modelHumanName}
         >
           <InvestJob
-            navID={job.navID}
+            job={job}
             investExe={investExe}
-            modelRunName={job.modelRunName}
-            modelHumanName={job.modelHumanName}
-            argsInitValues={job.argsValues}
-            logfile={job.logfile}
-            jobStatus={job.status}
             investSettings={investSettings}
             saveJob={this.saveJob}
           />

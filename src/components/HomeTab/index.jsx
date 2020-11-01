@@ -30,7 +30,10 @@ export default class HomeTab extends React.PureComponent {
     const { value } = event.target;
     const { investList, openInvestModel } = this.props;
     const modelRunName = investList[value].internal_name;
-    const job = new Job(modelRunName, value);
+    const job = new Job({
+      modelRunName: modelRunName,
+      modelHumanName: value
+    });
     openInvestModel(job);
   }
 
@@ -85,11 +88,17 @@ HomeTab.propTypes = {
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
   recentJobs: PropTypes.arrayOf(
-    PropTypes.array
-  ),
-};
-HomeTab.defaultProps = {
-  recentJobs: [],
+    PropTypes.shape({
+      modelRunName: PropTypes.string.isRequired,
+      modelHumanName: PropTypes.string.isRequired,
+      argsValues: PropTypes.object,
+      workspace: PropTypes.shape({
+        directory: PropTypes.string,
+        suffix: PropTypes.string,
+      }),
+      logfile: PropTypes.string,
+    })
+  ).isRequired,
 };
 
 /**
@@ -101,8 +110,8 @@ class RecentInvestJobs extends React.PureComponent {
     this.handleClick = this.handleClick.bind(this);
   }
 
-  handleClick(job) {
-    this.props.openInvestModel(job);
+  handleClick(jobMetadata) {
+    this.props.openInvestModel(new Job(jobMetadata));
   }
 
   render() {
@@ -173,6 +182,17 @@ class RecentInvestJobs extends React.PureComponent {
 }
 
 RecentInvestJobs.propTypes = {
-  recentJobs: PropTypes.array.isRequired,
+  recentJobs: PropTypes.arrayOf(
+    PropTypes.shape({
+      modelRunName: PropTypes.string.isRequired,
+      modelHumanName: PropTypes.string.isRequired,
+      argsValues: PropTypes.object,
+      workspace: PropTypes.shape({
+        directory: PropTypes.string,
+        suffix: PropTypes.string,
+      }),
+      logfile: PropTypes.string,
+    })
+  ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
 };

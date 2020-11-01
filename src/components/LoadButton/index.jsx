@@ -21,11 +21,11 @@ export default class LoadButton extends React.Component {
     const data = await remote.dialog.showOpenDialog();
     if (data.filePaths.length) {
       const datastack = await fetchDatastackFromFile(data.filePaths[0]);
-      const job = new Job(
-        datastack.model_run_name,
-        datastack.model_human_name,
-        datastack.args
-      );
+      const job = new Job({
+        modelRunName: datastack.model_run_name,
+        modelHumanName: datastack.model_human_name,
+        argsValues: datastack.args
+      });
       this.props.openInvestModel(job);
     }
   }

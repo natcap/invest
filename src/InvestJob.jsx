@@ -68,10 +68,8 @@ async function investGetSpec(modelName) {
   return undefined;
 }
 
-/** This component and it's children render all the visible parts of the app.
- *
- * This component's state includes all the data needed to represent one invest
- * job.
+/**
+ * Includes all the data needed to represent one invest model UI.
  */
 export default class InvestJob extends React.Component {
   constructor(props) {
@@ -98,16 +96,16 @@ export default class InvestJob extends React.Component {
     fs.mkdir(fileRegistry.CACHE_DIR, (err) => {});
     fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
     // logfile and jobStatus are undefined unless this is a pre-existing job.
-    const { modelRunName, logfile, jobStatus } = this.props;
+    const { job } = this.props;
     const {
       modelSpec, argsSpec, uiSpec
-    } = await investGetSpec(modelRunName);
+    } = await investGetSpec(job.metadata.modelRunName);
     this.setState({
       modelSpec: modelSpec,
       argsSpec: argsSpec,
       uiSpec: uiSpec,
-      logfile: logfile,
-      jobStatus: jobStatus,
+      logfile: job.metadata.logfile,
+      jobStatus: job.metadata.jobStatus,
     }, () => { this.switchTabs('setup'); });
   }
 
@@ -143,10 +141,11 @@ export default class InvestJob extends React.Component {
    */
   async investExecute(argsValues) {
     const {
+      job,
       investExe,
       investSettings,
-      modelRunName,
-      modelHumanName,
+      // modelRunName,
+      // modelHumanName,
       saveJob,
     } = this.props;
 
@@ -155,16 +154,13 @@ export default class InvestJob extends React.Component {
       suffix: argsValues.results_suffix,
     };
 
-    const job = new Job(
-      modelRunName,
-      modelHumanName,
-      argsValues,
-      workspace
-    );
+    job.setProperty('argsValues', argsValues);
+    job.setProperty('workspace', workspace);
+    job.setProperty('status', 'running');
+    job.setProperty('logfile', undefined);
 
     // Setting this very early in the click handler so the Execute button
     // can display an appropriate visual cue when it's clicked
-    job.metadata.status = 'running';
     this.setState({
       jobStatus: job.metadata.status,
     });
@@ -212,7 +208,8 @@ export default class InvestJob extends React.Component {
     // so this logic when listening for stdout seems like the way.
     this.investRun.stdout.on('data', async () => {
       if (!job.metadata.logfile) {
-        job.metadata.logfile = await findMostRecentLogfile(job.metadata.workspace.directory);
+        const logfile = await findMostRecentLogfile(job.metadata.workspace.directory);
+        job.setProperty('logfile', logfile);
         // TODO: handle case when job.logfile is still undefined?
         // Could be if some stdout is emitted before a logfile exists.
         logger.debug(`invest logging to: ${job.metadata.logfile}`);
@@ -246,13 +243,13 @@ export default class InvestJob extends React.Component {
     this.investRun.on('exit', (code) => {
       logger.debug(code);
       if (code === 0) {
-        job.metadata.status = 'success';
+        job.setProperty('status', 'success');
       } else {
         // Invest CLI exits w/ code 1 when it catches errors,
         // Models exit w/ code 255 (on all OS?) when errors raise from execute()
         // Windows taskkill yields exit code 1
         // Non-windows process.kill yields exit code null
-        job.metadata.status = 'error';
+        job.setProperty('status', 'error');
       }
       this.setState({
         jobStatus: job.metadata.status,
@@ -300,7 +297,11 @@ export default class InvestJob extends React.Component {
 
     const isRunning = jobStatus === 'running';
     const logDisabled = (!logfile);
-    const { navID, modelRunName } = this.props;
+    const {
+      navID,
+      modelRunName,
+      argsValues,
+    } = this.props.job.metadata;
     const sidebarSetupElementId = `sidebar-setup-${navID}`;
     const sidebarFooterElementId = `sidebar-footer-${navID}`;
 
@@ -358,7 +359,7 @@ export default class InvestJob extends React.Component {
                   modelName={modelSpec.model_name}
                   argsSpec={argsSpec}
                   uiSpec={uiSpec}
-                  argsInitValues={this.props.argsInitValues}
+                  argsInitValues={argsValues}
                   investExecute={this.investExecute}
                   argsToJsonFile={this.argsToJsonFile}
                   nWorkers={this.props.investSettings.nWorkers}
@@ -386,17 +387,24 @@ export default class InvestJob extends React.Component {
 }
 
 InvestJob.propTypes = {
+  job: PropTypes.shape({
+    metadata: PropTypes.shape({
+      modelRunName: PropTypes.string.isRequired,
+      modelHumanName: PropTypes.string.isRequired,
+      argsValues: PropTypes.object,
+      workspace: PropTypes.shape({
+        directory: PropTypes.string,
+        suffix: PropTypes.string,
+      }),
+      logfile: PropTypes.string,
+    }),
+    save: PropTypes.func.isRequired,
+    setProperty: PropTypes.func.isRequired,
+  }).isRequired,
   investExe: PropTypes.string.isRequired,
-  modelRunName: PropTypes.string.isRequired,
-  modelHumanName: PropTypes.string.isRequired,
-  navID: PropTypes.string.isRequired,
-  logfile: PropTypes.string,
-  argsInitValues: PropTypes.object,
-  jobStatus: PropTypes.string,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
   }).isRequired,
   saveJob: PropTypes.func.isRequired,
-  navID: PropTypes.string.isRequired,
 };
