@@ -15,10 +15,6 @@ export default class Job {
   /* If none exists, init an empty array for the sorted workspace hashes */
   static async initDB() {
     localforage.setItem(KEYS_ARRAY, []);
-    // const keys = await localforage.getItem(KEYS_ARRAY);
-    // if (!keys) {
-    //   localforage.setItem(KEYS_ARRAY, []);
-    // }
   }
 
   static async getJobStore() {

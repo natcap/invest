@@ -233,7 +233,6 @@ describe('Display recently executed InVEST jobs', () => {
   })
   
   test('Recent Jobs: each has a button', async () => {
-    // TODO: This json is tracked in the repo for purposes of this test.
     const job1 = new Job({
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Sequestration',
