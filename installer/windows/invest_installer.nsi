@@ -114,7 +114,6 @@ SetCompressor zlib
 !define MUI_ICON "InVEST-2.ico"
 
 ; Add an advanced options control for the welcome page.
-;!define MUI_PAGE_CUSTOMFUNCTION_SHOW WarnArchitecture
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW AddAdvancedOptions
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE ValidateAdvZipFile
 !insertmacro MUI_PAGE_WELCOME
@@ -181,10 +180,8 @@ Function AddAdvancedOptions
         Call EnableAdvFileSelect
     ${EndIf}
 
-
-    ${If} ${RunningX64}
-        Call WarnArchitecture
-    ${Else}
+    ; if install computer is 32-bit then warn the user of a 64-bit app.
+    ${IfNot} ${RunningX64}
         Call WarnArchitecture
     ${EndIf}
 FunctionEnd
