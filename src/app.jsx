@@ -42,7 +42,7 @@ export default class App extends React.Component {
   /** Initialize the list of available invest models and recent invest jobs. */
   async componentDidMount() {
     const investList = await getInvestList();
-    await Job.initDB();
+    // await Job.initDB();
     const recentJobs = await Job.getJobStore(); // why does this return a Promise?
     // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?

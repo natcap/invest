@@ -18,7 +18,6 @@ import {
 } from '../src/server_requests';
 jest.mock('../src/server_requests');
 import Job from '../src/Job';
-Job.getJobStore = jest.fn();
 import { fileRegistry } from '../src/constants';
 import { cleanupDir } from '../src/utils';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
@@ -40,14 +39,15 @@ afterAll(() => {
   jest.resetAllMocks()
 })
 
-describe.only('Various ways to open and close InVEST models', () => {
+describe('Various ways to open and close InVEST models', () => {
   beforeAll(() => {
     getInvestList.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
   })
-  beforeEach(() => {
+  afterEach(async () => {
     jest.clearAllMocks() // clears usage data, does not reset/restore
+    await Job.clearStore(); // should call because a test calls job.save()
   })
 
   test('Clicking an invest model button renders SetupTab', async () => {
@@ -78,7 +78,7 @@ describe.only('Various ways to open and close InVEST models', () => {
       status: 'success',
       humanTime: '3/5/2020, 10:43:14 AM',
     })
-    Job.getJobStore.mockReturnValue([mockJob.metadata])
+    mockJob.save();
 
     const { findByText, findByLabelText, findByRole } = render(
       <App
@@ -225,30 +225,53 @@ describe.only('Various ways to open and close InVEST models', () => {
 
 
 describe('Display recently executed InVEST jobs', () => {
-  getInvestList.mockResolvedValue({});
+  beforeEach(() => {
+    getInvestList.mockResolvedValue({});
+  })
+  afterEach(async () => {
+    await Job.clearStore();
+  })
   
   test('Recent Jobs: each has a button', async () => {
-    // This json is tracked in the repo for purposes of this test.
-    const testJobsDatabase = path.join(__dirname, './data/jobdb.json');
+    // TODO: This json is tracked in the repo for purposes of this test.
+    const job1 = new Job({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Sequestration',
+      argsValues: {
+        workspace_dir: 'work1'
+      },
+      workspace: { directory: 'work1', suffix: null },
+      status: 'success',
+      humanTime: '3/5/2020, 10:43:14 AM',
+    });
+    let recentJobs = await job1.save();
+    const job2 = new Job({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Sequestration',
+      argsValues: {
+        workspace_dir: 'work2'
+      },
+      workspace: { directory: 'work2', suffix: null },
+      status: 'success',
+      humanTime: '3/5/2020, 10:43:14 AM',
+    });
+    recentJobs = await job2.save();
+    
     const { getByText } = render(
       <App
-        jobDatabase={testJobsDatabase}
         investExe='foo'/>);
-    const db = JSON.parse(fs.readFileSync(testJobsDatabase));
-
+    
     await waitFor(() => {
-      Object.keys(db).forEach((job) => {
-        expect(getByText(db[job].workspace.directory))
+      recentJobs.forEach((job) => {
+        expect(getByText(job.workspace.directory))
           .toBeTruthy();
       })
     })
   })
 
   test('Recent Jobs: Some text if the database does not exist', async () => {
-    const testJobsDatabase = 'foo.json';
     const { findByText } = render(
       <App
-        jobDatabase={testJobsDatabase}
         investExe='foo'/>);
 
     const node = await findByText(/No recent InVEST runs/)
@@ -257,12 +280,16 @@ describe('Display recently executed InVEST jobs', () => {
 })
 
 describe('InVEST global settings: dialog interactions', () => {
-  getInvestList.mockResolvedValue({});
+  beforeEach(() => {
+    getInvestList.mockResolvedValue({});
+  })
+  afterEach(() => {
+    jest.resetAllMocks();
+  })
   test('Set the python logging level to pass to the invest CLI', async () => {
     const DEFAULT = 'INFO';
     const { getByText, getByLabelText } = render(
       <App
-        jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
 
     // Check the default settings
@@ -295,7 +322,6 @@ describe('InVEST global settings: dialog interactions', () => {
 
     const { getByText, getByLabelText } = render(
       <App
-        jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
 
     fireEvent.click(getByText('Settings'));
@@ -375,7 +401,7 @@ describe('InVEST subprocess testing', () => {
       return mockInvestProc
     })
   })
-
+  
   afterEach(() => {
     cleanupDir(fakeWorkspace);
     jest.resetAllMocks();
@@ -386,7 +412,6 @@ describe('InVEST subprocess testing', () => {
       findByText, findByLabelText, findByRole, queryByText, unmount
     } = render(
       <App
-        jobDatabase={fileRegistry.JOBS_DATABASE}
         investExe='foo'/>);
 
     const carbon = await findByRole('button', {name: MOCK_MODEL_LIST_KEY});

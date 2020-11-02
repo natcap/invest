@@ -11,6 +11,7 @@ jest.mock('../src/server_requests');
 import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation, fetchDatastackFromFile } from '../src/server_requests';
 import { fileRegistry } from '../src/constants';
+import Job from '../src/Job';
 
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
@@ -28,6 +29,11 @@ const MOCK_RECENT_JOBS_VALUE =
 
 /** Render an InvestJob component with the minimal props needed for tests. */
 function renderInvestJob() {
+  const job = new Job({
+    modelRunName: 'carbon',
+    modelHumanName: 'Carbon Model',
+  })
+  job.setProperty('navID', 'carbon456asdf');
   const {
     findByText,
     findAllByText,
@@ -37,13 +43,8 @@ function renderInvestJob() {
     ...utils
   } = render(
     <InvestJob
-      navID='carbon456asdf'
+      job={job}
       investExe=''
-      modelRunName='carbon'
-      modelHumanName='Carbon Model'
-      argsInitValues={undefined}
-      logfile={undefined}
-      jobStatus={undefined}
       investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
       saveJob={() => {}}
     />);

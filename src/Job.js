@@ -14,9 +14,11 @@ const KEYS_ARRAY = 'sortedHashArray';
 export default class Job {
   /* If none exists, init an empty array for the sorted workspace hashes */
   static async initDB() {
-    if (!await localforage.getItem(KEYS_ARRAY)) {
-      localforage.setItem(KEYS_ARRAY, []);
-    }
+    localforage.setItem(KEYS_ARRAY, []);
+    // const keys = await localforage.getItem(KEYS_ARRAY);
+    // if (!keys) {
+    //   localforage.setItem(KEYS_ARRAY, []);
+    // }
   }
 
   static async getJobStore() {
@@ -29,6 +31,10 @@ export default class Job {
       ));
     }
     return jobArray;
+  }
+
+  static async clearStore() {
+    await localforage.clear();
   }
 
   /**
@@ -89,9 +95,13 @@ export default class Job {
       throw Error('cannot save a job that has no workspaceHash');
     }
     this.metadata.humanTime = new Date().toLocaleString();
+    let sortedKeys = await localforage.getItem(KEYS_ARRAY);
+    if (!sortedKeys) {
+      await Job.initDB();
+      sortedKeys = await localforage.getItem(KEYS_ARRAY);
+    }
     // If this key already exists, make sure not to duplicate it,
     // and make sure to move it to the front
-    const sortedKeys = await localforage.getItem(KEYS_ARRAY);
     const idx = sortedKeys.indexOf(this.metadata.workspaceHash);
     if (idx > -1) {
       sortedKeys.splice(idx, 1);
