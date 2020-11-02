@@ -9,47 +9,6 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g;
 
 /**
- * Load job metadata from a persistent file and return the jobs
- * sorted by creation time.
- *
- * @param  {string} jobDatabasePath - path to a json file with jobs metadata.
- * @returns {Promise} - Resolves sorted array of jobs with metadata.
- */
-export function loadRecentJobs(store) {
-  return new Promise((resolve) => {
-    // const db = JSON.parse(fs.readFileSync(jobDatabasePath, 'utf8'));
-    // const db = window.localStorage;
-    const sortedJobs = Object.entries(store).sort(
-      (a, b) => b[1].systemTime - a[1].systemTime
-    );
-    resolve(sortedJobs);
-  });
-}
-
-/** Append/overwrite an entry to the persistent jobs file and reload its data.
- * If a job already exists with the same name is jobdata, it is overwritten.
- *
- * @param  {object} jobdata - object with job's metadata
- * @param  {string} jobDatabase - path to a json file with jobs metadata.
- * @returns {Array} - sorted array of jobs with metadata.
- */
-export async function updateRecentJobs(jobdata, jobDatabase) {
-  let jsonContent;
-  if (fs.existsSync(jobDatabase)) {
-    const db = JSON.parse(fs.readFileSync(jobDatabase, 'utf8'));
-    Object.keys(jobdata).forEach((job) => {
-      db[job] = jobdata[job];
-    });
-    jsonContent = JSON.stringify(db, null, 2);
-  } else {
-    jsonContent = JSON.stringify(jobdata, null, 2);
-  }
-  fs.writeFileSync(jobDatabase, jsonContent, 'utf8');
-  const updated = await loadRecentJobs(jobDatabase);
-  return updated;
-}
-
-/**
  * Given an invest workspace, find the most recently modified invest log.
  *
  * This function is used in order to associate a logfile with an active
