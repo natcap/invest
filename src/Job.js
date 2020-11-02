@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-
 import localforage from 'localforage';
 
 import { getLogger } from './logger';
@@ -62,6 +61,10 @@ export default class Job {
     this.save = this.save.bind(this);
     this.setProperty = this.setProperty.bind(this);
     this.setWorkspaceHash = this.setWorkspaceHash.bind(this);
+
+    if (workspace) {
+      this.setWorkspaceHash();
+    }
   }
 
   setWorkspaceHash() {

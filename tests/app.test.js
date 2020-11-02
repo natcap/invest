@@ -17,8 +17,10 @@ import {
   getInvestList, getSpec, fetchValidation, fetchDatastackFromFile
 } from '../src/server_requests';
 jest.mock('../src/server_requests');
+import Job from '../src/Job';
+Job.getJobStore = jest.fn();
 import { fileRegistry } from '../src/constants';
-import { cleanupDir } from '../src/utils'
+import { cleanupDir } from '../src/utils';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 
 const MOCK_MODEL_LIST_KEY = 'Carbon';
@@ -38,7 +40,7 @@ afterAll(() => {
   jest.resetAllMocks()
 })
 
-describe('Various ways to open and close InVEST models', () => {
+describe.only('Various ways to open and close InVEST models', () => {
   beforeAll(() => {
     getInvestList.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
@@ -51,7 +53,6 @@ describe('Various ways to open and close InVEST models', () => {
   test('Clicking an invest model button renders SetupTab', async () => {
     const { findByText, findByRole } = render(
       <App
-        jobDatabase={'foodb.json'}
         investExe='foo'
       />
     );
@@ -66,43 +67,27 @@ describe('Various ways to open and close InVEST models', () => {
   })
 
   test('Clicking a recent job renders SetupTab', async () => {
-    const mockJobDatabasePath = path.join(fileRegistry.CACHE_DIR, 'mock_job_database.json')
-    const mockJobDataPath = path.join(fileRegistry.CACHE_DIR, 'mock_job_data.json');
-    const mockJobId = 'job1hash';
-    const mockRecentJobsDB = { 
-      [mockJobId]: {
-        model: "carbon",
-        workspace: { "directory": "carbon_workspace", "suffix": null },
-        jobDataPath: mockJobDataPath,
-        status: "success",
-        humanTime: "3/5/2020, 10:43:14 AM",
-        systemTime: 1583259376573.759,
-      },
-    };
-    // Setting up the files that would exist if there are saved jobs.
-    const job = {
-      jobID: mockJobId,
-      modelRunName: mockRecentJobsDB[mockJobId].model,
-      modelHumanName: mockRecentJobsDB[mockJobId].model,
+    const workspacePath = 'my_workspace';
+    const mockJob = new Job({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Sequestration',
       argsValues: {
-        workspace_dir: mockRecentJobsDB[mockJobId].workspace.directory
+        workspace_dir: workspacePath
       },
-      workspace: mockRecentJobsDB[mockJobId].workspace,
-      logfile: 'foo-log.txt',
-      status: mockRecentJobsDB[mockJobId].status,
-    };
-    fs.writeFileSync(mockJobDataPath, JSON.stringify(job), 'utf8');
-    fs.writeFileSync(mockJobDatabasePath, JSON.stringify(mockRecentJobsDB), 'utf8');
+      workspace: { directory: workspacePath, suffix: null },
+      status: 'success',
+      humanTime: '3/5/2020, 10:43:14 AM',
+    })
+    Job.getJobStore.mockReturnValue([mockJob.metadata])
 
     const { findByText, findByLabelText, findByRole } = render(
       <App
-        jobDatabase={mockJobDatabasePath}
         investExe='foo'
       />
     );
 
     const recentJobCard = await findByText(
-      mockRecentJobsDB[mockJobId].workspace.directory
+      mockJob.metadata.workspace.directory
     );
     fireEvent.click(recentJobCard);
     const executeButton = await findByRole('button', {name: /Run/});
@@ -113,7 +98,7 @@ describe('Various ways to open and close InVEST models', () => {
     // Expect some arg values that were loaded from the saved job:
     const input = await findByLabelText(/Workspace/);
     expect(input).toHaveValue(
-      mockRecentJobsDB[mockJobId].workspace.directory
+      mockJob.metadata.workspace.directory
     );
   })
 
@@ -134,7 +119,6 @@ describe('Various ways to open and close InVEST models', () => {
     
     const { findByText, findByLabelText, findByRole } = render(
       <App
-        jobDatabase={'foodb.json'}
         investExe='foo'
       />
     );
@@ -159,7 +143,6 @@ describe('Various ways to open and close InVEST models', () => {
     
     const { findByText, findByLabelText } = render(
       <App
-        jobDatabase={'foodb.json'}
         investExe='foo'
       />
     );
@@ -183,7 +166,6 @@ describe('Various ways to open and close InVEST models', () => {
       queryByText,
     } = render(
       <App
-        jobDatabase={'foodb.json'}
         investExe='foo'
       />
     );

@@ -97,6 +97,7 @@ HomeTab.propTypes = {
         suffix: PropTypes.string,
       }),
       logfile: PropTypes.string,
+      status: PropTypes.string,
     })
   ).isRequired,
 };
@@ -192,6 +193,7 @@ RecentInvestJobs.propTypes = {
         suffix: PropTypes.string,
       }),
       logfile: PropTypes.string,
+      status: PropTypes.string,
     })
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,

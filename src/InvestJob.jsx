@@ -24,7 +24,6 @@ import {
 } from './utils';
 import { fileRegistry } from './constants';
 import { getLogger } from './logger';
-import Job from './Job';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -69,7 +68,9 @@ async function investGetSpec(modelName) {
 }
 
 /**
- * Includes all the data needed to represent one invest model UI.
+ * Render an invest model setup form, log display, etc.
+ * Manage launching of an invest model in a child process.
+ * And manage saves of executed jobs to a persistent store.
  */
 export default class InvestJob extends React.Component {
   constructor(props) {
@@ -105,7 +106,7 @@ export default class InvestJob extends React.Component {
       argsSpec: argsSpec,
       uiSpec: uiSpec,
       logfile: job.metadata.logfile,
-      jobStatus: job.metadata.jobStatus,
+      jobStatus: job.metadata.status,
     }, () => { this.switchTabs('setup'); });
   }
 
@@ -391,12 +392,14 @@ InvestJob.propTypes = {
     metadata: PropTypes.shape({
       modelRunName: PropTypes.string.isRequired,
       modelHumanName: PropTypes.string.isRequired,
+      navID: PropTypes.string.isRequired,
       argsValues: PropTypes.object,
       workspace: PropTypes.shape({
         directory: PropTypes.string,
         suffix: PropTypes.string,
       }),
       logfile: PropTypes.string,
+      status: PropTypes.string,
     }),
     save: PropTypes.func.isRequired,
     setProperty: PropTypes.func.isRequired,
