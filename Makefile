@@ -355,6 +355,15 @@ build/vcredist_x86.exe: | build
 
 CERT_FILE := StanfordUniversity.crt
 KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
+P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
+codesign_mac:
+	# download the p12 certificate file from google cloud
+	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
+	# add the certificate to the default keychain
+	security add-certificates $(BUILD_DIR)/$(P12_FILE) -P $(CERT_KEY_PASS)
+	# sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
+	codesign --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
+
 signcode:
 	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
 	$(GSUTIL) cp gs://stanford_cert/$(KEY_FILE) $(BUILD_DIR)/$(KEY_FILE)
@@ -365,7 +374,6 @@ signcode:
 	$(RM) $(BUILD_DIR)/$(KEY_FILE)
 	@echo "Installer was signed with osslsigncode"
 
-P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
 signcode_windows:
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
