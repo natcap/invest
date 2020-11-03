@@ -15,17 +15,6 @@ import Job from '../src/Job';
 
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
-const MOCK_RECENT_JOBS_VALUE = 
-  [ [ "job1",
-      {
-        "model": "carbon",
-        "workspace": { "directory": "carbon_setup", "suffix": null },
-        "statefile": "tests/data/carbon_setup.json",
-        "status": null,
-        "humanTime": "3/5/2020, 10:43:14 AM",
-        "systemTime": 1583259376573.759,
-        "description": null } ] ]
-
 
 /** Render an InvestJob component with the minimal props needed for tests. */
 function renderInvestJob() {
