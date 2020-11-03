@@ -55,6 +55,8 @@ Unreleased Changes (3.9)
       messages from the model execution will show up when you run the script.
     * InVEST is now a 64-bit binary built against Python 3.7.
     * Adding Python 3.8 support for InVEST testing.
+    * Add warning message to installer for 32-bit computers about installing
+      64-bit software.
     * Stop running validation extra times when model inputs autofill, saving
       a small but noticeable amount of time in launching a model.
 * Coastal Vulnerability
