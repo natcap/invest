@@ -14,14 +14,17 @@ const KEYS_ARRAY = 'sortedHashArray';
 export default class Job {
   /* If none exists, init an empty array for the sorted workspace hashes */
   static async initDB() {
-    localforage.setItem(KEYS_ARRAY, []);
+    const keys = await localforage.getItem(KEYS_ARRAY);
+    if (!keys) {
+      localforage.setItem(KEYS_ARRAY, []);
+    }
   }
 
+  /* Return an array of job metadata objects, ordered by most recently saved */
   static async getJobStore() {
     let jobArray = [];
     const sortedKeys = await localforage.getItem(KEYS_ARRAY);
     if (sortedKeys) {
-      logger.debug(`cached jobs include ${sortedKeys}`);
       jobArray = await Promise.all(sortedKeys.map(
         (key) => localforage.getItem(key)
       ));
@@ -34,13 +37,16 @@ export default class Job {
   }
 
   /**
-  * @param  {string} modelRunName - (required) invest model name to be passed to `invest run`
-  * @param  {string} modelHumanName - (required) the colloquial name of the invest model
-  * @param  {object} argsValues - an invest "args dictionary" with initial values
-  * @param  {object} workspace - with keys for invest workspace directory and suffix
-  * @param  {string} logfile - path to an existing invest logfile
-  * @param  {string} status - indicates how the job exited, if it's a recent job.
-  */
+   * @param {object} obj - the metadata property
+   * @param {string} obj.modelRunName - name to be passed to `invest run`
+   * @param {string} obj.modelHumanName - colloquial name of the invest model
+   * @param {object} obj.argsValues - an invest "args dict" with initial values
+   * @param {object} obj.workspace - defines the invest workspace and suffix
+   * @param {string} obj.workspace.directory - path to invest model workspace
+   * @param {string} obj.workspace.suffix - invest model results suffix
+   * @param {string} obj.logfile - path to an existing invest logfile
+   * @param {'running'|'success'|'error'} obj.status - status of the invest process
+   */
   constructor(
     {
       modelRunName,
@@ -52,13 +58,12 @@ export default class Job {
     }
   ) {
     this.metadata = {};
-    this.metadata.modelRunName = modelRunName || '';
-    this.metadata.modelHumanName = modelHumanName || '';
+    this.metadata.modelRunName = modelRunName;
+    this.metadata.modelHumanName = modelHumanName;
     this.metadata.argsValues = argsValues;
     this.metadata.workspace = workspace;
     this.metadata.logfile = logfile;
     this.metadata.status = status;
-    this.metadata.humanTime = new Date().toLocaleString();
 
     this.save = this.save.bind(this);
     this.setProperty = this.setProperty.bind(this);
@@ -75,7 +80,9 @@ export default class Job {
         `${this.metadata.modelRunName}${JSON.stringify(this.metadata.workspace)}`
       ).digest('hex');
     } else {
-      throw Error('cannot hash a workspace that does not exist');
+      throw Error(
+        'Cannot hash a job that is missing workspace or modelRunName properties'
+      );
     }
   }
 

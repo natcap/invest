@@ -51,7 +51,9 @@
     "verbose": true,
     "collectCoverage": true,
     "testEnvironment": "jest-environment-jsdom-sixteen",
-    "setupFiles": ["./tests/jest.overrides.js"]
+    "setupFiles": [
+      "./tests/jest.overrides.js"
+    ]
   },
   "invest": {
     "version": "3.8.9"
@@ -112,6 +114,7 @@
     "eslint": "^7.9.0",
     "eslint-config-airbnb": "^18.2.0",
     "eslint-plugin-import": "^2.22.0",
+    "eslint-plugin-jest": "^24.1.0",
     "eslint-plugin-jsdoc": "^29.2.0",
     "eslint-plugin-jsx-a11y": "^6.3.1",
     "eslint-plugin-react": "^7.20.6",

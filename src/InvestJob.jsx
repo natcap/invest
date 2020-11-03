@@ -145,8 +145,6 @@ export default class InvestJob extends React.Component {
       job,
       investExe,
       investSettings,
-      // modelRunName,
-      // modelHumanName,
       saveJob,
     } = this.props;
 
@@ -158,7 +156,6 @@ export default class InvestJob extends React.Component {
     job.setProperty('argsValues', argsValues);
     job.setProperty('workspace', workspace);
     job.setProperty('status', 'running');
-    job.setProperty('logfile', undefined);
 
     // Setting this very early in the click handler so the Execute button
     // can display an appropriate visual cue when it's clicked
