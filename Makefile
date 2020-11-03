@@ -360,7 +360,7 @@ codesign_mac:
 	# download the p12 certificate file from google cloud
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	# add the certificate to the default keychain
-	security add-certificates $(BUILD_DIR)/$(P12_FILE) -P $(CERT_KEY_PASS)
+	security import $(BUILD_DIR)/$(P12_FILE) -P $(CERT_KEY_PASS)
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
 	codesign --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
 
