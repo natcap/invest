@@ -21,10 +21,10 @@ mkdir -p "$tempdir"
 
 # Copy the binaries and the html docs into the tempdir
 cp -r "$2" "$tempdir/InVEST.app"
-cp -r "$3" "$tempdir/documentation"
+# cp -r "$3" "$tempdir/documentation"
 
-# copy the release notes (HISTORY.rst) into the directory to be zipped as an HTML doc.
-pandoc HISTORY.rst -o "$tempdir/HISTORY.html"
+# # copy the release notes (HISTORY.rst) into the directory to be zipped as an HTML doc.
+# pandoc HISTORY.rst -o "$tempdir/HISTORY.html"
 
 pushd "build/mac_zip"
 zip -r "../../dist/$zipfilename" "$zipdirname"
