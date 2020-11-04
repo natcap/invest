@@ -1,12 +1,12 @@
-import Job from '../src/Job';
+import InvestJob from '../src/InvestJob';
 
-describe('Job', () => {
+describe('InvestJob', () => {
   afterEach(() => {
-    Job.clearStore();
+    InvestJob.clearStore();
   });
 
   test('setting a workspace generates a workspaceHash', async () => {
-    const job = new Job({
+    const job = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
@@ -17,19 +17,19 @@ describe('Job', () => {
   test('workspaceHash collisions only when expected', async () => {
     const modelName = 'foo';
     const workspace = { directory: 'myspace', suffix: '!!' };
-    const job1 = new Job({
+    const job1 = new InvestJob({
       modelRunName: modelName,
       modelHumanName: 'Foo',
     });
     job1.setProperty('workspace', workspace);
-    const job2 = new Job({
+    const job2 = new InvestJob({
       modelRunName: modelName,
       modelHumanName: 'Foo',
     });
     job2.setProperty('workspace', workspace);
     expect(job1.metadata.workspaceHash).toBe(job2.metadata.workspaceHash);
 
-    const job3 = new Job({
+    const job3 = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Foo',
     });
@@ -39,7 +39,7 @@ describe('Job', () => {
   });
 
   test('save method errors if no workspace is set', async () => {
-    const job = new Job({
+    const job = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
@@ -49,7 +49,7 @@ describe('Job', () => {
   });
 
   test('save method works with no pre-existing database', async () => {
-    const job = new Job({
+    const job = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
@@ -59,7 +59,7 @@ describe('Job', () => {
   });
 
   test('save method returns job store in sorted order', async () => {
-    const job1 = new Job({
+    const job1 = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
@@ -67,7 +67,7 @@ describe('Job', () => {
     let recentJobs = await job1.save();
     expect(recentJobs[0]).toBe(job1.metadata);
 
-    const job2 = new Job({
+    const job2 = new InvestJob({
       modelRunName: 'foo2',
       modelHumanName: 'Foo2',
     });
@@ -82,7 +82,7 @@ describe('Job', () => {
   });
 
   test('save on the same instance overwrites entry', async () => {
-    const job1 = new Job({
+    const job1 = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
@@ -94,29 +94,29 @@ describe('Job', () => {
   });
 
   test('getJobStore before and after any jobs exist', async () => {
-    let recentJobs = await Job.getJobStore();
+    let recentJobs = await InvestJob.getJobStore();
     expect(recentJobs).toHaveLength(0);
-    const job1 = new Job({
+    const job1 = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
     job1.setProperty('workspace', { directory: 'myspace' });
     await job1.save();
-    recentJobs = await Job.getJobStore();
+    recentJobs = await InvestJob.getJobStore();
     expect(recentJobs).toHaveLength(1);
   });
 
   test('clearStore clears the store', async () => {
-    const job1 = new Job({
+    const job1 = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
     job1.setProperty('workspace', { directory: 'myspace' });
     await job1.save();
-    let recentJobs = await Job.getJobStore();
+    let recentJobs = await InvestJob.getJobStore();
     expect(recentJobs).toHaveLength(1);
-    await Job.clearStore();
-    recentJobs = await Job.getJobStore();
+    await InvestJob.clearStore();
+    recentJobs = await InvestJob.getJobStore();
     expect(recentJobs).toHaveLength(0);
   });
 });
