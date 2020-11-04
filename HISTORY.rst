@@ -55,6 +55,10 @@ Unreleased Changes (3.9)
       messages from the model execution will show up when you run the script.
     * InVEST is now a 64-bit binary built against Python 3.7.
     * Adding Python 3.8 support for InVEST testing.
+    * Add warning message to installer for 32-bit computers about installing
+      64-bit software.
+    * Stop running validation extra times when model inputs autofill, saving
+      a small but noticeable amount of time in launching a model.
 * Coastal Blue Carbon
     * Refactor of Coastal Blue Carbon that implements TaskGraph for task
       management across the model and fixes a wide range of issues with the model
@@ -90,7 +94,7 @@ Unreleased Changes (3.9)
       'snapped' to be the same as the file name (including suffix).
     * The layer in the 'watersheds.gpkg' output has been renamed from
       'watersheds' to match the name of the vector file (including the suffix).
-    * Added pour point detection option as an alternative to providing an 
+    * Added pour point detection option as an alternative to providing an
       outlet features vector.
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
@@ -115,6 +119,9 @@ Unreleased Changes (3.9)
       value. Now, the decay does not ignore those nodata edges causing values
       on the edges to decay more quickly. The area of study should have
       adequate boundaries to account for these edge effects.
+* Seasonal Water Yield
+    * Fixed a bug where precip or eto rasters of ``GDT_Float64`` with values
+      greater than 32-bit would overflow to ``-inf``.
 * SDR:
     * Fixing an issue where the LS factor should be capped to an upstream area
       of 333^2 m^2. In previous versions the LS factor was erroneously capped
@@ -124,7 +131,11 @@ Unreleased Changes (3.9)
 
 ..
 ..
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.8.9 (2020-09-15)
 ------------------
 * Hydropower
     * Fixed bug that prevented validation from ever passing for this model.

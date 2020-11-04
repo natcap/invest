@@ -57,7 +57,7 @@ _MODEL_UIS = {
         aliases=('cpr',)),
     'delineateit': _UIMETA(
         humanname="DelineateIt",
-        pyname='natcap.invest.delineateit',
+        pyname='natcap.invest.delineateit.delineateit',
         gui='delineateit.Delineateit',
         aliases=()),
     'finfish_aquaculture': _UIMETA(
