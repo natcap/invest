@@ -357,6 +357,7 @@ CERT_FILE := StanfordUniversity.crt
 KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
 P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
 codesign_mac:
+	echo "codesign"
 	# download the p12 certificate file from google cloud
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	# add the certificate to the default keychain
