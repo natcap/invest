@@ -44,7 +44,8 @@ class UCMTests(unittest.TestCase):
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'factors',
-            'do_valuation': True,
+            'do_energy_valuation': True,
+            'do_productivity_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(
                 REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -180,7 +181,8 @@ class UCMTests(unittest.TestCase):
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'intensity',  # main difference in the reg. tests
-            'do_valuation': True,
+            'do_energy_valuation': True,
+            'do_productivity_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(
                 REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -243,7 +245,8 @@ class UCMTests(unittest.TestCase):
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'factors',
-            'do_valuation': True,
+            'do_energy_valuation': True,
+            'do_productivity_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(
                 REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -300,7 +303,8 @@ class UCMTests(unittest.TestCase):
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'factors',
-            'do_valuation': True,
+            'do_energy_valuation': True,
+            'do_productivity_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(
                 REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -348,7 +352,8 @@ class UCMTests(unittest.TestCase):
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'factors',
-            'do_valuation': True,
+            'do_energy_valuation': True,
+            'do_productivity_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(
                 REGRESSION_DATA, "buildings_clip.gpkg"),

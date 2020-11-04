@@ -150,7 +150,7 @@ ARGS_SPEC = {
         "avg_rel_humidity": {
             "name": "Average relative humidity (0-100%)",
             "type": "number",
-            "required": "do_valuation",
+            "required": "do_productivity_valuation",
             "validation_options": {
                 "expression": "(value >= 0) and (value <= 100)",
             },
@@ -162,7 +162,7 @@ ARGS_SPEC = {
         "building_vector_path": {
             "name": "Buildings vector",
             "type": "vector",
-            "required": "do_valuation",
+            "required": "do_energy_valuation",
             "validation_options": {
                 "required_fields": ["type"],
             },
@@ -177,7 +177,7 @@ ARGS_SPEC = {
         "energy_consumption_table_path": {
             "name": "Energy consumption table",
             "type": "csv",
-            "required": "do_valuation",
+            "required": "do_energy_valuation",
             "validation_options": {
                 "required_fields": ["type", "consumption"],
             },
@@ -267,15 +267,17 @@ def execute(args):
         args['t_air_average_radius'] (float): radius of the averaging filter
             for turning T_air_nomix into T_air.
         args['uhi_max'] (float): Magnitude of the UHI effect.
-        args['do_valuation'] (bool): if True, consider the valuation
-            parameters for buildings.
+        args['do_energy_valuation'] (bool): if True, calculate energy savings 
+            valuation for buildings.
+        args['do_productivity_valuation'] (bool): if True, calculate work 
+            productivity valuation based on humidity and temperature.
         args['avg_rel_humidity'] (float): (optional, depends on
-            'do_valuation') Average relative humidity (0-100%).
+            'do_productivity_valuation') Average relative humidity (0-100%).
         args['building_vector_path']: (str) (optional, depends on
-            'do_valuation') path to a vector of building footprints that
+            'do_energy_valuation') path to a vector of building footprints that
             contains at least the field 'type'.
         args['energy_consumption_table_path'] (str): (optional, depends on
-            'do_valuation') path to a table that maps building types to
+            'do_energy_valuation') path to a table that maps building types to
             energy consumption. Must contain at least the fields 'type' and
             'consumption'.
         args['cc_method'] (str): Either "intensity" or "factors".  If
