@@ -16,7 +16,7 @@ import App from '../src/app';
 import {
   getInvestList, getSpec, fetchValidation, fetchDatastackFromFile
 } from '../src/server_requests';
-import Job from '../src/Job';
+import InvestJob from '../src/InvestJob';
 import { fileRegistry } from '../src/constants';
 import { cleanupDir } from '../src/utils';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
@@ -49,7 +49,7 @@ describe('Various ways to open and close InVEST models', () => {
   });
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore
-    await Job.clearStore(); // should call because a test calls job.save()
+    await InvestJob.clearStore(); // should call because a test calls job.save()
   });
 
   test('Clicking an invest model button renders SetupTab', async () => {
@@ -68,7 +68,7 @@ describe('Various ways to open and close InVEST models', () => {
 
   test('Clicking a recent job renders SetupTab', async () => {
     const workspacePath = 'my_workspace';
-    const mockJob = new Job({
+    const mockJob = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Sequestration',
       argsValues: {
@@ -216,11 +216,11 @@ describe('Display recently executed InVEST jobs', () => {
     getInvestList.mockResolvedValue({});
   });
   afterEach(async () => {
-    await Job.clearStore();
+    await InvestJob.clearStore();
   });
 
   test('Recent Jobs: each has a button', async () => {
-    const job1 = new Job({
+    const job1 = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Sequestration',
       argsValues: {
@@ -231,7 +231,7 @@ describe('Display recently executed InVEST jobs', () => {
       humanTime: '3/5/2020, 10:43:14 AM',
     });
     let recentJobs = await job1.save();
-    const job2 = new Job({
+    const job2 = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Sequestration',
       argsValues: {

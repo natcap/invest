@@ -11,7 +11,7 @@ import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
-import Job from '../../Job';
+import InvestJob from '../../InvestJob';
 import { getLogger } from '../../logger';
 
 const logger = getLogger(__filename.split('/').slice(-2).join('/'));
@@ -30,7 +30,7 @@ export default class HomeTab extends React.PureComponent {
     const { value } = event.target;
     const { investList, openInvestModel } = this.props;
     const modelRunName = investList[value].internal_name;
-    const job = new Job({
+    const job = new InvestJob({
       modelRunName: modelRunName,
       modelHumanName: value
     });
@@ -112,7 +112,7 @@ class RecentInvestJobs extends React.PureComponent {
   }
 
   handleClick(jobMetadata) {
-    this.props.openInvestModel(new Job(jobMetadata));
+    this.props.openInvestModel(new InvestJob(jobMetadata));
   }
 
   render() {

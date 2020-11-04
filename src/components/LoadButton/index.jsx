@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
 
-import Job from '../../Job';
+import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
 
 /**
@@ -21,7 +21,7 @@ export default class LoadButton extends React.Component {
     const data = await remote.dialog.showOpenDialog();
     if (data.filePaths.length) {
       const datastack = await fetchDatastackFromFile(data.filePaths[0]);
-      const job = new Job({
+      const job = new InvestJob({
         modelRunName: datastack.model_run_name,
         modelHumanName: datastack.model_human_name,
         argsValues: datastack.args

@@ -11,12 +11,12 @@ import {
   getSpec, saveToPython, writeParametersToFile, fetchValidation
 } from '../src/server_requests';
 import { fileRegistry } from '../src/constants';
-import Job from '../src/Job';
+import InvestJob from '../src/InvestJob';
 
 jest.mock('../src/server_requests');
 
 function renderInvestTab() {
-  const job = new Job({
+  const job = new InvestJob({
     modelRunName: 'carbon',
     modelHumanName: 'Carbon Model',
   });

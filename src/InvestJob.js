@@ -11,7 +11,7 @@ const KEYS_ARRAY = 'sortedHashArray';
  * Create an object to hold properties associated with an Invest Job.
  *
  */
-export default class Job {
+export default class InvestJob {
   /* If none exists, init an empty array for the sorted workspace hashes */
   static async initDB() {
     const keys = await localforage.getItem(KEYS_ARRAY);
@@ -100,7 +100,7 @@ export default class Job {
     this.metadata.humanTime = new Date().toLocaleString();
     let sortedKeys = await localforage.getItem(KEYS_ARRAY);
     if (!sortedKeys) {
-      await Job.initDB();
+      await InvestJob.initDB();
       sortedKeys = await localforage.getItem(KEYS_ARRAY);
     }
     // If this key already exists, make sure not to duplicate it,
@@ -114,6 +114,6 @@ export default class Job {
     localforage.setItem(
       this.metadata.workspaceHash, this.metadata
     );
-    return Job.getJobStore();
+    return InvestJob.getJobStore();
   }
 }

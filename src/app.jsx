@@ -15,7 +15,7 @@ import LoadButton from './components/LoadButton';
 import SettingsModal from './components/SettingsModal';
 import { getInvestList } from './server_requests';
 import { getLogger } from './logger';
-import Job from './Job';
+import InvestJob from './InvestJob';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -42,8 +42,7 @@ export default class App extends React.Component {
   /** Initialize the list of available invest models and recent invest jobs. */
   async componentDidMount() {
     const investList = await getInvestList();
-    // await Job.initDB();
-    const recentJobs = await Job.getJobStore(); // why does this return a Promise?
+    const recentJobs = await InvestJob.getJobStore();
     // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?
 
@@ -75,7 +74,7 @@ export default class App extends React.Component {
 
   /** Push data for a new InvestTab component to an array.
    *
-   * @param {Job} job - as constructed by new Job()
+   * @param {InvestJob} job - as constructed by new InvestJob()
    */
   openInvestModel(job) {
     const navID = crypto.randomBytes(16).toString('hex');
@@ -114,10 +113,9 @@ export default class App extends React.Component {
 
   /** Save data describing an invest job to a persistent JSON file.
    *
-   * @param {object} job - data that can be passed to openInvestModel
+   * @param {object} job - as constructed by new InvestJob()
    */
   async saveJob(job) {
-    // TODO: can we have this component listen for DB changes instead?
     const recentJobs = await job.save();
     this.setState({
       recentJobs: recentJobs,
