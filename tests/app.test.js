@@ -17,7 +17,6 @@ import {
   getInvestList, getSpec, fetchValidation, fetchDatastackFromFile
 } from '../src/server_requests';
 import InvestJob from '../src/InvestJob';
-import { fileRegistry } from '../src/constants';
 import { cleanupDir } from '../src/utils';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 
@@ -33,11 +32,8 @@ const MOCK_INVEST_LIST = {
 };
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 
-afterAll(() => {
-  // cache dir accumulates files when Run is clicked
-  fs.readdirSync(fileRegistry.CACHE_DIR).forEach((filename) => {
-    fs.unlinkSync(path.join(fileRegistry.CACHE_DIR, filename));
-  });
+afterAll(async () => {
+  await InvestJob.clearStore();
   jest.resetAllMocks();
 });
 

@@ -89,10 +89,8 @@ export default class InvestTab extends React.Component {
   }
 
   async componentDidMount() {
-    // If these dirs already exist, this will err and pass
-    fs.mkdir(fileRegistry.CACHE_DIR, (err) => {});
+    // If these dir already exists, this will err and pass
     fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
-    // logfile and jobStatus are undefined unless this is a pre-existing job.
     const { job } = this.props;
     const {
       modelSpec, argsSpec, uiSpec
