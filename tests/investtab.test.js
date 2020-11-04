@@ -5,7 +5,7 @@ import { remote } from 'electron';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import InvestJob from '../src/InvestJob';
+import InvestTab from '../src/components/InvestTab';
 import SetupTab from '../src/components/SetupTab';
 import {
   getSpec, saveToPython, writeParametersToFile, fetchValidation
@@ -15,14 +15,14 @@ import Job from '../src/Job';
 
 jest.mock('../src/server_requests');
 
-function renderInvestJob() {
+function renderInvestTab() {
   const job = new Job({
     modelRunName: 'carbon',
     modelHumanName: 'Carbon Model',
   });
   job.setProperty('navID', 'carbon456asdf');
   const { ...utils } = render(
-    <InvestJob
+    <InvestTab
       job={job}
       investExe="foo"
       investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
@@ -89,7 +89,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     };
     remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData);
 
-    const { findByText } = renderInvestJob();
+    const { findByText } = renderInvestTab();
 
     const saveButton = await findByText('Save to JSON');
     fireEvent.click(saveButton);
@@ -122,7 +122,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     const mockDialogData = { filePath: 'foo.py' };
     remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData);
 
-    const { findByText } = renderInvestJob();
+    const { findByText } = renderInvestTab();
 
     const saveButton = await findByText('Save to Python script');
     fireEvent.click(saveButton);
@@ -155,9 +155,9 @@ describe('Save InVEST Model Setup Buttons', () => {
     // Spy on this method so we can assert it was never called.
     // Don't forget to restore! Otherwise a 'resetAllMocks'
     // can silently turn this spy into a function that returns nothing.
-    const spy = jest.spyOn(InvestJob.prototype, 'argsToJsonFile');
+    const spy = jest.spyOn(InvestTab.prototype, 'argsToJsonFile');
 
-    const { findByText } = renderInvestJob();
+    const { findByText } = renderInvestTab();
 
     const saveButton = await findByText('Save to JSON');
     fireEvent.click(saveButton);
@@ -179,7 +179,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     // will silently turn this spy into a function that returns nothing.
     const spy = jest.spyOn(SetupTab.prototype, 'savePythonScript');
 
-    const { findByText } = renderInvestJob();
+    const { findByText } = renderInvestTab();
 
     const saveButton = await findByText('Save to Python script');
     fireEvent.click(saveButton);
@@ -234,7 +234,7 @@ describe('InVEST Run Button', () => {
       findByLabelText,
       findByRole,
       queryAllByText,
-    } = renderInvestJob();
+    } = renderInvestTab();
 
     const runButton = await findByRole('button', { name: /Run/ });
     expect(runButton).toBeDisabled();

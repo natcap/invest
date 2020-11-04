@@ -11,7 +11,7 @@ import {
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import InvestJob from '../src/InvestJob';
+import InvestTab from '../src/components/InvestTab';
 import App from '../src/app';
 import {
   getInvestList, getSpec, fetchValidation, fetchDatastackFromFile
@@ -487,7 +487,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('user terminates process - expect log display', async () => {
-    const spy = jest.spyOn(InvestJob.prototype, 'terminateInvestProcess')
+    const spy = jest.spyOn(InvestTab.prototype, 'terminateInvestProcess')
       .mockImplementation(() => {
         mockInvestProc.emit('exit', null);
       });

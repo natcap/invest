@@ -13,17 +13,13 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
 
-import SetupTab from './components/SetupTab';
-import LogTab from './components/LogTab';
-import ResourcesLinks from './components/ResourcesLinks';
-import {
-  getSpec, writeParametersToFile
-} from './server_requests';
-import {
-  findMostRecentLogfile, cleanupDir
-} from './utils';
-import { fileRegistry } from './constants';
-import { getLogger } from './logger';
+import SetupTab from '../SetupTab';
+import LogTab from '../LogTab';
+import ResourcesLinks from '../ResourcesLinks';
+import { getSpec, writeParametersToFile } from '../../server_requests';
+import { findMostRecentLogfile, cleanupDir } from '../../utils';
+import { fileRegistry } from '../../constants';
+import { getLogger } from '../../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -72,7 +68,7 @@ async function investGetSpec(modelName) {
  * Manage launching of an invest model in a child process.
  * And manage saves of executed jobs to a persistent store.
  */
-export default class InvestJob extends React.Component {
+export default class InvestTab extends React.Component {
   constructor(props) {
     super(props);
 
@@ -384,7 +380,7 @@ export default class InvestJob extends React.Component {
   }
 }
 
-InvestJob.propTypes = {
+InvestTab.propTypes = {
   job: PropTypes.shape({
     metadata: PropTypes.shape({
       modelRunName: PropTypes.string.isRequired,

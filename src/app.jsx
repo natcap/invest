@@ -10,7 +10,7 @@ import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
 
 import HomeTab from './components/HomeTab';
-import InvestJob from './InvestJob';
+import InvestTab from './components/InvestTab';
 import LoadButton from './components/LoadButton';
 import SettingsModal from './components/SettingsModal';
 import { getInvestList } from './server_requests';
@@ -73,7 +73,7 @@ export default class App extends React.Component {
     });
   }
 
-  /** Push data for a new InvestJob component to an array.
+  /** Push data for a new InvestTab component to an array.
    *
    * @param {Job} job - as constructed by new Job()
    */
@@ -89,7 +89,7 @@ export default class App extends React.Component {
    * Click handler for the close-tab button on an Invest model tab.
    *
    * @param  {string} navID - the eventKey of the tab containing the
-   *   InvestJob component that will be removed.
+   *   InvestTab component that will be removed.
    */
   closeInvestModel(navID) {
     let index;
@@ -159,7 +159,7 @@ export default class App extends React.Component {
           eventKey={job.metadata.navID}
           title={job.metadata.modelHumanName}
         >
-          <InvestJob
+          <InvestTab
             job={job}
             investExe={investExe}
             investSettings={investSettings}
