@@ -135,11 +135,17 @@ ARGS_SPEC = {
                 "city."
             ),
         },
-        "do_valuation": {
-            "name": "Run Valuation Model",
+        "do_energy_valuation": {
+            "name": "Run Energy Savings Valuation Model",
             "type": "boolean",
             "required": True,
-            "about": "Select to run the valuation model."
+            "about": "Select to run the energy savings valuation model."
+        },
+        "do_productivity_valuation": {
+            "name": "Run Work Productivity Valuation Model",
+            "type": "boolean",
+            "required": True,
+            "about": "Select to run the work productivity valuation model."
         },
         "avg_rel_humidity": {
             "name": "Average relative humidity (0-100%)",
@@ -585,8 +591,8 @@ def execute(args):
     light_loss_stats_pickle_path = None
     heavy_loss_stats_pickle_path = None
     energy_consumption_vector_path = None
-    if bool(args['do_valuation']):
-        LOGGER.info('Starting valuation')
+    if bool(args['do_productivity_valuation']):
+        LOGGER.info('Starting work productivity valuation')
         # work productivity
         wbgt_raster_path = os.path.join(
             intermediate_dir, 'wbgt%s.tif' % file_suffix)
@@ -620,6 +626,8 @@ def execute(args):
                 task_name='work loss: %s' % os.path.basename(loss_raster_path))
             loss_task_path_map[loss_type] = (work_loss_task, loss_raster_path)
 
+    if bool(args['do_energy_valuation']):
+        LOGGER.info('Starting energy savings valuation')
         intermediate_building_vector_path = os.path.join(
             intermediate_dir,
             'reprojected_buildings%s.shp' % file_suffix)
