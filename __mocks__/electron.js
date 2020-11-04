@@ -1,9 +1,9 @@
 import path from 'path';
 
 const mockApp = {
-  getPath: jest.fn().mockImplementation(() => {
-    return path.resolve('tests/data');
-  })
+  getPath: jest.fn().mockImplementation(
+    () => path.resolve('tests/data')
+  )
 };
 
 // mocks for when electron API accessed via remote from renderer process
@@ -21,4 +21,4 @@ export const remote = {
 };
 
 // mocks for when electron API called from main process
-export const app = mockApp
+export const app = mockApp;
