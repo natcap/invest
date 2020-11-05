@@ -628,6 +628,45 @@ def execute(args):
                 task_name='work loss: %s' % os.path.basename(loss_raster_path))
             loss_task_path_map[loss_type] = (work_loss_task, loss_raster_path)
 
+        # pickle WBGT
+        wbgt_stats_pickle_path = os.path.join(
+            intermediate_dir, 'wbgt_stats.pickle')
+        _ = task_graph.add_task(
+            func=pickle_zonal_stats,
+            args=(
+                intermediate_aoi_vector_path,
+                wbgt_raster_path, wbgt_stats_pickle_path),
+            target_path_list=[wbgt_stats_pickle_path],
+            dependent_task_list=[
+                wbgt_task, intermediate_uhi_result_vector_task],
+            task_name='pickle WBgt stats')
+        # pickle light loss
+        light_loss_stats_pickle_path = os.path.join(
+            intermediate_dir, 'light_loss_stats.pickle')
+        _ = task_graph.add_task(
+            func=pickle_zonal_stats,
+            args=(
+                intermediate_aoi_vector_path,
+                loss_task_path_map['light'][1], light_loss_stats_pickle_path),
+            target_path_list=[light_loss_stats_pickle_path],
+            dependent_task_list=[
+                loss_task_path_map['light'][0],
+                intermediate_uhi_result_vector_task],
+            task_name='pickle light_loss stats')
+
+        heavy_loss_stats_pickle_path = os.path.join(
+            intermediate_dir, 'heavy_loss_stats.pickle')
+        _ = task_graph.add_task(
+            func=pickle_zonal_stats,
+            args=(
+                intermediate_aoi_vector_path,
+                loss_task_path_map['heavy'][1], heavy_loss_stats_pickle_path),
+            target_path_list=[heavy_loss_stats_pickle_path],
+            dependent_task_list=[
+                loss_task_path_map['heavy'][0],
+                intermediate_uhi_result_vector_task],
+            task_name='pickle heavy_loss stats')
+
     if bool(args['do_energy_valuation']):
         LOGGER.info('Starting energy savings valuation')
         intermediate_building_vector_path = os.path.join(
@@ -669,45 +708,6 @@ def execute(args):
             dependent_task_list=[
                 pickle_t_air_task, intermediate_building_vector_task],
             task_name='calculate energy savings task')
-
-        # pickle WBGT
-        wbgt_stats_pickle_path = os.path.join(
-            intermediate_dir, 'wbgt_stats.pickle')
-        _ = task_graph.add_task(
-            func=pickle_zonal_stats,
-            args=(
-                intermediate_aoi_vector_path,
-                wbgt_raster_path, wbgt_stats_pickle_path),
-            target_path_list=[wbgt_stats_pickle_path],
-            dependent_task_list=[
-                wbgt_task, intermediate_uhi_result_vector_task],
-            task_name='pickle WBgt stats')
-        # pickle light loss
-        light_loss_stats_pickle_path = os.path.join(
-            intermediate_dir, 'light_loss_stats.pickle')
-        _ = task_graph.add_task(
-            func=pickle_zonal_stats,
-            args=(
-                intermediate_aoi_vector_path,
-                loss_task_path_map['light'][1], light_loss_stats_pickle_path),
-            target_path_list=[light_loss_stats_pickle_path],
-            dependent_task_list=[
-                loss_task_path_map['light'][0],
-                intermediate_uhi_result_vector_task],
-            task_name='pickle light_loss stats')
-
-        heavy_loss_stats_pickle_path = os.path.join(
-            intermediate_dir, 'heavy_loss_stats.pickle')
-        _ = task_graph.add_task(
-            func=pickle_zonal_stats,
-            args=(
-                intermediate_aoi_vector_path,
-                loss_task_path_map['heavy'][1], heavy_loss_stats_pickle_path),
-            target_path_list=[heavy_loss_stats_pickle_path],
-            dependent_task_list=[
-                loss_task_path_map['heavy'][0],
-                intermediate_uhi_result_vector_task],
-            task_name='pickle heavy_loss stats')
 
     # final reporting can't be done until everything else is complete so
     # stop here
