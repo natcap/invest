@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 6deacc7df20c3cb7ecd77c05f5cd9277d5e75627
+GIT_SAMPLE_DATA_REPO_REV    := e9bf37762255535f7c74edb8139847edd1866702
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -29,8 +29,8 @@ ifeq ($(OS),Windows_NT)
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
 	MAKE := make
 	# Powershell has been inconsistent for allowing make commands to be
-	# ignored on failure. Many times if a command writes to std error 
-	# powershell interprets that as a failure and exits. Bash shells are 
+	# ignored on failure. Many times if a command writes to std error
+	# powershell interprets that as a failure and exits. Bash shells are
 	# widely available on Windows now, especially through git-bash
 	SHELL := /usr/bin/bash
 	CONDA := conda.bat

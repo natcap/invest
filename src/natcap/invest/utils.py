@@ -483,13 +483,6 @@ def build_lookup_from_csv(
         KeyError
             If ``key_field`` is not present during ``set_index`` call.
     """
-    # Check if the file encoding is UTF-8 BOM first
-    encoding = None
-    with open(table_path, 'rb') as file_obj:
-        first_line = file_obj.readline()
-        if first_line.startswith(codecs.BOM_UTF8):
-            encoding = 'utf-8-sig'
-
     # Reassign to avoid mutation
     col_list = column_list
     # if a list of columns are provided to use and return, make sure
@@ -497,20 +490,19 @@ def build_lookup_from_csv(
     if col_list and key_field not in col_list:
         col_list.append(key_field)
 
-    table = pandas.read_csv(
-        table_path, sep=None, index_col=False, engine='python',
-        encoding=encoding)
-    # strip column names to prevent indexing errors
-    # when users accidentally include leading/trailing whitespace
-    table.columns = table.columns.str.strip()
+    table = read_csv_to_dataframe(
+        table_path, to_lower=to_lower, sep=None, index_col=False,
+        engine='python')
 
     # if 'to_lower`, case handling is done before trying to access the data.
+    # the columns are stripped of leading/trailing whitespace in
+    # ``read_csv_to_dataframe``, and also lowercased if ``to_lower`` so we only
+    # need to convert the rest of the table.
     if to_lower:
         key_field = key_field.lower()
         # lowercase column names
         if col_list:
             col_list = [col.lower() for col in col_list]
-        table.columns = table.columns.str.lower()
         # lowercase values
         table = table.applymap(
             lambda x: x.lower() if isinstance(x, str) else x)
@@ -588,11 +580,8 @@ def read_csv_to_dataframe(
     """
     # Check if the file encoding is UTF-8 BOM first
     # allow encoding kwarg to override this if it's provided
-    if not encoding:
-        with open(path, 'rb') as file_obj:
-            first_line = file_obj.readline()
-            if first_line.startswith(codecs.BOM_UTF8):
-                encoding = 'utf-8-sig'
+    if not encoding and has_utf8_bom(path):
+        encoding = 'utf-8-sig'
     dataframe = pandas.read_csv(path, engine=engine, encoding=encoding,
                                 sep=sep, **kwargs)
     # this won't work on integer types, which happens if you set header=None
@@ -798,6 +787,22 @@ def _assert_vectors_equal(
         expected_vector = None
 
     return None
+
+
+def has_utf8_bom(textfile_path):
+    """Determine if the text file has a UTF-8 byte-order marker.
+
+    Args:
+        textfile_path (str): The path to a file on disk.
+
+    Returns:
+        A bool indicating whether the textfile has a BOM.  If ``True``, a BOM
+        is present.
+
+    """
+    with open(textfile_path, 'rb') as file_obj:
+        first_line = file_obj.readline()
+        return first_line.startswith(codecs.BOM_UTF8)
 
 
 def reclassify_raster(
