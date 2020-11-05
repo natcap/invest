@@ -6,3 +6,8 @@ include pyproject.toml
 include requirements.txt
 include requirements-dev.txt
 include requirements-gui.txt
+prune .github
+prune ci
+prune exe
+prune installer
+prune doc/users-guide
