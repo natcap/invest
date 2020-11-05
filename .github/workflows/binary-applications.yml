@@ -224,8 +224,9 @@ jobs:
             - name: Sign DMG
               if: github.event_name != 'pull_request'
               shell: bash -l {0}
-              # env:
-              #   CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
+              env:
+                TEST_ENV_VAR: "test"
+                # CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
               run: make codesign_mac
 
             - name: Deploy artifacts to GCS
