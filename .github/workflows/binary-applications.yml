@@ -224,7 +224,7 @@ jobs:
             - name: Sign DMG
               if: github.event_name != 'pull_request'
               shell: bash -l {0}
-              run: echo "testing"
+              run: make codesign_mac
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
