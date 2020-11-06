@@ -59,6 +59,8 @@ Unreleased Changes (3.9)
       64-bit software.
     * Stop running validation extra times when model inputs autofill, saving
       a small but noticeable amount of time in launching a model.
+    * The number of files included in the python source distribution has been
+      reduced to just those needed to install the python package and run tests.
 * Coastal Blue Carbon
     * Refactor of Coastal Blue Carbon that implements TaskGraph for task
       management across the model and fixes a wide range of issues with the model
