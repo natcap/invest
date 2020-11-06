@@ -24,8 +24,11 @@ ORIGIN_REPO=$(git config --get remote.origin.url | sed 's|\.git$||g' | grep -E -
 if [ "$ORIGIN_REPO" != "natcap/invest" ]
 then
     echo ""
-    echo "To push to your fork:"
+    echo "To push to your fork via SSH:"
     echo "  $ git push git@github.com:$ORIGIN_REPO.git $VERSION $AUTORELEASE_BRANCH"
+    echo ""
+    echo "To push to your fork via HTTPS:
+    echo "  $ git push https://github.com/$ORIGIN_REPO.git $VERSION $AUTORELEASE_BRANCH"
 fi
 
 echo ""
