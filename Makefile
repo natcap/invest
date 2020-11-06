@@ -29,8 +29,8 @@ ifeq ($(OS),Windows_NT)
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
 	MAKE := make
 	# Powershell has been inconsistent for allowing make commands to be
-	# ignored on failure. Many times if a command writes to std error 
-	# powershell interprets that as a failure and exits. Bash shells are 
+	# ignored on failure. Many times if a command writes to std error
+	# powershell interprets that as a failure and exits. Bash shells are
 	# widely available on Windows now, especially through git-bash
 	SHELL := /usr/bin/bash
 	CONDA := conda.bat
