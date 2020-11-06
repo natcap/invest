@@ -79,6 +79,7 @@ export default class InvestTab extends React.Component {
       logfile: null, // path to the invest logfile associated with invest job
       logStdErr: null, // stderr data from the invest subprocess
       jobStatus: null, // 'running', 'error', 'success'
+      procID: null,
     };
 
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
@@ -150,6 +151,8 @@ export default class InvestTab extends React.Component {
     job.setProperty('argsValues', argsValues);
     job.setProperty('workspace', workspace);
     job.setProperty('status', 'running');
+    // if a job is being re-run, logfile must be reset
+    // job.setProperty('logfile', undefined);
 
     // Setting this very early in the click handler so the Execute button
     // can display an appropriate visual cue when it's clicked
@@ -177,43 +180,45 @@ export default class InvestTab extends React.Component {
         shell: true, // without shell, IOError when datastack.py loads json
         detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
       });
-      this.investRun.terminate = () => {
-        if (this.state.jobStatus === 'running') {
-          // the '-' prefix on pid sends signal to children as well
-          process.kill(-this.investRun.pid, 'SIGTERM');
-        }
-      };
+      // this.investRun.terminate = () => {
+      //   if (this.state.jobStatus === 'running') {
+      //     // the '-' prefix on pid sends signal to children as well
+      //     process.kill(-this.investRun.pid, 'SIGTERM');
+      //   }
+      // };
     } else { // windows
       this.investRun = spawn(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
         shell: true,
       });
-      this.investRun.terminate = () => {
-        if (this.state.jobStatus === 'running') {
-          exec(`taskkill /pid ${this.investRun.pid} /t /f`);
-        }
-      };
+      // this.investRun.terminate = () => {
+      //   if (this.state.jobStatus === 'running') {
+      //     exec(`taskkill /pid ${this.investRun.pid} /t /f`);
+      //   }
+      // };
     }
-    logger.debug(this.investRun.spawnargs);
 
     // There's no general way to know that a spawned process started,
     // so this logic when listening for stdout seems like the way.
-    this.investRun.stdout.on('data', async () => {
-      if (!job.metadata.logfile) {
-        const logfile = await findMostRecentLogfile(job.metadata.workspace.directory);
-        job.setProperty('logfile', logfile);
-        // TODO: handle case when job.logfile is still undefined?
-        // Could be if some stdout is emitted before a logfile exists.
-        logger.debug(`invest logging to: ${job.metadata.logfile}`);
-        this.setState(
-          {
-            logfile: job.metadata.logfile,
-          }, () => {
-            this.switchTabs('log');
-            saveJob(job);
-          }
-        );
-      }
+    this.investRun.stdout.once('data', async () => {
+      // if (!job.metadata.logfile) {
+      const logfile = await findMostRecentLogfile(job.metadata.workspace.directory);
+      job.setProperty('logfile', logfile);
+      console.log('stdout once')
+      console.log(logfile);
+      // TODO: handle case when job.logfile is still undefined?
+      // Could be if some stdout is emitted before a logfile exists.
+      logger.debug(`invest logging to: ${job.metadata.logfile}`);
+      this.setState(
+        {
+          logfile: job.metadata.logfile,
+          procID: this.investRun.pid,
+        }, () => {
+          this.switchTabs('log');
+          saveJob(job);
+        }
+      );
+      // }
     });
 
     // Capture stderr to a string separate from the invest log
@@ -252,8 +257,16 @@ export default class InvestTab extends React.Component {
     });
   }
 
-  terminateInvestProcess() {
-    this.investRun.terminate();
+  terminateInvestProcess(pid) {
+    if (this.state.jobStatus === 'running') {
+      if (process.platform !== 'win32') {
+        // the '-' prefix on pid sends signal to children as well
+        process.kill(-pid, 'SIGTERM');
+      } else {
+        exec(`taskkill /pid ${pid} /t /f`);
+      }
+    }
+    // this.investRun.terminate();
     // this replaces any stderr that might exist, but that's
     // okay since the user requested terminating the process.
     this.setState({
@@ -280,6 +293,7 @@ export default class InvestTab extends React.Component {
       jobStatus,
       logfile,
       logStdErr,
+      procID,
     } = this.state;
 
     // Don't render the model setup & log until data has been fetched.
@@ -365,7 +379,7 @@ export default class InvestTab extends React.Component {
                   jobStatus={jobStatus}
                   logfile={logfile}
                   logStdErr={logStdErr}
-                  terminateInvestProcess={this.terminateInvestProcess}
+                  terminateInvestProcess={() => this.terminateInvestProcess(procID)}
                   pyModuleName={modelSpec.module}
                   sidebarFooterElementId={sidebarFooterElementId}
                 />

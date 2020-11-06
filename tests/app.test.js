@@ -352,13 +352,13 @@ describe('InVEST subprocess testing', () => {
   };
 
   const dummyTextToLog = JSON.stringify(spec.args);
-  const logfileName = 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt'
+  // const logfileName = 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt'
   let fakeWorkspace;
   let mockInvestProc;
 
   beforeEach(() => {
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
-    const logfilePath = path.join(fakeWorkspace, logfileName);
+    // const logfilePath = path.join(fakeWorkspace, logfileName);
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
     mockInvestProc = new events.EventEmitter();
@@ -376,13 +376,20 @@ describe('InVEST subprocess testing', () => {
 
     spawn.mockImplementation((exe, cmdArgs, options) => {
       // To simulate an invest model run, write a logfile to the workspace
-      // The line-ending is critical; the log is read with `tail.on('line'...)`
+      // with an expected filename pattern.
+      const timestamp = new Date().toLocaleTimeString(
+        'en-US', { hour12: false }
+      ).replace(/:/g, '_');
+      const logfileName = `InVEST-natcap.invest.model-log-9999-99-99--${timestamp}.txt`;
+      const logfilePath = path.join(fakeWorkspace, logfileName);
+      // line-ending is critical; the log is read with `tail.on('line'...)`
       fs.writeFileSync(logfilePath, dummyTextToLog + os.EOL);
       return mockInvestProc;
     });
   });
 
   afterEach(() => {
+    mockInvestProc = null;
     cleanupDir(fakeWorkspace);
     jest.resetAllMocks();
   });
@@ -524,6 +531,65 @@ describe('InVEST subprocess testing', () => {
       await findByLabelText('Recent InVEST Runs:')
     ).findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
+    unmount();
+    spy.mockRestore();
+  });
+
+  test('re-run a job - expect new log display', async () => {
+    const spy = jest.spyOn(InvestTab.prototype, 'terminateInvestProcess')
+      .mockImplementation(() => {
+        mockInvestProc.emit('exit', null);
+      });
+
+    const {
+      findByText,
+      findByLabelText,
+      findByRole,
+      unmount,
+    } = render(<App investExe="foo" />);
+
+    const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
+    fireEvent.click(carbon);
+    const workspaceInput = await findByLabelText(
+      RegExp(`${spec.args.workspace_dir.name}`)
+    );
+    fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } });
+
+    const execute = await findByRole('button', { name: /Run/ });
+    fireEvent.click(execute);
+
+    // stdout listener is how the app knows the process started
+    mockInvestProc.stdout.push('hello from stdout');
+    let logTab = await findByText('Log');
+    expect(logTab.classList.contains('active')).toBeTruthy();
+
+    // some text from the logfile should be rendered:
+    expect(await findByText(dummyTextToLog, { exact: false }))
+      .toBeInTheDocument();
+
+    const cancelButton = await findByText('Cancel Run');
+    fireEvent.click(cancelButton);
+    expect(await findByText('Open Workspace'))
+      .toBeEnabled();
+
+    // Now click away from Log, re-run, and expect the switch
+    // back to the new log
+    // logTab = null;
+    // mockInvestProc = null;
+    const setupTab = await findByText('Setup');
+    fireEvent.click(setupTab);
+    fireEvent.click(execute);
+    // firing execute re-assigns mockInvestProc via the spawn mock,
+    // but we need to wait for that before pushing to it's stdout.
+    // Since the production code cannot 'await spawn()' (we don't want
+    // it to stop the event loop), we do this manual timeout instead.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    mockInvestProc.stdout.push('hello from stdout');
+    logTab = await findByText('Log');
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
+
     unmount();
     spy.mockRestore();
   });
