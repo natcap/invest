@@ -368,7 +368,6 @@ codesign_mac:
 # 	security list-keychains -s '$(KEYCHAIN_NAME)'
 	# add the certificate to the default keychain
 	security import $(BUILD_DIR)/$(P12_FILE) \
-		-k '$(KEYCHAIN_NAME)' \
 		-P '$(CERT_KEY_PASS)' \
 		-T /usr/bin/codesign  # give codesign permission to use the certificate
 
