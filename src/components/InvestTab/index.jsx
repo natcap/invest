@@ -76,7 +76,6 @@ export default class InvestTab extends React.Component {
       activeTab: 'setup',
       modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
-      logfile: null, // path to the invest logfile associated with invest job
       logStdErr: null, // stderr data from the invest subprocess
       jobStatus: null, // 'running', 'error', 'success'
       procID: null,
@@ -100,7 +99,6 @@ export default class InvestTab extends React.Component {
       modelSpec: modelSpec,
       argsSpec: argsSpec,
       uiSpec: uiSpec,
-      logfile: job.metadata.logfile,
       jobStatus: job.metadata.status,
     }, () => { this.switchTabs('setup'); });
   }
@@ -151,8 +149,6 @@ export default class InvestTab extends React.Component {
     job.setProperty('argsValues', argsValues);
     job.setProperty('workspace', workspace);
     job.setProperty('status', 'running');
-    // if a job is being re-run, logfile must be reset
-    // job.setProperty('logfile', undefined);
 
     // Setting this very early in the click handler so the Execute button
     // can display an appropriate visual cue when it's clicked
@@ -180,45 +176,29 @@ export default class InvestTab extends React.Component {
         shell: true, // without shell, IOError when datastack.py loads json
         detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
       });
-      // this.investRun.terminate = () => {
-      //   if (this.state.jobStatus === 'running') {
-      //     // the '-' prefix on pid sends signal to children as well
-      //     process.kill(-this.investRun.pid, 'SIGTERM');
-      //   }
-      // };
     } else { // windows
       this.investRun = spawn(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
         shell: true,
       });
-      // this.investRun.terminate = () => {
-      //   if (this.state.jobStatus === 'running') {
-      //     exec(`taskkill /pid ${this.investRun.pid} /t /f`);
-      //   }
-      // };
     }
 
     // There's no general way to know that a spawned process started,
-    // so this logic when listening for stdout seems like the way.
+    // so this logic to listen once on stdout seems like the way.
     this.investRun.stdout.once('data', async () => {
-      // if (!job.metadata.logfile) {
       const logfile = await findMostRecentLogfile(job.metadata.workspace.directory);
       job.setProperty('logfile', logfile);
-      console.log('stdout once')
-      console.log(logfile);
-      // TODO: handle case when job.logfile is still undefined?
+      // TODO: handle case when logfile is still undefined?
       // Could be if some stdout is emitted before a logfile exists.
       logger.debug(`invest logging to: ${job.metadata.logfile}`);
       this.setState(
         {
-          logfile: job.metadata.logfile,
           procID: this.investRun.pid,
         }, () => {
           this.switchTabs('log');
           saveJob(job);
         }
       );
-      // }
     });
 
     // Capture stderr to a string separate from the invest log
@@ -266,7 +246,6 @@ export default class InvestTab extends React.Component {
         exec(`taskkill /pid ${pid} /t /f`);
       }
     }
-    // this.investRun.terminate();
     // this replaces any stderr that might exist, but that's
     // okay since the user requested terminating the process.
     this.setState({
@@ -291,10 +270,15 @@ export default class InvestTab extends React.Component {
       argsSpec,
       uiSpec,
       jobStatus,
-      logfile,
       logStdErr,
       procID,
     } = this.state;
+    const {
+      navID,
+      modelRunName,
+      argsValues,
+      logfile,
+    } = this.props.job.metadata;
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
@@ -303,11 +287,6 @@ export default class InvestTab extends React.Component {
 
     const isRunning = jobStatus === 'running';
     const logDisabled = (!logfile);
-    const {
-      navID,
-      modelRunName,
-      argsValues,
-    } = this.props.job.metadata;
     const sidebarSetupElementId = `sidebar-setup-${navID}`;
     const sidebarFooterElementId = `sidebar-footer-${navID}`;
 
