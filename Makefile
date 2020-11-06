@@ -356,16 +356,22 @@ build/vcredist_x86.exe: | build
 CERT_FILE := StanfordUniversity.crt
 KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
 P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
+KEYCHAIN_NAME := codesign_keychain
 codesign_mac:
 	echo "codesign"
 	# download the p12 certificate file from google cloud
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
-	# add the certificate to the default keychain
-	security import $(BUILD_DIR)/$(P12_FILE) -P '$(CERT_KEY_PASS)'
 
-	security list-keychains
-	security default-keychain
-	security find-certificate -a -c 'Stanford'
+# 	# create a new keychain (so that we can know what the password is)
+# 	security create-keychain -p '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
+# 	# add the keychain to the search list so it can be found
+# 	security list-keychains -s '$(KEYCHAIN_NAME)'
+	# add the certificate to the default keychain
+	security import $(BUILD_DIR)/$(P12_FILE) \
+		-k '$(KEYCHAIN_NAME)' \
+		-P '$(CERT_KEY_PASS)' \
+		-T /usr/bin/codesign  # give codesign permission to use the certificate
+
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
 	codesign --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
 

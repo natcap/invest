@@ -226,6 +226,7 @@ jobs:
               shell: bash -l {0}
               env:
                 CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
+                KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
               run: make codesign_mac
 
             - name: Deploy artifacts to GCS
