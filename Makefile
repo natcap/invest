@@ -363,7 +363,7 @@ codesign_mac:
 	# add the certificate to the default keychain
 	security import $(BUILD_DIR)/$(P12_FILE) -P '$(CERT_KEY_PASS)'
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
-	codesign --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
+	codesign --verbose --sign 'not a key' $(MAC_DISK_IMAGE_FILE)
 
 signcode:
 	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
