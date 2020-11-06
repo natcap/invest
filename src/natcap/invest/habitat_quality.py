@@ -291,11 +291,11 @@ def execute(args):
     threat_values_task_lookup = {}
     LOGGER.info("Validate threat rasters and collect unique LULC codes")
     # compile all the threat rasters associated with the land cover
-    for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
-                                ('_f', 'lulc_fut_path'),
-                                ('_b', 'lulc_bas_path')):
-        if lulc_args in args:
-            lulc_path = args[lulc_args]
+    for lulc_key, lulc_arg in (('_c', 'lulc_cur_path'),
+                               ('_f', 'lulc_fut_path'),
+                               ('_b', 'lulc_bas_path')):
+        if lulc_arg in args and args[lulc_arg] != '':
+            lulc_path = args[lulc_arg]
             lulc_path_dict[lulc_key] = lulc_path
             # save land cover paths in a list for alignment and resize
             lulc_and_threat_raster_list.append(lulc_path)
@@ -1084,10 +1084,10 @@ def validate(args, limit_to=None):
         duplicate_paths = []
         threat_path_list = []
         bad_threat_columns = []
-        for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
-                                    ('_f', 'lulc_fut_path'),
-                                    ('_b', 'lulc_bas_path')):
-            if lulc_args in args:
+        for lulc_key, lulc_arg in (('_c', 'lulc_cur_path'),
+                                   ('_f', 'lulc_fut_path'),
+                                   ('_b', 'lulc_bas_path')):
+            if lulc_arg in args and args[lulc_arg] != '':
                 # for each threat given in the CSV file try opening the
                 # associated raster which should be found in
                 # threat_raster_folder

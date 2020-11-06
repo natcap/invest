@@ -417,7 +417,7 @@ cpdef calculate_local_recharge(
     cdef int xi, yi, xj, yj, flow_dir_j, p_ij_base
     cdef int win_xsize, win_ysize, n_dir
     cdef int raster_x_size, raster_y_size
-    cdef float pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
+    cdef double pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
     cdef float qf_nodata, kc_nodata
 
     cdef int j_neighbor_end_index, mfd_dir_sum
