@@ -128,6 +128,8 @@ Unreleased Changes (3.9)
     * Fixing an issue where the LS factor should be capped to an upstream area
       of 333^2 m^2. In previous versions the LS factor was erroneously capped
       to "333" leading to high export spikes in some pixels.
+    * Fixed an issue where sediment deposition progress logging was not
+      progressing linearly.
 * Finfish
     * Fixed a bug where the suffix input was not being used for output paths.
 
