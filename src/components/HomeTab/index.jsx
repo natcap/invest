@@ -1,4 +1,3 @@
-import fs from 'fs';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -6,7 +5,6 @@ import Button from 'react-bootstrap/Button';
 import Table from 'react-bootstrap/Table';
 import CardGroup from 'react-bootstrap/CardGroup';
 import Card from 'react-bootstrap/Card';
-import Spinner from 'react-bootstrap/Spinner';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
@@ -128,19 +126,8 @@ class RecentInvestJobs extends React.PureComponent {
           onClick={() => this.handleClick(job)}
         >
           <Card.Body>
-            <Card.Header as="h4">
-              {job.modelHumanName}
-              {job.status === 'running'
-                && (
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                  />
-                )
-              }
+            <Card.Header>
+              <span className="header-title">{job.modelHumanName}</span>
             </Card.Header>
             <Card.Title>
               <span className="text-heading">{'Workspace: '}</span>
@@ -151,7 +138,12 @@ class RecentInvestJobs extends React.PureComponent {
               <span className="text-mono">{job.workspace.suffix}</span>
             </Card.Title>
             <Card.Text>{job.description || <em>no description</em>}</Card.Text>
-            <Card.Footer className="text-muted">{job.humanTime}</Card.Footer>
+            <Card.Footer className="text-muted">
+              <span>{job.humanTime}</span>
+              <span className="float-right">
+                <em>{job.status !== 'success' ? job.status : ''}</em>
+              </span>
+            </Card.Footer>
           </Card.Body>
         </Card>
       );
