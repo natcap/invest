@@ -5,7 +5,7 @@ import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
-const KEYS_ARRAY = 'sortedHashArray';
+const HASH_ARRAY_KEY = 'workspaceHashes';
 
 /**
  * Create an object to hold properties associated with an Invest Job.
@@ -14,16 +14,16 @@ const KEYS_ARRAY = 'sortedHashArray';
 export default class InvestJob {
   /* If none exists, init an empty array for the sorted workspace hashes */
   static async initDB() {
-    const keys = await localforage.getItem(KEYS_ARRAY);
+    const keys = await localforage.getItem(HASH_ARRAY_KEY);
     if (!keys) {
-      localforage.setItem(KEYS_ARRAY, []);
+      localforage.setItem(HASH_ARRAY_KEY, []);
     }
   }
 
   /* Return an array of job metadata objects, ordered by most recently saved */
   static async getJobStore() {
     let jobArray = [];
-    const sortedKeys = await localforage.getItem(KEYS_ARRAY);
+    const sortedKeys = await localforage.getItem(HASH_ARRAY_KEY);
     if (sortedKeys) {
       jobArray = await Promise.all(sortedKeys.map(
         (key) => localforage.getItem(key)
@@ -94,10 +94,10 @@ export default class InvestJob {
       this.setWorkspaceHash();
     }
     this.metadata.humanTime = new Date().toLocaleString();
-    let sortedKeys = await localforage.getItem(KEYS_ARRAY);
+    let sortedKeys = await localforage.getItem(HASH_ARRAY_KEY);
     if (!sortedKeys) {
       await InvestJob.initDB();
-      sortedKeys = await localforage.getItem(KEYS_ARRAY);
+      sortedKeys = await localforage.getItem(HASH_ARRAY_KEY);
     }
     // If this key already exists, make sure not to duplicate it,
     // and make sure to move it to the front
@@ -106,7 +106,7 @@ export default class InvestJob {
       sortedKeys.splice(idx, 1);
     }
     sortedKeys.unshift(this.metadata.workspaceHash);
-    await localforage.setItem(KEYS_ARRAY, sortedKeys);
+    await localforage.setItem(HASH_ARRAY_KEY, sortedKeys);
     await localforage.setItem(
       this.metadata.workspaceHash, this.metadata
     );
