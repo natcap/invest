@@ -61,23 +61,22 @@ export default class InvestJob {
     this.metadata.modelRunName = modelRunName;
     this.metadata.modelHumanName = modelHumanName;
     this.metadata.argsValues = argsValues;
-    this.metadata.workspace = workspace;
     this.metadata.logfile = logfile;
     this.metadata.status = status;
+    this.metadata.workspaceHash = null;
 
     this.save = this.save.bind(this);
     this.setProperty = this.setProperty.bind(this);
     this.setWorkspaceHash = this.setWorkspaceHash.bind(this);
-
-    if (workspace) {
-      this.setWorkspaceHash();
-    }
   }
 
   setWorkspaceHash() {
-    if (this.metadata.workspace && this.metadata.modelRunName) {
+    if (this.metadata.argsValues.workspace_dir
+        && this.metadata.modelRunName) {
       this.metadata.workspaceHash = crypto.createHash('sha1').update(
-        `${this.metadata.modelRunName}${JSON.stringify(this.metadata.workspace)}`
+        `${this.metadata.modelRunName}
+         ${JSON.stringify(this.metadata.argsValues.workspace_dir)}
+         ${JSON.stringify(this.metadata.argsValues.results_suffix)}`
       ).digest('hex');
     } else {
       throw Error(
@@ -88,14 +87,11 @@ export default class InvestJob {
 
   setProperty(key, value) {
     this.metadata[key] = value;
-    if (key === 'workspace') {
-      this.setWorkspaceHash();
-    }
   }
 
   async save() {
     if (!this.metadata.workspaceHash) {
-      throw Error('cannot save a job that has no workspaceHash');
+      this.setWorkspaceHash();
     }
     this.metadata.humanTime = new Date().toLocaleString();
     let sortedKeys = await localforage.getItem(KEYS_ARRAY);
@@ -110,8 +106,8 @@ export default class InvestJob {
       sortedKeys.splice(idx, 1);
     }
     sortedKeys.unshift(this.metadata.workspaceHash);
-    localforage.setItem(KEYS_ARRAY, sortedKeys);
-    localforage.setItem(
+    await localforage.setItem(KEYS_ARRAY, sortedKeys);
+    await localforage.setItem(
       this.metadata.workspaceHash, this.metadata
     );
     return InvestJob.getJobStore();

@@ -140,14 +140,14 @@ export default class InvestTab extends React.Component {
       investSettings,
       saveJob,
     } = this.props;
+    const args = { ...argsValues };
+    // Not strictly necessary, but resolving to a complete path
+    // here to be extra certain we avoid unexpected collisions
+    // of workspaceHash, which uniquely ids a job in the database
+    // in part by it's workspace directory.
+    args.workspace_dir = path.resolve(argsValues.workspace_dir);
 
-    const workspace = {
-      directory: path.resolve(argsValues.workspace_dir),
-      suffix: argsValues.results_suffix,
-    };
-
-    job.setProperty('argsValues', argsValues);
-    job.setProperty('workspace', workspace);
+    job.setProperty('argsValues', args);
     job.setProperty('status', 'running');
 
     // Setting this very early in the click handler so the Execute button
@@ -161,7 +161,7 @@ export default class InvestTab extends React.Component {
       fileRegistry.TEMP_DIR, 'data-'
     ));
     const datastackPath = path.join(tempDir, 'datastack.json');
-    await this.argsToJsonFile(datastackPath, job.metadata.argsValues);
+    await this.argsToJsonFile(datastackPath, args);
 
     const cmdArgs = [
       LOGLEVELMAP[investSettings.loggingLevel],
@@ -186,7 +186,7 @@ export default class InvestTab extends React.Component {
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
     this.investRun.stdout.once('data', async () => {
-      const logfile = await findMostRecentLogfile(job.metadata.workspace.directory);
+      const logfile = await findMostRecentLogfile(args.workspace_dir);
       job.setProperty('logfile', logfile);
       // TODO: handle case when logfile is still undefined?
       // Could be if some stdout is emitted before a logfile exists.
@@ -382,10 +382,6 @@ InvestTab.propTypes = {
       modelHumanName: PropTypes.string.isRequired,
       navID: PropTypes.string.isRequired,
       argsValues: PropTypes.object,
-      workspace: PropTypes.shape({
-        directory: PropTypes.string,
-        suffix: PropTypes.string,
-      }),
       logfile: PropTypes.string,
       status: PropTypes.string,
     }),

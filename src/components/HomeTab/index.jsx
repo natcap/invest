@@ -90,10 +90,6 @@ HomeTab.propTypes = {
       modelRunName: PropTypes.string.isRequired,
       modelHumanName: PropTypes.string.isRequired,
       argsValues: PropTypes.object,
-      workspace: PropTypes.shape({
-        directory: PropTypes.string,
-        suffix: PropTypes.string,
-      }),
       logfile: PropTypes.string,
       status: PropTypes.string,
     })
@@ -131,11 +127,11 @@ class RecentInvestJobs extends React.PureComponent {
             </Card.Header>
             <Card.Title>
               <span className="text-heading">{'Workspace: '}</span>
-              <span className="text-mono">{job.workspace.directory}</span>
+              <span className="text-mono">{job.argsValues.workspace_dir}</span>
             </Card.Title>
             <Card.Title>
               <span className="text-heading">{'Suffix: '}</span>
-              <span className="text-mono">{job.workspace.suffix}</span>
+              <span className="text-mono">{job.argsValues.results_suffix}</span>
             </Card.Title>
             <Card.Text>{job.description || <em>no description</em>}</Card.Text>
             <Card.Footer className="text-muted">
@@ -180,10 +176,6 @@ RecentInvestJobs.propTypes = {
       modelRunName: PropTypes.string.isRequired,
       modelHumanName: PropTypes.string.isRequired,
       argsValues: PropTypes.object,
-      workspace: PropTypes.shape({
-        directory: PropTypes.string,
-        suffix: PropTypes.string,
-      }),
       logfile: PropTypes.string,
       status: PropTypes.string,
     })

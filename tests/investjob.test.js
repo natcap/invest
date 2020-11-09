@@ -1,39 +1,37 @@
 import InvestJob from '../src/InvestJob';
 
 describe('InvestJob', () => {
+  const baseArgsValues = {
+    workspace_dir: 'myspace',
+    results_suffix: '!!',
+  };
+
   afterEach(() => {
     InvestJob.clearStore();
   });
 
-  test('setting a workspace generates a workspaceHash', async () => {
-    const job = new InvestJob({
-      modelRunName: 'foo',
-      modelHumanName: 'Foo',
-    });
-    job.setProperty('workspace', { directory: 'myspace' });
-    expect(typeof job.metadata.workspaceHash).toBe('string');
-  });
-
   test('workspaceHash collisions only when expected', async () => {
     const modelName = 'foo';
-    const workspace = { directory: 'myspace', suffix: '!!' };
     const job1 = new InvestJob({
       modelRunName: modelName,
       modelHumanName: 'Foo',
     });
-    job1.setProperty('workspace', workspace);
+    job1.setProperty('argsValues', baseArgsValues);
+    job1.setWorkspaceHash();
     const job2 = new InvestJob({
       modelRunName: modelName,
       modelHumanName: 'Foo',
     });
-    job2.setProperty('workspace', workspace);
+    job2.setProperty('argsValues', baseArgsValues);
+    job2.setWorkspaceHash();
     expect(job1.metadata.workspaceHash).toBe(job2.metadata.workspaceHash);
 
     const job3 = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Foo',
     });
-    job3.setProperty('workspace', workspace);
+    job3.setProperty('argsValues', baseArgsValues);
+    job3.setWorkspaceHash();
     // A different model with the same workspace should not collide
     expect(job1.metadata.workspaceHash).not.toBe(job3.metadata.workspaceHash);
   });
@@ -43,8 +41,9 @@ describe('InvestJob', () => {
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
+    job.setProperty('argsValues', { results_suffix: 'foo' });
     await expect(job.save()).rejects.toThrow(
-      'cannot save a job that has no workspaceHash'
+      'Cannot hash a job that is missing workspace or modelRunName properties'
     );
   });
 
@@ -53,7 +52,7 @@ describe('InvestJob', () => {
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
-    job.setProperty('workspace', { directory: 'myspace' });
+    job.setProperty('argsValues', baseArgsValues);
     const recentJobs = await job.save();
     expect(recentJobs[0]).toBe(job.metadata);
   });
@@ -63,7 +62,7 @@ describe('InvestJob', () => {
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
-    job1.setProperty('workspace', { directory: 'myspace' });
+    job1.setProperty('argsValues', baseArgsValues);
     let recentJobs = await job1.save();
     expect(recentJobs[0]).toBe(job1.metadata);
 
@@ -71,7 +70,7 @@ describe('InvestJob', () => {
       modelRunName: 'foo2',
       modelHumanName: 'Foo2',
     });
-    job2.setProperty('workspace', { directory: 'myspace' });
+    job2.setProperty('argsValues', baseArgsValues);
     recentJobs = await job2.save();
     expect(recentJobs).toHaveLength(2);
     // The most recently saved job should always be first
@@ -86,7 +85,7 @@ describe('InvestJob', () => {
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
-    job1.setProperty('workspace', { directory: 'myspace' });
+    job1.setProperty('argsValues', baseArgsValues);
     let recentJobs = await job1.save();
     expect(recentJobs).toHaveLength(1);
     recentJobs = await job1.save();
@@ -100,7 +99,7 @@ describe('InvestJob', () => {
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
-    job1.setProperty('workspace', { directory: 'myspace' });
+    job1.setProperty('argsValues', baseArgsValues);
     await job1.save();
     recentJobs = await InvestJob.getJobStore();
     expect(recentJobs).toHaveLength(1);
@@ -111,7 +110,7 @@ describe('InvestJob', () => {
       modelRunName: 'foo',
       modelHumanName: 'Foo',
     });
-    job1.setProperty('workspace', { directory: 'myspace' });
+    job1.setProperty('argsValues', baseArgsValues);
     await job1.save();
     let recentJobs = await InvestJob.getJobStore();
     expect(recentJobs).toHaveLength(1);

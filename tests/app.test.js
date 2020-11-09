@@ -64,24 +64,24 @@ describe('Various ways to open and close InVEST models', () => {
 
   test('Clicking a recent job renders SetupTab', async () => {
     const workspacePath = 'my_workspace';
+    const argsValues = {
+      workspace_dir: workspacePath
+    };
     const mockJob = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Sequestration',
-      argsValues: {
-        workspace_dir: workspacePath
-      },
-      workspace: { directory: workspacePath, suffix: null },
+      argsValues: argsValues,
       status: 'success',
       humanTime: '3/5/2020, 10:43:14 AM',
     });
-    mockJob.save();
+    await mockJob.save();
 
     const { findByText, findByLabelText, findByRole } = render(
       <App investExe="foo" />
     );
 
     const recentJobCard = await findByText(
-      mockJob.metadata.workspace.directory
+      argsValues.workspace_dir
     );
     fireEvent.click(recentJobCard);
     const executeButton = await findByRole('button', { name: /Run/ });
@@ -92,7 +92,7 @@ describe('Various ways to open and close InVEST models', () => {
     // Expect some arg values that were loaded from the saved job:
     const input = await findByLabelText(/Workspace/);
     expect(input).toHaveValue(
-      mockJob.metadata.workspace.directory
+      argsValues.workspace_dir
     );
   });
 
@@ -222,7 +222,7 @@ describe('Display recently executed InVEST jobs', () => {
       argsValues: {
         workspace_dir: 'work1'
       },
-      workspace: { directory: 'work1', suffix: null },
+      // workspace: { directory: 'work1', suffix: null },
       status: 'success',
       humanTime: '3/5/2020, 10:43:14 AM',
     });
@@ -233,7 +233,7 @@ describe('Display recently executed InVEST jobs', () => {
       argsValues: {
         workspace_dir: 'work2'
       },
-      workspace: { directory: 'work2', suffix: null },
+      // workspace: { directory: 'work2', suffix: null },
       status: 'success',
       humanTime: '3/5/2020, 10:43:14 AM',
     });
@@ -243,7 +243,7 @@ describe('Display recently executed InVEST jobs', () => {
 
     await waitFor(() => {
       recentJobs.forEach((job) => {
-        expect(getByText(job.workspace.directory))
+        expect(getByText(job.argsValues.workspace_dir))
           .toBeTruthy();
       });
     });
@@ -389,9 +389,10 @@ describe('InVEST subprocess testing', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     mockInvestProc = null;
     cleanupDir(fakeWorkspace);
+    await InvestJob.clearStore();
     jest.resetAllMocks();
   });
 
@@ -425,17 +426,22 @@ describe('InVEST subprocess testing', () => {
       .toBeInTheDocument();
     expect(queryByText('Model Complete')).toBeNull();
     expect(queryByText('Open Workspace')).toBeNull();
+    // Job should already be saved to recent jobs database w/ status:
+    const recentJobCards = await findByLabelText('Recent InVEST Runs:');
+    expect(await within(recentJobCards).findByText('running'))
+      .toBeInTheDocument();
 
     mockInvestProc.emit('exit', 0); // 0 - exit w/o error
     expect(await findByText('Model Complete')).toBeInTheDocument();
     expect(await findByText('Open Workspace')).toBeEnabled();
     expect(execute).toBeEnabled();
 
-    // A recent job card should be rendered
-    const cardText = await within(
-      await findByLabelText('Recent InVEST Runs:')
-    ).findByText(`${path.resolve(fakeWorkspace)}`);
+    // A recent job card should be rendered w/ updated status
+    const cardText = await within(recentJobCards)
+      .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
+    expect(within(recentJobCards).queryByText('running'))
+      .toBeNull();
     // Normally we don't explicitly unmount the rendered components,
     // but in this case we're 'watching' a file that the afterEach()
     // wants to remove. Unmounting triggers an 'unwatch' of the logfile
@@ -575,8 +581,6 @@ describe('InVEST subprocess testing', () => {
 
     // Now click away from Log, re-run, and expect the switch
     // back to the new log
-    // logTab = null;
-    // mockInvestProc = null;
     const setupTab = await findByText('Setup');
     fireEvent.click(setupTab);
     fireEvent.click(execute);
