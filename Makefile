@@ -366,11 +366,15 @@ codesign_mac:
 	security create-keychain -p '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
 	# add the keychain to the search list so it can be found
 	security list-keychains -s '$(KEYCHAIN_NAME)'
-	# unlock the keychain so we can use it now
+	security list-keychains
+	# unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
 	security unlock-keychain -p '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
 	# add the certificate to the keychain
-	security import $(BUILD_DIR)/$(P12_FILE) -k '$(KEYCHAIN_NAME)' -P '$(CERT_KEY_PASS)'
-
+	# -T option says that the codesign executable can access the keychain
+	# for some reason this alone is not enough, also need the following step
+	security import $(BUILD_DIR)/$(P12_FILE) -k '$(KEYCHAIN_NAME)' -P '$(CERT_KEY_PASS)' -T /usr/bin/codesign
+	# this is essential to avoid the UI password prompt
+	security set-key-partition-list -S apple-tool:,apple: -s -k '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
 	codesign --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
 
