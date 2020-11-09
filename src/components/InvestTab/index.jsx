@@ -230,6 +230,7 @@ export default class InvestTab extends React.Component {
       }
       this.setState({
         jobStatus: job.metadata.status,
+        procID: null,
       }, () => {
         saveJob(job);
         cleanupDir(tempDir);
@@ -238,19 +239,21 @@ export default class InvestTab extends React.Component {
   }
 
   terminateInvestProcess(pid) {
-    if (this.state.jobStatus === 'running') {
-      if (process.platform !== 'win32') {
-        // the '-' prefix on pid sends signal to children as well
-        process.kill(-pid, 'SIGTERM');
-      } else {
-        exec(`taskkill /pid ${pid} /t /f`);
+    if (pid) {
+      if (this.state.jobStatus === 'running') {
+        if (process.platform !== 'win32') {
+          // the '-' prefix on pid sends signal to children as well
+          process.kill(-pid, 'SIGTERM');
+        } else {
+          exec(`taskkill /pid ${pid} /t /f`);
+        }
       }
+      // this replaces any stderr that might exist, but that's
+      // okay since the user requested terminating the process.
+      this.setState({
+        logStdErr: 'Run Canceled',
+      });
     }
-    // this replaces any stderr that might exist, but that's
-    // okay since the user requested terminating the process.
-    this.setState({
-      logStdErr: 'Run Canceled',
-    });
   }
 
   /** Change the tab that is currently visible.
@@ -286,7 +289,7 @@ export default class InvestTab extends React.Component {
     }
 
     const isRunning = jobStatus === 'running';
-    const logDisabled = (!logfile);
+    const logDisabled = !logfile;
     const sidebarSetupElementId = `sidebar-setup-${navID}`;
     const sidebarFooterElementId = `sidebar-footer-${navID}`;
 
@@ -358,7 +361,8 @@ export default class InvestTab extends React.Component {
                   jobStatus={jobStatus}
                   logfile={logfile}
                   logStdErr={logStdErr}
-                  terminateInvestProcess={() => this.terminateInvestProcess(procID)}
+                  terminateInvestProcess={this.terminateInvestProcess}
+                  procID={procID}
                   pyModuleName={modelSpec.module}
                   sidebarFooterElementId={sidebarFooterElementId}
                 />

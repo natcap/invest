@@ -161,6 +161,7 @@ export default class LogTab extends React.Component {
     const {
       jobStatus,
       logStdErr,
+      procID,
       terminateInvestProcess,
       sidebarFooterElementId,
     } = this.props;
@@ -178,7 +179,8 @@ export default class LogTab extends React.Component {
     const CancelButton = (
       <Button
         variant="outline-dark"
-        onClick={terminateInvestProcess}
+        onClick={() => terminateInvestProcess(procID)}
+        disabled={!procID}
       >
         Cancel Run
       </Button>
@@ -235,12 +237,8 @@ LogTab.propTypes = {
   jobStatus: PropTypes.string,
   logfile: PropTypes.string,
   logStdErr: PropTypes.string,
+  procID: PropTypes.number,
   pyModuleName: PropTypes.string.isRequired,
   terminateInvestProcess: PropTypes.func.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,
-};
-LogTab.defaultProps = {
-  jobStatus: undefined,
-  logfile: undefined,
-  logStdErr: undefined,
 };

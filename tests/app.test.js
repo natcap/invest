@@ -362,6 +362,7 @@ describe('InVEST subprocess testing', () => {
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
     mockInvestProc = new events.EventEmitter();
+    mockInvestProc.pid = -9999999; // a value that is not a plausible pid
     mockInvestProc.stdout = new Stream.Readable({
       read: () => {},
     });
