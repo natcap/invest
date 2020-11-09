@@ -26,7 +26,7 @@ icon_size = 70
 text_size = 12
 
 # Window Settings
-window_rect = ((0, 10000), (450, 375))
+window_rect = ((100, 100), (900, 600))
 background = os.path.join(CWD, 'background.png')
 default_view = 'icon-view'
 
