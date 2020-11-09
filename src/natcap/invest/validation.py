@@ -1,6 +1,5 @@
 """Common validation utilities for InVEST models."""
 import ast
-import codecs
 import inspect
 import logging
 import pprint
@@ -17,6 +16,8 @@ import pandas
 import xlrd
 from osgeo import gdal, osr
 import numpy
+
+from . import utils
 
 
 #: A flag to pass to the validation context manager indicating that all keys
@@ -516,10 +517,8 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
     try:
         # Check if the file encoding is UTF-8 BOM first
         encoding = None
-        with open(filepath, 'rb') as file_obj:
-            first_line = file_obj.readline()
-            if first_line.startswith(codecs.BOM_UTF8):
-                encoding = 'utf-8-sig'
+        if utils.has_utf8_bom(filepath):
+            encoding = 'utf-8-sig'
 
         # engine=python handles unknown characters by replacing them with a
         # replacement character, instead of raising an error
@@ -895,7 +894,7 @@ def invest_validator(validate_func):
             assert isinstance(key, str), (
                 'All args keys must be strings.')
 
-        # Pytest in importlib mode makes it impossible for test modules to 
+        # Pytest in importlib mode makes it impossible for test modules to
         # import one another. This causes a problem in test_validation.py,
         # which gets imported into itself here and fails.
         # Since this decorator might not be needed in the future,

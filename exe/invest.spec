@@ -45,14 +45,20 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 # Create the executable file.
 if is_darwin:
-    # add rtree dependency dynamic libraries from conda environment
+    # add rtree, shapely, proj dependency dynamic libraries from conda
+    # environment.
+    # These libraries are specifically included here because they don't seem to
+    # be picked up by the built-in hooks and have been known to interfere with
+    # the pyinstaller installation when running on a homebrew-enabled system.
+    # See https://github.com/natcap/invest/issues/10.
     a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
-        glob.glob(os.path.join(conda_env, 'lib', 'libspatialindex*.dylib'))]
-    # add shapely dependency geos from conda environment
-    a.binaries += [
-        (os.path.basename(name), name, 'BINARY') for name in
-        glob.glob(os.path.join(conda_env, 'lib', 'libgeos_*.dylib'))]
+        itertools.chain(
+            glob.glob(os.path.join(conda_env, 'lib', 'libspatialindex*.dylib')),
+            glob.glob(os.path.join(conda_env, 'lib', 'libgeos*.dylib')),
+            glob.glob(os.path.join(conda_env, 'lib', 'libproj*.dylib')),
+        )
+    ]
 elif is_win:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/

@@ -12,7 +12,7 @@ package.  See `Installing InVEST <installing.html>`_
 
 It is also available to Windows users who installed InVEST with the downloadable
 installer. Just replace ``invest`` in the commands below with the full path to 
-``invest.exe`` (e.g. ``C:\InVEST_3.8.0_x86\invest-3-x86\invest.exe``)
+``invest.exe`` (e.g. ``C:\InVEST_3.8.9_x64\invest-3-x64\invest.exe``)
 
 Usage
 =====
