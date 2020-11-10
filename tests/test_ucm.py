@@ -44,7 +44,8 @@ class UCMTests(unittest.TestCase):
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'factors',
-            'do_valuation': True,
+            'do_energy_valuation': True,
+            'do_productivity_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(
                 REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -180,7 +181,8 @@ class UCMTests(unittest.TestCase):
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'intensity',  # main difference in the reg. tests
-            'do_valuation': True,
+            'do_energy_valuation': True,
+            'do_productivity_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(
                 REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -243,7 +245,8 @@ class UCMTests(unittest.TestCase):
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'factors',
-            'do_valuation': True,
+            'do_energy_valuation': True,
+            'do_productivity_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(
                 REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -300,7 +303,8 @@ class UCMTests(unittest.TestCase):
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'factors',
-            'do_valuation': True,
+            'do_energy_valuation': True,
+            'do_productivity_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(
                 REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -348,7 +352,8 @@ class UCMTests(unittest.TestCase):
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'cc_method': 'factors',
-            'do_valuation': True,
+            'do_energy_valuation': True,
+            'do_productivity_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(
                 REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -414,3 +419,133 @@ class UCMTests(unittest.TestCase):
             numpy.sum(kernel_band.ReadAsArray())/1000,
             numpy.ceil(1000**2*numpy.pi/1000),
             places=0)
+
+    def test_do_energy_valuation_option(self):
+        """UCM: test separate valuation options."""
+        import natcap.invest.urban_cooling_model
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'results_suffix': '',
+            't_ref': 35.0,
+            't_obs_raster_path': os.path.join(
+                REGRESSION_DATA, "Tair_Sept.tif"),
+            'lulc_raster_path': os.path.join(
+                REGRESSION_DATA, "LULC_SFBA.tif"),
+            'ref_eto_raster_path': os.path.join(
+                REGRESSION_DATA, "ETo_SFBA.tif"),
+            'aoi_vector_path': os.path.join(
+                REGRESSION_DATA,
+                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
+            'biophysical_table_path': os.path.join(
+                REGRESSION_DATA, "biophysical_table_ucm.csv"),
+            'green_area_cooling_distance': 1000.0,
+            'uhi_max': 3,
+            'cc_method': 'regression',
+            'do_energy_valuation': True,
+            'do_productivity_valuation': False,
+            't_air_average_radius': "1000.0",
+            'building_vector_path': os.path.join(
+                REGRESSION_DATA, "buildings_clip.gpkg"),
+            'energy_consumption_table_path': os.path.join(
+                REGRESSION_DATA, "Energy.csv"),
+            'cc_weight_shade': '0.6',
+            'cc_weight_albedo': '0.2',
+            'cc_weight_eti': '0.2',
+            'n_workers': -1,
+        }
+        natcap.invest.urban_cooling_model.execute(args)
+        intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+
+        wbgt_path = os.path.join(
+            intermediate_dir, f'wbgt.tif')
+        light_work_loss_path = os.path.join(
+            intermediate_dir, f'light_work_loss_percent.tif')
+        heavy_work_loss_path = os.path.join(
+            intermediate_dir, f'heavy_work_loss_percent.tif')
+        wbgt_stats_pickle_path = os.path.join(
+            intermediate_dir, 'wbgt_stats.pickle')
+        light_loss_stats_pickle_path = os.path.join(
+            intermediate_dir, 'light_loss_stats.pickle')
+        heavy_loss_stats_pickle_path = os.path.join(
+            intermediate_dir, 'heavy_loss_stats.pickle')
+        intermediate_building_vector_path = os.path.join(
+            intermediate_dir, f'reprojected_buildings.shp')
+        t_air_stats_pickle_path = os.path.join(
+            intermediate_dir, 't_air_stats.pickle')
+        energy_consumption_vector_path = os.path.join(
+            args['workspace_dir'], f'buildings_with_stats.shp')
+
+        # make sure the energy valuation outputs are there, 
+        # and the productivity valuation outputs aren't
+        for path in [intermediate_building_vector_path, t_air_stats_pickle_path, 
+                     energy_consumption_vector_path]:
+            self.assertTrue(os.path.exists(path))
+
+        for path in [wbgt_path, light_work_loss_path, heavy_work_loss_path, 
+                     wbgt_stats_pickle_path, light_loss_stats_pickle_path, heavy_loss_stats_pickle_path]:
+            self.assertFalse(os.path.exists(path))
+
+    def test_do_productivity_valuation_option(self):
+        """UCM: test separate valuation options."""
+        import natcap.invest.urban_cooling_model
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'results_suffix': '',
+            't_ref': 35.0,
+            't_obs_raster_path': os.path.join(
+                REGRESSION_DATA, "Tair_Sept.tif"),
+            'lulc_raster_path': os.path.join(
+                REGRESSION_DATA, "LULC_SFBA.tif"),
+            'ref_eto_raster_path': os.path.join(
+                REGRESSION_DATA, "ETo_SFBA.tif"),
+            'aoi_vector_path': os.path.join(
+                REGRESSION_DATA,
+                "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
+            'biophysical_table_path': os.path.join(
+                REGRESSION_DATA, "biophysical_table_ucm.csv"),
+            'green_area_cooling_distance': 1000.0,
+            'uhi_max': 3,
+            'cc_method': 'regression',
+            'do_energy_valuation': False,
+            'do_productivity_valuation': True,
+            't_air_average_radius': "1000.0",
+            'building_vector_path': os.path.join(
+                REGRESSION_DATA, "buildings_clip.gpkg"),
+            'energy_consumption_table_path': os.path.join(
+                REGRESSION_DATA, "Energy.csv"),
+            'avg_rel_humidity': '30.0',
+            'cc_weight_shade': '0.6',
+            'cc_weight_albedo': '0.2',
+            'cc_weight_eti': '0.2',
+            'n_workers': -1,
+        }
+        natcap.invest.urban_cooling_model.execute(args)
+        intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+
+        wbgt_path = os.path.join(
+            intermediate_dir, f'wbgt.tif')
+        light_work_loss_path = os.path.join(
+            intermediate_dir, f'light_work_loss_percent.tif')
+        heavy_work_loss_path = os.path.join(
+            intermediate_dir, f'heavy_work_loss_percent.tif')
+        wbgt_stats_pickle_path = os.path.join(
+            intermediate_dir, 'wbgt_stats.pickle')
+        light_loss_stats_pickle_path = os.path.join(
+            intermediate_dir, 'light_loss_stats.pickle')
+        heavy_loss_stats_pickle_path = os.path.join(
+            intermediate_dir, 'heavy_loss_stats.pickle')
+        intermediate_building_vector_path = os.path.join(
+            intermediate_dir, f'reprojected_buildings.shp')
+        t_air_stats_pickle_path = os.path.join(
+            intermediate_dir, 't_air_stats.pickle')
+        energy_consumption_vector_path = os.path.join(
+            args['workspace_dir'], f'buildings_with_stats.shp')
+        
+        # make sure the productivity valuation outputs are there, 
+        # and the energy valuation outputs aren't
+        for path in [wbgt_path, light_work_loss_path, heavy_work_loss_path, 
+                     wbgt_stats_pickle_path, light_loss_stats_pickle_path, heavy_loss_stats_pickle_path]:
+            self.assertTrue(os.path.exists(path))
+        for path in [intermediate_building_vector_path, t_air_stats_pickle_path, 
+                     energy_consumption_vector_path]:
+            self.assertFalse(os.path.exists(path))
