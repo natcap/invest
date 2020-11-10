@@ -5,7 +5,6 @@ import os
 import itertools
 import glob
 from PyInstaller.compat import is_win, is_darwin
-import subprocess
 
 # Global Variables
 current_dir = os.getcwd()  # assume we're building from the project root
@@ -77,7 +76,6 @@ elif is_win:
     # .exe extension is required if we're on windows.
     exename += '.exe'
 
-print('after analyiss')
 exe = EXE(
     pyz,
     a.scripts,
@@ -87,7 +85,6 @@ exe = EXE(
     strip=False,
     upx=False,
     console=True)
-print('after exe')
 
 # Collect Files into Distributable Folder/File
 dist = COLLECT(
@@ -98,26 +95,3 @@ dist = COLLECT(
     name="invest",  # name of the output folder
     strip=False,
     upx=False)
-print('after collect')
-
-app = BUNDLE(
-    dist,
-    name='InVEST.app',
-    icon=None,
-    bundle_identifier=None,
-    info_plist={
-        'CFBundleDisplayName': 'InVEST',
-        'CFBundleName': 'InVEST',
-        'CFBundleIdentifier': 'org.naturalcapitalproject.InVEST',
-        'CFBundleExecutable': 'MacOS/invest',
-        'CFBundleInfoDictionaryVersion': '6.0',
-        'CFBundlePackageType': 'AAPL',
-        'LSBackgroundOnly': '0',
-        'CFBundleIconFile': 'invest'
-    }
-)
-print('after bundle')
-print(os.listdir(os.getcwd()))
-print(os.listdir(os.path.join(os.getcwd(), 'dist')))
-print(os.listdir(os.path.join(os.getcwd(), 'dist', 'invest')))
-subprocess.run(['find . -name *.app'], shell=True)
