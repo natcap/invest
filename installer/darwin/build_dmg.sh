@@ -7,22 +7,20 @@
 #  $2 = the path to the binary dir to package.
 #  $3 = the path to the directory of html documentation to include.
 #  $4 = the path to the final DMG to create
-#
-# Script adapted from http://stackoverflow.com/a/1513578/299084
 
-CONFIG_DIR="installer/darwin"
-title="InVEST ${1}"  # the name of the volume the DMG provides.
+VERSION=$1
+BINARY_PATH=$2
+DOCS_PATH=$3
+DMG_PATH=$4
+DMG_CONFIG_PATH=$5
 
 # copy the docs into the dmg
-docsdir="$3"
-if [ -d $docsdir ]
+if [ -d $DOCS_PATH ]
 then
-    cp -r $docsdir $2/documentation
+    cp -r $DOCS_PATH $BINARY_PATH/documentation
 fi
 
 # Copy the release notes (HISTORY.rst) into the dmg as an HTML doc.
-pandoc HISTORY.rst -o $2/HISTORY.html
+pandoc HISTORY.rst -o BINARY_PATH/HISTORY.html
 
-dmgbuild -Dinvestdir="$2" -s $CONFIG_DIR/dmgconf.py "$title" "$4"
-
-find . -name "InVEST-${1}.dmg"
+dmgbuild -Dinvestdir=$BINARY_PATH -s $DMG_CONFIG_PATH "InVEST ${VERSION}" $DMG_PATH
