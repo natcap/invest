@@ -6,7 +6,10 @@ const localforage = {
   setItem: function (key, val) {
     localforage.store[key] = val;
   },
-  clear: function() {
+  removeItem: function (key) {
+    delete localforage.store[key];
+  },
+  clear: function () {
     localforage.store = {};
   },
 };

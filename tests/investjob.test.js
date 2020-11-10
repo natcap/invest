@@ -92,6 +92,28 @@ describe('InvestJob', () => {
     expect(recentJobs).toHaveLength(1);
   });
 
+  test('save never accumulates more jobs than max allowed', async () => {
+    let i = 0;
+    const saves = [];
+    while (i < InvestJob.max_cached_jobs) {
+      i += 1;
+      saves.push(
+        new InvestJob({
+          modelRunName: `model${i}`,
+          argsValues: { workspace_dir: 'foo' }
+        }).save()
+      );
+    }
+    await Promise.all(saves);
+    let jobsArray = await InvestJob.getJobStore();
+    expect(jobsArray).toHaveLength(InvestJob.max_cached_jobs);
+    jobsArray = await new InvestJob({
+      modelRunName: 'a new model',
+      argsValues: { workspace_dir: 'foo' },
+    }).save();
+    expect(jobsArray).toHaveLength(InvestJob.max_cached_jobs);
+  });
+
   test('getJobStore before and after any jobs exist', async () => {
     let recentJobs = await InvestJob.getJobStore();
     expect(recentJobs).toHaveLength(0);

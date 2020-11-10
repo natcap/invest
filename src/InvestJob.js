@@ -6,12 +6,17 @@ import { getLogger } from './logger';
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const HASH_ARRAY_KEY = 'workspaceHashes';
+const MAX_CACHED_JOBS = 30;
 
 /**
  * Create an object to hold properties associated with an Invest Job.
  *
  */
 export default class InvestJob {
+  static get max_cached_jobs() {
+    return MAX_CACHED_JOBS;
+  }
+
   /* If none exists, init an empty array for the sorted workspace hashes */
   static async initDB() {
     const keys = await localforage.getItem(HASH_ARRAY_KEY);
@@ -41,9 +46,6 @@ export default class InvestJob {
    * @param {string} obj.modelRunName - name to be passed to `invest run`
    * @param {string} obj.modelHumanName - colloquial name of the invest model
    * @param {object} obj.argsValues - an invest "args dict" with initial values
-   * @param {object} obj.workspace - defines the invest workspace and suffix
-   * @param {string} obj.workspace.directory - path to invest model workspace
-   * @param {string} obj.workspace.suffix - invest model results suffix
    * @param {string} obj.logfile - path to an existing invest logfile
    * @param {'running'|'success'|'error'} obj.status - status of the invest process
    */
@@ -52,7 +54,6 @@ export default class InvestJob {
       modelRunName,
       modelHumanName,
       argsValues,
-      workspace,
       logfile,
       status,
     }
@@ -106,6 +107,11 @@ export default class InvestJob {
       sortedKeys.splice(idx, 1);
     }
     sortedKeys.unshift(this.metadata.workspaceHash);
+    if (sortedKeys.length > MAX_CACHED_JOBS) {
+      // only 1 key is ever added at a time, so only 1 item to remove
+      const lastKey = sortedKeys.pop();
+      localforage.removeItem(lastKey);
+    }
     await localforage.setItem(HASH_ARRAY_KEY, sortedKeys);
     await localforage.setItem(
       this.metadata.workspaceHash, this.metadata
