@@ -1165,6 +1165,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             localdoc (string): The filename of the user's guide chapter for
                 this model.
         """
+
         QtWidgets.QMainWindow.__init__(self)
         self.label = label
         self.target = target
@@ -1851,16 +1852,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         def _validate(new_value):
             # We want to validate the whole form; discard the individual value
             self.validate(block=False)
-
-        self.validate(block=False)
-        for input_obj in self.inputs:
-            input_obj.value_changed.connect(_validate)
-            try:
-                input_obj.validity_changed.connect(_validate)
-            except AttributeError:
-                # Not all inputs can have validity (e.g. Container, dropdown)
-                pass
-
+        
         # Set up quickrun options if we're doing a quickrun
         if quickrun:
             @QtCore.Slot()
@@ -1907,6 +1899,15 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.show()
         self.raise_()  # raise window to top of stack.
         self.validate(block=False)  # initial validation for the model
+
+        for input_obj in self.inputs:
+            input_obj.value_changed.connect(_validate)
+            try:
+                input_obj.validity_changed.connect(_validate)
+            except AttributeError:
+                # Not all inputs can have validity (e.g. Container, dropdown)
+                pass
+
 
     def close(self, prompt=True):
         """Close the window.
