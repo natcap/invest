@@ -222,7 +222,6 @@ describe('Display recently executed InVEST jobs', () => {
       argsValues: {
         workspace_dir: 'work1'
       },
-      // workspace: { directory: 'work1', suffix: null },
       status: 'success',
       humanTime: '3/5/2020, 10:43:14 AM',
     });
@@ -233,7 +232,6 @@ describe('Display recently executed InVEST jobs', () => {
       argsValues: {
         workspace_dir: 'work2'
       },
-      // workspace: { directory: 'work2', suffix: null },
       status: 'success',
       humanTime: '3/5/2020, 10:43:14 AM',
     });
@@ -254,6 +252,32 @@ describe('Display recently executed InVEST jobs', () => {
       <App investExe="foo" />
     );
 
+    const node = await findByText(/No recent InVEST runs/);
+    expect(node).toBeInTheDocument();
+  });
+
+  test('Recent Jobs: cleared by button', async () => {
+    const job1 = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Sequestration',
+      argsValues: {
+        workspace_dir: 'work1'
+      },
+      status: 'success',
+      humanTime: '3/5/2020, 10:43:14 AM',
+    });
+    const recentJobs = await job1.save();
+
+    const { getByText, findByText } = render(<App investExe="foo" />);
+
+    await waitFor(() => {
+      recentJobs.forEach((job) => {
+        expect(getByText(job.argsValues.workspace_dir))
+          .toBeTruthy();
+      });
+    });
+    fireEvent.click(getByText('Settings'));
+    fireEvent.click(getByText('Clear'));
     const node = await findByText(/No recent InVEST runs/);
     expect(node).toBeInTheDocument();
   });

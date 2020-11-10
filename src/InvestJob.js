@@ -39,6 +39,7 @@ export default class InvestJob {
 
   static async clearStore() {
     await localforage.clear();
+    return InvestJob.getJobStore();
   }
 
   /**

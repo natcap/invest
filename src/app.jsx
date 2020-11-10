@@ -37,6 +37,7 @@ export default class App extends React.Component {
     this.openInvestModel = this.openInvestModel.bind(this);
     this.closeInvestModel = this.closeInvestModel.bind(this);
     this.saveJob = this.saveJob.bind(this);
+    this.clearRecentJobs = this.clearRecentJobs.bind(this);
   }
 
   /** Initialize the list of available invest models and recent invest jobs. */
@@ -122,6 +123,13 @@ export default class App extends React.Component {
     });
   }
 
+  async clearRecentJobs() {
+    const recentJobs = await InvestJob.clearStore();
+    this.setState({
+      recentJobs: recentJobs,
+    });
+  }
+
   render() {
     const { investExe } = this.props;
     const {
@@ -191,6 +199,7 @@ export default class App extends React.Component {
             className="mx-3"
             saveSettings={this.saveSettings}
             investSettings={investSettings}
+            clearStorage={this.clearRecentJobs}
           />
         </Navbar>
         <TabContent id="top-tab-content">
