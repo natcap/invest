@@ -26,7 +26,7 @@ icon_size = 100
 text_size = 12
 
 # Window Settings
-window_rect = ((0, 10000), (900, 660))
+window_rect = ((100, 100), (900, 660))
 background = os.path.join(CWD, 'background.png')
 #background = 'builtin-arrow'
 default_view = 'icon-view'
