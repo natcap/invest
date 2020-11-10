@@ -19,8 +19,8 @@ symlinks = {'Applications': '/Applications'}
 files = [defines['investdir']]
 
 icon_locations = {
-    _invest_dirname: (230, 280),
-    'Applications': (660, 280)
+    _invest_dirname: (220, 290),
+    'Applications': (670, 290)
 }
 icon_size = 100
 text_size = 12
