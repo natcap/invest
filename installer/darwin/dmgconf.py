@@ -19,14 +19,14 @@ symlinks = {'Applications': '/Applications'}
 files = [defines['investdir']]
 
 icon_locations = {
-    _invest_dirname: (200, 250),
-    'Applications': (650, 250)
+    _invest_dirname: (250, 220),
+    'Applications': (650, 220)
 }
-icon_size = 70
+icon_size = 100
 text_size = 12
 
 # Window Settings
-window_rect = ((0, 10000), (1000, 700))
+window_rect = ((0, 10000), (900, 660))
 background = os.path.join(CWD, 'background.png')
 #background = 'builtin-arrow'
 default_view = 'icon-view'
