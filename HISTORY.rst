@@ -130,6 +130,9 @@ Unreleased Changes (3.9)
       to "333" leading to high export spikes in some pixels.
 * Finfish
     * Fixed a bug where the suffix input was not being used for output paths.
+* Urban Cooling
+    * Split energy savings valuation and work productivity valuation into 
+      separate UI options.
 
 ..
 ..
