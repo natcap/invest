@@ -25,7 +25,7 @@ but have almost all been ported over to a purely open-source python environment.
 General Information
 -------------------
 
-* Website: https://naturalcapitalproject.org/invest
+* Website: https://naturalcapitalproject.stanford.edu/software/invest
 * Source code: https://github.com/natcap/invest
 * Issue tracker: https://github.com/natcap/invest/issues
 * Users' guide: http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/
