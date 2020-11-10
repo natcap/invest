@@ -232,7 +232,6 @@ env:
 # REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
 # of pip don't think CWD is a valid package.
 install: $(DIST_DIR)/natcap.invest%.whl
-	echo "install"
 	-$(RMDIR) natcap.invest.egg-info
 	$(PIP) install --isolated --upgrade --no-index --only-binary natcap.invest --find-links=dist natcap.invest
 
@@ -250,9 +249,8 @@ $(DIST_DIR)/natcap.invest%.zip: | $(DIST_DIR)
 # The `invest list` is to test the binaries.  If something doesn't
 # import, we want to know right away.  No need to provide the `.exe` extension
 # on Windows as the .exe extension is assumed.
-binaries: $(INVEST_BINARIES_DIR) $(MAC_APPLICATION_BUNDLE)
+binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
-	echo "binaries"
 	-$(RMDIR) $(BUILD_DIR)/pyi-build
 	-$(RMDIR) $(INVEST_BINARIES_DIR)
 	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
@@ -336,17 +334,14 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vc
 
 mac_dmg: $(MAC_DISK_IMAGE_FILE) 
 $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
-	echo "mac_dmg"
 	./installer/darwin/build_dmg.sh "$(VERSION)" "$(MAC_APPLICATION_BUNDLE)" "$(USERGUIDE_HTML_DIR)" "$(MAC_DISK_IMAGE_FILE)"
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
 $(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR)
-	echo "mac_app"
 	./installer/darwin/build_app_bundle.sh "$(VERSION)" "$(INVEST_BINARIES_DIR)" "$(MAC_APPLICATION_BUNDLE)"
 
 mac_zipfile: $(MAC_BINARIES_ZIP_FILE)
 $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
-	echo "mac_zipfile"
 	./installer/darwin/build_zip.sh "$(VERSION)" "$(MAC_APPLICATION_BUNDLE)" "$(USERGUIDE_HTML_DIR)"
 
 build/vcredist_x86.exe: | build
@@ -357,15 +352,12 @@ KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
 P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
 KEYCHAIN_NAME := codesign_keychain
 codesign_mac:
-	echo "codesign"
 	# download the p12 certificate file from google cloud
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
-
 	# create a new keychain (so that we can know what the password is)
 	security create-keychain -p '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
 	# add the keychain to the search list so it can be found
 	security list-keychains -s '$(KEYCHAIN_NAME)'
-	security list-keychains
 	# unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
 	security unlock-keychain -p '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
 	# add the certificate to the keychain
@@ -376,7 +368,6 @@ codesign_mac:
 	security set-key-partition-list -S apple-tool:,apple: -s -k '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
 	codesign --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
-
 	# relock the keychain (not sure if this is important?)
 	security lock-keychain '$(KEYCHAIN_NAME)'
 
