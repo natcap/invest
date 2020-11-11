@@ -217,7 +217,7 @@ jobs:
               shell: bash -l {0}
               run: |
                   make install
-                  make mac_zipfile
+                  # make mac_zipfile
                   make mac_dmg
 
             - name: Set up GCP
