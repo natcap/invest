@@ -20,12 +20,6 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    
-    - name: Set env var for invest version
-      shell: bash
-      run: |
-        jq -r .invest.version package.json
-        # echo "{INVEST_VERSION}={$(jq -r .invest.version package.json)}" >> $GITHUB_ENV
 
     - name: test env var
       shell: bash
@@ -39,7 +33,7 @@ jobs:
         INVEST_VERSION: $(jq -r .invest.version package.json)
       with:
         repository: natcap/invest
-        ref: refs/tags/${{env.INVEST_VERSION}}
+        ref: refs/tags/${{ env.INVEST_VERSION }}
         path: ./invest
 
     - name: Install libspatialindex for ubuntu
