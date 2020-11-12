@@ -25,15 +25,7 @@ jobs:
       shell: bash
       run: |
         INVEST_VERSION=$(jq -r .invest.version package.json)
-        echo $INVEST_VERSION
-        echo "INVEST_VERSION=$INVEST_VERSION"
         echo "INVEST_VERSION=$INVEST_VERSION" >> $GITHUB_ENV
-
-    - name: test env var
-      shell: bash
-      env:
-        INVEST_VERSION: 
-      run: echo "${{ env.INVEST_VERSION }}"
 
     - name: Clone natcap/invest
       uses: actions/checkout@v2
