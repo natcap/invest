@@ -143,7 +143,7 @@ help:
 	@echo "  userguide         to build HTML version of the users guide"
 	@echo "  python_packages   to build natcap.invest wheel and source distributions"
 	@echo "  windows_installer to build an NSIS installer for distribution"
-	@echo "  mac_dmg     to build a disk image for distribution"
+	@echo "  mac_dmg           to build a disk image for distribution"
 	@echo "  sampledata        to build sample data zipfiles"
 	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
 	@echo "  test              to run pytest on the tests directory"

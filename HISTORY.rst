@@ -62,6 +62,7 @@ Unreleased Changes (3.9)
     * The number of files included in the python source distribution has been
       reduced to just those needed to install the python package and run tests.
     * Code-sign the macOS distribution, and switch to a DMG distribution format.
+    * No longer include the HTML docs or HISTORY.rst in the macOS distribution.
 * Coastal Blue Carbon
     * Refactor of Coastal Blue Carbon that implements TaskGraph for task
       management across the model and fixes a wide range of issues with the model
