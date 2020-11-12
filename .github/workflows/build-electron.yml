@@ -23,7 +23,9 @@ jobs:
     
     - name: Set env var for invest version
       shell: bash
-      run: echo "{INVEST_VERSION}={$(jq -r .invest.version package.json)}" >> $GITHUB_ENV
+      run: 
+        jq -r .invest.version package.json
+        echo "{INVEST_VERSION}={$(jq -r .invest.version package.json)}" >> $GITHUB_ENV
 
     - name: test env var
       shell: bash
