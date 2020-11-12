@@ -1,9 +1,9 @@
 ; Variables needed at the command line:
-; VERSION         - the version of InVEST we're building (example: 3.4.5)
+; VERSION         - the version of InVEST we're building (example: 3.8.9)
 ;                   This string must not contain characters that are
 ;                   problematic in Windows paths (no : , etc)
 ; BINDIR          - The local folder of binaries to include.
-; ARCHITECTURE    - The architecture we're building for.  Generally this is x86.
+; ARCHITECTURE    - The architecture we're building for. Generally this is x64.
 ; FORKNAME        - The username of the InVEST fork we're building off of.
 ; DATA_LOCATION   - Where (relative to datportal) the data should be downloaded
 ;                   from.
@@ -24,9 +24,9 @@
 ;    sample data as a single zipfile with the installer, as might be the case
 ;    for sysadmins installing on many computers, or Natcappers installing on
 ;    user's computers at a training.  To make this work, a specially formatted
-;    zipfile must be used.  This zipfile may be created with paver by calling:
+;    zipfile must be used.  This zipfile may be created with make by calling:
 ;
-;        $ paver build_data --single-archive
+;        $ make sampledata_single
 ;
 ;    Alternately, this zipfile may be assembled by hand, so long as the
 ;    zipfile has all sample data folders at the top level.  Whatever is in the
@@ -34,11 +34,11 @@
 ;
 ;    It's also worth noting that this 'Advanced' install may be used at the
 ;    command-line, optionally as part of a silent install.  If we assume that
-;    the InVEST 3.3.1 installer and the advanced sampledata zipfile are copied
+;    the InVEST 3.8.9 installer and the advanced sampledata zipfile are copied
 ;    to the same directory, and we open a cmd prompt within that same
 ;    directory:
 ;
-;        > .\InVEST_3.3.1_Setup_x86.exe /S /DATAZIP=%CD%\sampledata.zip
+;        > .\InVEST_3.8.8_Setup_x64.exe /S /DATAZIP=%CD%\sampledata.zip
 ;
 ;    This will execute the installer silently, and extract the contents of
 ;    sampledata.zip to the installation directory.
@@ -158,7 +158,9 @@ var AdvCheckbox
 var AdvFileField
 var AdvZipFile
 var LocalDataZipFile
+var WarnLabel
 Function AddAdvancedOptions
+    ; NSD_CREATE* macros take 5 params: x, y, width, height and text
     ${NSD_CreateCheckBox} 120u -18u 15% 12u "Advanced"
     pop $AdvCheckbox
     ${NSD_OnClick} $AdvCheckbox EnableAdvFileSelect
@@ -176,6 +178,11 @@ Function AddAdvancedOptions
     ${If} $LocalDataZipFile != ""
         ${NSD_Check} $AdvCheckbox
         Call EnableAdvFileSelect
+    ${EndIf}
+
+    ; if install computer is 32-bit then warn the user of a 64-bit app.
+    ${IfNot} ${RunningX64}
+        Call WarnArchitecture
     ${EndIf}
 FunctionEnd
 
@@ -218,6 +225,14 @@ Function ValidateAdvZipFile
         ; Save the value in the advanced filefield as $LocalDataZipFile
         strcpy $LocalDataZipFile $0
     ${EndIf}
+FunctionEnd
+
+Function WarnArchitecture
+    !define msg1 " Warning: 32-bit architecture detected. Installing $\r$\n"
+    !define msg2 " 64-bit software could lead to unexpected results. $\r$\n"
+    ${NSD_CreateLabel} 120u -56u 50% 16u "${msg1}${msg2}"
+    pop $WarnLabel
+    SetCtlColors $WarnLabel 0x000000 0xFFE300
 FunctionEnd
 
 ; NSIS 3.x defines these variables, NSIS 2.x does not.  This supports both versions.
@@ -274,7 +289,7 @@ Function Un.onInit
 FunctionEnd
 
 ; Copied into the invest folder later in the NSIS script
-!define INVEST_BINARIES "$INSTDIR\invest-3-x86"
+!define INVEST_BINARIES "$INSTDIR\invest-3-x64"
 !define INVEST_ICON "${INVEST_BINARIES}\InVEST-2.ico"
 !define SAMPLEDATADIR "$INSTDIR\sample_data"
 !macro StartMenuLink linkName modelName
