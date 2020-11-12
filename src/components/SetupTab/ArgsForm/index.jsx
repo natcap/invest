@@ -1,3 +1,4 @@
+import os from 'os';
 import React from 'react';
 import PropTypes from 'prop-types';
 import { remote } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
@@ -11,6 +12,21 @@ import { boolStringToBoolean } from '../../../utils';
 function dragoverHandler(event) {
   event.preventDefault();
   event.dataTransfer.dropEffect = 'move';
+}
+
+function parseMultiInputFeedback(message, selector) {
+  const pattern = 'Bounding boxes do not intersect';
+  const isMultiInputFeedback = message.startsWith(pattern);
+  let newMessage = message;
+  const newPrefix = 'Bounding box does not intersect at least one other:';
+  if (isMultiInputFeedback) {
+    const bbox = message.split(`${selector}:`).pop().split('|')[0];
+    const bboxFormatted = bbox.split(' ').map(
+      (str) => str.padEnd(22, ' ')
+    ).join('').trim();
+    newMessage = `${newPrefix}${os.EOL}${bboxFormatted}`;
+  }
+  return newMessage;
 }
 
 /** Renders a form with a list of input components. */
@@ -78,6 +94,12 @@ export default class ArgsForm extends React.Component {
       k += 1;
       const groupItems = [];
       groupArray.forEach((argkey) => {
+        let { validationMessage } = argsValidation[argkey];
+        if (validationMessage) {
+          validationMessage = parseMultiInputFeedback(
+            validationMessage, argsValues[argkey].value
+          );
+        }
         groupItems.push(
           <ArgInput
             key={argkey}
@@ -87,7 +109,7 @@ export default class ArgsForm extends React.Component {
             touched={argsValues[argkey].touched}
             ui_option={argsValues[argkey].ui_option}
             isValid={argsValidation[argkey].valid}
-            validationMessage={argsValidation[argkey].validationMessage}
+            validationMessage={validationMessage}
             handleChange={this.handleChange}
             handleBoolChange={this.handleBoolChange}
             selectFile={this.selectFile}
