@@ -120,7 +120,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       env:
         GH_TOKEN: env.GITHUB_TOKEN
-      run: npx --no-install electron-builder --windows -c.extraMetadata.main=build/main.js
+      run: npx --no-install electron-builder --windows -c.extraMetadata.main=build\main.js
 
     - name: Run electron-builder on ubuntu
       if: matrix.os == 'ubuntu-latest'
