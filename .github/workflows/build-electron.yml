@@ -122,17 +122,6 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: npx --no-install electron-builder --linux -c.extraMetadata.main=build/main.js
 
-    - name: Build & Release Electron application
-      uses: samuelmeuli/action-electron-builder@v1
-      if: ${{ always() }}
-      with:
-        build_script_name: build
-        args: -c.extraMetadata.main=build/main.js
-        github_token: ${{ secrets.github_token }}
-        # If the commit is tagged with a version (e.g. "v1.0.0"),
-        # release the app after building
-        release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-
       # Also run all tests on the build dir code?
     - name: Test flask app binaries
       shell: bash -l {0}
