@@ -23,11 +23,11 @@ jobs:
 
     - name: Set env var
       shell: bash
-      run:
+      run: |
         INVEST_VERSION=$(jq -r .invest.version package.json)
         echo $INVEST_VERSION
         echo "INVEST_VERSION=$INVEST_VERSION"
-        echo "action_state=$INVEST_VERSION" >> $GITHUB_ENV
+        echo "INVEST_VERSION=$INVEST_VERSION" >> $GITHUB_ENV
 
     - name: test env var
       shell: bash
