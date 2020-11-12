@@ -106,17 +106,34 @@ export default class SettingsModal extends React.Component {
               </Form.Group>
               <Form.Group as={Row}>
                 <Form.Label column sm="8" htmlFor="nworkers-text">
-                  Taskgraph n_workers parameter (must be an integer &gt;= -1)
+                  Taskgraph n_workers parameter
+                  <br />
+                  (must be an integer &gt;= -1)
                 </Form.Label>
                 <Col sm="3">
                   <Form.Control
                     id="nworkers-text"
                     name="nWorkers"
-                    type="text" 
+                    type="text"
                     value={this.state.localSettings.nWorkers}
                     onChange={this.handleChange}
                     isInvalid={!nWorkersIsValid}
                   />
+                </Col>
+              </Form.Group>
+              <Form.Group as={Row}>
+                <Form.Label column sm="8">
+                  Clear Recent Jobs Shortcuts
+                  <br />
+                  (no invest workspaces will be deleted)
+                </Form.Label>
+                <Col sm="3">
+                  <Button
+                    variant="secondary"
+                    onClick={this.props.clearStorage}
+                  >
+                    Clear
+                  </Button>
                 </Col>
               </Form.Group>
             </Modal.Body>
@@ -124,11 +141,12 @@ export default class SettingsModal extends React.Component {
               <Button variant="secondary" onClick={this.handleClose}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 variant="primary"
                 onClick={this.handleSubmit}
                 type="submit"
-                disabled={!nWorkersIsValid}>
+                disabled={!nWorkersIsValid}
+              >
                 Save Changes
               </Button>
             </Modal.Footer>

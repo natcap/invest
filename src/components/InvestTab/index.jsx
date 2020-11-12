@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import crypto from 'crypto';
 import { spawn, exec } from 'child_process';
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -14,17 +13,13 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
 
-import SetupTab from './components/SetupTab';
-import LogTab from './components/LogTab';
-import ResourcesLinks from './components/ResourcesLinks';
-import {
-  getSpec, writeParametersToFile
-} from './server_requests';
-import {
-  findMostRecentLogfile, cleanupDir
-} from './utils';
-import { fileRegistry } from './constants';
-import { getLogger } from './logger';
+import SetupTab from '../SetupTab';
+import LogTab from '../LogTab';
+import ResourcesLinks from '../ResourcesLinks';
+import { getSpec, writeParametersToFile } from '../../server_requests';
+import { findMostRecentLogfile, cleanupDir } from '../../utils';
+import { fileRegistry } from '../../constants';
+import { getLogger } from '../../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -68,12 +63,12 @@ async function investGetSpec(modelName) {
   return undefined;
 }
 
-/** This component and it's children render all the visible parts of the app.
- *
- * This component's state includes all the data needed to represent one invest
- * job.
+/**
+ * Render an invest model setup form, log display, etc.
+ * Manage launching of an invest model in a child process.
+ * And manage saves of executed jobs to a persistent store.
  */
-export default class InvestJob extends React.Component {
+export default class InvestTab extends React.Component {
   constructor(props) {
     super(props);
 
@@ -81,9 +76,9 @@ export default class InvestJob extends React.Component {
       activeTab: 'setup',
       modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
-      logfile: null, // path to the invest logfile associated with invest job
       logStdErr: null, // stderr data from the invest subprocess
       jobStatus: null, // 'running', 'error', 'success'
+      procID: null,
     };
 
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
@@ -94,20 +89,17 @@ export default class InvestJob extends React.Component {
   }
 
   async componentDidMount() {
-    // If these dirs already exist, this will err and pass
-    fs.mkdir(fileRegistry.CACHE_DIR, (err) => {});
+    // If these dir already exists, this will err and pass
     fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
-    // logfile and jobStatus are undefined unless this is a pre-existing job.
-    const { modelRunName, logfile, jobStatus } = this.props;
+    const { job } = this.props;
     const {
       modelSpec, argsSpec, uiSpec
-    } = await investGetSpec(modelRunName);
+    } = await investGetSpec(job.metadata.modelRunName);
     this.setState({
       modelSpec: modelSpec,
       argsSpec: argsSpec,
       uiSpec: uiSpec,
-      logfile: logfile,
-      jobStatus: jobStatus,
+      jobStatus: job.metadata.status,
     }, () => { this.switchTabs('setup'); });
   }
 
@@ -143,39 +135,25 @@ export default class InvestJob extends React.Component {
    */
   async investExecute(argsValues) {
     const {
+      job,
       investExe,
       investSettings,
-      modelRunName,
-      modelHumanName,
       saveJob,
     } = this.props;
+    const args = { ...argsValues };
+    // Not strictly necessary, but resolving to a complete path
+    // here to be extra certain we avoid unexpected collisions
+    // of workspaceHash, which uniquely ids a job in the database
+    // in part by it's workspace directory.
+    args.workspace_dir = path.resolve(argsValues.workspace_dir);
 
-    // If the same model, workspace, and suffix are executed, invest
-    // will overwrite the previous outputs. So our recent jobs
-    // catalogue should overwite as well, and that's assured by this
-    // non-unique jobID.
-    const workspace = {
-      directory: path.resolve(argsValues.workspace_dir),
-      suffix: argsValues.results_suffix,
-    };
-    const jobID = crypto.createHash('sha1').update(
-      `${modelRunName}${JSON.stringify(workspace)}`
-    ).digest('hex');
-
-    const job = {
-      jobID: jobID,
-      modelRunName: modelRunName,
-      modelHumanName: modelHumanName,
-      argsValues: argsValues,
-      workspace: workspace,
-      logfile: undefined,
-      status: 'running',
-    };
+    job.setProperty('argsValues', args);
+    job.setProperty('status', 'running');
 
     // Setting this very early in the click handler so the Execute button
     // can display an appropriate visual cue when it's clicked
     this.setState({
-      jobStatus: job.status,
+      jobStatus: job.metadata.status,
     });
 
     // Write a temporary datastack json for passing to invest CLI
@@ -183,13 +161,12 @@ export default class InvestJob extends React.Component {
       fileRegistry.TEMP_DIR, 'data-'
     ));
     const datastackPath = path.join(tempDir, 'datastack.json');
-    await this.argsToJsonFile(datastackPath, job.argsValues);
+    await this.argsToJsonFile(datastackPath, args);
 
-    const verbosity = LOGLEVELMAP[investSettings.loggingLevel];
     const cmdArgs = [
-      verbosity,
+      LOGLEVELMAP[investSettings.loggingLevel],
       'run',
-      job.modelRunName,
+      job.metadata.modelRunName,
       '--headless',
       `-d "${datastackPath}"`,
     ];
@@ -199,42 +176,29 @@ export default class InvestJob extends React.Component {
         shell: true, // without shell, IOError when datastack.py loads json
         detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
       });
-      this.investRun.terminate = () => {
-        if (this.state.jobStatus === 'running') {
-          // the '-' prefix on pid sends signal to children as well
-          process.kill(-this.investRun.pid, 'SIGTERM');
-        }
-      };
-    } else {  // windows
+    } else { // windows
       this.investRun = spawn(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
         shell: true,
       });
-      this.investRun.terminate = () => {
-        if (this.state.jobStatus === 'running') {
-          exec(`taskkill /pid ${this.investRun.pid} /t /f`);
-        }
-      };
     }
-    logger.debug(this.investRun.spawnargs);
 
     // There's no general way to know that a spawned process started,
-    // so this logic when listening for stdout seems like the way.
-    this.investRun.stdout.on('data', async () => {
-      if (!job.logfile) {
-        job.logfile = await findMostRecentLogfile(job.workspace.directory);
-        // TODO: handle case when job.logfile is still undefined?
-        // Could be if some stdout is emitted before a logfile exists.
-        logger.debug(`invest logging to: ${job.logfile}`);
-        this.setState(
-          {
-            logfile: job.logfile,
-          }, () => {
-            this.switchTabs('log');
-            saveJob(job);
-          }
-        );
-      }
+    // so this logic to listen once on stdout seems like the way.
+    this.investRun.stdout.once('data', async () => {
+      const logfile = await findMostRecentLogfile(args.workspace_dir);
+      job.setProperty('logfile', logfile);
+      // TODO: handle case when logfile is still undefined?
+      // Could be if some stdout is emitted before a logfile exists.
+      logger.debug(`invest logging to: ${job.metadata.logfile}`);
+      this.setState(
+        {
+          procID: this.investRun.pid,
+        }, () => {
+          this.switchTabs('log');
+          saveJob(job);
+        }
+      );
     });
 
     // Capture stderr to a string separate from the invest log
@@ -256,16 +220,17 @@ export default class InvestJob extends React.Component {
     this.investRun.on('exit', (code) => {
       logger.debug(code);
       if (code === 0) {
-        job.status = 'success';
+        job.setProperty('status', 'success');
       } else {
         // Invest CLI exits w/ code 1 when it catches errors,
         // Models exit w/ code 255 (on all OS?) when errors raise from execute()
         // Windows taskkill yields exit code 1
         // Non-windows process.kill yields exit code null
-        job.status = 'error';
+        job.setProperty('status', 'error');
       }
       this.setState({
-        jobStatus: job.status,
+        jobStatus: job.metadata.status,
+        procID: null,
       }, () => {
         saveJob(job);
         cleanupDir(tempDir);
@@ -273,13 +238,22 @@ export default class InvestJob extends React.Component {
     });
   }
 
-  terminateInvestProcess() {
-    this.investRun.terminate();
-    // this replaces any stderr that might exist, but that's
-    // okay since the user requested terminating the process.
-    this.setState({
-      logStdErr: 'Run Canceled',
-    });
+  terminateInvestProcess(pid) {
+    if (pid) {
+      if (this.state.jobStatus === 'running') {
+        if (process.platform !== 'win32') {
+          // the '-' prefix on pid sends signal to children as well
+          process.kill(-pid, 'SIGTERM');
+        } else {
+          exec(`taskkill /pid ${pid} /t /f`);
+        }
+      }
+      // this replaces any stderr that might exist, but that's
+      // okay since the user requested terminating the process.
+      this.setState({
+        logStdErr: 'Run Canceled',
+      });
+    }
   }
 
   /** Change the tab that is currently visible.
@@ -299,9 +273,15 @@ export default class InvestJob extends React.Component {
       argsSpec,
       uiSpec,
       jobStatus,
-      logfile,
       logStdErr,
+      procID,
     } = this.state;
+    const {
+      navID,
+      modelRunName,
+      argsValues,
+      logfile,
+    } = this.props.job.metadata;
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
@@ -309,8 +289,7 @@ export default class InvestJob extends React.Component {
     }
 
     const isRunning = jobStatus === 'running';
-    const logDisabled = (!logfile);
-    const { navID, modelRunName } = this.props;
+    const logDisabled = !logfile;
     const sidebarSetupElementId = `sidebar-setup-${navID}`;
     const sidebarFooterElementId = `sidebar-footer-${navID}`;
 
@@ -368,7 +347,7 @@ export default class InvestJob extends React.Component {
                   modelName={modelSpec.model_name}
                   argsSpec={argsSpec}
                   uiSpec={uiSpec}
-                  argsInitValues={this.props.argsInitValues}
+                  argsInitValues={argsValues}
                   investExecute={this.investExecute}
                   argsToJsonFile={this.argsToJsonFile}
                   nWorkers={this.props.investSettings.nWorkers}
@@ -383,6 +362,7 @@ export default class InvestJob extends React.Component {
                   logfile={logfile}
                   logStdErr={logStdErr}
                   terminateInvestProcess={this.terminateInvestProcess}
+                  procID={procID}
                   pyModuleName={modelSpec.module}
                   sidebarFooterElementId={sidebarFooterElementId}
                 />
@@ -395,14 +375,20 @@ export default class InvestJob extends React.Component {
   }
 }
 
-InvestJob.propTypes = {
+InvestTab.propTypes = {
+  job: PropTypes.shape({
+    metadata: PropTypes.shape({
+      modelRunName: PropTypes.string.isRequired,
+      modelHumanName: PropTypes.string.isRequired,
+      navID: PropTypes.string.isRequired,
+      argsValues: PropTypes.object,
+      logfile: PropTypes.string,
+      status: PropTypes.string,
+    }),
+    save: PropTypes.func.isRequired,
+    setProperty: PropTypes.func.isRequired,
+  }).isRequired,
   investExe: PropTypes.string.isRequired,
-  modelRunName: PropTypes.string.isRequired,
-  modelHumanName: PropTypes.string.isRequired,
-  navID: PropTypes.string.isRequired,
-  logfile: PropTypes.string,
-  argsInitValues: PropTypes.object,
-  jobStatus: PropTypes.string,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,

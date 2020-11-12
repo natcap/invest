@@ -70,6 +70,7 @@ def get_invest_getspec():
     target_model = request.get_json()
     target_module = natcap.invest.cli._MODEL_UIS[target_model].pyname
     model_module = importlib.import_module(name=target_module)
+    LOGGER.debug(model_module.__file__)
     spec = model_module.ARGS_SPEC
     return json.dumps(spec)
 

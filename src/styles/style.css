@@ -106,10 +106,14 @@ body {
 
 .card-header {
 	background-color: var(--invest-green);
-	color: white;
-	font-weight: 700;
-	padding-left: 1.25rem;
 	filter: opacity(0.75);
+}
+
+.card-header .header-title {
+	color: white;
+	font-size: 1.35rem;
+	font-weight: 600;
+	letter-spacing: 0.5px;
 }
 
 .card-title {

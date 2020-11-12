@@ -1,4 +1,3 @@
-import fs from 'fs';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -6,11 +5,11 @@ import Button from 'react-bootstrap/Button';
 import Table from 'react-bootstrap/Table';
 import CardGroup from 'react-bootstrap/CardGroup';
 import Card from 'react-bootstrap/Card';
-import Spinner from 'react-bootstrap/Spinner';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
+import InvestJob from '../../InvestJob';
 import { getLogger } from '../../logger';
 
 const logger = getLogger(__filename.split('/').slice(-2).join('/'));
@@ -29,7 +28,11 @@ export default class HomeTab extends React.PureComponent {
     const { value } = event.target;
     const { investList, openInvestModel } = this.props;
     const modelRunName = investList[value].internal_name;
-    openInvestModel(modelRunName, value);
+    const job = new InvestJob({
+      modelRunName: modelRunName,
+      modelHumanName: value
+    });
+    openInvestModel(job);
   }
 
   render() {
@@ -83,11 +86,14 @@ HomeTab.propTypes = {
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
   recentJobs: PropTypes.arrayOf(
-    PropTypes.array
-  ),
-};
-HomeTab.defaultProps = {
-  recentJobs: [],
+    PropTypes.shape({
+      modelRunName: PropTypes.string.isRequired,
+      modelHumanName: PropTypes.string.isRequired,
+      argsValues: PropTypes.object,
+      logfile: PropTypes.string,
+      status: PropTypes.string,
+    })
+  ).isRequired,
 };
 
 /**
@@ -99,17 +105,8 @@ class RecentInvestJobs extends React.PureComponent {
     this.handleClick = this.handleClick.bind(this);
   }
 
-  handleClick(jobDataPath) {
-    const jobData = JSON.parse(
-      fs.readFileSync(jobDataPath, 'utf8')
-    );
-    this.props.openInvestModel(
-      jobData.modelRunName,
-      jobData.modelHumanName,
-      jobData.argsValues,
-      jobData.logfile,
-      jobData.status,
-    );
+  handleClick(jobMetadata) {
+    this.props.openInvestModel(new InvestJob(jobMetadata));
   }
 
   render() {
@@ -117,59 +114,32 @@ class RecentInvestJobs extends React.PureComponent {
     const recentButtons = [];
     const { recentJobs } = this.props;
     recentJobs.forEach((job) => {
-      let model;
-      let workspaceDir;
-      let jobDataPath;
-      const [jobID, metadata] = job;
-      // The following properties are required. If they don't exist,
-      // the recent job's data was corrupted and should be skipped over.
-      if (jobID === undefined) { return; }
-      try {
-        model = metadata.model;
-        workspaceDir = metadata.workspace.directory;
-        jobDataPath = metadata.jobDataPath;
-      } catch (error) {
-        logger.error(error);
-        return;
-      }
-
-      // These are optional and the rest of the render method
-      // should be robust to undefined values
-      const { suffix } = metadata.workspace;
-      const { status, description, humanTime } = metadata;
-
       recentButtons.push(
         <Card
           className="text-left recent-job-card"
           as="button"
-          key={jobID}
-          onClick={() => this.handleClick(jobDataPath)}
+          key={job.workspaceHash}
+          onClick={() => this.handleClick(job)}
         >
           <Card.Body>
-            <Card.Header as="h4">
-              {model}
-              {status === 'running'
-                && (
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                  />
-                )
-              }
+            <Card.Header>
+              <span className="header-title">{job.modelHumanName}</span>
             </Card.Header>
             <Card.Title>
               <span className="text-heading">{'Workspace: '}</span>
-              <span className="text-mono">{workspaceDir}</span>
+              <span className="text-mono">{job.argsValues.workspace_dir}</span>
             </Card.Title>
             <Card.Title>
               <span className="text-heading">{'Suffix: '}</span>
-              <span className="text-mono">{suffix}</span>
+              <span className="text-mono">{job.argsValues.results_suffix}</span>
             </Card.Title>
-            <Card.Text>{description || <em>no description</em>}</Card.Text>
-            <Card.Footer className="text-muted">{humanTime}</Card.Footer>
+            <Card.Text>{job.description || <em>no description</em>}</Card.Text>
+            <Card.Footer className="text-muted">
+              <span>{job.humanTime}</span>
+              <span className="float-right">
+                <em>{job.status !== 'success' ? job.status : ''}</em>
+              </span>
+            </Card.Footer>
           </Card.Body>
         </Card>
       );
@@ -201,6 +171,14 @@ class RecentInvestJobs extends React.PureComponent {
 }
 
 RecentInvestJobs.propTypes = {
-  recentJobs: PropTypes.array.isRequired,
+  recentJobs: PropTypes.arrayOf(
+    PropTypes.shape({
+      modelRunName: PropTypes.string.isRequired,
+      modelHumanName: PropTypes.string.isRequired,
+      argsValues: PropTypes.object,
+      logfile: PropTypes.string,
+      status: PropTypes.string,
+    })
+  ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
 };

@@ -16,6 +16,8 @@
         "airbnb",
         "plugin:jsdoc/recommended",
         "plugin:react/recommended",
+        "plugin:jest/recommended",
+        "plugin:jest/style",
     ],
     "settings": {
         "react": {
@@ -33,6 +35,7 @@
         "max-classes-per-file": ["error", 2],
         "react/destructuring-assignment": ["warn", "always"],
         "react/jsx-fragments": ["off", "syntax"],
+        "react/jsx-filename-extension": [1, { "extensions": [".js", ".jsx"] }],
         "camelcase": ["warn", ],
         "comma-dangle": ["warn", {
             "arrays": "always-multiline",

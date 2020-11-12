@@ -6,7 +6,6 @@ const USER_DATA = remote.app.getPath('userData');
 export const fileRegistry = {
   //  for storing state snapshot files
   CACHE_DIR: path.join(USER_DATA, 'state_cache'),
-  JOBS_DATABASE: path.join(USER_DATA, 'state_cache', 'jobdb.json'),
 
   // for saving datastack json files prior to investExecute
   TEMP_DIR: path.join(USER_DATA, 'tmp'),

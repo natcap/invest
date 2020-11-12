@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -12,13 +10,12 @@ import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
 
 import HomeTab from './components/HomeTab';
-import InvestJob from './InvestJob';
+import InvestTab from './components/InvestTab';
 import LoadButton from './components/LoadButton';
 import SettingsModal from './components/SettingsModal';
 import { getInvestList } from './server_requests';
-import { updateRecentJobs, loadRecentJobs } from './utils';
-import { fileRegistry } from './constants';
 import { getLogger } from './logger';
+import InvestJob from './InvestJob';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -35,22 +32,18 @@ export default class App extends React.Component {
       recentJobs: [],
       investSettings: {},
     };
-    this.setRecentJobs = this.setRecentJobs.bind(this);
     this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
     this.closeInvestModel = this.closeInvestModel.bind(this);
     this.saveJob = this.saveJob.bind(this);
+    this.clearRecentJobs = this.clearRecentJobs.bind(this);
   }
 
   /** Initialize the list of available invest models and recent invest jobs. */
   async componentDidMount() {
-    const { jobDatabase } = this.props;
     const investList = await getInvestList();
-    let recentJobs = [];
-    if (fs.existsSync(jobDatabase)) {
-      recentJobs = await loadRecentJobs(jobDatabase);
-    }
+    const recentJobs = await InvestJob.getJobStore();
     // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?
 
@@ -61,20 +54,6 @@ export default class App extends React.Component {
         nWorkers: '-1',
         loggingLevel: 'INFO',
       },
-    });
-  }
-
-  /** Update the recent jobs list when a new invest job was saved.
-   * This triggers on InvestJob.saveState().
-   *
-   * @param {object} jobdata - the metadata describing an invest job.
-   */
-  async setRecentJobs(jobdata) {
-    const recentJobs = await updateRecentJobs(
-      jobdata, this.props.jobDatabase
-    );
-    this.setState({
-      recentJobs: recentJobs,
     });
   }
 
@@ -94,31 +73,15 @@ export default class App extends React.Component {
     });
   }
 
-  /** Push data for a new InvestJob component to an array.
+  /** Push data for a new InvestTab component to an array.
    *
-   * When this is called to load a "recent job", optional argsValues, logfile,
-   * and jobStatus parameters will be defined, otherwise they can be undefined.
-   *
-   * @param  {string} modelRunName - invest model name to be passed to `invest run`
-   * @param  {string} modelHumanName - the colloquial name of the invest model
-   * @param  {object} argsValues - an invest "args dictionary" with initial values
-   * @param  {string} logfile - path to an existing invest logfile
-   * @param  {string} jobStatus - indicates how the job exited, if it's a recent job.
+   * @param {InvestJob} job - as constructed by new InvestJob()
    */
-  openInvestModel(modelRunName, modelHumanName, argsValues, logfile, jobStatus) {
+  openInvestModel(job) {
     const navID = crypto.randomBytes(16).toString('hex');
+    job.setProperty('navID', navID);
     this.setState((state) => ({
-      openJobs: [
-        ...state.openJobs,
-        {
-          modelRunName: modelRunName,
-          modelHumanName: modelHumanName,
-          argsValues: argsValues,
-          logfile: logfile,
-          status: jobStatus,
-          navID: navID,
-        },
-      ],
+      openJobs: [...state.openJobs, job],
     }), () => this.switchTabs(navID));
   }
 
@@ -126,13 +89,13 @@ export default class App extends React.Component {
    * Click handler for the close-tab button on an Invest model tab.
    *
    * @param  {string} navID - the eventKey of the tab containing the
-   *   InvestJob component that will be removed.
+   *   InvestTab component that will be removed.
    */
   closeInvestModel(navID) {
     let index;
     const { openJobs } = this.state;
     openJobs.forEach((job) => {
-      if (job.navID === navID) {
+      if (job.metadata.navID === navID) {
         index = openJobs.indexOf(job);
         openJobs.splice(index, 1);
       }
@@ -151,28 +114,20 @@ export default class App extends React.Component {
 
   /** Save data describing an invest job to a persistent JSON file.
    *
-   * @param {object} jobData - data that can be passed to openInvestModel
+   * @param {object} job - as constructed by new InvestJob()
    */
-  saveJob(jobData) {
-    const jsonContent = JSON.stringify(jobData);
-    const filepath = path.join(
-      fileRegistry.CACHE_DIR, `${jobData.jobID}.json`
-    );
-    fs.writeFile(filepath, jsonContent, 'utf8', (err) => {
-      if (err) {
-        logger.error('An error occured while writing JSON Object to File.');
-        return logger.error(err.stack);
-      }
+  async saveJob(job) {
+    const recentJobs = await job.save();
+    this.setState({
+      recentJobs: recentJobs,
     });
-    const jobMetadata = {};
-    jobMetadata[jobData.jobID] = {
-      model: jobData.modelHumanName,
-      workspace: jobData.workspace,
-      humanTime: new Date().toLocaleString(),
-      systemTime: new Date().getTime(),
-      jobDataPath: filepath,
-    };
-    this.setRecentJobs(jobMetadata, this.props.jobDatabase);
+  }
+
+  async clearRecentJobs() {
+    const recentJobs = await InvestJob.clearStore();
+    this.setState({
+      recentJobs: recentJobs,
+    });
   }
 
   render() {
@@ -189,14 +144,14 @@ export default class App extends React.Component {
     const investTabPanes = [];
     openJobs.forEach((job) => {
       investNavItems.push(
-        <Nav.Item key={job.navID}>
-          <Nav.Link eventKey={job.navID}>
+        <Nav.Item key={job.metadata.navID}>
+          <Nav.Link eventKey={job.metadata.navID}>
             <React.Fragment>
-              {job.modelHumanName}
+              {job.metadata.modelHumanName}
               <Button
                 className="close-tab"
                 variant="outline-dark"
-                onClick={() => this.closeInvestModel(job.navID)}
+                onClick={() => this.closeInvestModel(job.metadata.navID)}
               >
                 x
               </Button>
@@ -206,18 +161,13 @@ export default class App extends React.Component {
       );
       investTabPanes.push(
         <TabPane
-          key={job.navID}
-          eventKey={job.navID}
-          title={job.modelHumanName}
+          key={job.metadata.navID}
+          eventKey={job.metadata.navID}
+          title={job.metadata.modelHumanName}
         >
-          <InvestJob
-            navID={job.navID}
+          <InvestTab
+            job={job}
             investExe={investExe}
-            modelRunName={job.modelRunName}
-            modelHumanName={job.modelHumanName}
-            argsInitValues={job.argsValues}
-            logfile={job.logfile}
-            jobStatus={job.status}
             investSettings={investSettings}
             saveJob={this.saveJob}
           />
@@ -249,6 +199,7 @@ export default class App extends React.Component {
             className="mx-3"
             saveSettings={this.saveSettings}
             investSettings={investSettings}
+            clearStorage={this.clearRecentJobs}
           />
         </Navbar>
         <TabContent id="top-tab-content">
@@ -268,5 +219,4 @@ export default class App extends React.Component {
 
 App.propTypes = {
   investExe: PropTypes.string.isRequired,
-  jobDatabase: PropTypes.string,
 };

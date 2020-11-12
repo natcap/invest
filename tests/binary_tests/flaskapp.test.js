@@ -1,76 +1,74 @@
 import fs from 'fs';
 import readline from 'readline';
-import fetch from 'node-fetch';
 import * as server_requests from '../../src/server_requests';
 import { findInvestBinaries, createPythonFlaskProcess } from '../../src/main_helpers';
 import { argsDictFromObject } from '../../src/utils';
 
-// If SERVER path is configured in .env, this appends it to process.env
+// If SERVER is defined in .env, this appends it to global process.env
 const dotenv = require('dotenv');
 dotenv.config();
 
-jest.setTimeout(250000) // This test is slow in CI
+jest.setTimeout(250000); // This test is slow in CI
 
-
-const isDevMode = true // otherwise need to mock process.resourcesPath
+const isDevMode = true; // otherwise need to mock process.resourcesPath
 beforeAll(async () => {
-	const binaries = await findInvestBinaries(isDevMode);
+  const binaries = await findInvestBinaries(isDevMode);
   createPythonFlaskProcess(binaries.server, isDevMode);
   // In the CI the flask app takes more than 10x as long to startup.
   // Especially so on macos.
   // So, allowing many retries, especially because the error
   // that is thrown if all retries fail is swallowed by jest
   // and tests try to run anyway.
-  await server_requests.getFlaskIsReady({retries: 201})
-})
+  await server_requests.getFlaskIsReady({ retries: 201 });
+});
 
 afterAll(async () => {
-  await server_requests.shutdownPythonProcess()
-})
+  await server_requests.shutdownPythonProcess();
+});
 
 test('invest list items have expected properties', async () => {
   const investList = await server_requests.getInvestList();
   Object.values(investList).forEach((item) => {
-    expect(item.internal_name !== undefined).toBe(true)
-  })
-})
+    expect(item.internal_name).not.toBeUndefined();
+  });
+});
 
 test('fetch invest model args spec', async () => {
   const spec = await server_requests.getSpec('carbon');
-  const expectedKeys = ['model_name', 'module', 'userguide_html', 'args']
+  const expectedKeys = ['model_name', 'module', 'userguide_html', 'args'];
   expectedKeys.forEach((key) => {
-    expect(spec[key] !== undefined).toBe(true)
-  })
-})
+    expect(spec[key]).not.toBeUndefined();
+  });
+});
 
 test('fetch invest validation', async () => {
   const spec = await server_requests.getSpec('carbon');
-   // it's okay to validate even if none of the args have values yet
-  const argsDict = argsDictFromObject(spec.args)
-  const payload = { 
+  // it's okay to validate even if none of the args have values yet
+  const argsDict = argsDictFromObject(spec.args);
+  const payload = {
     model_module: spec.module,
-    args: JSON.stringify(argsDict)
+    args: JSON.stringify(argsDict),
   };
-  
+
   const results = await server_requests.fetchValidation(payload);
   // There's always an array of arrays, where each child array has
   // two elements: 1) an array of invest arg keys, 2) string message
-  expect(results[0].length).toBe(2)
-})
+  expect(results[0]).toHaveLength(2);
+});
 
 test('write parameters to file and parse them from file', async () => {
   const spec = await server_requests.getSpec('carbon');
   const argsDict = argsDictFromObject(spec.args);
   const filepath = 'tests/data/foo.json';
-  const payload = { 
+  const payload = {
     parameterSetPath: filepath,
     moduleName: spec.module,
     args: JSON.stringify(argsDict),
-    relativePaths: true
+    relativePaths: true,
   };
-  
+
   // First test the data is written
-  const _ = await server_requests.writeParametersToFile(payload);
+  await server_requests.writeParametersToFile(payload);
   const data = JSON.parse(fs.readFileSync(filepath));
   const expectedKeys = [
     'args',
@@ -78,12 +76,11 @@ test('write parameters to file and parse them from file', async () => {
     'model_name'
   ];
   expectedKeys.forEach((key) => {
-    expect(data[key] !== undefined).toBe(true)
-  })
+    expect(data[key]).not.toBeUndefined();
+  });
 
   // Second test the datastack is read and parsed
   const data2 = await server_requests.fetchDatastackFromFile(filepath);
-  console.log(data2)
   const expectedKeys2 = [
     'type',
     'args',
@@ -93,32 +90,32 @@ test('write parameters to file and parse them from file', async () => {
     'model_human_name',
   ];
   expectedKeys2.forEach((key) => {
-    expect(data2[key] !== undefined).toBe(true)
-  })
-
-  fs.unlinkSync(filepath)
-})
+    expect(data2[key]).not.toBeUndefined();
+  });
+  fs.unlinkSync(filepath);
+});
 
 test('write parameters to python script', async () => {
-  const modelName = 'carbon' // as appearing in `invest list`
+  const modelName = 'carbon'; // as appearing in `invest list`
   const spec = await server_requests.getSpec(modelName);
   const argsDict = argsDictFromObject(spec.args);
   const filepath = 'tests/data/foo.py';
-  const payload = { 
+  const payload = {
     filepath: filepath,
     modelname: modelName,
     pyname: spec.module,
     args: JSON.stringify(argsDict),
   };
-  const _ = await server_requests.saveToPython(payload);
-  
+  await server_requests.saveToPython(payload);
+
   const file = readline.createInterface({
     input: fs.createReadStream(filepath),
-    crlfDelay: Infinity
-  })
+    crlfDelay: Infinity,
+  });
+  // eslint-disable-next-line
   for await (const line of file) {
-    expect(`${line}`).toBe('# coding=UTF-8')
-    break
+    expect(`${line}`).toBe('# coding=UTF-8');
+    break;
   }
-  fs.unlinkSync(filepath)
-})
+  fs.unlinkSync(filepath);
+});

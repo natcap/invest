@@ -14,7 +14,6 @@ const react = _interopRequireDefault(require('react'));
 const reactDom = _interopRequireDefault(require('react-dom'));
 
 const app = require('./app');
-const { fileRegistry } = require('./constants');
 
 // Create a right-click menu
 // TODO: Not sure if Inspect Element should be available in production
@@ -39,7 +38,6 @@ const render = async function render(investExe) {
   reactDom.default.render(
     react.default.createElement(
       app.default, {
-        jobDatabase: fileRegistry.JOBS_DATABASE,
         investExe: investExe,
       }
     ),
