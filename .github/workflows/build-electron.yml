@@ -112,15 +112,15 @@ jobs:
 
     - name: Run electron-builder on macOS
       if: matrix.os == 'macos-latest'
-      run: npx --no-install electron-builder --mac ${args}
+      run: npx --no-install electron-builder --mac -c.extraMetadata.main=build/main.js
 
     - name: Run electron-builder on windows
       if: matrix.os == 'windows-latest'
-      run: npx --no-install electron-builder --windows ${args}
+      run: npx --no-install electron-builder --windows -c.extraMetadata.main=build/main.js
 
     - name: Run electron-builder on ubuntu
       if: matrix.os == 'ubuntu-latest'
-      run: npx --no-install electron-builder --linux ${args}
+      run: npx --no-install electron-builder --linux -c.extraMetadata.main=build/main.js
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
