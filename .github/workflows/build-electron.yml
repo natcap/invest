@@ -112,14 +112,20 @@ jobs:
 
     - name: Run electron-builder on macOS
       if: matrix.os == 'macos-latest'
+      env:
+        GH_TOKEN: env.GITHUB_TOKEN
       run: npx --no-install electron-builder --mac -c.extraMetadata.main=build/main.js
 
     - name: Run electron-builder on windows
       if: matrix.os == 'windows-latest'
+      env:
+        GH_TOKEN: env.GITHUB_TOKEN
       run: npx --no-install electron-builder --windows -c.extraMetadata.main=build/main.js
 
     - name: Run electron-builder on ubuntu
       if: matrix.os == 'ubuntu-latest'
+      env:
+        GH_TOKEN: env.GITHUB_TOKEN
       run: npx --no-install electron-builder --linux -c.extraMetadata.main=build/main.js
 
       # Also run all tests on the build dir code?
