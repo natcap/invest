@@ -122,13 +122,13 @@ jobs:
       if: matrix.os == 'windows-latest'
       env:
         GH_TOKEN: env.GITHUB_TOKEN
-      run: npx --no-install electron-builder --windows -c.extraMetadata.foo=
+      run: npx --no-install electron-builder --windows -c.extraMetadata.foo=bar
 
     - name: Run electron-builder on ubuntu
       if: matrix.os == 'ubuntu-latest'
       env:
         GH_TOKEN: env.GITHUB_TOKEN
-      run: npx --no-install electron-builder --linux -c.extraMetadata.main=build/main.js
+      run: npx --no-install electron-builder --linux -c.extraMetadata.foo=bar
 
       # Also run all tests on the build dir code?
     - name: Test flask app binaries
