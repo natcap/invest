@@ -58,7 +58,7 @@ jobs:
 
               # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
             - name: Restore pip cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: ~\AppData\Local\pip\Cache
                   key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
@@ -68,7 +68,7 @@ jobs:
             # Test data is way, way faster by contrast (on the order of a few
             # seconds to archive).
             - name: Restore git-LFS test data cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
@@ -231,7 +231,7 @@ jobs:
                   fetch-depth: 0
 
             - name: Restore pip cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: ~\AppData\Local\pip\Cache
                   key: windows-py37-pipcache-sampledata-${{ hashfiles('requirements.txt') }}
@@ -279,13 +279,13 @@ jobs:
 
               # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
             - name: Restore pip cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: ~\AppData\Local\pip\Cache
                   key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-ui-tests
 
             - name: Restore git-LFS test data cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
