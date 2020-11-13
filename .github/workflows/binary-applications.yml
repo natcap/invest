@@ -48,7 +48,7 @@ jobs:
                   key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v2
               with:
                   activate-environment: winbin-env
                   auto-update-conda: true
@@ -192,7 +192,7 @@ jobs:
                   key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v2
               with:
                   activate-environment: macbin-env
                   auto-update-conda: true
