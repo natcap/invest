@@ -112,6 +112,21 @@ jobs:
     - name: Run the build script
       run: npm run build
 
+    - name: Download code-signing certificate, set env vars
+      # electron-builder code signing only supported on macos and windows
+      if: matrix.os == 'macos-latest' || matrix.os == 'windows-latest' 
+      run: |
+        P12_FILENAME=Stanford-natcap-code-signing-2019-03-07.p12
+        CERTIFICATE_PATH='~/Downloads/$(P12_FILE)'
+        gsutil cp 'gs://stanford_cert/$(P12_FILE)' $CERTIFICATE_PATH
+
+        # all these variables are used by electron-builder
+        echo "GH_TOKEN=${{ env.GITHUB_TOKEN }}" >> $GITHUB_ENV
+        echo "CSC_LINK=$CERTIFICATE_PATH" >> $GITHUB_ENV
+        echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
+        echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
+        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
+
     - name: Run electron-builder on macOS
       if: matrix.os == 'macos-latest'
       env:
