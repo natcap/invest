@@ -112,6 +112,14 @@ jobs:
     - name: Run the build script
       run: npm run build
 
+    - name: Set up GCP
+      # Secrets not available in PR so don't use GCP.
+      if: github.event_name != 'pull_request'
+      uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      with:
+          version: '281.0.0'
+          service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
     - name: Download code-signing certificate, set env vars
       # electron-builder code signing only supported on macos and windows
       if: matrix.os == 'macos-latest' || matrix.os == 'windows-latest' 
