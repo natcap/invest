@@ -42,13 +42,13 @@ jobs:
               run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Restore pip cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: ~\AppData\Local\pip\Cache
                   key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v2
               with:
                   activate-environment: winbin-env
                   auto-update-conda: true
@@ -186,13 +186,13 @@ jobs:
                   brew install pandoc
 
             - name: Restore conda cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: ~/opt/anaconda3
                   key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v2
               with:
                   activate-environment: macbin-env
                   auto-update-conda: true
