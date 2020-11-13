@@ -141,7 +141,7 @@ jobs:
         run: npm run test-electron-app
     
     - name: Upload installer artifacts
-      uses: actions/upload-artifact@v2-preview
+      uses: actions/upload-artifact@v2.2.1
       if: ${{ always() }}
       with:
         name: invest-workbench-${{ matrix.os }}
