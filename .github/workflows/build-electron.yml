@@ -126,7 +126,7 @@ jobs:
       run: |
         P12_FILE=Stanford-natcap-code-signing-2019-03-07.p12
         CERTIFICATE_PATH='~/Downloads/$(P12_FILE)'
-        gsutil cp 'gs://stanford_cert/$(P12_FILE)' $CERTIFICATE_PATH
+        gsutil cp gs://stanford_cert/$(P12_FILE) $CERTIFICATE_PATH
 
         # all these variables are used by electron-builder
         echo "GH_TOKEN=${{ env.GITHUB_TOKEN }}" >> $GITHUB_ENV
