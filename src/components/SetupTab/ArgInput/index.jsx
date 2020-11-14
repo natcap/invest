@@ -77,8 +77,9 @@ export default class ArgInput extends React.PureComponent {
                 placeholder={typeLabel}
                 value={value || ''} // empty string is handled better than `undefined`
                 onChange={handleChange}
+                onFocus={handleChange}
                 isValid={touched && isValid}
-                isInvalid={touched && validationMessage}
+                isInvalid={validationMessage}
                 disabled={ui_option === 'disable'}
               />
               {
@@ -98,11 +99,17 @@ export default class ArgInput extends React.PureComponent {
                   )
                   : <React.Fragment />
               }
-              <Feedback
-                argkey={argkey}
-                argtype={argSpec.type}
-                message={validationMessage}
-              />
+              {
+                (validationMessage && touched)
+                  ? (
+                    <Feedback
+                      argkey={argkey}
+                      argtype={argSpec.type}
+                      message={validationMessage}
+                    />
+                  )
+                  : <React.Fragment />
+              }
             </InputGroup>
           </Col>
         </Form.Group>
@@ -160,17 +167,24 @@ export default class ArgInput extends React.PureComponent {
                 name={argkey}
                 value={value}
                 onChange={handleChange}
+                onFocus={handleChange}
                 disabled={ui_option === 'disable'}
               >
                 {argSpec.validation_options.options.map((opt) =>
                   <option value={opt} key={opt}>{opt}</option>
                 )}
               </Form.Control>
-              <Feedback
-                argkey={argkey}
-                argtype={argSpec.type}
-                message={validationMessage}
-              />
+              {
+                (validationMessage && touched)
+                  ? (
+                    <Feedback
+                      argkey={argkey}
+                      argtype={argSpec.type}
+                      message={validationMessage}
+                    />
+                  )
+                  : <React.Fragment />
+              }
             </InputGroup>
           </Col>
         </Form.Group>

@@ -1,5 +1,5 @@
-import React from 'react';
 import { remote } from 'electron';
+import React from 'react';
 import {
   createEvent, fireEvent, render, waitFor
 } from '@testing-library/react';
@@ -39,140 +39,63 @@ function renderSetupFromSpec(spec, uiSpec = {}) {
 }
 
 describe('Arguments form input types', () => {
+  const validationMessage = 'invalid because';
+  let spec;
+
   afterEach(() => {
     jest.resetAllMocks();
   });
 
-  const validationMessage = 'invalid because';
-
-  test('expect a text input for a directory', async () => {
-    const spec = {
+  beforeEach(() => {
+    spec = {
       args: {
         arg: {
-          name: 'Workspace',
-          type: 'directory',
-          about: 'this is a workspace',
+          name: 'foo',
+          type: undefined, // varies by test
+          required: undefined,
+          about: 'this is about foo',
         },
       },
     };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), validationMessage]]
     );
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'text');
-    expect(await findByText('Browse')).toBeInTheDocument();
-    fireEvent.change(input, { target: { value: 'foo' } });
-    await waitFor(() => {
-      expect(input).toHaveValue('foo');
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
-    });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
+  });
 
-    // Expect the info dialog contains the about text, when clicked
-    fireEvent.click(await findByText('i'));
-    expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
+  test('expect a text input for a directory', async () => {
+    spec.args.arg.type = 'directory';
+    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
+
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    expect(await findByText('Browse')).toBeInTheDocument();
+    expect(input).toHaveAttribute('type', 'text');
   });
 
   test('expect a text input for a csv', async () => {
-    /** Also testing the browse button functionality */
-
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'csv',
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), validationMessage]]
-    );
+    spec.args.arg.type = 'csv';
     const { findByText, findByLabelText } = renderSetupFromSpec(spec);
+
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
     expect(input).toHaveAttribute('type', 'text');
     expect(await findByText('Browse')).toBeInTheDocument();
-    fireEvent.change(input, { target: { value: 'foo' } });
-    await waitFor(() => {
-      expect(input).toHaveValue('foo');
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
-    });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
-
-    // Browsing for a file
-    const filepath = 'grilled_cheese.csv';
-    let mockDialogData = { filePaths: [filepath] };
-    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
-    fireEvent.click(await findByText('Browse'));
-    await waitFor(() => {
-      expect(input).toHaveValue(filepath);
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
-    });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
-
-    // Now browse again, but this time cancel it and expect the previous value
-    mockDialogData = { filePaths: [] }; // empty array is a mocked 'Cancel'
-    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
-    fireEvent.click(await findByText('Browse'));
-    await waitFor(() => {
-      expect(input).toHaveValue(filepath);
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
-    });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
   });
 
   test('expect a text input for a vector', async () => {
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'vector',
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), validationMessage]]
-    );
+    spec.args.arg.type = 'vector';
     const { findByText, findByLabelText } = renderSetupFromSpec(spec);
+
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
     expect(input).toHaveAttribute('type', 'text');
     expect(await findByText('Browse')).toBeInTheDocument();
-    fireEvent.change(input, { target: { value: 'foo' } });
-    await waitFor(() => {
-      expect(input).toHaveValue('foo');
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
-    });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
   });
 
   test('expect a text input for a raster', async () => {
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'raster',
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), validationMessage]]
-    );
+    spec.args.arg.type = 'raster';
     const { findByText, findByLabelText } = renderSetupFromSpec(spec);
+
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
     expect(input).toHaveAttribute('type', 'text');
     expect(await findByText('Browse')).toBeInTheDocument();
-    fireEvent.change(input, { target: { value: 'foo' } });
-    await waitFor(() => {
-      expect(input).toHaveValue('foo');
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
-    });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
   });
 
   test('expect a text input for a freestyle_string', async () => {
@@ -182,60 +105,21 @@ describe('Arguments form input types', () => {
     // a PureComponent for ArgsForm. PureComponents check for shallow-equality
     // of props and avoid re-rendering if equal. This test alone maintained
     // shallow-equality in a case where we definitely do need to re-render.
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'freestyle_string',
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue([]);
+    spec.args.arg.type = 'freestyle_string';
     const { findByLabelText } = renderSetupFromSpec(spec);
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
     expect(input).toHaveAttribute('type', 'text');
-    fireEvent.change(input, { target: { value: 'foo' } });
-    await waitFor(() => {
-      expect(input).toHaveValue('foo');
-      // Not really possible to invalidate a freestyle_string
-      expect(input.classList.contains('is-invalid')).toBeFalsy();
-    });
   });
 
   test('expect a text input for a number', async () => {
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'number',
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), validationMessage]]
-    );
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
+    spec.args.arg.type = 'number';
+    const { findByLabelText } = renderSetupFromSpec(spec);
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
     expect(input).toHaveAttribute('type', 'text');
-    fireEvent.change(input, { target: { value: 'foo' } });
-    await waitFor(() => {
-      expect(input).toHaveValue('foo');
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
-    });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
   });
 
   test('expect a radio button for a boolean', async () => {
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'boolean',
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue([]);
+    spec.args.arg.type = 'boolean';
     const { findByLabelText } = renderSetupFromSpec(spec);
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
     expect(input).toHaveAttribute('type', 'radio');
@@ -243,22 +127,135 @@ describe('Arguments form input types', () => {
   });
 
   test('expect a select input for an option_string', async () => {
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'option_string',
-          validation_options: {
-            options: ['a', 'b'],
-          },
-        },
-      },
+    spec.args.arg.type = 'option_string';
+    spec.args.arg.validation_options = {
+      options: ['a', 'b']
     };
-    fetchValidation.mockResolvedValue([]);
     const { findByLabelText } = renderSetupFromSpec(spec);
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
+  });
+
+  test('expect the info dialog contains text about input', async () => {
+    spec.args.arg.type = 'directory';
+    const { findByText } = renderSetupFromSpec(spec);
+    fireEvent.click(await findByText('i'));
+    expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
+  });
+});
+
+describe('Arguments form interactions', () => {
+  const validationMessage = 'invalid because';
+  let spec;
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  beforeEach(() => {
+    spec = {
+      args: {
+        arg: {
+          name: 'foo',
+          type: undefined, // varies by test
+          required: undefined,
+          about: 'this is about foo',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), validationMessage]]
+    );
+  });
+
+  test('Browse button populates an input', async () => {
+    spec.args.arg.type = 'csv';
+    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
+
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    expect(input).toHaveAttribute('type', 'text');
+    expect(await findByText('Browse')).toBeInTheDocument();
+
+    // Browsing for a file
+    const filepath = 'grilled_cheese.csv';
+    let mockDialogData = { filePaths: [filepath] };
+    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
+    fireEvent.click(await findByText('Browse'));
+    await waitFor(() => {
+      expect(input).toHaveValue(filepath);
+    });
+
+    // Browse again, but cancel it and expect the previous value
+    mockDialogData = { filePaths: [] }; // empty array is a mocked 'Cancel'
+    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
+    fireEvent.click(await findByText('Browse'));
+    await waitFor(() => {
+      expect(input).toHaveValue(filepath);
+    });
+  });
+
+  test('Change value & get feedback on a required input', async () => {
+    spec.args.arg.type = 'directory';
+    spec.args.arg.required = true;
+    const { findByText, findByLabelText, queryByText } = renderSetupFromSpec(spec);
+
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+
+    // A required input with no value is invalid (red X), but
+    // feedback does not display until the input has been touched.
+    expect(input).toHaveClass('is-invalid');
+    expect(queryByText(RegExp(validationMessage))).toBeNull();
+
+    fireEvent.change(input, { target: { value: 'foo' } });
+    await waitFor(() => {
+      expect(input).toHaveValue('foo');
+      expect(input).toHaveClass('is-invalid');
+    });
+    expect(await findByText(RegExp(validationMessage)))
+      .toBeInTheDocument();
+
+    fetchValidation.mockResolvedValue([]); // now make input valid
+    fireEvent.change(input, { target: { value: 'mydir' } });
+    await waitFor(() => {
+      expect(input).toHaveClass('is-valid');
+      expect(queryByText(RegExp(validationMessage))).toBeNull();
+    });
+  });
+
+  test('Focus on required input & get validation feedback', async () => {
+    spec.args.arg.type = 'csv';
+    spec.args.arg.required = true;
+    const { findByText, findByLabelText, queryByText } = renderSetupFromSpec(spec);
+
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    expect(input).toHaveClass('is-invalid');
+    expect(queryByText(RegExp(validationMessage))).toBeNull();
+
+    await fireEvent.focus(input);
+    await waitFor(() => {
+      expect(input).toHaveClass('is-invalid');
+    });
+    expect(await findByText(RegExp(validationMessage)))
+      .toBeInTheDocument();
+  });
+
+  test('Focus on optional input & get valid display', async () => {
+    spec.args.arg.type = 'csv';
+    spec.args.arg.required = false;
+    fetchValidation.mockResolvedValue([]);
+    const { findByLabelText } = renderSetupFromSpec(spec);
+
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+
+    // An optional input with no value is valid, but green check
+    // does not display until the input has been touched.
+    expect(input).not.toHaveClass('is-valid', 'is-invalid');
+
+    await fireEvent.focus(input);
+    await waitFor(() => {
+      expect(input).toHaveClass('is-valid');
+    });
   });
 });
 
@@ -271,7 +268,7 @@ describe('UI spec functionality', () => {
     jest.resetAllMocks();
   });
 
-  test('test a UI spec with a boolean controller arg', async () => {
+  test('A UI spec with a boolean controller arg', async () => {
     const spec = {
       module: 'natcap.invest.dummy',
       args: {
@@ -402,7 +399,7 @@ describe('UI spec functionality', () => {
     });
   });
 
-  test('test grouping and sorting of args', async () => {
+  test('Grouping and sorting of args', async () => {
     const spec = {
       module: 'natcap.invest.dummy',
       args: {
@@ -464,7 +461,7 @@ describe('UI spec functionality', () => {
   });
 });
 
-test('SetupTab: test validation payload is well-formatted', async () => {
+test('Validation payload is well-formatted', async () => {
   const spec = {
     args: {
       a: {
@@ -494,7 +491,6 @@ test('SetupTab: test validation payload is well-formatted', async () => {
     const payload = fetchValidation.mock.results[0].value;
     expectedKeys.forEach((key) => {
       expect(Object.keys(payload)).toContain(key);
-      // expect(Object.keys(payload).includes(key)).toBe(true);
     });
   });
   fetchValidation.mockReset();
