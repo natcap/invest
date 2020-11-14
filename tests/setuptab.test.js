@@ -62,60 +62,26 @@ describe('Arguments form input types', () => {
     );
   });
 
-  test('expect a text input for a directory', async () => {
-    spec.args.arg.type = 'directory';
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
+  test('expect a text input and browse button for file inputs', () => {
+    const types = ['directory', 'csv', 'vector', 'raster'];
+    types.forEach(async (type) => {
+      spec.args.arg.type = type;
+      const { findByText, findByLabelText } = renderSetupFromSpec(spec);
 
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(await findByText('Browse')).toBeInTheDocument();
-    expect(input).toHaveAttribute('type', 'text');
+      const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+      expect(input).toHaveAttribute('type', 'text');
+      expect(await findByText('Browse')).toBeInTheDocument();
+    });
   });
 
-  test('expect a text input for a csv', async () => {
-    spec.args.arg.type = 'csv';
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
-
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'text');
-    expect(await findByText('Browse')).toBeInTheDocument();
-  });
-
-  test('expect a text input for a vector', async () => {
-    spec.args.arg.type = 'vector';
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
-
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'text');
-    expect(await findByText('Browse')).toBeInTheDocument();
-  });
-
-  test('expect a text input for a raster', async () => {
-    spec.args.arg.type = 'raster';
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
-
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'text');
-    expect(await findByText('Browse')).toBeInTheDocument();
-  });
-
-  test('expect a text input for a freestyle_string', async () => {
-    // This turned out to be an important test that caught an unrelated bug
-    // that all other tests missed -- changing only the `value` of the input
-    // while not changing the validation state revealed the problem of using
-    // a PureComponent for ArgsForm. PureComponents check for shallow-equality
-    // of props and avoid re-rendering if equal. This test alone maintained
-    // shallow-equality in a case where we definitely do need to re-render.
-    spec.args.arg.type = 'freestyle_string';
-    const { findByLabelText } = renderSetupFromSpec(spec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'text');
-  });
-
-  test('expect a text input for a number', async () => {
-    spec.args.arg.type = 'number';
-    const { findByLabelText } = renderSetupFromSpec(spec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'text');
+  test('expect a text input for a freestyle_string or number', () => {
+    const types = ['freestyle_string', 'number'];
+    types.forEach(async (type) => {
+      spec.args.arg.type = type;
+      const { findByLabelText } = renderSetupFromSpec(spec);
+      const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+      expect(input).toHaveAttribute('type', 'text');
+    });
   });
 
   test('expect a radio button for a boolean', async () => {
@@ -159,7 +125,7 @@ describe('Arguments form interactions', () => {
         arg: {
           name: 'foo',
           type: undefined, // varies by test
-          required: undefined,
+          required: undefined, // varies by test
           about: 'this is about foo',
         },
       },
