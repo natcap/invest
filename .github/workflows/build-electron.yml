@@ -136,7 +136,7 @@ jobs:
         echo "CSC_LINK=$CERTIFICATE_PATH" >> $GITHUB_ENV
         echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
         echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
-        # echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
+        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
 
     - name: Run electron-builder on macOS
       if: matrix.os == 'macos-latest'
