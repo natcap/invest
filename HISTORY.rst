@@ -89,6 +89,8 @@ Unreleased Changes (3.9)
       the suffix if any, and its one layer now is renamed from
       'missing_geomorphology' to be the same as the file name
       (including suffix).
+    * Fixed a memory bug that occurred during shore point interpolation when
+      dealing with very large landmass vectors.
 * Delineateit
     * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
       'verified_geometries' to be the same as the file name (including suffix).
