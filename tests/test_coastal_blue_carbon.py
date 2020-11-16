@@ -551,6 +551,62 @@ class TestCBC2(unittest.TestCase):
         finally:
             raster = None
 
+    def test_model_one_transition_no_analysis_year(self):
+        """CBC: Test the model on one transition with no analysis year.
+
+        This test came up while looking into an issue reported on the forums:
+        https://community.naturalcapitalproject.org/t/coastal-blue-carbon-negative-carbon-stocks/780/12
+        """
+        args = TestCBC2._create_model_args(self.workspace_dir)
+        args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
+
+        prior_snapshots = coastal_blue_carbon._extract_snapshots_from_table(
+            args['landcover_snapshot_csv'])
+        baseline_year = min(prior_snapshots.keys())
+        baseline_raster = prior_snapshots[baseline_year]
+        with open(args['landcover_snapshot_csv'], 'w') as snapshot_csv:
+            snapshot_csv.write('snapshot_year,raster_path\n')
+            snapshot_csv.write(f'{baseline_year},{baseline_raster}\n')
+            snapshot_csv.write(f'2010,{prior_snapshots[2010]}\n')
+        del args['analysis_year']
+
+        # Use valuation parameters rather than price table.
+        args['use_price_table'] = False
+        args['inflation_rate'] = 4
+        args['price'] = 1.0
+
+        coastal_blue_carbon.execute(args)
+
+        # Check sequestration raster
+        expected_sequestration_2000_to_2010 = numpy.array(
+            [[83.5, 0.]], dtype=numpy.float32)
+        raster_path = os.path.join(
+            args['workspace_dir'], 'output',
+            ('total-net-carbon-sequestration-between-'
+                '2000-and-2010.tif'))
+        try:
+            raster= gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_sequestration_2000_to_2010)
+        finally:
+            raster = None
+
+        # Check valuation raster
+        # Discount rate here matches the inflation rate, so the value of the 10
+        # years' accumulation is just 1*(10 years of accumulation).
+        expected_net_present_value_at_2010 = numpy.array(
+            [[835.0, 0.]], dtype=numpy.float32)
+        raster_path = os.path.join(
+            args['workspace_dir'], 'output', 'net-present-value-at-2010.tif')
+        try:
+            raster = gdal.OpenEx(raster_path)
+            numpy.testing.assert_allclose(
+                raster.ReadAsArray(),
+                expected_net_present_value_at_2010, rtol=1e-6)
+        finally:
+            raster = None
+
     def test_model(self):
         """CBC: Test the model's execution."""
         args = TestCBC2._create_model_args(self.workspace_dir)
