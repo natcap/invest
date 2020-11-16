@@ -1,7 +1,7 @@
 import { remote } from 'electron';
 import React from 'react';
 import {
-  createEvent, fireEvent, render, waitFor
+  createEvent, fireEvent, render, waitFor, within
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
@@ -458,6 +458,56 @@ test('Validation payload is well-formatted', async () => {
     expectedKeys.forEach((key) => {
       expect(Object.keys(payload)).toContain(key);
     });
+  });
+  fetchValidation.mockReset();
+});
+
+test('Check spatial overlap feedback is well-formatted', async () => {
+  const spec = {
+    args: {
+      vector: {
+        name: 'vvvvvv',
+        type: 'vector',
+      },
+      raster: {
+        name: 'rrrrrr',
+        type: 'raster',
+      },
+    },
+  };
+  const vectorValue = './vector.shp';
+  const expectedVal1 = '-84.9';
+  const vectorBox = `[${expectedVal1}, 19.1, -69.1, 29.5]`;
+  const rasterValue = './raster.tif';
+  const expectedVal2 = '-79.0198012081401';
+  const rasterBox = `[${expectedVal2}, 26.481559513537064, -78.37173806200593, 27.268061760228512]`;
+  const message = `Bounding boxes do not intersect: ${vectorValue}: ${vectorBox} | ${rasterValue}: ${rasterBox}`;
+
+  fetchValidation.mockResolvedValue([[Object.keys(spec.args), message]]);
+
+  const { findByLabelText } = renderSetupFromSpec(spec);
+  const vectorInput = await findByLabelText(spec.args.vector.name);
+  const rasterInput = await findByLabelText(spec.args.raster.name);
+
+  fireEvent.change(vectorInput, { target: { value: vectorValue } });
+  fireEvent.change(rasterInput, { target: { value: rasterValue } });
+
+  // Feedback on each input should only include the bounding box
+  // of that single input.
+  const vectorGroup = vectorInput.closest('div');
+  await waitFor(() => {
+    expect(within(vectorGroup).getByText(RegExp(expectedVal1)))
+      .toBeInTheDocument();
+    expect(within(vectorGroup).queryByText(RegExp(expectedVal2)))
+      .toBeNull();
+  });
+
+  const rasterGroup = rasterInput.closest('div');
+  await waitFor(() => {
+    expect(within(rasterGroup).getByText(RegExp(expectedVal2)))
+      .toBeInTheDocument();
+    expect(within(rasterGroup).queryByText(RegExp(expectedVal1)))
+      .toBeNull();
   });
   fetchValidation.mockReset();
 });
