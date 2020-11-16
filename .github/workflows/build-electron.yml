@@ -107,14 +107,17 @@ jobs:
         python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec
 
     - name: NPM Install
+      shell: bash -l {0} 
       run: npm install
 
     - name: Run the build script
+      shell: bash -l {0} 
       run: npm run build
 
     - name: Set up GCP
       # Secrets not available in PR so don't use GCP.
       if: github.event_name != 'pull_request'
+      shell: bash -l {0} 
       uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
       with:
           version: '281.0.0'
@@ -122,7 +125,8 @@ jobs:
 
     - name: Download code-signing certificate, set env vars
       # electron-builder code signing only supported on macos and windows
-      if: matrix.os == 'macos-latest' || matrix.os == 'windows-latest' 
+      if: matrix.os == 'macos-latest' || matrix.os == 'windows-latest'
+      shell: bash -l {0} 
       run: |
         P12_FILE=Stanford-natcap-code-signing-2019-03-07.p12
         CERTIFICATE_PATH=~/Downloads/$P12_FILE
@@ -137,18 +141,21 @@ jobs:
 
     - name: Run electron-builder on macOS
       if: matrix.os == 'macos-latest'
+      shell: bash -l {0}
       env:
         GH_TOKEN: env.GITHUB_TOKEN
       run: npx --no-install electron-builder build --mac -c.extraMetadata.main=build/main.js --publish never
 
     - name: Run electron-builder on windows
       if: matrix.os == 'windows-latest'
+      shell: bash -l {0} 
       env:
         GH_TOKEN: env.GITHUB_TOKEN
       run: npx --no-install electron-builder build --windows -c.extraMetadata.main=build/main.js --publish never
 
     - name: Run electron-builder on ubuntu
       if: matrix.os == 'ubuntu-latest'
+      shell: bash -l {0} 
       env:
         GH_TOKEN: env.GITHUB_TOKEN
       run: npx --no-install electron-builder build --linux -c.extraMetadata.main=build/main.js --publish never
