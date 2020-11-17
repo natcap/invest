@@ -114,7 +114,6 @@ describe('Arguments form input types', () => {
     spec.args.arg.type = 'directory';
     const { findByText } = renderSetupFromSpec(spec);
     fireEvent.click(await findByText('i'));
-    // expect(true).toBe(true);
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
   });
 });
@@ -436,10 +435,9 @@ describe('UI spec functionality', () => {
 });
 
 describe('Misc form validation stuff', () => {
-
   afterEach(() => {
     fetchValidation.mockReset();
-  })
+  });
 
   test('Validation payload is well-formatted', async () => {
     const spec = {
