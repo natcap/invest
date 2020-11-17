@@ -300,6 +300,7 @@ def execute(args):
         _determine_valid_viewpoints,
         args=(file_registry['clipped_dem'],
               file_registry['structures_clipped']),
+        store_result=True,
         dependent_task_list=[clipped_viewpoints_task, clipped_dem_task],
         task_name='determine_valid_viewpoints')
 

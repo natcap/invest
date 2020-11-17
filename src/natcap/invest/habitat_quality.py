@@ -346,6 +346,7 @@ def execute(args):
                     threat_values_task = task_graph.add_task(
                          func=_raster_values_in_bounds,
                          args=((threat_path, 1), 0.0, 1.0),
+                         store_result=True,
                          task_name=f'check_threat_values{lulc_key}_{threat}')
                     threat_values_task_lookup[threat_values_task.task_name] = {
                         'task': threat_values_task,

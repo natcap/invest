@@ -58,7 +58,7 @@ jobs:
 
               # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
             - name: Restore pip cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: ~\AppData\Local\pip\Cache
                   key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
@@ -68,13 +68,13 @@ jobs:
             # Test data is way, way faster by contrast (on the order of a few
             # seconds to archive).
             - name: Restore git-LFS test data cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
             - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v2
               with:
                   activate-environment: ${{ matrix.os }}-test-env
                   auto-update-conda: true
@@ -151,7 +151,7 @@ jobs:
               run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v2
               with:
                   activate-environment: source-env
                   auto-update-conda: true
@@ -231,13 +231,13 @@ jobs:
                   fetch-depth: 0
 
             - name: Restore pip cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: ~\AppData\Local\pip\Cache
                   key: windows-py37-pipcache-sampledata-${{ hashfiles('requirements.txt') }}
 
             - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v2
               with:
                   activate-environment: validate-env
                   auto-update-conda: true
@@ -279,19 +279,19 @@ jobs:
 
               # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
             - name: Restore pip cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: ~\AppData\Local\pip\Cache
                   key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-ui-tests
 
             - name: Restore git-LFS test data cache
-              uses: actions/cache@v1
+              uses: actions/cache@v2
               with:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
             - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v1.7.0
+              uses: conda-incubator/setup-miniconda@v2
               with:
                   activate-environment: ui-env
                   auto-update-conda: true

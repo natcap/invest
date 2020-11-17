@@ -63,6 +63,8 @@ Unreleased Changes (3.9)
       reduced to just those needed to install the python package and run tests.
     * Code-sign the macOS distribution, and switch to a DMG distribution format.
     * No longer include the HTML docs or HISTORY.rst in the macOS distribution.
+    * Bumped the ``shapely`` requirements to ``>=1.7.1`` to address a library
+      import issue on Mac OS Big Sur.
 * Coastal Blue Carbon
     * Refactor of Coastal Blue Carbon that implements TaskGraph for task
       management across the model and fixes a wide range of issues with the model
@@ -91,6 +93,8 @@ Unreleased Changes (3.9)
       the suffix if any, and its one layer now is renamed from
       'missing_geomorphology' to be the same as the file name
       (including suffix).
+    * Fixed a memory bug that occurred during shore point interpolation when
+      dealing with very large landmass vectors.
 * Delineateit
     * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
       'verified_geometries' to be the same as the file name (including suffix).
@@ -130,8 +134,13 @@ Unreleased Changes (3.9)
     * Fixing an issue where the LS factor should be capped to an upstream area
       of 333^2 m^2. In previous versions the LS factor was erroneously capped
       to "333" leading to high export spikes in some pixels.
+    * Fixed an issue where sediment deposition progress logging was not
+      progressing linearly.
 * Finfish
     * Fixed a bug where the suffix input was not being used for output paths.
+* Urban Cooling
+    * Split energy savings valuation and work productivity valuation into 
+      separate UI options.
 
 ..
 ..
