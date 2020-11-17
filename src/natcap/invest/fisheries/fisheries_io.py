@@ -469,7 +469,7 @@ def _parse_migration_tables(args, class_list):
             if class_name.lower() in class_list:
                 LOGGER.info('Parsing csv %s for class %s', mig_csv,
                             class_name)
-                with open(mig_csv, 'rU') as param_file:
+                with open(mig_csv, 'r') as param_file:
                     csv_reader = csv.reader(param_file)
                     lines = []
                     for row in csv_reader:
