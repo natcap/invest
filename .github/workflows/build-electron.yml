@@ -38,7 +38,7 @@ jobs:
         sudo apt-get install libspatialindex-dev
 
     - name: Set up conda for non-Windows
-      uses: goanpeca/setup-miniconda@v1.1.2
+      uses: conda-incubator/setup-miniconda@v2
       if: matrix.os != 'windows-latest'
       with:
         activate-environment: invest-env
