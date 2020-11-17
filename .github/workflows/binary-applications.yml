@@ -122,7 +122,7 @@ jobs:
                         GSUTIL="gsutil" \
                         BIN_TO_SIGN="$INSTALLER_BINARY" \
                         SIGNTOOL="$SIGNTOOL_PATH" \
-                        signcode_windows
+                        -s signcode_windows
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
@@ -181,7 +181,6 @@ jobs:
                   brew uninstall python@2.7.17
                   brew untap local/openssl
                   brew untap local/python2
-
                   brew update
                   brew install pandoc
 
@@ -218,7 +217,7 @@ jobs:
               shell: bash -l {0}
               run: |
                   make install
-                  make mac_zipfile
+                  make mac_dmg
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
@@ -228,6 +227,14 @@ jobs:
               with:
                   version: '281.0.0'
                   service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+            - name: Sign DMG
+              if: github.event_name != 'pull_request'
+              shell: bash -l {0}
+              env:
+                CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
+                KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
+              run: make -s codesign_mac
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
@@ -240,6 +247,12 @@ jobs:
               with:
                   name: InVEST-mac-binaries
                   path: dist/InVEST-*-mac.zip
+
+            - name: Upload DMG artifact
+              uses: actions/upload-artifact@v2-preview
+              with:
+                  name: InVEST-dmg
+                  path: dist/InVEST*.dmg
 
     build-sampledata:
         name: Build sampledata archives
