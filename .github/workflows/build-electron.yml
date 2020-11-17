@@ -23,13 +23,13 @@ jobs:
     
     - name: Set env var for invest version
       shell: bash
-      run: echo ::set-env name=INVEST_VERSION::$(jq -r .invest.version package.json)
+      run: echo "INVEST_VERSION=$(jq -r .invest.version package.json)" >> $GITHUB_ENV
 
     - name: Clone natcap/invest
       uses: actions/checkout@v2
       with:
         repository: natcap/invest
-        ref: refs/tags/${{env.INVEST_VERSION}}
+        ref: refs/tags/$INVEST_VERSION
         path: ./invest
 
     - name: Install libspatialindex for ubuntu
