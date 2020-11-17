@@ -435,141 +435,151 @@ describe('UI spec functionality', () => {
   });
 });
 
-test('Validation payload is well-formatted', async () => {
-  const spec = {
-    args: {
-      a: {
-        name: 'afoo',
-        type: 'freestyle_string',
-      },
-      b: {
-        name: 'bfoo',
-        type: 'number',
-      },
-      c: {
-        name: 'cfoo',
-        type: 'csv',
-      },
-    },
-  };
+describe('Misc form validation stuff', () => {
 
-  // Mocking to return the payload so we can assert we always send
-  // correct payload to this endpoint.
-  fetchValidation.mockImplementation(
-    (payload) => payload
-  );
+  afterEach(() => {
+    fetchValidation.mockReset();
+  })
 
-  renderSetupFromSpec(spec);
-  await waitFor(() => {
-    const expectedKeys = ['model_module', 'args'];
-    const payload = fetchValidation.mock.results[0].value;
-    expectedKeys.forEach((key) => {
-      expect(Object.keys(payload)).toContain(key);
+  test('Validation payload is well-formatted', async () => {
+    const spec = {
+      args: {
+        a: {
+          name: 'afoo',
+          type: 'freestyle_string',
+        },
+        b: {
+          name: 'bfoo',
+          type: 'number',
+        },
+        c: {
+          name: 'cfoo',
+          type: 'csv',
+        },
+      },
+    };
+
+    // Mocking to return the payload so we can assert we always send
+    // correct payload to this endpoint.
+    fetchValidation.mockImplementation(
+      (payload) => payload
+    );
+
+    renderSetupFromSpec(spec);
+    await waitFor(() => {
+      const expectedKeys = ['model_module', 'args'];
+      const payload = fetchValidation.mock.results[0].value;
+      expectedKeys.forEach((key) => {
+        expect(Object.keys(payload)).toContain(key);
+      });
     });
   });
-  fetchValidation.mockReset();
+
+  test('Check spatial overlap feedback is well-formatted', async () => {
+    const spec = {
+      args: {
+        vector: {
+          name: 'vvvvvv',
+          type: 'vector',
+        },
+        raster: {
+          name: 'rrrrrr',
+          type: 'raster',
+        },
+      },
+    };
+    const vectorValue = './vector.shp';
+    const expectedVal1 = '-84.9';
+    const vectorBox = `[${expectedVal1}, 19.1, -69.1, 29.5]`;
+    const rasterValue = './raster.tif';
+    const expectedVal2 = '-79.0198012081401';
+    const rasterBox = `[${expectedVal2}, 26.481559513537064, -78.37173806200593, 27.268061760228512]`;
+    const message = `Bounding boxes do not intersect: ${vectorValue}: ${vectorBox} | ${rasterValue}: ${rasterBox}`;
+
+    fetchValidation.mockResolvedValue([[Object.keys(spec.args), message]]);
+
+    const { findByLabelText } = renderSetupFromSpec(spec);
+    const vectorInput = await findByLabelText(spec.args.vector.name);
+    const rasterInput = await findByLabelText(spec.args.raster.name);
+
+    fireEvent.change(vectorInput, { target: { value: vectorValue } });
+    fireEvent.change(rasterInput, { target: { value: rasterValue } });
+
+    // Feedback on each input should only include the bounding box
+    // of that single input.
+    const vectorGroup = vectorInput.closest('div');
+    await waitFor(() => {
+      expect(within(vectorGroup).getByText(RegExp(expectedVal1)))
+        .toBeInTheDocument();
+      expect(within(vectorGroup).queryByText(RegExp(expectedVal2)))
+        .toBeNull();
+    });
+
+    const rasterGroup = rasterInput.closest('div');
+    await waitFor(() => {
+      expect(within(rasterGroup).getByText(RegExp(expectedVal2)))
+        .toBeInTheDocument();
+      expect(within(rasterGroup).queryByText(RegExp(expectedVal1)))
+        .toBeNull();
+    });
+  });
 });
 
-test('Check spatial overlap feedback is well-formatted', async () => {
-  const spec = {
-    args: {
-      vector: {
-        name: 'vvvvvv',
-        type: 'vector',
-      },
-      raster: {
-        name: 'rrrrrr',
-        type: 'raster',
-      },
-    },
-  };
-  const vectorValue = './vector.shp';
-  const expectedVal1 = '-84.9';
-  const vectorBox = `[${expectedVal1}, 19.1, -69.1, 29.5]`;
-  const rasterValue = './raster.tif';
-  const expectedVal2 = '-79.0198012081401';
-  const rasterBox = `[${expectedVal2}, 26.481559513537064, -78.37173806200593, 27.268061760228512]`;
-  const message = `Bounding boxes do not intersect: ${vectorValue}: ${vectorBox} | ${rasterValue}: ${rasterBox}`;
-
-  fetchValidation.mockResolvedValue([[Object.keys(spec.args), message]]);
-
-  const { findByLabelText } = renderSetupFromSpec(spec);
-  const vectorInput = await findByLabelText(spec.args.vector.name);
-  const rasterInput = await findByLabelText(spec.args.raster.name);
-
-  fireEvent.change(vectorInput, { target: { value: vectorValue } });
-  fireEvent.change(rasterInput, { target: { value: rasterValue } });
-
-  // Feedback on each input should only include the bounding box
-  // of that single input.
-  const vectorGroup = vectorInput.closest('div');
-  await waitFor(() => {
-    expect(within(vectorGroup).getByText(RegExp(expectedVal1)))
-      .toBeInTheDocument();
-    expect(within(vectorGroup).queryByText(RegExp(expectedVal2)))
-      .toBeNull();
+describe('Form drag-and-drop', () => {
+  afterEach(() => {
+    fetchValidation.mockReset();
+    fetchDatastackFromFile.mockReset();
   });
 
-  const rasterGroup = rasterInput.closest('div');
-  await waitFor(() => {
-    expect(within(rasterGroup).getByText(RegExp(expectedVal2)))
-      .toBeInTheDocument();
-    expect(within(rasterGroup).queryByText(RegExp(expectedVal1)))
-      .toBeNull();
-  });
-  fetchValidation.mockReset();
-});
-
-test('SetupTab: test dragover of a datastack/logfile', async () => {
-  const spec = {
-    module: `natcap.invest.${MODULE}`,
-    args: {
-      arg1: {
-        name: 'Workspace',
-        type: 'directory',
+  test('Dragover of a datastack/logfile updates all inputs', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
       },
-      arg2: {
-        name: 'AOI',
-        type: 'vector',
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const mockDatastack = {
+      module_name: spec.module,
+      args: {
+        arg1: 'circle',
+        arg2: 'square',
       },
-    },
-  };
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
-  fetchValidation.mockResolvedValue(
-    [[Object.keys(spec.args), 'invalid because']]
-  );
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const setupForm = await findByTestId('setup-form');
 
-  const mockDatastack = {
-    module_name: spec.module,
-    args: {
-      arg1: 'circle',
-      arg2: 'square',
-    },
-  };
-  fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+    // This should work but doesn't due to lack of dataTransfer object in jsdom:
+    // https://github.com/jsdom/jsdom/issues/1568
+    // const dropEvent = new Event('drop',
+    //   { dataTransfer: { files: ['foo.txt'] }
+    // })
+    // fireEvent.drop(setupForm, dropEvent)
 
-  const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
-  const setupForm = await findByTestId('setup-form');
+    // Below is a patch similar to the one noted here:
+    // https://github.com/testing-library/react-testing-library/issues/339
+    const fileDropEvent = createEvent.drop(setupForm);
+    const fileArray = ['foo.txt'];
+    Object.defineProperty(fileDropEvent, 'dataTransfer', {
+      value: { files: fileArray }
+    });
+    fireEvent(setupForm, fileDropEvent);
 
-  // This should work but doesn't due to lack of dataTransfer object in jsdom:
-  // https://github.com/jsdom/jsdom/issues/1568
-  // const dropEvent = new Event('drop',
-  //   { dataTransfer: { files: ['foo.txt'] }
-  // })
-  // fireEvent.drop(setupForm, dropEvent)
-
-  // Below is a patch similar to the one noted here:
-  // https://github.com/testing-library/react-testing-library/issues/339
-  const fileDropEvent = createEvent.drop(setupForm);
-  const fileArray = ['foo.txt'];
-  Object.defineProperty(fileDropEvent, 'dataTransfer', {
-    value: { files: fileArray }
+    expect(await findByLabelText(RegExp(`${spec.args.arg1.name}`)))
+      .toHaveValue(mockDatastack.args.arg1);
+    expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
+      .toHaveValue(mockDatastack.args.arg2);
   });
-  fireEvent(setupForm, fileDropEvent);
-
-  expect(await findByLabelText(RegExp(`${spec.args.arg1.name}`)))
-    .toHaveValue(mockDatastack.args.arg1);
-  expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
-    .toHaveValue(mockDatastack.args.arg2);
-  fetchValidation.mockReset();
 });
