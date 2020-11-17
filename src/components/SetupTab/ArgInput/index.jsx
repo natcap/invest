@@ -9,6 +9,20 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 
+/**
+ * Filter a message that refers to many spatial inputs' bounding boxes.
+ *
+ * Messages are oneline strings with `|` separating each
+ * filename & bounding-box pair. E.g:
+ *
+ *   `Bounding boxes do not intersect:
+ *   ./a.shp: [-84.9, 19.1, -69.15, 29.5] |
+ *   ./b.shp: [-79.0198, 26.481, -78.3717, 27.268] | ...`
+ *
+ * @param {string} message - a string that contains `filepath` e.g:
+ * @param {string} filepath - string preceding the relevant part of `message`
+ * @returns {string} - the filtered and formatted part of the message
+ */
 function filterSpatialOverlapFeedback(message, filepath) {
   const newPrefix = 'Bounding box does not intersect at least one other:';
   const bbox = message.split(`${filepath}:`).pop().split('|')[0];
