@@ -2,8 +2,9 @@ import logging
 import sys
 import subprocess
 import os
-import PySide2
+import platform
 
+import PySide2
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
@@ -15,6 +16,12 @@ except ImportError:
 
 import natcap.invest
 
+if platform.system != 'Windows':
+    # Syslog is only available on linux/unix and mac, so we can only add it
+    # when the launcher is running on those OSes.
+    from logging.handlers import SysLogHandler
+    logging.getLogger().addHandler(SysLogHandler())
+
 LOGGER = logging.getLogger(__name__)
 
 try:
@@ -24,7 +31,7 @@ except AttributeError:
 
 APP = QApplication.instance()
 if APP is None:
-    APP = QApplication(sys.argv)  # pragma: no cover
+    APP = QApplication()  # pragma: no cover
 
 
 class ModelLaunchButton(QtWidgets.QPushButton):
@@ -48,6 +55,7 @@ class ModelLaunchButton(QtWidgets.QPushButton):
 
 
 def main():
+    LOGGER.info('Starting the InVEST launcher')
     launcher_window = QtWidgets.QMainWindow()
     launcher_window.setWindowTitle('InVEST Launcher')
     scroll_area = QtWidgets.QScrollArea()
