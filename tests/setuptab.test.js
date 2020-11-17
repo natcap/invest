@@ -63,31 +63,32 @@ describe('Arguments form input types', () => {
     );
   });
 
-  test('expect a text input and browse button for file inputs', async () => {
-    const types = ['directory', 'csv', 'vector', 'raster'];
-    types.forEach(async (type) => {
-      const spec = { ...baseSpec };
-      spec.args.arg.type = type;
-      const { findByText, findByLabelText } = renderSetupFromSpec(spec);
-
-      const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-      expect(input).toHaveAttribute('type', 'text');
-      expect(await findByText('Browse')).toBeInTheDocument();
-    });
+  test.each([
+    ['directory'],
+    ['csv'],
+    ['vector'],
+    ['raster'],
+  ])('render a text input & browse button for a %s', async (type) => {
+    const spec = { ...baseSpec };
+    spec.args.arg.type = type;
+    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    expect(input).toHaveAttribute('type', 'text');
+    expect(await findByText('Browse')).toBeInTheDocument();
   });
 
-  test('expect a text input for a freestyle_string or number', async () => {
-    const types = ['freestyle_string', 'number'];
-    types.forEach(async (type) => {
-      const spec = { ...baseSpec };
-      spec.args.arg.type = type;
-      const { findByLabelText } = renderSetupFromSpec(spec);
-      const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-      expect(input).toHaveAttribute('type', 'text');
-    });
+  test.each([
+    ['freestyle_string'],
+    ['number'],
+  ])('render a text input for a %s', async (type) => {
+    const spec = { ...baseSpec };
+    spec.args.arg.type = type;
+    const { findByLabelText } = renderSetupFromSpec(spec);
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    expect(input).toHaveAttribute('type', 'text');
   });
 
-  test('expect a radio button for a boolean', async () => {
+  test('render an unchecked radio button for a boolean', async () => {
     const spec = { ...baseSpec };
     spec.args.arg.type = 'boolean';
     const { findByLabelText } = renderSetupFromSpec(spec);
@@ -96,7 +97,7 @@ describe('Arguments form input types', () => {
     expect(input).not.toBeChecked();
   });
 
-  test('expect a select input for an option_string', async () => {
+  test('render a select input for an option_string', async () => {
     const spec = { ...baseSpec };
     spec.args.arg.type = 'option_string';
     spec.args.arg.validation_options = {
@@ -113,7 +114,7 @@ describe('Arguments form input types', () => {
     spec.args.arg.type = 'directory';
     const { findByText } = renderSetupFromSpec(spec);
     fireEvent.click(await findByText('i'));
-    expect(true).toBe(true);
+    // expect(true).toBe(true);
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
   });
 });
