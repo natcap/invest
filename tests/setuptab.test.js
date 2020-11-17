@@ -14,9 +14,10 @@ jest.mock('../src/server_requests');
 
 const MODULE = 'carbon';
 
-function renderSetupFromSpec(spec, uiSpec = {}) {
+function renderSetupFromSpec(baseSpec, uiSpec = {}) {
   // some ARGS_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
+  const spec = { ...baseSpec };
   if (!spec.modelName) { spec.modelName = 'Eco Model'; }
   if (!spec.module) { spec.module = 'natcap.invest.dot'; }
 
@@ -40,14 +41,14 @@ function renderSetupFromSpec(spec, uiSpec = {}) {
 
 describe('Arguments form input types', () => {
   const validationMessage = 'invalid because';
-  let spec;
+  let baseSpec;
 
   afterEach(() => {
     jest.resetAllMocks();
   });
 
   beforeEach(() => {
-    spec = {
+    baseSpec = {
       args: {
         arg: {
           name: 'foo',
@@ -58,13 +59,14 @@ describe('Arguments form input types', () => {
       },
     };
     fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), validationMessage]]
+      [[Object.keys(baseSpec.args), validationMessage]]
     );
   });
 
-  test('expect a text input and browse button for file inputs', () => {
+  test('expect a text input and browse button for file inputs', async () => {
     const types = ['directory', 'csv', 'vector', 'raster'];
     types.forEach(async (type) => {
+      const spec = { ...baseSpec };
       spec.args.arg.type = type;
       const { findByText, findByLabelText } = renderSetupFromSpec(spec);
 
@@ -74,9 +76,10 @@ describe('Arguments form input types', () => {
     });
   });
 
-  test('expect a text input for a freestyle_string or number', () => {
+  test('expect a text input for a freestyle_string or number', async () => {
     const types = ['freestyle_string', 'number'];
     types.forEach(async (type) => {
+      const spec = { ...baseSpec };
       spec.args.arg.type = type;
       const { findByLabelText } = renderSetupFromSpec(spec);
       const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
@@ -85,6 +88,7 @@ describe('Arguments form input types', () => {
   });
 
   test('expect a radio button for a boolean', async () => {
+    const spec = { ...baseSpec };
     spec.args.arg.type = 'boolean';
     const { findByLabelText } = renderSetupFromSpec(spec);
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
@@ -93,6 +97,7 @@ describe('Arguments form input types', () => {
   });
 
   test('expect a select input for an option_string', async () => {
+    const spec = { ...baseSpec };
     spec.args.arg.type = 'option_string';
     spec.args.arg.validation_options = {
       options: ['a', 'b']
@@ -104,9 +109,11 @@ describe('Arguments form input types', () => {
   });
 
   test('expect the info dialog contains text about input', async () => {
+    const spec = { ...baseSpec };
     spec.args.arg.type = 'directory';
     const { findByText } = renderSetupFromSpec(spec);
     fireEvent.click(await findByText('i'));
+    expect(true).toBe(true);
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
   });
 });
@@ -550,7 +557,7 @@ test('SetupTab: test dragover of a datastack/logfile', async () => {
   // })
   // fireEvent.drop(setupForm, dropEvent)
 
-  // Below is a patch similar to the one described here:
+  // Below is a patch similar to the one noted here:
   // https://github.com/testing-library/react-testing-library/issues/339
   const fileDropEvent = createEvent.drop(setupForm);
   const fileArray = ['foo.txt'];
