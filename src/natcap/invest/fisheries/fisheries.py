@@ -492,6 +492,7 @@ def execute(args, create_outputs=True):
         # Run Model
         model_vars_dict = model.run_population_model(
             model_vars_dict, init_cond_func, cycle_func, harvest_func)
+        print('shape:', model_vars_dict['N_tasx'].shape)
 
         vars_all_models.append(model_vars_dict)
 

@@ -11,6 +11,7 @@ s: sex
 import logging
 
 import numpy as np
+import sys
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.model')
 
@@ -293,6 +294,7 @@ def set_cycle_func(vars_dict, rec_func):
     G = vars_dict['G_survtotalfrac']  # G_asx
     num_classes = len(vars_dict['Classes'])
     Migration = vars_dict['Migration']
+    print(Migration[0].shape)
 
     def age_based_cycle_func(N_prev):
         """
@@ -329,11 +331,11 @@ def set_cycle_func(vars_dict, rec_func):
 
         for i in range(1, num_classes):
             N_next[i] = np.array(
-                [Migration[i-1].dot(x) for x in N_prev[i-1]])[:, 0, :] * S[i-1]
+                [Migration[i-1].dot(x) for x in N_prev[i-1]]) * S[i-1]
 
         if len(N_prev) > 1:
             N_next[-1] = N_next[-1] + np.array(
-                [Migration[-1].dot(x) for x in N_prev[-1]])[:, 0, :] * S[-1]
+                [Migration[-1].dot(x) for x in N_prev[-1]]) * S[-1]
 
         return N_next, spawners
 
@@ -362,9 +364,9 @@ def set_cycle_func(vars_dict, rec_func):
         N_next[0] = N_next[0] + np.array(Migration[0].dot(N_prev[0][0])) * S[0]
         for i in range(1, num_classes):
             G_comp = np.array(
-                [Migration[i-1].dot(x) for x in N_prev[i-1]])[:, 0, :] * G[i-1]
+                [Migration[i-1].dot(x) for x in N_prev[i-1]]) * G[i-1]
             P_comp = np.array(
-                [Migration[i].dot(x) for x in N_prev[i]])[:, 0, :] * P[i]
+                [Migration[i].dot(x) for x in N_prev[i]]) * P[i]
             N_next[i] = G_comp + P_comp
 
         return N_next, spawners
