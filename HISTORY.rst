@@ -63,6 +63,8 @@ Unreleased Changes (3.9)
       reduced to just those needed to install the python package and run tests.
     * Bumped the ``shapely`` requirements to ``>=1.7.1`` to address a library
       import issue on Mac OS Big Sur.
+    * The InVEST binary builds now launch on Mac OS 11 "Big Sur".  This was
+      addressed by defining the ``QT_MAC_WANTS_LAYER`` environment variable.
 * Coastal Blue Carbon
     * Refactor of Coastal Blue Carbon that implements TaskGraph for task
       management across the model and fixes a wide range of issues with the model
@@ -137,7 +139,7 @@ Unreleased Changes (3.9)
 * Finfish
     * Fixed a bug where the suffix input was not being used for output paths.
 * Urban Cooling
-    * Split energy savings valuation and work productivity valuation into 
+    * Split energy savings valuation and work productivity valuation into
       separate UI options.
 
 ..
