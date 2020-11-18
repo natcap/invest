@@ -376,13 +376,11 @@ describe('InVEST subprocess testing', () => {
   };
 
   const dummyTextToLog = JSON.stringify(spec.args);
-  // const logfileName = 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt'
   let fakeWorkspace;
   let mockInvestProc;
 
   beforeEach(() => {
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
-    // const logfilePath = path.join(fakeWorkspace, logfileName);
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
     mockInvestProc = new events.EventEmitter();
@@ -610,15 +608,17 @@ describe('InVEST subprocess testing', () => {
     fireEvent.click(execute);
     // firing execute re-assigns mockInvestProc via the spawn mock,
     // but we need to wait for that before pushing to it's stdout.
-    // Since the production code cannot 'await spawn()' (we don't want
-    // it to stop the event loop), we do this manual timeout instead.
+    // Since the production code cannot 'await spawn()',
+    // we do this manual timeout instead.
     await new Promise((resolve) => setTimeout(resolve, 500));
     mockInvestProc.stdout.push('hello from stdout');
     logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
     });
-
+    mockInvestProc.emit('exit', 0);
+    // Give it time to run the listener before unmounting.
+    await new Promise((resolve) => setTimeout(resolve, 300));
     unmount();
     spy.mockRestore();
   });
