@@ -11,7 +11,6 @@ s: sex
 import logging
 
 import numpy as np
-import sys
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.model')
 
@@ -294,7 +293,6 @@ def set_cycle_func(vars_dict, rec_func):
     G = vars_dict['G_survtotalfrac']  # G_asx
     num_classes = len(vars_dict['Classes'])
     Migration = vars_dict['Migration']
-    print(Migration[0].shape)
 
     def age_based_cycle_func(N_prev):
         """
