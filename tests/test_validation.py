@@ -665,7 +665,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file, encoding='iso8859_5')
 
         # Note that non-UTF8 encodings should pass this check, but aren't
-        # actually being read correctly. Characters outside the ASCII set may 
+        # actually being read correctly. Characters outside the ASCII set may
         # be replaced with a replacement character.
         # UTF16, UTF32, etc. will still raise an error.
         error_msg = validation.check_csv(target_file)
@@ -732,16 +732,16 @@ class CSVValidation(unittest.TestCase):
         # define a side effect for the mock that will sleep
         # for longer than the allowed timeout
         def delay(*args, **kwargs):
-            time.sleep(6)
+            time.sleep(7)
             return []
 
         # make a copy of the real _VALIDATION_FUNCS and override the CSV function
-        mock_validation_funcs = {key: val for key, val in validation._VALIDATION_FUNCS.items()}
+        mock_validation_funcs = validation._VALIDATION_FUNCS.copy()
         mock_validation_funcs['csv'] = functools.partial(validation.timeout, delay)
 
-
         # replace the validation.check_csv with the mock function, and try to validate
-        with unittest.mock.patch('natcap.invest.validation._VALIDATION_FUNCS', mock_validation_funcs):
+        with unittest.mock.patch('natcap.invest.validation._VALIDATION_FUNCS',
+                                 mock_validation_funcs):
             with warnings.catch_warnings(record=True) as ws:
                 # cause all warnings to always be triggered
                 warnings.simplefilter("always")
@@ -1232,8 +1232,7 @@ class TestValidationFromSpec(unittest.TestCase):
             }
         }
         message = 'DEBUG:natcap.invest.validation:Provided key b does not exist in ARGS_SPEC'
-        
+
         with self.assertLogs('natcap.invest.validation', level='DEBUG') as cm:
             validation.validate(args, spec)
         self.assertTrue(message in cm.output)
-
