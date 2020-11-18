@@ -2,6 +2,10 @@ name: Build, Test Binaries, & Release
 
 on: [push, pull_request]
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   build-and-release:
     runs-on: ${{ matrix.os }}
@@ -21,8 +25,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
-    - name: Set env var
-      shell: bash
+    - name: Set env var for invest version
       run: |
         INVEST_VERSION=$(jq -r .invest.version package.json)
         echo "INVEST_VERSION=$INVEST_VERSION" >> $GITHUB_ENV
@@ -50,7 +53,6 @@ jobs:
 
     - name: Install python dependencies for non-Windows
       if: matrix.os != 'windows-latest'
-      shell: bash -l {0}
       working-directory: ./invest
       run: |
           conda upgrade -y pip setuptools
@@ -77,7 +79,6 @@ jobs:
     - name: Install python build dependencies for Windows
       if: matrix.os == 'windows-latest'
       working-directory: ./invest
-      shell: bash -l {0}
       run: |
           python -m pip install --upgrade pip nose setuptools toml twine ${{ matrix.numpy }}
           pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
@@ -85,7 +86,6 @@ jobs:
     - name: Install python runtime dependencies for Windows
       if: matrix.os == 'windows-latest'
       working-directory: ./invest
-      shell: bash -l {0}
       env:
         PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
         PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
@@ -97,21 +97,17 @@ jobs:
         cp ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos_c.dll ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos.dll
     
     - name: Install natcap.invest python package
-      shell: bash -l {0}
       working-directory: ./invest
       run: make install
 
     - name: Freeze Python environment
-      shell: bash -l {0}
       run: |
         python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec
 
     - name: NPM Install
-      shell: bash -l {0} 
       run: npm install
 
     - name: Run the build script
-      shell: bash -l {0} 
       run: npm run build
 
     - name: Set up GCP
@@ -125,7 +121,6 @@ jobs:
     # electron-builder code signing only supported on macos and windows
     - name: Code-signing for macOS
       if: matrix.os == 'macos-latest'
-      shell: bash -l {0}
       env:
         P12_FILE: Stanford-natcap-code-signing-2019-03-07.p12
         KEYCHAIN_NAME: codesign_keychain
@@ -158,7 +153,6 @@ jobs:
 
     - name: Code-signing for Windows
       if: matrix.os == 'windows-latest'
-      shell: bash -l {0} 
       env:
         P12_FILE: Stanford-natcap-code-signing-2019-03-07.p12
       run: |
@@ -171,28 +165,24 @@ jobs:
 
     - name: Run electron-builder on macOS
       if: matrix.os == 'macos-latest'
-      shell: bash -l {0}
       env:
         GH_TOKEN: env.GITHUB_TOKEN
       run: npx --no-install electron-builder build --mac -c.extraMetadata.main=build/main.js --publish never
 
     - name: Run electron-builder on windows
       if: matrix.os == 'windows-latest'
-      shell: bash -l {0} 
       env:
         GH_TOKEN: env.GITHUB_TOKEN
       run: npx --no-install electron-builder build --windows -c.extraMetadata.main=build/main.js --publish never
 
     - name: Run electron-builder on ubuntu
       if: matrix.os == 'ubuntu-latest'
-      shell: bash -l {0} 
       env:
         GH_TOKEN: env.GITHUB_TOKEN
       run: npx --no-install electron-builder build --linux -c.extraMetadata.main=build/main.js --publish never
 
       # Also run all tests on the build dir code?
     - name: Test flask app binaries
-      shell: bash -l {0}
       run: npm run test-flask-app
 
     - name: Test electron app with puppeteer
