@@ -391,6 +391,9 @@ def main(user_args=None):
         help=('The model for which the spec should be fetched.  Use "invest '
               'list" to list the available models.'))
 
+    serve_subparser = subparsers.add_parser(
+        'serve', help=('Start the flask app on the localhost.'))
+
     args = parser.parse_args(user_args)
 
     root_logger = logging.getLogger()
@@ -569,6 +572,10 @@ def main(user_args=None):
             parser.exit(app_exitcode,
                         'App terminated with exit code %s\n' % app_exitcode)
 
+    if args.subcommand == 'serve':
+        from natcap.invest import app
+        app.app.run()
+        parser.exit(0)
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
