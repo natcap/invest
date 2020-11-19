@@ -133,14 +133,16 @@ jobs:
 
         gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
 
-        KEYCHAIN_NAME=fake-keychain
-        KEYCHAIN_PASS=fake-password
         echo $KEYCHAIN_NAME
-        echo $KEYCHAIN_PASS
+
         security list-keychains
         security create-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
         security list-keychains -s $KEYCHAIN_NAME
         security list-keychains
+
+        echo 'listed keychains'
+        security unlock-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
+        echo 'unlocked keychain'
 
         # # unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
         # security unlock-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
