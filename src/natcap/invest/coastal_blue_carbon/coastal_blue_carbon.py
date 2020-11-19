@@ -663,7 +663,7 @@ def execute(args):
     total_accumulation_tasks = {}
     prior_transition_year = baseline_lulc_year
     for current_transition_year in sorted(
-            transition_years.union(set([analysis_year]))):
+            transition_years.union([analysis_year])):
         total_accumulation_rasters[current_transition_year] = os.path.join(
             output_dir, ACCUMULATION_SINCE_TRANSITION_RASTER_PATTERN.format(
                 start_year=prior_transition_year,
