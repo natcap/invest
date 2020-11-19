@@ -214,19 +214,16 @@ $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
 
 
-# Python environment management
+# Python conda environment management
 env:
-    ifeq ($(OS),Windows_NT)
-		$(PYTHON) -m virtualenv --system-site-packages $(ENV)
-		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-gui.txt"
-		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -I -r requirements-dev.txt"
-		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
-    else
 		$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
-		$(CONDA) create -p $(ENV) -y -c conda-forge
+		$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
 		$(CONDA) env update -p $(ENV) --file requirements-all.yml
-		$(BASHLIKE_SHELL_COMMAND) "source activate ./$(ENV) && $(MAKE) install"
-    endif
+		@echo "----------------------------"
+		@echo "To finish the conda env install:"
+		@echo ">> conda activate ./$(ENV)"
+		@echo ">> make install"
+
 
 # compatible with pip>=7.0.0
 # REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
