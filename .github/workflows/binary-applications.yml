@@ -212,6 +212,7 @@ jobs:
 
                   # Libtiff from conda defaults channel gets around issue with missing libwebp
                   conda install --yes libtiff
+                  conda list
 
             - name: Build binaries
               shell: bash -l {0}
