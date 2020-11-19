@@ -184,11 +184,11 @@ jobs:
                   brew update
                   brew install pandoc
 
-            - name: Restore conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ~/opt/anaconda3
-                  key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
+            # - name: Restore conda cache
+            #   uses: actions/cache@v2
+            #   with:
+            #       path: ~/opt/anaconda3
+            #       key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -202,7 +202,7 @@ jobs:
               shell: bash -l {0}
               run: |
                   conda upgrade -y pip setuptools
-                  conda install toml requests
+                  conda install toml requests nomkl
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
