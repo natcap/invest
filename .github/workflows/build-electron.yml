@@ -133,17 +133,14 @@ jobs:
 
         gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
 
-        security list-keychains
-        security create-keychain -p fake-password fake-keychain
-        security list-keychains -s fake-keychain
-        security list-keychains
+        KEYCHAIN_NAME=fake-keychain
+        KEYCHAIN_PASS=fake-password
         echo $KEYCHAIN_NAME
-        echo '$KEYCHAIN_NAME'
-        echo $(KEYCHAIN_NAME)
-        echo '$(KEYCHAIN_NAME)'
-        # security create-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
-        # security list-keychains -s $KEYCHAIN_NAME
-        # security list-keychains
+        echo $KEYCHAIN_PASS
+        security list-keychains
+        security create-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
+        security list-keychains -s $KEYCHAIN_NAME
+        security list-keychains
 
         # # unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
         # security unlock-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
@@ -170,7 +167,7 @@ jobs:
         gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
 
         # all these variables are used by electron-builder
-        echo "CSC_LINK=~/$P12_FILE >> $GITHUB_ENV
+        echo "CSC_LINK=~/$P12_FILE" >> $GITHUB_ENV
         echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
         echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
 
