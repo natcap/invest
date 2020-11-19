@@ -41,10 +41,10 @@ Unreleased Changes (3.9)
     * Deprecating GDAL 2 and adding support for GDAL 3.
     * Adding function in utils.py to handle InVEST coordindate transformations.
     * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
-      * ``convolve_2d()`` keyword ``ignore_nodata`` to
-        ``ignore_nodata_and_edges``.
-      * ``get_raster_info()`` / ``get_vector_info()`` keyword ``projection`` to
-        ``projection_wkt``.
+        * ``convolve_2d()`` keyword ``ignore_nodata`` to
+          ``ignore_nodata_and_edges``.
+        * ``get_raster_info()`` / ``get_vector_info()`` keyword ``projection`` 
+          to ``projection_wkt``.
     * Improve consistency and context for error messages related to raster
       reclassification across models by using ``utils.reclassify_raster``.
     * Fixed bug that was causing a TypeError when certain input rasters had an
