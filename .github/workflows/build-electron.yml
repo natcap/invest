@@ -138,9 +138,8 @@ jobs:
         # these env variables tell electron-builder to do code signing
         echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
         echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
-        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
-
-        # echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
+        echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
+        #echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
        
 
     - name: Code-signing setup for Windows
