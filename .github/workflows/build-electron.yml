@@ -130,16 +130,14 @@ jobs:
 
       run: |
         set +x
-        
-        # download the p12 certificate file from google cloud
+
         gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
 
         security list-keychains
-        # create a new keychain (so that we can know what the password is)
         security create-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
-        # add the keychain to the search list so it can be found
         security list-keychains -s $KEYCHAIN_NAME
         security list-keychains
+        
         # # unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
         # security unlock-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
         # # add the certificate to the keychain
