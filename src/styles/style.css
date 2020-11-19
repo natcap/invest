@@ -251,8 +251,8 @@ input[type=text]::placeholder {
 	font-size: 1.15rem;
 	font-family: monospace;
 	white-space: pre-wrap;
-	padding-left: 50px;
-	text-indent: -50px;
+	padding-left: 3rem;
+	text-indent: -3rem;
 }
 
 /* InVEST Log Tab */
