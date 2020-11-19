@@ -132,10 +132,8 @@ jobs:
         gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-2019-03-07.p12 $P12_FILE_PATH 
 
         pwd
-        echo $P12_FILE_PATH
-        CERT_KEY_PASS=fake-cert-pass
-        KEYCHAIN_PASS=fake-keychain-pass
-        bash ./scripts/setup_macos_keychain.sh $KEYCHAIN_NAME $KEYCHAIN_PASS $CERT_KEY_PASS $P12_FILE_PATH 
+
+        bash ./scripts/setup_macos_keychain.sh 
 
         # these env variables tell electron-builder to do code signing
         echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
