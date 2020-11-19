@@ -119,23 +119,21 @@ jobs:
           service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
     # electron-builder code signing only supported on macos and windows
-    - name: Code-signing for macOS
+    - name: Code-signing setup for macOS
       if: matrix.os == 'macos-latest'
       shell: bash
       env:
-        P12_FILE: Stanford-natcap-code-signing-2019-03-07.p12
+        P12_FILE_PATH: ~/Downloads/stanford_cert.p12
         KEYCHAIN_NAME: codesign_keychain
         KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
         CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
 
       run: |
-        set +x
-
-        gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE 
+        gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-2019-03-07.p12 $P12_FILE_PATH 
 
         pwd
-
-        bash ./scripts/setup_macos_keychain.sh $KEYCHAIN_NAME $KEYCHAIN_PASS ~/$P12_FILE $CERT_KEY_PASS
+        echo $P12_FILE_PATH
+        bash ./scripts/setup_macos_keychain.sh $KEYCHAIN_NAME $KEYCHAIN_PASS $P12_FILE_PATH $CERT_KEY_PASS
 
         # these env variables tell electron-builder to do code signing
         echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
@@ -145,7 +143,7 @@ jobs:
         # echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
        
 
-    - name: Code-signing for Windows
+    - name: Code-signing setup for Windows
       if: matrix.os == 'windows-latest'
       env:
         P12_FILE: Stanford-natcap-code-signing-2019-03-07.p12
