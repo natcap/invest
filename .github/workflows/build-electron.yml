@@ -113,7 +113,7 @@ jobs:
     - name: Set up GCP
       # Secrets not available in PR so don't use GCP.
       if: github.event_name != 'pull_request'
-      uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      uses: google-github-actions/setup-gcloud@v0.2.0
       with:
           version: '281.0.0'
           service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
@@ -137,6 +137,10 @@ jobs:
         security create-keychain -p fake-password fake-keychain
         security list-keychains -s fake-keychain
         security list-keychains
+        echo $KEYCHAIN_NAME
+        echo '$KEYCHAIN_NAME'
+        echo $(KEYCHAIN_NAME)
+        echo '$(KEYCHAIN_NAME)'
         # security create-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
         # security list-keychains -s $KEYCHAIN_NAME
         # security list-keychains
@@ -166,7 +170,7 @@ jobs:
         gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
 
         # all these variables are used by electron-builder
-        echo "CSC_LINK=$CERTIFICATE_PATH" >> $GITHUB_ENV
+        echo "CSC_LINK=~/$P12_FILE >> $GITHUB_ENV
         echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
         echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
 
