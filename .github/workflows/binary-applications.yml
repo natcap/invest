@@ -201,18 +201,16 @@ jobs:
             - name: Build conda env with python dependencies
               shell: bash -l {0}
               run: |
-                  conda upgrade -y pip setuptools
-                  conda install toml requests nomkl
-                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  conda install nomkl
+                  
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
                         requirements-dev.txt \
                         requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
 
-                  # Libtiff from conda defaults channel gets around issue with missing libwebp
-                  conda install --yes libtiff
                   conda list
+
 
             - name: Build binaries
               shell: bash -l {0}
