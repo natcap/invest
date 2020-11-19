@@ -15,6 +15,7 @@ security list-keychains
 
 echo $1
 echo $3
+echo $4
 
 echo 'listed keychains'
 # unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
