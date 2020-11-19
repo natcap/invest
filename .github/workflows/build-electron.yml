@@ -133,7 +133,8 @@ jobs:
 
         pwd
         echo $P12_FILE_PATH
-        CERT_KEY_PASS=fake-pass
+        CERT_KEY_PASS=fake-cert-pass
+        KEYCHAIN_PASS=fake-keychain-pass
         bash ./scripts/setup_macos_keychain.sh $KEYCHAIN_NAME $KEYCHAIN_PASS $CERT_KEY_PASS $P12_FILE_PATH 
 
         # these env variables tell electron-builder to do code signing

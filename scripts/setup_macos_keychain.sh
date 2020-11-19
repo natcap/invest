@@ -14,6 +14,7 @@ security list-keychains -s $1
 security list-keychains
 
 echo $1
+echo $2
 echo $3
 echo $4
 
