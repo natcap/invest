@@ -7,7 +7,7 @@
 # finding the cocoa plugin interface. And in general the pip distributions
 # seem better supported by PyInstaller
 
-qtpy>1.3
-qtawesome
+qtpy>1.3  # pip-only
+qtawesome  # pip-only
 requests
-PySide2!=5.15.0
+PySide2!=5.15.0  # pip-only
