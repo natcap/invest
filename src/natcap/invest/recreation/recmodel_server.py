@@ -51,7 +51,7 @@ def _try_except_wrapper(mesg):
     This can be useful in places where multiprocessing crashes for some reason
     or Pyro4 calls crash and need to report back over stdout.
 
-    Parameters:
+    Args:
         mesg (string): printed to log before the exception object
 
     Returns:
@@ -81,7 +81,7 @@ class RecModel(object):
             max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE):
         """Initialize RecModel object.
 
-        Parameters:
+        Args:
             raw_csv_filename (string): path to csv file that contains lines
                 with the following pattern:
 
@@ -139,7 +139,7 @@ class RecModel(object):
         Searches self.cache_workspace for the workspace specified, zips the
         contents, then returns the result as a binary string.
 
-        Parameters:
+        Args:
             workspace_id (string): unique workspace ID on server to query.
 
         Returns:
@@ -157,7 +157,7 @@ class RecModel(object):
             self, zip_file_binary, date_range, out_vector_filename):
         """Calculate annual average and per monthly average photo user days.
 
-        Parameters:
+        Args:
             zip_file_binary (string): a bytestring that is a zip file of an
                 ESRI shapefile.
             date_range (string 2-tuple): a tuple that contains the inclusive
@@ -219,7 +219,7 @@ class RecModel(object):
             self, aoi_path, workspace_path, date_range, out_vector_filename):
         """Aggregate the PUD in the AOI.
 
-        Parameters:
+        Args:
             aoi_path (string): a path to an OGR compatible vector.
             workspace_path(string): path to a directory where working files
                 can be created
@@ -447,7 +447,7 @@ def _parse_input_csv(
         block_offset_size_queue, csv_filepath, numpy_array_queue):
     """Parse CSV file lines to (datetime64[d], userhash, lat, lng) tuples.
 
-    Parameters:
+    Args:
 
         block_offset_size_queue (multiprocessing.Queue): contains tuples of
             the form (offset, chunk size) to direct where the file should be
@@ -516,7 +516,7 @@ def construct_userday_quadtree(
         max_points_per_node):
     """Construct a spatial quadtree for fast querying of userday points.
 
-    Parameters:
+    Args:
         initial_bounding_box (list of int):
         raw_photo_csv_table ():
         cache_dir (string): path to a directory that can be used to cache
@@ -635,7 +635,7 @@ def build_quadtree_shape(
         quad_tree_shapefile_path, quadtree, spatial_reference):
     """Generate a vector of the quadtree geometry.
 
-    Parameters:
+    Args:
         quad_tree_shapefile_path (string): path to save the vector
         quadtree (out_of_core_quadtree.OutOfCoreQuadTree): quadtree
             data structure
@@ -668,7 +668,7 @@ def _calc_poly_pud(
 
     Updates polygons with a PUD and send back out on the queue.
 
-    Parameters:
+    Args:
         local_qt_pickle_path (string): path to pickled local quadtree
         aoi_path (string): path to AOI that contains polygon features
         date_range (tuple): numpy.datetime64 tuple indicating inclusive start
@@ -759,7 +759,7 @@ def execute(args):
               'cache_workspace': $CACHE_WORKSPACE_PATH'};
         natcap.invest.recreation.recmodel_server.execute(args)"
 
-    Parameters:
+    Args:
         args['raw_csv_point_data_path'] (string): path to a csv file of the
             format
         args['hostname'] (string): hostname to host Pyro server.
@@ -789,7 +789,7 @@ def execute(args):
 def _hashfile(file_path, blocksize=2**20, fast_hash=False):
     """Hash file with memory efficiency as a priority.
 
-    Parameters:
+    Args:
         file_path (string): path to file to hash
         blocksize (int): largest memory block to hold in memory at once in
             bytes

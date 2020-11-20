@@ -100,7 +100,7 @@ cdef class _ManagedRaster:
     def __cinit__(self, raster_path, band_id, write_mode):
         """Create new instance of Managed Raster.
 
-        Parameters:
+        Args:
             raster_path (char*): path to raster that has block sizes that are
                 powers of 2. If not, an exception is raised.
             band_id (int): which band in `raster_path` to index. Uses GDAL
@@ -380,7 +380,7 @@ cpdef calculate_local_recharge(
     Note all input rasters must be in the same coordinate system and
     have the same dimensions.
 
-    Parameters:
+    Args:
         precip_path_list (list): list of paths to monthly precipitation
             rasters. (model input)
         et0_path_list (list): path to monthly ET0 rasters. (model input)
@@ -683,7 +683,7 @@ def route_baseflow_sum(
         stream_path, target_b_path, target_b_sum_path):
     """Route Baseflow through MFD as described in Equation 11.
 
-    Parameters:
+    Args:
         flow_dir_mfd_path (string): path to a pygeoprocessing multiple flow
             direction raster.
         l_path (string): path to local recharge raster.

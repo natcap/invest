@@ -698,7 +698,7 @@ def execute(args):
 def _copy_vector_or_raster(base_file_path, target_file_path):
     """Make a copy of a vector or raster.
 
-    Parameters:
+    Args:
         base_file_path (str): a path to the base vector or raster to be copied
             from.
         target_file_path (str): a path to the target copied vector or raster.
@@ -737,7 +737,7 @@ def _interpolate_vector_field_onto_raster(
     Copy the base raster to the target interpolated raster, so taskgraph could
     trace the file state correctly.
 
-    Parameters:
+    Args:
         base_vector_path (str): a path to a base vector that has field_name to
             be interpolated.
         base_raster_path (str): a path to a base raster to make a copy from.
@@ -761,7 +761,7 @@ def _create_npv_raster(
         target_npv_raster_path, target_pixel_size):
     """Generate final NPV raster from the wave vector and AOI extent.
 
-    Parameters:
+    Args:
         base_wave_vector_path (str): a path to the wave vector that contains
             the NPV field.
         base_aoi_vector_path (str): a path to the AOI vector used for
@@ -803,7 +803,7 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
                      wave_to_land_dist, land_to_grid_dist, machine_econ_dict):
     """Compute NPV, total captured wave energy, and units for wave point.
 
-    Parameters:
+    Args:
         captured_wave_energy (double): the amount of captured wave energy for
             a wave machine.
         depth (double): the depth of that wave point.
@@ -873,7 +873,7 @@ def _add_target_fields_to_wave_vector(
     from land to grid, the land point ID, NPV, total captured wave energy, and
     units.
 
-    Parameters:
+    Args:
         base_wave_vector_path (str): a path to the wave point vector with
             fields to calculate distances and NPV.
         base_land_vector_path (str): a path to the land point vector to get
@@ -955,7 +955,7 @@ def _add_target_fields_to_wave_vector(
 def _get_validated_dataframe(csv_path, field_list):
     """Return a dataframe with upper cased fields, and a list of missing fields.
 
-    Parameters:
+    Args:
         csv_path (str): path to the csv to be converted to a dataframe.
         field_list (list): a list of fields in string format.
 
@@ -976,7 +976,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
                           base_sr_wkt, target_sr_wkt):
     """Given a dictionary of data create a point shapefile that represents it.
 
-    Parameters:
+    Args:
         base_dict_data (dict): a  dictionary with the wind data, where the keys
             are tuples of the lat/long coordinates:
             {
@@ -1059,7 +1059,7 @@ def _get_points_geometries(base_vector_path):
     The X and Y values from each point feature in the vector are stored in pair
     as [x_location,y_location] in a numpy array.
 
-    Parameters:
+    Args:
         base_vector_path (str): a path to an OGR vector file.
 
     Returns:
@@ -1089,7 +1089,7 @@ def _calculate_min_distances(xy_1, xy_2):
     a list min_dist. The function also stores the index from which ever point
     in xy_2 was closest, as an id in a list that corresponds to min_dist.
 
-    Parameters:
+    Args:
         xy_1 (numpy.array): An array of points in the form [x,y]
         xy_2 (numpy.array): An array of points in the form [x,y]
 
@@ -1121,7 +1121,7 @@ def _binary_wave_data_to_dict(wave_file_path):
     seastate occurs over a 5 year period. The row and column fields are
     extracted once and stored in the dictionary as well.
 
-    Parameters:
+    Args:
         wave_file_path (str): path to a pickled binary WW3 file.
 
     Returns:
@@ -1198,7 +1198,7 @@ def _machine_csv_to_dict(machine_csv_path):
     are from the corresponding 'VALUE' field. No need to check for missing
     columns since the file is validated by validate() function.
 
-    Parameters:
+    Args:
         machine_csv_path (str): path to the input machine CSV file.
 
     Returns:
@@ -1226,7 +1226,7 @@ def _machine_csv_to_dict(machine_csv_path):
 def _get_vector_spatial_ref(base_vector_path):
     """Get the spatial reference of an OGR vector (datasource).
 
-    Parameters:
+    Args:
         base_vector_path (str): a path to an ogr vector
 
     Returns:
@@ -1249,7 +1249,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     An attribute table is also constructed for the raster_dataset that displays
     the ranges provided by taking the quartile of values.
 
-    Parameters:
+    Args:
         base_raster_path (str): path to a GDAL raster with data of type
             integer
         target_raster_path (str): path to the destination of the new raster.
@@ -1392,7 +1392,7 @@ def _clip_vector_by_vector(base_vector_path, clip_vector_path,
     Clip a shapefile layer where the output Layer inherits the projection and
     fields from the original Shapefile.
 
-    Parameters:
+    Args:
         base_vector_path (str): a path to a Shapefile on disk. This is
             the Layer to clip. Must have same spatial reference as
             'clip_vector_path'.
@@ -1476,7 +1476,7 @@ def _wave_energy_interp(wave_data, machine_perf):
 
     The matrix is generated using new ranges from wave watch data.
 
-    Parameters:
+    Args:
         wave_data (dict): A dictionary holding the new x range (period) and
             y range (height) values for the interpolation. The dictionary has
             the following structure:
@@ -1518,7 +1518,7 @@ def _wave_energy_capacity_to_dict(wave_data, interp_z, machine_param):
     The dictionary keys are the points (i,j) and their corresponding value
     is the wave energy capacity.
 
-    Parameters:
+    Args:
         wave_data (dict): A wave watch dictionary with the following structure:
                 {'periods': [1,2,3,4,...],
                  'heights': [.5,1.0,1.5,...],
@@ -1612,7 +1612,7 @@ def _index_raster_value_to_point_vector(
     is larger than or equal to 0, the feature will be deleted, since a wave
     energy point on land should not be used in calculations.
 
-    Parameters:
+    Args:
         base_point_vector_path (str): a path to an OGR point vector file.
         base_raster_path (str): a path to a GDAL dataset.
         target_point_vector_path (str): a path to a shapefile that has the
@@ -1747,7 +1747,7 @@ def _energy_and_power_to_wave_vector(
     The values are set corresponding to the same I,J values which is the key of
     the dictionary and used as the unique identifier of the shape.
 
-    Parameters:
+    Args:
         energy_cap (dict): a dictionary with keys (I,J), representing the
             wave energy capacity values.
         base_wave_vector_path (str): a path to a wave point shapefile with
@@ -1828,7 +1828,7 @@ def _energy_and_power_to_wave_vector(
 def _count_pixels_groups(raster_path, group_values):
     """Count pixels for each value in 'group_values' over a raster.
 
-    Parameters:
+    Args:
         raster_path (str): path to a GDAL raster on disk
         group_values (list): unique numbers for which to get a pixel count
 
@@ -1855,7 +1855,7 @@ def _pixel_size_helper(base_vector_path, coord_trans, coord_trans_opposite,
                        base_raster_path):
     """Retrieve pixel size of a raster given a vector w/ certain projection.
 
-    Parameters:
+    Args:
         base_vector_path (str): path to a shapefile indicating where in the
             world we are interested in
         coord_trans (osr.CoordinateTransformation): a coordinate transformation
@@ -1943,7 +1943,7 @@ def _pixel_size_based_on_coordinate_transform(base_raster_path, coord_trans,
 def _create_raster_attr_table(base_raster_path, attr_dict, column_name):
     """Create a raster attribute table (RAT).
 
-    Parameters:
+    Args:
         base_raster_path (str): a GDAL raster dataset to create the RAT for
         attr_dict (dict): a dictionary with keys that point to a primitive type
             ex: {integer_id_1: value_1, ... integer_id_n: value_n}
@@ -1976,7 +1976,7 @@ def _create_raster_attr_table(base_raster_path, attr_dict, column_name):
 def validate(args, limit_to=None):
     """Validate an input dictionary for Wave Energy.
 
-    Parameters:
+    Args:
         args (dict): The args dictionary.
         limit_to=None (str or None): If a string key, only this args parameter
             will be validated.  If ``None``, all args parameters will be

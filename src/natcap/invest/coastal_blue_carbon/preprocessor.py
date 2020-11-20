@@ -318,7 +318,7 @@ def _create_biophysical_table(landcover_table, target_biophysical_table_path):
 def validate(args, limit_to=None):
     """Validate an input dictionary for Coastal Blue Carbon: Preprocessor.
 
-    Parameters:
+    Args:
         args (dict): The args dictionary.
         limit_to=None (str or None): If a string key, only this args parameter
             will be validated.  If ``None``, all args parameters will be

@@ -129,7 +129,7 @@ _ROUTING_FUNCS = {
 def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
     """Raster_calculator local_op to threshold D8 stream flow.
 
-    Parameters:
+    Args:
         flow_accum_pixels (numpy.ndarray): Array representing the number of
             pixels upstream of a given pixel.
         threshold (int or float): The threshold above which we have a stream.
@@ -164,7 +164,7 @@ def execute(args):
 
     This tool will always fill pits on the input DEM.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
@@ -346,7 +346,7 @@ def execute(args):
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to ``execute``'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation
