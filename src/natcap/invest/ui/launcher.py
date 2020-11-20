@@ -2,9 +2,8 @@ import logging
 import sys
 import subprocess
 import os
-import platform
-
 import PySide2
+
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
@@ -16,12 +15,6 @@ except ImportError:
 
 import natcap.invest
 
-if platform.system != 'Windows':
-    # Syslog is only available on linux/unix and mac, so we can only add it
-    # when the launcher is running on those OSes.
-    from logging.handlers import SysLogHandler
-    logging.getLogger().addHandler(SysLogHandler())
-
 LOGGER = logging.getLogger(__name__)
 
 try:
@@ -31,7 +24,7 @@ except AttributeError:
 
 APP = QApplication.instance()
 if APP is None:
-    APP = QApplication()  # pragma: no cover
+    APP = QApplication(sys.argv)  # pragma: no cover
 
 
 class ModelLaunchButton(QtWidgets.QPushButton):
@@ -51,14 +44,10 @@ class ModelLaunchButton(QtWidgets.QPushButton):
             cwd = None  # subprocess.Popen default value for cwd.
             command = 'invest'
         LOGGER.info('Launching %s from CWD %s', self._model, cwd)
-        subprocess.Popen('%s run %s' % (command, self._model),
-                         shell=True, cwd=cwd,
-                         stdout=sys.stdout,
-                         stderr=sys.stderr)
+        subprocess.Popen('%s run %s' % (command, self._model), shell=True, cwd=cwd)
 
 
 def main():
-    LOGGER.info('Starting the InVEST launcher')
     launcher_window = QtWidgets.QMainWindow()
     launcher_window.setWindowTitle('InVEST Launcher')
     scroll_area = QtWidgets.QScrollArea()
