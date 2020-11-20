@@ -88,10 +88,10 @@ exe = EXE(
 
 # Collect Files into Distributable Folder/File
 dist = COLLECT(
-        exe,
-        a.binaries,
-        a.zipfiles,
-        a.datas,
-        name="invest",  # name of the output folder
-        strip=False,
-        upx=False)
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    name="invest",  # name of the output folder
+    strip=False,
+    upx=False)
