@@ -204,7 +204,7 @@ def execute(args):
 
     Execute recreation client model on remote server.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): path to workspace directory
         args['aoi_path'] (string): path to AOI vector
         args['hostname'] (string): FQDN to recreation server
@@ -438,7 +438,7 @@ def _retrieve_photo_user_days(
     is sent to the server for PUD calculations. PUD results are sent back when
     complete.
 
-    Parameters:
+    Args:
         local_aoi_path (string): path to polygon vector for PUD aggregation
         compressed_aoi_path (string): path to zip file storing compressed AOI
         start_year (int/string): lower limit of date-range for PUD queries
@@ -532,7 +532,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     original vector.  Cells that would intersect with the boundary are not
     produced.
 
-    Parameters:
+    Args:
         vector_path (string): path to an OGR compatible polygon vector type
         grid_type (string): one of "square" or "hexagon"
         cell_size (float): dimensions of the grid cell in the projected units
@@ -646,7 +646,7 @@ def _schedule_predictor_data_processing(
     data from aggregate metrics of spatial predictor datasets in
     ``predictor_table_path``.
 
-    Parameters:
+    Args:
         response_vector_path (string): path to a single layer polygon vector.
         response_polygons_pickle_path (string): path to pickle that stores a
             dictionary which maps FIDs to shapely geometry.
@@ -772,7 +772,7 @@ def _json_to_shp_table(
         predictor_json_list):
     """Create a shapefile and a field with data from each json file.
 
-    Parameters:
+    Args:
         response_vector_path (string): Path to the response vector polygon
             shapefile.
         predictor_vector_path (string): a copy of ``response_vector_path``.
@@ -842,7 +842,7 @@ def _raster_sum_mean(
         predictor_target_path):
     """Sum or mean for all non-nodata values in the raster under each polygon.
 
-    Parameters:
+    Args:
         raster_path (string): path to a raster.
         op_mode (string): either 'mean' or 'sum'.
         response_vector_path (string): path to response polygons
@@ -897,7 +897,7 @@ def _polygon_area(
     Calculates the amount of projected area overlap from ``polygon_vector_path``
     with ``response_polygons_lookup``.
 
-    Parameters:
+    Args:
         mode (string): one of 'area' or 'percent'.  How this is set affects
             the metric that's output.  'area' is the area covered in projected
             units while 'percent' is percent of the total response area
@@ -960,7 +960,7 @@ def _line_intersect_length(
         line_vector_path, predictor_target_path):
     """Calculate the length of the intersecting lines on the response polygon.
 
-    Parameters:
+    Args:
         response_polygons_lookup (dictionary): maps feature ID to
             prepared shapely.Polygon.
         line_vector_path (string): path to a single layer line vector
@@ -1010,7 +1010,7 @@ def _point_nearest_distance(
         predictor_target_path):
     """Calculate distance to nearest point for all polygons.
 
-    Parameters:
+    Args:
         response_polygons_lookup (dictionary): maps feature ID to
             prepared shapely.Polygon.
         point_vector_path (string): path to a single layer point vector
@@ -1052,7 +1052,7 @@ def _point_count(
         predictor_target_path):
     """Calculate number of points contained in each response polygon.
 
-    Parameters:
+    Args:
         response_polygons_lookup (dictionary): maps feature ID to
             prepared shapely.Polygon.
         point_vector_path (string): path to a single layer point vector
@@ -1097,7 +1097,7 @@ def _ogr_to_geometry_list(vector_path):
     valid geometry, an attempt is made to buffer the object by 0 units
     before adding to the list.
 
-    Parameters:
+    Args:
         vector_path (string): path to an OGR vector
 
     Returns:
@@ -1125,7 +1125,7 @@ def _compute_and_summarize_regression(
         target_coefficient_json_path, target_regression_summary_path):
     """Compute a regression and summary statistics and generate a report.
 
-    Parameters:
+    Args:
         response_vector_path (string): path to polygon vector containing the
             RESPONSE_ID field.
         predictor_vector_path (string): path to polygon vector containing
@@ -1199,7 +1199,7 @@ def _build_regression(
     ``predictor_vector_path`` and are not transformed. Features with incomplete
     data are dropped prior to computing the regression.
 
-    Parameters:
+    Args:
         response_vector_path (string): path to polygon vector with PUD
             results, in particular a field named with the ``response_id``.
         predictor_vector_path (string): path to a shapefile that contains
@@ -1315,7 +1315,7 @@ def _calculate_scenario(
     It is expected that the predictor coefficients have been derived from a
     log normal distribution.
 
-    Parameters:
+    Args:
         scenario_results_path (string): path to desired output scenario
             vector result which will be geometrically a copy of the input
             AOI but contain the scenario predictor data fields as well as the
@@ -1412,7 +1412,7 @@ def _validate_same_ids_and_types(
     contain the same elements and that their values are the same.  This
     ensures that a user won't get an accidentally incorrect simulation result.
 
-    Parameters:
+    Args:
         predictor_table_path (string): path to a csv table that has at least
             the fields 'id' and 'type'
         scenario_predictor_table_path (string):  path to a csv table that has
@@ -1448,7 +1448,7 @@ def _validate_same_ids_and_types(
 def _validate_same_projection(base_vector_path, table_path):
     """Assert the GIS data in the table are in the same projection as the AOI.
 
-    Parameters:
+    Args:
         base_vector_path (string): path to a GIS vector
         table_path (string): path to a csv table that has at least
             the field 'path'
@@ -1537,7 +1537,7 @@ def _validate_predictor_types(table_path):
 def delay_op(last_time, time_delay, func):
     """Execute ``func`` if last_time + time_delay >= current time.
 
-    Parameters:
+    Args:
         last_time (float): last time in seconds that ``func`` was triggered
         time_delay (float): time to wait in seconds since last_time before
             triggering ``func``
@@ -1567,7 +1567,7 @@ def _sanitize_path(base_path, raw_path):
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to ``execute``'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation

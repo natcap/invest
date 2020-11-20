@@ -39,7 +39,7 @@ _USAGE_LOGGING_THREAD_NAME = 'usage-logging-thread'
 def log_run(module, args):
     """Context manager to log an InVEST model run and exit status.
 
-    Parameters:
+    Args:
         module (string): The string module name that identifies the model.
         args (dict): The full args dictionary.
 
@@ -83,7 +83,7 @@ def _calculate_args_bounding_box(args, args_spec):
     def _merge_bounding_boxes(bb1, bb2, mode):
         """Merge two bounding boxes through union or intersection.
 
-        Parameters:
+        Args:
             bb1 (list of float): bounding box of the form
                 [minx, maxy, maxx, miny] or None
             bb2 (list of float): bounding box of the form
@@ -161,7 +161,7 @@ def _calculate_args_bounding_box(args, args_spec):
 def _log_exit_status(session_id, status):
     """Log the completion of a model with the given status.
 
-    Parameters:
+    Args:
         session_id (string): a unique string that can be used to identify
             the current session between the model initial start and exit.
         status (string): a string describing the exit status of the model,
@@ -194,7 +194,7 @@ def _log_exit_status(session_id, status):
 def _log_model(model_name, model_args, session_id=None):
     """Log information about a model run to a remote server.
 
-    Parameters:
+    Args:
         model_name (string): a python string of the package version.
         model_args (dict): the traditional InVEST argument dictionary.
 
