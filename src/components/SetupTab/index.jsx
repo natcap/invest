@@ -285,10 +285,8 @@ export default class SetupTab extends React.Component {
     if (results.length) {
       results.forEach((result) => {
         // Each result is an array of two elements
-        // 0: array of arg keys
-        // 1: string message that pertains to those args
-        const argkeys = result[0];
-        const message = result[1];
+        const argkeys = result[0]; // array of arg keys
+        const message = result[1]; // string that describes those args
         argkeys.forEach((key) => {
           argsValidation[key].validationMessage = message;
           argsValidation[key].valid = false;

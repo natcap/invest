@@ -1,7 +1,7 @@
-import React from 'react';
 import { remote } from 'electron';
+import React from 'react';
 import {
-  createEvent, fireEvent, render, waitFor
+  createEvent, fireEvent, render, waitFor, within
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
@@ -14,9 +14,10 @@ jest.mock('../src/server_requests');
 
 const MODULE = 'carbon';
 
-function renderSetupFromSpec(spec, uiSpec = {}) {
+function renderSetupFromSpec(baseSpec, uiSpec = {}) {
   // some ARGS_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
+  const spec = { ...baseSpec };
   if (!spec.modelName) { spec.modelName = 'Eco Model'; }
   if (!spec.module) { spec.module = 'natcap.invest.dot'; }
 
@@ -39,67 +40,115 @@ function renderSetupFromSpec(spec, uiSpec = {}) {
 }
 
 describe('Arguments form input types', () => {
+  const validationMessage = 'invalid because';
+  let baseSpec;
+
   afterEach(() => {
     jest.resetAllMocks();
   });
 
-  const validationMessage = 'invalid because';
-
-  test('expect a text input for a directory', async () => {
-    const spec = {
-      args: {
-        arg: {
-          name: 'Workspace',
-          type: 'directory',
-          about: 'this is a workspace',
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), validationMessage]]
-    );
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'text');
-    expect(await findByText('Browse')).toBeInTheDocument();
-    fireEvent.change(input, { target: { value: 'foo' } });
-    await waitFor(() => {
-      expect(input).toHaveValue('foo');
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
-    });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
-
-    // Expect the info dialog contains the about text, when clicked
-    fireEvent.click(await findByText('i'));
-    expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
-  });
-
-  test('expect a text input for a csv', async () => {
-    /** Also testing the browse button functionality */
-
-    const spec = {
+  beforeEach(() => {
+    baseSpec = {
       args: {
         arg: {
           name: 'foo',
-          type: 'csv',
+          type: undefined, // varies by test
+          required: undefined,
+          about: 'this is about foo',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(baseSpec.args), validationMessage]]
+    );
+  });
+
+  test.each([
+    ['directory'],
+    ['csv'],
+    ['vector'],
+    ['raster'],
+  ])('render a text input & browse button for a %s', async (type) => {
+    const spec = { ...baseSpec };
+    spec.args.arg.type = type;
+    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    expect(input).toHaveAttribute('type', 'text');
+    expect(await findByText('Browse')).toBeInTheDocument();
+  });
+
+  test.each([
+    ['freestyle_string'],
+    ['number'],
+  ])('render a text input for a %s', async (type) => {
+    const spec = { ...baseSpec };
+    spec.args.arg.type = type;
+    const { findByLabelText } = renderSetupFromSpec(spec);
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    expect(input).toHaveAttribute('type', 'text');
+  });
+
+  test('render an unchecked radio button for a boolean', async () => {
+    const spec = { ...baseSpec };
+    spec.args.arg.type = 'boolean';
+    const { findByLabelText } = renderSetupFromSpec(spec);
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    expect(input).toHaveAttribute('type', 'radio');
+    expect(input).not.toBeChecked();
+  });
+
+  test('render a select input for an option_string', async () => {
+    const spec = { ...baseSpec };
+    spec.args.arg.type = 'option_string';
+    spec.args.arg.validation_options = {
+      options: ['a', 'b']
+    };
+    const { findByLabelText } = renderSetupFromSpec(spec);
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    expect(input).toHaveValue('a');
+    expect(input).not.toHaveValue('b');
+  });
+
+  test('expect the info dialog contains text about input', async () => {
+    const spec = { ...baseSpec };
+    spec.args.arg.type = 'directory';
+    const { findByText } = renderSetupFromSpec(spec);
+    fireEvent.click(await findByText('i'));
+    expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
+  });
+});
+
+describe('Arguments form interactions', () => {
+  const validationMessage = 'invalid because';
+  let spec;
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  beforeEach(() => {
+    spec = {
+      args: {
+        arg: {
+          name: 'foo',
+          type: undefined, // varies by test
+          required: undefined, // varies by test
+          about: 'this is about foo',
         },
       },
     };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), validationMessage]]
     );
+  });
+
+  test('Browse button populates an input', async () => {
+    spec.args.arg.type = 'csv';
     const { findByText, findByLabelText } = renderSetupFromSpec(spec);
+
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
     expect(input).toHaveAttribute('type', 'text');
     expect(await findByText('Browse')).toBeInTheDocument();
-    fireEvent.change(input, { target: { value: 'foo' } });
-    await waitFor(() => {
-      expect(input).toHaveValue('foo');
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
-    });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
 
     // Browsing for a file
     const filepath = 'grilled_cheese.csv';
@@ -108,157 +157,78 @@ describe('Arguments form input types', () => {
     fireEvent.click(await findByText('Browse'));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
     });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
 
-    // Now browse again, but this time cancel it and expect the previous value
+    // Browse again, but cancel it and expect the previous value
     mockDialogData = { filePaths: [] }; // empty array is a mocked 'Cancel'
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
     fireEvent.click(await findByText('Browse'));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
     });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
   });
 
-  test('expect a text input for a vector', async () => {
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'vector',
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), validationMessage]]
-    );
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
+  test('Change value & get feedback on a required input', async () => {
+    spec.args.arg.type = 'directory';
+    spec.args.arg.required = true;
+    const { findByText, findByLabelText, queryByText } = renderSetupFromSpec(spec);
+
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'text');
-    expect(await findByText('Browse')).toBeInTheDocument();
+
+    // A required input with no value is invalid (red X), but
+    // feedback does not display until the input has been touched.
+    expect(input).toHaveClass('is-invalid');
+    expect(queryByText(RegExp(validationMessage))).toBeNull();
+
     fireEvent.change(input, { target: { value: 'foo' } });
     await waitFor(() => {
       expect(input).toHaveValue('foo');
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
+      expect(input).toHaveClass('is-invalid');
     });
-    expect(await findByText(validationMessage, { exact: false }))
+    expect(await findByText(RegExp(validationMessage)))
       .toBeInTheDocument();
-  });
 
-  test('expect a text input for a raster', async () => {
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'raster',
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), validationMessage]]
-    );
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'text');
-    expect(await findByText('Browse')).toBeInTheDocument();
-    fireEvent.change(input, { target: { value: 'foo' } });
+    fetchValidation.mockResolvedValue([]); // now make input valid
+    fireEvent.change(input, { target: { value: 'mydir' } });
     await waitFor(() => {
-      expect(input).toHaveValue('foo');
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
+      expect(input).toHaveClass('is-valid');
+      expect(queryByText(RegExp(validationMessage))).toBeNull();
     });
-    expect(await findByText(validationMessage, { exact: false }))
+  });
+
+  test('Focus on required input & get validation feedback', async () => {
+    spec.args.arg.type = 'csv';
+    spec.args.arg.required = true;
+    const { findByText, findByLabelText, queryByText } = renderSetupFromSpec(spec);
+
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    expect(input).toHaveClass('is-invalid');
+    expect(queryByText(RegExp(validationMessage))).toBeNull();
+
+    await fireEvent.focus(input);
+    await waitFor(() => {
+      expect(input).toHaveClass('is-invalid');
+    });
+    expect(await findByText(RegExp(validationMessage)))
       .toBeInTheDocument();
   });
 
-  test('expect a text input for a freestyle_string', async () => {
-    // This turned out to be an important test that caught an unrelated bug
-    // that all other tests missed -- changing only the `value` of the input
-    // while not changing the validation state revealed the problem of using
-    // a PureComponent for ArgsForm. PureComponents check for shallow-equality
-    // of props and avoid re-rendering if equal. This test alone maintained
-    // shallow-equality in a case where we definitely do need to re-render.
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'freestyle_string',
-        },
-      },
-    };
+  test('Focus on optional input & get valid display', async () => {
+    spec.args.arg.type = 'csv';
+    spec.args.arg.required = false;
     fetchValidation.mockResolvedValue([]);
     const { findByLabelText } = renderSetupFromSpec(spec);
+
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'text');
-    fireEvent.change(input, { target: { value: 'foo' } });
+
+    // An optional input with no value is valid, but green check
+    // does not display until the input has been touched.
+    expect(input).not.toHaveClass('is-valid', 'is-invalid');
+
+    await fireEvent.focus(input);
     await waitFor(() => {
-      expect(input).toHaveValue('foo');
-      // Not really possible to invalidate a freestyle_string
-      expect(input.classList.contains('is-invalid')).toBeFalsy();
+      expect(input).toHaveClass('is-valid');
     });
-  });
-
-  test('expect a text input for a number', async () => {
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'number',
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), validationMessage]]
-    );
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'text');
-    fireEvent.change(input, { target: { value: 'foo' } });
-    await waitFor(() => {
-      expect(input).toHaveValue('foo');
-      expect(input.classList.contains('is-invalid')).toBeTruthy();
-    });
-    expect(await findByText(validationMessage, { exact: false }))
-      .toBeInTheDocument();
-  });
-
-  test('expect a radio button for a boolean', async () => {
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'boolean',
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue([]);
-    const { findByLabelText } = renderSetupFromSpec(spec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveAttribute('type', 'radio');
-    expect(input).not.toBeChecked();
-  });
-
-  test('expect a select input for an option_string', async () => {
-    const spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: 'option_string',
-          validation_options: {
-            options: ['a', 'b'],
-          },
-        },
-      },
-    };
-    fetchValidation.mockResolvedValue([]);
-    const { findByLabelText } = renderSetupFromSpec(spec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
-    expect(input).toHaveValue('a');
-    expect(input).not.toHaveValue('b');
   });
 });
 
@@ -271,7 +241,7 @@ describe('UI spec functionality', () => {
     jest.resetAllMocks();
   });
 
-  test('test a UI spec with a boolean controller arg', async () => {
+  test('A UI spec with a boolean controller arg', async () => {
     const spec = {
       module: 'natcap.invest.dummy',
       args: {
@@ -402,7 +372,7 @@ describe('UI spec functionality', () => {
     });
   });
 
-  test('test grouping and sorting of args', async () => {
+  test('Grouping and sorting of args', async () => {
     const spec = {
       module: 'natcap.invest.dummy',
       args: {
@@ -464,92 +434,150 @@ describe('UI spec functionality', () => {
   });
 });
 
-test('SetupTab: test validation payload is well-formatted', async () => {
-  const spec = {
-    args: {
-      a: {
-        name: 'afoo',
-        type: 'freestyle_string',
-      },
-      b: {
-        name: 'bfoo',
-        type: 'number',
-      },
-      c: {
-        name: 'cfoo',
-        type: 'csv',
-      },
-    },
-  };
+describe('Misc form validation stuff', () => {
+  afterEach(() => {
+    fetchValidation.mockReset();
+  });
 
-  // Mocking to return the payload so we can assert we always send
-  // correct payload to this endpoint.
-  fetchValidation.mockImplementation(
-    (payload) => payload
-  );
+  test('Validation payload is well-formatted', async () => {
+    const spec = {
+      args: {
+        a: {
+          name: 'afoo',
+          type: 'freestyle_string',
+        },
+        b: {
+          name: 'bfoo',
+          type: 'number',
+        },
+        c: {
+          name: 'cfoo',
+          type: 'csv',
+        },
+      },
+    };
 
-  renderSetupFromSpec(spec);
-  await waitFor(() => {
-    const expectedKeys = ['model_module', 'args'];
-    const payload = fetchValidation.mock.results[0].value;
-    expectedKeys.forEach((key) => {
-      expect(Object.keys(payload)).toContain(key);
-      // expect(Object.keys(payload).includes(key)).toBe(true);
+    // Mocking to return the payload so we can assert we always send
+    // correct payload to this endpoint.
+    fetchValidation.mockImplementation(
+      (payload) => payload
+    );
+
+    renderSetupFromSpec(spec);
+    await waitFor(() => {
+      const expectedKeys = ['model_module', 'args'];
+      const payload = fetchValidation.mock.results[0].value;
+      expectedKeys.forEach((key) => {
+        expect(Object.keys(payload)).toContain(key);
+      });
     });
   });
-  fetchValidation.mockReset();
+
+  test('Check spatial overlap feedback is well-formatted', async () => {
+    const spec = {
+      args: {
+        vector: {
+          name: 'vvvvvv',
+          type: 'vector',
+        },
+        raster: {
+          name: 'rrrrrr',
+          type: 'raster',
+        },
+      },
+    };
+    const vectorValue = './vector.shp';
+    const expectedVal1 = '-84.9';
+    const vectorBox = `[${expectedVal1}, 19.1, -69.1, 29.5]`;
+    const rasterValue = './raster.tif';
+    const expectedVal2 = '-79.0198012081401';
+    const rasterBox = `[${expectedVal2}, 26.481559513537064, -78.37173806200593, 27.268061760228512]`;
+    const message = `Bounding boxes do not intersect: ${vectorValue}: ${vectorBox} | ${rasterValue}: ${rasterBox}`;
+
+    fetchValidation.mockResolvedValue([[Object.keys(spec.args), message]]);
+
+    const { findByLabelText } = renderSetupFromSpec(spec);
+    const vectorInput = await findByLabelText(spec.args.vector.name);
+    const rasterInput = await findByLabelText(spec.args.raster.name);
+
+    fireEvent.change(vectorInput, { target: { value: vectorValue } });
+    fireEvent.change(rasterInput, { target: { value: rasterValue } });
+
+    // Feedback on each input should only include the bounding box
+    // of that single input.
+    const vectorGroup = vectorInput.closest('div');
+    await waitFor(() => {
+      expect(within(vectorGroup).getByText(RegExp(expectedVal1)))
+        .toBeInTheDocument();
+      expect(within(vectorGroup).queryByText(RegExp(expectedVal2)))
+        .toBeNull();
+    });
+
+    const rasterGroup = rasterInput.closest('div');
+    await waitFor(() => {
+      expect(within(rasterGroup).getByText(RegExp(expectedVal2)))
+        .toBeInTheDocument();
+      expect(within(rasterGroup).queryByText(RegExp(expectedVal1)))
+        .toBeNull();
+    });
+  });
 });
 
-test('SetupTab: test dragover of a datastack/logfile', async () => {
-  const spec = {
-    module: `natcap.invest.${MODULE}`,
-    args: {
-      arg1: {
-        name: 'Workspace',
-        type: 'directory',
-      },
-      arg2: {
-        name: 'AOI',
-        type: 'vector',
-      },
-    },
-  };
-
-  fetchValidation.mockResolvedValue(
-    [[Object.keys(spec.args), 'invalid because']]
-  );
-
-  const mockDatastack = {
-    module_name: spec.module,
-    args: {
-      arg1: 'circle',
-      arg2: 'square',
-    },
-  };
-  fetchDatastackFromFile.mockResolvedValue(mockDatastack);
-
-  const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
-  const setupForm = await findByTestId('setup-form');
-
-  // This should work but doesn't due to lack of dataTransfer object in jsdom:
-  // https://github.com/jsdom/jsdom/issues/1568
-  // const dropEvent = new Event('drop',
-  //   { dataTransfer: { files: ['foo.txt'] }
-  // })
-  // fireEvent.drop(setupForm, dropEvent)
-
-  // Below is a patch similar to the one described here:
-  // https://github.com/testing-library/react-testing-library/issues/339
-  const fileDropEvent = createEvent.drop(setupForm);
-  const fileArray = ['foo.txt'];
-  Object.defineProperty(fileDropEvent, 'dataTransfer', {
-    value: { files: fileArray }
+describe('Form drag-and-drop', () => {
+  afterEach(() => {
+    fetchValidation.mockReset();
+    fetchDatastackFromFile.mockReset();
   });
-  fireEvent(setupForm, fileDropEvent);
 
-  expect(await findByLabelText(RegExp(`${spec.args.arg1.name}`)))
-    .toHaveValue(mockDatastack.args.arg1);
-  expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
-    .toHaveValue(mockDatastack.args.arg2);
-  fetchValidation.mockReset();
+  test('Dragover of a datastack/logfile updates all inputs', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const mockDatastack = {
+      module_name: spec.module,
+      args: {
+        arg1: 'circle',
+        arg2: 'square',
+      },
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const setupForm = await findByTestId('setup-form');
+
+    // This should work but doesn't due to lack of dataTransfer object in jsdom:
+    // https://github.com/jsdom/jsdom/issues/1568
+    // const dropEvent = new Event('drop',
+    //   { dataTransfer: { files: ['foo.txt'] }
+    // })
+    // fireEvent.drop(setupForm, dropEvent)
+
+    // Below is a patch similar to the one noted here:
+    // https://github.com/testing-library/react-testing-library/issues/339
+    const fileDropEvent = createEvent.drop(setupForm);
+    const fileArray = ['foo.txt'];
+    Object.defineProperty(fileDropEvent, 'dataTransfer', {
+      value: { files: fileArray }
+    });
+    fireEvent(setupForm, fileDropEvent);
+
+    expect(await findByLabelText(RegExp(`${spec.args.arg1.name}`)))
+      .toHaveValue(mockDatastack.args.arg1);
+    expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
+      .toHaveValue(mockDatastack.args.arg2);
+  });
 });

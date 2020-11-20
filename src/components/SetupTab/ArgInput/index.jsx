@@ -1,3 +1,4 @@
+import os from 'os';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -7,6 +8,29 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
+
+/**
+ * Filter a message that refers to many spatial inputs' bounding boxes.
+ *
+ * Messages are oneline strings with `|` separating each
+ * filename & bounding-box pair. E.g:
+ *
+ *   `Bounding boxes do not intersect:
+ *   ./a.shp: [-84.9, 19.1, -69.15, 29.5] |
+ *   ./b.shp: [-79.0198, 26.481, -78.3717, 27.268] | ...`
+ *
+ * @param {string} message - a string that contains `filepath` e.g:
+ * @param {string} filepath - string preceding the relevant part of `message`
+ * @returns {string} - the filtered and formatted part of the message
+ */
+function filterSpatialOverlapFeedback(message, filepath) {
+  const newPrefix = 'Bounding box does not intersect at least one other:';
+  const bbox = message.split(`${filepath}:`).pop().split('|')[0];
+  const bboxFormatted = bbox.split(' ').map(
+    (str) => str.padEnd(22, ' ')
+  ).join('').trim();
+  return `${newPrefix}${os.EOL}${bboxFormatted}`;
+}
 
 function FormLabel(props) {
   return (
@@ -47,14 +71,31 @@ export default class ArgInput extends React.PureComponent {
       selectFile,
       touched,
       ui_option,
-      validationMessage,
       value,
     } = this.props;
+    let { validationMessage } = this.props;
     let Input;
 
+    // Messages with this pattern include validation feedback about
+    // multiple inputs, but the whole message is repeated for each input.
+    // It's more readable if filtered on the individual input.
+    const pattern = 'Bounding boxes do not intersect';
+    if (validationMessage.startsWith(pattern)) {
+      validationMessage = filterSpatialOverlapFeedback(
+        validationMessage, value
+      );
+    }
+
     // These types need a text input, and some also need a file browse button
-    if (['csv', 'vector', 'raster', 'directory', 'freestyle_string', 'number'].includes(argSpec.type)) {
-      const typeLabel = argSpec.type !== 'freestyle_string' ? argSpec.type : 'string';
+    if (
+      [
+        'csv', 'vector', 'raster', 'directory',
+        'freestyle_string', 'number',
+      ].includes(argSpec.type)
+    ) {
+      const typeLabel = argSpec.type === 'freestyle_string'
+        ? 'string'
+        : argSpec.type;
       Input = (
         <Form.Group
           as={Row}
@@ -77,8 +118,9 @@ export default class ArgInput extends React.PureComponent {
                 placeholder={typeLabel}
                 value={value || ''} // empty string is handled better than `undefined`
                 onChange={handleChange}
+                onFocus={handleChange}
                 isValid={touched && isValid}
-                isInvalid={touched && validationMessage}
+                isInvalid={validationMessage}
                 disabled={ui_option === 'disable'}
               />
               {
@@ -98,11 +140,17 @@ export default class ArgInput extends React.PureComponent {
                   )
                   : <React.Fragment />
               }
-              <Feedback
-                argkey={argkey}
-                argtype={argSpec.type}
-                message={validationMessage}
-              />
+              {
+                (validationMessage && touched)
+                  ? (
+                    <Feedback
+                      argkey={argkey}
+                      argtype={argSpec.type}
+                      message={validationMessage}
+                    />
+                  )
+                  : <React.Fragment />
+              }
             </InputGroup>
           </Col>
         </Form.Group>
@@ -160,17 +208,24 @@ export default class ArgInput extends React.PureComponent {
                 name={argkey}
                 value={value}
                 onChange={handleChange}
+                onFocus={handleChange}
                 disabled={ui_option === 'disable'}
               >
                 {argSpec.validation_options.options.map((opt) =>
                   <option value={opt} key={opt}>{opt}</option>
                 )}
               </Form.Control>
-              <Feedback
-                argkey={argkey}
-                argtype={argSpec.type}
-                message={validationMessage}
-              />
+              {
+                (validationMessage && touched)
+                  ? (
+                    <Feedback
+                      argkey={argkey}
+                      argtype={argSpec.type}
+                      message={validationMessage}
+                    />
+                  )
+                  : <React.Fragment />
+              }
             </InputGroup>
           </Col>
         </Form.Group>

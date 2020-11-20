@@ -248,7 +248,11 @@ input[type=text]::placeholder {
 }
 
 .invalid-feedback {
-	font-size: 1.05rem;
+	font-size: 1.15rem;
+	font-family: monospace;
+	white-space: pre-wrap;
+	padding-left: 3rem;
+	text-indent: -3rem;
 }
 
 /* InVEST Log Tab */

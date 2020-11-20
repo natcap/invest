@@ -219,40 +219,22 @@ describe('InVEST Run Button', () => {
   });
 
   test('Changing inputs trigger validation & enable/disable Run', async () => {
-    /*
-    This tests that changes to input values trigger validation.
-    The fetchValidation return value is always mocked, but then this
-    also tests that validation results correctly enable/disable the
-    Run button and display feedback messages on invalid inputs.
-    */
     let invalidFeedback = 'is a required key';
     fetchValidation.mockResolvedValue([[['a', 'b'], invalidFeedback]]);
 
     const {
-      findByText,
-      findAllByText,
       findByLabelText,
       findByRole,
-      queryAllByText,
     } = renderInvestTab();
 
     const runButton = await findByRole('button', { name: /Run/ });
     expect(runButton).toBeDisabled();
-    // The inputs are invalid so the invalid feedback message is present.
-    // But, the inputs have not yet been touched, so the message is hidden
-    // by CSS 'display: none'. Unfortunately, the bootstrap stylesheet is
-    // not loaded in this testing DOM, so cannot assert the message is not visible.
-    const invalidInputs = await findAllByText(invalidFeedback, { exact: false });
-    invalidInputs.forEach((element) => {
-      expect(element).toBeInTheDocument();
-      // Would be nice if these worked, but they do not:
-      // expect(element).not.toBeVisible()
-      // expect(element).toHaveStyle('display: none')
-    });
 
     const a = await findByLabelText(RegExp(`${spec.args.a.name}`));
     const b = await findByLabelText(RegExp(`${spec.args.b.name}`));
-    const c = await findByLabelText(RegExp(`${spec.args.c.name}`));
+
+    expect(a).toHaveClass('is-invalid');
+    expect(b).toHaveClass('is-invalid');
 
     // These new values will be valid - Run should enable
     fetchValidation.mockResolvedValue([]);
@@ -260,10 +242,6 @@ describe('InVEST Run Button', () => {
     fireEvent.change(b, { target: { value: 1 } });
     await waitFor(() => {
       expect(runButton).toBeEnabled();
-    });
-    // Now that inputs are valid, feedback message should be cleared.
-    queryAllByText(invalidFeedback, { exact: false }).forEach((element) => {
-      expect(element).toBeNull();
     });
 
     // This new value will be invalid - Run should disable again
@@ -273,7 +251,5 @@ describe('InVEST Run Button', () => {
     await waitFor(() => {
       expect(runButton).toBeDisabled();
     });
-    expect(await findByText(invalidFeedback, { exact: false }))
-      .toBeInTheDocument();
   });
 });
