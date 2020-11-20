@@ -38,6 +38,7 @@ ifeq ($(OS),Windows_NT)
 	.DEFAULT_GOAL := windows_installer
 	RM_DATA_DIR := $(RMDIR) $(DATA_DIR)
 	/ := '\'
+	OSNAME = 'windows'
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -56,6 +57,7 @@ else
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
 		.DEFAULT_GOAL := mac_dmg
+		OSNAME = 'mac'
 	else
 		.DEFAULT_GOAL := binaries
 	endif
@@ -110,6 +112,7 @@ TEST_DATAVALIDATOR := $(PYTHON) -m pytest -vs scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
+INVEST_BINARIES_DIR_ZIP := $(DIST_DIR)/$(OSNAME)_invest_binaries.zip
 APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
 APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
@@ -389,9 +392,10 @@ signcode_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
-	-$(GSUTIL) -m rsync -r $(DIST_DIR) $(DIST_URL_BASE)
-# 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
-# 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	$(ZIP) $(INVEST_BINARIES_DIR_ZIP) $(INVEST_BINARIES_DIR)
+	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
+	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
 	@echo "Application binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 
