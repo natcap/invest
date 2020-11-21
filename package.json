@@ -56,7 +56,14 @@
     ]
   },
   "invest": {
-    "version": "3.8.9"
+    "hostname": "https://storage.googleapis.com", 
+    "bucket": "natcap-dev-build-artifacts",
+    "fork": "invest/davemfish",
+    "version": "3.8.0.post1935+gb52992af",
+    "target": {
+      "macos": "mac_invest_binaries.zip",
+      "windows": "windows_invest_binaries.zip"
+    }
   },
   "keywords": [],
   "author": "dmf",
