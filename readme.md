@@ -8,30 +8,34 @@ workflows of an InVEST user.
 
 ## To develop and launch this Application
 
+* `npm start`  but first,
 * `npm install`  
-* clone natcap.invest and checkout a recent revision (e.g. `main`)  
-* setup a conda* environment with deps for `natcap.invest Flask PyInstaller`  
-* build invest binaries  
-	`python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec`  
-* `npm start`  
+* bind to an `invest` executeable
 
-(* invest-flask.spec script assumes a conda environment)
+In production, the invest exe comes from prebuilt binaries that are an artifact of the `invest` build process.  
 
-## To build this application
+For development, there are options:  
+* A. Duplicate the production setup by fetching prebuilt binaries  
+`npm run fetch-invest` 
+* B. use an any other locally installed, compatible, invest CLI (e.g. from an active python environment). To configure this, see `.env-example`
+
 
 `npm run build`  -- calls babel to transpile ES6 and jsx code to commonjs
 
 `npm run dist`  -- packages build source into an electron application using electron-builder
 
 
-### To run linter or tests
+### To run various scripts and local programs
+See the "scripts" section of `package.json` and run of them like:  
 `npm run lint`  
 `npm run test`  
 
-To run these or other command-line utils of locally installed packages outside the context of the `package.json scripts`, use `npx` (e.g. `npx eslint ...`) as a shortcut to the executeable. 
+To run other scripts or CLIs of locally installed packages, 
+prefix commands with `npx` (e.g. `npx eslint ...`). Otherwise, only
+globally installed packages are on the PATH. 
 
-### To run a single test file:
+#### E.g. run a single test file:
 `npx jest --coverage=false --verbose app.test.js`  
 
-To run snippets of code outside the electron runtime, but with the same ECMAscript features and babel configurations, use `node -r @babel/register script.js`.  
+To run javascript outside the electron runtime, but with the same ECMAscript features and babel configurations, use `node -r @babel/register script.js`.  
 
