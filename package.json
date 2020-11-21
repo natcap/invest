@@ -6,13 +6,14 @@
   "main": "src/main.js",
   "homepage": "./",
   "scripts": {
-    "start": "npx electron . --dev",
+    "start": "electron . --dev",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "cross-env DEBUG_PRINT_LIMIT=10 jest --testMatch **/tests/*.test.js",
     "test-flask-app": "jest --runInBand --testMatch **/tests/binary_tests/flaskapp.test.js",
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
     "postinstall": "electron-builder install-app-deps",
-    "build": "npx ./build.js",
+    "fetch-invest": "node ./scripts/fetch_invest_binaries.js",
+    "build": "node ./build.js",
     "dist": "electron-builder -c.extraMetadata.main=build/main.js",
     "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js"
   },
