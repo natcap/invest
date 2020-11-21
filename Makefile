@@ -112,7 +112,7 @@ TEST_DATAVALIDATOR := $(PYTHON) -m pytest -vs scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
-INVEST_BINARIES_DIR_ZIP := $(DIST_DIR)/$(OSNAME)_invest_binaries.zip
+INVEST_BINARIES_DIR_ZIP := $(OSNAME)_invest_binaries.zip
 APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
 APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
