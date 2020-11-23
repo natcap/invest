@@ -12,7 +12,7 @@
     "test-flask-app": "jest --runInBand --testMatch **/tests/binary_tests/flaskapp.test.js",
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
     "postinstall": "electron-builder install-app-deps",
-    "fetch-invest": "node ./scripts/fetch_invest_binaries.js",
+    "fetch-invest": "node ./scripts/fetch_invest_binaries.js && unzip ./build/binaries.zip -d build/invest/",
     "build": "node ./build.js",
     "dist": "electron-builder -c.extraMetadata.main=build/main.js",
     "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js"
@@ -57,7 +57,7 @@
     ]
   },
   "invest": {
-    "hostname": "https://storage.googleapis.com", 
+    "hostname": "https://storage.googleapis.com",
     "bucket": "natcap-dev-build-artifacts",
     "fork": "invest/davemfish",
     "version": "3.8.0.post1935+gb52992af",

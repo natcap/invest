@@ -26,9 +26,7 @@ jobs:
 
     - name: Fetch InVEST Binaries
       shell: bash
-      run: |
-        npx node ./scripts/fetch_invest_binaries.js ${{matrix.os}}
-        unzip ./build/binaries.zip -d build/invest/
+      run: npm run fetch-invest
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1

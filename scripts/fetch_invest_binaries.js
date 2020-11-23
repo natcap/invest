@@ -14,24 +14,19 @@ const path = require('path')
 const url = require('url')
 const package = require('../package')
 
-// TODO: better to just detect the platform with node instead of passing
-const args = process.argv.slice(2)
-if (args.length !== 1) {
-	throw new Error('expected exactly 1 argument: the current OS');
-}
 let fileSuffix;
-switch (args[0]) {
-	case 'windows-latest':
+switch (process.platform) {
+	case 'win32':
 		filePrefix = 'windows'
 		break
-	case 'macos-latest':
+	case 'darwin':
 		filePrefix = 'macos'
 		break
-	case 'ubuntu-latest':
+	case 'linux':
 		filePrefix = 'linux'
 		break
 	default:
-		throw new Error("expected argument to be in ['windows-latest, 'macos-latest', 'ubuntu-latest']")
+		throw new Error("expected platform to be windows, mac, or linux")
 }
 
 const HOSTNAME = package.invest.hostname
@@ -44,6 +39,7 @@ const DESTFILE = path.resolve('build/binaries.zip');
 const urladdress = url.resolve(HOSTNAME, path.join(BUCKET, FORK, VERSION, SRCFILE))
 
 const download = function(url, dest) {
+	console.log(`fetching ${url}`)
 	fs.existsSync(path.dirname(dest)) || fs.mkdirSync(path.dirname(dest));
 	const fileStream = fs.createWriteStream(dest)
 	const request = https.get(url, function(response) {
