@@ -22,4 +22,4 @@ echo 'imported cert'
 # this is essential to avoid the UI password prompt
 security set-key-partition-list -S apple-tool:,apple: -s -k $KEYCHAIN_PASS $KEYCHAIN_NAME
 
-
+security find-certificate -c 'Stanford University'
