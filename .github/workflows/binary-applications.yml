@@ -153,7 +153,7 @@ jobs:
     build-mac-binaries:
         name: "Build mac binaries"
         needs: check-syntax-errors
-        runs-on: macos-11.0
+        runs-on: macos-10.15
         env:
             PYTHON_VERSION: 3.7
             PYTHON_ARCH: x64

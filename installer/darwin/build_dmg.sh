@@ -10,7 +10,6 @@
 # Script adapted from http://stackoverflow.com/a/1513578/299084
 
 CONFIG_DIR="installer/darwin"
-appdirname="InVEST_${1}_unstable"  # the name of the folder the user will drag from the DMG to their applications folder.
 title="InVEST ${1}"  # the name of the volume the DMG provides.
 finalDMGName="dist/InVEST ${1}.dmg"  # the name of the final DMG file.
 
@@ -25,4 +24,3 @@ fi
 pandoc HISTORY.rst -o $tempdir/HISTORY.html
 
 dmgbuild -Dinvestdir="$tempdir" -s $CONFIG_DIR/dmgconf.py "$title" "$finalDMGName"
-    
