@@ -110,8 +110,6 @@ TEST_DATAVALIDATOR := $(PYTHON) -m pytest -vs scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
-APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
-APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
@@ -119,7 +117,7 @@ MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
+.PHONY: fetch install binaries userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -139,7 +137,6 @@ help:
 	@echo "  fetch             to clone all managed repositories"
 	@echo "  install           to build and install a wheel of natcap.invest into the active python installation"
 	@echo "  binaries          to build pyinstaller binaries"
-	@echo "  apidocs           to build HTML API documentation"
 	@echo "  userguide         to build HTML version of the users guide"
 	@echo "  python_packages   to build natcap.invest wheel and source distributions"
 	@echo "  windows_installer to build an NSIS installer for distribution"
@@ -257,17 +254,6 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	$(CONDA) list --export > $(INVEST_BINARIES_DIR)/package_versions.txt
 	$(INVEST_BINARIES_DIR)/invest list
 
-# Documentation.
-# API docs are copied to dist/apidocs
-# Userguide HTML docs are copied to dist/userguide
-# Userguide PDF file is copied to dist/InVEST_<version>_.pdf
-apidocs: $(APIDOCS_HTML_DIR) $(APIDOCS_ZIP_FILE)
-$(APIDOCS_HTML_DIR): | $(DIST_DIR)
-	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
-	$(COPYDIR) build/sphinx/html $(APIDOCS_HTML_DIR)
-
-$(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
-	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_HTML_DIR))"
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
