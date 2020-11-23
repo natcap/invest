@@ -79,7 +79,7 @@ def fetch_args(args, create_outputs=True):
 
                 # Mig Params
                 'migration_dir': 'path/to/mig_dir',
-                'Migration': [numpy.ndarray, numpy.ndarray, ...]
+                'Migration': [numpy.matrix, numpy.matrix, ...]
             },
             {
                 ...  # additional dictionary doesn't exist when 'do_batch'
@@ -397,7 +397,7 @@ def read_migration_tables(args, class_list, region_list):
     Example Returns::
 
         mig_dict = {
-            'Migration': [numpy.ndarray, numpy.ndarray, ...]
+            'Migration': [numpy.matrix, numpy.matrix, ...]
         }
 
     Note:
@@ -410,29 +410,29 @@ def read_migration_tables(args, class_list, region_list):
     mig_dict = _parse_migration_tables(args, class_list)
 
     # Create indexed list
-    array_list = [None] * len(class_list)
+    matrix_list = [None] * len(class_list)
 
     # Map numpy.matrices to indices in list
     for i in range(0, len(class_list)):
         if class_list[i] in mig_dict.keys():
-            array_list[i] = mig_dict[class_list[i]]
+            matrix_list[i] = mig_dict[class_list[i]]
 
     # Fill in rest with identity matrices
-    for i in range(0, len(array_list)):
-        if array_list[i] is None:
-            array_list[i] = numpy.array(numpy.identity(len(region_list)))
+    for i in range(0, len(matrix_list)):
+        if matrix_list[i] is None:
+            matrix_list[i] = numpy.matrix(numpy.identity(len(region_list)))
 
     # Check migration regions are equal across matrices
-    assert all((x.shape == array_list[0].shape for x in array_list)), (
+    assert all((x.shape == matrix_list[0].shape for x in matrix_list)), (
         "Shape of migration matrices are not equal across lifecycle classes")
 
     # Check that all migration vectors approximately sum to one
     if not all((numpy.allclose(vector.sum(), 1)
-                for array in array_list for vector in array)):
+                for matrix in matrix_list for vector in matrix)):
         LOGGER.warning("Elements in at least one migration matrices source "
                        "vector do not sum to one")
 
-    migration_dict['Migration'] = array_list
+    migration_dict['Migration'] = matrix_list
     return migration_dict
 
 
@@ -441,7 +441,7 @@ def _parse_migration_tables(args, class_list):
     Parses the migration tables given by user
 
     Parses all files in the given directory as migration matrices and returns a
-    dictionary of stages and their corresponding migration numpy array. If
+    dictionary of stages and their corresponding migration numpy matrix. If
     extra files are provided that do not match the class names, an exception
     will be thrown.
 
@@ -454,8 +454,8 @@ def _parse_migration_tables(args, class_list):
     Example Returns::
 
         mig_dict = {
-            {'stage1': numpy.ndarray},
-            {'stage2': numpy.ndarray},
+            {'stage1': numpy.matrix},
+            {'stage2': numpy.matrix},
             # ...
         }
     """
@@ -469,20 +469,20 @@ def _parse_migration_tables(args, class_list):
             if class_name.lower() in class_list:
                 LOGGER.info('Parsing csv %s for class %s', mig_csv,
                             class_name)
-                with open(mig_csv, 'r') as param_file:
+                with open(mig_csv, 'rU') as param_file:
                     csv_reader = csv.reader(param_file)
                     lines = []
                     for row in csv_reader:
                         lines.append(row)
 
-                    float_array = []
+                    matrix = []
                     for row in range(1, len(lines)):
-                        float_row = []
-                        for col in range(1, len(lines[row])):
-                            float_row.append(float(lines[row][col]))
-                        float_array.append(float_row)
+                        array = []
+                        for entry in range(1, len(lines[row])):
+                            array.append(float(lines[row][entry]))
+                        matrix.append(array)
 
-                    Migration = numpy.array(float_array)
+                    Migration = numpy.matrix(matrix)
 
                 mig_dict[class_name] = Migration
 

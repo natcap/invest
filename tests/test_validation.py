@@ -669,7 +669,7 @@ class CSVValidation(unittest.TestCase):
         # be replaced with a replacement character.
         # UTF16, UTF32, etc. will still raise an error.
         error_msg = validation.check_csv(target_file)
-        self.assertEqual(error_msg, None)
+        self.assertEquals(error_msg, None)
 
     def test_excel_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in excel."""
