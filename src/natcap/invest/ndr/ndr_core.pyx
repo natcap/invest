@@ -81,7 +81,7 @@ cdef class _ManagedRaster:
     def __cinit__(self, raster_path, band_id, write_mode):
         """Create new instance of Managed Raster.
 
-        Parameters:
+        Args:
             raster_path (char*): path to raster that has block sizes that are
                 powers of 2. If not, an exception is raised.
             band_id (int): which band in `raster_path` to index. Uses GDAL
@@ -355,7 +355,7 @@ def ndr_eff_calculation(
         crit_len_path, effective_retention_path):
     """Calculate flow downhill effective_retention to the channel.
 
-        Parameters:
+        Args:
             mfd_flow_direction_path (string): a path to a raster with
                 pygeoprocessing.routing MFD flow direction values.
             stream_path (string): a path to a raster where 1 indicates a

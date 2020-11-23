@@ -61,6 +61,8 @@ Unreleased Changes (3.9)
       a small but noticeable amount of time in launching a model.
     * The number of files included in the python source distribution has been
       reduced to just those needed to install the python package and run tests.
+    * Code-sign the macOS distribution, and switch to a DMG distribution format.
+    * No longer include the HTML docs or HISTORY.rst in the macOS distribution.
     * Bumped the ``shapely`` requirements to ``>=1.7.1`` to address a library
       import issue on Mac OS Big Sur.
     * The InVEST binary builds now launch on Mac OS 11 "Big Sur".  This was

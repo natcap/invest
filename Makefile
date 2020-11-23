@@ -55,7 +55,7 @@ else
 	RM_DATA_DIR := yes | $(RMDIR) $(DATA_DIR)
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
-		.DEFAULT_GOAL := mac_installer
+		.DEFAULT_GOAL := mac_dmg
 	else
 		.DEFAULT_GOAL := binaries
 	endif
@@ -119,7 +119,7 @@ MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -143,7 +143,7 @@ help:
 	@echo "  userguide         to build HTML version of the users guide"
 	@echo "  python_packages   to build natcap.invest wheel and source distributions"
 	@echo "  windows_installer to build an NSIS installer for distribution"
-	@echo "  mac_installer     to build a disk image for distribution"
+	@echo "  mac_dmg           to build a disk image for distribution"
 	@echo "  sampledata        to build sample data zipfiles"
 	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
 	@echo "  test              to run pytest on the tests directory"
@@ -332,23 +332,46 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vc
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
+DMG_CONFIG_FILE := installer/darwin/dmgconf.py
+mac_dmg: $(MAC_DISK_IMAGE_FILE) 
+$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
+	dmgbuild -Dinvestdir=$(MAC_APPLICATION_BUNDLE) -s $(DMG_CONFIG_FILE) "InVEST $(VERSION)" $(MAC_DISK_IMAGE_FILE)
+
 mac_app: $(MAC_APPLICATION_BUNDLE)
 $(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR)
-	./installer/darwin/build_app_bundle.sh "$(VERSION)" "$(INVEST_BINARIES_DIR)" "$(MAC_APPLICATION_BUNDLE)"
-
-mac_installer: $(MAC_DISK_IMAGE_FILE)
-$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
-	./installer/darwin/build_dmg.sh "$(VERSION)" "$(MAC_APPLICATION_BUNDLE)" "$(USERGUIDE_HTML_DIR)"
+	./installer/darwin/build_app_bundle.sh $(VERSION) $(INVEST_BINARIES_DIR) $(MAC_APPLICATION_BUNDLE)
 
 mac_zipfile: $(MAC_BINARIES_ZIP_FILE)
 $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
-	./installer/darwin/build_zip.sh "$(VERSION)" "$(MAC_APPLICATION_BUNDLE)" "$(USERGUIDE_HTML_DIR)"
+	./installer/darwin/build_zip.sh $(VERSION) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
 
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
 CERT_FILE := StanfordUniversity.crt
 KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
+P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
+KEYCHAIN_NAME := codesign_keychain
+codesign_mac:
+	# download the p12 certificate file from google cloud
+	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
+	# create a new keychain (so that we can know what the password is)
+	security create-keychain -p '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
+	# add the keychain to the search list so it can be found
+	security list-keychains -s '$(KEYCHAIN_NAME)'
+	# unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
+	security unlock-keychain -p '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
+	# add the certificate to the keychain
+	# -T option says that the codesign executable can access the keychain
+	# for some reason this alone is not enough, also need the following step
+	security import $(BUILD_DIR)/$(P12_FILE) -k '$(KEYCHAIN_NAME)' -P '$(CERT_KEY_PASS)' -T /usr/bin/codesign
+	# this is essential to avoid the UI password prompt
+	security set-key-partition-list -S apple-tool:,apple: -s -k '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
+	# sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
+	codesign --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
+	# relock the keychain (not sure if this is important?)
+	security lock-keychain '$(KEYCHAIN_NAME)'
+
 signcode:
 	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
 	$(GSUTIL) cp gs://stanford_cert/$(KEY_FILE) $(BUILD_DIR)/$(KEY_FILE)
@@ -359,7 +382,6 @@ signcode:
 	$(RM) $(BUILD_DIR)/$(KEY_FILE)
 	@echo "Installer was signed with osslsigncode"
 
-P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
 signcode_windows:
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"

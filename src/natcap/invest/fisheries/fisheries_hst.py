@@ -243,7 +243,7 @@ def convert_survival_matrix(vars_dict):
 def validate(args, limit_to=None):
     """Validate an input dictionary for Fisheries HST.
 
-    Parameters:
+    Args:
         args (dict): The args dictionary.
         limit_to=None (str or None): If a string key, only this args parameter
             will be validated.  If ``None``, all args parameters will be

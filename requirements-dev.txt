@@ -23,10 +23,4 @@ setuptools_scm
 requests
 coverage
 xlwt
-
-# Specifying dmgbuild and some dependencies.  Dmgbuild will probably work
-# with some other package versions, but I haven't had time to try to get
-# other versions to work.
-dmgbuild==1.1.0; sys_platform == 'darwin'  # pip-only
-mac-alias==1.1.0; sys_platform == 'darwin'  # pip-only
-ds-store==1.0.1; sys_platform == 'darwin'  # pip-only
+dmgbuild==1.4.2; sys_platform == 'darwin'  # pip-only
