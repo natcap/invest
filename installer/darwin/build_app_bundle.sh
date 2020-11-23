@@ -5,7 +5,8 @@
 # Arguments:
 #  $1 = the version string to use
 #  $2 = the path to the binary dir to package.
-#  $3 = the path to where the application bundle should be written.
+#  $3 = the path to the HTML documentation
+#  $4 = the path to where the application bundle should be written.
 
 # remove temp files that can get in the way
 tempdir=`basename $3`
@@ -21,13 +22,18 @@ mkdir -p "$tempdir"
 # .command extension makes the scripts runnable by the user.
 # Shell files without the `invest_` prefix will be left alone.
 new_basename='InVEST'
-_APPDIR="$3"
+_APPDIR="$4"
 _MACOSDIR="$_APPDIR/Contents/MacOS"
 _RESOURCEDIR="$_APPDIR/Contents/Resources"
+_INVEST_DIST_DIR="$_MACOSDIR/invest_dist"
+_USERGUIDE_HTML_DIR="$_INVEST_DIST_DIR/documentation/userguide"
 CONFIG_DIR="installer/darwin"
 mkdir -p "${_MACOSDIR}"
 mkdir -p "${_RESOURCEDIR}"
-cp -r "$2" "$_MACOSDIR/invest_dist"
+mkdir -p "${_USERGUIDE_HTML_DIR}"
+
+cp -r "$2" "$_INVEST_DIST_DIR"
+cp -r "$3" "$_USERGUIDE_HTML_DIR"
 new_command_file="$_MACOSDIR/$new_basename"
 cp $CONFIG_DIR/invest.icns "$_RESOURCEDIR/invest.icns"
 
