@@ -15,7 +15,7 @@ Installing InVEST From Source or Wheel
 Binary Dependencies
 -------------------
 
-InVEST itself depends only on python packages, but many of these packaged
+InVEST itself depends only on python packages, but many of these package
 dependencies depend on low-level libraries or have complex build processes.
 Some of these packages (notably, numpy and scipy) have started to release 
 precompiled binary packages of their own. Recently we have had success 
