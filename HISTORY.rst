@@ -65,6 +65,7 @@ Unreleased Changes (3.9)
     * No longer include the HTML docs or HISTORY.rst in the macOS distribution.
     * Bumped the ``shapely`` requirements to ``>=1.7.1`` to address a library
       import issue on Mac OS Big Sur.
+    * Fixing model documentation links for Windows.
 * Coastal Blue Carbon
     * Refactor of Coastal Blue Carbon that implements TaskGraph for task
       management across the model and fixes a wide range of issues with the model
@@ -139,7 +140,7 @@ Unreleased Changes (3.9)
 * Finfish
     * Fixed a bug where the suffix input was not being used for output paths.
 * Urban Cooling
-    * Split energy savings valuation and work productivity valuation into 
+    * Split energy savings valuation and work productivity valuation into
       separate UI options.
 
 ..

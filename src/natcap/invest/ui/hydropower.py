@@ -11,7 +11,7 @@ class HydropowerWaterYield(model.InVESTModel):
             label='Hydropower Water Yield',
             target=hydropower_water_yield.execute,
             validator=hydropower_water_yield.validate,
-            localdoc='../documentation/reservoirhydropowerproduction.html')
+            localdoc='reservoirhydropowerproduction.html')
 
         self.precipitation = inputs.File(
             args_key='precipitation_path',
