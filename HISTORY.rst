@@ -66,6 +66,8 @@ Unreleased Changes (3.9)
     * Bumped the ``shapely`` requirements to ``>=1.7.1`` to address a library
       import issue on Mac OS Big Sur.
     * Fixing model documentation links for Windows.
+    * The InVEST binary builds now launch on Mac OS 11 "Big Sur".  This was
+      addressed by defining the ``QT_MAC_WANTS_LAYER`` environment variable.
 * Coastal Blue Carbon
     * Refactor of Coastal Blue Carbon that implements TaskGraph for task
       management across the model and fixes a wide range of issues with the model

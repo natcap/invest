@@ -31,4 +31,5 @@ background = os.path.join(CWD, 'background.png')
 #background = 'builtin-arrow'
 default_view = 'icon-view'
 
-
+format = 'UDZO'
+license = {'licenses': {'en_US': 'LICENSE.txt'}}
