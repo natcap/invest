@@ -10,7 +10,7 @@ workflows of an InVEST user.
 
 * `npm start`  but first,
 * `npm install`  
-* bind to an `invest` executeable
+* bind to an `invest` executeable (see package.json "invest" for a compatible version)
 
 In production, the invest exe comes from prebuilt binaries that are an artifact of the `invest` build process.  
 
