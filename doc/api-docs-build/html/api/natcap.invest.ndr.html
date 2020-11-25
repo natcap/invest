@@ -1,0 +1,498 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>natcap.invest.ndr package &mdash; InVEST 3.8.9.post1013+gbc4bb051.d20201125 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.gif"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="natcap.invest.recreation package" href="natcap.invest.recreation.html" />
+    <link rel="prev" title="natcap.invest.hydropower package" href="natcap.invest.hydropower.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> InVEST
+          
+
+          
+            
+            <img src="../_static/invest-logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.8.9.post1013
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installing InVEST From Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">The InVEST CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scripting.html">Tutorial: Batch Processing on Windows</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">Full API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html">natcap</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.invest.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">natcap.invest.ndr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.carbon">natcap.invest.carbon module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.cli">natcap.invest.cli module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.coastal_vulnerability">natcap.invest.coastal_vulnerability module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_percentile">natcap.invest.crop_production_percentile module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_regression">natcap.invest.crop_production_regression module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.datastack">natcap.invest.datastack module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.forest_carbon_edge_effect">natcap.invest.forest_carbon_edge_effect module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.globio">natcap.invest.globio module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.habitat_quality">natcap.invest.habitat_quality module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.hra">natcap.invest.hra module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.pollination">natcap.invest.pollination module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.routedem">natcap.invest.routedem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.scenario_gen_proximity">natcap.invest.scenario_gen_proximity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_cooling_model">natcap.invest.urban_cooling_model module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_flood_risk_mitigation">natcap.invest.urban_flood_risk_mitigation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.utils">natcap.invest.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.validation">natcap.invest.validation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wave_energy">natcap.invest.wave_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wind_energy">natcap.invest.wind_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">natcap.invest.ndr package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.ndr.ndr">natcap.invest.ndr.ndr module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.ndr.ndr_core">natcap.invest.ndr.ndr_core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">natcap.invest.ndr.ndr_core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.ndr">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">InVEST</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="modules.html">natcap</a> &raquo;</li>
+        
+          <li><a href="natcap.html">natcap package</a> &raquo;</li>
+        
+          <li><a href="natcap.invest.html">natcap.invest package</a> &raquo;</li>
+        
+      <li>natcap.invest.ndr package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/natcap.invest.ndr.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="natcap-invest-ndr-package">
+<h1>natcap.invest.ndr package<a class="headerlink" href="#natcap-invest-ndr-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-natcap.invest.ndr.ndr">
+<span id="natcap-invest-ndr-ndr-module"></span><h2>natcap.invest.ndr.ndr module<a class="headerlink" href="#module-natcap.invest.ndr.ndr" title="Permalink to this headline">¶</a></h2>
+<p>InVEST Nutrient Delivery Ratio (NDR) module.</p>
+<dl class="py function">
+<dt id="natcap.invest.ndr.ndr.calculate_ic">
+<code class="sig-prename descclassname">natcap.invest.ndr.ndr.</code><code class="sig-name descname">calculate_ic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">d_up_path</span></em>, <em class="sig-param"><span class="n">d_dn_path</span></em>, <em class="sig-param"><span class="n">target_ic_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.ndr.ndr.calculate_ic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate IC as log_10(d_up/d_dn).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.ndr.ndr.create_vector_copy">
+<code class="sig-prename descclassname">natcap.invest.ndr.ndr.</code><code class="sig-name descname">create_vector_copy</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">base_vector_path</span></em>, <em class="sig-param"><span class="n">target_vector_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.ndr.ndr.create_vector_copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a copy of base vector.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.ndr.ndr.d_up_calculation">
+<code class="sig-prename descclassname">natcap.invest.ndr.ndr.</code><code class="sig-name descname">d_up_calculation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">s_bar_path</span></em>, <em class="sig-param"><span class="n">flow_accum_path</span></em>, <em class="sig-param"><span class="n">target_d_up_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.ndr.ndr.d_up_calculation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate d_up = s_bar * sqrt(upstream area).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.ndr.ndr.execute">
+<code class="sig-prename descclassname">natcap.invest.ndr.ndr.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.ndr.ndr.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Nutrient Delivery Ratio.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – path to current workspace</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_path'</strong><strong>]</strong> (<em>string</em>) – path to digital elevation map raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_path'</strong><strong>]</strong> (<em>string</em>) – a path to landcover map raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'runoff_proxy_path'</strong><strong>]</strong> (<em>string</em>) – a path to a runoff proxy raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'watersheds_path'</strong><strong>]</strong> (<em>string</em>) – path to the watershed shapefile</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biophysical_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>path to csv table on disk
+containing nutrient retention values.</p>
+<p>For each nutrient type [t] in args[‘calc_[t]’] that is true, must
+contain the following headers:</p>
+<p>’load_[t]’, ‘eff_[t]’, ‘crit_len_[t]’</p>
+<p>If args[‘calc_n’] is True, must also contain the header
+‘proportion_subsurface_n’ field.</p>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'calc_p'</strong><strong>]</strong> (<em>boolean</em>) – if True, phosphorous is modeled,
+additionally if True then biophysical table must have p fields in
+them</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'calc_n'</strong><strong>]</strong> (<em>boolean</em>) – if True nitrogen will be modeled,
+additionally biophysical table must have n fields in them.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) a text field to append to
+all output files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'threshold_flow_accumulation'</strong><strong>]</strong> – a number representing the flow
+accumulation in terms of upstream pixels.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'k_param'</strong><strong>]</strong> (<em>number</em>) – The Borselli k parameter. This is a
+calibration parameter that determines the shape of the
+relationship between hydrologic connectivity.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'subsurface_critical_length_n'</strong><strong>]</strong> (<em>number</em>) – The distance (traveled
+subsurface and downslope) after which it is assumed that soil
+retains nutrient at its maximum capacity, given in meters. If
+dissolved nutrients travel a distance smaller than Subsurface
+Critical Length, the retention efficiency will be lower than the
+Subsurface Maximum Retention Efficiency value defined. Setting this
+value to a distance smaller than the pixel size will result in the
+maximum retention efficiency being reached within one pixel only.
+Required if <code class="docutils literal notranslate"><span class="pre">calc_n</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'subsurface_critical_length_p'</strong><strong>]</strong> (<em>number</em>) – The distance (traveled
+subsurface and downslope) after which it is assumed that soil
+retains nutrient at its maximum capacity, given in meters. If
+dissolved nutrients travel a distance smaller than Subsurface
+Critical Length, the retention efficiency will be lower than the
+Subsurface Maximum Retention Efficiency value defined. Setting this
+value to a distance smaller than the pixel size will result in the
+maximum retention efficiency being reached within one pixel only.
+Required if <code class="docutils literal notranslate"><span class="pre">calc_p</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'subsurface_eff_n'</strong><strong>]</strong> (<em>number</em>) – The maximum nutrient retention
+efficiency that can be reached through subsurface flow, a floating
+point value between 0 and 1. This field characterizes the retention
+due to biochemical degradation in soils.  Required if <code class="docutils literal notranslate"><span class="pre">calc_n</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'subsurface_eff_p'</strong><strong>]</strong> (<em>number</em>) – The maximum nutrient retention
+efficiency that can be reached through subsurface flow, a floating
+point value between 0 and 1. This field characterizes the retention
+due to biochemical degradation in soils.  Required if <code class="docutils literal notranslate"><span class="pre">calc_p</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – if present, indicates how many worker
+processes should be used in parallel processing. -1 indicates
+single process mode, 0 is single process but non-blocking mode,
+and &gt;= 1 is number of processes.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.ndr.ndr.invert_raster_values">
+<code class="sig-prename descclassname">natcap.invest.ndr.ndr.</code><code class="sig-name descname">invert_raster_values</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">base_raster_path</span></em>, <em class="sig-param"><span class="n">target_raster_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.ndr.ndr.invert_raster_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Invert (1/x) the values in <cite>base</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>base_raster_path</strong> (<em>string</em>) – path to floating point raster.</p></li>
+<li><p><strong>target_raster_path</strong> (<em>string</em>) – path to created output raster whose
+values are 1/x of base.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.ndr.ndr.s_bar_calculate">
+<code class="sig-prename descclassname">natcap.invest.ndr.ndr.</code><code class="sig-name descname">s_bar_calculate</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">s_accumulation_path</span></em>, <em class="sig-param"><span class="n">flow_accumulation_path</span></em>, <em class="sig-param"><span class="n">target_s_bar_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.ndr.ndr.s_bar_calculate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate bar op which is s/flow.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.ndr.ndr_core">
+<span id="natcap-invest-ndr-ndr-core-module"></span><h2>natcap.invest.ndr.ndr_core module<a class="headerlink" href="#module-natcap.invest.ndr.ndr_core" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.ndr.ndr_core.ndr_eff_calculation">
+<code class="sig-prename descclassname">natcap.invest.ndr.ndr_core.</code><code class="sig-name descname">ndr_eff_calculation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.ndr.ndr_core.ndr_eff_calculation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate flow downhill effective_retention to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mfd_flow_direction_path</strong> (<em>string</em>) – a path to a raster with
+pygeoprocessing.routing MFD flow direction values.</p></li>
+<li><p><strong>stream_path</strong> (<em>string</em>) – a path to a raster where 1 indicates a
+stream all other values ignored must be same dimensions and
+projection as mfd_flow_direction_path.</p></li>
+<li><p><strong>retention_eff_lulc_path</strong> (<em>string</em>) – a path to a raster indicating
+the maximum retention efficiency that the landcover on that
+pixel can accumulate.</p></li>
+<li><p><strong>crit_len_path</strong> (<em>string</em>) – a path to a raster indicating the critical
+length of the retention efficiency that the landcover on this
+pixel.</p></li>
+<li><p><strong>effective_retention_path</strong> (<em>string</em>) – path to a raster that is
+created by this call that contains a per-pixel effective
+sediment retention to the stream.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="id1">
+<h2>natcap.invest.ndr.ndr_core module<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-0"></span><dl class="py function">
+<dt id="id0">
+<code class="sig-prename descclassname">natcap.invest.ndr.ndr_core.</code><code class="sig-name descname">ndr_eff_calculation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate flow downhill effective_retention to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mfd_flow_direction_path</strong> (<em>string</em>) – a path to a raster with
+pygeoprocessing.routing MFD flow direction values.</p></li>
+<li><p><strong>stream_path</strong> (<em>string</em>) – a path to a raster where 1 indicates a
+stream all other values ignored must be same dimensions and
+projection as mfd_flow_direction_path.</p></li>
+<li><p><strong>retention_eff_lulc_path</strong> (<em>string</em>) – a path to a raster indicating
+the maximum retention efficiency that the landcover on that
+pixel can accumulate.</p></li>
+<li><p><strong>crit_len_path</strong> (<em>string</em>) – a path to a raster indicating the critical
+length of the retention efficiency that the landcover on this
+pixel.</p></li>
+<li><p><strong>effective_retention_path</strong> (<em>string</em>) – path to a raster that is
+created by this call that contains a per-pixel effective
+sediment retention to the stream.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.ndr">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-natcap.invest.ndr" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="natcap.invest.recreation.html" class="btn btn-neutral float-right" title="natcap.invest.recreation package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="natcap.invest.hydropower.html" class="btn btn-neutral float-left" title="natcap.invest.hydropower package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2019, The Natural Capital Project
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

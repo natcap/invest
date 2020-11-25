@@ -1,0 +1,557 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>natcap.invest.seasonal_water_yield package &mdash; InVEST 3.8.9.post1013+gbc4bb051.d20201125 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.gif"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="natcap.invest.ui package" href="natcap.invest.ui.html" />
+    <link rel="prev" title="natcap.invest.sdr package" href="natcap.invest.sdr.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> InVEST
+          
+
+          
+            
+            <img src="../_static/invest-logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.8.9.post1013
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installing InVEST From Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">The InVEST CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scripting.html">Tutorial: Batch Processing on Windows</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">Full API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html">natcap</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.invest.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.carbon">natcap.invest.carbon module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.cli">natcap.invest.cli module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.coastal_vulnerability">natcap.invest.coastal_vulnerability module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_percentile">natcap.invest.crop_production_percentile module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_regression">natcap.invest.crop_production_regression module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.datastack">natcap.invest.datastack module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.forest_carbon_edge_effect">natcap.invest.forest_carbon_edge_effect module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.globio">natcap.invest.globio module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.habitat_quality">natcap.invest.habitat_quality module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.hra">natcap.invest.hra module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.pollination">natcap.invest.pollination module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.routedem">natcap.invest.routedem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.scenario_gen_proximity">natcap.invest.scenario_gen_proximity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_cooling_model">natcap.invest.urban_cooling_model module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_flood_risk_mitigation">natcap.invest.urban_flood_risk_mitigation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.utils">natcap.invest.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.validation">natcap.invest.validation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wave_energy">natcap.invest.wave_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wind_energy">natcap.invest.wind_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">natcap.invest.seasonal_water_yield package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.seasonal_water_yield.seasonal_water_yield">natcap.invest.seasonal_water_yield.seasonal_water_yield module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.seasonal_water_yield.seasonal_water_yield_core">natcap.invest.seasonal_water_yield.seasonal_water_yield_core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">natcap.invest.seasonal_water_yield.seasonal_water_yield_core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.seasonal_water_yield">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">InVEST</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="modules.html">natcap</a> &raquo;</li>
+        
+          <li><a href="natcap.html">natcap package</a> &raquo;</li>
+        
+          <li><a href="natcap.invest.html">natcap.invest package</a> &raquo;</li>
+        
+      <li>natcap.invest.seasonal_water_yield package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/natcap.invest.seasonal_water_yield.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="natcap-invest-seasonal-water-yield-package">
+<h1>natcap.invest.seasonal_water_yield package<a class="headerlink" href="#natcap-invest-seasonal-water-yield-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-natcap.invest.seasonal_water_yield.seasonal_water_yield">
+<span id="natcap-invest-seasonal-water-yield-seasonal-water-yield-module"></span><h2>natcap.invest.seasonal_water_yield.seasonal_water_yield module<a class="headerlink" href="#module-natcap.invest.seasonal_water_yield.seasonal_water_yield" title="Permalink to this headline">¶</a></h2>
+<p>InVEST Seasonal Water Yield Model.</p>
+<dl class="py function">
+<dt id="natcap.invest.seasonal_water_yield.seasonal_water_yield.execute">
+<code class="sig-prename descclassname">natcap.invest.seasonal_water_yield.seasonal_water_yield.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.seasonal_water_yield.seasonal_water_yield.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Seasonal Water Yield.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – output directory for intermediate,
+temporary, and final files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) string to append to any
+output files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'threshold_flow_accumulation'</strong><strong>]</strong> (<em>number</em>) – used when classifying
+stream pixels from the DEM by thresholding the number of upstream
+cells that must flow into a cell before it’s considered
+part of a stream.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'et0_dir'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_local_recharge’] is False.  Path to a directory
+that contains rasters of monthly reference evapotranspiration;
+units in mm.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'precip_dir'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_local_recharge’] is False. A path to a directory
+that contains rasters of monthly precipitation; units in mm.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_raster_path'</strong><strong>]</strong> (<em>string</em>) – a path to a digital elevation raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_raster_path'</strong><strong>]</strong> (<em>string</em>) – a path to a land cover raster used
+to classify biophysical properties of pixels.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'soil_group_path'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_local_recharge’] is  False. A path to a raster
+indicating SCS soil groups where integer values are mapped to soil
+types</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_path'</strong><strong>]</strong> (<em>string</em>) – path to a vector that indicates the area
+over which the model should be run, as well as the area in which to
+aggregate over when calculating the output Qb.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biophysical_table_path'</strong><strong>]</strong> (<em>string</em>) – path to a CSV table that maps
+landcover codes paired with soil group types to curve numbers as
+well as Kc values.  Headers must include ‘lucode’, ‘CN_A’, ‘CN_B’,
+‘CN_C’, ‘CN_D’, ‘Kc_1’, ‘Kc_2’, ‘Kc_3’, ‘Kc_4’, ‘Kc_5’, ‘Kc_6’,
+‘Kc_7’, ‘Kc_8’, ‘Kc_9’, ‘Kc_10’, ‘Kc_11’, ‘Kc_12’.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'rain_events_table_path'</strong><strong>]</strong> (<em>string</em>) – Not required if
+args[‘user_defined_local_recharge’] is True or
+args[‘user_defined_climate_zones’] is True.  Path to a CSV table
+that has headers ‘month’ (1-12) and ‘events’ (int &gt;= 0) that
+indicates the number of rain events per month</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'alpha_m'</strong><strong>]</strong> (<em>float</em><em> or </em><em>string</em>) – required if args[‘monthly_alpha’] is
+false.  Is the proportion of upslope annual available local
+recharge that is available in month m.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'beta_i'</strong><strong>]</strong> (<em>float</em><em> or </em><em>string</em>) – is the fraction of the upgradient
+subsidy that is available for downgradient evapotranspiration.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'gamma'</strong><strong>]</strong> (<em>float</em><em> or </em><em>string</em>) – is the fraction of pixel local
+recharge that is available to downgradient pixels.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'user_defined_local_recharge'</strong><strong>]</strong> (<em>boolean</em>) – if True, indicates user
+will provide pre-defined local recharge raster layer</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'l_path'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_local_recharge’] is True.  If provided pixels
+indicate the amount of local recharge; units in mm.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'user_defined_climate_zones'</strong><strong>]</strong> (<em>boolean</em>) – if True, user provides
+a climate zone rain events table and a climate zone raster map in
+lieu of a global rain events table.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'climate_zone_table_path'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_climate_zones’] is True. Contains monthly
+precipitation events per climate zone.  Fields must be
+“cz_id”, “jan”, “feb”, “mar”, “apr”, “may”, “jun”, “jul”,
+“aug”, “sep”, “oct”, “nov”, “dec”.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'climate_zone_raster_path'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_climate_zones’] is True, pixel values correspond
+to the “cz_id” values defined in args[‘climate_zone_table_path’]</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'monthly_alpha'</strong><strong>]</strong> (<em>boolean</em>) – if True, use the alpha</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'monthly_alpha_path'</strong><strong>]</strong> (<em>string</em>) – required if args[‘monthly_alpha’]
+is True. A CSV file.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) indicates the number of processes
+to devote to potential parallel task execution. A value &lt; 0 will
+use a single process, 0 will be non-blocking scheduling but
+single process, and &gt;= 1 will make additional processes for
+parallel execution.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.seasonal_water_yield.seasonal_water_yield_core">
+<span id="natcap-invest-seasonal-water-yield-seasonal-water-yield-core-module"></span><h2>natcap.invest.seasonal_water_yield.seasonal_water_yield_core module<a class="headerlink" href="#module-natcap.invest.seasonal_water_yield.seasonal_water_yield_core" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.seasonal_water_yield.seasonal_water_yield_core.calculate_local_recharge">
+<code class="sig-prename descclassname">natcap.invest.seasonal_water_yield.seasonal_water_yield_core.</code><code class="sig-name descname">calculate_local_recharge</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.seasonal_water_yield.seasonal_water_yield_core.calculate_local_recharge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the rasters defined by equations [3]-[7].</p>
+<p>Note all input rasters must be in the same coordinate system and
+have the same dimensions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>precip_path_list</strong> (<em>list</em>) – list of paths to monthly precipitation
+rasters. (model input)</p></li>
+<li><p><strong>et0_path_list</strong> (<em>list</em>) – path to monthly ET0 rasters. (model input)</p></li>
+<li><p><strong>qf_m_path_list</strong> (<em>list</em>) – path to monthly quickflow rasters calculated by
+Equation [1].</p></li>
+<li><p><strong>flow_dir_mfd_path</strong> (<em>str</em>) – path to a PyGeoprocessing Multiple Flow
+Direction raster indicating flow directions for this analysis.</p></li>
+<li><p><strong>alpha_month_map</strong> (<em>dict</em>) – fraction of upslope annual available recharge
+that is available in month m (indexed from 1).</p></li>
+<li><p><strong>beta_i</strong> (<em>float</em>) – fraction of the upgradient subsidy that is available
+for downgradient evapotranspiration.</p></li>
+<li><p><strong>gamma</strong> (<em>float</em>) – the fraction of pixel recharge that is available to
+downgradient pixels.</p></li>
+<li><p><strong>stream_path</strong> (<em>str</em>) – path to the stream raster where 1 is a stream,
+0 is not, and nodata is outside of the DEM.</p></li>
+<li><p><strong>kc_path_list</strong> (<em>str</em>) – list of rasters of the monthly crop factor for the
+pixel.</p></li>
+<li><p><strong>target_li_path</strong> (<em>str</em>) – created by this call, path to local recharge
+derived from the annual water budget. (Equation 3).</p></li>
+<li><p><strong>target_li_avail_path</strong> (<em>str</em>) – created by this call, path to raster
+indicating available recharge to a pixel.</p></li>
+<li><p><strong>target_l_sum_avail_path</strong> (<em>str</em>) – created by this call, the recursive
+upstream accumulation of target_li_avail_path.</p></li>
+<li><p><strong>target_aet_path</strong> (<em>str</em>) – created by this call, the annual actual
+evapotranspiration.</p></li>
+<li><p><strong>Returns</strong> – None.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.seasonal_water_yield.seasonal_water_yield_core.route_baseflow_sum">
+<code class="sig-prename descclassname">natcap.invest.seasonal_water_yield.seasonal_water_yield_core.</code><code class="sig-name descname">route_baseflow_sum</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.seasonal_water_yield.seasonal_water_yield_core.route_baseflow_sum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Route Baseflow through MFD as described in Equation 11.</p>
+<blockquote>
+<div><dl>
+<dt>Parameters:</dt><dd><dl class="simple">
+<dt>flow_dir_mfd_path (string): path to a pygeoprocessing multiple flow</dt><dd><p>direction raster.</p>
+</dd>
+</dl>
+<p>l_path (string): path to local recharge raster.
+l_avail_path (string): path to local recharge raster that shows</p>
+<blockquote>
+<div><p>recharge available to the pixel.</p>
+</div></blockquote>
+<p>l_sum_path (string): path to upstream sum of l_path.
+stream_path (string): path to stream raster, 1 stream, 0 no stream,</p>
+<blockquote>
+<div><p>and nodata.</p>
+</div></blockquote>
+<p>target_b_path (string): path to created raster for per-pixel baseflow.
+target_b_sum_path (string): path to created raster for per-pixel</p>
+<blockquote>
+<div><p>upstream sum of baseflow.</p>
+</div></blockquote>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="simple">
+<dt>`    Returns:</dt><dd><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="id1">
+<h2>natcap.invest.seasonal_water_yield.seasonal_water_yield_core module<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-0"></span><dl class="py function">
+<dt id="id0">
+<code class="sig-prename descclassname">natcap.invest.seasonal_water_yield.seasonal_water_yield_core.</code><code class="sig-name descname">calculate_local_recharge</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the rasters defined by equations [3]-[7].</p>
+<p>Note all input rasters must be in the same coordinate system and
+have the same dimensions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>precip_path_list</strong> (<em>list</em>) – list of paths to monthly precipitation
+rasters. (model input)</p></li>
+<li><p><strong>et0_path_list</strong> (<em>list</em>) – path to monthly ET0 rasters. (model input)</p></li>
+<li><p><strong>qf_m_path_list</strong> (<em>list</em>) – path to monthly quickflow rasters calculated by
+Equation [1].</p></li>
+<li><p><strong>flow_dir_mfd_path</strong> (<em>str</em>) – path to a PyGeoprocessing Multiple Flow
+Direction raster indicating flow directions for this analysis.</p></li>
+<li><p><strong>alpha_month_map</strong> (<em>dict</em>) – fraction of upslope annual available recharge
+that is available in month m (indexed from 1).</p></li>
+<li><p><strong>beta_i</strong> (<em>float</em>) – fraction of the upgradient subsidy that is available
+for downgradient evapotranspiration.</p></li>
+<li><p><strong>gamma</strong> (<em>float</em>) – the fraction of pixel recharge that is available to
+downgradient pixels.</p></li>
+<li><p><strong>stream_path</strong> (<em>str</em>) – path to the stream raster where 1 is a stream,
+0 is not, and nodata is outside of the DEM.</p></li>
+<li><p><strong>kc_path_list</strong> (<em>str</em>) – list of rasters of the monthly crop factor for the
+pixel.</p></li>
+<li><p><strong>target_li_path</strong> (<em>str</em>) – created by this call, path to local recharge
+derived from the annual water budget. (Equation 3).</p></li>
+<li><p><strong>target_li_avail_path</strong> (<em>str</em>) – created by this call, path to raster
+indicating available recharge to a pixel.</p></li>
+<li><p><strong>target_l_sum_avail_path</strong> (<em>str</em>) – created by this call, the recursive
+upstream accumulation of target_li_avail_path.</p></li>
+<li><p><strong>target_aet_path</strong> (<em>str</em>) – created by this call, the annual actual
+evapotranspiration.</p></li>
+<li><p><strong>Returns</strong> – None.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="id2">
+<code class="sig-prename descclassname">natcap.invest.seasonal_water_yield.seasonal_water_yield_core.</code><code class="sig-name descname">route_baseflow_sum</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Route Baseflow through MFD as described in Equation 11.</p>
+<blockquote>
+<div><dl>
+<dt>Parameters:</dt><dd><dl class="simple">
+<dt>flow_dir_mfd_path (string): path to a pygeoprocessing multiple flow</dt><dd><p>direction raster.</p>
+</dd>
+</dl>
+<p>l_path (string): path to local recharge raster.
+l_avail_path (string): path to local recharge raster that shows</p>
+<blockquote>
+<div><p>recharge available to the pixel.</p>
+</div></blockquote>
+<p>l_sum_path (string): path to upstream sum of l_path.
+stream_path (string): path to stream raster, 1 stream, 0 no stream,</p>
+<blockquote>
+<div><p>and nodata.</p>
+</div></blockquote>
+<p>target_b_path (string): path to created raster for per-pixel baseflow.
+target_b_sum_path (string): path to created raster for per-pixel</p>
+<blockquote>
+<div><p>upstream sum of baseflow.</p>
+</div></blockquote>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="simple">
+<dt>`    Returns:</dt><dd><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.seasonal_water_yield">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-natcap.invest.seasonal_water_yield" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="natcap.invest.ui.html" class="btn btn-neutral float-right" title="natcap.invest.ui package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="natcap.invest.sdr.html" class="btn btn-neutral float-left" title="natcap.invest.sdr package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2019, The Natural Capital Project
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

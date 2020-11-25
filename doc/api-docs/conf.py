@@ -12,18 +12,26 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
-import os
-import imp
 import ast
-import pprint
+import importlib
+import itertools
+import logging
+import os
+import pkgutil
+import sys
+import warnings
+
+import natcap.invest
+
+logging.basicConfig()
+LOGGER = logging.getLogger('__name__')
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src'))
-pprint.pprint(sys.path)
 
 # -- General configuration ------------------------------------------------
 
@@ -294,21 +302,7 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 # Specify the imports that must be mocked out in order to generate the docs.
-autodoc_mock_imports = [
-    'sextante', 'matplotlib', 'matplotlib.pyplot', 'matplotlib.pylab',
-    'pylab', 'pyamg', 'osgeo', 'PyQt4', 'shapely', 'shapely.wkb',
-    'rtree', 'Pyro4', 'PyQt4.QtGui.QWidget',
-    'shapely.geometry', 'osgeo.osr', 'osgeo.gdal', 'gdal',
-    'shapely.wkt', 'shapely.ops', 'shapely.speedups', 'shapely.errors',
-    'shapely.strtree',
-    'shapely.prepared', 'qgis.utils', 'grass.script.setup', 'PyQt4.QtTest',
-    'PyQt4.QtCore', 'geoprocessing_core', 'pygeoprocessing', 'pandas',
-    'qtpy', 'qtpy.QtWidgets', 'qtpy.QtCore', 'pygeoprocessing.routing',
-    'pygeoprocessing.testing', 'qtawesome', 'sip', 'taskgraph',
-    'natcap.invest.ndr.ndr_core', 'natcap.invest.sdr.sdr_core',
-    'natcap.invest.scenic_quality.viewshed',
-    'natcap.invest.seasonal_water_yield.seasonal_water_yield_core',
-]
+autodoc_mock_imports = ['osgeo', 'osgeo.gdal', 'gdal']
 
 # Mock class with attribute handling.  As suggested by:
 # http://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
@@ -356,6 +350,129 @@ apidoc.main([
 ])
 
 
+MODEL_RST_TEMPLATE = """
+.. _models:
+
+=========================
+InVEST Model Entry Points
+=========================
+
+All InVEST models share a consistent python API:
+
+    1) The model has a function called ``execute`` that takes a single python
+       dict (``"args"``) as its argument.
+    2) This arguments dict contains an entry, ``'workspace_dir'``, which
+       points to the folder on disk where all files created by the model
+       should be saved.
+
+Calling a model requires importing the model's execute function and then
+calling the model with the correct parameters.  For example, if you were
+to call the Carbon Storage and Sequestration model, your script might
+include
+
+.. code-block:: python
+
+    import natcap.invest.carbon.carbon_combined
+    args = {
+        'workspace_dir': 'path/to/workspace'
+        # Other arguments, as needed for Carbon.
+    }
+
+    natcap.invest.carbon.carbon_combined.execute(args)
+
+For examples of scripts that could be created around a model run,
+or multiple successive model runs, see :ref:`CreatingSamplePythonScripts`.
+
+
+.. contents:: Available Models and Tools:
+    :local:
+
+"""
+
+EXCLUDED_MODULES = [
+    '_core',  # anything ending in '_core'
+    '_example_model',
+    'carbon_biophysical',
+    'carbon_valuation',
+    'coastal_vulnerability_post_processing',
+    'usage_logger',
+    'recmodel_server',
+    'recmodel_workspace_fetcher',
+]
+
+
+def list_models(outfile):
+    """List out all InVEST model entrypoints in RST.
+
+    Writes a file with the list of models and their automodule documentation 
+    directives for processing by sphinx.
+
+    Arguments:
+        outfile (string): The absolute path to write to.
+
+    Returns:
+        None
+
+    """
+
+    all_modules = {}
+    iteration_args = {
+        'path': natcap.invest.__path__,
+        'prefix': 'natcap.invest.',
+    }
+
+    for _loader, name, _is_pkg in itertools.chain(
+            pkgutil.walk_packages(**iteration_args),  # catch packages
+            pkgutil.iter_modules(**iteration_args)):  # catch modules
+
+        if any([name.endswith(x) for x in EXCLUDED_MODULES]):
+            continue
+
+        # Skip anything within the UI.
+        if name.startswith('natcap.invest.ui'):
+            continue
+
+        try:
+            module = importlib.import_module(name)
+        except Exception:
+            # If we encounter an exception when importing a module, log it
+            # but continue.
+            LOGGER.exception('Error importing %s', name)
+            continue
+
+        if not hasattr(module, 'execute'):
+            continue
+
+        try:
+            module_title = module.execute.__doc__.strip().split('\n')[0]
+            if module_title.endswith('.'):
+                module_title = module_title[:-1]
+        except AttributeError:
+            module_title = None
+        all_modules[name] = module_title
+
+    LOGGER.debug('Writing models to file %s', outfile)
+
+    with open(outfile, 'w') as models_rst:
+        models_rst.write(MODEL_RST_TEMPLATE)
+
+        for name, module_title in sorted(all_modules.items(),
+                                         key=lambda x: x[1]):
+            if module_title is None:
+                warnings.warn('%s has no title' % name)
+                module_title = 'unknown'
+
+            models_rst.write((
+                '{module_title}\n'
+                '{underline}\n'
+                '.. autofunction:: {modname}.execute\n\n').format(
+                    module_title=module_title,
+                    underline=''.join(['=']*len(module_title)),
+                    modname=name
+                )
+            )
+
+
 # list out all the models that conform to the InVEST API standard.
-listmodels = imp.load_source('listmodels', os.path.join(DOCS_SOURCE_DIR, 'listmodels.py'))
-listmodels.main([])
+# write out to a file models.rst in the source dir (api-docs)
+list_models(os.path.join(os.getcwd(), 'models.rst'))

@@ -1,0 +1,2188 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>InVEST Model Entry Points &mdash; InVEST 3.8.9.post1013+gbc4bb051.d20201125 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.gif"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> InVEST
+          
+
+          
+            
+            <img src="_static/invest-logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.8.9.post1013
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="installing.html">Installing InVEST From Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">The InVEST CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scripting.html">Tutorial: Batch Processing on Windows</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Full API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">InVEST</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>InVEST Model Entry Points</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/models.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="invest-model-entry-points">
+<span id="models"></span><h1>InVEST Model Entry Points<a class="headerlink" href="#invest-model-entry-points" title="Permalink to this headline">¶</a></h1>
+<p>All InVEST models share a consistent python API:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>The model has a function called <code class="docutils literal notranslate"><span class="pre">execute</span></code> that takes a single python
+dict (<code class="docutils literal notranslate"><span class="pre">&quot;args&quot;</span></code>) as its argument.</p></li>
+<li><p>This arguments dict contains an entry, <code class="docutils literal notranslate"><span class="pre">'workspace_dir'</span></code>, which
+points to the folder on disk where all files created by the model
+should be saved.</p></li>
+</ol>
+</div></blockquote>
+<p>Calling a model requires importing the model’s execute function and then
+calling the model with the correct parameters.  For example, if you were
+to call the Carbon Storage and Sequestration model, your script might
+include</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">natcap.invest.carbon.carbon_combined</span>
+<span class="n">args</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;workspace_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/workspace&#39;</span>
+    <span class="c1"># Other arguments, as needed for Carbon.</span>
+<span class="p">}</span>
+
+<span class="n">natcap</span><span class="o">.</span><span class="n">invest</span><span class="o">.</span><span class="n">carbon</span><span class="o">.</span><span class="n">carbon_combined</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For examples of scripts that could be created around a model run,
+or multiple successive model runs, see <a class="reference internal" href="scripting.html#creatingsamplepythonscripts"><span class="std std-ref">Creating Sample Python Scripts</span></a>.</p>
+<div class="contents local topic" id="available-models-and-tools">
+<p class="topic-title">Available Models and Tools:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#annual-water-yield-reservoir-hydropower-production" id="id1">Annual Water Yield: Reservoir Hydropower Production</a></p></li>
+<li><p><a class="reference internal" href="#coastal-blue-carbon-preprocessor" id="id2">Coastal Blue Carbon Preprocessor</a></p></li>
+<li><p><a class="reference internal" href="#crop-production-percentile-model" id="id3">Crop Production Percentile Model</a></p></li>
+<li><p><a class="reference internal" href="#crop-production-regression-model" id="id4">Crop Production Regression Model</a></p></li>
+<li><p><a class="reference internal" href="#delineateit-watershed-delineation" id="id5">DelineateIt: Watershed Delineation</a></p></li>
+<li><p><a class="reference internal" href="#finfish-aquaculture" id="id6">Finfish Aquaculture</a></p></li>
+<li><p><a class="reference internal" href="#fisheries" id="id7">Fisheries</a></p></li>
+<li><p><a class="reference internal" href="#fisheries-habitat-scenario-tool" id="id8">Fisheries: Habitat Scenario Tool</a></p></li>
+<li><p><a class="reference internal" href="#forest-carbon-edge-effect" id="id9">Forest Carbon Edge Effect</a></p></li>
+<li><p><a class="reference internal" href="#globio" id="id10">GLOBIO</a></p></li>
+<li><p><a class="reference internal" href="#habitat-quality" id="id11">Habitat Quality</a></p></li>
+<li><p><a class="reference internal" href="#invest-carbon-model" id="id12">InVEST Carbon Model</a></p></li>
+<li><p><a class="reference internal" href="#invest-coastal-vulnerability-model" id="id13">InVEST Coastal Vulnerability Model</a></p></li>
+<li><p><a class="reference internal" href="#invest-habitat-risk-assessment-hra-model" id="id14">InVEST Habitat Risk Assessment (HRA) Model</a></p></li>
+<li><p><a class="reference internal" href="#invest-pollination-model" id="id15">InVEST Pollination Model</a></p></li>
+<li><p><a class="reference internal" href="#model-coastal-blue-carbon-over-a-time-series" id="id16">Model Coastal Blue Carbon over a time series</a></p></li>
+<li><p><a class="reference internal" href="#nutrient-delivery-ratio" id="id17">Nutrient Delivery Ratio</a></p></li>
+<li><p><a class="reference internal" href="#recreation" id="id18">Recreation</a></p></li>
+<li><p><a class="reference internal" href="#routedem-hydrological-routing" id="id19">RouteDEM: Hydrological routing</a></p></li>
+<li><p><a class="reference internal" href="#run-the-scenic-quality-model" id="id20">Run the Scenic Quality Model</a></p></li>
+<li><p><a class="reference internal" href="#scenario-generator-proximity-based" id="id21">Scenario Generator: Proximity-Based</a></p></li>
+<li><p><a class="reference internal" href="#seasonal-water-yield" id="id22">Seasonal Water Yield</a></p></li>
+<li><p><a class="reference internal" href="#sediment-delivery-ratio" id="id23">Sediment Delivery Ratio</a></p></li>
+<li><p><a class="reference internal" href="#urban-cooling-model" id="id24">Urban Cooling Model</a></p></li>
+<li><p><a class="reference internal" href="#urban-flood-risk-mitigation-model" id="id25">Urban Flood Risk Mitigation model</a></p></li>
+<li><p><a class="reference internal" href="#wave-energy" id="id26">Wave Energy</a></p></li>
+<li><p><a class="reference internal" href="#wind-energy" id="id27">Wind Energy</a></p></li>
+</ul>
+</div>
+<div class="section" id="annual-water-yield-reservoir-hydropower-production">
+<h2><a class="toc-backref" href="#id1">Annual Water Yield: Reservoir Hydropower Production</a><a class="headerlink" href="#annual-water-yield-reservoir-hydropower-production" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.execute">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Annual Water Yield: Reservoir Hydropower Production.</p>
+<p>Executes the hydropower/water_yield model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – a path to the directory that will write
+output and other temporary files during calculation. (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_path'</strong><strong>]</strong> (<em>string</em>) – a path to a land use/land cover raster
+whose LULC indexes correspond to indexes in the biophysical table
+input. Used for determining soil retention and other biophysical
+properties of the landscape. (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'depth_to_root_rest_layer_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input
+raster describing the depth of “good” soil before reaching this
+restrictive layer (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'precipitation_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input raster
+describing the average annual precipitation value for each cell
+(mm) (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'pawc_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input raster describing the
+plant available water content value for each cell. Plant Available
+Water Content fraction (PAWC) is the fraction of water that can be
+stored in the soil profile that is available for plants’ use.
+PAWC is a fraction from 0 to 1 (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'eto_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input raster describing the
+annual average evapotranspiration value for each cell. Potential
+evapotranspiration is the potential loss of water from soil by
+both evaporation from the soil and transpiration by healthy
+Alfalfa (or grass) if sufficient water is available (mm)
+(required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'watersheds_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input shapefile of the
+watersheds of interest as polygons. (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'sub_watersheds_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input shapefile of
+the subwatersheds of interest that are contained in the
+<code class="docutils literal notranslate"><span class="pre">args['watersheds_path']</span></code> shape provided as input. (optional)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biophysical_table_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input CSV table
+of land use/land cover classes, containing data on biophysical
+coefficients such as root_depth (mm) and Kc, which are required.
+A column with header LULC_veg is also required which should
+have values of 1 or 0, 1 indicating a land cover type of
+vegetation, a 0 indicating non vegetation or wetland, water.
+NOTE: these data are attributes of each LULC class rather than
+attributes of individual cells in the raster map (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'seasonality_constant'</strong><strong>]</strong> (<em>float</em>) – floating point value between
+1 and 30 corresponding to the seasonal distribution of
+precipitation (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – a string that will be concatenated
+onto the end of file names (optional)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'demand_table_path'</strong><strong>]</strong> (<em>string</em>) – (optional) if a non-empty string,
+a path to an input CSV
+table of LULC classes, showing consumptive water use for each
+landuse / land-cover type (cubic meters per year) to calculate
+water scarcity.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'valuation_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>(optional) if a non-empty
+string, a path to an input CSV table of
+hydropower stations with the following fields to calculate
+valuation:</p>
+<blockquote>
+<div><p>(‘ws_id’, ‘time_span’, ‘discount’, ‘efficiency’, ‘fraction’,
+‘cost’, ‘height’, ‘kw_price’)</p>
+</div></blockquote>
+<p>Required if <code class="docutils literal notranslate"><span class="pre">calculate_valuation</span></code> is True.</p>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) The number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="coastal-blue-carbon-preprocessor">
+<h2><a class="toc-backref" href="#id2">Coastal Blue Carbon Preprocessor</a><a class="headerlink" href="#coastal-blue-carbon-preprocessor" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.coastal_blue_carbon.preprocessor.execute">
+<code class="sig-prename descclassname">natcap.invest.coastal_blue_carbon.preprocessor.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.coastal_blue_carbon.preprocessor.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Coastal Blue Carbon Preprocessor.</p>
+<p>The preprocessor accepts a list of rasters and checks for cell-transitions
+across the rasters.  The preprocessor outputs a CSV file representing a
+matrix of land cover transitions, each cell pre-filled with a string
+indicating whether carbon accumulates or is disturbed as a result of the
+transition, if a transition occurs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – directory path to workspace</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – append to outputs directory name if
+provided</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_lookup_table_path'</strong><strong>]</strong> (<em>string</em>) – filepath of lulc lookup table</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'landcover_csv_path'</strong><strong>]</strong> (<em>string</em>) – filepath to a CSV containing the
+year and filepath to snapshot rasters on disk.  The years may be in
+any order, but must be unique.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="crop-production-percentile-model">
+<h2><a class="toc-backref" href="#id3">Crop Production Percentile Model</a><a class="headerlink" href="#crop-production-percentile-model" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.crop_production_percentile.execute">
+<code class="sig-prename descclassname">natcap.invest.crop_production_percentile.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.crop_production_percentile.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Crop Production Percentile Model.</p>
+<p>This model will take a landcover (crop cover?) map and produce yields,
+production, and observed crop yields, a nutrient table, and a clipped
+observed map.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – output directory for intermediate,
+temporary, and final files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) string to append to any
+output file names</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'landcover_raster_path'</strong><strong>]</strong> (<em>string</em>) – path to landcover raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'landcover_to_crop_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>path to a table that
+converts landcover types to crop names that has two headers:
+* lucode: integer value corresponding to a landcover code in</p>
+<blockquote>
+<div><p><cite>args[‘landcover_raster_path’]</cite>.</p>
+</div></blockquote>
+<ul>
+<li><p>crop_name: a string that must match one of the crops in
+args[‘model_data_path’]/climate_bin_maps/[cropname]_*
+A ValueError is raised if strings don’t match.</p></li>
+</ul>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aggregate_polygon_path'</strong><strong>]</strong> (<em>string</em>) – path to polygon shapefile
+that will be used to aggregate crop yields and total nutrient
+value. (optional, if value is None, then skipped)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'model_data_path'</strong><strong>]</strong> (<em>string</em>) – <p>path to the InVEST Crop Production
+global data directory.  This model expects that the following
+directories are subdirectories of this path
+* climate_bin_maps (contains [cropname]_climate_bin.tif files)
+* climate_percentile_yield (contains</p>
+<blockquote>
+<div><p>[cropname]_percentile_yield_table.csv files)</p>
+</div></blockquote>
+<p>Please see the InVEST user’s guide chapter on crop production for
+details about how to download these data.</p>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) The number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="crop-production-regression-model">
+<h2><a class="toc-backref" href="#id4">Crop Production Regression Model</a><a class="headerlink" href="#crop-production-regression-model" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.crop_production_regression.execute">
+<code class="sig-prename descclassname">natcap.invest.crop_production_regression.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.crop_production_regression.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Crop Production Regression Model.</p>
+<p>This model will take a landcover (crop cover?), N, P, and K map and
+produce modeled yields, and a nutrient table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – output directory for intermediate,
+temporary, and final files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) string to append to any
+output file names</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'landcover_raster_path'</strong><strong>]</strong> (<em>string</em>) – path to landcover raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'landcover_to_crop_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>path to a table that
+converts landcover types to crop names that has two headers:
+* lucode: integer value corresponding to a landcover code in</p>
+<blockquote>
+<div><p><cite>args[‘landcover_raster_path’]</cite>.</p>
+</div></blockquote>
+<ul>
+<li><p>crop_name: a string that must match one of the crops in
+args[‘model_data_path’]/climate_regression_yield_tables/[cropname]_*
+A ValueError is raised if strings don’t match.</p></li>
+</ul>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'fertilization_rate_table_path'</strong><strong>]</strong> (<em>string</em>) – path to CSV table
+that contains fertilization rates for the crops in the simulation,
+though it can contain additional crops not used in the simulation.
+The headers must be ‘crop_name’, ‘nitrogen_rate’,
+‘phosphorous_rate’, and ‘potassium_rate’, where ‘crop_name’ is the
+name string used to identify crops in the
+‘landcover_to_crop_table_path’, and rates are in units kg/Ha.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aggregate_polygon_path'</strong><strong>]</strong> (<em>string</em>) – path to polygon vector
+that will be used to aggregate crop yields and total nutrient
+value. (optional, if value is None, then skipped)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'model_data_path'</strong><strong>]</strong> (<em>string</em>) – <p>path to the InVEST Crop Production
+global data directory.  This model expects that the following
+directories are subdirectories of this path
+* climate_bin_maps (contains [cropname]_climate_bin.tif files)
+* climate_percentile_yield (contains</p>
+<blockquote>
+<div><p>[cropname]_percentile_yield_table.csv files)</p>
+</div></blockquote>
+<p>Please see the InVEST user’s guide chapter on crop production for
+details about how to download these data.</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="delineateit-watershed-delineation">
+<h2><a class="toc-backref" href="#id5">DelineateIt: Watershed Delineation</a><a class="headerlink" href="#delineateit-watershed-delineation" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.delineateit.delineateit.execute">
+<code class="sig-prename descclassname">natcap.invest.delineateit.delineateit.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.delineateit.delineateit.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>DelineateIt: Watershed Delineation.</p>
+<p>This ‘model’ provides an InVEST-based wrapper around the pygeoprocessing
+routing API for watershed delineation.</p>
+<p>Upon successful completion, the following files are written to the
+output workspace:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">snapped_outlets.gpkg</span></code> - A GeoPackage with the points snapped
+to a nearby stream.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">watersheds.gpkg</span></code> - a GeoPackage of watersheds determined
+by the D8 routing algorithm.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">stream.tif</span></code> - a GeoTiff representing detected streams based on
+the provided <code class="docutils literal notranslate"><span class="pre">flow_threshold</span></code> parameter.  Values of 1 are
+streams, values of 0 are not.</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – The selected folder is used as the
+workspace all intermediate and output files will be written.If the
+selected folder does not exist, it will be created. If datasets
+already exist in the selected folder, they will be overwritten.
+(required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – This text will be appended to the end of
+output files to help separate multiple runs. (optional)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_path'</strong><strong>]</strong> (<em>string</em>) – A GDAL-supported raster file with an elevation
+for each cell. Make sure the DEM is corrected by filling in sinks,
+and if necessary burning hydrographic features into the elevation
+model (recommended when unusual streams are observed.) See the
+‘Working with the DEM’ section of the InVEST User’s Guide for more
+information. (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'outlet_vector_path'</strong><strong>]</strong> (<em>string</em>) – This is a vector representing
+geometries that the watersheds should be built around. Required if
+<code class="docutils literal notranslate"><span class="pre">args['detect_pour_points']</span></code> is False; not used otherwise.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'snap_points'</strong><strong>]</strong> (<em>bool</em>) – Whether to snap point geometries to the
+nearest stream pixel.  If <code class="docutils literal notranslate"><span class="pre">True</span></code>, <code class="docutils literal notranslate"><span class="pre">args['flow_threshold']</span></code>
+and <code class="docutils literal notranslate"><span class="pre">args['snap_distance']</span></code> must also be defined.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'flow_threshold'</strong><strong>]</strong> (<em>int</em>) – The number of upstream cells that must
+into a cell before it’s considered part of a stream such that
+retention stops and the remaining export is exported to the stream.
+Used to define streams from the DEM.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'snap_distance'</strong><strong>]</strong> (<em>int</em>) – Pixel Distance to Snap Outlet Points</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'skip_invalid_geometry'</strong><strong>]</strong> (<em>bool</em>) – Whether to crash when an
+invalid geometry is passed or skip it, including all valid
+geometries in the vector to be passed to delineation.
+If <code class="docutils literal notranslate"><span class="pre">False</span></code>, this tool will crash if an invalid geometry is
+found.  If <code class="docutils literal notranslate"><span class="pre">True</span></code>, invalid geometries will be left out of
+the vector to be delineated.  Default: True</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'detect_pour_points'</strong><strong>]</strong> (<em>bool</em>) – Whether to run the pour point
+detection algorithm. If True, detected pour points are used instead
+of outlet_vector_path geometries. Default: False</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – The number of worker processes to use with
+taskgraph. Defaults to -1 (no parallelism).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="finfish-aquaculture">
+<h2><a class="toc-backref" href="#id6">Finfish Aquaculture</a><a class="headerlink" href="#finfish-aquaculture" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.finfish_aquaculture.finfish_aquaculture.execute">
+<code class="sig-prename descclassname">natcap.invest.finfish_aquaculture.finfish_aquaculture.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.finfish_aquaculture.finfish_aquaculture.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finfish Aquaculture.</p>
+<p>This function will take care of preparing files passed into
+the finfish aquaculture model. It will handle all files/inputs associated
+with biophysical and valuation calculations and manipulations. It will
+create objects to be passed to the aquaculture_core.py module. It may
+write log, warning, or error messages to stdout.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>workspace_dir</strong> (<em>string</em>) – The directory in which to place all result
+files.</p></li>
+<li><p><strong>results_suffix</strong> (<em>string</em>) – (optional) string to append to any
+output file names</p></li>
+<li><p><strong>ff_farm_loc</strong> (<em>string</em>) – URI that points to a shape file of fishery
+locations</p></li>
+<li><p><strong>farm_ID</strong> (<em>string</em>) – column heading used to describe individual farms.
+Used to link GIS location data to later inputs.</p></li>
+<li><p><strong>g_param_a</strong> (<em>float</em>) – Growth parameter alpha, used in modeling fish
+growth, should be an int or float.</p></li>
+<li><p><strong>g_param_b</strong> (<em>float</em>) – Growth parameter beta, used in modeling fish growth,
+should be an int or float.</p></li>
+<li><p><strong>g_param_tau</strong> (<em>float</em>) – Growth parameter tau, used in modeling fish
+growth, should be an int or float</p></li>
+<li><p><strong>use_uncertainty</strong> (<em>boolean</em>) – </p></li>
+<li><p><strong>g_param_a_sd</strong> (<em>float</em>) – (description)</p></li>
+<li><p><strong>g_param_b_sd</strong> (<em>float</em>) – (description)</p></li>
+<li><p><strong>num_monte_carlo_runs</strong> (<em>int</em>) – </p></li>
+<li><p><strong>water_temp_tbl</strong> (<em>string</em>) – URI to a CSV table where daily water
+temperature values are stored from one year</p></li>
+<li><p><strong>farm_op_tbl</strong> (<em>string</em>) – URI to CSV table of static variables for
+calculations</p></li>
+<li><p><strong>outplant_buffer</strong> (<em>int</em>) – This value will allow the outplanting
+start day to be flexible plus or minus the number of days specified
+here.</p></li>
+<li><p><strong>do_valuation</strong> (<em>boolean</em>) – Boolean that indicates whether or not valuation
+should be performed on the aquaculture model</p></li>
+<li><p><strong>p_per_kg</strong> (<em>float</em>) – Market price per kilogram of processed fish</p></li>
+<li><p><strong>frac_p</strong> (<em>float</em>) – Fraction of market price that accounts for costs rather
+than profit</p></li>
+<li><p><strong>discount</strong> (<em>float</em>) – Daily market discount rate</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example Args Dictionary:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s1">&#39;workspace_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/workspace_dir&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;results_suffix&#39;</span><span class="p">:</span> <span class="s1">&#39;test&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ff_farm_loc&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/shapefile&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;farm_ID&#39;</span><span class="p">:</span> <span class="s1">&#39;FarmID&#39;</span>
+    <span class="s1">&#39;g_param_a&#39;</span><span class="p">:</span> <span class="mf">0.038</span><span class="p">,</span>
+    <span class="s1">&#39;g_param_b&#39;</span><span class="p">:</span> <span class="mf">0.6667</span><span class="p">,</span>
+    <span class="s1">&#39;g_param_tau&#39;</span><span class="p">:</span> <span class="mf">0.08</span><span class="p">,</span>
+    <span class="s1">&#39;use_uncertainty&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;g_param_a_sd&#39;</span><span class="p">:</span> <span class="mf">0.005</span><span class="p">,</span>
+    <span class="s1">&#39;g_param_b_sd&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="s1">&#39;num_monte_carlo_runs&#39;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
+    <span class="s1">&#39;water_temp_tbl&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/water_temp_tbl&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;farm_op_tbl&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/farm_op_tbl&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;outplant_buffer&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="s1">&#39;do_valuation&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;p_per_kg&#39;</span><span class="p">:</span> <span class="mf">2.25</span><span class="p">,</span>
+    <span class="s1">&#39;frac_p&#39;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span>
+    <span class="s1">&#39;discount&#39;</span><span class="p">:</span> <span class="mf">0.000192</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="fisheries">
+<h2><a class="toc-backref" href="#id7">Fisheries</a><a class="headerlink" href="#fisheries" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries.execute">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em>, <em class="sig-param"><span class="n">create_outputs</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fisheries.</p>
+<dl class="simple">
+<dt>args[‘workspace_dir’] (str): location into which all intermediate</dt><dd><p>and output files should be placed.</p>
+</dd>
+</dl>
+<p>args[‘results_suffix’] (str): a string to append to output filenames</p>
+<dl class="simple">
+<dt>args[‘aoi_vector_path’] (str): location of shapefile which will be</dt><dd><p>used as subregions for calculation. Each region must contain a ‘Name’
+attribute (case-sensitive) matching the given name in the population
+parameters csv file.</p>
+</dd>
+<dt>args[‘timesteps’] (int): represents the number of time steps that</dt><dd><p>the user desires the model to run.</p>
+</dd>
+<dt>args[‘population_type’] (str): specifies whether the model</dt><dd><p>is age-specific or stage-specific. Options will be either “Age
+Specific” or “Stage Specific” and will change which equation is
+used in modeling growth.</p>
+</dd>
+<dt>args[‘sexsp’] (str): specifies whether or not the age and stage</dt><dd><p>classes are distinguished by sex.</p>
+</dd>
+<dt>args[‘harvest_units’] (str): specifies how the user wants to get</dt><dd><p>the harvest data. Options are either “Individuals” or “Weight”, and
+will change the harvest equation used in core. (Required if
+args[‘val_cont’] is True)</p>
+</dd>
+<dt>args[‘do_batch’] (bool): specifies whether program will perform a</dt><dd><p>single model run or a batch (set) of model runs.</p>
+</dd>
+<dt>args[‘population_csv_path’] (str): location of the population</dt><dd><p>parameters csv. This will contain all age and stage specific
+parameters. (Required if args[‘do_batch’] is False)</p>
+</dd>
+<dt>args[‘population_csv_dir’] (str): location of the directory that</dt><dd><p>contains the Population Parameters CSV files for batch processing
+(Required if args[‘do_batch’] is True)</p>
+</dd>
+<dt>args[‘spawn_units’] (str): specifies whether the spawner abundance used in</dt><dd><p>the recruitment function should be calculated in terms of number of
+individuals (‘Individuals’) or in terms of biomass (‘Weight’). If
+‘Weight’ is selected, the user must provide a ‘Weight’ vector alongside
+the survival matrix in the Population Parameters CSV File. The ‘alpha’
+and ‘beta’ parameters provided by the user should correspond to the
+selected choice.</p>
+</dd>
+<dt>args[‘total_init_recruits’] (float): represents the initial number of</dt><dd><p>recruits that will be used in calculation of population on a per area
+basis.</p>
+</dd>
+<dt>args[‘recruitment_type’] (str): name corresponding to one of the built-in</dt><dd><p>recruitment functions {‘Beverton-Holt’, ‘Ricker’, ‘Fecundity’, Fixed},
+or ‘Other’, meaning that the user is passing in their own recruitment
+function as an anonymous python function via the optional dictionary
+argument ‘recruitment_func’.</p>
+</dd>
+<dt>args[‘recruitment_func’] (function): Required if args[‘recruitment_type’]</dt><dd><p>is set to ‘Other’.  See below for instructions on how to create a user-
+defined recruitment function.</p>
+</dd>
+<dt>args[‘alpha’] (float): must exist within args for BH or Ricker Recruitment.</dt><dd><p>Parameter that will be used in calculation of recruitment.</p>
+</dd>
+<dt>args[‘beta’] (float): must exist within args for BH or Ricker Recruitment.</dt><dd><p>Parameter that will be used in calculation of recruitment.</p>
+</dd>
+<dt>args[‘total_recur_recruits’] (float): must exist within args for Fixed</dt><dd><p>Recruitment. Parameter that will be used in calculation of recruitment.</p>
+</dd>
+</dl>
+<p>args[‘migr_cont’] (bool): if True, model uses migration.</p>
+<dl class="simple">
+<dt>args[‘migration_dir’] (str): if this parameter exists, it means migration</dt><dd><p>is desired. This is  the location of the parameters folder containing
+files for migration. There should be one file for every age class which
+migrates. (Required if args[‘migr_cont’] is True)</p>
+</dd>
+</dl>
+<p>args[‘val_cont’] (bool): if True, model computes valuation.</p>
+<dl class="simple">
+<dt>args[‘frac_post_process’] (float): represents the fraction of the species</dt><dd><p>remaining after processing of the whole carcass is complete. This will
+exist only if valuation is desired for the particular species.
+(Required if args[‘val_cont’] is True)</p>
+</dd>
+<dt>args[‘unit_price’] (float): represents the price for a single unit of</dt><dd><p>harvest. Exists only if valuation is desired. (Required if
+args[‘val_cont’] is True)</p>
+</dd>
+</dl>
+<p>Example Args:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">args</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;workspace_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/workspace_dir/&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;results_suffix&#39;</span><span class="p">:</span> <span class="s1">&#39;scenario_name&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;aoi_vector_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/aoi_vector_path&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;total_timesteps&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+    <span class="s1">&#39;population_type&#39;</span><span class="p">:</span> <span class="s1">&#39;Stage-Based&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;sexsp&#39;</span><span class="p">:</span> <span class="s1">&#39;Yes&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;harvest_units&#39;</span><span class="p">:</span> <span class="s1">&#39;Individuals&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;do_batch&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s1">&#39;population_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv_path&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;population_csv_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;spawn_units&#39;</span><span class="p">:</span> <span class="s1">&#39;Weight&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;total_init_recruits&#39;</span><span class="p">:</span> <span class="mf">100000.0</span><span class="p">,</span>
+    <span class="s1">&#39;recruitment_type&#39;</span><span class="p">:</span> <span class="s1">&#39;Ricker&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;alpha&#39;</span><span class="p">:</span> <span class="mf">32.4</span><span class="p">,</span>
+    <span class="s1">&#39;beta&#39;</span><span class="p">:</span> <span class="mf">54.2</span><span class="p">,</span>
+    <span class="s1">&#39;total_recur_recruits&#39;</span><span class="p">:</span> <span class="mf">92.1</span><span class="p">,</span>
+    <span class="s1">&#39;migr_cont&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;migration_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/mig_dir/&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;val_cont&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;frac_post_process&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+    <span class="s1">&#39;unit_price&#39;</span><span class="p">:</span> <span class="mf">5.0</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Creating a User-Defined Recruitment Function</strong></p>
+<p>An optional argument has been created in the Fisheries Model to allow users
+proficient in Python to pass their own recruitment function into the
+program via the args dictionary.</p>
+<p>Using the Beverton-Holt recruitment function as an example, here’s how a
+user might create and pass in their own recruitment function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">natcap.invest</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="c1"># define input data</span>
+<span class="n">Matu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">])</span>  <span class="c1"># the Maturity vector in the Population</span>
+    <span class="n">Parameters</span> <span class="n">File</span>
+<span class="n">Weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">])</span>  <span class="c1"># the Weight vector in the Population</span>
+    <span class="n">Parameters</span> <span class="n">File</span>
+<span class="n">LarvDisp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">])</span>  <span class="c1"># the LarvalDispersal vector in the</span>
+    <span class="n">Population</span> <span class="n">Parameters</span> <span class="n">File</span>
+<span class="n">alpha</span> <span class="o">=</span> <span class="mf">2.0</span>  <span class="c1"># scalar value</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="mf">10.0</span>  <span class="c1"># scalar value</span>
+<span class="n">sexsp</span> <span class="o">=</span> <span class="mi">2</span>   <span class="c1"># 1 = not sex-specific, 2 = sex-specific</span>
+
+<span class="c1"># create recruitment function</span>
+<span class="k">def</span> <span class="nf">spawners</span><span class="p">(</span><span class="n">N_prev</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">N_prev</span> <span class="o">*</span> <span class="n">Matu</span> <span class="o">*</span> <span class="n">Weight</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">rec_func_BH</span><span class="p">(</span><span class="n">N_prev</span><span class="p">):</span>
+    <span class="n">N_0</span> <span class="o">=</span> <span class="p">(</span><span class="n">LarvDisp</span> <span class="o">*</span> <span class="p">((</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">spawners</span><span class="p">(</span>
+        <span class="n">N_prev</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">beta</span> <span class="o">+</span> <span class="n">spawners</span><span class="p">(</span><span class="n">N_prev</span><span class="p">))))</span> <span class="o">/</span> <span class="n">sexsp</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">N_0</span><span class="p">,</span> <span class="n">spawners</span><span class="p">(</span><span class="n">N_prev</span><span class="p">))</span>
+
+<span class="c1"># fill out args dictionary</span>
+<span class="n">args</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="c1"># ... define other arguments ...</span>
+<span class="n">args</span><span class="p">[</span><span class="s1">&#39;recruitment_type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Other&#39;</span>  <span class="c1"># lets program know to use user-</span>
+    <span class="n">defined</span> <span class="n">function</span>
+<span class="n">args</span><span class="p">[</span><span class="s1">&#39;recruitment_func&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rec_func_BH</span>  <span class="c1"># pass recruitment function as</span>
+    <span class="s1">&#39;anonymous&#39;</span> <span class="n">Python</span> <span class="n">function</span>
+
+<span class="c1"># run model</span>
+<span class="n">natcap</span><span class="o">.</span><span class="n">invest</span><span class="o">.</span><span class="n">fisheries</span><span class="o">.</span><span class="n">fisheries</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Conditions that a new recruitment function must meet to run properly:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>The function must accept as an argument:</strong> a single numpy three-</dt><dd><p>dimensional array (N_prev) representing the state of the population at
+the previous time step. N_prev has three dimensions: the indices of the
+first dimension correspond to the region (must be in same order as
+provided in the Population Parameters File), the indices of the second
+dimension represent the sex if it is specific (i.e. two indices
+representing female, then male if the model is ‘sex-specific’, else
+just a single zero index representing the female and male populations
+aggregated together), and the indicies of the third dimension represent
+age/stage in ascending order.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>The function must return:</strong> a tuple of two values. The first value</dt><dd><p>(N_0) being a single numpy one-dimensional array representing the
+youngest age of the population for the next time step. The indices of
+the array correspond to the regions of the population (outputted in
+same order as provided). If the model is sex-specific, it is currently
+assumed that males and females are produced in equal number and that
+the returned array has been already been divided by 2 in the
+recruitment function. The second value (spawners) is the number or
+weight of the spawners created by the population from the previous time
+step, provided as a scalar float value (non-negative).</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Example of How Recruitment Function Operates within Fisheries Model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># input data</span>
+<span class="n">N_prev_xsa</span> <span class="o">=</span> <span class="p">[[[</span><span class="n">region0</span><span class="o">-</span><span class="n">female</span><span class="o">-</span><span class="n">age0</span><span class="p">,</span> <span class="n">region0</span><span class="o">-</span><span class="n">female</span><span class="o">-</span><span class="n">age1</span><span class="p">],</span>
+               <span class="p">[</span><span class="n">region0</span><span class="o">-</span><span class="n">male</span><span class="o">-</span><span class="n">age0</span><span class="p">,</span> <span class="n">region1</span><span class="o">-</span><span class="n">male</span><span class="o">-</span><span class="n">age1</span><span class="p">]],</span>
+              <span class="p">[[</span><span class="n">region1</span><span class="o">-</span><span class="n">female</span><span class="o">-</span><span class="n">age0</span><span class="p">,</span> <span class="n">region1</span><span class="o">-</span><span class="n">female</span><span class="o">-</span><span class="n">age1</span><span class="p">],</span>
+               <span class="p">[</span><span class="n">region1</span><span class="o">-</span><span class="n">male</span><span class="o">-</span><span class="n">age0</span><span class="p">],</span> <span class="p">[</span><span class="n">region1</span><span class="o">-</span><span class="n">male</span><span class="o">-</span><span class="n">age1</span><span class="p">]]]</span>
+
+<span class="c1"># execute function</span>
+<span class="n">N_0_x</span><span class="p">,</span> <span class="n">spawners</span> <span class="o">=</span> <span class="n">rec_func</span><span class="p">(</span><span class="n">N_prev_xsa</span><span class="p">)</span>
+
+<span class="c1"># output data - where N_0 contains information about the youngest</span>
+<span class="c1">#     age/stage of the population for the next time step:</span>
+<span class="n">N_0_x</span> <span class="o">=</span> <span class="p">[</span><span class="n">region0</span><span class="o">-</span><span class="n">age0</span><span class="p">,</span> <span class="n">region1</span><span class="o">-</span><span class="n">age0</span><span class="p">]</span> <span class="c1"># if sex-specific, rec_func should</span>
+    <span class="n">divide</span> <span class="n">by</span> <span class="n">two</span> <span class="n">before</span> <span class="n">returning</span> <span class="nb">type</span><span class="p">(</span><span class="n">spawners</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">float</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="fisheries-habitat-scenario-tool">
+<h2><a class="toc-backref" href="#id8">Fisheries: Habitat Scenario Tool</a><a class="headerlink" href="#fisheries-habitat-scenario-tool" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_hst.execute">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_hst.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_hst.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fisheries: Habitat Scenario Tool.</p>
+<p>The Fisheries Habitat Scenario Tool generates a new Population Parameters
+CSV File with modified survival attributes across classes and regions
+based on habitat area changes and class-level dependencies on those
+habitats.</p>
+<dl class="simple">
+<dt>args[‘workspace_dir’] (str): location into which the resultant</dt><dd><p>modified Population Parameters CSV file should be placed.</p>
+</dd>
+<dt>args[‘sexsp’] (str): specifies whether or not the age and stage</dt><dd><p>classes are distinguished by sex. Options: ‘Yes’ or ‘No’</p>
+</dd>
+<dt>args[‘population_csv_path’] (str): location of the population</dt><dd><p>parameters csv file. This file contains all age and stage specific
+parameters.</p>
+</dd>
+<dt>args[‘habitat_chg_csv_path’] (str): location of the habitat change</dt><dd><p>parameters csv file. This file contains habitat area change
+information.</p>
+</dd>
+<dt>args[‘habitat_dep_csv_path’] (str): location of the habitat dependency</dt><dd><p>parameters csv file. This file contains habitat-class dependency
+information.</p>
+</dd>
+<dt>args[‘gamma’] (float): describes the relationship between a change</dt><dd><p>in habitat area and a change in survival of life stages dependent on
+that habitat</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+<p>Example Args:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">args</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;workspace_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/workspace_dir/&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;sexsp&#39;</span><span class="p">:</span> <span class="s1">&#39;Yes&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;population_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;habitat_chg_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;habitat_dep_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;gamma&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>Modified Population Parameters CSV File saved to ‘workspace_dir/output/’</p></li>
+</ul>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="forest-carbon-edge-effect">
+<h2><a class="toc-backref" href="#id9">Forest Carbon Edge Effect</a><a class="headerlink" href="#forest-carbon-edge-effect" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.forest_carbon_edge_effect.execute">
+<code class="sig-prename descclassname">natcap.invest.forest_carbon_edge_effect.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.forest_carbon_edge_effect.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Forest Carbon Edge Effect.</p>
+<p>InVEST Carbon Edge Model calculates the carbon due to edge effects in
+tropical forest pixels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – a path to the directory that will write
+output and other temporary files during calculation. (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – a string to append to any output file
+name (optional)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_nearest_model_points'</strong><strong>]</strong> (<em>int</em>) – number of nearest neighbor model
+points to search for</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_vector_path'</strong><strong>]</strong> (<em>string</em>) – (optional) if present, a path to a
+shapefile that will be used to aggregate carbon stock results at
+the end of the run.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biophysical_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>a path to a CSV table that has
+at least the fields ‘lucode’ and ‘c_above’. If
+<code class="docutils literal notranslate"><span class="pre">args['compute_forest_edge_effects']</span> <span class="pre">==</span> <span class="pre">True</span></code>, table must
+also contain an ‘is_tropical_forest’ field.  If
+<code class="docutils literal notranslate"><span class="pre">args['pools_to_calculate']</span> <span class="pre">==</span> <span class="pre">'all'</span></code>, this table must contain
+the fields ‘c_below’, ‘c_dead’, and ‘c_soil’.</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">lucode</span></code>: an integer that corresponds to landcover codes in
+the raster <code class="docutils literal notranslate"><span class="pre">args['lulc_raster_path']</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">is_tropical_forest</span></code>: either 0 or 1 indicating whether the
+landcover type is forest (1) or not (0).  If 1, the value
+in <code class="docutils literal notranslate"><span class="pre">c_above</span></code> is ignored and instead calculated from the
+edge regression model.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">c_above</span></code>: floating point number indicating tons of above
+ground carbon per hectare for that landcover type</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">{'c_below',</span> <span class="pre">'c_dead',</span> <span class="pre">'c_soil'}</span></code>: three other optional
+carbon pools that will statically map landcover types to the
+carbon densities in the table.</p></li>
+</ul>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lucode</span><span class="p">,</span><span class="n">is_tropical_forest</span><span class="p">,</span><span class="n">c_above</span><span class="p">,</span><span class="n">c_soil</span><span class="p">,</span><span class="n">c_dead</span><span class="p">,</span><span class="n">c_below</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mf">32.8</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mf">5.2</span><span class="p">,</span><span class="mf">2.1</span>
+<span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">n</span><span class="o">/</span><span class="n">a</span><span class="p">,</span><span class="mf">2.5</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.0</span>
+<span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">n</span><span class="o">/</span><span class="n">a</span><span class="p">,</span><span class="mf">1.8</span><span class="p">,</span><span class="mf">1.0</span><span class="p">,</span><span class="mf">0.0</span>
+<span class="mi">16</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mf">28.1</span><span class="p">,</span><span class="mf">4.3</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">2.0</span>
+</pre></div>
+</div>
+<p>Note the “n/a” in <code class="docutils literal notranslate"><span class="pre">c_above</span></code> are optional since that field
+is ignored when <code class="docutils literal notranslate"><span class="pre">is_tropical_forest==1</span></code>.</p>
+</div></blockquote>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_raster_path'</strong><strong>]</strong> (<em>string</em>) – path to a integer landcover code
+raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'pools_to_calculate'</strong><strong>]</strong> (<em>string</em>) – if “all” then all carbon pools
+will be calculted.  If any other value only above ground carbon
+pools will be calculated and expect only a ‘c_above’ header in
+the biophysical table. If “all” model expects ‘c_above’,
+‘c_below’, ‘c_dead’, ‘c_soil’ in header of biophysical_table and
+will make a translated carbon map for each based off the landcover
+map.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'compute_forest_edge_effects'</strong><strong>]</strong> (<em>boolean</em>) – if True, requires
+biophysical table to have ‘is_tropical_forest’ forest field, and
+any landcover codes that have a 1 in this column calculate carbon
+stocks using the Chaplin-Kramer et. al method and ignore ‘c_above’.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'tropical_forest_edge_carbon_model_vector_path'</strong><strong>]</strong> (<em>string</em>) – <p>path to a shapefile that defines the regions for the local carbon
+edge models.  Has at least the fields ‘method’, ‘theta1’, ‘theta2’,
+‘theta3’.  Where ‘method’ is an int between 1..3 describing the
+biomass regression model, and the thetas are floating point numbers
+that have different meanings depending on the ‘method’ parameter.
+Specifically,</p>
+<blockquote>
+<div><ul>
+<li><p>method 1 (asymptotic model):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">biomass</span> <span class="o">=</span> <span class="n">theta1</span> <span class="o">-</span> <span class="n">theta2</span> <span class="o">*</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">theta3</span> <span class="o">*</span> <span class="n">edge_dist_km</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>method 2 (logarithmic model):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># NOTE: theta3 is ignored for this method</span>
+<span class="n">biomass</span> <span class="o">=</span> <span class="n">theta1</span> <span class="o">+</span> <span class="n">theta2</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">edge_dist_km</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>method 3 (linear regression):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">biomass</span> <span class="o">=</span> <span class="n">theta1</span> <span class="o">+</span> <span class="n">theta2</span> <span class="o">*</span> <span class="n">edge_dist_km</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biomass_to_carbon_conversion_factor'</strong><strong>]</strong> (<em>string/float</em>) – Number by
+which to multiply forest biomass to convert to carbon in the edge
+effect calculation.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) The number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="globio">
+<h2><a class="toc-backref" href="#id10">GLOBIO</a><a class="headerlink" href="#globio" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.globio.execute">
+<code class="sig-prename descclassname">natcap.invest.globio.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.globio.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>GLOBIO.</p>
+<p>The model operates in two modes.  Mode (a) generates a landcover map
+based on a base landcover map and information about crop yields,
+infrastructure, and more.  Mode (b) assumes the globio landcover
+map is generated.  These modes are used below to describe input
+parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – output directory for intermediate,
+temporary, and final files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'predefined_globio'</strong><strong>]</strong> (<em>boolean</em>) – if True then “mode (b)” else
+“mode (a)”</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) string to append to any
+output files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_path'</strong><strong>]</strong> (<em>string</em>) – used in “mode (a)” path to a base landcover
+map with integer codes</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_to_globio_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>used in “mode (a)” path to
+table that translates the land-cover args[‘lulc_path’] to
+intermediate GLOBIO classes, from which they will be further
+differentiated using the additional data in the model.  Contains
+at least the following fields:</p>
+<ul>
+<li><p>’lucode’: Land use and land cover class code of the dataset
+used. LULC codes match the ‘values’ column in the LULC
+raster of mode (b) and must be numeric and unique.</p></li>
+<li><p>’globio_lucode’: The LULC code corresponding to the GLOBIO class
+to which it should be converted, using intermediate codes
+described in the example below.</p></li>
+</ul>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'infrastructure_dir'</strong><strong>]</strong> (<em>string</em>) – used in “mode (a) and (b)” a path
+to a folder containing maps of either gdal compatible rasters or
+OGR compatible shapefiles.  These data will be used in the
+infrastructure to calculation of MSA.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'pasture_path'</strong><strong>]</strong> (<em>string</em>) – used in “mode (a)” path to pasture
+raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'potential_vegetation_path'</strong><strong>]</strong> (<em>string</em>) – used in “mode (a)” path to
+potential vegetation raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'pasture_threshold'</strong><strong>]</strong> (<em>float</em>) – used in “mode (a)”</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'intensification_fraction'</strong><strong>]</strong> (<em>float</em>) – used in “mode (a)”; a value
+between 0 and 1 denoting proportion of total agriculture that
+should be classified as ‘high input’</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'primary_threshold'</strong><strong>]</strong> (<em>float</em>) – used in “mode (a)”</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'msa_parameters_path'</strong><strong>]</strong> (<em>string</em>) – path to MSA classification
+parameters</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_path'</strong><strong>]</strong> (<em>string</em>) – (optional) if it exists then final MSA
+raster is summarized by AOI</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'globio_lulc_path'</strong><strong>]</strong> (<em>string</em>) – used in “mode (b)” path to
+predefined globio raster.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) The number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="habitat-quality">
+<h2><a class="toc-backref" href="#id11">Habitat Quality</a><a class="headerlink" href="#habitat-quality" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.habitat_quality.execute">
+<code class="sig-prename descclassname">natcap.invest.habitat_quality.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.habitat_quality.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Habitat Quality.</p>
+<p>This model calculates habitat degradation and quality for the current LULC
+as described in the InVEST user’s guide. Optionally <code class="docutils literal notranslate"><span class="pre">execute</span></code> calculates
+habitat degradation and quality for a future LULC and habitat rarity for
+current and future LULC.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>dict</em>) – a key, value mapping for the habitat quality inputs.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – a path to the directory that will
+write output and other temporary files (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_cur_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input land use/land
+cover raster (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_fut_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input land use/land
+cover raster (optional)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_bas_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input land use/land
+cover raster (optional, but required for rarity calculations)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'threats_table_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input CSV
+containing data of all the considered threats. Each row is a
+degradation source and each column a different attribute of the
+source with the following names (case-insensitive):
+‘THREAT’,’MAX_DIST’,’WEIGHT’, ‘DECAY’, ‘CUR_PATH’ (required)
+‘BASE_PATH’, ‘FUT_PATH’ (optional).</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'access_vector_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input polygon
+shapefile containing data on the relative protection against
+threats (optional)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'sensitivity_table_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input CSV file
+of LULC types, whether they are considered habitat, and their
+sensitivity to each threat (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'half_saturation_constant'</strong><strong>]</strong> (<em>float</em>) – a python float that
+determines the spread and central tendency of habitat quality
+scores (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – a python string that will be inserted
+into all raster path paths just before the file extension.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) The number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="invest-carbon-model">
+<h2><a class="toc-backref" href="#id12">InVEST Carbon Model</a><a class="headerlink" href="#invest-carbon-model" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.carbon.execute">
+<code class="sig-prename descclassname">natcap.invest.carbon.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.carbon.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>InVEST Carbon Model.</p>
+<p>Calculate the amount of carbon stocks given a landscape, or the difference
+due to a future change, and/or the tradeoffs between that and a REDD
+scenario, and calculate economic valuation on those scenarios.</p>
+<p>The model can operate on a single scenario, a combined present and future
+scenario, as well as an additional REDD scenario.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – a path to the directory that will
+write output and other temporary files during calculation.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – appended to any output file name.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_cur_path'</strong><strong>]</strong> (<em>string</em>) – a path to a raster representing the
+current carbon stocks.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'calc_sequestration'</strong><strong>]</strong> (<em>bool</em>) – if true, sequestration should
+be calculated and ‘lulc_fut_path’ and ‘do_redd’ should be defined.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_fut_path'</strong><strong>]</strong> (<em>string</em>) – a path to a raster representing future
+landcover scenario.  Optional, but if present and well defined
+will trigger a sequestration calculation.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'do_redd'</strong><strong>]</strong> (<em>bool</em>) – if true, REDD analysis should be calculated
+and ‘lulc_redd_path’ should be defined</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_redd_path'</strong><strong>]</strong> (<em>string</em>) – a path to a raster representing the
+alternative REDD scenario which is only possible if the
+args[‘lulc_fut_path’] is present and well defined.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'carbon_pools_path'</strong><strong>]</strong> (<em>string</em>) – path to CSV or that indexes carbon
+storage density to lulc codes. (required if ‘do_uncertainty’ is
+false)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_cur_year'</strong><strong>]</strong> (<em>int/string</em>) – an integer representing the year
+of <cite>args[‘lulc_cur_path’]</cite> used if <cite>args[‘calc_sequestration’]</cite>
+is True.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_fut_year'</strong><strong>]</strong> (<em>int/string</em>) – an integer representing the year
+of <cite>args[‘lulc_fut_path’]</cite> used in valuation if it exists.
+Required if  <cite>args[‘do_valuation’]</cite> is True and
+<cite>args[‘lulc_fut_path’]</cite> is present and well defined.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'do_valuation'</strong><strong>]</strong> (<em>bool</em>) – if true then run the valuation model on
+available outputs.  At a minimum will run on carbon stocks, if
+sequestration with a future scenario is done and/or a REDD
+scenario calculate NPV for either and report in final HTML
+document.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'price_per_metric_ton_of_c'</strong><strong>]</strong> (<em>float</em>) – Is the present value of
+carbon per metric ton. Used if <cite>args[‘do_valuation’]</cite> is present
+and True.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'discount_rate'</strong><strong>]</strong> (<em>float</em>) – Discount rate used if NPV calculations
+are required.  Used if <cite>args[‘do_valuation’]</cite> is  present and
+True.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'rate_change'</strong><strong>]</strong> (<em>float</em>) – Annual rate of change in price of carbon
+as a percentage.  Used if <cite>args[‘do_valuation’]</cite> is  present and
+True.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) The number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="invest-coastal-vulnerability-model">
+<h2><a class="toc-backref" href="#id13">InVEST Coastal Vulnerability Model</a><a class="headerlink" href="#invest-coastal-vulnerability-model" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.coastal_vulnerability.execute">
+<code class="sig-prename descclassname">natcap.invest.coastal_vulnerability.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.coastal_vulnerability.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>InVEST Coastal Vulnerability Model.</p>
+<p>For points along a coastline, evaluate the relative exposure of points
+to coastal hazards based on up to eight biophysical hazard indices.
+Also quantify the role of habitats in reducing the hazard. Optionally
+summarize the population density in proximity to each shore point.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – (required) a path to the directory that
+will write output and other temporary files during calculation.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) appended to any output
+filename.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_vector_path'</strong><strong>]</strong> (<em>string</em>) – (required) path to a polygon vector
+that is projected in a coordinate system with units of meters.
+The polygon should intersect the landmass and the shelf contour
+line.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'model_resolution'</strong><strong>]</strong> (<em>string</em>) – (required) distance in meters.
+Points are spaced along the coastline at intervals of this
+distance.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'landmass_vector_path'</strong><strong>]</strong> (<em>string</em>) – (required) path to a polygon
+vector representing landmasses in the region of interest.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'wwiii_vector_path'</strong><strong>]</strong> (<em>string</em>) – (required) path to a point vector
+containing wind and wave information across the region of interest.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'max_fetch_distance'</strong><strong>]</strong> (<em>string</em>) – (required) maximum distance
+in meters to extend rays from shore points. Points with rays equal
+to this distance will accumulate ocean-driven wave exposure along
+those rays and local-wind-driven wave exposure along the shorter
+rays.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'bathymetry_raster_path'</strong><strong>]</strong> (<em>string</em>) – (required) path to a raster
+representing the depth below sea level, in negative meters. Should
+cover the area extending outward from the AOI to the
+max_fetch_distance.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'shelf_contour_vector_path'</strong><strong>]</strong> (<em>string</em>) – (required) path to a
+polyline vector delineating edges of the continental shelf
+or other bathymetry contour.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_path'</strong><strong>]</strong> (<em>string</em>) – (required) path to a raster representing the
+elevation on land in the region of interest.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_averaging_radius'</strong><strong>]</strong> (<em>int</em><em> or </em><em>float</em>) – (required) a value &gt;= 0.
+The radius in meters around each shore point in which to compute
+the average elevation.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'habitat_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>(rqeuired) path to a CSV file with
+the following four fields:</p>
+<blockquote>
+<div><p>’id’: unique string to represent each habitat
+‘path’: absolute or relative path to a polygon vector
+‘rank’: integer from 1 to 5 representing the relative</p>
+<blockquote>
+<div><p>protection offered by this habitat</p>
+</div></blockquote>
+<dl class="simple">
+<dt>’protection distance (m)’: integer or float used as a</dt><dd><p>search radius around each shore point.</p>
+</dd>
+</dl>
+</div></blockquote>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'geomorphology_vector_path'</strong><strong>]</strong> (<em>string</em>) – (optional) path to a
+polyline vector that has a field called “RANK” with values from
+1 to 5 in the attribute table.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'geomorphology_fill_value'</strong><strong>]</strong> (<em>int</em>) – (optional) a value from 1 to 5
+that will be used as a geomorphology rank for any points not
+proximate to the geomorphology_vector_path.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'population_raster_path'</strong><strong>]</strong> (<em>string</em>) – (optional) path a raster with
+values of total population per pixel.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'population_radius'</strong><strong>]</strong> (<em>int</em><em> or </em><em>float</em>) – (optional) a value &gt;= 0.
+The radius in meters around each shore point in which to compute
+the population density.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'slr_vector_path'</strong><strong>]</strong> (<em>string</em>) – (optional) path to point vector
+containing the field <code class="docutils literal notranslate"><span class="pre">args['slr_field']</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'slr_field'</strong><strong>]</strong> (<em>string</em>) – name of a field in
+<code class="docutils literal notranslate"><span class="pre">args['slr_vector_path']</span></code> containing numeric values.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) The number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="invest-habitat-risk-assessment-hra-model">
+<h2><a class="toc-backref" href="#id14">InVEST Habitat Risk Assessment (HRA) Model</a><a class="headerlink" href="#invest-habitat-risk-assessment-hra-model" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.hra.execute">
+<code class="sig-prename descclassname">natcap.invest.hra.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hra.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>InVEST Habitat Risk Assessment (HRA) Model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>str</em>) – a path to the output workspace folder.
+It will overwrite any files that exist if the path already exists.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>str</em>) – a string appended to each output file
+path. (optional)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'info_table_path'</strong><strong>]</strong> (<em>str</em>) – a path to the CSV or Excel file that
+contains the name of the habitat (H) or stressor (s) on the
+<code class="docutils literal notranslate"><span class="pre">NAME</span></code> column that matches the names in criteria_table_path.
+Each H/S has its corresponding vector or raster path on the
+<code class="docutils literal notranslate"><span class="pre">PATH</span></code> column. The <code class="docutils literal notranslate"><span class="pre">STRESSOR</span> <span class="pre">BUFFER</span> <span class="pre">(meters)</span></code> column should
+have a buffer value if the <code class="docutils literal notranslate"><span class="pre">TYPE</span></code> column is a stressor.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'criteria_table_path'</strong><strong>]</strong> (<em>str</em>) – a path to the CSV or Excel file that
+contains the set of criteria ranking of each stressor on each
+habitat.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'resolution'</strong><strong>]</strong> (<em>int</em>) – a number representing the desired pixel
+dimensions of output rasters in meters.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'max_rating'</strong><strong>]</strong> (<em>str</em><em>, </em><em>int</em><em> or </em><em>float</em>) – a number representing the
+highest potential value that should be represented in rating in the
+criteria scores table.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'risk_eq'</strong><strong>]</strong> (<em>str</em>) – a string identifying the equation that should be
+used in calculating risk scores for each H-S overlap cell. This
+will be either ‘Euclidean’ or ‘Multiplicative’.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'decay_eq'</strong><strong>]</strong> (<em>str</em>) – a string identifying the equation that should
+be used in calculating the decay of stressor buffer influence. This
+can be ‘None’, ‘Linear’, or ‘Exponential’.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_vector_path'</strong><strong>]</strong> (<em>str</em>) – a path to the shapefile containing one
+or more planning regions used to get the average risk value for
+each habitat-stressor combination over each area. Optionally, if
+each of the shapefile features contain a ‘name’ field, it will
+be used as a way of identifying each individual shape.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – the number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process. (optional)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'visualize_outputs'</strong><strong>]</strong> (<em>bool</em>) – if True, create output GeoJSONs and
+save them in a visualization_outputs folder, so users can visualize
+results on the web app. Default to True if not specified.
+(optional)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="invest-pollination-model">
+<h2><a class="toc-backref" href="#id15">InVEST Pollination Model</a><a class="headerlink" href="#invest-pollination-model" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.pollination.execute">
+<code class="sig-prename descclassname">natcap.invest.pollination.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.pollination.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>InVEST Pollination Model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – a path to the output workspace folder.
+Will overwrite any files that exist if the path already exists.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – string appended to each output
+file path.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'landcover_raster_path'</strong><strong>]</strong> (<em>string</em>) – file path to a landcover
+raster.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'guild_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>file path to a table indicating
+the bee species to analyze in this model run.  Table headers
+must include:</p>
+<blockquote>
+<div><ul>
+<li><dl class="simple">
+<dt>’species’: a bee species whose column string names will</dt><dd><p>be referred to in other tables and the model will output
+analyses per species.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>one or more columns matching _NESTING_SUITABILITY_PATTERN</dt><dd><p>with values in the range [0.0, 1.0] indicating the
+suitability of the given species to nest in a particular
+substrate.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>one or more columns matching _FORAGING_ACTIVITY_RE_PATTERN</dt><dd><p>with values in the range [0.0, 1.0] indicating the
+relative level of foraging activity for that species
+during a particular season.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>_ALPHA_HEADER the sigma average flight distance of that bee</dt><dd><p>species in meters.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>’relative_abundance’: a weight indicating the relative</dt><dd><p>abundance of the particular species with respect to the
+sum of all relative abundance weights in the table.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'landcover_biophysical_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>path to a table
+mapping landcover codes in <cite>args[‘landcover_path’]</cite> to indexes of
+nesting availability for each nesting substrate referenced in
+guilds table as well as indexes of abundance of floral resources
+on that landcover type per season in the bee activity columns of
+the guild table.</p>
+<p>All indexes are in the range [0.0, 1.0].</p>
+<dl class="simple">
+<dt>Columns in the table must be at least</dt><dd><ul>
+<li><dl class="simple">
+<dt>’lucode’: representing all the unique landcover codes in</dt><dd><p>the raster ast <cite>args[‘landcover_path’]</cite></p>
+</dd>
+</dl>
+</li>
+<li><p>For every nesting matching _NESTING_SUITABILITY_PATTERN
+in the guild stable, a column matching the pattern in
+<cite>_LANDCOVER_NESTING_INDEX_HEADER</cite>.</p></li>
+<li><p>For every season matching _FORAGING_ACTIVITY_RE_PATTERN
+in the guilds table, a column matching
+the pattern in <cite>_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'farm_vector_path'</strong><strong>]</strong> (<em>string</em>) – <p>(optional) path to a single layer
+polygon shapefile representing farms. If present will trigger the
+farm yield component of the model.</p>
+<p>The layer must have at least the following fields:</p>
+<ul>
+<li><p>season (string): season in which the farm needs pollination</p></li>
+<li><dl class="simple">
+<dt>crop_type (string): a text field to identify the crop type for</dt><dd><p>summary statistics.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>half_sat (float): a real in the range [0.0, 1.0] representing</dt><dd><p>the proportion of wild pollinators to achieve a 50% yield
+of that crop.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>p_dep (float): a number in the range [0.0, 1.0]</dt><dd><p>representing the proportion of yield dependent on pollinators.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>p_managed (float): proportion of pollinators that come from</dt><dd><p>non-native/managed hives.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>fr_[season] (float): one or more fields that match this pattern</dt><dd><p>such that <cite>season</cite> also matches the season headers in the
+biophysical and guild table.  Any areas that overlap the
+landcover map will replace seasonal floral resources with
+this value.  Ranges from 0..1.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>n_[substrate] (float): One or more fields that match this</dt><dd><p>pattern such that <cite>substrate</cite> also matches the nesting
+substrate headers in the biophysical and guild table.  Any
+areas that overlap the landcover map will replace nesting
+substrate suitability with this value.  Ranges from 0..1.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) The number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="model-coastal-blue-carbon-over-a-time-series">
+<h2><a class="toc-backref" href="#id16">Model Coastal Blue Carbon over a time series</a><a class="headerlink" href="#model-coastal-blue-carbon-over-a-time-series" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute">
+<code class="sig-prename descclassname">natcap.invest.coastal_blue_carbon.coastal_blue_carbon.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Model Coastal Blue Carbon over a time series.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – the path to a workspace directory where
+outputs should be written.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) If provided, a string
+suffix that will be added to each output filename.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) If provided, the number of workers
+to pass to <code class="docutils literal notranslate"><span class="pre">taskgraph</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'landcover_snapshot_csv'</strong><strong>]</strong> (<em>string</em>) – The path to a transitions
+CSV table containing transition years and the LULC rasters
+representing that year. Required for transition analysis.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'analysis_year'</strong><strong>]</strong> (<em>int</em>) – the year of the final analysis.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'do_economic_analysis'</strong><strong>]</strong> (<em>bool</em>) – Whether to do valuation.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'use_price_table'</strong><strong>]</strong> (<em>bool</em>) – Whether to use a table of annual carbon
+prices for valuation.  Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'price_table_path'</strong><strong>]</strong> (<em>string</em>) – The path to a table of prices to use
+for valuation.  Required if <code class="docutils literal notranslate"><span class="pre">args['use_price_table']</span></code> is
+<code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'inflation_rate'</strong><strong>]</strong> (<em>number</em>) – The rate of inflation.  The number
+provided is multiplied by <code class="docutils literal notranslate"><span class="pre">0.01</span></code> to compute the actual rate of
+inflation.  Required if <code class="docutils literal notranslate"><span class="pre">args['use_price_table']</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'price'</strong><strong>]</strong> (<em>number</em>) – The carbon price.  Required if
+<code class="docutils literal notranslate"><span class="pre">args['use_price_table']</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'discount_rate'</strong><strong>]</strong> (<em>number</em>) – The discount rate.  The number provided
+is multiplied by <code class="docutils literal notranslate"><span class="pre">0.01</span></code> to compute the actual discount rate.
+Required if <code class="docutils literal notranslate"><span class="pre">args['do_economic_analysis']</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biophysical_table_path'</strong><strong>]</strong> (<em>string</em>) – The path to the biophysical
+table on disk.  This table has many required columns.  See
+<code class="docutils literal notranslate"><span class="pre">ARGS_SPEC</span></code> for the required columns.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'landcover_transitions_table'</strong><strong>]</strong> (<em>string</em>) – The path to the landcover
+transitions table, indicating the behavior of carbon when the
+landscape undergoes a transition.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="nutrient-delivery-ratio">
+<h2><a class="toc-backref" href="#id17">Nutrient Delivery Ratio</a><a class="headerlink" href="#nutrient-delivery-ratio" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.ndr.ndr.execute">
+<code class="sig-prename descclassname">natcap.invest.ndr.ndr.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.ndr.ndr.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Nutrient Delivery Ratio.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – path to current workspace</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_path'</strong><strong>]</strong> (<em>string</em>) – path to digital elevation map raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_path'</strong><strong>]</strong> (<em>string</em>) – a path to landcover map raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'runoff_proxy_path'</strong><strong>]</strong> (<em>string</em>) – a path to a runoff proxy raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'watersheds_path'</strong><strong>]</strong> (<em>string</em>) – path to the watershed shapefile</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biophysical_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>path to csv table on disk
+containing nutrient retention values.</p>
+<p>For each nutrient type [t] in args[‘calc_[t]’] that is true, must
+contain the following headers:</p>
+<p>’load_[t]’, ‘eff_[t]’, ‘crit_len_[t]’</p>
+<p>If args[‘calc_n’] is True, must also contain the header
+‘proportion_subsurface_n’ field.</p>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'calc_p'</strong><strong>]</strong> (<em>boolean</em>) – if True, phosphorous is modeled,
+additionally if True then biophysical table must have p fields in
+them</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'calc_n'</strong><strong>]</strong> (<em>boolean</em>) – if True nitrogen will be modeled,
+additionally biophysical table must have n fields in them.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) a text field to append to
+all output files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'threshold_flow_accumulation'</strong><strong>]</strong> – a number representing the flow
+accumulation in terms of upstream pixels.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'k_param'</strong><strong>]</strong> (<em>number</em>) – The Borselli k parameter. This is a
+calibration parameter that determines the shape of the
+relationship between hydrologic connectivity.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'subsurface_critical_length_n'</strong><strong>]</strong> (<em>number</em>) – The distance (traveled
+subsurface and downslope) after which it is assumed that soil
+retains nutrient at its maximum capacity, given in meters. If
+dissolved nutrients travel a distance smaller than Subsurface
+Critical Length, the retention efficiency will be lower than the
+Subsurface Maximum Retention Efficiency value defined. Setting this
+value to a distance smaller than the pixel size will result in the
+maximum retention efficiency being reached within one pixel only.
+Required if <code class="docutils literal notranslate"><span class="pre">calc_n</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'subsurface_critical_length_p'</strong><strong>]</strong> (<em>number</em>) – The distance (traveled
+subsurface and downslope) after which it is assumed that soil
+retains nutrient at its maximum capacity, given in meters. If
+dissolved nutrients travel a distance smaller than Subsurface
+Critical Length, the retention efficiency will be lower than the
+Subsurface Maximum Retention Efficiency value defined. Setting this
+value to a distance smaller than the pixel size will result in the
+maximum retention efficiency being reached within one pixel only.
+Required if <code class="docutils literal notranslate"><span class="pre">calc_p</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'subsurface_eff_n'</strong><strong>]</strong> (<em>number</em>) – The maximum nutrient retention
+efficiency that can be reached through subsurface flow, a floating
+point value between 0 and 1. This field characterizes the retention
+due to biochemical degradation in soils.  Required if <code class="docutils literal notranslate"><span class="pre">calc_n</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'subsurface_eff_p'</strong><strong>]</strong> (<em>number</em>) – The maximum nutrient retention
+efficiency that can be reached through subsurface flow, a floating
+point value between 0 and 1. This field characterizes the retention
+due to biochemical degradation in soils.  Required if <code class="docutils literal notranslate"><span class="pre">calc_p</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – if present, indicates how many worker
+processes should be used in parallel processing. -1 indicates
+single process mode, 0 is single process but non-blocking mode,
+and &gt;= 1 is number of processes.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="recreation">
+<h2><a class="toc-backref" href="#id18">Recreation</a><a class="headerlink" href="#recreation" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.recreation.recmodel_client.execute">
+<code class="sig-prename descclassname">natcap.invest.recreation.recmodel_client.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_client.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recreation.</p>
+<p>Execute recreation client model on remote server.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – path to workspace directory</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_path'</strong><strong>]</strong> (<em>string</em>) – path to AOI vector</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'hostname'</strong><strong>]</strong> (<em>string</em>) – FQDN to recreation server</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'port'</strong><strong>]</strong> (<em>string</em><em> or </em><em>int</em>) – port on hostname for recreation server</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'start_year'</strong><strong>]</strong> (<em>string</em>) – start year in form YYYY.  This year
+is the inclusive lower bound to consider points in the PUD and
+regression.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'end_year'</strong><strong>]</strong> (<em>string</em>) – end year in form YYYY.  This year
+is the inclusive upper bound to consider points in the PUD and
+regression.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'grid_aoi'</strong><strong>]</strong> (<em>boolean</em>) – if true the polygon vector in
+<code class="docutils literal notranslate"><span class="pre">args['aoi_path']</span></code> should be gridded into a new vector and the
+recreation model should be executed on that</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'grid_type'</strong><strong>]</strong> (<em>string</em>) – optional, but must exist if
+args[‘grid_aoi’] is True.  Is one of ‘hexagon’ or ‘square’ and
+indicates the style of gridding.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'cell_size'</strong><strong>]</strong> (<em>string/float</em>) – optional, but must exist if
+<code class="docutils literal notranslate"><span class="pre">args['grid_aoi']</span></code> is True.  Indicates the cell size of square
+pixels and the width of the horizontal axis for the hexagonal
+cells.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'compute_regression'</strong><strong>]</strong> (<em>boolean</em>) – if True, then process the
+predictor table and scenario table (if present).</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'predictor_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>required if
+args[‘compute_regression’] is True.  Path to a table that
+describes the regression predictors, their IDs and types.  Must
+contain the fields ‘id’, ‘path’, and ‘type’ where:</p>
+<blockquote>
+<div><ul>
+<li><p>’id’: is a &lt;=10 character length ID that is used to uniquely
+describe the predictor.  It will be added to the output
+result shapefile attribute table which is an ESRI
+Shapefile, thus limited to 10 characters.</p></li>
+<li><p>’path’: an absolute or relative (to this table) path to the
+predictor dataset, either a vector or raster type.</p></li>
+<li><p>’type’: one of the following,</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>’raster_mean’: mean of values in the raster under the
+response polygon</p></li>
+<li><p>’raster_sum’: sum of values in the raster under the
+response polygon</p></li>
+<li><p>’point_count’: count of the points contained in the
+response polygon</p></li>
+<li><p>’point_nearest_distance’: distance to the nearest point
+from the response polygon</p></li>
+<li><p>’line_intersect_length’: length of lines that intersect
+with the response polygon in projected units of AOI</p></li>
+<li><p>’polygon_area’: area of the polygon contained within
+response polygon in projected units of AOI</p></li>
+<li><p>’polygon_percent_coverage’: percent (0-100) of area of
+overlap between the predictor and each AOI grid cell</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'scenario_predictor_table_path'</strong><strong>]</strong> (<em>string</em>) – (optional) if
+present runs the scenario mode of the recreation model with the
+datasets described in the table on this path.  Field headers
+are identical to <code class="docutils literal notranslate"><span class="pre">args['predictor_table_path']</span></code> and ids in the
+table are required to be identical to the predictor list.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – optional, if exists is appended to
+any output file paths.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="routedem-hydrological-routing">
+<h2><a class="toc-backref" href="#id19">RouteDEM: Hydrological routing</a><a class="headerlink" href="#routedem-hydrological-routing" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.routedem.execute">
+<code class="sig-prename descclassname">natcap.invest.routedem.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.routedem.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>RouteDEM: Hydrological routing.</p>
+<p>This model exposes the pygeoprocessing D8 and Multiple Flow Direction
+routing functionality as an InVEST model.</p>
+<p>This tool will always fill pits on the input DEM.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – output directory for intermediate,
+temporary, and final files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) string to append to any
+output file names</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_path'</strong><strong>]</strong> (<em>string</em>) – path to a digital elevation raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_band_index'</strong><strong>]</strong> (<em>int</em>) – Optional. The band index to operate on.
+If not provided, band index 1 is assumed.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'algorithm'</strong><strong>]</strong> (<em>string</em>) – The routing algorithm to use.  Must be
+one of ‘D8’ or ‘MFD’ (case-insensitive). Required when calculating
+flow direction, flow accumulation, stream threshold, and downstream
+distance.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'calculate_flow_direction'</strong><strong>]</strong> (<em>bool</em>) – If True, model will calculate
+flow direction for the filled DEM.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'calculate_flow_accumulation'</strong><strong>]</strong> (<em>bool</em>) – If True, model will
+calculate a flow accumulation raster. Only applies when
+args[‘calculate_flow_direction’] is True.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'calculate_stream_threshold'</strong><strong>]</strong> (<em>bool</em>) – if True, model will
+calculate a stream classification layer by thresholding flow
+accumulation to the provided value in
+<code class="docutils literal notranslate"><span class="pre">args['threshold_flow_accumulation']</span></code>.  Only applies when
+args[‘calculate_flow_accumulation’] and
+args[‘calculate_flow_direction’] are True.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'threshold_flow_accumulation'</strong><strong>]</strong> (<em>int</em>) – The number of upstream
+cells that must flow into a cell before it’s classified as a
+stream.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'calculate_downstream_distance'</strong><strong>]</strong> (<em>bool</em>) – If True, and a stream
+threshold is calculated, model will calculate a downstream
+distance raster in units of pixels. Only applies when
+args[‘calculate_flow_accumulation’],
+args[‘calculate_flow_direction’], and
+args[‘calculate_stream_threshold’] are all True.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'calculate_slope'</strong><strong>]</strong> (<em>bool</em>) – If True, model will calculate a
+slope raster from the DEM.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – The <code class="docutils literal notranslate"><span class="pre">n_workers</span></code> parameter to pass to
+the task graph.  The default is <code class="docutils literal notranslate"><span class="pre">-1</span></code> if not provided.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="run-the-scenic-quality-model">
+<h2><a class="toc-backref" href="#id20">Run the Scenic Quality Model</a><a class="headerlink" href="#run-the-scenic-quality-model" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.scenic_quality.scenic_quality.execute">
+<code class="sig-prename descclassname">natcap.invest.scenic_quality.scenic_quality.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.scenic_quality.scenic_quality.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the Scenic Quality Model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – (required) output directory for
+intermediate, temporary, and final files.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) string to append to any
+output file.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_path'</strong><strong>]</strong> (<em>string</em>) – (required) path to a vector that
+indicates the area over which the model should be run.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'structure_path'</strong><strong>]</strong> (<em>string</em>) – (required) path to a point vector
+that has the features for the viewpoints. Optional fields:
+‘WEIGHT’, ‘RADIUS’ / ‘RADIUS2’, ‘HEIGHT’</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_path'</strong><strong>]</strong> (<em>string</em>) – (required) path to a digital elevation model
+raster.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'refraction'</strong><strong>]</strong> (<em>float</em>) – (required) number indicating the refraction
+coefficient to use for calculating curvature of the earth.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'do_valuation'</strong><strong>]</strong> (<em>bool</em>) – (optional) indicates whether to compute
+valuation.  If <code class="docutils literal notranslate"><span class="pre">False</span></code>, per-viewpoint value will not be computed,
+and the summation of valuation rasters (vshed_value.tif) will not
+be created.  Additionally, the Viewshed Quality raster will
+represent the weighted sum of viewsheds. Default: <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'valuation_function'</strong><strong>]</strong> (<em>string</em>) – The type of economic
+function to use for valuation.  One of “linear”, “logarithmic”,
+or “exponential”.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'a_coef'</strong><strong>]</strong> (<em>float</em>) – The “a” coefficient for valuation.  Required
+if <code class="docutils literal notranslate"><span class="pre">args['do_valuation']</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'b_coef'</strong><strong>]</strong> (<em>float</em>) – The “b” coefficient for valuation.  Required
+if <code class="docutils literal notranslate"><span class="pre">args['do_valuation']</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'max_valuation_radius'</strong><strong>]</strong> (<em>float</em>) – Past this distance
+from the viewpoint, the valuation raster’s pixel values will be set
+to 0.  Required if <code class="docutils literal notranslate"><span class="pre">args['do_valuation']</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) The number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="scenario-generator-proximity-based">
+<h2><a class="toc-backref" href="#id21">Scenario Generator: Proximity-Based</a><a class="headerlink" href="#scenario-generator-proximity-based" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.scenario_gen_proximity.execute">
+<code class="sig-prename descclassname">natcap.invest.scenario_gen_proximity.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.scenario_gen_proximity.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scenario Generator: Proximity-Based.</p>
+<p>Main entry point for proximity based scenario generator model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – output directory for intermediate,
+temporary, and final files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) string to append to any
+output files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'base_lulc_path'</strong><strong>]</strong> (<em>string</em>) – path to the base landcover map</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'replacment_lucode'</strong><strong>]</strong> (<em>string</em><em> or </em><em>int</em>) – code to replace when
+converting pixels</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'area_to_convert'</strong><strong>]</strong> (<em>string</em><em> or </em><em>float</em>) – max area (Ha) to convert</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'focal_landcover_codes'</strong><strong>]</strong> (<em>string</em>) – a space separated string of
+landcover codes that are used to determine the proximity when
+refering to “towards” or “away” from the base landcover codes</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'convertible_landcover_codes'</strong><strong>]</strong> (<em>string</em>) – a space separated string
+of landcover codes that can be converted in the generation phase
+found in <cite>args[‘base_lulc_path’]</cite>.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_fragmentation_steps'</strong><strong>]</strong> (<em>string</em>) – an int as a string indicating
+the number of steps to take for the fragmentation conversion</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_path'</strong><strong>]</strong> (<em>string</em>) – (optional) path to a shapefile that
+indicates area of interest.  If present, the expansion scenario
+operates only under that AOI and the output raster is clipped to
+that shape.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'convert_farthest_from_edge'</strong><strong>]</strong> (<em>boolean</em>) – if True will run the
+conversion simulation starting from the furthest pixel from the
+edge and work inwards.  Workspace will contain output files named
+‘toward_base{suffix}.{tif,csv}.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'convert_nearest_to_edge'</strong><strong>]</strong> (<em>boolean</em>) – if True will run the
+conversion simulation starting from the nearest pixel on the
+edge and work inwards.  Workspace will contain output files named
+‘toward_base{suffix}.{tif,csv}.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) The number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="seasonal-water-yield">
+<h2><a class="toc-backref" href="#id22">Seasonal Water Yield</a><a class="headerlink" href="#seasonal-water-yield" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.seasonal_water_yield.seasonal_water_yield.execute">
+<code class="sig-prename descclassname">natcap.invest.seasonal_water_yield.seasonal_water_yield.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.seasonal_water_yield.seasonal_water_yield.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Seasonal Water Yield.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – output directory for intermediate,
+temporary, and final files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) string to append to any
+output files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'threshold_flow_accumulation'</strong><strong>]</strong> (<em>number</em>) – used when classifying
+stream pixels from the DEM by thresholding the number of upstream
+cells that must flow into a cell before it’s considered
+part of a stream.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'et0_dir'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_local_recharge’] is False.  Path to a directory
+that contains rasters of monthly reference evapotranspiration;
+units in mm.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'precip_dir'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_local_recharge’] is False. A path to a directory
+that contains rasters of monthly precipitation; units in mm.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_raster_path'</strong><strong>]</strong> (<em>string</em>) – a path to a digital elevation raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_raster_path'</strong><strong>]</strong> (<em>string</em>) – a path to a land cover raster used
+to classify biophysical properties of pixels.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'soil_group_path'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_local_recharge’] is  False. A path to a raster
+indicating SCS soil groups where integer values are mapped to soil
+types</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_path'</strong><strong>]</strong> (<em>string</em>) – path to a vector that indicates the area
+over which the model should be run, as well as the area in which to
+aggregate over when calculating the output Qb.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biophysical_table_path'</strong><strong>]</strong> (<em>string</em>) – path to a CSV table that maps
+landcover codes paired with soil group types to curve numbers as
+well as Kc values.  Headers must include ‘lucode’, ‘CN_A’, ‘CN_B’,
+‘CN_C’, ‘CN_D’, ‘Kc_1’, ‘Kc_2’, ‘Kc_3’, ‘Kc_4’, ‘Kc_5’, ‘Kc_6’,
+‘Kc_7’, ‘Kc_8’, ‘Kc_9’, ‘Kc_10’, ‘Kc_11’, ‘Kc_12’.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'rain_events_table_path'</strong><strong>]</strong> (<em>string</em>) – Not required if
+args[‘user_defined_local_recharge’] is True or
+args[‘user_defined_climate_zones’] is True.  Path to a CSV table
+that has headers ‘month’ (1-12) and ‘events’ (int &gt;= 0) that
+indicates the number of rain events per month</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'alpha_m'</strong><strong>]</strong> (<em>float</em><em> or </em><em>string</em>) – required if args[‘monthly_alpha’] is
+false.  Is the proportion of upslope annual available local
+recharge that is available in month m.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'beta_i'</strong><strong>]</strong> (<em>float</em><em> or </em><em>string</em>) – is the fraction of the upgradient
+subsidy that is available for downgradient evapotranspiration.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'gamma'</strong><strong>]</strong> (<em>float</em><em> or </em><em>string</em>) – is the fraction of pixel local
+recharge that is available to downgradient pixels.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'user_defined_local_recharge'</strong><strong>]</strong> (<em>boolean</em>) – if True, indicates user
+will provide pre-defined local recharge raster layer</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'l_path'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_local_recharge’] is True.  If provided pixels
+indicate the amount of local recharge; units in mm.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'user_defined_climate_zones'</strong><strong>]</strong> (<em>boolean</em>) – if True, user provides
+a climate zone rain events table and a climate zone raster map in
+lieu of a global rain events table.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'climate_zone_table_path'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_climate_zones’] is True. Contains monthly
+precipitation events per climate zone.  Fields must be
+“cz_id”, “jan”, “feb”, “mar”, “apr”, “may”, “jun”, “jul”,
+“aug”, “sep”, “oct”, “nov”, “dec”.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'climate_zone_raster_path'</strong><strong>]</strong> (<em>string</em>) – required if
+args[‘user_defined_climate_zones’] is True, pixel values correspond
+to the “cz_id” values defined in args[‘climate_zone_table_path’]</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'monthly_alpha'</strong><strong>]</strong> (<em>boolean</em>) – if True, use the alpha</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'monthly_alpha_path'</strong><strong>]</strong> (<em>string</em>) – required if args[‘monthly_alpha’]
+is True. A CSV file.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) indicates the number of processes
+to devote to potential parallel task execution. A value &lt; 0 will
+use a single process, 0 will be non-blocking scheduling but
+single process, and &gt;= 1 will make additional processes for
+parallel execution.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="sediment-delivery-ratio">
+<h2><a class="toc-backref" href="#id23">Sediment Delivery Ratio</a><a class="headerlink" href="#sediment-delivery-ratio" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.sdr.sdr.execute">
+<code class="sig-prename descclassname">natcap.invest.sdr.sdr.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.sdr.sdr.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sediment Delivery Ratio.</p>
+<p>This function calculates the sediment export and retention of a landscape
+using the sediment delivery ratio model described in the InVEST user’s
+guide.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – output directory for intermediate,
+temporary, and final files</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) string to append to any
+output file names</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_path'</strong><strong>]</strong> (<em>string</em>) – path to a digital elevation raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'erosivity_path'</strong><strong>]</strong> (<em>string</em>) – path to rainfall erosivity index
+raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'erodibility_path'</strong><strong>]</strong> (<em>string</em>) – a path to soil erodibility raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_path'</strong><strong>]</strong> (<em>string</em>) – path to land use/land cover raster</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'watersheds_path'</strong><strong>]</strong> (<em>string</em>) – path to vector of the watersheds</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biophysical_table_path'</strong><strong>]</strong> (<em>string</em>) – path to CSV file with
+biophysical information of each land use classes.  contain the
+fields ‘usle_c’ and ‘usle_p’</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'threshold_flow_accumulation'</strong><strong>]</strong> (<em>number</em>) – number of upstream pixels
+on the dem to threshold to a stream.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'k_param'</strong><strong>]</strong> (<em>number</em>) – k calibration parameter</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'sdr_max'</strong><strong>]</strong> (<em>number</em>) – max value the SDR</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'ic_0_param'</strong><strong>]</strong> (<em>number</em>) – ic_0 calibration parameter</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'drainage_path'</strong><strong>]</strong> (<em>string</em>) – (optional) path to drainage raster that
+is used to add additional drainage areas to the internally
+calculated stream layer</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – if present, indicates how many worker
+processes should be used in parallel processing. -1 indicates
+single process mode, 0 is single process but non-blocking mode,
+and &gt;= 1 is number of processes.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biophysical_table_lucode_field'</strong><strong>]</strong> (<em>str</em>) – optional, if exists
+use this instead of ‘lucode’.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="urban-cooling-model">
+<h2><a class="toc-backref" href="#id24">Urban Cooling Model</a><a class="headerlink" href="#urban-cooling-model" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.urban_cooling_model.execute">
+<code class="sig-prename descclassname">natcap.invest.urban_cooling_model.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.urban_cooling_model.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Urban Cooling Model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>str</em>) – path to target output directory.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – (optional) string to append to any
+output file names</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'t_ref'</strong><strong>]</strong> (<em>str/float</em>) – reference air temperature.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_raster_path'</strong><strong>]</strong> (<em>str</em>) – path to landcover raster.  This raster
+must be in a linearly-projected CRS.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'ref_eto_raster_path'</strong><strong>]</strong> (<em>str</em>) – path to evapotranspiration raster.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_vector_path'</strong><strong>]</strong> (<em>str</em>) – path to desired AOI.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biophysical_table_path'</strong><strong>]</strong> (<em>str</em>) – table to map landcover codes to
+Shade, Kc, and Albedo values. Must contain the fields ‘lucode’,
+‘kc’, and ‘green_area’.  If <code class="docutils literal notranslate"><span class="pre">args['cc_method']</span> <span class="pre">==</span> <span class="pre">'factors'</span></code>,
+then this table must also contain the fields ‘shade’ and
+‘albedo’.  If <code class="docutils literal notranslate"><span class="pre">args['cc_method']</span> <span class="pre">==</span> <span class="pre">'intensity'</span></code>, then this
+table must also contain the field ‘building_intensity’.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'green_area_cooling_distance'</strong><strong>]</strong> (<em>float</em>) – Distance (in m) over
+which large green areas (&gt; 2 ha) will have a cooling effect.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'t_air_average_radius'</strong><strong>]</strong> (<em>float</em>) – radius of the averaging filter
+for turning T_air_nomix into T_air.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'uhi_max'</strong><strong>]</strong> (<em>float</em>) – Magnitude of the UHI effect.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'do_energy_valuation'</strong><strong>]</strong> (<em>bool</em>) – if True, calculate energy savings
+valuation for buildings.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'do_productivity_valuation'</strong><strong>]</strong> (<em>bool</em>) – if True, calculate work
+productivity valuation based on humidity and temperature.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'avg_rel_humidity'</strong><strong>]</strong> (<em>float</em>) – (optional, depends on
+‘do_productivity_valuation’) Average relative humidity (0-100%).</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'building_vector_path'</strong><strong>]</strong> – (str) (optional, depends on
+‘do_energy_valuation’) path to a vector of building footprints that
+contains at least the field ‘type’.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'energy_consumption_table_path'</strong><strong>]</strong> (<em>str</em>) – (optional, depends on
+‘do_energy_valuation’) path to a table that maps building types to
+energy consumption. Must contain at least the fields ‘type’ and
+‘consumption’.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'cc_method'</strong><strong>]</strong> (<em>str</em>) – Either “intensity” or “factors”.  If
+“intensity”, then the “building_intensity” column must be
+present in the biophysical table.  If “factors”, then
+<code class="docutils literal notranslate"><span class="pre">args['cc_weight_shade']</span></code>, <code class="docutils literal notranslate"><span class="pre">args['cc_weight_albedo']</span></code>,
+<code class="docutils literal notranslate"><span class="pre">args['cc_weight_eti']</span></code> may be set to alternative weights
+if desired.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'cc_weight_shade'</strong><strong>]</strong> (<em>str/float</em>) – floating point number
+representing the relative weight to apply to shade when
+calculating the cooling index. Default: 0.6</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'cc_weight_albedo'</strong><strong>]</strong> (<em>str/float</em>) – floating point number
+representing the relative weight to apply to albedo when
+calculating the cooling index. Default: 0.2</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'cc_weight_eti'</strong><strong>]</strong> (<em>str/float</em>) – floating point number
+representing the relative weight to apply to ETI when
+calculating the cooling index. Default: 0.2</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="urban-flood-risk-mitigation-model">
+<h2><a class="toc-backref" href="#id25">Urban Flood Risk Mitigation model</a><a class="headerlink" href="#urban-flood-risk-mitigation-model" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.urban_flood_risk_mitigation.execute">
+<code class="sig-prename descclassname">natcap.invest.urban_flood_risk_mitigation.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.urban_flood_risk_mitigation.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Urban Flood Risk Mitigation model.</p>
+<p>The model computes the peak flow attenuation for each pixel, delineates
+areas benefiting from this service, then calculates the monetary value of
+potential avoided damage to built infrastructure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – a path to the directory that will
+write output and other temporary files during calculation.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – appended to any output file name.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_watersheds_path'</strong><strong>]</strong> (<em>string</em>) – path to a shapefile of
+(sub)watersheds or sewersheds used to indicate spatial area of
+interest.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'rainfall_depth'</strong><strong>]</strong> (<em>float</em>) – depth of rainfall in mm.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_path'</strong><strong>]</strong> (<em>string</em>) – path to a landcover raster.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'soils_hydrological_group_raster_path'</strong><strong>]</strong> (<em>string</em>) – Raster with
+values equal to 1, 2, 3, 4, corresponding to soil hydrologic group
+A, B, C, or D, respectively (used to derive the CN number).</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'curve_number_table_path'</strong><strong>]</strong> (<em>string</em>) – path to a CSV table that
+contains at least the headers ‘lucode’, ‘CN_A’, ‘CN_B’, ‘CN_C’,
+‘CN_D’.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'built_infrastructure_vector_path'</strong><strong>]</strong> (<em>string</em>) – (optional) path to
+a vector with built infrastructure footprints. Attribute table
+contains a column ‘Type’ with integers (e.g. 1=residential,
+2=office, etc.).</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'infrastructure_damage_loss_table_path'</strong><strong>]</strong> (<em>string</em>) – (optional)
+path to a CSV table with columns ‘Type’ and ‘Damage’ with values
+of built infrastructure type from the ‘Type’ field in
+<code class="docutils literal notranslate"><span class="pre">args['built_infrastructure_vector_path']</span></code> and potential damage
+loss (in $/m^2).</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) if present, indicates how many
+worker processes should be used in parallel processing. -1
+indicates single process mode, 0 is single process but
+non-blocking mode, and &gt;= 1 is number of processes.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="wave-energy">
+<h2><a class="toc-backref" href="#id26">Wave Energy</a><a class="headerlink" href="#wave-energy" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.wave_energy.execute">
+<code class="sig-prename descclassname">natcap.invest.wave_energy.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.wave_energy.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wave Energy.</p>
+<p>Executes both the biophysical and valuation parts of the wave energy model
+(WEM). Files will be written on disk to the intermediate and output
+directories. The outputs computed for biophysical and valuation include:
+wave energy capacity raster, wave power raster, net present value raster,
+percentile rasters for the previous three, and a point shapefile of the
+wave points with attributes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>workspace_dir</strong> (<em>str</em>) – Where the intermediate and output folder/files
+will be saved. (required)</p></li>
+<li><p><strong>wave_base_data_path</strong> (<em>str</em>) – Directory location of wave base data
+including WAVEWATCH III (WW3) data and analysis area shapefile.
+(required)</p></li>
+<li><p><strong>analysis_area_path</strong> (<em>str</em>) – A string identifying the analysis area of
+interest. Used to determine wave data shapefile, wave data text
+file, and analysis area boundary shape. (required)</p></li>
+<li><p><strong>aoi_path</strong> (<em>str</em>) – A polygon OGR vector outlining a more detailed area
+within the analysis area. This vector should be projected with
+linear units being in meters. (required to run Valuation model)</p></li>
+<li><p><strong>machine_perf_path</strong> (<em>str</em>) – The path of a CSV file that holds the
+machine performance table. (required)</p></li>
+<li><p><strong>machine_param_path</strong> (<em>str</em>) – The path of a CSV file that holds the
+machine parameter table. (required)</p></li>
+<li><p><strong>dem_path</strong> (<em>str</em>) – The path of the Global Digital Elevation Model (DEM).
+(required)</p></li>
+<li><p><strong>results_suffix</strong> (<em>str</em>) – A python string of characters to append to each output
+filename (optional)</p></li>
+<li><p><strong>valuation_container</strong> (<em>boolean</em>) – Indicates whether the model includes
+valuation</p></li>
+<li><p><strong>land_gridPts_path</strong> (<em>str</em>) – A CSV file path containing the Landing and
+Power Grid Connection Points table. (required for Valuation)</p></li>
+<li><p><strong>machine_econ_path</strong> (<em>str</em>) – A CSV file path for the machine economic
+parameters table. (required for Valuation)</p></li>
+<li><p><strong>number_of_machines</strong> (<em>int</em>) – An integer specifying the number of machines
+for a wave farm site. (required for Valuation)</p></li>
+<li><p><strong>n_workers</strong> (<em>int</em>) – The number of worker processes to use for processing
+this model.  If omitted, computation will take place in the current
+process. (optional)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="wind-energy">
+<h2><a class="toc-backref" href="#id27">Wind Energy</a><a class="headerlink" href="#wind-energy" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.wind_energy.execute">
+<code class="sig-prename descclassname">natcap.invest.wind_energy.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.wind_energy.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wind Energy.</p>
+<p>This module handles the execution of the wind energy model
+given the following dictionary:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>workspace_dir</strong> (<em>str</em>) – a path to the output workspace folder (required)</p></li>
+<li><p><strong>wind_data_path</strong> (<em>str</em>) – path to a CSV file with the following header
+[‘LONG’,’LATI’,’LAM’, ‘K’, ‘REF’]. Each following row is a location
+with at least the Longitude, Latitude, Scale (‘LAM’),
+Shape (‘K’), and reference height (‘REF’) at which the data was
+collected (required)</p></li>
+<li><p><strong>aoi_vector_path</strong> (<em>str</em>) – a path to an OGR polygon vector that is
+projected in linear units of meters. The polygon specifies the
+area of interest for the wind data points. If limiting the wind
+farm bins by distance, then the aoi should also cover a portion
+of the land polygon that is of interest (optional for biophysical
+and no distance masking, required for biophysical and distance
+masking, required for valuation)</p></li>
+<li><p><strong>bathymetry_path</strong> (<em>str</em>) – a path to a GDAL raster that has the depth
+values of the area of interest (required)</p></li>
+<li><p><strong>land_polygon_vector_path</strong> (<em>str</em>) – a path to an OGR polygon vector that
+provides a coastline for determining distances from wind farm bins.
+Enabled by AOI and required if wanting to mask by distances or run
+valuation</p></li>
+<li><p><strong>global_wind_parameters_path</strong> (<em>str</em>) – a float for the average distance
+in kilometers from a grid connection point to a land connection
+point (required for valuation if grid connection points are not
+provided)</p></li>
+<li><p><strong>results_suffix</strong> (<em>str</em>) – a str to append to the end of the output files
+(optional)</p></li>
+<li><p><strong>turbine_parameters_path</strong> (<em>str</em>) – a path to a CSV file that holds the
+turbines biophysical parameters as well as valuation parameters
+(required)</p></li>
+<li><p><strong>number_of_turbines</strong> (<em>int</em>) – an integer value for the number of machines
+for the wind farm (required for valuation)</p></li>
+<li><p><strong>min_depth</strong> (<em>float</em>) – a float value for the minimum depth for offshore
+wind farm installation (meters) (required)</p></li>
+<li><p><strong>max_depth</strong> (<em>float</em>) – a float value for the maximum depth for offshore
+wind farm installation (meters) (required)</p></li>
+<li><p><strong>min_distance</strong> (<em>float</em>) – a float value for the minimum distance from shore
+for offshore wind farm installation (meters) The land polygon must
+be selected for this input to be active (optional, required for
+valuation)</p></li>
+<li><p><strong>max_distance</strong> (<em>float</em>) – a float value for the maximum distance from shore
+for offshore wind farm installation (meters) The land polygon must
+be selected for this input to be active (optional, required for
+valuation)</p></li>
+<li><p><strong>valuation_container</strong> (<em>boolean</em>) – Indicates whether model includes
+valuation</p></li>
+<li><p><strong>foundation_cost</strong> (<em>float</em>) – a float representing how much the foundation
+will cost for the specific type of turbine (required for valuation)</p></li>
+<li><p><strong>discount_rate</strong> (<em>float</em>) – a float value for the discount rate (required
+for valuation)</p></li>
+<li><p><strong>grid_points_path</strong> (<em>str</em>) – a path to a CSV file that specifies the
+landing and grid point locations (optional)</p></li>
+<li><p><strong>avg_grid_distance</strong> (<em>float</em>) – a float for the average distance in
+kilometers from a grid connection point to a land connection point
+(required for valuation if grid connection points are not provided)</p></li>
+<li><p><strong>price_table</strong> (<em>boolean</em>) – a bool indicating whether to use the wind energy
+price table or not (required)</p></li>
+<li><p><strong>wind_schedule</strong> (<em>str</em>) – a path to a CSV file for the yearly prices of
+wind energy for the lifespan of the farm (required if ‘price_table’
+is true)</p></li>
+<li><p><strong>wind_price</strong> (<em>float</em>) – a float for the wind energy price at year 0
+(required if price_table is false)</p></li>
+<li><p><strong>rate_change</strong> (<em>float</em>) – a float as a percent for the annual rate of change
+in the price of wind energy. (required if price_table is false)</p></li>
+<li><p><strong>n_workers</strong> (<em>int</em>) – The number of worker processes to use for processing
+this model.  If omitted, computation will take place in the current
+process. (optional)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2019, The Natural Capital Project
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

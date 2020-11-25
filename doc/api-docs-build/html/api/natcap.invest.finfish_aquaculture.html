@@ -1,0 +1,716 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>natcap.invest.finfish_aquaculture package &mdash; InVEST 3.8.9.post1013+gbc4bb051.d20201125 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.gif"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="natcap.invest.fisheries package" href="natcap.invest.fisheries.html" />
+    <link rel="prev" title="natcap.invest.delineateit package" href="natcap.invest.delineateit.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> InVEST
+          
+
+          
+            
+            <img src="../_static/invest-logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.8.9.post1013
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installing InVEST From Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">The InVEST CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scripting.html">Tutorial: Batch Processing on Windows</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">Full API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html">natcap</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.invest.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.carbon">natcap.invest.carbon module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.cli">natcap.invest.cli module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.coastal_vulnerability">natcap.invest.coastal_vulnerability module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_percentile">natcap.invest.crop_production_percentile module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_regression">natcap.invest.crop_production_regression module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.datastack">natcap.invest.datastack module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.forest_carbon_edge_effect">natcap.invest.forest_carbon_edge_effect module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.globio">natcap.invest.globio module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.habitat_quality">natcap.invest.habitat_quality module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.hra">natcap.invest.hra module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.pollination">natcap.invest.pollination module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.routedem">natcap.invest.routedem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.scenario_gen_proximity">natcap.invest.scenario_gen_proximity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_cooling_model">natcap.invest.urban_cooling_model module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_flood_risk_mitigation">natcap.invest.urban_flood_risk_mitigation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.utils">natcap.invest.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.validation">natcap.invest.validation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wave_energy">natcap.invest.wave_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wind_energy">natcap.invest.wind_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">natcap.invest.finfish_aquaculture package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.finfish_aquaculture.finfish_aquaculture">natcap.invest.finfish_aquaculture.finfish_aquaculture module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.finfish_aquaculture.finfish_aquaculture_core">natcap.invest.finfish_aquaculture.finfish_aquaculture_core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.finfish_aquaculture">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">InVEST</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="modules.html">natcap</a> &raquo;</li>
+        
+          <li><a href="natcap.html">natcap package</a> &raquo;</li>
+        
+          <li><a href="natcap.invest.html">natcap.invest package</a> &raquo;</li>
+        
+      <li>natcap.invest.finfish_aquaculture package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/natcap.invest.finfish_aquaculture.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="natcap-invest-finfish-aquaculture-package">
+<h1>natcap.invest.finfish_aquaculture package<a class="headerlink" href="#natcap-invest-finfish-aquaculture-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-natcap.invest.finfish_aquaculture.finfish_aquaculture">
+<span id="natcap-invest-finfish-aquaculture-finfish-aquaculture-module"></span><h2>natcap.invest.finfish_aquaculture.finfish_aquaculture module<a class="headerlink" href="#module-natcap.invest.finfish_aquaculture.finfish_aquaculture" title="Permalink to this headline">¶</a></h2>
+<p>InVEST Finfish Aquaculture.</p>
+<dl class="py function">
+<dt id="natcap.invest.finfish_aquaculture.finfish_aquaculture.execute">
+<code class="sig-prename descclassname">natcap.invest.finfish_aquaculture.finfish_aquaculture.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.finfish_aquaculture.finfish_aquaculture.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finfish Aquaculture.</p>
+<p>This function will take care of preparing files passed into
+the finfish aquaculture model. It will handle all files/inputs associated
+with biophysical and valuation calculations and manipulations. It will
+create objects to be passed to the aquaculture_core.py module. It may
+write log, warning, or error messages to stdout.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>workspace_dir</strong> (<em>string</em>) – The directory in which to place all result
+files.</p></li>
+<li><p><strong>results_suffix</strong> (<em>string</em>) – (optional) string to append to any
+output file names</p></li>
+<li><p><strong>ff_farm_loc</strong> (<em>string</em>) – URI that points to a shape file of fishery
+locations</p></li>
+<li><p><strong>farm_ID</strong> (<em>string</em>) – column heading used to describe individual farms.
+Used to link GIS location data to later inputs.</p></li>
+<li><p><strong>g_param_a</strong> (<em>float</em>) – Growth parameter alpha, used in modeling fish
+growth, should be an int or float.</p></li>
+<li><p><strong>g_param_b</strong> (<em>float</em>) – Growth parameter beta, used in modeling fish growth,
+should be an int or float.</p></li>
+<li><p><strong>g_param_tau</strong> (<em>float</em>) – Growth parameter tau, used in modeling fish
+growth, should be an int or float</p></li>
+<li><p><strong>use_uncertainty</strong> (<em>boolean</em>) – </p></li>
+<li><p><strong>g_param_a_sd</strong> (<em>float</em>) – (description)</p></li>
+<li><p><strong>g_param_b_sd</strong> (<em>float</em>) – (description)</p></li>
+<li><p><strong>num_monte_carlo_runs</strong> (<em>int</em>) – </p></li>
+<li><p><strong>water_temp_tbl</strong> (<em>string</em>) – URI to a CSV table where daily water
+temperature values are stored from one year</p></li>
+<li><p><strong>farm_op_tbl</strong> (<em>string</em>) – URI to CSV table of static variables for
+calculations</p></li>
+<li><p><strong>outplant_buffer</strong> (<em>int</em>) – This value will allow the outplanting
+start day to be flexible plus or minus the number of days specified
+here.</p></li>
+<li><p><strong>do_valuation</strong> (<em>boolean</em>) – Boolean that indicates whether or not valuation
+should be performed on the aquaculture model</p></li>
+<li><p><strong>p_per_kg</strong> (<em>float</em>) – Market price per kilogram of processed fish</p></li>
+<li><p><strong>frac_p</strong> (<em>float</em>) – Fraction of market price that accounts for costs rather
+than profit</p></li>
+<li><p><strong>discount</strong> (<em>float</em>) – Daily market discount rate</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example Args Dictionary:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s1">&#39;workspace_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/workspace_dir&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;results_suffix&#39;</span><span class="p">:</span> <span class="s1">&#39;test&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ff_farm_loc&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/shapefile&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;farm_ID&#39;</span><span class="p">:</span> <span class="s1">&#39;FarmID&#39;</span>
+    <span class="s1">&#39;g_param_a&#39;</span><span class="p">:</span> <span class="mf">0.038</span><span class="p">,</span>
+    <span class="s1">&#39;g_param_b&#39;</span><span class="p">:</span> <span class="mf">0.6667</span><span class="p">,</span>
+    <span class="s1">&#39;g_param_tau&#39;</span><span class="p">:</span> <span class="mf">0.08</span><span class="p">,</span>
+    <span class="s1">&#39;use_uncertainty&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;g_param_a_sd&#39;</span><span class="p">:</span> <span class="mf">0.005</span><span class="p">,</span>
+    <span class="s1">&#39;g_param_b_sd&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="s1">&#39;num_monte_carlo_runs&#39;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
+    <span class="s1">&#39;water_temp_tbl&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/water_temp_tbl&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;farm_op_tbl&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/farm_op_tbl&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;outplant_buffer&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="s1">&#39;do_valuation&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;p_per_kg&#39;</span><span class="p">:</span> <span class="mf">2.25</span><span class="p">,</span>
+    <span class="s1">&#39;frac_p&#39;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span>
+    <span class="s1">&#39;discount&#39;</span><span class="p">:</span> <span class="mf">0.000192</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.finfish_aquaculture.finfish_aquaculture.format_ops_table">
+<code class="sig-prename descclassname">natcap.invest.finfish_aquaculture.finfish_aquaculture.</code><code class="sig-name descname">format_ops_table</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">op_path</span></em>, <em class="sig-param"><span class="n">farm_ID</span></em>, <em class="sig-param"><span class="n">ff_aqua_args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.finfish_aquaculture.finfish_aquaculture.format_ops_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes in the path to the operating parameters table as well as the
+keyword to look for to identify the farm number to go with the parameters,
+and outputs a 2D dictionary that contains all parameters by farm and
+description. The outer key is farm number, and the inner key is a string
+description of the parameter.</p>
+<dl>
+<dt>Input:</dt><dd><p>op_path: URI to CSV table of static variables for calculations
+farm_ID: The string to look for in order to identify the column in</p>
+<blockquote>
+<div><p>which the farm numbers are stored. That column data will become the
+keys for the dictionary output.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>ff_aqua_args: Dictionary of arguments being created in order to be</dt><dd><p>passed to the aquaculture core function.</p>
+</dd>
+</dl>
+</dd>
+<dt>Output:</dt><dd><dl class="simple">
+<dt>ff_aqua_args[‘farm_op_dict’]: A dictionary that is built up to store</dt><dd><p>the static parameters for the aquaculture model run. This is a 2D
+dictionary, where the outer key is the farm ID number, and the
+inner keys are strings of parameter names.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>Returns nothing.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.finfish_aquaculture.finfish_aquaculture.format_temp_table">
+<code class="sig-prename descclassname">natcap.invest.finfish_aquaculture.finfish_aquaculture.</code><code class="sig-name descname">format_temp_table</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">temp_path</span></em>, <em class="sig-param"><span class="n">ff_aqua_args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.finfish_aquaculture.finfish_aquaculture.format_temp_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is doing much the same thing as format_ops_table- it
+takes in information from a temperature table, and is formatting it into a
+2D dictionary as an output.</p>
+<dl class="simple">
+<dt>Input:</dt><dd><dl class="simple">
+<dt>temp_path: URI to a CSV file containing temperature data for 365 days</dt><dd><p>for the farms on which we will look at growth cycles.</p>
+</dd>
+<dt>ff_aqua_args: Dictionary of arguments that we are building up in order</dt><dd><p>to pass it to the aquaculture core module.</p>
+</dd>
+</dl>
+</dd>
+<dt>Output:</dt><dd><dl class="simple">
+<dt>ff_aqua_args[‘water_temp_dict’]: A 2D dictionary containing temperature</dt><dd><p>data for 365 days. The outer keys are days of the year from 0 to
+364 (we need to be able to check the day modulo 365) which we
+manually shift down by 1, and the inner keys are farm ID numbers.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>Returns nothing.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.finfish_aquaculture.finfish_aquaculture_core">
+<span id="natcap-invest-finfish-aquaculture-finfish-aquaculture-core-module"></span><h2>natcap.invest.finfish_aquaculture.finfish_aquaculture_core module<a class="headerlink" href="#module-natcap.invest.finfish_aquaculture.finfish_aquaculture_core" title="Permalink to this headline">¶</a></h2>
+<p>Implementation of the aquaculture calculations, and subsequent outputs.
+This will pull from data passed in by finfish_aquaculture.</p>
+<dl class="py function">
+<dt id="natcap.invest.finfish_aquaculture.finfish_aquaculture_core.calc_farm_cycles">
+<code class="sig-prename descclassname">natcap.invest.finfish_aquaculture.finfish_aquaculture_core.</code><code class="sig-name descname">calc_farm_cycles</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">outplant_buffer</span></em>, <em class="sig-param"><span class="n">a</span></em>, <em class="sig-param"><span class="n">b</span></em>, <em class="sig-param"><span class="n">tau</span></em>, <em class="sig-param"><span class="n">water_temp_dict</span></em>, <em class="sig-param"><span class="n">farm_op_dict</span></em>, <em class="sig-param"><span class="n">dur</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.finfish_aquaculture.finfish_aquaculture_core.calc_farm_cycles" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Input:</dt><dd><dl class="simple">
+<dt>outplant_buffer: The number of days surrounding the outplant day during</dt><dd><p>which the fish growth cycle can still be started.</p>
+</dd>
+<dt>a: Growth parameter alpha. Float used as a scaler in the fish growth</dt><dd><p>equation.</p>
+</dd>
+<dt>b: Growth paramater beta. Float used as an exponential multiplier in</dt><dd><p>the fish growth equation.</p>
+</dd>
+<dt>water_temp_dict: 2D dictionary which contains temperature values for</dt><dd><p>farms. The outer keys are calendar days as strings, and the inner
+are farm numbers as strings.</p>
+</dd>
+<dt>farm_op_dict: 2D dictionary which contains individual operating</dt><dd><p>parameters for each farm. The outer key is farm number as a string,
+and the inner is string descriptors of each parameter.</p>
+</dd>
+<dt>dur: Float which describes the length for the growth simulation to run</dt><dd><p>in years.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>Returns cycle_history where:</p>
+<blockquote>
+<div><dl>
+<dt>cycle_history: Dictionary which contains mappings from farms to a</dt><dd><p>history of growth for each cycle completed on that farm. These
+entries are formatted as follows…</p>
+<dl class="simple">
+<dt>Farm-&gt;List of Type (day of outplanting,day of harvest, fish weight</dt><dd><p>(grams))</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.finfish_aquaculture.finfish_aquaculture_core.calc_hrv_weight">
+<code class="sig-prename descclassname">natcap.invest.finfish_aquaculture.finfish_aquaculture_core.</code><code class="sig-name descname">calc_hrv_weight</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">farm_op_dict</span></em>, <em class="sig-param"><span class="n">frac</span></em>, <em class="sig-param"><span class="n">mort</span></em>, <em class="sig-param"><span class="n">cycle_history</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.finfish_aquaculture.finfish_aquaculture_core.calc_hrv_weight" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Input:</dt><dd><dl class="simple">
+<dt>farm_op_dict: 2D dictionary which contains individual operating</dt><dd><p>parameters for each farm. The outer key is farm number as a string,
+and the inner is string descriptors of each parameter.</p>
+</dd>
+<dt>frac: A float representing the fraction of the fish that remains after</dt><dd><p>processing.</p>
+</dd>
+<dt>mort: A float referring to the daily mortality rate of fishes on an</dt><dd><p>aquaculture farm.</p>
+</dd>
+<dt>cycle_history: Farm-&gt;List of Type (day of outplanting,</dt><dd><p>day of harvest, fish weight (grams))</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns a tuple (curr_cycle_totals,indiv_tpw_totals) where:</dt><dd><dl class="simple">
+<dt><a href="#id1"><span class="problematic" id="id2">curr_cycle_totals_</span></a>: dictionary which will hold a mapping from every</dt><dd><p>farm (as identified by farm_ID) to the total processed weight of
+each farm</p>
+</dd>
+<dt>indiv_tpw_totals: dictionary which will hold a farm-&gt;list mapping,</dt><dd><p>where the list holds the individual tpw for all cycles that the
+farm completed</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.finfish_aquaculture.finfish_aquaculture_core.compute_uncertainty_data">
+<code class="sig-prename descclassname">natcap.invest.finfish_aquaculture.finfish_aquaculture_core.</code><code class="sig-name descname">compute_uncertainty_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em>, <em class="sig-param"><span class="n">output_dir</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.finfish_aquaculture.finfish_aquaculture_core.compute_uncertainty_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Does uncertainty analysis via a Monte Carlo simulation.</p>
+<p>Returns:
+-a dict containining statistical results (mean and std deviation)
+The dict has farm IDs as outer keys, and result types (e.g. ‘value’,
+‘weight’, and ‘cycles’) as inner keys.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.finfish_aquaculture.finfish_aquaculture_core.create_HTML_table">
+<code class="sig-prename descclassname">natcap.invest.finfish_aquaculture.finfish_aquaculture_core.</code><code class="sig-name descname">create_HTML_table</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">output_html_path</span></em>, <em class="sig-param"><span class="n">args</span></em>, <em class="sig-param"><span class="n">cycle_history</span></em>, <em class="sig-param"><span class="n">sum_hrv_weight</span></em>, <em class="sig-param"><span class="n">hrv_weight</span></em>, <em class="sig-param"><span class="n">farms_npv</span></em>, <em class="sig-param"><span class="n">value_history</span></em>, <em class="sig-param"><span class="n">uncertainty_stats</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.finfish_aquaculture.finfish_aquaculture_core.create_HTML_table" title="Permalink to this definition">¶</a></dt>
+<dd><dl>
+<dt>Inputs:</dt><dd><p>output_html_path: The output html file path.
+cycle_history: dictionary mapping farm ID-&gt;list of tuples, each of</p>
+<blockquote>
+<div><dl class="simple">
+<dt>which contains 3 things- (day of outplanting, day of harvest,</dt><dd><p>harvest weight of a single fish in grams)</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="simple">
+<dt>sum_hrv_weight: dictionary which holds a mapping from farm ID-&gt;total</dt><dd><p>processed weight of each farm</p>
+</dd>
+<dt>hrv_weight: dictionary which holds a farm-&gt;list mapping, where the list</dt><dd><p>holds the individual tpw for all cycles that the farm completed</p>
+</dd>
+<dt>do_valuation: boolean variable that says whether or not valuation is</dt><dd><p>desired</p>
+</dd>
+<dt>farms_npv: dictionary with a farm-&gt; float mapping, where each float is</dt><dd><p>the net processed value of the fish processed on that farm, in
+$1000s of dollars.</p>
+</dd>
+<dt>value_history: dictionary which holds a farm-&gt;list mapping, where the</dt><dd><p>list holds tuples containing (Net Revenue, Net Present Value) for
+each cycle completed by that farm</p>
+</dd>
+</dl>
+</dd>
+<dt>Output:</dt><dd><dl>
+<dt>HTML file: contains 3 tables that summarize inputs and outputs for the</dt><dd><p>duration of the model.
+- Input Table: Farm Operations provided data, including Farm ID #,</p>
+<blockquote>
+<div><p>Cycle Number, weight of fish at start, weight of fish at
+harvest, number of fish in farm, start day for growing, and
+length of fallowing period</p>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>Output Table 1: Farm Harvesting data, including a summary table</dt><dd><p>for each harvest cycle of each farm. Will show Farm ID, cycle
+number, days since outplanting date, harvested weight, net
+revenue, outplant day, and year.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Output Table 2: Model outputs for each farm, including Farm ID,</dt><dd><p>net present value, number of completed harvest cycles, and
+total volume harvested.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+<p>Returns nothing.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.finfish_aquaculture.finfish_aquaculture_core.do_monte_carlo_simulation">
+<code class="sig-prename descclassname">natcap.invest.finfish_aquaculture.finfish_aquaculture_core.</code><code class="sig-name descname">do_monte_carlo_simulation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.finfish_aquaculture.finfish_aquaculture_core.do_monte_carlo_simulation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs a Monte Carlo simulation and returns the results.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.finfish_aquaculture.finfish_aquaculture_core.execute">
+<code class="sig-prename descclassname">natcap.invest.finfish_aquaculture.finfish_aquaculture_core.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.finfish_aquaculture.finfish_aquaculture_core.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>‘
+Runs the biophysical and valuation parts of the finfish aquaculture model.
+This will output:
+1. a shape file showing farm locations w/ addition of # of harvest cycles,</p>
+<blockquote>
+<div><p>total processed weight at that farm, and if valuation is true, total
+discounted net revenue at each farm location.</p>
+</div></blockquote>
+<ol class="arabic simple" start="2">
+<li><dl class="simple">
+<dt>Three HTML tables summarizing all model I/O- summary of user-provided</dt><dd><p>data, summary of each harvest cycle, and summary of the outputs/farm</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>A .txt file that is named according to the date and time the model is</dt><dd><p>run, which lists the values used during that run</p>
+</dd>
+</dl>
+</li>
+</ol>
+<p>Data in args should include the following:
+–Biophysical Arguments–
+args: a python dictionary containing the following data:
+args[‘workspace_dir’]- The directory in which to place all result files.
+args[‘results_suffix’] (string): (optional) string to append to any</p>
+<blockquote>
+<div><p>output file names</p>
+</div></blockquote>
+<dl>
+<dt>args[‘ff_farm_file’]- An open shape file containing the locations of</dt><dd><p>individual fisheries</p>
+</dd>
+<dt>args[‘farm_ID’]- column heading used to describe individual farms. Used to</dt><dd><p>link GIS location data to later inputs.</p>
+</dd>
+<dt>args[‘g_param_a’]- Growth parameter alpha, used in modeling fish growth,</dt><dd><p>should be int or a float.</p>
+</dd>
+<dt>args[‘g_param_b’]- Growth parameter beta, used in modeling fish growth,</dt><dd><p>should be int or a float.</p>
+</dd>
+<dt>args[‘water_temp_dict’]- A dictionary which links a specific date to the</dt><dd><p>farm numbers, and their temperature values on that day. (Note: in this
+case, the outer keys 1 and 2 are calendar days out of 365, starting
+with January 1 (day 0), and the inner 1, 2, and 3 are farm numbers.)</p>
+<blockquote>
+<div><dl>
+<dt>Format: {‘0’: ‘{‘1’: ‘8.447, ‘2’: ‘8.447’, ‘3’:’8.947’, …}’ ,</dt><dd><blockquote>
+<div><p>‘1’: ‘{‘1’: ‘8.406, ‘2’: ‘8.406’, ‘3’:’8.906’, …}’ ,</p>
+</div></blockquote>
+<p>.                        .                    .
+.                        .                    .
+.                        .                    .       }</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+<dt>args[‘farm_op_dict’]- Dictionary which links a specific farm ID # to</dt><dd><p>another dictionary containing operating parameters mapped to their
+value for that particular farm (Note: in this case, the 1 and 2
+are farm ID’s, not dates out of 365.)</p>
+<blockquote>
+<div><dl class="simple">
+<dt>Format: {‘1’: ‘{‘Wt of Fish’: ‘0.06’, ‘Tar Weight’: ‘5.4’, …}’,</dt><dd><p>‘2’: ‘{‘Wt of Fish’: ‘0.06’, ‘Tar Weight’: ‘5.4’, …}’,
+.                        .                    .
+.                        .                    .
+.                        .                    .       }</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+<dt>args[‘frac_post_process’]- the fraction of edible fish left after</dt><dd><p>processing is done to remove undesirable parts</p>
+</dd>
+<dt>args[‘mort_rate_daily’]- mortality rate among fish  in a year, divided by</dt><dd><p>365</p>
+</dd>
+</dl>
+<p>args[‘duration’]- duration of the simulation, in years
+args[‘outplant_buffer’] - This value will allow the outplant start day to</p>
+<blockquote>
+<div><p>be flexible plus or minus the number of days specified here.</p>
+</div></blockquote>
+<p>–Valuation arguments–
+args[‘do_valuation’]- boolean indicating whether or not to run the</p>
+<blockquote>
+<div><p>valuation process</p>
+</div></blockquote>
+<p>args[‘p_per_kg’]: Market price per kilogram of processed fish
+args[‘frac_p’]: Fraction of market price that accounts for costs rather</p>
+<blockquote>
+<div><p>than profit</p>
+</div></blockquote>
+<p>args[‘discount’]: Daily market discount rate</p>
+<p>returns nothing</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.finfish_aquaculture.finfish_aquaculture_core.valuation">
+<code class="sig-prename descclassname">natcap.invest.finfish_aquaculture.finfish_aquaculture_core.</code><code class="sig-name descname">valuation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">price_per_kg</span></em>, <em class="sig-param"><span class="n">frac_mrkt_price</span></em>, <em class="sig-param"><span class="n">discount</span></em>, <em class="sig-param"><span class="n">hrv_weight</span></em>, <em class="sig-param"><span class="n">cycle_history</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.finfish_aquaculture.finfish_aquaculture_core.valuation" title="Permalink to this definition">¶</a></dt>
+<dd><p>This performs the valuation calculations, and returns tuple containing a
+dictionary with a farm-&gt; float mapping, where each float is the net
+processed value of the fish processed on that farm, in $1000s of dollars,
+and a dictionary containing a farm-&gt; list mapping, where each entry in the
+list is a tuple of (Net Revenue, Net Present Value) for every cycle on that
+farm.</p>
+<dl>
+<dt>Inputs:</dt><dd><dl class="simple">
+<dt>price_per_kg: Float representing the price per kilogram of finfish for</dt><dd><p>valuation purposes.</p>
+</dd>
+<dt>frac_mrkt_price: Float that represents the fraction of market price</dt><dd><p>that is attributable to costs.</p>
+</dd>
+</dl>
+<p>discount: Float that is the daily market discount rate.
+cycle_hisory: Farm-&gt;List of Type (day of outplanting,</p>
+<blockquote>
+<div><p>day of harvest, fish weight (grams))</p>
+</div></blockquote>
+<p>hrv_weight: Farm-&gt;List of TPW for each cycle (kilograms)</p>
+</dd>
+<dt>Returns a tuple (val_history, valuations):</dt><dd><dl class="simple">
+<dt>val_history: dictionary which will hold a farm-&gt;list mapping, where the</dt><dd><p>list holds tuples containing (Net Revenue, Net Present Value) for
+each cycle completed by that farm</p>
+</dd>
+<dt>valuations: dictionary with a farm-&gt; float mapping, where each float is</dt><dd><p>the net processed value of the fish processed on that farm</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.finfish_aquaculture">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-natcap.invest.finfish_aquaculture" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="natcap.invest.fisheries.html" class="btn btn-neutral float-right" title="natcap.invest.fisheries package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="natcap.invest.delineateit.html" class="btn btn-neutral float-left" title="natcap.invest.delineateit package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2019, The Natural Capital Project
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

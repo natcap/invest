@@ -1,0 +1,861 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>natcap.invest.recreation package &mdash; InVEST 3.8.9.post1013+gbc4bb051.d20201125 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.gif"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="natcap.invest.reporting package" href="natcap.invest.reporting.html" />
+    <link rel="prev" title="natcap.invest.ndr package" href="natcap.invest.ndr.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> InVEST
+          
+
+          
+            
+            <img src="../_static/invest-logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.8.9.post1013
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installing InVEST From Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">The InVEST CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scripting.html">Tutorial: Batch Processing on Windows</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">Full API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html">natcap</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.invest.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">natcap.invest.recreation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.carbon">natcap.invest.carbon module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.cli">natcap.invest.cli module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.coastal_vulnerability">natcap.invest.coastal_vulnerability module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_percentile">natcap.invest.crop_production_percentile module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_regression">natcap.invest.crop_production_regression module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.datastack">natcap.invest.datastack module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.forest_carbon_edge_effect">natcap.invest.forest_carbon_edge_effect module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.globio">natcap.invest.globio module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.habitat_quality">natcap.invest.habitat_quality module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.hra">natcap.invest.hra module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.pollination">natcap.invest.pollination module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.routedem">natcap.invest.routedem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.scenario_gen_proximity">natcap.invest.scenario_gen_proximity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_cooling_model">natcap.invest.urban_cooling_model module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_flood_risk_mitigation">natcap.invest.urban_flood_risk_mitigation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.utils">natcap.invest.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.validation">natcap.invest.validation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wave_energy">natcap.invest.wave_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wind_energy">natcap.invest.wind_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">natcap.invest.recreation package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.recreation.buffered_numpy_disk_map">natcap.invest.recreation.buffered_numpy_disk_map module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.recreation.out_of_core_quadtree">natcap.invest.recreation.out_of_core_quadtree module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">natcap.invest.recreation.out_of_core_quadtree module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.recreation.recmodel_client">natcap.invest.recreation.recmodel_client module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.recreation.recmodel_server">natcap.invest.recreation.recmodel_server module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.recreation.recmodel_workspace_fetcher">natcap.invest.recreation.recmodel_workspace_fetcher module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.recreation">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">InVEST</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="modules.html">natcap</a> &raquo;</li>
+        
+          <li><a href="natcap.html">natcap package</a> &raquo;</li>
+        
+          <li><a href="natcap.invest.html">natcap.invest package</a> &raquo;</li>
+        
+      <li>natcap.invest.recreation package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/natcap.invest.recreation.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="natcap-invest-recreation-package">
+<h1>natcap.invest.recreation package<a class="headerlink" href="#natcap-invest-recreation-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-natcap.invest.recreation.buffered_numpy_disk_map">
+<span id="natcap-invest-recreation-buffered-numpy-disk-map-module"></span><h2>natcap.invest.recreation.buffered_numpy_disk_map module<a class="headerlink" href="#module-natcap.invest.recreation.buffered_numpy_disk_map" title="Permalink to this headline">¶</a></h2>
+<p>Buffered file manager module.</p>
+<dl class="py class">
+<dt id="natcap.invest.recreation.buffered_numpy_disk_map.BufferedNumpyDiskMap">
+<em class="property">class </em><code class="sig-prename descclassname">natcap.invest.recreation.buffered_numpy_disk_map.</code><code class="sig-name descname">BufferedNumpyDiskMap</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">manager_filename</span></em>, <em class="sig-param"><span class="n">max_bytes_to_buffer</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.buffered_numpy_disk_map.BufferedNumpyDiskMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Persistent object to append and read numpy arrays to unique keys.</p>
+<p>This object is abstractly a key/value pair map where the operations are
+to append, read, and delete numpy arrays associated with those keys.  The
+object attempts to keep data in RAM as much as possible and saves data to
+files on disk to manage memory and persist between instantiations.</p>
+<dl class="py method">
+<dt id="natcap.invest.recreation.buffered_numpy_disk_map.BufferedNumpyDiskMap.append">
+<code class="sig-name descname">append</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">array_id</span></em>, <em class="sig-param"><span class="n">array_data</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.buffered_numpy_disk_map.BufferedNumpyDiskMap.append" title="Permalink to this definition">¶</a></dt>
+<dd><p>Append data to the file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>array_id</strong> (<em>int</em>) – unique key to identify the array node</p></li>
+<li><p><strong>array_data</strong> (<em>numpy.ndarray</em>) – data to append to node.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.buffered_numpy_disk_map.BufferedNumpyDiskMap.delete">
+<code class="sig-name descname">delete</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">array_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.buffered_numpy_disk_map.BufferedNumpyDiskMap.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete node <cite>array_id</cite> from disk and cache.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.buffered_numpy_disk_map.BufferedNumpyDiskMap.flush">
+<code class="sig-name descname">flush</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.buffered_numpy_disk_map.BufferedNumpyDiskMap.flush" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to flush data in memory to disk.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.buffered_numpy_disk_map.BufferedNumpyDiskMap.read">
+<code class="sig-name descname">read</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">array_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.buffered_numpy_disk_map.BufferedNumpyDiskMap.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read the entirety of the file.</p>
+<p>Internally this might mean that part of the file is read from disk
+and the end from the buffer or any combination of those.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>array_id</strong> (<em>string</em>) – unique node id to read</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>contents of node as a numpy.ndarray.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.recreation.out_of_core_quadtree">
+<span id="natcap-invest-recreation-out-of-core-quadtree-module"></span><h2>natcap.invest.recreation.out_of_core_quadtree module<a class="headerlink" href="#module-natcap.invest.recreation.out_of_core_quadtree" title="Permalink to this headline">¶</a></h2>
+<p>A hierarchical spatial index for fast culling of points in 2D space.</p>
+<dl class="py class">
+<dt id="natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree">
+<em class="property">class </em><code class="sig-prename descclassname">natcap.invest.recreation.out_of_core_quadtree.</code><code class="sig-name descname">OutOfCoreQuadTree</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">bounding_box</span></em>, <em class="sig-param"><span class="n">max_points_per_node</span></em>, <em class="sig-param"><span class="n">max_node_depth</span></em>, <em class="sig-param"><span class="n">quad_tree_storage_dir</span></em>, <em class="sig-param"><span class="n">node_depth</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">node_data_manager</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">pickle_filename</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>An out of core quad tree spatial indexing structure.</p>
+<dl class="py method">
+<dt id="natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.add_points">
+<code class="sig-name descname">add_points</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">point_list</span></em>, <em class="sig-param"><span class="n">left_bound</span></em>, <em class="sig-param"><span class="n">right_bound</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.add_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a list of points to the current node.</p>
+<p>This function will split the current node if the added points exceed
+the maximum number of points allowed per node and is already not at
+the maximum level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>point_list</strong> (<em>numpy.ndarray</em>) – a numpy array of
+(data, x_coord, y_coord) tuples</p></li>
+<li><p><strong>left_bound</strong> (<em>int</em>) – left index inclusive of points to consider under
+<cite>point_list</cite></p></li>
+<li><p><strong>right_bound</strong> (<em>int</em>) – right index non-inclusive of points to consider
+under <cite>point_list</cite></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.build_node_shapes">
+<code class="sig-name descname">build_node_shapes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ogr_polygon_layer</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.build_node_shapes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add features to an ogr.Layer to visualize quadtree segmentation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>ogr_polygon_layer</strong> (<em>ogr.layer</em>) – an ogr polygon layer with fields
+‘n_points’ (int) and ‘bb_box’ (string) defined.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.flush">
+<code class="sig-name descname">flush</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.flush" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flush any cached data to disk.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.get_intersecting_points_in_bounding_box">
+<code class="sig-name descname">get_intersecting_points_in_bounding_box</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">bounding_box</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.get_intersecting_points_in_bounding_box" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get list of data that is contained by bounding_box.</p>
+<p>This function takes in a bounding box and returns a list of
+(data, lat, lng) tuples that are contained in the leaf nodes that
+intersect that bounding box.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>bounding_box</strong> (<em>list</em>) – of the form [xmin, ymin, xmax, ymax]</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>numpy.ndarray array of (data, x_coord, lng) of nodes that
+intersect the bounding box.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.get_intersecting_points_in_polygon">
+<code class="sig-name descname">get_intersecting_points_in_polygon</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">shapely_polygon</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.get_intersecting_points_in_polygon" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the points contained in <cite>shapely_prepared_polygon</cite>.</p>
+<p>This function is a high performance test routine to return the points
+contained in the shapely_prepared_polygon that are stored in <cite>self</cite>’s
+representation of a quadtree.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>shapely_polygon</strong> (<em>ogr.DataSource</em>) – a polygon datasource to bound
+against</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>deque of (data, x_coord, y_coord) of nodes that are contained</dt><dd><p>in <cite>shapely_prepared_polygon</cite>.</p>
+</dd>
+</dl>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.n_nodes">
+<code class="sig-name descname">n_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.n_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the number of nodes in the quadtree</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.n_points">
+<code class="sig-name descname">n_points</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.n_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the number of nodes in the quadtree</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.next_available_blob_id">
+<code class="sig-name descname">next_available_blob_id</code><em class="property"> = 0</em><a class="headerlink" href="#natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree.next_available_blob_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id1">
+<h2>natcap.invest.recreation.out_of_core_quadtree module<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-0"></span><p>A hierarchical spatial index for fast culling of points in 2D space.</p>
+<dl class="py class">
+<dt id="id0">
+<em class="property">class </em><code class="sig-prename descclassname">natcap.invest.recreation.out_of_core_quadtree.</code><code class="sig-name descname">OutOfCoreQuadTree</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">bounding_box</span></em>, <em class="sig-param"><span class="n">max_points_per_node</span></em>, <em class="sig-param"><span class="n">max_node_depth</span></em>, <em class="sig-param"><span class="n">quad_tree_storage_dir</span></em>, <em class="sig-param"><span class="n">node_depth</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">node_data_manager</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">pickle_filename</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>An out of core quad tree spatial indexing structure.</p>
+<dl class="py method">
+<dt id="id2">
+<code class="sig-name descname">add_points</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">point_list</span></em>, <em class="sig-param"><span class="n">left_bound</span></em>, <em class="sig-param"><span class="n">right_bound</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a list of points to the current node.</p>
+<p>This function will split the current node if the added points exceed
+the maximum number of points allowed per node and is already not at
+the maximum level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>point_list</strong> (<em>numpy.ndarray</em>) – a numpy array of
+(data, x_coord, y_coord) tuples</p></li>
+<li><p><strong>left_bound</strong> (<em>int</em>) – left index inclusive of points to consider under
+<cite>point_list</cite></p></li>
+<li><p><strong>right_bound</strong> (<em>int</em>) – right index non-inclusive of points to consider
+under <cite>point_list</cite></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id3">
+<code class="sig-name descname">build_node_shapes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ogr_polygon_layer</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add features to an ogr.Layer to visualize quadtree segmentation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>ogr_polygon_layer</strong> (<em>ogr.layer</em>) – an ogr polygon layer with fields
+‘n_points’ (int) and ‘bb_box’ (string) defined.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id4">
+<code class="sig-name descname">flush</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id4" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flush any cached data to disk.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id5">
+<code class="sig-name descname">get_intersecting_points_in_bounding_box</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">bounding_box</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id5" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get list of data that is contained by bounding_box.</p>
+<p>This function takes in a bounding box and returns a list of
+(data, lat, lng) tuples that are contained in the leaf nodes that
+intersect that bounding box.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>bounding_box</strong> (<em>list</em>) – of the form [xmin, ymin, xmax, ymax]</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>numpy.ndarray array of (data, x_coord, lng) of nodes that
+intersect the bounding box.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id6">
+<code class="sig-name descname">get_intersecting_points_in_polygon</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">shapely_polygon</span></em><span class="sig-paren">)</span><a class="headerlink" href="#id6" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the points contained in <cite>shapely_prepared_polygon</cite>.</p>
+<p>This function is a high performance test routine to return the points
+contained in the shapely_prepared_polygon that are stored in <cite>self</cite>’s
+representation of a quadtree.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>shapely_polygon</strong> (<em>ogr.DataSource</em>) – a polygon datasource to bound
+against</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>deque of (data, x_coord, y_coord) of nodes that are contained</dt><dd><p>in <cite>shapely_prepared_polygon</cite>.</p>
+</dd>
+</dl>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id7">
+<code class="sig-name descname">n_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id7" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the number of nodes in the quadtree</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id8">
+<code class="sig-name descname">n_points</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id8" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the number of nodes in the quadtree</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="id9">
+<code class="sig-name descname">next_available_blob_id</code><em class="property"> = 0</em><a class="headerlink" href="#id9" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.recreation.recmodel_client">
+<span id="natcap-invest-recreation-recmodel-client-module"></span><h2>natcap.invest.recreation.recmodel_client module<a class="headerlink" href="#module-natcap.invest.recreation.recmodel_client" title="Permalink to this headline">¶</a></h2>
+<p>InVEST Recreation Client.</p>
+<dl class="py function">
+<dt id="natcap.invest.recreation.recmodel_client.delay_op">
+<code class="sig-prename descclassname">natcap.invest.recreation.recmodel_client.</code><code class="sig-name descname">delay_op</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">last_time</span></em>, <em class="sig-param"><span class="n">time_delay</span></em>, <em class="sig-param"><span class="n">func</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_client.delay_op" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute <code class="docutils literal notranslate"><span class="pre">func</span></code> if last_time + time_delay &gt;= current time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>last_time</strong> (<em>float</em>) – last time in seconds that <code class="docutils literal notranslate"><span class="pre">func</span></code> was triggered</p></li>
+<li><p><strong>time_delay</strong> (<em>float</em>) – time to wait in seconds since last_time before
+triggering <code class="docutils literal notranslate"><span class="pre">func</span></code></p></li>
+<li><p><strong>func</strong> (<em>function</em>) – parameterless function to invoke if
+current_time &gt;= last_time + time_delay</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>If <code class="docutils literal notranslate"><span class="pre">func</span></code> was triggered, return the time which it was triggered in
+seconds, otherwise return <code class="docutils literal notranslate"><span class="pre">last_time</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.recreation.recmodel_client.execute">
+<code class="sig-prename descclassname">natcap.invest.recreation.recmodel_client.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_client.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recreation.</p>
+<p>Execute recreation client model on remote server.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – path to workspace directory</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'aoi_path'</strong><strong>]</strong> (<em>string</em>) – path to AOI vector</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'hostname'</strong><strong>]</strong> (<em>string</em>) – FQDN to recreation server</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'port'</strong><strong>]</strong> (<em>string</em><em> or </em><em>int</em>) – port on hostname for recreation server</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'start_year'</strong><strong>]</strong> (<em>string</em>) – start year in form YYYY.  This year
+is the inclusive lower bound to consider points in the PUD and
+regression.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'end_year'</strong><strong>]</strong> (<em>string</em>) – end year in form YYYY.  This year
+is the inclusive upper bound to consider points in the PUD and
+regression.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'grid_aoi'</strong><strong>]</strong> (<em>boolean</em>) – if true the polygon vector in
+<code class="docutils literal notranslate"><span class="pre">args['aoi_path']</span></code> should be gridded into a new vector and the
+recreation model should be executed on that</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'grid_type'</strong><strong>]</strong> (<em>string</em>) – optional, but must exist if
+args[‘grid_aoi’] is True.  Is one of ‘hexagon’ or ‘square’ and
+indicates the style of gridding.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'cell_size'</strong><strong>]</strong> (<em>string/float</em>) – optional, but must exist if
+<code class="docutils literal notranslate"><span class="pre">args['grid_aoi']</span></code> is True.  Indicates the cell size of square
+pixels and the width of the horizontal axis for the hexagonal
+cells.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'compute_regression'</strong><strong>]</strong> (<em>boolean</em>) – if True, then process the
+predictor table and scenario table (if present).</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'predictor_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>required if
+args[‘compute_regression’] is True.  Path to a table that
+describes the regression predictors, their IDs and types.  Must
+contain the fields ‘id’, ‘path’, and ‘type’ where:</p>
+<blockquote>
+<div><ul>
+<li><p>’id’: is a &lt;=10 character length ID that is used to uniquely
+describe the predictor.  It will be added to the output
+result shapefile attribute table which is an ESRI
+Shapefile, thus limited to 10 characters.</p></li>
+<li><p>’path’: an absolute or relative (to this table) path to the
+predictor dataset, either a vector or raster type.</p></li>
+<li><p>’type’: one of the following,</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>’raster_mean’: mean of values in the raster under the
+response polygon</p></li>
+<li><p>’raster_sum’: sum of values in the raster under the
+response polygon</p></li>
+<li><p>’point_count’: count of the points contained in the
+response polygon</p></li>
+<li><p>’point_nearest_distance’: distance to the nearest point
+from the response polygon</p></li>
+<li><p>’line_intersect_length’: length of lines that intersect
+with the response polygon in projected units of AOI</p></li>
+<li><p>’polygon_area’: area of the polygon contained within
+response polygon in projected units of AOI</p></li>
+<li><p>’polygon_percent_coverage’: percent (0-100) of area of
+overlap between the predictor and each AOI grid cell</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'scenario_predictor_table_path'</strong><strong>]</strong> (<em>string</em>) – (optional) if
+present runs the scenario mode of the recreation model with the
+datasets described in the table on this path.  Field headers
+are identical to <code class="docutils literal notranslate"><span class="pre">args['predictor_table_path']</span></code> and ids in the
+table are required to be identical to the predictor list.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – optional, if exists is appended to
+any output file paths.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.recreation.recmodel_server">
+<span id="natcap-invest-recreation-recmodel-server-module"></span><h2>natcap.invest.recreation.recmodel_server module<a class="headerlink" href="#module-natcap.invest.recreation.recmodel_server" title="Permalink to this headline">¶</a></h2>
+<p>InVEST Recreation Server.</p>
+<dl class="py class">
+<dt id="natcap.invest.recreation.recmodel_server.RecModel">
+<em class="property">class </em><code class="sig-prename descclassname">natcap.invest.recreation.recmodel_server.</code><code class="sig-name descname">RecModel</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_server.RecModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class that manages RPCs for calculating photo user days.</p>
+<dl class="py method">
+<dt id="natcap.invest.recreation.recmodel_server.RecModel.calc_photo_user_days_in_aoi">
+<code class="sig-name descname">calc_photo_user_days_in_aoi</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_server.RecModel.calc_photo_user_days_in_aoi" title="Permalink to this definition">¶</a></dt>
+<dd><p>General purpose try/except wrapper.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.recmodel_server.RecModel.fetch_workspace_aoi">
+<code class="sig-name descname">fetch_workspace_aoi</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_server.RecModel.fetch_workspace_aoi" title="Permalink to this definition">¶</a></dt>
+<dd><p>General purpose try/except wrapper.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.recmodel_server.RecModel.get_valid_year_range">
+<code class="sig-name descname">get_valid_year_range</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_server.RecModel.get_valid_year_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the min and max year queriable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(min_year, max_year)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.recreation.recmodel_server.RecModel.get_version">
+<code class="sig-name descname">get_version</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_server.RecModel.get_version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the rec model server version.</p>
+<p>This string can be used to uniquely identify the PUD database and
+algorithm for publication in terms of reproducibility.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.recreation.recmodel_server.build_quadtree_shape">
+<code class="sig-prename descclassname">natcap.invest.recreation.recmodel_server.</code><code class="sig-name descname">build_quadtree_shape</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">quad_tree_shapefile_path</span></em>, <em class="sig-param"><span class="n">quadtree</span></em>, <em class="sig-param"><span class="n">spatial_reference</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_server.build_quadtree_shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a vector of the quadtree geometry.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>quad_tree_shapefile_path</strong> (<em>string</em>) – path to save the vector</p></li>
+<li><p><strong>quadtree</strong> (<a class="reference internal" href="#id0" title="natcap.invest.recreation.out_of_core_quadtree.OutOfCoreQuadTree"><em>out_of_core_quadtree.OutOfCoreQuadTree</em></a>) – quadtree
+data structure</p></li>
+<li><p><strong>spatial_reference</strong> (<em>osr.SpatialReference</em>) – spatial reference for the
+output vector</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.recreation.recmodel_server.construct_userday_quadtree">
+<code class="sig-prename descclassname">natcap.invest.recreation.recmodel_server.</code><code class="sig-name descname">construct_userday_quadtree</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">initial_bounding_box</span></em>, <em class="sig-param"><span class="n">raw_photo_csv_table</span></em>, <em class="sig-param"><span class="n">cache_dir</span></em>, <em class="sig-param"><span class="n">max_points_per_node</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_server.construct_userday_quadtree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a spatial quadtree for fast querying of userday points.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>initial_bounding_box</strong> (<em>list of int</em>) – </p></li>
+<li><p><strong>(</strong><strong>)</strong> (<em>raw_photo_csv_table</em>) – </p></li>
+<li><p><strong>cache_dir</strong> (<em>string</em>) – path to a directory that can be used to cache
+the quadtree files on disk</p></li>
+<li><p><strong>max_points_per_node</strong> (<em>int</em>) – maximum number of points to allow per node
+of the quadree.  A larger amount will cause the quadtree to
+subdivide.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.recreation.recmodel_server.execute">
+<code class="sig-prename descclassname">natcap.invest.recreation.recmodel_server.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_server.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Launch recreation server and parse/generate quadtree if necessary.</p>
+<p>A call to this function registers a Pyro RPC RecModel entry point given
+the configuration input parameters described below.</p>
+<p>There are many methods to launch a server, including at a Linux command
+line as shown:</p>
+<dl>
+<dt>nohup python -u -c “import natcap.invest.recreation.recmodel_server;</dt><dd><dl class="simple">
+<dt>args={‘hostname’:’$LOCALIP’,</dt><dd><p>‘port’:$REC_SERVER_PORT,
+‘raw_csv_point_data_path’: $POINT_DATA_PATH,
+‘max_year’: $MAX_YEAR,
+‘min_year’: $MIN_YEAR,
+‘cache_workspace’: $CACHE_WORKSPACE_PATH’};</p>
+</dd>
+</dl>
+<p>natcap.invest.recreation.recmodel_server.execute(args)”</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'raw_csv_point_data_path'</strong><strong>]</strong> (<em>string</em>) – path to a csv file of the
+format</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'hostname'</strong><strong>]</strong> (<em>string</em>) – hostname to host Pyro server.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'port'</strong><strong>]</strong> (<em>int/or string representation of int</em>) – port number to host
+Pyro entry point.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'max_year'</strong><strong>]</strong> (<em>int</em>) – maximum year allowed to be queries by user</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'min_year'</strong><strong>]</strong> (<em>int</em>) – minimum valid year allowed to be queried by
+user</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Never returns</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.recreation.recmodel_workspace_fetcher">
+<span id="natcap-invest-recreation-recmodel-workspace-fetcher-module"></span><h2>natcap.invest.recreation.recmodel_workspace_fetcher module<a class="headerlink" href="#module-natcap.invest.recreation.recmodel_workspace_fetcher" title="Permalink to this headline">¶</a></h2>
+<p>InVEST recreation workspace fetcher.</p>
+<dl class="py function">
+<dt id="natcap.invest.recreation.recmodel_workspace_fetcher.execute">
+<code class="sig-prename descclassname">natcap.invest.recreation.recmodel_workspace_fetcher.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.recreation.recmodel_workspace_fetcher.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch workspace from remote server.</p>
+<p>After the call a .zip file exists at <cite>args[‘workspace_dir’]</cite> named
+<cite>args[‘workspace_id’] + ‘.zip’</cite> and contains the zipped workspace of that
+model run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – path to workspace directory</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'hostname'</strong><strong>]</strong> (<em>string</em>) – FQDN to recreation server</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'port'</strong><strong>]</strong> (<em>string</em><em> or </em><em>int</em>) – port on hostname for recreation server</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_id'</strong><strong>]</strong> (<em>string</em>) – workspace identifier</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.recreation">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-natcap.invest.recreation" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="natcap.invest.reporting.html" class="btn btn-neutral float-right" title="natcap.invest.reporting package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="natcap.invest.ndr.html" class="btn btn-neutral float-left" title="natcap.invest.ndr package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2019, The Natural Capital Project
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

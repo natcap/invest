@@ -1,0 +1,526 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>natcap.invest.delineateit package &mdash; InVEST 3.8.9.post1013+gbc4bb051.d20201125 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.gif"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="natcap.invest.finfish_aquaculture package" href="natcap.invest.finfish_aquaculture.html" />
+    <link rel="prev" title="natcap.invest.coastal_blue_carbon package" href="natcap.invest.coastal_blue_carbon.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> InVEST
+          
+
+          
+            
+            <img src="../_static/invest-logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.8.9.post1013
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installing InVEST From Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">The InVEST CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scripting.html">Tutorial: Batch Processing on Windows</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">Full API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html">natcap</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.invest.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">natcap.invest.delineateit package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.carbon">natcap.invest.carbon module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.cli">natcap.invest.cli module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.coastal_vulnerability">natcap.invest.coastal_vulnerability module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_percentile">natcap.invest.crop_production_percentile module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_regression">natcap.invest.crop_production_regression module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.datastack">natcap.invest.datastack module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.forest_carbon_edge_effect">natcap.invest.forest_carbon_edge_effect module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.globio">natcap.invest.globio module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.habitat_quality">natcap.invest.habitat_quality module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.hra">natcap.invest.hra module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.pollination">natcap.invest.pollination module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.routedem">natcap.invest.routedem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.scenario_gen_proximity">natcap.invest.scenario_gen_proximity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_cooling_model">natcap.invest.urban_cooling_model module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_flood_risk_mitigation">natcap.invest.urban_flood_risk_mitigation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.utils">natcap.invest.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.validation">natcap.invest.validation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wave_energy">natcap.invest.wave_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wind_energy">natcap.invest.wind_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">natcap.invest.delineateit package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.delineateit.delineateit">natcap.invest.delineateit.delineateit module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.delineateit.delineateit_core">natcap.invest.delineateit.delineateit_core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.delineateit">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">InVEST</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="modules.html">natcap</a> &raquo;</li>
+        
+          <li><a href="natcap.html">natcap package</a> &raquo;</li>
+        
+          <li><a href="natcap.invest.html">natcap.invest package</a> &raquo;</li>
+        
+      <li>natcap.invest.delineateit package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/natcap.invest.delineateit.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="natcap-invest-delineateit-package">
+<h1>natcap.invest.delineateit package<a class="headerlink" href="#natcap-invest-delineateit-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-natcap.invest.delineateit.delineateit">
+<span id="natcap-invest-delineateit-delineateit-module"></span><h2>natcap.invest.delineateit.delineateit module<a class="headerlink" href="#module-natcap.invest.delineateit.delineateit" title="Permalink to this headline">¶</a></h2>
+<p>DelineateIt wrapper for pygeoprocessing’s watershed delineation routine.</p>
+<dl class="py function">
+<dt id="natcap.invest.delineateit.delineateit.check_geometries">
+<code class="sig-prename descclassname">natcap.invest.delineateit.delineateit.</code><code class="sig-name descname">check_geometries</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">outlet_vector_path</span></em>, <em class="sig-param"><span class="n">dem_path</span></em>, <em class="sig-param"><span class="n">target_vector_path</span></em>, <em class="sig-param"><span class="n">skip_invalid_geometry</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.delineateit.delineateit.check_geometries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform reasonable checks and repairs on the incoming vector.</p>
+<p>This function will iterate through the vector at <code class="docutils literal notranslate"><span class="pre">outlet_vector_path</span></code>
+and validate geometries, putting the geometries into a new geopackage
+at <code class="docutils literal notranslate"><span class="pre">target_vector_path</span></code>.</p>
+<p>The vector at <code class="docutils literal notranslate"><span class="pre">target_vector_path</span></code> will include features that:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Have valid geometries</p></li>
+<li><p>Are simplified to 1/2 the DEM pixel size</p></li>
+<li><p>Intersect the bounding box of the DEM</p></li>
+</ul>
+</div></blockquote>
+<p>Any geometries that are empty or do not intersect the DEM will not be
+included in <code class="docutils literal notranslate"><span class="pre">target_vector_path</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>outlet_vector_path</strong> (<em>string</em>) – The path to an outflow vector.  The first
+layer of the vector only will be inspected.</p></li>
+<li><p><strong>dem_path</strong> (<em>string</em>) – The path to a DEM on disk.</p></li>
+<li><p><strong>target_vector_path</strong> (<em>string</em>) – The target path to where the output
+geopackage should be written.</p></li>
+<li><p><strong>skip_invalid_geometry</strong> (<em>bool</em>) – Whether to raise an exception
+when invalid geometry is found.  If <code class="docutils literal notranslate"><span class="pre">False</span></code>, an exception
+will be raised when the first invalid geometry is found.
+If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the invalid geometry will be not be included
+in the output vector but any other valid geometries will.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.delineateit.delineateit.detect_pour_points">
+<code class="sig-prename descclassname">natcap.invest.delineateit.delineateit.</code><code class="sig-name descname">detect_pour_points</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">flow_dir_raster_path_band</span></em>, <em class="sig-param"><span class="n">target_vector_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.delineateit.delineateit.detect_pour_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a pour point vector from D8 flow direction raster.</p>
+<dl class="simple">
+<dt>A pour point is the center point of a pixel which:</dt><dd><ul class="simple">
+<li><p>flows off of the raster, or</p></li>
+<li><p>flows into a nodata pixel</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>flow_dir_raster_path_band</strong> (<em>tuple</em>) – <p>tuple of (raster path, band index)
+indicating the flow direction raster to use. Pixel values are D8
+values [0 - 7] in this order:</p>
+<blockquote>
+<div><p>321
+4x0
+567</p>
+</div></blockquote>
+</p></li>
+<li><p><strong>target_vector_path</strong> (<em>string</em>) – path to save pour point vector to.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.delineateit.delineateit.execute">
+<code class="sig-prename descclassname">natcap.invest.delineateit.delineateit.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.delineateit.delineateit.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>DelineateIt: Watershed Delineation.</p>
+<p>This ‘model’ provides an InVEST-based wrapper around the pygeoprocessing
+routing API for watershed delineation.</p>
+<p>Upon successful completion, the following files are written to the
+output workspace:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">snapped_outlets.gpkg</span></code> - A GeoPackage with the points snapped
+to a nearby stream.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">watersheds.gpkg</span></code> - a GeoPackage of watersheds determined
+by the D8 routing algorithm.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">stream.tif</span></code> - a GeoTiff representing detected streams based on
+the provided <code class="docutils literal notranslate"><span class="pre">flow_threshold</span></code> parameter.  Values of 1 are
+streams, values of 0 are not.</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – The selected folder is used as the
+workspace all intermediate and output files will be written.If the
+selected folder does not exist, it will be created. If datasets
+already exist in the selected folder, they will be overwritten.
+(required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – This text will be appended to the end of
+output files to help separate multiple runs. (optional)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'dem_path'</strong><strong>]</strong> (<em>string</em>) – A GDAL-supported raster file with an elevation
+for each cell. Make sure the DEM is corrected by filling in sinks,
+and if necessary burning hydrographic features into the elevation
+model (recommended when unusual streams are observed.) See the
+‘Working with the DEM’ section of the InVEST User’s Guide for more
+information. (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'outlet_vector_path'</strong><strong>]</strong> (<em>string</em>) – This is a vector representing
+geometries that the watersheds should be built around. Required if
+<code class="docutils literal notranslate"><span class="pre">args['detect_pour_points']</span></code> is False; not used otherwise.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'snap_points'</strong><strong>]</strong> (<em>bool</em>) – Whether to snap point geometries to the
+nearest stream pixel.  If <code class="docutils literal notranslate"><span class="pre">True</span></code>, <code class="docutils literal notranslate"><span class="pre">args['flow_threshold']</span></code>
+and <code class="docutils literal notranslate"><span class="pre">args['snap_distance']</span></code> must also be defined.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'flow_threshold'</strong><strong>]</strong> (<em>int</em>) – The number of upstream cells that must
+into a cell before it’s considered part of a stream such that
+retention stops and the remaining export is exported to the stream.
+Used to define streams from the DEM.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'snap_distance'</strong><strong>]</strong> (<em>int</em>) – Pixel Distance to Snap Outlet Points</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'skip_invalid_geometry'</strong><strong>]</strong> (<em>bool</em>) – Whether to crash when an
+invalid geometry is passed or skip it, including all valid
+geometries in the vector to be passed to delineation.
+If <code class="docutils literal notranslate"><span class="pre">False</span></code>, this tool will crash if an invalid geometry is
+found.  If <code class="docutils literal notranslate"><span class="pre">True</span></code>, invalid geometries will be left out of
+the vector to be delineated.  Default: True</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'detect_pour_points'</strong><strong>]</strong> (<em>bool</em>) – Whether to run the pour point
+detection algorithm. If True, detected pour points are used instead
+of outlet_vector_path geometries. Default: False</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – The number of worker processes to use with
+taskgraph. Defaults to -1 (no parallelism).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.delineateit.delineateit.snap_points_to_nearest_stream">
+<code class="sig-prename descclassname">natcap.invest.delineateit.delineateit.</code><code class="sig-name descname">snap_points_to_nearest_stream</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">points_vector_path</span></em>, <em class="sig-param"><span class="n">stream_raster_path_band</span></em>, <em class="sig-param"><span class="n">snap_distance</span></em>, <em class="sig-param"><span class="n">snapped_points_vector_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.delineateit.delineateit.snap_points_to_nearest_stream" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adjust the location of points to the nearest stream pixel.</p>
+<p>The new point layer will have all fields and field values copied over from
+the source vector.  Any points that are outside of the stream raster will
+not be included in the output vector.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>points_vector_path</strong> (<em>string</em>) – A path to a vector on disk containing
+point geometries.  Must be in the same projection as the stream
+raster.</p></li>
+<li><p><strong>stream_raster_path_band</strong> (<em>tuple</em>) – A tuple of (path, band index), where
+pixel values are <code class="docutils literal notranslate"><span class="pre">1</span></code> (indicating a stream pixel) or <code class="docutils literal notranslate"><span class="pre">0</span></code>
+(indicating a non-stream pixel).</p></li>
+<li><p><strong>snap_distance</strong> (<em>number</em>) – The maximum distance (in pixels) to search
+for stream pixels for each point.  This must be a positive, nonzero
+value.</p></li>
+<li><p><strong>snapped_points_vector_path</strong> (<em>string</em>) – A path to where the output
+points will be written.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><strong>ValueError` when snap_distance is less than</strong><strong> or </strong><strong>equal to 0</strong> – </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.delineateit.delineateit_core">
+<span id="natcap-invest-delineateit-delineateit-core-module"></span><h2>natcap.invest.delineateit.delineateit_core module<a class="headerlink" href="#module-natcap.invest.delineateit.delineateit_core" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="natcap.invest.delineateit.delineateit_core.calculate_pour_point_array">
+<code class="sig-prename descclassname">natcap.invest.delineateit.delineateit_core.</code><code class="sig-name descname">calculate_pour_point_array</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.delineateit.delineateit_core.calculate_pour_point_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a binary array indicating which pixels are pour points.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>flow_dir_array</strong> (<em>numpy.ndarray</em>) – a 2D array of D8 flow direction
+values (0 - 7) and possiby the nodata value.</p></li>
+<li><p><strong>edges</strong> (<em>list</em>) – a binary list of length 4 indicating whether or not each
+edge is an edge of the raster. Order: [top, left, bottom, right]</p></li>
+<li><p><strong>nodata</strong> (<em>int</em>) – the nodata value of the flow direction array</p></li>
+<li><p><strong>offset</strong> (<em>cpair</em><em>[</em><em>int</em><em>, </em><em>int</em><em>]</em>) – the input flow_dir_array is a block taken
+from a larger raster. Offset is the (x, y) coordinate of the
+upper-left corner of this block relative to the whole raster as a
+numpy array (the raster starts at (0, 0) and each pixel is 1x1).</p></li>
+<li><p><strong>origin</strong> (<em>cpair</em><em>[</em><em>double</em><em>, </em><em>double</em><em>]</em>) – the (x, y) origin of the raster from
+which this block was taken, in its original coordinate system.
+This is equivalent to elements (0, 3) of:
+<code class="docutils literal notranslate"><span class="pre">pygeoprocessing.get_raster_info(flow_dir_raster)['geotransform']</span></code>.</p></li>
+<li><p><strong>pixel_size</strong> (<em>cpair</em><em>[</em><em>double</em><em>, </em><em>double</em><em>]</em>) – the (x, y) dimensions of a pixel in
+the raster from which this block was taken, in its original
+coordinate system. This is equivalent to:
+<code class="docutils literal notranslate"><span class="pre">pygeoprocessing.get_raster_info(flow_dir_raster)['pixel_size']</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>set of (x, y) coordinates representing pour points in the coordinate
+system of the original raster. C type cset[cpair[double, double]] is
+automatically cast to python type set(tuple(float, float)) when this
+function is called from a python function.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.delineateit">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-natcap.invest.delineateit" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="natcap.invest.finfish_aquaculture.html" class="btn btn-neutral float-right" title="natcap.invest.finfish_aquaculture package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="natcap.invest.coastal_blue_carbon.html" class="btn btn-neutral float-left" title="natcap.invest.coastal_blue_carbon package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2019, The Natural Capital Project
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

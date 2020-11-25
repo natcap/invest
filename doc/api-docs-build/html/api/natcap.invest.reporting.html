@@ -1,0 +1,902 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>natcap.invest.reporting package &mdash; InVEST 3.8.9.post1013+gbc4bb051.d20201125 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.gif"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="natcap.invest.scenic_quality package" href="natcap.invest.scenic_quality.html" />
+    <link rel="prev" title="natcap.invest.recreation package" href="natcap.invest.recreation.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> InVEST
+          
+
+          
+            
+            <img src="../_static/invest-logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.8.9.post1013
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installing InVEST From Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">The InVEST CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scripting.html">Tutorial: Batch Processing on Windows</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">Full API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html">natcap</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.invest.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">natcap.invest.reporting package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.carbon">natcap.invest.carbon module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.cli">natcap.invest.cli module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.coastal_vulnerability">natcap.invest.coastal_vulnerability module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_percentile">natcap.invest.crop_production_percentile module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_regression">natcap.invest.crop_production_regression module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.datastack">natcap.invest.datastack module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.forest_carbon_edge_effect">natcap.invest.forest_carbon_edge_effect module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.globio">natcap.invest.globio module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.habitat_quality">natcap.invest.habitat_quality module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.hra">natcap.invest.hra module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.pollination">natcap.invest.pollination module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.routedem">natcap.invest.routedem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.scenario_gen_proximity">natcap.invest.scenario_gen_proximity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_cooling_model">natcap.invest.urban_cooling_model module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_flood_risk_mitigation">natcap.invest.urban_flood_risk_mitigation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.utils">natcap.invest.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.validation">natcap.invest.validation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wave_energy">natcap.invest.wave_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wind_energy">natcap.invest.wind_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">natcap.invest.reporting package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.reporting.html">natcap.invest.reporting.html module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.reporting.table_generator">natcap.invest.reporting.table_generator module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.reporting">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">InVEST</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="modules.html">natcap</a> &raquo;</li>
+        
+          <li><a href="natcap.html">natcap package</a> &raquo;</li>
+        
+          <li><a href="natcap.invest.html">natcap.invest package</a> &raquo;</li>
+        
+      <li>natcap.invest.reporting package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/natcap.invest.reporting.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="natcap-invest-reporting-package">
+<h1>natcap.invest.reporting package<a class="headerlink" href="#natcap-invest-reporting-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-natcap.invest.reporting.html">
+<span id="natcap-invest-reporting-html-module"></span><h2>natcap.invest.reporting.html module<a class="headerlink" href="#module-natcap.invest.reporting.html" title="Permalink to this headline">¶</a></h2>
+<p>Utilities for creating simple HTML report files.</p>
+<dl class="py class">
+<dt id="natcap.invest.reporting.html.Element">
+<em class="property">class </em><code class="sig-prename descclassname">natcap.invest.reporting.html.</code><code class="sig-name descname">Element</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tag</span></em>, <em class="sig-param"><span class="n">content</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">end_tag</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">attrs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.Element" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Represents a generic HTML element.</p>
+<p>Any Element object can be passed to HTMLDocument.add()</p>
+<p class="rubric">Example</p>
+<p>doc = html.HTMLDocument(…)
+details_elem = doc.add(html.Element(‘details’))
+details_elem.add(</p>
+<blockquote>
+<div><p>html.Element(‘img’, src=’images/my_pic.png’, end_tag=False))</p>
+</div></blockquote>
+<dl class="py method">
+<dt id="natcap.invest.reporting.html.Element.add">
+<code class="sig-name descname">add</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">elem</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.Element.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a child element (which is returned for convenience).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.reporting.html.Element.html">
+<code class="sig-name descname">html</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.Element.html" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an HTML string for this element (and its children).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="natcap.invest.reporting.html.HTMLDocument">
+<em class="property">class </em><code class="sig-prename descclassname">natcap.invest.reporting.html.</code><code class="sig-name descname">HTMLDocument</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uri</span></em>, <em class="sig-param"><span class="n">title</span></em>, <em class="sig-param"><span class="n">header</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.HTMLDocument" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Utility class for creating simple HTML files.</p>
+<dl>
+<dt>Example usage:</dt><dd><p># Create the document object.
+doc = html.HTMLDocument(‘myfile.html’, ‘My Page’, ‘A Page About Me’)</p>
+<p># Add some text.
+doc.write_header(‘My Early Life’)
+doc.write_paragraph(‘I lived in a small barn.’)</p>
+<p># Add a table.
+table = doc.add(html.Table())
+table.add_row([‘Age’, ‘Weight’], is_header=True)
+table.add_row([‘1 year’, ‘20 pounds’])
+table.add_row([‘2 years’, ‘40 pounds’])</p>
+<p># Add an arbitrary HTML element.
+# Note that the HTML ‘img’ element doesn’t have an end tag.
+doc.add(html.Element(‘img’, src=’images/my_pic.png’, end_tag=False))</p>
+<p># Create the file.
+doc.flush()</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="natcap.invest.reporting.html.HTMLDocument.add">
+<code class="sig-name descname">add</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">elem</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.HTMLDocument.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add an arbitrary element to the body of the document.</p>
+<p>elem - any object that has a method html() to output HTML markup</p>
+<p>Return the added element for convenience.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.reporting.html.HTMLDocument.flush">
+<code class="sig-name descname">flush</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.HTMLDocument.flush" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a file with the contents of this document.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.reporting.html.HTMLDocument.insert_table_of_contents">
+<code class="sig-name descname">insert_table_of_contents</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_header_level</span><span class="o">=</span><span class="default_value">2</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.HTMLDocument.insert_table_of_contents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Insert an auto-generated table of contents.</p>
+<p>The table of contents is based on the headers in the document.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.reporting.html.HTMLDocument.write_header">
+<code class="sig-name descname">write_header</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">text</span></em>, <em class="sig-param"><span class="n">level</span><span class="o">=</span><span class="default_value">2</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.HTMLDocument.write_header" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience method to write a header.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.reporting.html.HTMLDocument.write_paragraph">
+<code class="sig-name descname">write_paragraph</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">text</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.HTMLDocument.write_paragraph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience method to write a paragraph.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="natcap.invest.reporting.html.Table">
+<em class="property">class </em><code class="sig-prename descclassname">natcap.invest.reporting.html.</code><code class="sig-name descname">Table</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">attr</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.Table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Represents and renders HTML tables.</p>
+<dl class="py method">
+<dt id="natcap.invest.reporting.html.Table.add_row">
+<code class="sig-name descname">add_row</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cells</span></em>, <em class="sig-param"><span class="n">is_header</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">cell_attr</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">do_formatting</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.Table.add_row" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes a table row with the given cell data.</p>
+<dl class="simple">
+<dt>cell_attr - attributes for each cell. If provided, it must be the</dt><dd><p>same length as cells. Each entry should be a dictionary mapping
+attribute key to value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.reporting.html.Table.add_two_level_header">
+<code class="sig-name descname">add_two_level_header</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">outer_headers</span></em>, <em class="sig-param"><span class="n">inner_headers</span></em>, <em class="sig-param"><span class="n">row_id_header</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.Table.add_two_level_header" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a two level header to the table.</p>
+<p>In this header, each outer header appears on the top row,
+and each inner header appears once beneath each outer header.</p>
+<p>For example, the following code:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>table.add_two_level_header(</dt><dd><p>outer_headers=[‘Weight’, ‘Value’],
+inner_headers=[‘Mean, Standard deviation’],
+row_id_header=’Farm ID’)</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>produces the following header:</p>
+<blockquote>
+<div><p>Weight                            Value</p>
+</div></blockquote>
+<p>Farm ID   Mean    Standard Deviation        Mean    Standard deviation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="natcap.invest.reporting.html.Table.html">
+<code class="sig-name descname">html</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.Table.html" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the HTML string for the table.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.reporting.html.cell_format">
+<code class="sig-prename descclassname">natcap.invest.reporting.html.</code><code class="sig-name descname">cell_format</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.html.cell_format" title="Permalink to this definition">¶</a></dt>
+<dd><p>Formats the data to put in a table cell.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.reporting.table_generator">
+<span id="natcap-invest-reporting-table-generator-module"></span><h2>natcap.invest.reporting.table_generator module<a class="headerlink" href="#module-natcap.invest.reporting.table_generator" title="Permalink to this headline">¶</a></h2>
+<p>A helper module for generating html tables that are represented as Strings</p>
+<dl class="py function">
+<dt id="natcap.invest.reporting.table_generator.add_checkbox_column">
+<code class="sig-prename descclassname">natcap.invest.reporting.table_generator.</code><code class="sig-name descname">add_checkbox_column</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">col_list</span></em>, <em class="sig-param"><span class="n">row_list</span></em>, <em class="sig-param"><span class="n">checkbox_pos</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.table_generator.add_checkbox_column" title="Permalink to this definition">¶</a></dt>
+<dd><p>Insert a new column into the list of column dictionaries so that it
+is the second column dictionary found in the list. Also add the
+checkbox column header to the list of row dictionaries and
+subsequent checkbox value</p>
+<dl>
+<dt>‘col_list’- a list of dictionaries that defines the column</dt><dd><p>structure for the table (required). The order of the
+columns from left to right is depicted by the index
+of the column dictionary in the list. Each dictionary
+in the list has the following keys and values:</p>
+<blockquote>
+<div><p>‘name’ - a string for the column name (required)
+‘total’ - a boolean for whether the column should be</p>
+<blockquote>
+<div><p>totaled (required)</p>
+</div></blockquote>
+</div></blockquote>
+</dd>
+<dt>‘row_list’ - a list of dictionaries that represent the rows. Each</dt><dd><p>dictionaries keys should match the column names found in
+‘col_list’ (required) Example:
+[{col_name_1: value, col_name_2: value, …},</p>
+<blockquote>
+<div><p>{col_name_1: value, col_name_2: value, …},
+…]</p>
+</div></blockquote>
+</dd>
+<dt>checkbox_pos - an integer for the position of the checkbox</dt><dd><p>column. Defaulted at 1 (optional)</p>
+</dd>
+<dt>returns - a tuple of the updated column and rows list of dictionaries</dt><dd><p>in that order</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.reporting.table_generator.add_totals_row">
+<code class="sig-prename descclassname">natcap.invest.reporting.table_generator.</code><code class="sig-name descname">add_totals_row</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">col_headers</span></em>, <em class="sig-param"><span class="n">total_list</span></em>, <em class="sig-param"><span class="n">total_name</span></em>, <em class="sig-param"><span class="n">checkbox_total</span></em>, <em class="sig-param"><span class="n">tdata_tuples</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.table_generator.add_totals_row" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a totals row as an html string. Creates one row element with
+data where the row gets a class name and the data get a class name if
+the corresponding column is a totalable column</p>
+<p>col_headers - a list of the column headers in order (required)</p>
+<dl class="simple">
+<dt>total_list - a list of booleans that corresponds to ‘col_headers’ and</dt><dd><p>indicates whether a column should be totaled (required)</p>
+</dd>
+<dt>total_name - a string for the name of the total row, ex: ‘Total’, ‘Sum’</dt><dd><p>(required)</p>
+</dd>
+<dt>checkbox_total - a boolean value that distinguishes whether a checkbox</dt><dd><p>total row is being added or a regular total row. Checkbox total row
+is True. This will determine the row class name and row data class
+name (required)</p>
+</dd>
+<dt>tdata_tuples - a list of tuples where the first index in the tuple is a</dt><dd><p>boolean which indicates if a table data element has a attribute
+class. The second index is the String value of that class or None
+(required)</p>
+</dd>
+<dt>return - a string representing the html contents of a row which should</dt><dd><p>later be used in a ‘tfoot’ element</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.reporting.table_generator.generate_table">
+<code class="sig-prename descclassname">natcap.invest.reporting.table_generator.</code><code class="sig-name descname">generate_table</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">table_dict</span></em>, <em class="sig-param"><span class="n">attributes</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.table_generator.generate_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes in a dictionary representation of a table and generates a String of
+the the table in the form of hmtl</p>
+<dl>
+<dt>table_dict - a dictionary with the following arguments:</dt><dd><dl>
+<dt>‘cols’- a list of dictionaries that defines the column</dt><dd><p>structure for the table (required). The order of the
+columns from left to right is depicted by the index
+of the column dictionary in the list. Each dictionary
+in the list has the following keys and values:</p>
+<blockquote>
+<div><p>‘name’ - a string for the column name (required)
+‘total’ - a boolean for whether the column should be</p>
+<blockquote>
+<div><p>totaled (required)</p>
+</div></blockquote>
+<dl class="simple">
+<dt>‘attr’ - a dictionary that has key value pairs for</dt><dd><p>optional tag attributes (optional). Ex:
+‘attr’: {‘class’: ‘offsets’}</p>
+</dd>
+<dt>‘td_class’ - a String to assign as a class name to</dt><dd><p>the table data tags under the column. Each
+table data tag under the column will have a class
+attribute assigned to ‘td_class’ value (optional)</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+<dt>‘rows’ - a list of dictionaries that represent the rows. Each</dt><dd><p>dictionaries keys should match the column names found in
+‘cols’ (possibly empty list) (required) Example:
+[{col_name_1: value, col_name_2: value, …},</p>
+<blockquote>
+<div><p>{col_name_1: value, col_name_2: value, …},
+…]</p>
+</div></blockquote>
+</dd>
+<dt>‘checkbox’ - a boolean value for whether there should be a</dt><dd><p>checkbox column. If True a ‘selected total’ row will be added
+to the bottom of the table that will show the total of the
+columns selected (optional)</p>
+</dd>
+<dt>‘checkbox_pos’ - an integer value for in which column</dt><dd><p>position the the checkbox column should appear
+(optional)</p>
+</dd>
+<dt>‘total’- a boolean value for whether there should be a constant</dt><dd><p>total row at the bottom of the table that sums the column
+values (optional)</p>
+</dd>
+<dt>‘attributes’ - a dictionary of html table attributes. The attribute</dt><dd><p>name is the key which gets set to the value of the key.
+(optional)
+Example: {‘class’: ‘sorttable’, ‘id’: ‘parcel_table’}</p>
+</dd>
+</dl>
+<p>returns - a string representing an html table</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.reporting.table_generator.get_dictionary_values_ordered">
+<code class="sig-prename descclassname">natcap.invest.reporting.table_generator.</code><code class="sig-name descname">get_dictionary_values_ordered</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dict_list</span></em>, <em class="sig-param"><span class="n">key_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.table_generator.get_dictionary_values_ordered" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a list, with values from ‘key_name’ found in each dictionary
+in the list of dictionaries ‘dict_list’. The order of the values in the
+returned list match the order they are retrieved from ‘dict_list’</p>
+<dl class="simple">
+<dt>dict_list - a list of dictionaries where each dictionary has the same</dt><dd><p>keys. Each dictionary should have at least one key:value pair
+with the key being ‘key_name’ (required)</p>
+</dd>
+<dt>key_name - a String or Int for the key name of interest in the</dt><dd><p>dictionaries (required)</p>
+</dd>
+<dt>return - a list of values from ‘key_name’ in ascending order based</dt><dd><p>on ‘dict_list’ keys</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.reporting.table_generator.get_row_data">
+<code class="sig-prename descclassname">natcap.invest.reporting.table_generator.</code><code class="sig-name descname">get_row_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">row_list</span></em>, <em class="sig-param"><span class="n">col_headers</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.table_generator.get_row_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct the rows in a 2D List from the list of dictionaries,
+using col_headers to properly order the row data.</p>
+<dl>
+<dt>‘row_list’ - a list of dictionaries that represent the rows. Each</dt><dd><p>dictionaries keys should match the column names found in
+‘col_headers’. The rows will be ordered the same as they are found
+in the dictionary list (required) Example:
+[{‘col_name_1’:’9/13’, ‘col_name_3’:’expensive’,</p>
+<blockquote>
+<div><blockquote>
+<div><p>‘col_name_2’:’chips’},</p>
+</div></blockquote>
+<dl class="simple">
+<dt>{‘col_name_1’:’3/13’, ‘col_name_2’:’cheap’,</dt><dd><p>‘col_name_3’:’peanuts’},</p>
+</dd>
+<dt>{‘col_name_1’:’5/12’, ‘col_name_2’:’moderate’,</dt><dd><p>‘col_name_3’:’mints’}]</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+<dt>col_headers - a List of the names of the column headers in order</dt><dd><p>example : [col_name_1, col_name_2, col_name_3…]</p>
+</dd>
+</dl>
+<p>return - a 2D list with each inner list representing a row</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.reporting">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-natcap.invest.reporting" title="Permalink to this headline">¶</a></h2>
+<p>natcap.invest.reporting package.</p>
+<dl class="py function">
+<dt id="natcap.invest.reporting.add_head_element">
+<code class="sig-prename descclassname">natcap.invest.reporting.</code><code class="sig-name descname">add_head_element</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">param_args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.add_head_element" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a string that represents a valid element in the head section
+of an html file. Currently handles ‘style’ and ‘script’ elements,
+where both the script and style are locally embedded</p>
+<p>param_args - a dictionary that holds the following arguments:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>param_args[‘format’] - a string representing the type of element to</dt><dd><p>be added. Currently : ‘script’, ‘style’ (required)</p>
+</dd>
+<dt>param_args[‘data_src’] - a string URI path for the external source</dt><dd><p>of the element OR a String representing the html
+(DO NOT include html tags, tags are automatically generated).
+If a URI the file is read in as a String. (required)</p>
+</dd>
+<dt>param_args[‘input_type’] - ‘Text’ or ‘File’. Determines how the</dt><dd><p>input from ‘data_src’ is handled (required)</p>
+</dd>
+<dt>‘attributes’ - a dictionary that has key value pairs for</dt><dd><p>optional tag attributes (optional). Ex:
+‘attributes’: {‘class’: ‘offsets’}</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>returns - a string representation of the html head element</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.reporting.add_text_element">
+<code class="sig-prename descclassname">natcap.invest.reporting.</code><code class="sig-name descname">add_text_element</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">param_args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.add_text_element" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a string that represents a html text block. The input string
+should be wrapped in proper html tags</p>
+<p>param_args - a dictionary with the following arguments:</p>
+<blockquote>
+<div><p>param_args[‘text’] - a string</p>
+</div></blockquote>
+<p>returns - a string</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.reporting.build_table">
+<code class="sig-prename descclassname">natcap.invest.reporting.</code><code class="sig-name descname">build_table</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">param_args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.build_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a string representing a table in html format.</p>
+<dl>
+<dt>param_args - a dictionary that has the parameters for building up the</dt><dd><p>html table. The dictionary includes the following:</p>
+<dl>
+<dt>‘attributes’ - a dictionary of html table attributes. The attribute</dt><dd><p>name is the key which gets set to the value of the key.
+(optional)
+Example: {‘class’: ‘sorttable’, ‘id’: ‘parcel_table’}</p>
+</dd>
+<dt>param_args[‘sortable’] - a boolean value that determines whether the</dt><dd><p>table should be sortable (required)</p>
+</dd>
+<dt>param_args[‘data_type’] - a string depicting the type of input to</dt><dd><p>build the table from. Either ‘shapefile’, ‘csv’, or ‘dictionary’
+(required)</p>
+</dd>
+<dt>param_args[‘data’] - a URI to a csv or shapefile OR a list of</dt><dd><p>dictionaries. If a list of dictionaries the data should be
+represented in the following format: (required)</p>
+<blockquote>
+<div><dl class="simple">
+<dt>[{col_name_1: value, col_name_2: value, …},</dt><dd><p>{col_name_1: value, col_name_2: value, …},
+…]</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+<dt>param_args[‘key’] - a string that depicts which column (csv) or</dt><dd><p>field (shapefile) will be the unique key to use in extracting
+the data into a dictionary. (required for ‘data_type’
+‘shapefile’ and ‘csv’)</p>
+</dd>
+<dt>param_args[‘columns’] - a list of dictionaries that defines the</dt><dd><p>column structure for the table (required). The order of
+the columns from left to right is depicted by the index
+of the column dictionary in the list. Each dictionary
+in the list has the following keys and values:</p>
+<blockquote>
+<div><p>‘name’ - a string for the column name (required)
+‘total’ - a boolean for whether the column should be</p>
+<blockquote>
+<div><p>totaled (required)</p>
+</div></blockquote>
+<dl class="simple">
+<dt>‘attr’ - a dictionary that has key value pairs for</dt><dd><p>optional tag attributes (optional). Ex:
+‘attr’: {‘class’: ‘offsets’}</p>
+</dd>
+<dt>‘td_class’ - a String to assign as a class name to</dt><dd><p>the table data tags under the column. Each
+table data tag under the column will have a class
+attribute assigned to ‘td_class’ value (optional)</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+<dt>param_args[‘total’] - a boolean value where if True a constant</dt><dd><p>total row will be placed at the bottom of the table that sums
+the columns (required)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>returns - a string that represents an html table</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.reporting.data_dict_to_list">
+<code class="sig-prename descclassname">natcap.invest.reporting.</code><code class="sig-name descname">data_dict_to_list</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.data_dict_to_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract out inner dictionaries from data_dict into a list, where
+the inner dictionaries are added to the list in the order of
+their sorted keys</p>
+<dl class="simple">
+<dt>data_dict - a dictionary with unique keys pointing to dictionaries.</dt><dd><p>Could be empty (required)</p>
+</dd>
+</dl>
+<p>returns - a list of dictionaries, or empty list if data_dict is empty</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.reporting.extract_datasource_table_by_key">
+<code class="sig-prename descclassname">natcap.invest.reporting.</code><code class="sig-name descname">extract_datasource_table_by_key</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">datasource_uri</span></em>, <em class="sig-param"><span class="n">key_field</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.extract_datasource_table_by_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return vector attribute table of first layer as dictionary.</p>
+<p>Create a dictionary lookup table of the features in the attribute table
+of the datasource referenced by datasource_uri.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>datasource_uri</strong> (<em>string</em>) – a uri to an OGR datasource</p></li>
+<li><p><strong>key_field</strong> – a field in datasource_uri that refers to a key value
+for each row such as a polygon id.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>returns a dictionary of the</dt><dd><p>form {key_field_0: {field_0: value0, field_1: value1}…}</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>attribute_dictionary (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.reporting.generate_report">
+<code class="sig-prename descclassname">natcap.invest.reporting.</code><code class="sig-name descname">generate_report</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.generate_report" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate an html page from the arguments given in ‘reporting_args’</p>
+<dl>
+<dt>reporting_args[title] - a string for the title of the html page</dt><dd><p>(required)</p>
+</dd>
+<dt>reporting_args[sortable] - a boolean value indicating whether</dt><dd><p>the sorttable.js library should be added for table sorting
+functionality (optional)</p>
+</dd>
+<dt>reporting_args[totals] - a boolean value indicating whether</dt><dd><p>the totals_function.js script should be added for table totals
+functionality (optional)</p>
+</dd>
+<dt>reporting_args[out_uri] - a URI to the output destination for the html</dt><dd><p>page (required)</p>
+</dd>
+<dt>reporting_args[elements] - a list of dictionaries that represent html</dt><dd><p>elements to be added to the html page. (required) If no elements
+are provided (list is empty) a blank html page will be generated.
+The 3 main element types are ‘table’, ‘head’, and ‘text’.
+All elements share the following arguments:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>‘type’ - a string that depicts the type of element being add.</dt><dd><p>Currently ‘table’, ‘head’, and ‘text’ are defined
+(required)</p>
+</dd>
+<dt>‘section’ - a string that depicts whether the element belongs</dt><dd><p>in the body or head of the html page.
+Values: ‘body’ | ‘head’ (required)</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>Table element dictionary has at least the following additional
+arguments:</p>
+<blockquote>
+<div><dl>
+<dt>‘attributes’ - a dictionary of html table attributes. The</dt><dd><p>attribute name is the key which gets set to the value
+of the key. (optional)
+Example: {‘class’: ‘sorttable’, ‘id’: ‘parcel_table’}</p>
+</dd>
+<dt>‘sortable’ - a boolean value for whether the tables columns</dt><dd><p>should be sortable (required)</p>
+</dd>
+<dt>‘checkbox’ - a boolean value for whether there should be a</dt><dd><p>checkbox column. If True a ‘selected total’ row will be
+added to the bottom of the table that will show the
+total of the columns selected (optional)</p>
+</dd>
+<dt>‘checkbox_pos’ - an integer value for in which column</dt><dd><p>position the the checkbox column should appear
+(optional)</p>
+</dd>
+<dt>‘data_type’ - one of the following string values:</dt><dd><p>‘shapefile’|’hg csv’|’dictionary’. Depicts the type of data
+structure to build the table from (required)</p>
+</dd>
+<dt>‘data’ - either a list of dictionaries if ‘data_type’ is</dt><dd><p>‘dictionary’ or a URI to a CSV table or shapefile if
+‘data_type’ is ‘shapefile’ or ‘csv’ (required). If a
+list of dictionaries, each dictionary should have
+keys that represent the columns, where each dictionary
+is a row (list could be empty)
+How the rows are ordered are defined by their
+index in the list. Formatted example:
+[{col_name_1: value, col_name_2: value, …},</p>
+<blockquote>
+<div><p>{col_name_1: value, col_name_2: value, …},
+…]</p>
+</div></blockquote>
+</dd>
+<dt>‘key’ - a string that defines which column or field should be</dt><dd><p>used as the keys for extracting data from a shapefile or
+csv table ‘key_field’.
+(required for ‘data_type’ = ‘shapefile’ | ‘csv’)</p>
+</dd>
+<dt>‘columns’- a list of dictionaries that defines the column</dt><dd><p>structure for the table (required). The order of the
+columns from left to right is depicted by the index
+of the column dictionary in the list. Each dictionary
+in the list has the following keys and values:</p>
+<blockquote>
+<div><p>‘name’ - a string for the column name (required)
+‘total’ - a boolean for whether the column should be</p>
+<blockquote>
+<div><p>totaled (required)</p>
+</div></blockquote>
+<dl class="simple">
+<dt>‘attr’ - a dictionary that has key value pairs for</dt><dd><p>optional tag attributes (optional). Ex:
+‘attr’: {‘class’: ‘offsets’}</p>
+</dd>
+<dt>‘td_class’ - a String to assign as a class name to</dt><dd><p>the table data tags under the column. Each
+table data tag under the column will have a class
+attribute assigned to ‘td_class’ value (optional)</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+<dt>‘total’- a boolean value for whether there should be a constant</dt><dd><p>total row at the bottom of the table that sums the column
+values (optional)</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>Head element dictionary has at least the following additional
+arguments:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>‘format’ - a string representing the type of head element being</dt><dd><p>added. Currently ‘script’ (javascript) and ‘style’ (css
+style) accepted (required)</p>
+</dd>
+<dt>‘data_src’- a URI to the location of the external file for</dt><dd><p>either the ‘script’ or the ‘style’ OR a String representing
+the html script or style (DO NOT include the tags)
+(required)</p>
+</dd>
+<dt>‘input_type’ -  a String, ‘File’ or ‘Text’ that refers to how</dt><dd><p>‘data_src’ is being passed in (URI vs String) (required).</p>
+</dd>
+<dt>‘attributes’ - a dictionary that has key value pairs for</dt><dd><p>optional tag attributes (optional). Ex:
+‘attributes’: {‘id’: ‘muni_data’}</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>Text element dictionary has at least the following additional
+arguments:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>‘text’- a string to add as a paragraph element in the html page</dt><dd><p>(required)</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+</dl>
+<p>returns - nothing</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.reporting.write_html">
+<code class="sig-prename descclassname">natcap.invest.reporting.</code><code class="sig-name descname">write_html</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">html_obj</span></em>, <em class="sig-param"><span class="n">out_uri</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.reporting.write_html" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write an html file to ‘out_uri’ from html element represented as strings
+in ‘html_obj’</p>
+<dl>
+<dt>html_obj - a dictionary with two keys, ‘head’ and ‘body’, that point to</dt><dd><p>lists. The list for each key is a list of the htmls elements as
+strings (required)
+example: {‘head’:[‘elem_1’, ‘elem_2’,…],</p>
+<blockquote>
+<div><p>‘body’:[‘elem_1’, ‘elem_2’,…]}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>out_uri - a URI for the output html file</p>
+<p>returns - nothing</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="natcap.invest.scenic_quality.html" class="btn btn-neutral float-right" title="natcap.invest.scenic_quality package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="natcap.invest.recreation.html" class="btn btn-neutral float-left" title="natcap.invest.recreation package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2019, The Natural Capital Project
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

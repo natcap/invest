@@ -1,0 +1,614 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>natcap.invest.hydropower package &mdash; InVEST 3.8.9.post1013+gbc4bb051.d20201125 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.gif"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="natcap.invest.ndr package" href="natcap.invest.ndr.html" />
+    <link rel="prev" title="natcap.invest.fisheries package" href="natcap.invest.fisheries.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> InVEST
+          
+
+          
+            
+            <img src="../_static/invest-logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.8.9.post1013
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installing InVEST From Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">The InVEST CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scripting.html">Tutorial: Batch Processing on Windows</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">Full API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html">natcap</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.invest.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">natcap.invest.hydropower package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.carbon">natcap.invest.carbon module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.cli">natcap.invest.cli module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.coastal_vulnerability">natcap.invest.coastal_vulnerability module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_percentile">natcap.invest.crop_production_percentile module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_regression">natcap.invest.crop_production_regression module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.datastack">natcap.invest.datastack module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.forest_carbon_edge_effect">natcap.invest.forest_carbon_edge_effect module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.globio">natcap.invest.globio module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.habitat_quality">natcap.invest.habitat_quality module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.hra">natcap.invest.hra module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.pollination">natcap.invest.pollination module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.routedem">natcap.invest.routedem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.scenario_gen_proximity">natcap.invest.scenario_gen_proximity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_cooling_model">natcap.invest.urban_cooling_model module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_flood_risk_mitigation">natcap.invest.urban_flood_risk_mitigation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.utils">natcap.invest.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.validation">natcap.invest.validation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wave_energy">natcap.invest.wave_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wind_energy">natcap.invest.wind_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.fisheries.html">natcap.invest.fisheries package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">natcap.invest.hydropower package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.hydropower.hydropower_water_yield">natcap.invest.hydropower.hydropower_water_yield module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.hydropower">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">InVEST</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="modules.html">natcap</a> &raquo;</li>
+        
+          <li><a href="natcap.html">natcap package</a> &raquo;</li>
+        
+          <li><a href="natcap.invest.html">natcap.invest package</a> &raquo;</li>
+        
+      <li>natcap.invest.hydropower package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/natcap.invest.hydropower.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="natcap-invest-hydropower-package">
+<h1>natcap.invest.hydropower package<a class="headerlink" href="#natcap-invest-hydropower-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-natcap.invest.hydropower.hydropower_water_yield">
+<span id="natcap-invest-hydropower-hydropower-water-yield-module"></span><h2>natcap.invest.hydropower.hydropower_water_yield module<a class="headerlink" href="#module-natcap.invest.hydropower.hydropower_water_yield" title="Permalink to this headline">¶</a></h2>
+<p>InVEST Hydropower Water Yield model.</p>
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.aet_op">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">aet_op</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fractp</span></em>, <em class="sig-param"><span class="n">precip</span></em>, <em class="sig-param"><span class="n">precip_nodata</span></em>, <em class="sig-param"><span class="n">output_nodata</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.aet_op" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute actual evapotranspiration values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fractp</strong> (<em>numpy.ndarray float</em>) – fractp raster values.</p></li>
+<li><p><strong>precip</strong> (<em>numpy.ndarray</em>) – precipitation raster values (mm).</p></li>
+<li><p><strong>precip_nodata</strong> (<em>float</em>) – nodata value from the precip raster.</p></li>
+<li><p><strong>output_nodata</strong> (<em>float</em>) – nodata value assigned to output of
+raster_calculator.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>numpy.ndarray of actual evapotranspiration values (mm).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.compute_rsupply_volume">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">compute_rsupply_volume</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">watershed_results_vector_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.compute_rsupply_volume" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the total realized water supply volume.</p>
+<p>And the mean realized water supply volume per pixel for the given sheds.
+Output units in cubic meters and cubic meters per pixel respectively.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>watershed_results_vector_path</strong> (<em>string</em>) – a path to a vector that
+contains fields ‘wyield_vol’ and ‘wyield_mn’.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.compute_water_yield_volume">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">compute_water_yield_volume</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">watershed_results_vector_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.compute_water_yield_volume" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the water yield volume per sub-watershed or watershed.</p>
+<p>Results are added to a ‘wyield_vol’ field in
+<cite>watershed_results_vector_path</cite>. Units are cubic meters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>watershed_results_vector_path</strong> (<em>str</em>) – Path to a sub-watershed
+or watershed vector. This vector’s features should have a
+‘wyield_mn’ attribute.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.compute_watershed_valuation">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">compute_watershed_valuation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">watershed_results_vector_path</span></em>, <em class="sig-param"><span class="n">val_dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.compute_watershed_valuation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute net present value and energy for the watersheds.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>watershed_results_vector_path</strong> (<em>string</em>) – Path to an OGR shapefile for the watershed results.
+Where the results will be added.</p></li>
+<li><p><strong>val_dict</strong> (<em>dict</em>) – a python dictionary that has all the valuation
+parameters for each watershed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.convert_vector_to_csv">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">convert_vector_to_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">base_vector_path</span></em>, <em class="sig-param"><span class="n">target_csv_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.convert_vector_to_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a CSV with all the fields present in vector attribute table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>base_vector_path</strong> (<em>string</em>) – Path to the watershed shapefile in the output workspace.</p></li>
+<li><p><strong>target_csv_path</strong> (<em>string</em>) – Path to a CSV to create in the output workspace.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.create_vector_output">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">create_vector_output</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">base_vector_path</span></em>, <em class="sig-param"><span class="n">target_vector_path</span></em>, <em class="sig-param"><span class="n">ws_id_name</span></em>, <em class="sig-param"><span class="n">stats_path_list</span></em>, <em class="sig-param"><span class="n">valuation_params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.create_vector_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the main vector outputs of this model.</p>
+<p>Join results of zonal stats to copies of the watershed shapefiles.
+Also do optional scarcity and valuation calculations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>base_vector_path</strong> (<em>string</em>) – Path to a watershed shapefile provided in
+the args dictionary.</p></li>
+<li><p><strong>target_vector_path</strong> (<em>string</em>) – Path where base_vector_path will be copied
+to in the output workspace.</p></li>
+<li><p><strong>ws_id_name</strong> (<em>string</em>) – Either ‘ws_id’ or ‘subws_id’, which are required
+names of a unique ID field in the watershed and subwatershed
+shapefiles, respectively. Used to determine if the polygons
+represent watersheds or subwatersheds.</p></li>
+<li><p><strong>stats_path_list</strong> (<em>list</em>) – List of file paths to pickles storing the zonal
+stats results.</p></li>
+<li><p><strong>valuation_params</strong> (<em>dict</em>) – The dictionary built from
+args[‘valuation_table_path’]. Or None if valuation table was not
+provided.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.execute">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Annual Water Yield: Reservoir Hydropower Production.</p>
+<p>Executes the hydropower/water_yield model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong><strong>[</strong><strong>'workspace_dir'</strong><strong>]</strong> (<em>string</em>) – a path to the directory that will write
+output and other temporary files during calculation. (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'lulc_path'</strong><strong>]</strong> (<em>string</em>) – a path to a land use/land cover raster
+whose LULC indexes correspond to indexes in the biophysical table
+input. Used for determining soil retention and other biophysical
+properties of the landscape. (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'depth_to_root_rest_layer_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input
+raster describing the depth of “good” soil before reaching this
+restrictive layer (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'precipitation_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input raster
+describing the average annual precipitation value for each cell
+(mm) (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'pawc_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input raster describing the
+plant available water content value for each cell. Plant Available
+Water Content fraction (PAWC) is the fraction of water that can be
+stored in the soil profile that is available for plants’ use.
+PAWC is a fraction from 0 to 1 (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'eto_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input raster describing the
+annual average evapotranspiration value for each cell. Potential
+evapotranspiration is the potential loss of water from soil by
+both evaporation from the soil and transpiration by healthy
+Alfalfa (or grass) if sufficient water is available (mm)
+(required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'watersheds_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input shapefile of the
+watersheds of interest as polygons. (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'sub_watersheds_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input shapefile of
+the subwatersheds of interest that are contained in the
+<code class="docutils literal notranslate"><span class="pre">args['watersheds_path']</span></code> shape provided as input. (optional)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'biophysical_table_path'</strong><strong>]</strong> (<em>string</em>) – a path to an input CSV table
+of land use/land cover classes, containing data on biophysical
+coefficients such as root_depth (mm) and Kc, which are required.
+A column with header LULC_veg is also required which should
+have values of 1 or 0, 1 indicating a land cover type of
+vegetation, a 0 indicating non vegetation or wetland, water.
+NOTE: these data are attributes of each LULC class rather than
+attributes of individual cells in the raster map (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'seasonality_constant'</strong><strong>]</strong> (<em>float</em>) – floating point value between
+1 and 30 corresponding to the seasonal distribution of
+precipitation (required)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'results_suffix'</strong><strong>]</strong> (<em>string</em>) – a string that will be concatenated
+onto the end of file names (optional)</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'demand_table_path'</strong><strong>]</strong> (<em>string</em>) – (optional) if a non-empty string,
+a path to an input CSV
+table of LULC classes, showing consumptive water use for each
+landuse / land-cover type (cubic meters per year) to calculate
+water scarcity.</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'valuation_table_path'</strong><strong>]</strong> (<em>string</em>) – <p>(optional) if a non-empty
+string, a path to an input CSV table of
+hydropower stations with the following fields to calculate
+valuation:</p>
+<blockquote>
+<div><p>(‘ws_id’, ‘time_span’, ‘discount’, ‘efficiency’, ‘fraction’,
+‘cost’, ‘height’, ‘kw_price’)</p>
+</div></blockquote>
+<p>Required if <code class="docutils literal notranslate"><span class="pre">calculate_valuation</span></code> is True.</p>
+</p></li>
+<li><p><strong>args</strong><strong>[</strong><strong>'n_workers'</strong><strong>]</strong> (<em>int</em>) – (optional) The number of worker processes to
+use for processing this model.  If omitted, computation will take
+place in the current process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.fractp_op">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">fractp_op</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">Kc</span></em>, <em class="sig-param"><span class="n">eto</span></em>, <em class="sig-param"><span class="n">precip</span></em>, <em class="sig-param"><span class="n">root</span></em>, <em class="sig-param"><span class="n">soil</span></em>, <em class="sig-param"><span class="n">pawc</span></em>, <em class="sig-param"><span class="n">veg</span></em>, <em class="sig-param"><span class="n">nodata_dict</span></em>, <em class="sig-param"><span class="n">seasonality_constant</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.fractp_op" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate actual evapotranspiration fraction of precipitation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Kc</strong> (<em>numpy.ndarray</em>) – Kc (plant evapotranspiration
+coefficient) raster values</p></li>
+<li><p><strong>eto</strong> (<em>numpy.ndarray</em>) – potential evapotranspiration raster
+values (mm)</p></li>
+<li><p><strong>precip</strong> (<em>numpy.ndarray</em>) – precipitation raster values (mm)</p></li>
+<li><p><strong>root</strong> (<em>numpy.ndarray</em>) – root depth (maximum root depth for
+vegetated land use classes) raster values (mm)</p></li>
+<li><p><strong>soil</strong> (<em>numpy.ndarray</em>) – depth to root restricted layer raster
+values (mm)</p></li>
+<li><p><strong>pawc</strong> (<em>numpy.ndarray</em>) – plant available water content raster
+values</p></li>
+<li><p><strong>veg</strong> (<em>numpy.ndarray</em>) – 1 or 0 where 1 depicts the land type as
+vegetation and 0 depicts the land type as non
+vegetation (wetlands, urban, water, etc…). If 1 use
+regular AET equation if 0 use: AET = Kc * ETo</p></li>
+<li><p><strong>nodata_dict</strong> (<em>dict</em>) – stores nodata values keyed by raster names</p></li>
+<li><p><strong>seasonality_constant</strong> (<em>float</em>) – floating point value between
+1 and 30 corresponding to the seasonal distribution of
+precipitation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>numpy.ndarray (float) of actual evapotranspiration as fraction</dt><dd><p>of precipitation.</p>
+</dd>
+</dl>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.pet_op">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">pet_op</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">eto_pix</span></em>, <em class="sig-param"><span class="n">Kc_pix</span></em>, <em class="sig-param"><span class="n">eto_nodata</span></em>, <em class="sig-param"><span class="n">output_nodata</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.pet_op" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the plant potential evapotranspiration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>eto_pix</strong> (<em>numpy.ndarray</em>) – a numpy array of ETo</p></li>
+<li><p><strong>Kc_pix</strong> (<em>numpy.ndarray</em>) – a numpy array of  Kc coefficient</p></li>
+<li><p><strong>precip_nodata</strong> (<em>float</em>) – nodata value from the precip raster</p></li>
+<li><p><strong>output_nodata</strong> (<em>float</em>) – nodata value assigned to output of
+raster_calculator</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>numpy.ndarray of potential evapotranspiration (mm)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.wyield_op">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">wyield_op</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fractp</span></em>, <em class="sig-param"><span class="n">precip</span></em>, <em class="sig-param"><span class="n">precip_nodata</span></em>, <em class="sig-param"><span class="n">output_nodata</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.wyield_op" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate water yield.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fractp</strong> (<em>numpy.ndarray float</em>) – fractp raster values.</p></li>
+<li><p><strong>precip</strong> (<em>numpy.ndarray</em>) – precipitation raster values (mm).</p></li>
+<li><p><strong>precip_nodata</strong> (<em>float</em>) – nodata value from the precip raster.</p></li>
+<li><p><strong>output_nodata</strong> (<em>float</em>) – nodata value assigned to output of
+raster_calculator.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>numpy.ndarray of water yield value (mm).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.hydropower.hydropower_water_yield.zonal_stats_tofile">
+<code class="sig-prename descclassname">natcap.invest.hydropower.hydropower_water_yield.</code><code class="sig-name descname">zonal_stats_tofile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">base_vector_path</span></em>, <em class="sig-param"><span class="n">raster_path</span></em>, <em class="sig-param"><span class="n">target_stats_pickle</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.hydropower.hydropower_water_yield.zonal_stats_tofile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate zonal statistics for watersheds and write results to a file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>base_vector_path</strong> (<em>string</em>) – Path to the watershed shapefile in the
+output workspace.</p></li>
+<li><p><strong>raster_path</strong> (<em>string</em>) – Path to raster to aggregate.</p></li>
+<li><p><strong>target_stats_pickle</strong> (<em>string</em>) – Path to pickle file to store dictionary
+returned by zonal stats.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.hydropower">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-natcap.invest.hydropower" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="natcap.invest.ndr.html" class="btn btn-neutral float-right" title="natcap.invest.ndr package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="natcap.invest.fisheries.html" class="btn btn-neutral float-left" title="natcap.invest.fisheries package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2019, The Natural Capital Project
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

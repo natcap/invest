@@ -1,0 +1,1276 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>natcap.invest.fisheries package &mdash; InVEST 3.8.9.post1013+gbc4bb051.d20201125 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.gif"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="natcap.invest.hydropower package" href="natcap.invest.hydropower.html" />
+    <link rel="prev" title="natcap.invest.finfish_aquaculture package" href="natcap.invest.finfish_aquaculture.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> InVEST
+          
+
+          
+            
+            <img src="../_static/invest-logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.8.9.post1013
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installing InVEST From Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">The InVEST CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scripting.html">Tutorial: Batch Processing on Windows</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">Full API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html">natcap</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.html">natcap package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.html#module-natcap">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="natcap.invest.html">natcap.invest package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="natcap.invest.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">natcap.invest.fisheries package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.carbon">natcap.invest.carbon module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.cli">natcap.invest.cli module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.coastal_vulnerability">natcap.invest.coastal_vulnerability module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_percentile">natcap.invest.crop_production_percentile module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.crop_production_regression">natcap.invest.crop_production_regression module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.datastack">natcap.invest.datastack module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.forest_carbon_edge_effect">natcap.invest.forest_carbon_edge_effect module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.globio">natcap.invest.globio module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.habitat_quality">natcap.invest.habitat_quality module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.hra">natcap.invest.hra module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.pollination">natcap.invest.pollination module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.routedem">natcap.invest.routedem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.scenario_gen_proximity">natcap.invest.scenario_gen_proximity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_cooling_model">natcap.invest.urban_cooling_model module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.urban_flood_risk_mitigation">natcap.invest.urban_flood_risk_mitigation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.utils">natcap.invest.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.validation">natcap.invest.validation module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wave_energy">natcap.invest.wave_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest.wind_energy">natcap.invest.wind_energy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="natcap.invest.html#module-natcap.invest">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.coastal_blue_carbon.html">natcap.invest.coastal_blue_carbon package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.delineateit.html">natcap.invest.delineateit package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.finfish_aquaculture.html">natcap.invest.finfish_aquaculture package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">natcap.invest.fisheries package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.fisheries.fisheries">natcap.invest.fisheries.fisheries module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.fisheries.fisheries_hst">natcap.invest.fisheries.fisheries_hst module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.fisheries.fisheries_hst_io">natcap.invest.fisheries.fisheries_hst_io module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.fisheries.fisheries_io">natcap.invest.fisheries.fisheries_io module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.fisheries.fisheries_model">natcap.invest.fisheries.fisheries_model module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-natcap.invest.fisheries">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.hydropower.html">natcap.invest.hydropower package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ndr.html">natcap.invest.ndr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.recreation.html">natcap.invest.recreation package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.reporting.html">natcap.invest.reporting package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.scenic_quality.html">natcap.invest.scenic_quality package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.sdr.html">natcap.invest.sdr package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.seasonal_water_yield.html">natcap.invest.seasonal_water_yield package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="natcap.invest.ui.html">natcap.invest.ui package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">InVEST</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../api.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="modules.html">natcap</a> &raquo;</li>
+        
+          <li><a href="natcap.html">natcap package</a> &raquo;</li>
+        
+          <li><a href="natcap.invest.html">natcap.invest package</a> &raquo;</li>
+        
+      <li>natcap.invest.fisheries package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/natcap.invest.fisheries.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="natcap-invest-fisheries-package">
+<h1>natcap.invest.fisheries package<a class="headerlink" href="#natcap-invest-fisheries-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-natcap.invest.fisheries.fisheries">
+<span id="natcap-invest-fisheries-fisheries-module"></span><h2>natcap.invest.fisheries.fisheries module<a class="headerlink" href="#module-natcap.invest.fisheries.fisheries" title="Permalink to this headline">¶</a></h2>
+<p>Fisheries.</p>
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries.execute">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em>, <em class="sig-param"><span class="n">create_outputs</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fisheries.</p>
+<dl class="simple">
+<dt>args[‘workspace_dir’] (str): location into which all intermediate</dt><dd><p>and output files should be placed.</p>
+</dd>
+</dl>
+<p>args[‘results_suffix’] (str): a string to append to output filenames</p>
+<dl class="simple">
+<dt>args[‘aoi_vector_path’] (str): location of shapefile which will be</dt><dd><p>used as subregions for calculation. Each region must contain a ‘Name’
+attribute (case-sensitive) matching the given name in the population
+parameters csv file.</p>
+</dd>
+<dt>args[‘timesteps’] (int): represents the number of time steps that</dt><dd><p>the user desires the model to run.</p>
+</dd>
+<dt>args[‘population_type’] (str): specifies whether the model</dt><dd><p>is age-specific or stage-specific. Options will be either “Age
+Specific” or “Stage Specific” and will change which equation is
+used in modeling growth.</p>
+</dd>
+<dt>args[‘sexsp’] (str): specifies whether or not the age and stage</dt><dd><p>classes are distinguished by sex.</p>
+</dd>
+<dt>args[‘harvest_units’] (str): specifies how the user wants to get</dt><dd><p>the harvest data. Options are either “Individuals” or “Weight”, and
+will change the harvest equation used in core. (Required if
+args[‘val_cont’] is True)</p>
+</dd>
+<dt>args[‘do_batch’] (bool): specifies whether program will perform a</dt><dd><p>single model run or a batch (set) of model runs.</p>
+</dd>
+<dt>args[‘population_csv_path’] (str): location of the population</dt><dd><p>parameters csv. This will contain all age and stage specific
+parameters. (Required if args[‘do_batch’] is False)</p>
+</dd>
+<dt>args[‘population_csv_dir’] (str): location of the directory that</dt><dd><p>contains the Population Parameters CSV files for batch processing
+(Required if args[‘do_batch’] is True)</p>
+</dd>
+<dt>args[‘spawn_units’] (str): specifies whether the spawner abundance used in</dt><dd><p>the recruitment function should be calculated in terms of number of
+individuals (‘Individuals’) or in terms of biomass (‘Weight’). If
+‘Weight’ is selected, the user must provide a ‘Weight’ vector alongside
+the survival matrix in the Population Parameters CSV File. The ‘alpha’
+and ‘beta’ parameters provided by the user should correspond to the
+selected choice.</p>
+</dd>
+<dt>args[‘total_init_recruits’] (float): represents the initial number of</dt><dd><p>recruits that will be used in calculation of population on a per area
+basis.</p>
+</dd>
+<dt>args[‘recruitment_type’] (str): name corresponding to one of the built-in</dt><dd><p>recruitment functions {‘Beverton-Holt’, ‘Ricker’, ‘Fecundity’, Fixed},
+or ‘Other’, meaning that the user is passing in their own recruitment
+function as an anonymous python function via the optional dictionary
+argument ‘recruitment_func’.</p>
+</dd>
+<dt>args[‘recruitment_func’] (function): Required if args[‘recruitment_type’]</dt><dd><p>is set to ‘Other’.  See below for instructions on how to create a user-
+defined recruitment function.</p>
+</dd>
+<dt>args[‘alpha’] (float): must exist within args for BH or Ricker Recruitment.</dt><dd><p>Parameter that will be used in calculation of recruitment.</p>
+</dd>
+<dt>args[‘beta’] (float): must exist within args for BH or Ricker Recruitment.</dt><dd><p>Parameter that will be used in calculation of recruitment.</p>
+</dd>
+<dt>args[‘total_recur_recruits’] (float): must exist within args for Fixed</dt><dd><p>Recruitment. Parameter that will be used in calculation of recruitment.</p>
+</dd>
+</dl>
+<p>args[‘migr_cont’] (bool): if True, model uses migration.</p>
+<dl class="simple">
+<dt>args[‘migration_dir’] (str): if this parameter exists, it means migration</dt><dd><p>is desired. This is  the location of the parameters folder containing
+files for migration. There should be one file for every age class which
+migrates. (Required if args[‘migr_cont’] is True)</p>
+</dd>
+</dl>
+<p>args[‘val_cont’] (bool): if True, model computes valuation.</p>
+<dl class="simple">
+<dt>args[‘frac_post_process’] (float): represents the fraction of the species</dt><dd><p>remaining after processing of the whole carcass is complete. This will
+exist only if valuation is desired for the particular species.
+(Required if args[‘val_cont’] is True)</p>
+</dd>
+<dt>args[‘unit_price’] (float): represents the price for a single unit of</dt><dd><p>harvest. Exists only if valuation is desired. (Required if
+args[‘val_cont’] is True)</p>
+</dd>
+</dl>
+<p>Example Args:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">args</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;workspace_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/workspace_dir/&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;results_suffix&#39;</span><span class="p">:</span> <span class="s1">&#39;scenario_name&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;aoi_vector_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/aoi_vector_path&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;total_timesteps&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+    <span class="s1">&#39;population_type&#39;</span><span class="p">:</span> <span class="s1">&#39;Stage-Based&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;sexsp&#39;</span><span class="p">:</span> <span class="s1">&#39;Yes&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;harvest_units&#39;</span><span class="p">:</span> <span class="s1">&#39;Individuals&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;do_batch&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s1">&#39;population_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv_path&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;population_csv_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;spawn_units&#39;</span><span class="p">:</span> <span class="s1">&#39;Weight&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;total_init_recruits&#39;</span><span class="p">:</span> <span class="mf">100000.0</span><span class="p">,</span>
+    <span class="s1">&#39;recruitment_type&#39;</span><span class="p">:</span> <span class="s1">&#39;Ricker&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;alpha&#39;</span><span class="p">:</span> <span class="mf">32.4</span><span class="p">,</span>
+    <span class="s1">&#39;beta&#39;</span><span class="p">:</span> <span class="mf">54.2</span><span class="p">,</span>
+    <span class="s1">&#39;total_recur_recruits&#39;</span><span class="p">:</span> <span class="mf">92.1</span><span class="p">,</span>
+    <span class="s1">&#39;migr_cont&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;migration_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/mig_dir/&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;val_cont&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;frac_post_process&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+    <span class="s1">&#39;unit_price&#39;</span><span class="p">:</span> <span class="mf">5.0</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Creating a User-Defined Recruitment Function</strong></p>
+<p>An optional argument has been created in the Fisheries Model to allow users
+proficient in Python to pass their own recruitment function into the
+program via the args dictionary.</p>
+<p>Using the Beverton-Holt recruitment function as an example, here’s how a
+user might create and pass in their own recruitment function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">natcap.invest</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="c1"># define input data</span>
+<span class="n">Matu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">])</span>  <span class="c1"># the Maturity vector in the Population</span>
+    <span class="n">Parameters</span> <span class="n">File</span>
+<span class="n">Weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">])</span>  <span class="c1"># the Weight vector in the Population</span>
+    <span class="n">Parameters</span> <span class="n">File</span>
+<span class="n">LarvDisp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">])</span>  <span class="c1"># the LarvalDispersal vector in the</span>
+    <span class="n">Population</span> <span class="n">Parameters</span> <span class="n">File</span>
+<span class="n">alpha</span> <span class="o">=</span> <span class="mf">2.0</span>  <span class="c1"># scalar value</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="mf">10.0</span>  <span class="c1"># scalar value</span>
+<span class="n">sexsp</span> <span class="o">=</span> <span class="mi">2</span>   <span class="c1"># 1 = not sex-specific, 2 = sex-specific</span>
+
+<span class="c1"># create recruitment function</span>
+<span class="k">def</span> <span class="nf">spawners</span><span class="p">(</span><span class="n">N_prev</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">N_prev</span> <span class="o">*</span> <span class="n">Matu</span> <span class="o">*</span> <span class="n">Weight</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">rec_func_BH</span><span class="p">(</span><span class="n">N_prev</span><span class="p">):</span>
+    <span class="n">N_0</span> <span class="o">=</span> <span class="p">(</span><span class="n">LarvDisp</span> <span class="o">*</span> <span class="p">((</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">spawners</span><span class="p">(</span>
+        <span class="n">N_prev</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">beta</span> <span class="o">+</span> <span class="n">spawners</span><span class="p">(</span><span class="n">N_prev</span><span class="p">))))</span> <span class="o">/</span> <span class="n">sexsp</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">N_0</span><span class="p">,</span> <span class="n">spawners</span><span class="p">(</span><span class="n">N_prev</span><span class="p">))</span>
+
+<span class="c1"># fill out args dictionary</span>
+<span class="n">args</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="c1"># ... define other arguments ...</span>
+<span class="n">args</span><span class="p">[</span><span class="s1">&#39;recruitment_type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Other&#39;</span>  <span class="c1"># lets program know to use user-</span>
+    <span class="n">defined</span> <span class="n">function</span>
+<span class="n">args</span><span class="p">[</span><span class="s1">&#39;recruitment_func&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rec_func_BH</span>  <span class="c1"># pass recruitment function as</span>
+    <span class="s1">&#39;anonymous&#39;</span> <span class="n">Python</span> <span class="n">function</span>
+
+<span class="c1"># run model</span>
+<span class="n">natcap</span><span class="o">.</span><span class="n">invest</span><span class="o">.</span><span class="n">fisheries</span><span class="o">.</span><span class="n">fisheries</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Conditions that a new recruitment function must meet to run properly:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>The function must accept as an argument:</strong> a single numpy three-</dt><dd><p>dimensional array (N_prev) representing the state of the population at
+the previous time step. N_prev has three dimensions: the indices of the
+first dimension correspond to the region (must be in same order as
+provided in the Population Parameters File), the indices of the second
+dimension represent the sex if it is specific (i.e. two indices
+representing female, then male if the model is ‘sex-specific’, else
+just a single zero index representing the female and male populations
+aggregated together), and the indicies of the third dimension represent
+age/stage in ascending order.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>The function must return:</strong> a tuple of two values. The first value</dt><dd><p>(N_0) being a single numpy one-dimensional array representing the
+youngest age of the population for the next time step. The indices of
+the array correspond to the regions of the population (outputted in
+same order as provided). If the model is sex-specific, it is currently
+assumed that males and females are produced in equal number and that
+the returned array has been already been divided by 2 in the
+recruitment function. The second value (spawners) is the number or
+weight of the spawners created by the population from the previous time
+step, provided as a scalar float value (non-negative).</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Example of How Recruitment Function Operates within Fisheries Model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># input data</span>
+<span class="n">N_prev_xsa</span> <span class="o">=</span> <span class="p">[[[</span><span class="n">region0</span><span class="o">-</span><span class="n">female</span><span class="o">-</span><span class="n">age0</span><span class="p">,</span> <span class="n">region0</span><span class="o">-</span><span class="n">female</span><span class="o">-</span><span class="n">age1</span><span class="p">],</span>
+               <span class="p">[</span><span class="n">region0</span><span class="o">-</span><span class="n">male</span><span class="o">-</span><span class="n">age0</span><span class="p">,</span> <span class="n">region1</span><span class="o">-</span><span class="n">male</span><span class="o">-</span><span class="n">age1</span><span class="p">]],</span>
+              <span class="p">[[</span><span class="n">region1</span><span class="o">-</span><span class="n">female</span><span class="o">-</span><span class="n">age0</span><span class="p">,</span> <span class="n">region1</span><span class="o">-</span><span class="n">female</span><span class="o">-</span><span class="n">age1</span><span class="p">],</span>
+               <span class="p">[</span><span class="n">region1</span><span class="o">-</span><span class="n">male</span><span class="o">-</span><span class="n">age0</span><span class="p">],</span> <span class="p">[</span><span class="n">region1</span><span class="o">-</span><span class="n">male</span><span class="o">-</span><span class="n">age1</span><span class="p">]]]</span>
+
+<span class="c1"># execute function</span>
+<span class="n">N_0_x</span><span class="p">,</span> <span class="n">spawners</span> <span class="o">=</span> <span class="n">rec_func</span><span class="p">(</span><span class="n">N_prev_xsa</span><span class="p">)</span>
+
+<span class="c1"># output data - where N_0 contains information about the youngest</span>
+<span class="c1">#     age/stage of the population for the next time step:</span>
+<span class="n">N_0_x</span> <span class="o">=</span> <span class="p">[</span><span class="n">region0</span><span class="o">-</span><span class="n">age0</span><span class="p">,</span> <span class="n">region1</span><span class="o">-</span><span class="n">age0</span><span class="p">]</span> <span class="c1"># if sex-specific, rec_func should</span>
+    <span class="n">divide</span> <span class="n">by</span> <span class="n">two</span> <span class="n">before</span> <span class="n">returning</span> <span class="nb">type</span><span class="p">(</span><span class="n">spawners</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">float</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.fisheries.fisheries_hst">
+<span id="natcap-invest-fisheries-fisheries-hst-module"></span><h2>natcap.invest.fisheries.fisheries_hst module<a class="headerlink" href="#module-natcap.invest.fisheries.fisheries_hst" title="Permalink to this headline">¶</a></h2>
+<p>The Fisheries Habitat Scenario Tool module contains the high-level code for
+generating a new Population Parameters CSV File based on habitat area
+change and the dependencies that particular classes of the given species
+have on particular habitats.</p>
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_hst.convert_survival_matrix">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_hst.</code><code class="sig-name descname">convert_survival_matrix</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vars_dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_hst.convert_survival_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new survival matrix based on the information provided by
+the user related to habitat area changes and class-level dependencies
+on those habitats.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>vars_dict</strong> (<em>dictionary</em>) – see fisheries_preprocessor_io.fetch_args for
+example</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>modified vars_dict with new Survival matrix</dt><dd><p>accessible using the key ‘Surv_nat_xsa_mod’ with element values
+that exist between [0,1]</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>vars_dict (dictionary)</p>
+</dd>
+</dl>
+<p>Example Returns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ret</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># Other Variables...</span>
+
+    <span class="s1">&#39;Surv_nat_xsa_mod&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">([</span><span class="o">...</span><span class="p">])</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_hst.execute">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_hst.</code><code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_hst.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fisheries: Habitat Scenario Tool.</p>
+<p>The Fisheries Habitat Scenario Tool generates a new Population Parameters
+CSV File with modified survival attributes across classes and regions
+based on habitat area changes and class-level dependencies on those
+habitats.</p>
+<dl class="simple">
+<dt>args[‘workspace_dir’] (str): location into which the resultant</dt><dd><p>modified Population Parameters CSV file should be placed.</p>
+</dd>
+<dt>args[‘sexsp’] (str): specifies whether or not the age and stage</dt><dd><p>classes are distinguished by sex. Options: ‘Yes’ or ‘No’</p>
+</dd>
+<dt>args[‘population_csv_path’] (str): location of the population</dt><dd><p>parameters csv file. This file contains all age and stage specific
+parameters.</p>
+</dd>
+<dt>args[‘habitat_chg_csv_path’] (str): location of the habitat change</dt><dd><p>parameters csv file. This file contains habitat area change
+information.</p>
+</dd>
+<dt>args[‘habitat_dep_csv_path’] (str): location of the habitat dependency</dt><dd><p>parameters csv file. This file contains habitat-class dependency
+information.</p>
+</dd>
+<dt>args[‘gamma’] (float): describes the relationship between a change</dt><dd><p>in habitat area and a change in survival of life stages dependent on
+that habitat</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+<p>Example Args:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">args</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;workspace_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/workspace_dir/&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;sexsp&#39;</span><span class="p">:</span> <span class="s1">&#39;Yes&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;population_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;habitat_chg_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;habitat_dep_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;gamma&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>Modified Population Parameters CSV File saved to ‘workspace_dir/output/’</p></li>
+</ul>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.fisheries.fisheries_hst_io">
+<span id="natcap-invest-fisheries-fisheries-hst-io-module"></span><h2>natcap.invest.fisheries.fisheries_hst_io module<a class="headerlink" href="#module-natcap.invest.fisheries.fisheries_hst_io" title="Permalink to this headline">¶</a></h2>
+<p>The Fisheries Habitat Scenarios Tool IO module contains functions for handling
+inputs and outputs</p>
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_hst_io.fetch_args">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_hst_io.</code><code class="sig-name descname">fetch_args</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_hst_io.fetch_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetches input arguments from the user, verifies for correctness and
+completeness, and returns a list of variables dictionaries</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>args</strong> (<em>dictionary</em>) – arguments from the user (same as Fisheries
+Preprocessor entry point)</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary containing necessary variables</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>vars_dict (dictionary)</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – parameter mismatch between Population and Habitat CSV files</p>
+</dd>
+</dl>
+<p>Example Returns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">vars_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;workspace_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/workspace_dir/&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;output_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/output_dir/&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;sexsp&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s1">&#39;gamma&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+
+    <span class="c1"># Pop Vars</span>
+    <span class="s1">&#39;population_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv_path&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Surv_nat_xsa&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Classes&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Class_vectors&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;Vulnfishing&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Maturity&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Duration&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Weight&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Fecundity&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;Regions&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Region_vectors&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;Exploitationfraction&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Larvaldispersal&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="p">},</span>
+
+    <span class="c1"># Habitat Vars</span>
+    <span class="s1">&#39;habitat_chg_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;habitat_dep_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Habitats&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;habitat1&#39;</span><span class="p">,</span> <span class="s1">&#39;habitat2&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="s1">&#39;Hab_classes&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;class1&#39;</span><span class="p">,</span> <span class="s1">&#39;class2&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="s1">&#39;Hab_regions&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;region1&#39;</span><span class="p">,</span> <span class="s1">&#39;region2&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="s1">&#39;Hab_chg_hx&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Hab_dep_ha&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Hab_class_mvmt_a&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Hab_dep_num_a&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_hst_io.read_habitat_chg_csv">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_hst_io.</code><code class="sig-name descname">read_habitat_chg_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_hst_io.read_habitat_chg_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses and verifies a Habitat Change Parameters CSV file and returns a
+dictionary of information related to the interaction between a species
+and the given habitats.</p>
+<p>Parses the Habitat Change Parameters CSV file for the following vectors:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Names of Habitats and Regions</p></li>
+<li><p>Habitat Area Change</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>args</strong> (<em>dictionary</em>) – arguments from the user (same as Fisheries
+HST entry point)</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>dictionary containing necessary</dt><dd><p>variables</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>habitat_chg_dict (dictionary)</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#natcap.invest.fisheries.fisheries_io.MissingParameter" title="natcap.invest.fisheries.fisheries_io.MissingParameter"><strong>MissingParameter</strong></a> – required parameter not included</p></li>
+<li><p><strong>ValueError</strong> – values are out of bounds or of wrong type</p></li>
+<li><p><strong>IndexError</strong> – likely a file formatting issue</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example Returns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">habitat_chg_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;Habitats&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;habitat1&#39;</span><span class="p">,</span> <span class="s1">&#39;habitat2&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="s1">&#39;Hab_regions&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;region1&#39;</span><span class="p">,</span> <span class="s1">&#39;region2&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="s1">&#39;Hab_chg_hx&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="o">...</span><span class="p">]),</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_hst_io.read_habitat_dep_csv">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_hst_io.</code><code class="sig-name descname">read_habitat_dep_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_hst_io.read_habitat_dep_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses and verifies a Habitat Dependency Parameters CSV file and returns a
+dictionary of information related to the interaction between a species and
+the given habitats.</p>
+<p>Parses the Habitat Parameters CSV file for the following vectors:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Names of Habitats and Classes</p></li>
+<li><p>Habitat-Class Dependency</p></li>
+</ul>
+</div></blockquote>
+<p>The following vectors are derived from the information given in the file:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Classes where movement between habitats occurs</p></li>
+<li><p>Number of habitats that a particular class depends upon</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>args</strong> (<em>dictionary</em>) – arguments from the user (same as Fisheries
+HST entry point)</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>dictionary containing necessary</dt><dd><p>variables</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>habitat_dep_dict (dictionary)</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>MissingParameter - required parameter not included</strong> – </p></li>
+<li><p><strong>ValueError - values are out of bounds</strong><strong> or </strong><strong>of wrong type</strong> – </p></li>
+<li><p><strong>IndexError - likely a file formatting issue</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+<p>Example Returns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">habitat_dep_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;Habitats&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;habitat1&#39;</span><span class="p">,</span> <span class="s1">&#39;habitat2&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="s1">&#39;Hab_classes&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;class1&#39;</span><span class="p">,</span> <span class="s1">&#39;class2&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="s1">&#39;Hab_dep_ha&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Hab_class_mvmt_a&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Hab_dep_num_a&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_hst_io.read_population_csv">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_hst_io.</code><code class="sig-name descname">read_population_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_hst_io.read_population_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses and verifies a single Population Parameters CSV file</p>
+<p>Parses and verifies inputs from the Population Parameters CSV file.
+If not all necessary vectors are included, the function will raise a
+MissingParameter exception. Survival matrix will be arranged by
+class-elements, 2nd dim: sex, and 3rd dim: region. Class vectors will
+be arranged by class-elements, 2nd dim: sex (depending on whether model
+is sex-specific) Region vectors will be arraged by region-elements,
+sex-agnostic.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>args</strong> (<em>dictionary</em>) – arguments provided by user</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>dictionary containing verified population</dt><dd><p>arguments</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pop_dict (dictionary)</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#natcap.invest.fisheries.fisheries_io.MissingParameter" title="natcap.invest.fisheries.fisheries_io.MissingParameter"><strong>MissingParameter</strong></a> – required parameter not included</p></li>
+<li><p><strong>ValueError</strong> – values are out of bounds or of wrong type</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example Returns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pop_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;population_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Surv_nat_xsa&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="o">...</span><span class="p">),</span>
+
+    <span class="c1"># Class Vectors</span>
+    <span class="s1">&#39;Classes&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Class_vector_names&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+    <span class="s1">&#39;Class_vectors&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;Vulnfishing&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Maturity&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Duration&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Weight&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Fecundity&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+    <span class="p">},</span>
+
+    <span class="c1"># Region Vectors</span>
+    <span class="s1">&#39;Regions&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Region_vector_names&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+    <span class="s1">&#39;Region_vectors&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;Exploitationfraction&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Larvaldispersal&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_hst_io.save_population_csv">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_hst_io.</code><code class="sig-name descname">save_population_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vars_dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_hst_io.save_population_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new Population Parameters CSV file based the provided inputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>vars_dict</strong> (<em>dictionary</em>) – variables generated by preprocessor arguments
+and run.</p>
+</dd>
+</dl>
+<p>Example Args:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">args</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;workspace_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/workspace_dir/&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;output_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/output_dir/&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;sexsp&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s1">&#39;population_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv&#39;</span><span class="p">,</span>  <span class="c1"># original csv file</span>
+    <span class="s1">&#39;Surv_nat_xsa&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Surv_nat_xsa_mod&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+
+    <span class="c1"># Class Vectors</span>
+    <span class="s1">&#39;Classes&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Class_vector_names&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+    <span class="s1">&#39;Class_vectors&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;Vulnfishing&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Maturity&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Duration&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Weight&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Fecundity&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+    <span class="p">},</span>
+
+    <span class="c1"># Region Vectors</span>
+    <span class="s1">&#39;Regions&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Region_vector_names&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+    <span class="s1">&#39;Region_vectors&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;Exploitationfraction&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Larvaldispersal&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="p">},</span>
+
+    <span class="c1"># other arguments are ignored ...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>Creates a modified Population Parameters CSV file located in the ‘workspace/output/’ folder</p></li>
+<li><p>Currently appends ‘_modified’ to original filename for new filename</p></li>
+</ul>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.fisheries.fisheries_io">
+<span id="natcap-invest-fisheries-fisheries-io-module"></span><h2>natcap.invest.fisheries.fisheries_io module<a class="headerlink" href="#module-natcap.invest.fisheries.fisheries_io" title="Permalink to this headline">¶</a></h2>
+<p>The Fisheries IO module contains functions for handling inputs and outputs</p>
+<dl class="py exception">
+<dt id="natcap.invest.fisheries.fisheries_io.MissingParameter">
+<em class="property">exception </em><code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_io.</code><code class="sig-name descname">MissingParameter</code><a class="headerlink" href="#natcap.invest.fisheries.fisheries_io.MissingParameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code></p>
+<p>An exception class that may be raised when a necessary parameter is not
+provided by the user.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_io.create_outputs">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_io.</code><code class="sig-name descname">create_outputs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vars_dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_io.create_outputs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates outputs from variables generated in the run_population_model()
+function in the fisheries_model module</p>
+<p>Creates the following:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Results CSV File</p></li>
+<li><p>Results HTML Page</p></li>
+<li><p>Results Shapefile (if provided)</p></li>
+<li><p>Intermediate CSV File</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>vars_dict</strong> (<em>dictionary</em>) – contains variables generated by model run</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_io.fetch_args">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_io.</code><code class="sig-name descname">fetch_args</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em>, <em class="sig-param"><span class="n">create_outputs</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_io.fetch_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetches input arguments from the user, verifies for correctness and
+completeness, and returns a list of variables dictionaries</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>args</strong> (<em>dictionary</em>) – arguments from the user</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>set of variable dictionaries for each</dt><dd><p>model</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>model_list (list)</p>
+</dd>
+</dl>
+<p>Example Returns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model_list</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s1">&#39;workspace_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/workspace_dir&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;results_suffix&#39;</span><span class="p">:</span> <span class="s1">&#39;scenario_name&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;output_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/output_dir&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;aoi_vector_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/aoi_vector_path&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;total_timesteps&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+        <span class="s1">&#39;population_type&#39;</span><span class="p">:</span> <span class="s1">&#39;Stage-Based&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;sexsp&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="s1">&#39;harvest_units&#39;</span><span class="p">:</span> <span class="s1">&#39;Individuals&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;do_batch&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s1">&#39;spawn_units&#39;</span><span class="p">:</span> <span class="s1">&#39;Weight&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;total_init_recruits&#39;</span><span class="p">:</span> <span class="mf">100.0</span><span class="p">,</span>
+        <span class="s1">&#39;recruitment_type&#39;</span><span class="p">:</span> <span class="s1">&#39;Ricker&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;alpha&#39;</span><span class="p">:</span> <span class="mf">32.4</span><span class="p">,</span>
+        <span class="s1">&#39;beta&#39;</span><span class="p">:</span> <span class="mf">54.2</span><span class="p">,</span>
+        <span class="s1">&#39;total_recur_recruits&#39;</span><span class="p">:</span> <span class="mf">92.1</span><span class="p">,</span>
+        <span class="s1">&#39;migr_cont&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s1">&#39;val_cont&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s1">&#39;frac_post_process&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="s1">&#39;unit_price&#39;</span><span class="p">:</span> <span class="mf">5.0</span><span class="p">,</span>
+
+        <span class="c1"># Pop Params</span>
+        <span class="s1">&#39;population_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv_path&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Survnaturalfrac&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Classes&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Vulnfishing&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Maturity&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Duration&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Weight&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Fecundity&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Regions&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Exploitationfraction&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Larvaldispersal&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+
+        <span class="c1"># Mig Params</span>
+        <span class="s1">&#39;migration_dir&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/mig_dir&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Migration&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">matrix</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">matrix</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+        <span class="o">...</span>  <span class="c1"># additional dictionary doesn&#39;t exist when &#39;do_batch&#39;</span>
+             <span class="c1"># is false</span>
+    <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function receives an unmodified ‘args’ dictionary from the user</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_io.read_migration_tables">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_io.</code><code class="sig-name descname">read_migration_tables</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em>, <em class="sig-param"><span class="n">class_list</span></em>, <em class="sig-param"><span class="n">region_list</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_io.read_migration_tables" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses, verifies and orders list of migration matrices necessary for
+program.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>dictionary</em>) – same args as model entry point</p></li>
+<li><p><strong>class_list</strong> (<em>list</em>) – list of class names</p></li>
+<li><p><strong>region_list</strong> (<em>list</em>) – list of region names</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>see example below</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>mig_dict (dictionary)</p>
+</dd>
+</dl>
+<p>Example Returns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mig_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;Migration&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">matrix</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">matrix</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If migration matrices are not provided for all classes, the function will
+generate identity matrices for missing classes</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_io.read_population_csv">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_io.</code><code class="sig-name descname">read_population_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em>, <em class="sig-param"><span class="n">path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_io.read_population_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses and verifies a single Population Parameters CSV file</p>
+<p>Parses and verifies inputs from the Population Parameters CSV file.
+If not all necessary vectors are included, the function will raise a
+MissingParameter exception. Survival matrix will be arranged by
+class-elements, 2nd dim: sex, and 3rd dim: region. Class vectors will
+be arranged by class-elements, 2nd dim: sex (depending on whether model
+is sex-specific) Region vectors will be arraged by region-elements,
+sex-agnostic.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>dictionary</em>) – arguments provided by user</p></li>
+<li><p><strong>path</strong> (<em>string</em>) – the particular Population Parameters CSV file to
+parse and verifiy</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>dictionary containing verified population</dt><dd><p>arguments</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pop_dict (dictionary)</p>
+</dd>
+</dl>
+<p>Example Returns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pop_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;population_csv_path&#39;</span><span class="p">:</span> <span class="s1">&#39;path/to/csv&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Survnaturalfrac&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="o">...</span><span class="p">),</span>
+
+    <span class="c1"># Class Vectors</span>
+    <span class="s1">&#39;Classes&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Vulnfishing&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Maturity&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Duration&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Weight&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Fecundity&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+
+    <span class="c1"># Region Vectors</span>
+    <span class="s1">&#39;Regions&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Exploitationfraction&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;Larvaldispersal&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_io.read_population_csvs">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_io.</code><code class="sig-name descname">read_population_csvs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_io.read_population_csvs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses and verifies the Population Parameters CSV files</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>args</strong> (<em>dictionary</em>) – arguments provided by user</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>list of dictionaries containing verified population</dt><dd><p>arguments</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pop_list (list)</p>
+</dd>
+</dl>
+<p>Example Returns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pop_list</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s1">&#39;Survnaturalfrac&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="p">[[</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]],</span> <span class="o">...</span><span class="p">),</span>
+
+        <span class="c1"># Class Vectors</span>
+        <span class="s1">&#39;Classes&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Vulnfishing&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Maturity&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Duration&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Weight&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Fecundity&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="o">...</span><span class="p">]),</span>
+
+        <span class="c1"># Region Vectors</span>
+        <span class="s1">&#39;Regions&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Exploitationfraction&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+        <span class="s1">&#39;Larvaldispersal&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+        <span class="o">...</span>
+    <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.fisheries.fisheries_model">
+<span id="natcap-invest-fisheries-fisheries-model-module"></span><h2>natcap.invest.fisheries.fisheries_model module<a class="headerlink" href="#module-natcap.invest.fisheries.fisheries_model" title="Permalink to this headline">¶</a></h2>
+<p>The Fisheries Model module contains functions for running the model</p>
+<p>Variable Suffix Notation:
+t: time
+x: area/region
+a: age/class
+s: sex</p>
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_model.initialize_vars">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_model.</code><code class="sig-name descname">initialize_vars</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vars_dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_model.initialize_vars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes variables for model run</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>vars_dict</strong> (<em>dictionary</em>) – verified arguments and variables</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>modified vars_dict with additional variables</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>vars_dict (dictionary)</p>
+</dd>
+</dl>
+<p>Example Returns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">vars_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># (original vars)</span>
+
+    <span class="s1">&#39;Survtotalfrac&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>  <span class="c1"># a,s,x</span>
+    <span class="s1">&#39;G_survtotalfrac&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>  <span class="c1"># (same)</span>
+    <span class="s1">&#39;P_survtotalfrac&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>  <span class="c1"># (same)</span>
+    <span class="s1">&#39;N_tasx&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>  <span class="c1"># Index Order: t,a,s,x</span>
+    <span class="s1">&#39;H_tx&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span> <span class="c1"># t,x</span>
+    <span class="s1">&#39;V_tx&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span> <span class="c1"># t,x</span>
+    <span class="s1">&#39;Spawners_t&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_model.run_population_model">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_model.</code><code class="sig-name descname">run_population_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vars_dict</span></em>, <em class="sig-param"><span class="n">init_cond_func</span></em>, <em class="sig-param"><span class="n">cycle_func</span></em>, <em class="sig-param"><span class="n">harvest_func</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_model.run_population_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs the model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vars_dict</strong> (<em>dictionary</em>) – </p></li>
+<li><p><strong>init_cond_func</strong> (<em>lambda function</em>) – sets initial conditions</p></li>
+<li><p><strong>cycle_func</strong> (<em>lambda function</em>) – computes numbers for the next time step</p></li>
+<li><p><strong>harvest_func</strong> (<em>lambda function</em>) – computes harvest and valuation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>vars_dict (dictionary)</p>
+</dd>
+</dl>
+<p>Example Returned Dictionary:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="c1"># (other items)</span>
+    <span class="o">...</span>
+    <span class="s1">&#39;N_tasx&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>  <span class="c1"># Index Order: time, class, sex, region</span>
+    <span class="s1">&#39;H_tx&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>  <span class="c1"># Index Order: time, region</span>
+    <span class="s1">&#39;V_tx&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>  <span class="c1"># Index Order: time, region</span>
+    <span class="s1">&#39;Spawners_t&#39;</span><span class="p">:</span> <span class="n">np</span><span class="p">,</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">]),</span>
+    <span class="s1">&#39;equilibrate_timestep&#39;</span><span class="p">:</span> <span class="o">&lt;</span><span class="nb">int</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_model.set_cycle_func">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_model.</code><code class="sig-name descname">set_cycle_func</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vars_dict</span></em>, <em class="sig-param"><span class="n">rec_func</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_model.set_cycle_func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a function to run a single cycle in the model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vars_dict</strong> (<em>dictionary</em>) – </p></li>
+<li><p><strong>rec_func</strong> (<em>lambda function</em>) – recruitment function</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example Output of Returned Cycle Function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">N_asx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">...</span><span class="p">])</span>
+<span class="n">spawners</span> <span class="o">=</span> <span class="o">&lt;</span><span class="nb">int</span><span class="o">&gt;</span>
+
+<span class="n">N_next</span><span class="p">,</span> <span class="n">spawners</span> <span class="o">=</span> <span class="n">cycle_func</span><span class="p">(</span><span class="n">N_prev</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_model.set_harvest_func">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_model.</code><code class="sig-name descname">set_harvest_func</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vars_dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_model.set_harvest_func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates harvest function that calculates the given harvest and valuation
+of the fisheries population over each time step for a given region.
+Returns None if harvest isn’t selected by user.</p>
+<p>Example Outputs of Returned Harvest Function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">H_x</span><span class="p">,</span> <span class="n">V_x</span> <span class="o">=</span> <span class="n">harv_func</span><span class="p">(</span><span class="n">N_tasx</span><span class="p">)</span>
+
+<span class="n">H_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">4.5</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+<span class="n">V_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">6.0</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_model.set_init_cond_func">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_model.</code><code class="sig-name descname">set_init_cond_func</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vars_dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_model.set_init_cond_func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a function to set the initial conditions of the model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>vars_dict</strong> (<em>dictionary</em>) – variables</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>initial conditions function</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>init_cond_func (lambda function)</p>
+</dd>
+</dl>
+<p>Example Return Array:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">N_asx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">([</span><span class="o">...</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="natcap.invest.fisheries.fisheries_model.set_recru_func">
+<code class="sig-prename descclassname">natcap.invest.fisheries.fisheries_model.</code><code class="sig-name descname">set_recru_func</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vars_dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#natcap.invest.fisheries.fisheries_model.set_recru_func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates recruitment function that calculates the number of recruits for
+class 0 at time t for each region (currently sex agnostic). Also
+returns number of spawners</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>vars_dict</strong> (<em>dictionary</em>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>recruitment function</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>rec_func (function)</p>
+</dd>
+</dl>
+<p>Example Output of Returned Recruitment Function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">N_next</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">spawners</span> <span class="o">=</span> <span class="n">rec_func</span><span class="p">(</span><span class="n">N_prev</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-natcap.invest.fisheries">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-natcap.invest.fisheries" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="natcap.invest.hydropower.html" class="btn btn-neutral float-right" title="natcap.invest.hydropower package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="natcap.invest.finfish_aquaculture.html" class="btn btn-neutral float-left" title="natcap.invest.finfish_aquaculture package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2019, The Natural Capital Project
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
