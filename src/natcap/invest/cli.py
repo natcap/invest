@@ -574,7 +574,7 @@ def main(user_args=None):
 
     if args.subcommand == 'serve':
         import natcap.invest.app
-        natcap.invest.app.app.run()
+        natcap.invest.web_api.app.run()
         parser.exit(0)
 
 if __name__ == '__main__':

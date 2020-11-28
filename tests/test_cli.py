@@ -333,7 +333,7 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: serve entry-point exists; flask app can import."""
         from natcap.invest import cli
 
-        with unittest.mock.patch('natcap.invest.app.app.run',
+        with unittest.mock.patch('natcap.invest.web_api.app.run',
                 return_value=None) as patched_app:
             with self.assertRaises(SystemExit) as exit_cm:
                 cli.main(['serve'])
