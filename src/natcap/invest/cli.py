@@ -288,7 +288,7 @@ class SelectModelAction(argparse.Action):
 
 
 def main(user_args=None):
-    """CLI entry point for launching InVEST runs.
+    """CLI entry point for launching InVEST runs and other useful utilities.
 
     This command-line interface supports two methods of launching InVEST models
     from the command-line:
@@ -573,8 +573,8 @@ def main(user_args=None):
                         'App terminated with exit code %s\n' % app_exitcode)
 
     if args.subcommand == 'serve':
-        from natcap.invest import app
-        app.app.run()
+        import natcap.invest.app
+        natcap.invest.app.app.run()
         parser.exit(0)
 
 if __name__ == '__main__':
