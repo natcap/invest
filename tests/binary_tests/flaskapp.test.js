@@ -4,7 +4,6 @@ import * as server_requests from '../../src/server_requests';
 import { findInvestBinaries, createPythonFlaskProcess } from '../../src/main_helpers';
 import { argsDictFromObject } from '../../src/utils';
 
-// If SERVER is defined in .env, this appends it to global process.env
 const dotenv = require('dotenv');
 dotenv.config();
 
