@@ -31,15 +31,14 @@ Getting Started
 
     installing
     cli
-    changelog
     scripting
 
-API Reference
+Resources
 -------------
 
 .. toctree::
     :maxdepth: 1
 
+    Model Entry Points <models>
     Full API Reference <api>
-
-.. End of file
+    Changelog <changelog>

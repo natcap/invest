@@ -302,59 +302,39 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 # Specify the imports that must be mocked out in order to generate the docs.
-autodoc_mock_imports = ['osgeo', 'PyQt4', 'shapely', 'shapely.wkb',
+autodoc_mock_imports = [
+    'pylab', 'pyamg', 'osgeo', 'PyQt4', 'shapely', 'shapely.wkb',
     'rtree', 'Pyro4', 'PyQt4.QtGui.QWidget',
     'shapely.geometry', 'osgeo.osr', 'osgeo.gdal', 'gdal',
     'shapely.wkt', 'shapely.ops', 'shapely.speedups', 'shapely.errors',
     'shapely.strtree',
-    'shapely.prepared', 'PyQt4.QtTest',
+    'shapely.prepared', 'qgis.utils', 'grass.script.setup', 'PyQt4.QtTest',
     'PyQt4.QtCore', 'geoprocessing_core', 'pygeoprocessing', 'pandas',
-    'qtpy', 'qtpy.QtWidgets', 'pygeoprocessing.routing',
-    
+    'qtpy', 'qtpy.QtWidgets', 'qtpy.QtCore', 'pygeoprocessing.routing',
+    'pygeoprocessing.testing', 'qtawesome', 'sip', 'taskgraph',
+    'natcap.invest.ndr.ndr_core', 'natcap.invest.sdr.sdr_core',
+    'natcap.invest.scenic_quality.viewshed',
+    'natcap.invest.seasonal_water_yield.seasonal_water_yield_core',
+    'natcap.invest.ui.inputs', 'natcap.invest.ui.model'
 ]
 
-# Mock class with attribute handling.  As suggested by:
-# http://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-from unittest.mock import MagicMock
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return MagicMock()
 
-# Any time we run a sphinx operation, also generate the API documentation.
-# This should work OK, so long as the required modules (above) are sufficiently
-# mocked up.
-sys.modules.update((mod_name, Mock()) for mod_name in autodoc_mock_imports)
-
-# mock the pygeoprocessing version to be whatever is in the natcap.invest
-# __init__ file.
-_invest_init = os.path.join(
-    DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap', 'invest',
-    '__init__.py')
-with open(_invest_init) as init_file:
-    for line in init_file:
-        if line.startswith('PYGEOPROCESSING_REQUIRED'):
-            pgp_version = ast.literal_eval(line.split(' ')[-1].strip())
-            sys.modules['pygeoprocessing'].__version__ = pgp_version
-
-sys.modules['osgeo'].gdal.GetDriverCount.return_value = 1
-sys.modules['osgeo.gdal'].GetDriverCount.return_value = 1
-sys.modules['gdal'].GetDriverCount.return_value = 1
-
-try:
-    from natcap.invest import __version__
-except ImportError:
-    # If the package isn't installed, the __version__ attribute won't be
-    # available.  Setting it anyways from the version from setuptools_scm.
-    sys.modules['natcap.invest'].__version__ = _version
-
+# Use sphinx apidoc tool to generate documentation for invest
+# Generated rst files go into the api/ directory
 try:
     from sphinx import apidoc  # sphinx < 1.7
 except ImportError:
     from sphinx.ext import apidoc  # sphinx >= 1.7
+print(os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap'))
+
+# Note that some apidoc options like --separate and --module-first may not work
+# the same because we aren't making use of their values in the custom templates
 apidoc.main([
-    '--force',
-    '-o', os.path.join(DOCS_SOURCE_DIR, 'api'),
+    '--force',  # overwrite any files from previous run
+    '-o', os.path.join(DOCS_SOURCE_DIR, 'api'),  # output to api/
+    '--templatedir', os.path.join(DOCS_SOURCE_DIR, 'templates'),  # use custom templates
+    '--separate',
+    # '--no-toc',  # don't create a table of contents file (it seems redundant)
     os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap')
 ])
 

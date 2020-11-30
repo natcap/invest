@@ -4,21 +4,15 @@ API Reference
 
 .. Note::
 
-    For the function documentation of available models,
-    see :ref:`models`.
+    For the entrypoint to each model, see :ref:`models`. The InVEST graphic 
+    user interface interacts with the models through these entrypoints. If you 
+    want to use the models as they are, such as to automate runs, you should 
+    only access the entrypoint function of each model.
+
+    If however you want to modify a model, or only use certain components, see
+    below for the complete API reference.
 
 .. toctree::
-    :maxdepth: 2
-    :glob:
+    :maxdepth: 4
 
-    api/*
-
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
-.. End of file
+    api/natcap.rst
