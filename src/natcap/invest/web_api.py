@@ -1,3 +1,4 @@
+"""A Flask app with HTTP endpoints used by the InVEST Workbench."""
 import codecs
 import collections
 from datetime import datetime
@@ -152,8 +153,6 @@ def write_parameter_set_file():
 
 # Borrowed this function from natcap.invest.model because I assume
 # that module won't persist if we eventually deprecate the Qt UI.
-# TODO: we could consider refactoring this to javascript, though
-# there is one call here to `natcap.invest.cli.__version__`
 @app.route('/save_to_python', methods=['POST'])
 def save_to_python():
     """Writes a python script with a call to an InVEST model execute function.
