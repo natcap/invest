@@ -177,7 +177,7 @@ ARGS_SPEC = {
 
 
 def execute(args):
-    """InVEST Habitat Risk Assessment (HRA) Model.
+    """Habitat Risk Assessment.
 
     Args:
         args['workspace_dir'] (str): a path to the output workspace folder.

@@ -245,7 +245,7 @@ ARGS_SPEC = {
 
 
 def execute(args):
-    """Urban Cooling Model.
+    """Urban Cooling.
 
     Args:
         args['workspace_dir'] (str): path to target output directory.

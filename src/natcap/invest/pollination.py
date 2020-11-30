@@ -221,7 +221,7 @@ _EXPECTED_FARM_HEADERS = [
 
 
 def execute(args):
-    """InVEST Pollination Model.
+    """Pollination.
 
     Args:
         args['workspace_dir'] (string): a path to the output workspace folder.

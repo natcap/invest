@@ -178,7 +178,7 @@ _NODATA_YIELD = -1.0
 
 
 def execute(args):
-    """Crop Production Percentile Model.
+    """Crop Production Percentile.
 
     This model will take a landcover (crop cover?) map and produce yields,
     production, and observed crop yields, a nutrient table, and a clipped

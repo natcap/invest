@@ -165,7 +165,7 @@ ARGS_SPEC = {
 
 
 def execute(args):
-    """Run the Scenic Quality Model.
+    """Scenic Quality.
 
     Args:
         args['workspace_dir'] (string): (required) output directory for

@@ -205,7 +205,7 @@ _NODATA_YIELD = -1.0
 
 
 def execute(args):
-    """Crop Production Regression Model.
+    """Crop Production Regression.
 
     This model will take a landcover (crop cover?), N, P, and K map and
     produce modeled yields, and a nutrient table.
