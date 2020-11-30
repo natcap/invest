@@ -302,7 +302,16 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 # Specify the imports that must be mocked out in order to generate the docs.
-autodoc_mock_imports = ['osgeo', 'osgeo.gdal', 'gdal']
+autodoc_mock_imports = ['osgeo', 'PyQt4', 'shapely', 'shapely.wkb',
+    'rtree', 'Pyro4', 'PyQt4.QtGui.QWidget',
+    'shapely.geometry', 'osgeo.osr', 'osgeo.gdal', 'gdal',
+    'shapely.wkt', 'shapely.ops', 'shapely.speedups', 'shapely.errors',
+    'shapely.strtree',
+    'shapely.prepared', 'PyQt4.QtTest',
+    'PyQt4.QtCore', 'geoprocessing_core', 'pygeoprocessing', 'pandas',
+    'qtpy', 'qtpy.QtWidgets', 'pygeoprocessing.routing',
+    
+]
 
 # Mock class with attribute handling.  As suggested by:
 # http://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
@@ -420,6 +429,7 @@ def list_models(outfile):
         'path': natcap.invest.__path__,
         'prefix': 'natcap.invest.',
     }
+    print(natcap.invest.__path__)
 
     for _loader, name, _is_pkg in itertools.chain(
             pkgutil.walk_packages(**iteration_args),  # catch packages
@@ -455,6 +465,9 @@ def list_models(outfile):
 
     with open(outfile, 'w') as models_rst:
         models_rst.write(MODEL_RST_TEMPLATE)
+
+        for i in all_modules.items():
+            print(i)
 
         for name, module_title in sorted(all_modules.items(),
                                          key=lambda x: x[1]):
