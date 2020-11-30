@@ -46,7 +46,7 @@ jobs:
 
     - name: Test electron app with puppeteer
       uses: GabrielBB/xvfb-action@v1
-      if: ${{ matrix.os }} != 'macos-latest'
+      if: matrix.os != 'macos-latest'
       with:
         run: npm run test-electron-app
     
