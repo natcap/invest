@@ -60,7 +60,7 @@
     "hostname": "https://storage.googleapis.com",
     "bucket": "natcap-dev-build-artifacts",
     "fork": "invest/davemfish",
-    "version": "3.8.0.post1935+gb52992af",
+    "version": "3.8.0.post1941+g289301ee",
     "target": {
       "macos": "mac_invest_binaries.zip",
       "windows": "windows_invest_binaries.zip"
