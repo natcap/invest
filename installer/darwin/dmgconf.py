@@ -1,5 +1,5 @@
 import os
-CWD = os.path.join('installer', 'darwin')
+CWD = os.path.dirname(__file__)
 
 def get_size(start_path = '.'):
     total_size = 0
@@ -33,6 +33,6 @@ default_view = 'icon-view'
 
 format = 'UDZO'
 license = {
-    'licenses': {'en_US': 'LICENSE.txt'},
+    'licenses': {'en_US': os.path.join(CWD, '..', '..', 'LICENSE.txt')},
     'default-language': 'en_US',
 }
