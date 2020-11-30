@@ -4,7 +4,7 @@ import sys
 import os
 import itertools
 import glob
-from PyInstaller.compat import is_win, is_darwin, is_linux
+from PyInstaller.compat import is_win, is_darwin
 
 # Global Variables
 current_dir = os.getcwd()  # assume we're building from the project root
@@ -43,7 +43,7 @@ a = Analysis([cli_file], **kwargs)
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 # Create the executable file.
-if is_darwin or is_linux:
+if is_darwin:
     # add rtree, shapely, proj dependency dynamic libraries from conda
     # environment.
     # These libraries are specifically included here because they don't seem to
@@ -53,9 +53,9 @@ if is_darwin or is_linux:
     a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
         itertools.chain(
-            glob.glob(os.path.join(conda_env, 'lib', 'libspatialindex*')),
-            glob.glob(os.path.join(conda_env, 'lib', 'libgeos*')),
-            glob.glob(os.path.join(conda_env, 'lib', 'libproj*')),
+            glob.glob(os.path.join(conda_env, 'lib', 'libspatialindex*.dylib')),
+            glob.glob(os.path.join(conda_env, 'lib', 'libgeos*.dylib')),
+            glob.glob(os.path.join(conda_env, 'lib', 'libproj*.dylib')),
         )
     ]
 elif is_win:
