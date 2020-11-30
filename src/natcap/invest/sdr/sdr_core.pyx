@@ -84,7 +84,7 @@ cdef class _ManagedRaster:
     def __cinit__(self, raster_path, band_id, write_mode):
         """Create new instance of Managed Raster.
 
-        Parameters:
+        Args:
             raster_path (char*): path to raster that has block sizes that are
                 powers of 2. If not, an exception is raised.
             band_id (int): which band in `raster_path` to index. Uses GDAL
@@ -358,7 +358,7 @@ def calculate_sediment_deposition(
         target_sediment_deposition_path):
     """Calculate sediment deposition layer
 
-        Parameters:
+        Args:
             mfd_flow_direction_path (string): a path to a raster with
                 pygeoprocessing.routing MFD flow direction values.
             e_prime_path (string): path to a raster that shows sources of
@@ -582,7 +582,7 @@ def calculate_average_aspect(
     Calculates the average aspect ratio weighted by proportional flow
     direction.
 
-    Parameters:
+    Args:
         mfd_flow_direction_path (string): The path to an MFD flow direction
             raster.
         target_average_aspect_path (string): The path to where the calculated

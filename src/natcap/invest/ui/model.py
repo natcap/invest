@@ -86,7 +86,7 @@ def wait_on_signal(signal, timeout=250):
 def is_probably_datastack(filepath):
     """Check to see if the path provided is probably a datastack.
 
-    Parameters:
+    Args:
         filepath (string): A path to a location on disk.
 
     Returns:
@@ -150,7 +150,7 @@ class OptionsDialog(QtWidgets.QDialog):
                  reject_text='cancel', parent=None):
         """Initialize the OptionsDialog.
 
-        Parameters:
+        Args:
             title=None (string): The title of the dialog.  If ``None``, the
                 dialog title will not be set.
             modal=False (bool): The dialog's modality. If ``True``, the dialog
@@ -201,7 +201,7 @@ class OptionsDialog(QtWidgets.QDialog):
 
         Subclasses of ``OptionsDialog`` must reimplement this method.
 
-        Parameters:
+        Args:
             exitcode (int): The exit code of the dialog.
 
         Raises:
@@ -217,7 +217,7 @@ class OptionsDialog(QtWidgets.QDialog):
 
         Reimplemented to QDialog.showEvent.
 
-        Parameters:
+        Args:
             showEvent (QEvent): The current showEvent.
 
         Returns:
@@ -272,7 +272,7 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
     def exec_(self, starting_checkstate):
         """Execute the dialog.
 
-        Parameters:
+        Args:
             starting_checkstate (bool): Whether the "Remember inputs" checkbox
                 should be checked when the dialog is shown.
 
@@ -289,7 +289,7 @@ class ConfirmDialog(QtWidgets.QMessageBox):
     def __init__(self, title_text, body_text, parent=None):
         """Initialize the dialog.
 
-        Parameters:
+        Args:
             title_text (string): The title of the dialog.
             body_text (string): The body text of the dialog.
             parent=None (QWidget or None): The parent of the dialog.  None if
@@ -315,7 +315,7 @@ class ModelMismatchConfirmDialog(ConfirmDialog):
     def __init__(self, current_modelname, parent=None):
         """Initialize the dialog.
 
-        Parameters:
+        Args:
             current_modelname (string): The modelname of the current
                 InVESTModel target.
             parent=None (QWidget or None): The parent of the dialog.  None if
@@ -344,7 +344,7 @@ class ModelMismatchConfirmDialog(ConfirmDialog):
         Also updates the informative text based on the provided datastack
         modelname.
 
-        Parameters:
+        Args:
             datastack_modelname (string): The modelname of the datastack.
 
         Returns:
@@ -364,7 +364,7 @@ class SettingsDialog(OptionsDialog):
     def __init__(self, parent=None):
         """Initialize the SettingsDialog.
 
-        Parameters:
+        Args:
             parent=None (QWidget or None): The parent of the dialog.  None if
                 no parent.
 
@@ -475,7 +475,7 @@ class SettingsDialog(OptionsDialog):
     def postprocess(self, exitcode):
         """Save the settings from the dialog.
 
-        Parameters:
+        Args:
             exitcode (int): The exit code of the dialog.
 
         Returns:
@@ -514,7 +514,7 @@ class AboutDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         """Initialize the AboutDialog.
 
-        Parameters:
+        Args:
             parent=None (QWidget or None): The parent of the dialog.  None if
                 no parent.
         """
@@ -596,7 +596,7 @@ class LocalDocsMissingDialog(QtWidgets.QMessageBox):
     def __init__(self, local_docs_link, parent=None):
         """Initialize the LocalDocsMissingDialog.
 
-        Parameters:
+        Args:
             local_docs_link (string): The local path to the local HTML
                 documentation.
             parent=None (QWidget or None): The parent of the dialog.  None if
@@ -659,7 +659,7 @@ class WindowTitle(QtCore.QObject):
     def __init__(self, modelname='', filename='', modified=''):
         """Initialize the WindowTitle.
 
-        Parameters:
+        Args:
             modelname (string or None): The modelname to use.
             filename (string or None): The filename to use.
             modified (bool): Whether the datastack file has been modified.
@@ -681,7 +681,7 @@ class WindowTitle(QtCore.QObject):
         the new window title if the rendered title is different from the
         previous title.
 
-        Parameters:
+        Args:
             name (string): the name of the attribute to set.
             value: The new value for the attribute.
         """
@@ -744,7 +744,7 @@ class DatastackOptionsDialog(OptionsDialog):
     def __init__(self, paramset_basename, parent=None):
         """Initialize the DatastackOptionsDialog.
 
-        Parameters:
+        Args:
             paramset_basename (string): The basename of the new parameter set
                 file.
             parent=None (QWidget or None): The parent of the dialog.  None if
@@ -791,7 +791,7 @@ class DatastackOptionsDialog(OptionsDialog):
         def _optionally_disable(value):
             """A slot to optionally disable inputs based on datastack type.
 
-            Parameters:
+            Args:
                 value (string): The datastack type, one of the strings in the
                     datastack type dropdown menu.
 
@@ -815,7 +815,7 @@ class DatastackOptionsDialog(OptionsDialog):
         def _enable_continue_button(new_value):
             """A slot to enable the continue button when input is filled.
 
-            Parameters:
+            Args:
                 new_value (string): The value of the form.
 
             Returns:
@@ -860,7 +860,7 @@ class DatastackArchiveExtractionDialog(OptionsDialog):
     def __init__(self, parent=None):
         """Initialize the DatastackArchiveExtractionDialog.
 
-        Parameters:
+        Args:
             parent=None (QWidget or None): The parent of the dialog.  None if
                 no parent.
         """
@@ -897,7 +897,7 @@ class DatastackProgressDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         """Initialize the DatastackProgressDialog.
 
-        Parameters:
+        Args:
             parent=None (QWidget or None): The parent of the dialog.  None if
                 no parent.
         """
@@ -933,7 +933,7 @@ class DatastackProgressDialog(QtWidgets.QDialog):
         is being built.  The actual processing happens in a separate thread of
         control.
 
-        Parameters:
+        Args:
             args (dict): The model arguments to archive.
             model_name (string): The python-importable model identifier.
             datastack_path (string): The path to the file on disk where the
@@ -959,7 +959,7 @@ class DatastackProgressDialog(QtWidgets.QDialog):
         is being extracted.  The actual processing happens in a separate thread
         of control.
 
-        Parameters:
+        Args:
             datastack_path (string): The path to the datastack archive on disk
                 that should be extracted.
             dest_dir_path (string): The path to the directory on disk where the
@@ -1022,7 +1022,7 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         """Initialize the WholeModelValidationErrorDialog.
 
-        Parameters:
+        Args:
             parent=None (QWidget or None): The parent of the dialog.  None if
                 no parent.
         """
@@ -1067,7 +1067,7 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
     def post_warnings(self, validation_warnings):
         """Post validation warnings to the dialog.
 
-        Parameters:
+        Args:
             validation_warnings (list): A list of validation warnings from
                 whole-model validation.
 
@@ -1098,7 +1098,7 @@ class InvestVersionUpdateDialog(QtWidgets.QDialog):
     def __init__(self, parent=None, latest_version=None):
         """Initialize the InvestVersionUpdateDialog.
 
-        Parameters:
+        Args:
             parent=None (QWidget or None): The parent of the dialog. None if
                 no parent.
 
@@ -1156,7 +1156,7 @@ class InVESTModel(QtWidgets.QMainWindow):
     def __init__(self, label, target, validator, localdoc):
         """Initialize the Model.
 
-        Parameters:
+        Args:
             label (string): The model label.
             target (callable): The reference to the target ``execute``
                 function.
@@ -1411,7 +1411,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         and will cause the Open-Recent menu to be rebuilt, limiting the number
         of items in the menu to the 10 most recently-loaded datastack files.
 
-        Parameters:
+        Args:
             datastack_path (string): The path to the datastack file.
 
         Returns:
@@ -1463,7 +1463,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         All local attributes will be set, but instances of ``inputs.Input``
         will have their reference added to ``self.inputs``.
 
-        Parameters:
+        Args:
             name (string): The string name of the local attribute being set.
             value (object): The value of the local attribute being set.
 
@@ -1557,7 +1557,7 @@ class InVESTModel(QtWidgets.QMainWindow):
     def add_input(self, input_obj):
         """Add an input to the model.
 
-        Parameters:
+        Args:
             input_obj (natcap.invest.ui.inputs.InVESTModelInput): An
                 InVESTModelInput instance to add to the model.
 
@@ -1673,7 +1673,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         Datastacks may be saved and loaded through the Model UI. For API access
         to datastacks, look at :ref:natcap.invest.datastack.
 
-        Parameters:
+        Args:
             datastack_path=None (string): The path to the datastack file to
                 load.  If ``None``, the user will be prompted for a file
                 with a file dialog.
@@ -1747,7 +1747,7 @@ class InVESTModel(QtWidgets.QMainWindow):
     def load_args(self, datastack_args):
         """Load arguments from an args dict.
 
-        Parameters:
+        Args:
             datastack_args (dict): The arguments dictionary from which model
                 parameters will be loaded.
 
@@ -1782,7 +1782,7 @@ class InVESTModel(QtWidgets.QMainWindow):
     def _validation_finished(self, validation_warnings):
         """A slot to handle whole-model validation errors.
 
-        Parameters:
+        Args:
             validation_warnings (list): A list of string validation warnings.
 
         Returns:
@@ -1819,7 +1819,7 @@ class InVESTModel(QtWidgets.QMainWindow):
     def validate(self, block=False):
         """Trigger validation for the whole model.
 
-        Parameters:
+        Args:
             block=False (bool): Whether to block on validation.
 
         Returns:
@@ -1839,7 +1839,7 @@ class InVESTModel(QtWidgets.QMainWindow):
     def run(self, quickrun=False):
         """Run the model.
 
-        Parameters:
+        Args:
             quickrun=False (bool): If True, the model will close when the
                 model finishes.
 
@@ -1915,7 +1915,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         Overridden from QMainWindow.close to allow for an optional ``prompt``
         argument.
 
-        Parameters:
+        Args:
             prompt=True (bool): Whether to prompt for the user to confirm the
                 window's closure.  If ``False``, the model window will be
                 closed without confirmation.
@@ -1934,7 +1934,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         Reimplemented from QMainWindow.closeEvent.
 
-        Parameters:
+        Args:
             event (QEvent): The current event.
 
         Returns:
@@ -1958,7 +1958,7 @@ class InVESTModel(QtWidgets.QMainWindow):
     def save_to_python(self, filepath=None):
         """Save the current arguments to a python script.
 
-        Parameters:
+        Args:
             filepath (string or None): If a string, this is the path to the
                 file that will be written.  If ``None``, a dialog will pop up
                 prompting the user to provide a filepath.
@@ -2064,7 +2064,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         and the background color of the window changes) and we accept the
         event.
 
-        Parameters:
+        Args:
             event (QDragEnterEvent): The event to handle.
 
         Returns:
@@ -2091,7 +2091,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         This is triggered when something dragged into the window is dragged
         back out.
 
-        Parameters:
+        Args:
             event (QDragLeaveEvent): The event to handle.
 
         Returns:
@@ -2106,7 +2106,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         When something is dropped, we assume that it has 1 URL and that its
         path should be loaded as a datastack.
 
-        Parameters:
+        Args:
             event (QDropEvent): The event to handle.
 
         Returns:

@@ -30,7 +30,7 @@ class BufferedNumpyDiskMap(object):
     def __init__(self, manager_filename, max_bytes_to_buffer):
         """Create file manager object.
 
-        Parameters:
+        Args:
             manager_filename (string): path to store file manager database.
                 Additional files will be created in this directory to store
                 binary data as needed.
@@ -59,7 +59,7 @@ class BufferedNumpyDiskMap(object):
     def append(self, array_id, array_data):
         """Append data to the file.
 
-        Parameters:
+        Args:
             array_id (int): unique key to identify the array node
             array_data (numpy.ndarray): data to append to node.
 
@@ -133,7 +133,7 @@ class BufferedNumpyDiskMap(object):
         Internally this might mean that part of the file is read from disk
         and the end from the buffer or any combination of those.
 
-        Parameters:
+        Args:
             array_id (string): unique node id to read
 
         Returns:
