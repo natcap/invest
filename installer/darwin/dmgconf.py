@@ -32,4 +32,7 @@ background = os.path.join(CWD, 'background.png')
 default_view = 'icon-view'
 
 format = 'UDZO'
-license = {'licenses': {'en_US': 'LICENSE.txt'}}
+license = {
+    'licenses': {'en_US': 'LICENSE.txt'},
+    'default-language': 'en_US',
+}
