@@ -14,17 +14,14 @@ workflows of an InVEST user.
 In production, the invest exe comes from prebuilt binaries that are an artifact of the `invest` build process.  
 
 For development, choose either:  
-+ **A.** Duplicate the production setup by fetching prebuilt binaries  
-`npm run fetch-invest` 
-+ **B.** Use an any other locally installed, compatible, invest CLI (e.g. from a local python environment). To configure this, see `.env-example`
-
+  **A.** Duplicate the production setup by fetching prebuilt binaries `npm run fetch-invest`  
+  **B.** Use an any other locally installed, compatible, invest CLI (e.g. from a local python environment). To configure this, see `.env-example`
 
 * `npm start`
 
 ## To package this app for distribution  
 
-`npm run build`  - calls babel to transpile ES6 and jsx code to commonjs  
-                 - moves other resources (CSS, JSON) to the build directory
+`npm run build`  - calls babel to transpile ES6 and jsx code to commonjs; moves other resources (CSS, JSON) to the build directory
 
 `npm run dist`  - packages build source into an electron application using electron-builder
 
