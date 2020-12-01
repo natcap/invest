@@ -396,7 +396,7 @@ EXCLUDED_MODULES = [
 ]
 
 
-def list_models(outfile):
+def list_models(path, outfile):
     """List out all InVEST model entrypoints in RST.
 
     Writes a file with the list of models and their automodule documentation 
@@ -412,10 +412,10 @@ def list_models(outfile):
 
     all_modules = {}
     iteration_args = {
-        'path': natcap.invest.__path__,
+        'path': [path], 
         'prefix': 'natcap.invest.',
     }
-    print(natcap.invest.__path__)
+    print([path])
 
     for _loader, name, _is_pkg in itertools.chain(
             pkgutil.walk_packages(**iteration_args),  # catch packages
@@ -472,4 +472,7 @@ def list_models(outfile):
 
 # list out all the models that conform to the InVEST API standard.
 # write out to a file models.rst in the source dir (api-docs)
-list_models(os.path.join(os.getcwd(), 'models.rst'))
+list_models(
+    os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap'),
+    os.path.join(os.getcwd(), 'models.rst')
+)
