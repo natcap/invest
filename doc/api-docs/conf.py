@@ -12,19 +12,15 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import ast
 import importlib
 import itertools
-import logging
 import os
 import pkgutil
 import sys
 import warnings
+from unittest.mock import MagicMock
 
 import natcap.invest
-
-logging.basicConfig()
-LOGGER = logging.getLogger('__name__')
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -301,23 +297,29 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-# Specify the imports that must be mocked out in order to generate the docs.
+# Sphinx will mock out these imports for us
+# This mostly works, but we have a few special cases handled below.
 autodoc_mock_imports = [
-    'pylab', 'pyamg', 'osgeo', 'PyQt4', 'shapely', 'shapely.wkb',
-    'rtree', 'Pyro4', 'PyQt4.QtGui.QWidget',
-    'shapely.geometry', 'osgeo.osr', 'osgeo.gdal', 'gdal',
-    'shapely.wkt', 'shapely.ops', 'shapely.speedups', 'shapely.errors',
-    'shapely.strtree',
-    'shapely.prepared', 'qgis.utils', 'grass.script.setup', 'PyQt4.QtTest',
-    'PyQt4.QtCore', 'geoprocessing_core', 'pygeoprocessing', 'pandas',
-    'qtpy', 'qtpy.QtWidgets', 'qtpy.QtCore', 'pygeoprocessing.routing',
-    'pygeoprocessing.testing', 'qtawesome', 'sip', 'taskgraph',
-    'natcap.invest.ndr.ndr_core', 'natcap.invest.sdr.sdr_core',
-    'natcap.invest.scenic_quality.viewshed',
-    'natcap.invest.seasonal_water_yield.seasonal_water_yield_core',
-    'natcap.invest.ui.inputs', 'natcap.invest.ui.model'
+    'shapely', 'PySide2',
+    'rtree', 'Pyro4', 'osgeo', 'gdal',
+    'pygeoprocessing',
+    'qtpy', 'qtawesome', 'taskgraph',
 ]
 
+# As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
+# Classes involved in multiple inheritance from a mocked class: 
+#   * Container(QtWidgets.QGroupBox, InVESTModelInput) 
+#   * Executor(QtCore.QObject, threading.Thread)
+# We have to explicitly define the mocked classes so that `type(mocked class)` 
+# is `type` and not `unittest.mock.MagicMock` to avoid metaclass conflict error
+
+# Because Container inherits from QtWidgets.QGroupBox and InVESTModelInput
+# which both are mocked, we have to give them separate classes
+# Otherwise we get an MRO error
+mock_qtpy = MagicMock()
+mock_qtpy.QtCore.QObject = type('MockQObject', (), {})
+mock_qtpy.QtWidgets.QGroupBox = type('MockQGroupBox', (), {})
+sys.modules.update([('qtpy', mock_qtpy)])
 
 # Use sphinx apidoc tool to generate documentation for invest
 # Generated rst files go into the api/ directory
@@ -337,6 +339,10 @@ apidoc.main([
     # '--no-toc',  # don't create a table of contents file (it seems redundant)
     os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap')
 ])
+
+
+
+
 
 
 MODEL_RST_TEMPLATE = """
@@ -424,10 +430,10 @@ def list_models(outfile):
 
         try:
             module = importlib.import_module(name)
-        except Exception:
+        except Exception as ex:
             # If we encounter an exception when importing a module, log it
             # but continue.
-            LOGGER.exception('Error importing %s', name)
+            print(ex)
             continue
 
         if not hasattr(module, 'execute'):
@@ -440,8 +446,6 @@ def list_models(outfile):
         except AttributeError:
             module_title = None
         all_modules[name] = module_title
-
-    LOGGER.debug('Writing models to file %s', outfile)
 
     with open(outfile, 'w') as models_rst:
         models_rst.write(MODEL_RST_TEMPLATE)

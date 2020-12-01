@@ -14,7 +14,7 @@
 # implemented with a checkbox in the readthedocs admin page.
 
 sphinx
-sphinx-rtd-theme
+sphinx-rtd-theme  # pip-only
 Cython
 numpy
 scipy
