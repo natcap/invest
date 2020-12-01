@@ -1,0 +1,51 @@
+# requirements-docs.txt
+# ---------------------
+# This file records the packages *required* to build documentation
+# for the natcap.invest package. Building documentation does not
+# require that all packages needed to actually execute the packages
+# are available.  Missing packages will be mocked out for the sphinx
+# build.
+#
+# This build script is maintained primarily for a build on
+# readthedocs.org.
+#
+# This requirements file assumes that the natcap.invest package is being
+# installed to the readthedocs virtualenv separately.  This is currently
+# implemented with a checkbox in the readthedocs admin page.
+
+channels:
+- conda-forge
+- defaults
+dependencies:
+- chardet>=3.0.4
+- coverage
+- Cython
+- GDAL>=3.1.2
+- numpy>=1.11.0,!=1.16.0
+- pandas>=1.0
+- pip
+- psutil>=5.6.6
+- pytest
+- requests
+- Rtree>=0.8.2,!=0.9.1
+- setuptools>=8.0
+- Shapely>=1.7.1,<2.0.0
+- sphinx==3.3.1
+- taskgraph[niced_processes]>=0.10.0
+- virtualenv>=12.0.1
+- wheel>=0.27.0
+- xlrd>=1.2.0
+- xlwt
+- pip:
+  - dmgbuild==1.4.2; sys_platform == 'darwin'  # pip-only
+  - pygeoprocessing>=2.1.1 # pip-only
+  - PyInstaller==3.5 # pip-only
+  - pypiwin32; sys_platform == 'win32'  # pip-only
+  - Pyro4==4.77  # pip-only
+  - PySide2!=5.15.0  # pip-only
+  - qtawesome  # pip-only
+  - qtpy>1.3  # pip-only
+  - scipy>=0.16.1,<1.5.0 # pip-only
+  - setuptools_scm
+  - sphinx-rtd-theme
+
