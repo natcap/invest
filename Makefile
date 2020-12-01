@@ -223,7 +223,7 @@ env:
 		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
     else
 		$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
-		$(CONDA) create -p $(ENV) -y -c conda-forge
+		$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8
 		$(CONDA) env update -p $(ENV) --file requirements-all.yml
 		$(BASHLIKE_SHELL_COMMAND) "source activate ./$(ENV) && $(MAKE) install"
     endif
