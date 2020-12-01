@@ -19,6 +19,7 @@ import pkgutil
 import sys
 import warnings
 from unittest.mock import MagicMock
+from sphinx.ext import apidoc
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -295,37 +296,8 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-# Sphinx will mock out these imports for us
-# This mostly works, but we have a few special cases handled below.
-autodoc_mock_imports = [
-    'shapely', 'PySide2',
-    'rtree', 'Pyro4', 'osgeo', 'gdal',
-    'pygeoprocessing',
-    'qtpy', 'qtawesome', 'taskgraph',
-]
-
-# As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
-# Classes involved in multiple inheritance from a mocked class: 
-#   * Container(QtWidgets.QGroupBox, InVESTModelInput) 
-#   * Executor(QtCore.QObject, threading.Thread)
-# We have to explicitly define the mocked classes so that `type(mocked class)` 
-# is `type` and not `unittest.mock.MagicMock` to avoid metaclass conflict error
-
-# Because Container inherits from QtWidgets.QGroupBox and InVESTModelInput
-# which both are mocked, we have to give them separate classes
-# Otherwise we get an MRO error
-mock_qtpy = MagicMock()
-mock_qtpy.QtCore.QObject = type('MockQObject', (), {})
-mock_qtpy.QtWidgets.QGroupBox = type('MockQGroupBox', (), {})
-sys.modules.update([('qtpy', mock_qtpy)])
-
 # Use sphinx apidoc tool to generate documentation for invest
 # Generated rst files go into the api/ directory
-try:
-    from sphinx import apidoc  # sphinx < 1.7
-except ImportError:
-    from sphinx.ext import apidoc  # sphinx >= 1.7
-print(os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap'))
 
 # Note that some apidoc options like --separate and --module-first may not work
 # the same because we aren't making use of their values in the custom templates
@@ -334,13 +306,8 @@ apidoc.main([
     '-o', os.path.join(DOCS_SOURCE_DIR, 'api'),  # output to api/
     '--templatedir', os.path.join(DOCS_SOURCE_DIR, 'templates'),  # use custom templates
     '--separate',
-    # '--no-toc',  # don't create a table of contents file (it seems redundant)
     os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap')
 ])
-
-
-
-
 
 
 MODEL_RST_TEMPLATE = """
