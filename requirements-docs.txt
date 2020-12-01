@@ -19,3 +19,5 @@ Cython
 numpy
 scipy
 setuptools_scm
+pygeoprocessing
+taskgraph
