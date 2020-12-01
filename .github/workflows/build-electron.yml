@@ -95,4 +95,4 @@ jobs:
       if: github.event_name != 'pull_request'
       run: |
         echo "${{ env.BUCKET }}/invest-workbench/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}"
-        gsutil -m rsync dist/invest-workbench* "${{ env.BUCKET }}/invest-workbench/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}"
+        gsutil -m cp dist/invest-workbench* "${{ env.BUCKET }}/invest-workbench/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}"
