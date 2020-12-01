@@ -21,6 +21,19 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Get npm cache directory
+      id: npm-cache
+      run: |
+        echo "::set-output name=dir::$(npm config get cache)"
+
+    - name: Cache node modules
+      uses: actions/cache@v2
+      env:
+        cache-name: cache-node-modules
+      with:
+        path: ${{ steps.npm-cache.outputs.dir }}
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+    
     - name: NPM Install
       run: npm install
 
@@ -50,12 +63,12 @@ jobs:
       with:
         run: npm run test-electron-app
     
-    - name: Upload installer artifacts
-      uses: actions/upload-artifact@v2-preview
-      if: ${{ always() }}
-      with:
-        name: invest-workbench-${{ matrix.os }}
-        path: dist/invest-workbench_*
+    # - name: Upload installer artifacts
+    #   uses: actions/upload-artifact@v2-preview
+    #   if: ${{ always() }}
+    #   with:
+    #     name: invest-workbench-${{ matrix.os }}
+    #     path: dist/invest-workbench_*
 
     - name: Set up GCP
       # Secrets not available in PR so don't use GCP.
@@ -69,10 +82,11 @@ jobs:
       shell: bash
       # If this is a release, don't include the commit hash
       run: |
+        echo "PKG_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
         echo "GIT_REV=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         echo "BUCKET=$([ env.GITHUB_ACTOR == 'natcap' ] \
           && echo 'gs://releases.naturalcapitalproject.org' \
-          || echo 'gs://natcap-dev-build-artifacts/{{ env.GITHUB_ACTOR }}' \
+          || echo 'gs://natcap-dev-build-artifacts/${{ env.GITHUB_ACTOR }}' \
           )" >> $GITHUB_ENV
 
     - name: Deploy artifacts to GCS
@@ -80,5 +94,5 @@ jobs:
       # We only want to upload artifacts to a release object in a release.
       if: github.event_name != 'pull_request'
       run: |
-        echo "${{ env.BUCKET }}/invest-workbench/${{ env.VERSION }}_${{ env.GIT_REV }}"
-        gsutil -m rsync dist/invest-workbench* "${{ env.BUCKET }}/invest-workbench/${{ env.VERSION }}_${{ env.GIT_REV }}"
+        echo "${{ env.BUCKET }}/invest-workbench/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}"
+        gsutil -m rsync dist/invest-workbench* "${{ env.BUCKET }}/invest-workbench/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}"
