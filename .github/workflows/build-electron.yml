@@ -98,8 +98,7 @@ jobs:
 
     - name: Deploy artifacts to GCS - Windows
       # Secrets not available in PR so don't use GCP.
-      if: github.event_name != 'pull_request'
-      if: matrix.os == 'windows-latest'
+      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
       env:
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
@@ -109,8 +108,7 @@ jobs:
 
     - name: Deploy artifacts to GCS - not Windows
       # Secrets not available in PR so don't use GCP.
-      if: github.event_name != 'pull_request'
-      if: matrix.os != 'windows-latest'
+      if: github.event_name != 'pull_request' && matrix.os != 'windows-latest'
       run: |
         echo "${{ env.BUCKET }}/invest-workbench/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}"
         gsutil -m cp dist/invest-workbench* \
