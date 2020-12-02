@@ -57,17 +57,17 @@ jobs:
         name: invest-workbench-${{ matrix.os }}
         path: dist/invest-workbench_*
 
-    - name: Set a GITHUB_ACTOR-dependent GCS target
+    - name: Set a github.actor-dependent GCS target
       shell: bash
       # TODO: If this is a release, don't include the commit hash
       run: |
-        echo $GITHUB_ACTOR
-        echo ${{ GITHUB_ACTOR }}
+        echo github.actor
+        echo "${{ github.actor }}"
         echo "PKG_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
         echo "GIT_REV=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-        echo "BUCKET=$([ env.GITHUB_ACTOR == 'natcap' ] \
+        echo "BUCKET=$([ github.actor == 'natcap' ] \
           && echo 'gs://releases.naturalcapitalproject.org' \
-          || echo 'gs://natcap-dev-build-artifacts/${{ GITHUB_ACTOR }}' \
+          || echo 'gs://natcap-dev-build-artifacts/${{ github.actor }}' \
           )" >> $GITHUB_ENV
 
     - name: Set up Python for gsutil
