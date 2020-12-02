@@ -61,13 +61,13 @@ jobs:
       shell: bash
       # TODO: If this is a release, don't include the commit hash
       run: |
-        echo $env.GITHUB_ACTOR
-        echo ${{ env.GITHUB_ACTOR }}
+        echo $GITHUB_ACTOR
+        echo ${{ GITHUB_ACTOR }}
         echo "PKG_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
         echo "GIT_REV=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         echo "BUCKET=$([ env.GITHUB_ACTOR == 'natcap' ] \
           && echo 'gs://releases.naturalcapitalproject.org' \
-          || echo 'gs://natcap-dev-build-artifacts/${{ env.GITHUB_ACTOR }}' \
+          || echo 'gs://natcap-dev-build-artifacts/${{ GITHUB_ACTOR }}' \
           )" >> $GITHUB_ENV
 
     - name: Set up Python for gsutil
@@ -95,7 +95,7 @@ jobs:
         gsutil -m cp dist/invest-workbench* \
           "${{ env.BUCKET }}/invest-workbench/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
 
-    - name: Deploy artifacts to GCS - not Windows
+    - name: Deploy artifacts to GCS - Not Windows
       # Secrets not available in PR so don't use GCP.
       if: github.event_name != 'pull_request' && matrix.os != 'windows-latest'
       run: |
