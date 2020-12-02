@@ -12,7 +12,7 @@ jobs:
         os: [macos-latest, windows-latest]
         node-version: [12.x]
     env:
-      ARTIFACT_NAME: $(jq -r .artifactName package.json)"
+      ARTIFACT_NAME: ${{ jq -r .build.artifactName package.json }}
 
     steps:
     - name: Checkout repository
