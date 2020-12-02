@@ -61,7 +61,8 @@ jobs:
       shell: bash
       # TODO: If this is a release, don't include the commit hash
       run: |
-        echo env.GITHUB_ACTOR
+        echo $env.GITHUB_ACTOR
+        echo ${{ env.GITHUB_ACTOR }}
         echo "PKG_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
         echo "GIT_REV=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         echo "BUCKET=$([ env.GITHUB_ACTOR == 'natcap' ] \
