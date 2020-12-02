@@ -20,6 +20,10 @@ import sys
 import warnings
 from unittest.mock import MagicMock
 from sphinx.ext import apidoc
+import subprocess
+
+print('in conf.py')
+subprocess.run(['export', 'QT_DEBUG_PLUGINS=1'])
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
