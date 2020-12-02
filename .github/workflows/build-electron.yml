@@ -71,10 +71,10 @@ jobs:
     #     path: dist/invest-workbench_*
 
     - name: Set up Python for gsutil
-        # gsutil requires a python, which is not included on Windows
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.7
+      # gsutil requires a python, which is not included on Windows
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
 
     - name: Set up GCP
       # Secrets not available in PR so don't use GCP.
