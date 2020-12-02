@@ -23,8 +23,6 @@ from sphinx.ext import apidoc
 import subprocess
 
 print('in conf.py')
-os.putenv('QT_DEBUG_PLUGINS', '1')
-os.putenv('QT_QPA_PLATFORM', 'eglfs')
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -300,6 +298,21 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+# As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
+# Classes involved in multiple inheritance from a mocked class: 
+#   * Container(QtWidgets.QGroupBox, InVESTModelInput) 
+#   * Executor(QtCore.QObject, threading.Thread)
+# We have to explicitly define the mocked classes so that `type(mocked class)` 
+# is `type` and not `unittest.mock.MagicMock` to avoid metaclass conflict error
+
+# Because Container inherits from QtWidgets.QGroupBox and InVESTModelInput
+# which both are mocked, we have to give them separate classes
+# Otherwise we get an MRO error
+mock_qtpy = MagicMock()
+mock_qtpy.QtCore.QObject = type('MockQObject', (), {})
+mock_qtpy.QtWidgets.QGroupBox = type('MockQGroupBox', (), {})
+sys.modules.update([('qtpy', mock_qtpy)])
 
 # Use sphinx apidoc tool to generate documentation for invest
 # Generated rst files go into the api/ directory
