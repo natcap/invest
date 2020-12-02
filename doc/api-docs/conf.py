@@ -24,6 +24,7 @@ import subprocess
 
 print('in conf.py')
 os.putenv('QT_DEBUG_PLUGINS', '1')
+os.putenv('QT_QPA_PLATFORM', 'eglfs')
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
