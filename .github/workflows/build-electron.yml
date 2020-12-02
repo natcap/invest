@@ -76,6 +76,11 @@ jobs:
       with:
         python-version: 3.7
 
+    - name: Set CLOUDSDK_PYTHON env variable for Windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        echo "CLOUDSDK_PYTHON=$('${{env.pythonLocation}}\python.exe')" >> $GITHUB_ENV
+
     - name: Set up GCP
       # Secrets not available in PR so don't use GCP.
       if: github.event_name != 'pull_request'
@@ -86,7 +91,7 @@ jobs:
 
     - name: Set a GITHUB_ACTOR-dependent GCS target
       shell: bash
-      # If this is a release, don't include the commit hash
+      # TODO: If this is a release, don't include the commit hash
       run: |
         echo "PKG_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
         echo "GIT_REV=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
@@ -97,7 +102,6 @@ jobs:
 
     - name: Deploy artifacts to GCS
       # Secrets not available in PR so don't use GCP.
-      # We only want to upload artifacts to a release object in a release.
       if: github.event_name != 'pull_request'
       run: |
         echo "${{ env.BUCKET }}/invest-workbench/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}"
