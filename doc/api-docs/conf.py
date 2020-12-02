@@ -299,6 +299,8 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
+subprocess.run(['python', 'setup.py', 'build_ext', '--inplace'])
+
 # As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
 # Classes involved in multiple inheritance from a mocked class: 
 #   * Container(QtWidgets.QGroupBox, InVESTModelInput) 
@@ -309,10 +311,19 @@ texinfo_documents = [
 # Because Container inherits from QtWidgets.QGroupBox and InVESTModelInput
 # which both are mocked, we have to give them separate classes
 # Otherwise we get an MRO error
+class MockQObject:
+  pass
+class MockQGroupBox:
+  pass
 mock_qtpy = MagicMock()
-mock_qtpy.QtCore.QObject = type('MockQObject', (), {})
-mock_qtpy.QtWidgets.QGroupBox = type('MockQGroupBox', (), {})
-sys.modules.update([('qtpy', mock_qtpy)])
+mock_qtpy.QtCore.QObject = MockQObject
+mock_qtpy.QtWidgets.QGroupBox = MockQGroupBox
+sys.modules.update([
+  ('qtpy', mock_qtpy),
+  ('qtpy.QtCore', MagicMock()),
+  ('qtpy.QtGui', MagicMock()),
+  ('qtpy.QtWidgets', MagicMock())
+])
 
 # Use sphinx apidoc tool to generate documentation for invest
 # Generated rst files go into the api/ directory
@@ -324,7 +335,7 @@ apidoc.main([
     '-o', os.path.join(DOCS_SOURCE_DIR, 'api'),  # output to api/
     '--templatedir', os.path.join(DOCS_SOURCE_DIR, 'templates'),  # use custom templates
     '--separate',
-    os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap')
+    os.path.join(DOCS_SOURCE_DIR, '..', '..', 'build', 'lib.macosx-10.9-x86_64-3.8', 'natcap')
 ])
 
 
