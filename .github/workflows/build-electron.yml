@@ -70,25 +70,6 @@ jobs:
     #     name: invest-workbench-${{ matrix.os }}
     #     path: dist/invest-workbench_*
 
-    - name: Set up Python for gsutil
-      # gsutil requires a python, which is not included on Windows
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.7
-
-    - name: Set CLOUDSDK_PYTHON env variable for Windows
-      if: matrix.os == 'windows-latest'
-      run: |
-        echo "CLOUDSDK_PYTHON=$('${{env.pythonLocation}}\python.exe')" >> $GITHUB_ENV
-
-    - name: Set up GCP
-      # Secrets not available in PR so don't use GCP.
-      if: github.event_name != 'pull_request'
-      uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
-      with:
-          version: '281.0.0'
-          service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
-
     - name: Set a GITHUB_ACTOR-dependent GCS target
       shell: bash
       # TODO: If this is a release, don't include the commit hash
@@ -100,9 +81,36 @@ jobs:
           || echo 'gs://natcap-dev-build-artifacts/${{ env.GITHUB_ACTOR }}' \
           )" >> $GITHUB_ENV
 
-    - name: Deploy artifacts to GCS
+    - name: Set up Python for gsutil
+      # gsutil requires a python, which is not included on Windows
+      if: matrix.os == 'windows-latest'
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
+
+    - name: Set up GCP
       # Secrets not available in PR so don't use GCP.
       if: github.event_name != 'pull_request'
+      uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      with:
+          version: '281.0.0'
+          service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+    - name: Deploy artifacts to GCS - Windows
+      # Secrets not available in PR so don't use GCP.
+      if: github.event_name != 'pull_request'
+      if: matrix.os == 'windows-latest'
+      env:
+        CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
+      run: |
+        echo "${{ env.BUCKET }}/invest-workbench/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}"
+        gsutil -m cp dist/invest-workbench* \
+          "${{ env.BUCKET }}/invest-workbench/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}"
+
+    - name: Deploy artifacts to GCS - not Windows
+      # Secrets not available in PR so don't use GCP.
+      if: github.event_name != 'pull_request'
+      if: matrix.os != 'windows-latest'
       run: |
         echo "${{ env.BUCKET }}/invest-workbench/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}"
         gsutil -m cp dist/invest-workbench* \
