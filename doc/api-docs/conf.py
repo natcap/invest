@@ -299,7 +299,8 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-subprocess.run(['python', 'setup.py', 'build_ext', '--inplace'])
+setup_py_path = os.path.join(DOCS_SOURCE_DIR, '..', '..', 'setup.py')
+subprocess.run(['python', setup_py_path, 'build_ext', '--inplace'])
 
 # As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
 # Classes involved in multiple inheritance from a mocked class: 
