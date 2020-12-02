@@ -67,7 +67,7 @@ jobs:
           && echo 'gs://releases.naturalcapitalproject.org/invest-workbench/' \
           || echo 'gs://natcap-dev-build-artifacts/invest-workbench/${{ github.actor }}' \
           )" >> $GITHUB_ENV
-        echo "ARTIFACT_NAME=$(jq -r .build.artifactName package.json)" >> $GITHUB_ENV
+        echo "ARTIFACT_NAME=$(find dist/ -maxdepth 1 -type f \( -name invest-workbench_*.AppImage -o -name invest-workbench_*.exe \))" >> $GITHUB_ENV
 
     - name: Set up Python for gsutil
       # gsutil requires a python, which is not included on Windows
