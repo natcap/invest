@@ -67,7 +67,6 @@ jobs:
           && echo 'gs://releases.naturalcapitalproject.org/invest-workbench/' \
           || echo 'gs://natcap-dev-build-artifacts/invest-workbench/${{ github.actor }}' \
           )" >> $GITHUB_ENV
-        echo "ARTIFACT_NAME=$(find dist/ -maxdepth 1 -type f \( -name invest-workbench_*.AppImage -o -name invest-workbench_*.exe \))" >> $GITHUB_ENV
 
     - name: Set up Python for gsutil
       # gsutil requires a python, which is not included on Windows
@@ -90,14 +89,10 @@ jobs:
       env:
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
-        echo "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/${{ env.ARTIFACT_NAME }}"
-        gsutil -m cp dist/${{ env.ARTIFACT_NAME }} \
-          "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/${{ env.ARTIFACT_NAME }}"
+        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
 
     - name: Deploy artifacts to GCS - Not Windows
       # Secrets not available in PR so don't use GCP.
       if: github.event_name != 'pull_request' && matrix.os != 'windows-latest'
       run: |
-        echo "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/${{ env.ARTIFACT_NAME }}"
-        gsutil -m cp dist/${{ env.ARTIFACT_NAME }} \
-          "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/${{ env.ARTIFACT_NAME }}"
+        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
