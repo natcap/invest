@@ -32,6 +32,7 @@
 
 
 .. :changelog:
+
 Unreleased Changes (3.9)
 ------------------------
 * Annual Water Yield:
@@ -41,7 +42,8 @@ Unreleased Changes (3.9)
     * Deprecating GDAL 2 and adding support for GDAL 3.
     * Adding function in utils.py to handle InVEST coordindate transformations.
     * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
-      * ``convolve_2d()`` keyword ``ignore_nodata`` to
+
+      * ``convolve_2d()`` keyword ``ignore_nodata`` to 
         ``ignore_nodata_and_edges``.
       * ``get_raster_info()`` / ``get_vector_info()`` keyword ``projection`` to
         ``projection_wkt``.
@@ -112,7 +114,7 @@ Unreleased Changes (3.9)
       required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``.
     * Threat and Sensitivity column names are now case-insensitive.
     * Sensitivity threat columns now match threat names from Threat Table
-      exactly, without the need for "L_". "L_" prefix is deprecated.
+      exactly, without the need for "L\_". "L\_" prefix is deprecated.
     * Threat raster input folder has been removed.
     * Validation enhancements that check whether threat raster paths are valid.
     * HQ update to User's Guide.
@@ -276,6 +278,7 @@ Unreleased Changes (3.9)
 3.8.3 (2020-05-29)
 ------------------
 * sdr
+
   * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
     available standard C library definition. This new definition helps to avoid
     some compiler issues on Windows.
