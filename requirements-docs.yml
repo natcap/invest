@@ -39,10 +39,9 @@ dependencies:
 - xlrd>=1.2.0
 - xlwt
 - pip:
-  - dmgbuild==1.4.2; sys_platform == 'darwin'  # pip-only
+  - natcap.invest  # pip-only
   - pygeoprocessing>=2.1.1 # pip-only
   - PyInstaller==3.5 # pip-only
-  - pypiwin32; sys_platform == 'win32'  # pip-only
   - Pyro4==4.77  # pip-only
   - PySide2!=5.15.0  # pip-only
   - qtawesome  # pip-only
