@@ -144,6 +144,10 @@ Unreleased Changes (3.9)
 * Urban Cooling
     * Split energy savings valuation and work productivity valuation into
       separate UI options.
+* Urban Flood Risk
+    * Changed output field names ``aff.bld`` and ``serv.blt`` to ``aff_bld``
+      and ``serv_blt`` respectively to fix an issue where ArcGIS would not 
+      display properly.
 
 ..
 ..
