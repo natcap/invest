@@ -65,6 +65,8 @@ Unreleased Changes (3.9)
     * No longer include the HTML docs or HISTORY.rst in the macOS distribution.
     * Bumped the ``shapely`` requirements to ``>=1.7.1`` to address a library
       import issue on Mac OS Big Sur.
+    * The InVEST binary builds now launch on Mac OS 11 "Big Sur".  This was
+      addressed by defining the ``QT_MAC_WANTS_LAYER`` environment variable.
 * Coastal Blue Carbon
     * Refactor of Coastal Blue Carbon that implements TaskGraph for task
       management across the model and fixes a wide range of issues with the model
@@ -139,7 +141,7 @@ Unreleased Changes (3.9)
 * Finfish
     * Fixed a bug where the suffix input was not being used for output paths.
 * Urban Cooling
-    * Split energy savings valuation and work productivity valuation into 
+    * Split energy savings valuation and work productivity valuation into
       separate UI options.
 * Urban Flood Risk
     * Changed output field names ``aff.bld`` and ``serv.blt`` to ``aff_bld``
