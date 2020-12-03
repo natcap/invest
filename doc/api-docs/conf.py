@@ -336,7 +336,8 @@ apidoc.main([
     '--force',  # overwrite any files from previous run
     '-o', os.path.join(DOCS_SOURCE_DIR, 'api'),  # output to api/
     '--templatedir', os.path.join(DOCS_SOURCE_DIR, 'templates'),  # use custom templates
-    '--separate',
+    '--separate',  # make a separate page for each module
+    '--no-toc',  # table of contents page is redundant
     os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap')
 ])
 
@@ -392,83 +393,83 @@ EXCLUDED_MODULES = [
 ]
 
 
-# def list_models(path, outfile):
-#     """List out all InVEST model entrypoints in RST.
+def list_models(path, outfile):
+    """List out all InVEST model entrypoints in RST.
 
-#     Writes a file with the list of models and their automodule documentation 
-#     directives for processing by sphinx.
+    Writes a file with the list of models and their automodule documentation 
+    directives for processing by sphinx.
 
-#     Arguments:
-#         outfile (string): The absolute path to write to.
+    Arguments:
+        outfile (string): The absolute path to write to.
 
-#     Returns:
-#         None
+    Returns:
+        None
 
-#     """
+    """
 
-#     all_modules = {}
-#     iteration_args = {
-#         'path': [path], 
-#         'prefix': 'natcap.invest.',
-#     }
-#     print([path])
+    all_modules = {}
+    iteration_args = {
+        'path': [path], 
+        'prefix': 'natcap.invest.',
+    }
+    print([path])
 
-#     for _loader, name, _is_pkg in itertools.chain(
-#             pkgutil.walk_packages(**iteration_args),  # catch packages
-#             pkgutil.iter_modules(**iteration_args)):  # catch modules
+    for _loader, name, _is_pkg in itertools.chain(
+            pkgutil.walk_packages(**iteration_args),  # catch packages
+            pkgutil.iter_modules(**iteration_args)):  # catch modules
 
-#         if any([name.endswith(x) for x in EXCLUDED_MODULES]):
-#             continue
+        if any([name.endswith(x) for x in EXCLUDED_MODULES]):
+            continue
 
-#         # Skip anything within the UI.
-#         if name.startswith('natcap.invest.ui'):
-#             continue
+        # Skip anything within the UI.
+        if name.startswith('natcap.invest.ui'):
+            continue
 
-#         try:
-#             module = importlib.import_module(name)
-#         except Exception as ex:
-#             # If we encounter an exception when importing a module, log it
-#             # but continue.
-#             print(ex)
-#             continue
+        try:
+            module = importlib.import_module(name)
+        except Exception as ex:
+            # If we encounter an exception when importing a module, log it
+            # but continue.
+            print(ex)
+            continue
 
-#         if not hasattr(module, 'execute'):
-#             continue
+        if not hasattr(module, 'execute'):
+            continue
 
-#         try:
-#             module_title = module.execute.__doc__.strip().split('\n')[0]
-#             if module_title.endswith('.'):
-#                 module_title = module_title[:-1]
-#         except AttributeError:
-#             module_title = None
-#         all_modules[name] = module_title
+        try:
+            module_title = module.execute.__doc__.strip().split('\n')[0]
+            if module_title.endswith('.'):
+                module_title = module_title[:-1]
+        except AttributeError:
+            module_title = None
+        all_modules[name] = module_title
 
-#     with open(outfile, 'w') as models_rst:
-#         models_rst.write(MODEL_RST_TEMPLATE)
+    with open(outfile, 'w') as models_rst:
+        models_rst.write(MODEL_RST_TEMPLATE)
 
-#         for i in all_modules.items():
-#             print(i)
+        for i in all_modules.items():
+            print(i)
 
-#         for name, module_title in sorted(all_modules.items(),
-#                                          key=lambda x: x[1]):
-#             if module_title is None:
-#                 warnings.warn('%s has no title' % name)
-#                 module_title = 'unknown'
+        for name, module_title in sorted(all_modules.items(),
+                                         key=lambda x: x[1]):
+            if module_title is None:
+                warnings.warn('%s has no title' % name)
+                module_title = 'unknown'
 
-#             models_rst.write((
-#                 '{module_title}\n'
-#                 '{underline}\n'
-#                 '.. autofunction:: {modname}.execute\n\n').format(
-#                     module_title=module_title,
-#                     underline=''.join(['=']*len(module_title)),
-#                     modname=name
-#                 )
-#             )
+            models_rst.write((
+                '{module_title}\n'
+                '{underline}\n'
+                '.. autofunction:: {modname}.execute\n\n').format(
+                    module_title=module_title,
+                    underline=''.join(['=']*len(module_title)),
+                    modname=name
+                )
+            )
 
 
-# # list out all the models that conform to the InVEST API standard.
-# # write out to a file models.rst in the source dir (api-docs)
-# list_models(
-#     os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap'),
-#     os.path.join(os.getcwd(), 'models.rst')
-# )
+# list out all the models that conform to the InVEST API standard.
+# write out to a file models.rst in the source dir (api-docs)
+list_models(
+    os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap'),
+    os.path.join(os.getcwd(), 'models.rst')
+)
