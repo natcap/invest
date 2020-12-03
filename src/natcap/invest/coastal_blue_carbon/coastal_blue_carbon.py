@@ -1988,7 +1988,7 @@ def _extract_snapshots_from_table(csv_path):
 
     No validation is performed on the years or raster paths.
 
-    Parameters:
+    Args:
         csv_path (string): The path to a CSV on disk containing snapshot
             years and a corresponding transition raster path.  Snapshot years
             may be in any order in the CSV, but must be integers and no two
@@ -2021,7 +2021,7 @@ def _extract_snapshots_from_table(csv_path):
 def validate(args, limit_to=None):
     """Validate an input dictionary for Coastal Blue Carbon.
 
-    Parameters:
+    Args:
         args (dict): The args dictionary.
         limit_to=None (str or None): If a string key, only this args parameter
             will be validated.  If ``None``, all args parameters will be
