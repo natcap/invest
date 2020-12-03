@@ -336,7 +336,7 @@ apidoc.main([
     '-o', os.path.join(DOCS_SOURCE_DIR, 'api'),  # output to api/
     '--templatedir', os.path.join(DOCS_SOURCE_DIR, 'templates'),  # use custom templates
     '--separate',
-    os.path.join(DOCS_SOURCE_DIR, '..', '..', 'build', 'lib.macosx-10.9-x86_64-3.8', 'natcap')
+    os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap')
 ])
 
 
