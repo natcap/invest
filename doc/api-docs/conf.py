@@ -326,7 +326,6 @@ sys.modules.update([
   ('qtpy.QtWidgets', MagicMock())
 ])
 
-
 # Use sphinx apidoc tool to generate documentation for invest
 # Generated rst files go into the api/ directory
 
