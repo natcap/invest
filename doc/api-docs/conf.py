@@ -323,7 +323,8 @@ sys.modules.update([
   ('qtpy', mock_qtpy),
   ('qtpy.QtCore', MagicMock()),
   ('qtpy.QtGui', MagicMock()),
-  ('qtpy.QtWidgets', MagicMock())
+  ('qtpy.QtWidgets', MagicMock()),
+  ('natcap.invest', MagicMock())
 ])
 
 # Use sphinx apidoc tool to generate documentation for invest
