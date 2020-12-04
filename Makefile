@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := ae3a596ca875687415095635977e6363c564c26a
+GIT_SAMPLE_DATA_REPO_REV    := 909d349aa4e813d9502889fcbbff8aece9fdb7b1
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 817adf2ffb68a5b5c636e5d8a08c20acd4c8ea81
+GIT_TEST_DATA_REPO_REV      := 510db35b4883cdc46e4784aa7a137ae481e352a7
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 57f5c9716709ca2185d8a1607c4ec6f4e7a630d0
+GIT_UG_REPO_REV              := afc9a3ce2cba5c8e263ae18ad66ca350d4884a42
 
 ENV = env
 ifeq ($(OS),Windows_NT)
@@ -214,19 +214,16 @@ $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
 
 
-# Python environment management
+# Python conda environment management
 env:
-    ifeq ($(OS),Windows_NT)
-		$(PYTHON) -m virtualenv --system-site-packages $(ENV)
-		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-gui.txt"
-		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -I -r requirements-dev.txt"
-		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
-    else
 		$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
-		$(CONDA) create -p $(ENV) -y -c conda-forge
+		$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
 		$(CONDA) env update -p $(ENV) --file requirements-all.yml
-		$(BASHLIKE_SHELL_COMMAND) "source activate ./$(ENV) && $(MAKE) install"
-    endif
+		@echo "----------------------------"
+		@echo "To finish the conda env install:"
+		@echo ">> conda activate ./$(ENV)"
+		@echo ">> make install"
+
 
 # compatible with pip>=7.0.0
 # REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
