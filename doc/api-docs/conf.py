@@ -78,6 +78,9 @@ print('setting package version...')
 # set the package version so that modules can import natcap.invest.__version__
 subprocess.run(['python', 'setup.py', '--version'],
                cwd=INVEST_ROOT_DIR)
+subprocess.run(['echo', f'__version__ = {_version}', '>>', 
+    os.path.join(INVEST_SOURCE_DIR, 'natcap', 'invest', '__init__.py')])
+subprocess.run(['cat', os.path.join(INVEST_SOURCE_DIR, 'natcap', 'invest', '__init__.py')])
 print('after setting version')
 version = _version.split('+')[0]
 # The full version, including alpha/beta/rc tags.
