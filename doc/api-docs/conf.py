@@ -158,6 +158,10 @@ texinfo_documents = [
 subprocess.run(['python', 'setup.py', 'build_ext', '--inplace'], 
                cwd=os.path.join(DOCS_SOURCE_DIR, '..', '..'))
 
+# set the package version so that modules can import natcap.invest.__version__
+subprocess.run(['python', 'setup.py', '--version'],
+               cwd=os.path.join(DOCS_SOURCE_DIR, '..', '..'))
+
 # As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
 # Classes involved in multiple inheritance from a mocked class: 
 #   * Container(QtWidgets.QGroupBox, InVESTModelInput) 
@@ -179,8 +183,7 @@ sys.modules.update([
   ('qtpy', mock_qtpy),
   ('qtpy.QtCore', MagicMock()),
   ('qtpy.QtGui', MagicMock()),
-  ('qtpy.QtWidgets', MagicMock()),
-  ('natcap.invest', MagicMock())
+  ('qtpy.QtWidgets', MagicMock())
 ])
 
 # Use sphinx apidoc tool to generate documentation for invest. Generated rst 
