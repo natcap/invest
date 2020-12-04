@@ -59,18 +59,14 @@ def _numpy_dumps(numpy_array):
 
 
 def _numpy_loads(queue_string):
-    """Safely unpickle numpy array to string.
-    Items in our queue may either be a pickled numpy array string, or the
-    string 'STOP'. If 'STOP', don't try to load as a numpy array.
+    """Safely unpickle string to numpy array.
+    
     Args:
         queue_string (str): binary string representing a pickled
             numpy array.
     Returns:
         A numpy representation of ``binary_numpy_string``.
     """
-    if queue_string == 'STOP':
-        return queue_string
-
     with BytesIO(queue_string) as file_stream:
         return numpy.load(file_stream)
 
@@ -622,14 +618,15 @@ def construct_userday_quadtree(
         n_points = 0
 
         while True:
-            # if the queue item is 'STOP', this returns 'STOP', not an array.
-            point_array = _numpy_loads(numpy_array_queue.get())
-            if (isinstance(point_array, str) and
-                    point_array == 'STOP'):  # count 'n cpu' STOPs
+            payload = numpy_array_queue.get()
+            # if the item is a 'STOP' sentinel, don't load as an array
+            if payload == 'STOP':
                 n_parse_processes -= 1
                 if n_parse_processes == 0:
                     break
                 continue
+            else:
+                point_array = _numpy_loads(payload)
 
             n_points += len(point_array)
             ooc_qt.add_points(point_array, 0, point_array.size)
