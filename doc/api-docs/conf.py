@@ -61,6 +61,9 @@ copyright = '2020, The Natural Capital Project'
 
 subprocess.run(['python', 'setup.py', 'install'], 
                cwd=INVEST_ROOT_DIR)
+import natcap.invest
+print(natcap.invest.__file__)
+print(natcap.invest.__version__)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
