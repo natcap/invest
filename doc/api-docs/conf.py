@@ -59,6 +59,13 @@ master_doc = 'index'
 project = 'InVEST'
 copyright = '2020, The Natural Capital Project'
 
+
+print('setting package version...')
+# set the package version so that modules can import natcap.invest.__version__
+subprocess.run(['python', 'setup.py', '--version'],
+               cwd=os.path.join(INVEST_SOURCE_DIR, 'natcap', 'invest'))
+print('after setting version')
+
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
@@ -70,6 +77,7 @@ _version = setuptools_scm.get_version(
     version_scheme='post-release',
     local_scheme='node-and-date'
 )
+print('_version:', _version)
 version = _version.split('+')[0]
 # The full version, including alpha/beta/rc tags.
 release = _version
@@ -160,17 +168,6 @@ texinfo_documents = [
 # alongside the source code
 subprocess.run(['python', 'setup.py', 'build_ext', '--inplace'], 
                cwd=INVEST_ROOT_DIR)
-
-print('first')
-print('_version:', _version)
-print('setting package version...')
-# set the package version so that modules can import natcap.invest.__version__
-subprocess.run(['python', 'setup.py', '--version'],
-               cwd=INVEST_ROOT_DIR)
-print('after setting version')
-import natcap.invest
-natcap.invest.__version__
-print(natcap.invest.__file__)
 
 
 # As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
