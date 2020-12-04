@@ -28,7 +28,9 @@ from unittest.mock import MagicMock
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
-sys.path.insert(0, os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src'))
+INVEST_ROOT_DIR = os.path.join(DOCS_SOURCE_DIR, '..', '..')
+INVEST_SOURCE_DIR = os.path.join(INVEST_ROOT_DIR, 'src')
+sys.path.insert(0, INVEST_SOURCE_DIR)
 
 # -- General configuration ------------------------------------------------
 
@@ -54,8 +56,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'InVEST'
-copyright = u'2019, The Natural Capital Project'
+project = 'InVEST'
+copyright = '2020, The Natural Capital Project'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -64,7 +66,7 @@ copyright = u'2019, The Natural Capital Project'
 # The short X.Y version.
 import setuptools_scm
 _version = setuptools_scm.get_version(
-    root= os.path.join(DOCS_SOURCE_DIR, '..', '..'),
+    root=INVEST_ROOT_DIR,
     version_scheme='post-release',
     local_scheme='node-and-date'
 )
@@ -124,8 +126,8 @@ htmlhelp_basename = 'InVEST3doc'
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'InVEST3.tex', u'InVEST 3 Documentation',
-   u'The Natural Capital Project', 'manual'),
+  ('index', 'InVEST.tex', 'InVEST Documentation',
+   'The Natural Capital Project', 'manual'),
 ]
 
 
@@ -134,8 +136,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'invest', u'InVEST Documentation',
-     [u'The Natural Capital Project'], 1)
+    ('index', 'invest', 'InVEST Documentation',
+     ['The Natural Capital Project'], 1)
 ]
 
 
@@ -145,9 +147,10 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'InVEST3', u'InVEST 3 Documentation',
-   u'The Natural Capital Project', 'InVEST3', 'One line description of project.',
-   'Miscellaneous'),
+  ('index', 'InVEST', 'InVEST Documentation',
+   'The Natural Capital Project', 'InVEST', 
+   'Integrated Valuation of Ecosystem Services and Tradeoffs',
+   'Scientific Software'),
 ]
 
 
@@ -156,11 +159,14 @@ texinfo_documents = [
 # build cython extensions in-place so that sphinx can find the .so files
 # alongside the source code
 subprocess.run(['python', 'setup.py', 'build_ext', '--inplace'], 
-               cwd=os.path.join(DOCS_SOURCE_DIR, '..', '..'))
+               cwd=INVEST_ROOT_DIR)
 
+print('setting package version...')
 # set the package version so that modules can import natcap.invest.__version__
 subprocess.run(['python', 'setup.py', '--version'],
-               cwd=os.path.join(DOCS_SOURCE_DIR, '..', '..'))
+               cwd=INVEST_ROOT_DIR)
+print('after setting version')
+
 
 # As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
 # Classes involved in multiple inheritance from a mocked class: 
@@ -195,7 +201,7 @@ apidoc.main([
     '--templatedir', os.path.join(DOCS_SOURCE_DIR, 'templates'),  # use custom templates
     '--separate',  # make a separate page for each module
     '--no-toc',  # table of contents page is redundant
-    os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src')
+    INVEST_SOURCE_DIR
 ])
 
 
@@ -242,93 +248,50 @@ or multiple successive model runs, see :ref:`CreatingSamplePythonScripts`.
 
 EXCLUDED_MODULES = [
     '_core',  # anything ending in '_core'
-    '_example_model',
-    'carbon_biophysical',
-    'carbon_valuation',
-    'coastal_vulnerability_post_processing',
-    'usage_logger',
     'recmodel_server',
-    'recmodel_workspace_fetcher',
+    'recmodel_workspace_fetcher'
 ]
+MODEL_ENTRYPOINTS_FILE = os.path.join(DOCS_SOURCE_DIR, 'models.rst')
 
+# Find all importable modules with an execute function
+# write out to a file models.rst in the source directory
+all_modules = {}
+for _loader, name, _is_pkg in itertools.chain(
+        pkgutil.walk_packages(path=[INVEST_SOURCE_DIR]),  # catch packages
+        pkgutil.iter_modules(path=[INVEST_SOURCE_DIR])):  # catch modules
 
-def list_models(path, outfile):
-    """List out all InVEST model entrypoints in RST.
+    if (any([name.endswith(x) for x in EXCLUDED_MODULES]) or
+        name.startswith('natcap.invest.ui')):
+        continue
 
-    Writes a file with the list of models and their automodule documentation 
-    directives for processing by sphinx.
+    try:
+        module = importlib.import_module(name)
+    except Exception as ex:
+        print(ex)
+        continue
 
-    Arguments:
-        outfile (string): The absolute path to write to.
+    if not hasattr(module, 'execute'):
+        continue
 
-    Returns:
-        None
+    try:
+        module_title = module.execute.__doc__.strip().split('\n')[0]
+        if module_title.endswith('.'):
+            module_title = module_title[:-1]
+    except AttributeError:
+        module_title = None
+    all_modules[name] = module_title
 
-    """
-
-    all_modules = {}
-    iteration_args = {
-        'path': [path], 
-        'prefix': 'natcap.invest.',
-    }
-    print([path])
-
-    for _loader, name, _is_pkg in itertools.chain(
-            pkgutil.walk_packages(**iteration_args),  # catch packages
-            pkgutil.iter_modules(**iteration_args)):  # catch modules
-
-        if any([name.endswith(x) for x in EXCLUDED_MODULES]):
-            continue
-
-        # Skip anything within the UI.
-        if name.startswith('natcap.invest.ui'):
-            continue
-
-        try:
-            module = importlib.import_module(name)
-        except Exception as ex:
-            # If we encounter an exception when importing a module, log it
-            # but continue.
-            print(ex)
-            continue
-
-        if not hasattr(module, 'execute'):
-            continue
-
-        try:
-            module_title = module.execute.__doc__.strip().split('\n')[0]
-            if module_title.endswith('.'):
-                module_title = module_title[:-1]
-        except AttributeError:
-            module_title = None
-        all_modules[name] = module_title
-
-    with open(outfile, 'w') as models_rst:
-        models_rst.write(MODEL_RST_TEMPLATE)
-
-        for i in all_modules.items():
-            print(i)
-
-        for name, module_title in sorted(all_modules.items(),
-                                         key=lambda x: x[1]):
-            if module_title is None:
-                warnings.warn('%s has no title' % name)
-                module_title = 'unknown'
-
-            models_rst.write((
-                '{module_title}\n'
-                '{underline}\n'
-                '.. autofunction:: {modname}.execute\n\n').format(
-                    module_title=module_title,
-                    underline=''.join(['=']*len(module_title)),
-                    modname=name
-                )
+# Write sphinx autodoc function for each entrypoint
+with open(MODEL_ENTRYPOINTS_FILE, 'w') as models_rst:
+    models_rst.write(MODEL_RST_TEMPLATE)
+    for name, module_title in sorted(all_modules.items(),
+                                     key=lambda x: x[1]):
+        models_rst.write((
+            '{module_title}\n'
+            '{underline}\n'
+            '.. autofunction:: {modname}.execute\n\n').format(
+                module_title=module_title,
+                underline=''.join(['=']*len(module_title)),
+                modname=name
             )
-
-
-# list out all the models that conform to the InVEST API standard.
-# write out to a file models.rst in the source dir (api-docs)
-list_models(
-    os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap'),
-    os.path.join(os.getcwd(), 'models.rst')
-)
+        )
