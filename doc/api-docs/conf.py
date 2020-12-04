@@ -70,7 +70,6 @@ _version = setuptools_scm.get_version(
     version_scheme='post-release',
     local_scheme='node-and-date'
 )
-print('_version:', _version)
 version = _version.split('+')[0]
 # The full version, including alpha/beta/rc tags.
 release = _version
@@ -162,6 +161,8 @@ texinfo_documents = [
 subprocess.run(['python', 'setup.py', 'build_ext', '--inplace'], 
                cwd=INVEST_ROOT_DIR)
 
+print('first')
+print('_version:', _version)
 print('setting package version...')
 # set the package version so that modules can import natcap.invest.__version__
 subprocess.run(['python', 'setup.py', '--version'],
