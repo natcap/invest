@@ -59,13 +59,6 @@ master_doc = 'index'
 project = 'InVEST'
 copyright = '2020, The Natural Capital Project'
 
-
-print('setting package version...')
-# set the package version so that modules can import natcap.invest.__version__
-subprocess.run(['python', 'setup.py', '--version'],
-               cwd=os.path.join(INVEST_SOURCE_DIR, 'natcap', 'invest'))
-print('after setting version')
-
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
@@ -73,11 +66,19 @@ print('after setting version')
 # The short X.Y version.
 import setuptools_scm
 _version = setuptools_scm.get_version(
-    root=os.path.join(INVEST_SOURCE_DIR, 'natcap', 'invest'),
+    root=INVEST_ROOT_DIR,
+    relative_to=__file__,
     version_scheme='post-release',
     local_scheme='node-and-date'
 )
 print('_version:', _version)
+
+
+print('setting package version...')
+# set the package version so that modules can import natcap.invest.__version__
+subprocess.run(['python', 'setup.py', '--version'],
+               cwd=INVEST_ROOT_DIR)
+print('after setting version')
 version = _version.split('+')[0]
 # The full version, including alpha/beta/rc tags.
 release = _version
