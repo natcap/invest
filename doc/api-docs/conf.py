@@ -166,6 +166,10 @@ print('setting package version...')
 subprocess.run(['python', 'setup.py', '--version'],
                cwd=INVEST_ROOT_DIR)
 print('after setting version')
+import natcap.invest
+print(natcap.invest.__file__)
+from natcap.invest import __version__
+print('version:', __version__)
 
 
 # As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
