@@ -66,7 +66,7 @@ copyright = '2020, The Natural Capital Project'
 # The short X.Y version.
 import setuptools_scm
 _version = setuptools_scm.get_version(
-    root=INVEST_ROOT_DIR,
+    root=os.path.join(INVEST_SOURCE_DIR, 'natcap', 'invest'),
     version_scheme='post-release',
     local_scheme='node-and-date'
 )
@@ -169,6 +169,7 @@ subprocess.run(['python', 'setup.py', '--version'],
                cwd=INVEST_ROOT_DIR)
 print('after setting version')
 import natcap.invest
+natcap.invest.__version__
 print(natcap.invest.__file__)
 
 
