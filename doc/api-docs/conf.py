@@ -195,7 +195,7 @@ apidoc.main([
     '--templatedir', os.path.join(DOCS_SOURCE_DIR, 'templates'),  # use custom templates
     '--separate',  # make a separate page for each module
     '--no-toc',  # table of contents page is redundant
-    os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap')
+    os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src')
 ])
 
 
