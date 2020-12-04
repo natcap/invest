@@ -65,6 +65,7 @@ Unreleased Changes (3.9)
     * No longer include the HTML docs or HISTORY.rst in the macOS distribution.
     * Bumped the ``shapely`` requirements to ``>=1.7.1`` to address a library
       import issue on Mac OS Big Sur.
+    * Fixing model local documentation links for Windows and Mac binaries.
     * The InVEST binary builds now launch on Mac OS 11 "Big Sur".  This was
       addressed by defining the ``QT_MAC_WANTS_LAYER`` environment variable.
 * Coastal Blue Carbon
