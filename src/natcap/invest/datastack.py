@@ -42,8 +42,7 @@ except ImportError:
     # environment.
     __version__ = 'UNKNOWN'
     warnings.warn(
-        '__version__ attribute of natcap.invest could not be imported. ' \
-        'This is expected when building the API docs.',
+        '__version__ attribute of natcap.invest could not be imported.', 
         RuntimeWarning)
 
 
