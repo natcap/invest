@@ -59,6 +59,9 @@ master_doc = 'index'
 project = 'InVEST'
 copyright = '2020, The Natural Capital Project'
 
+subprocess.run(['python', 'setup.py', 'install'], 
+               cwd=INVEST_ROOT_DIR)
+
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
@@ -72,16 +75,6 @@ _version = setuptools_scm.get_version(
     local_scheme='node-and-date'
 )
 print('_version:', _version)
-
-
-print('setting package version...')
-# set the package version so that modules can import natcap.invest.__version__
-subprocess.run(['python', 'setup.py', '--version'],
-               cwd=INVEST_ROOT_DIR)
-subprocess.run(['echo', f'__version__ = {_version}', '>>', 
-    os.path.join(INVEST_SOURCE_DIR, 'natcap', 'invest', '__init__.py')])
-subprocess.run(['cat', os.path.join(INVEST_SOURCE_DIR, 'natcap', 'invest', '__init__.py')])
-print('after setting version')
 version = _version.split('+')[0]
 # The full version, including alpha/beta/rc tags.
 release = _version
@@ -172,7 +165,6 @@ texinfo_documents = [
 # alongside the source code
 subprocess.run(['python', 'setup.py', 'build_ext', '--inplace'], 
                cwd=INVEST_ROOT_DIR)
-
 
 # As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
 # Classes involved in multiple inheritance from a mocked class: 
