@@ -118,7 +118,7 @@ html_favicon = "_static/favicon.gif"
 html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'InVEST3doc'
+htmlhelp_basename = 'InVESTdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -168,6 +168,7 @@ subprocess.run(['python', 'setup.py', '--version'],
 print('after setting version')
 import natcap.invest
 print(natcap.invest.__file__)
+print(natcap.invest.__version__)
 from natcap.invest import __version__
 print('version:', __version__)
 
