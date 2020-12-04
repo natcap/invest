@@ -496,7 +496,6 @@ class TestRecServer(unittest.TestCase):
         numpy_array_queue = multiprocessing.Queue()
         array = numpy.empty(1, dtype='datetime64,f4')
         numpy_array_queue.put(recmodel_server._numpy_dumps(array))
-        numpy_array_queue.put('STOP')
 
         out_array = recmodel_server._numpy_loads(numpy_array_queue.get())
         numpy.testing.assert_equal(out_array, array)
@@ -504,9 +503,6 @@ class TestRecServer(unittest.TestCase):
         # adding a metadata value to the `datetime64` dtype.
         # assert that this doesn't happen. 'f0' is the first subdtype.
         self.assertEqual(out_array.dtype['f0'].metadata, None)
-        # should not try to load 'STOP' as a numpy array
-        self.assertEqual('STOP', 
-            recmodel_server._numpy_loads(numpy_array_queue.get()))
 
         # assert that saving the array does not raise a warning
         with warnings.catch_warnings(record=True) as ws:
