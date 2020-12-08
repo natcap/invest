@@ -734,7 +734,7 @@ def _calculate_tropical_forest_edge_carbon_map(
         None
 
     """
-    # load spatial indeces from pickle file
+    # load spatial indices from pickle file
     # let d = number of precalculated model cells (2217 for sample data)
     #   kd_tree.data.shape: (d, 2)
     #   theta_model_parameters.shape: (d, 3)
@@ -831,7 +831,7 @@ def _calculate_tropical_forest_edge_carbon_map(
         # For each forest pixel x, for each of its k nearest neighbors, the 
         # chosen regression method (1, 2, or 3). model_index shape: (x, k)
         model_index = numpy.empty(indexes.shape, dtype=numpy.int8) 
-        model_index[:] = -1
+        model_index[:] = 0
         model_index[valid_index_mask] = ( 
             method_model_parameter[indexes[valid_index_mask]]) 
 
