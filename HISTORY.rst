@@ -107,6 +107,9 @@ Unreleased Changes (3.9)
       'watersheds' to match the name of the vector file (including the suffix).
     * Added pour point detection option as an alternative to providing an
       outlet features vector.
+* Forest Carbon Edge Effect:
+    * Fixed bug that was causing overflow errors to appear in the logs when 
+      running with the sample data.
 * Habitat Quality:
     * Refactor of Habitat Quality that implements TaskGraph
     * Threat files are now indicated in the Threat Table csv input under
