@@ -837,7 +837,7 @@ def _calculate_tropical_forest_edge_carbon_map(
 
         # biomass shape: (x, k)
         biomass = numpy.empty((indexes.shape[0], indexes.shape[1])) 
-        biomass[:] = -1
+        biomass[:] = 0
 
         # mask shapes: (x, k)
         mask_1 = model_index == 1
