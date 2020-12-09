@@ -831,15 +831,13 @@ def _calculate_tropical_forest_edge_carbon_map(
 
         # For each forest pixel x, for each of its k nearest neighbors, the 
         # chosen regression method (1, 2, or 3). model_index shape: (x, k)
-        model_index = numpy.empty(indexes.shape, dtype=numpy.int8) 
-        model_index[:] = 0
+        model_index = numpy.zeros(indexes.shape, dtype=numpy.int8) 
         model_index[valid_index_mask] = ( 
             method_model_parameter[indexes[valid_index_mask]]) 
 
         # biomass shape: (x, k)
-        biomass = numpy.empty((indexes.shape[0], indexes.shape[1]), 
-            dtype=numpy.float32) 
-        biomass[:] = 0
+        biomass = numpy.zeros((indexes.shape[0], indexes.shape[1]), 
+            dtype=numpy.float32)
 
         # mask shapes: (x, k)
         mask_1 = model_index == 1
@@ -883,9 +881,8 @@ def _calculate_tropical_forest_edge_carbon_map(
                       biomass[valid_denom], axis=1) / denom[valid_denom])
 
         # Ensure the result has nodata everywhere the distance was invalid
-        result = numpy.empty(
-            edge_distance_block.shape, dtype=numpy.float32)
-        result[:] = CARBON_MAP_NODATA
+        result = numpy.full(edge_distance_block.shape, CARBON_MAP_NODATA, 
+            dtype=numpy.float32)
         # convert biomass to carbon in this stage
         result[valid_edge_distance_mask] = (
             average_biomass * biomass_to_carbon_conversion_factor)
