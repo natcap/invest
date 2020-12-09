@@ -133,7 +133,7 @@ Unreleased Changes (3.9)
       value. Now, the decay does not ignore those nodata edges causing values
       on the edges to decay more quickly. The area of study should have
       adequate boundaries to account for these edge effects.
-    * Update default half saturation value for sample data to 0.05 from 0.5.
+    * Update default half saturation value for sample data to 0.05 from 0.1.
 * Seasonal Water Yield
     * Fixed a bug where precip or eto rasters of ``GDT_Float64`` with values
       greater than 32-bit would overflow to ``-inf``.
