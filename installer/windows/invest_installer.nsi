@@ -337,13 +337,13 @@ Section "InVEST Tools" Section_InVEST_Tools
 
     !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
     CreateDirectory "${COASTALBLUECARBON}"
-    !insertmacro StartMenuLink "${COASTALBLUECARBON}\(1) Coastal Blue Carbon Preprocessor" "cbc_pre"
-    !insertmacro StartMenuLink "${COASTALBLUECARBON}\(2) Coastal Blue Carbon" "cbc"
+    !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon Preprocessor" "cbc_pre"
+    !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon" "cbc"
 
     !define FISHERIES "${SMPATH}\Fisheries"
     CreateDirectory "${FISHERIES}"
-    !insertmacro StartMenuLink "${FISHERIES}\(1) Fisheries" "fisheries"
-    !insertmacro StartMenuLink "${FISHERIES}\(2) Fisheries Habitat Scenario Tool" "fisheries_hst"
+    !insertmacro StartMenuLink "${FISHERIES}\Fisheries" "fisheries"
+    !insertmacro StartMenuLink "${FISHERIES}\Fisheries Habitat Scenario Tool" "fisheries_hst"
 
 
     ; Write registry keys for convenient uninstallation via add/remove programs.
