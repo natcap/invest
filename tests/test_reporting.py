@@ -230,7 +230,7 @@ class ReportingRegressionTests(unittest.TestCase):
 
         regression_path = os.path.join(
             REGRESSION_DATA, 'table_strings', 'table_string_attrs.txt')
-        regression_file = codecs.open(regression_path, 'rU', 'utf-8')
+        regression_file = codecs.open(regression_path, 'r', 'utf-8')
         regression_str = regression_file.read()
 
         self.assertEqual(result_str, regression_str)
@@ -264,7 +264,7 @@ class ReportingRegressionTests(unittest.TestCase):
 
         regression_path = os.path.join(
             REGRESSION_DATA, 'table_strings', 'table_string_no_attrs.txt')
-        regression_file = codecs.open(regression_path, 'rU', 'utf-8')
+        regression_file = codecs.open(regression_path, 'r', 'utf-8')
         regression_str = regression_file.read()
 
         self.assertEqual(result_str, regression_str)
@@ -296,7 +296,7 @@ class ReportingRegressionTests(unittest.TestCase):
 
         regression_path = os.path.join(
             REGRESSION_DATA, 'table_strings', 'table_string_no_checkbox.txt')
-        regression_file = codecs.open(regression_path, 'rU', 'utf-8')
+        regression_file = codecs.open(regression_path, 'r', 'utf-8')
         regression_str = regression_file.read()
 
         self.assertEqual(result_str, regression_str)
@@ -330,7 +330,7 @@ class ReportingRegressionTests(unittest.TestCase):
 
         regression_path = os.path.join(
             REGRESSION_DATA, 'table_strings', 'table_string_no_td_classes.txt')
-        regression_file = codecs.open(regression_path, 'rU', 'utf-8')
+        regression_file = codecs.open(regression_path, 'r', 'utf-8')
         regression_str = regression_file.read()
 
         self.assertEqual(result_str, regression_str)
@@ -362,7 +362,7 @@ class ReportingRegressionTests(unittest.TestCase):
 
         regression_path = os.path.join(
             REGRESSION_DATA, 'table_strings', 'table_string_no_col_attrs.txt')
-        regression_file = codecs.open(regression_path, 'rU', 'utf-8')
+        regression_file = codecs.open(regression_path, 'r', 'utf-8')
         regression_str = regression_file.read()
 
         self.assertEqual(result_str, regression_str)
@@ -394,7 +394,7 @@ class ReportingRegressionTests(unittest.TestCase):
 
         regression_path = os.path.join(
             REGRESSION_DATA, 'table_strings', 'table_string_no_totals.txt')
-        regression_file = codecs.open(regression_path, 'rU', 'utf-8')
+        regression_file = codecs.open(regression_path, 'r', 'utf-8')
         regression_str = regression_file.read()
 
         self.assertEqual(result_str, regression_str)
