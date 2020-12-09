@@ -30,7 +30,7 @@ CARBON_MAP_NODATA = -9999
 ARGS_SPEC = {
     "model_name": "Forest Carbon Edge Effect Model",
     "module": __name__,
-    "userguide_html": "forest_carbon_edge_effect.html",
+    "userguide_html": "carbon_edge.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },
