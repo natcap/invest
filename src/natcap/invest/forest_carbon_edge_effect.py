@@ -809,7 +809,8 @@ def _calculate_tropical_forest_edge_carbon_map(
             col_coords[valid_edge_distance_mask].ravel()))
         # note, the 'n_jobs' parameter was introduced in SciPy 0.16.0
         # for each forest point x, for each of its k nearest neighbors
-        distances, indexes = kd_tree.query( # distances: (x, k) indexes: (x, k)
+        # shape of distances and indexes: (x, k)
+        distances, indexes = kd_tree.query(
             coord_points, k=n_nearest_model_points,
             distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
 
@@ -836,7 +837,8 @@ def _calculate_tropical_forest_edge_carbon_map(
             method_model_parameter[indexes[valid_index_mask]]) 
 
         # biomass shape: (x, k)
-        biomass = numpy.empty((indexes.shape[0], indexes.shape[1])) 
+        biomass = numpy.empty((indexes.shape[0], indexes.shape[1]), 
+            dtype=numpy.float32) 
         biomass[:] = 0
 
         # mask shapes: (x, k)
