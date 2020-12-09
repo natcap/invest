@@ -337,8 +337,8 @@ Section "InVEST Tools" Section_InVEST_Tools
 
     !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
     CreateDirectory "${COASTALBLUECARBON}"
-    !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon Preprocessor" "cbc_pre"
-    !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon" "cbc"
+    !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon (1) Preprocessor" "cbc_pre"
+    !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon (2)" "cbc"
 
     !define FISHERIES "${SMPATH}\Fisheries"
     CreateDirectory "${FISHERIES}"
