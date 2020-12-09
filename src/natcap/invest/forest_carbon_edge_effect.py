@@ -613,8 +613,7 @@ def _map_distance_from_tropical_forest_edge(
 
     def mask_non_forest_op(lulc_array):
         """Converts forest lulc codes to 1."""
-        non_forest_mask = ~numpy.in1d(
-            lulc_array.flatten(), forest_codes).reshape(lulc_array.shape)
+        non_forest_mask = ~numpy.isin(lulc_array, forest_codes)
         nodata_mask = lulc_array == lulc_nodata
         return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
 
@@ -775,6 +774,7 @@ def _calculate_tropical_forest_edge_carbon_map(
         n_cells_processed += (
             edge_distance_data['win_xsize'] * edge_distance_data['win_ysize'])
         valid_edge_distance_mask = (edge_distance_block > 0)
+        print(numpy.any(edge_distance_block < 0))
 
         # if no valid forest pixels to calculate, skip to the next block
         if not valid_edge_distance_mask.any():
