@@ -34,9 +34,6 @@
 .. :changelog:
 Unreleased Changes (3.9)
 ------------------------
-* Annual Water Yield:
-    * Fixing bug that limited ``rsupply`` result when ``wyield_mn`` or
-      ``consump_mn`` was 0.
 * General:
     * Deprecating GDAL 2 and adding support for GDAL 3.
     * Adding function in utils.py to handle InVEST coordindate transformations.
@@ -68,6 +65,10 @@ Unreleased Changes (3.9)
     * Fixing model local documentation links for Windows and Mac binaries.
     * The InVEST binary builds now launch on Mac OS 11 "Big Sur".  This was
       addressed by defining the ``QT_MAC_WANTS_LAYER`` environment variable.
+    * Fixed the alphabetical ordering of Windows Start Menu shortcuts.
+* Annual Water Yield:
+    * Fixing bug that limited ``rsupply`` result when ``wyield_mn`` or
+      ``consump_mn`` was 0.
 * Coastal Blue Carbon
     * Refactor of Coastal Blue Carbon that implements TaskGraph for task
       management across the model and fixes a wide range of issues with the model
