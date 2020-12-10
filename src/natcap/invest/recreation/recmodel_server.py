@@ -13,7 +13,7 @@ import threading
 import collections
 import logging
 import queue
-from io import StringIO
+from io import BytesIO, StringIO
 
 import Pyro4
 import numpy
@@ -43,6 +43,32 @@ LOGGER_TIME_DELAY = 5.0
 Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 
 LOGGER = logging.getLogger('natcap.invest.recreation.recmodel_server')
+
+
+def _numpy_dumps(numpy_array):
+    """Safely pickle numpy array to string.
+    Args:
+        numpy_array (numpy.ndarray): arbitrary numpy array.
+    Returns:
+        A string representation of the array that can be loaded using
+        `numpy_loads.
+    """
+    with BytesIO() as file_stream:
+        numpy.save(file_stream, numpy_array, allow_pickle=False)
+        return file_stream.getvalue()
+
+
+def _numpy_loads(queue_string):
+    """Safely unpickle string to numpy array.
+    
+    Args:
+        queue_string (str): binary string representing a pickled
+            numpy array.
+    Returns:
+        A numpy representation of ``binary_numpy_string``.
+    """
+    with BytesIO(queue_string) as file_stream:
+        return numpy.load(file_stream)
 
 
 def _try_except_wrapper(mesg):
@@ -490,7 +516,10 @@ def _parse_input_csv(
         user_day_lng_lat['f1'] = hashes
         user_day_lng_lat['f2'] = result['lng']
         user_day_lng_lat['f3'] = result['lat']
-        numpy_array_queue.put(user_day_lng_lat)
+        # multiprocessing.Queue pickles the array. Pickling isn't perfect and
+        # it modifies the `datetime64` dtype metadata, causing a warning later.
+        # To avoid this we dump the array to a string before adding to queue.
+        numpy_array_queue.put(_numpy_dumps(user_day_lng_lat))
     numpy_array_queue.put('STOP')
 
 
@@ -589,13 +618,15 @@ def construct_userday_quadtree(
         n_points = 0
 
         while True:
-            point_array = numpy_array_queue.get()
-            if (isinstance(point_array, str) and
-                    point_array == 'STOP'):  # count 'n cpu' STOPs
+            payload = numpy_array_queue.get()
+            # if the item is a 'STOP' sentinel, don't load as an array
+            if payload == 'STOP':
                 n_parse_processes -= 1
                 if n_parse_processes == 0:
                     break
                 continue
+            else:
+                point_array = _numpy_loads(payload)
 
             n_points += len(point_array)
             ooc_qt.add_points(point_array, 0, point_array.size)
