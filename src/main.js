@@ -8,7 +8,13 @@ if (isDevMode) {
 }
 
 const {
-  app, BrowserWindow, ipcMain, screen, nativeTheme
+  app,
+  BrowserWindow,
+  ipcMain,
+  screen,
+  nativeTheme,
+  Menu,
+  // MenuItem,
 } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const {
   getFlaskIsReady, shutdownPythonProcess
@@ -17,6 +23,7 @@ const {
   findInvestBinaries, createPythonFlaskProcess
 } = require('./main_helpers');
 const { getLogger } = require('./logger');
+ const { menuTemplate } = require('./menubar') ;
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -55,6 +62,9 @@ const createWindow = async () => {
       enableRemoteModule: true,
     },
   });
+
+  const menubar = Menu.buildFromTemplate(menuTemplate(mainWindow));
+  Menu.setApplicationMenu(menubar);
 
   // and load the index.html of the app.
   mainWindow.loadURL(`file://${__dirname}/index.html`);
