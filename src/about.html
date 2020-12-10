@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script>
+      const { remote } = require('electron')
+      const version = remote.app.getVersion()
+    </script>
+  </head>
+  <body>
+    <h3>About InVEST</h3>
+    <span id='invest-version'>
+      <b>Version: </b> 
+    </span>
+    <script>
+      const node = document.getElementById('invest-version')
+      const text = document.createTextNode(version)
+      node.appendChild(text)
+    </script>
+    <br/> <br/>
+
+    Documentation: <a href="http://releases.naturalcapitalproject.org/
+    invest-userguide/latest/">online</a><br/>
+    Homepage: <a href="http://naturalcapitalproject.org">
+                naturalcapitalproject.org</a><br/>
+    Copyright 2017, The Natural Capital Project<br/>
+    License:
+    <a href="https://github.com/natcap/invest/blob/master/LICENSE.txt">
+                BSD 3-clause</a><br/>
+    Project page: <a href="https://github.com/natcap/invest">
+                github.com/natcap/invest</a><br/>
+
+    <h2>Open-Source Licenses</h2>
+    <table>
+        <tr>
+          <td>'PyInstaller'</td>
+          <td>'GPL'</td>
+          <td><a href='http://pyinstaller.org'></td>
+        </tr>
+        <tr>
+          <td>'GDAL'</td>
+          <td>'MIT and others'</td>
+          <td><a href='http://gdal.org'></td>
+        </tr>
+        <tr>
+          <td>'numpy'</td>
+          <td>'BSD'</td>
+          <td><a href='http://numpy.org'></td>
+        </tr>
+        <tr>
+          <td>'pyamg'</td>
+          <td>'BSD'</td>
+          <td><a href='http://github.com/pyamg/pyamg'></td>
+        </tr>
+        <tr>
+          <td>'pygeoprocessing'</td>
+          <td>'BSD'</td>
+          <td><a href='https://github.com/natcap/pygeoprocessing'></td>
+       </tr>
+        <tr>
+          <td>'PyQt'</td>
+          <td>'GPL'</td>
+          <td><a href='https://riverbankcomputing.com/software/pyqt/intro'></td>
+       </tr>
+        <tr>
+          <td>'rtree'</td>
+          <td>'LGPL'</td>
+          <td><a href='http://toblerity.org/rtree/'></td>
+        </tr>
+        <tr>
+          <td>'scipy'</td>
+          <td>'BSD'</td>
+          <td><a href='http://www.scipy.org/'></td>
+        </tr>
+        <tr>
+          <td>'shapely'</td>
+          <td>'BSD'</td>
+          <td><a href='http://github.com/Toblerity/Shapely'></td>
+        </tr>
+    </table>
+    <br/>
+    <p>
+      The source code for GPL'd components are included as an extra
+      component on your installation medium.
+    </p>
+  </body>
+</html>
