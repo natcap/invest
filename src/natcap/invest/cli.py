@@ -393,6 +393,9 @@ def main(user_args=None):
 
     serve_subparser = subparsers.add_parser(
         'serve', help=('Start the flask app on the localhost.'))
+    serve_subparser.add_argument(
+        '--port', type=int, default=56789,
+        help='Port number for the Flask server')
 
     args = parser.parse_args(user_args)
 
@@ -574,7 +577,7 @@ def main(user_args=None):
 
     if args.subcommand == 'serve':
         import natcap.invest.web_api
-        natcap.invest.web_api.app.run()
+        natcap.invest.web_api.app.run(port=args.port)
         parser.exit(0)
 
 if __name__ == '__main__':
