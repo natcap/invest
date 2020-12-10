@@ -110,8 +110,10 @@ Unreleased Changes (3.9)
       outlet features vector.
 * Finfish
     * Fixed a bug where the suffix input was not being used for output paths.
-* Forest Carbon Edge Effects
+* Forest Carbon Edge Effect
     * Fixed a broken link to the local User's Guide
+    * Fixed bug that was causing overflow errors to appear in the logs when 
+      running with the sample data.
 * GLOBIO
     * Fixing a bug with how the ``msa`` results were masked and operated on
       that could cause bad results in the ``msa`` outputs.

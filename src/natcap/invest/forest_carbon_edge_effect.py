@@ -734,7 +734,11 @@ def _calculate_tropical_forest_edge_carbon_map(
         None
 
     """
-    # load spatial indeces from pickle file
+    # load spatial indices from pickle file
+    # let d = number of precalculated model cells (2217 for sample data)
+    #   kd_tree.data.shape: (d, 2)
+    #   theta_model_parameters.shape: (d, 3)
+    #   method_model_parameter.shape: (d,)
     kd_tree, theta_model_parameters, method_model_parameter = pickle.load(
         open(spatial_index_pickle_path, 'rb'))
 
@@ -804,6 +808,8 @@ def _calculate_tropical_forest_edge_carbon_map(
             row_coords[valid_edge_distance_mask].ravel(),
             col_coords[valid_edge_distance_mask].ravel()))
         # note, the 'n_jobs' parameter was introduced in SciPy 0.16.0
+        # for each forest point x, for each of its k nearest neighbors
+        # shape of distances and indexes: (x, k)
         distances, indexes = kd_tree.query(
             coord_points, k=n_nearest_model_points,
             distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
@@ -812,51 +818,50 @@ def _calculate_tropical_forest_edge_carbon_map(
             distances = distances.reshape(distances.shape[0], 1)
             indexes = indexes.reshape(indexes.shape[0], 1)
 
-        # the 3 is for the 3 thetas in the carbon model
+        # 3 is for the 3 thetas in the carbon model. thetas shape: (x, k, 3)
         thetas = numpy.zeros((indexes.shape[0], indexes.shape[1], 3))
         valid_index_mask = (indexes != kd_tree.n)
         thetas[valid_index_mask] = theta_model_parameters[
             indexes[valid_index_mask]]
 
-        # the 3 is for the 3 models (asym, exp, linear)
-        biomass_model = numpy.zeros(
-            (indexes.shape[0], indexes.shape[1], 3))
         # reshape to an N,nearest_points so we can multiply by thetas
         valid_edge_distances_km = numpy.repeat(
             edge_distance_block[valid_edge_distance_mask] * cell_size_km,
             n_nearest_model_points).reshape(-1, n_nearest_model_points)
 
-        # asymptotic model
+        # For each forest pixel x, for each of its k nearest neighbors, the 
+        # chosen regression method (1, 2, or 3). model_index shape: (x, k)
+        model_index = numpy.zeros(indexes.shape, dtype=numpy.int8) 
+        model_index[valid_index_mask] = ( 
+            method_model_parameter[indexes[valid_index_mask]]) 
+
+        # biomass shape: (x, k)
+        biomass = numpy.zeros((indexes.shape[0], indexes.shape[1]), 
+            dtype=numpy.float32)
+
+        # mask shapes: (x, k)
+        mask_1 = model_index == 1
+        mask_2 = model_index == 2
+        mask_3 = model_index == 3
+
+        # exponential model
         # biomass_1 = t1 - t2 * exp(-t3 * edge_dist_km)
-        biomass_model[:, :, 0] = (
-            thetas[:, :, 0] - thetas[:, :, 1] * numpy.exp(
-                -thetas[:, :, 2] * valid_edge_distances_km)
+        biomass[mask_1] = (
+            thetas[mask_1][:,0] - thetas[mask_1][:,1] * numpy.exp(
+                -thetas[mask_1][:,2] * valid_edge_distances_km[mask_1])
             ) * cell_area_ha
 
         # logarithmic model
         # biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
-        biomass_model[:, :, 1] = (
-            thetas[:, :, 0] + thetas[:, :, 1] * numpy.log(
-                valid_edge_distances_km)) * cell_area_ha
+        biomass[mask_2] = (
+            thetas[mask_2][:,0] + thetas[mask_2][:,1] * numpy.log(
+                valid_edge_distances_km[mask_2])) * cell_area_ha
 
         # linear regression
         # biomass_3 = t1 + t2 * edge_dist_km
-        biomass_model[:, :, 2] = (
-            (thetas[:, :, 0] + thetas[:, :, 1] * valid_edge_distances_km) *
-            cell_area_ha)
-
-        # Collapse the biomass down to the valid models
-        model_index = numpy.zeros(indexes.shape, dtype=numpy.int8)
-        model_index[valid_index_mask] = (
-            method_model_parameter[indexes[valid_index_mask]] - 1)
-
-        # reduce the axis=1 dimensionality of the model by selecting the
-        # appropriate value via the model_index array. Got this trick from
-        # http://stackoverflow.com/questions/18702746/reduce-a-dimension-of-numpy-array-by-selecting
-        biomass_y, biomass_x = numpy.meshgrid(
-            numpy.arange(biomass_model.shape[1]),
-            numpy.arange(biomass_model.shape[0]))
-        biomass = biomass_model[biomass_x, biomass_y, model_index]
+        biomass[mask_3] = (
+            thetas[mask_3][:,0] + thetas[mask_3][:,1] *
+            valid_edge_distances_km[mask_3]) * cell_area_ha
 
         # reshape the array so that each set of points is in a separate
         # dimension, here distances are distances to each valid model
@@ -876,9 +881,8 @@ def _calculate_tropical_forest_edge_carbon_map(
                       biomass[valid_denom], axis=1) / denom[valid_denom])
 
         # Ensure the result has nodata everywhere the distance was invalid
-        result = numpy.empty(
-            edge_distance_block.shape, dtype=numpy.float32)
-        result[:] = CARBON_MAP_NODATA
+        result = numpy.full(edge_distance_block.shape, CARBON_MAP_NODATA, 
+            dtype=numpy.float32)
         # convert biomass to carbon in this stage
         result[valid_edge_distance_mask] = (
             average_biomass * biomass_to_carbon_conversion_factor)
