@@ -34,9 +34,6 @@
 .. :changelog:
 Unreleased Changes (3.9)
 ------------------------
-* Annual Water Yield:
-    * Fixing bug that limited ``rsupply`` result when ``wyield_mn`` or
-      ``consump_mn`` was 0.
 * General:
     * Deprecating GDAL 2 and adding support for GDAL 3.
     * Adding function in utils.py to handle InVEST coordindate transformations.
@@ -68,6 +65,10 @@ Unreleased Changes (3.9)
     * Fixing model local documentation links for Windows and Mac binaries.
     * The InVEST binary builds now launch on Mac OS 11 "Big Sur".  This was
       addressed by defining the ``QT_MAC_WANTS_LAYER`` environment variable.
+    * Fixed the alphabetical ordering of Windows Start Menu shortcuts.
+* Annual Water Yield:
+    * Fixing bug that limited ``rsupply`` result when ``wyield_mn`` or
+      ``consump_mn`` was 0.
 * Coastal Blue Carbon
     * Refactor of Coastal Blue Carbon that implements TaskGraph for task
       management across the model and fixes a wide range of issues with the model
@@ -107,6 +108,12 @@ Unreleased Changes (3.9)
       'watersheds' to match the name of the vector file (including the suffix).
     * Added pour point detection option as an alternative to providing an
       outlet features vector.
+* Finfish
+    * Fixed a bug where the suffix input was not being used for output paths.
+* Forest Carbon Edge Effect
+    * Fixed a broken link to the local User's Guide
+    * Fixed bug that was causing overflow errors to appear in the logs when 
+      running with the sample data.
 * GLOBIO
     * Fixing a bug with how the ``msa`` results were masked and operated on
       that could cause bad results in the ``msa`` outputs.
@@ -133,6 +140,7 @@ Unreleased Changes (3.9)
       value. Now, the decay does not ignore those nodata edges causing values
       on the edges to decay more quickly. The area of study should have
       adequate boundaries to account for these edge effects.
+    * Update default half saturation value for sample data to 0.05 from 0.1.
 * Seasonal Water Yield
     * Fixed a bug where precip or eto rasters of ``GDT_Float64`` with values
       greater than 32-bit would overflow to ``-inf``.
@@ -142,8 +150,6 @@ Unreleased Changes (3.9)
       to "333" leading to high export spikes in some pixels.
     * Fixed an issue where sediment deposition progress logging was not
       progressing linearly.
-* Finfish
-    * Fixed a bug where the suffix input was not being used for output paths.
 * Urban Cooling
     * Split energy savings valuation and work productivity valuation into
       separate UI options.
