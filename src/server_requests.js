@@ -2,7 +2,6 @@ import fetch from 'node-fetch';
 import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-const PORT = process.env.PORT || '5000';
 const HOSTNAME = 'http://localhost';
 
 /** Find out if the Flask server is online, waiting until it is.
@@ -16,7 +15,7 @@ const HOSTNAME = 'http://localhost';
  */
 export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
   return (
-    fetch(`${HOSTNAME}:${PORT}/ready`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/ready`, {
       method: 'get',
     })
       .then((response) => response.text())
@@ -47,7 +46,7 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
  */
 export function getInvestList() {
   return (
-    fetch(`${HOSTNAME}:${PORT}/models`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/models`, {
       method: 'get',
     })
       .then((response) => response.json())
@@ -63,7 +62,7 @@ export function getInvestList() {
  */
 export function getSpec(payload) {
   return (
-    fetch(`${HOSTNAME}:${PORT}/getspec`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/getspec`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -84,7 +83,7 @@ export function getSpec(payload) {
  */
 export function fetchValidation(payload) {
   return (
-    fetch(`${HOSTNAME}:${PORT}/validate`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/validate`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -102,7 +101,7 @@ export function fetchValidation(payload) {
  */
 export function fetchDatastackFromFile(payload) {
   return (
-    fetch(`${HOSTNAME}:${PORT}/post_datastack_file`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/post_datastack_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -125,7 +124,7 @@ export function fetchDatastackFromFile(payload) {
  */
 export function saveToPython(payload) {
   return (
-    fetch(`${HOSTNAME}:${PORT}/save_to_python`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/save_to_python`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -149,7 +148,7 @@ export function saveToPython(payload) {
  */
 export function writeParametersToFile(payload) {
   return (
-    fetch(`${HOSTNAME}:${PORT}/write_parameter_set_file`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/write_parameter_set_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -167,7 +166,7 @@ export function writeParametersToFile(payload) {
  */
 export function shutdownPythonProcess() {
   return (
-    fetch(`http://localhost:${PORT}/shutdown`, {
+    fetch(`http://localhost:${process.env.PORT}/shutdown`, {
       method: 'get',
     })
       .then((response) => response.text())
