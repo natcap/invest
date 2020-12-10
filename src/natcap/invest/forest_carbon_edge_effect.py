@@ -612,9 +612,18 @@ def _map_distance_from_tropical_forest_edge(
         base_lulc_raster_path)['nodata']
 
     def mask_non_forest_op(lulc_array):
-        """Converts forest lulc codes to 1."""
+        """Convert forest lulc codes to 0.
+        Args:
+            lulc_array (numpy.ndarray): array representing a LULC raster where
+                each forest LULC code is in `forest_codes`.
+        Returns:
+            numpy.ndarray with the same shape as lulc_array. All pixels are
+                0 (forest), 1 (non-forest), or 255 (nodata).
+        """
         non_forest_mask = ~numpy.isin(lulc_array, forest_codes)
         nodata_mask = lulc_array == lulc_nodata
+        # where LULC has nodata, set value to forest_mask_nodata value (255)
+        # where LULC has data, set to 0 if LULC is a forest type, 1 if it's not
         return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
 
     pygeoprocessing.raster_calculator(
@@ -622,8 +631,28 @@ def _map_distance_from_tropical_forest_edge(
         target_non_forest_mask_path, gdal.GDT_Byte, forest_mask_nodata)
 
     # Do the distance transform on non-forest pixels
+    # This is the distance from each pixel to the nearest pixel with value 1.
+    #   - for forest pixels, this is the distance to the forest edge
+    #   - for non-forest pixels, this is 0
+    #   - for nodata pixels, distance is calculated but is meaningless
     pygeoprocessing.distance_transform_edt(
         (target_non_forest_mask_path, 1), edge_distance_path)
+
+    # mask out the meaningless distance pixels so they don't affect the output
+    edge_distance_raster = gdal.OpenEx(edge_distance_path, gdal.GA_Update)
+    edge_distance_band = edge_distance_raster.GetRasterBand(1)
+    for (lulc_offset, lulc_block), (_, distance_block) in zip(
+            pygeoprocessing.iterblocks(
+                (base_lulc_raster_path, 1), largest_block=2**12),
+            pygeoprocessing.iterblocks(
+                (edge_distance_path, 1), largest_block=2**12)):
+        # where LULC has nodata, overwrite edge distance with nodata value
+        masked_distance_block = numpy.where(
+            lulc_block == lulc_nodata, -1, distance_block)
+        edge_distance_band.WriteArray(
+            masked_distance_block, 
+            xoff=lulc_offset['xoff'], 
+            yoff=lulc_offset['yoff'])
 
 
 def _build_spatial_index(
@@ -773,8 +802,8 @@ def _calculate_tropical_forest_edge_carbon_map(
             last_time = current_time
         n_cells_processed += (
             edge_distance_data['win_xsize'] * edge_distance_data['win_ysize'])
+        # only forest pixels will have an edge distance > 0
         valid_edge_distance_mask = (edge_distance_block > 0)
-        print(numpy.any(edge_distance_block < 0))
 
         # if no valid forest pixels to calculate, skip to the next block
         if not valid_edge_distance_mask.any():
