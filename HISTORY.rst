@@ -108,6 +108,10 @@ Unreleased Changes (3.9)
       'watersheds' to match the name of the vector file (including the suffix).
     * Added pour point detection option as an alternative to providing an
       outlet features vector.
+* Finfish
+    * Fixed a bug where the suffix input was not being used for output paths.
+* Forest Carbon Edge Effects
+    * Fixed a broken link to the local User's Guide
 * GLOBIO
     * Fixing a bug with how the ``msa`` results were masked and operated on
       that could cause bad results in the ``msa`` outputs.
@@ -144,8 +148,6 @@ Unreleased Changes (3.9)
       to "333" leading to high export spikes in some pixels.
     * Fixed an issue where sediment deposition progress logging was not
       progressing linearly.
-* Finfish
-    * Fixed a bug where the suffix input was not being used for output paths.
 * Urban Cooling
     * Split energy savings valuation and work productivity valuation into
       separate UI options.

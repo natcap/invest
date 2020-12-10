@@ -11,7 +11,7 @@ class ForestCarbonEdgeEffect(model.InVESTModel):
             label='Forest Carbon Edge Effect Model',
             target=natcap.invest.forest_carbon_edge_effect.execute,
             validator=natcap.invest.forest_carbon_edge_effect.validate,
-            localdoc='forest_carbon_edge_effect.html')
+            localdoc=natcap.invest.forest_carbon_edge_effect.ARGS_SPEC.userguide_html)
 
         self.lulc_raster_path = inputs.File(
             args_key='lulc_raster_path',
