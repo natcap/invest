@@ -291,7 +291,8 @@ with open(MODEL_ENTRYPOINTS_FILE, 'w') as models_rst:
         models_rst.write((
             '{module_title}\n'
             '{underline}\n'
-            '.. autofunction:: {modname}.execute\n\n').format(
+            '.. autofunction:: {modname}.execute\n'
+            '   :noindex:\n\n').format(
                 module_title=module_title,
                 underline=''.join(['=']*len(module_title)),
                 modname=name
