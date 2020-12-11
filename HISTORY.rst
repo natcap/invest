@@ -152,6 +152,7 @@
       to "333" leading to high export spikes in some pixels.
     * Fixed an issue where sediment deposition progress logging was not
       progressing linearly.
+    * Fixed a task dependency bug that in rare cases could cause failure.
 * Urban Cooling
     * Split energy savings valuation and work productivity valuation into
       separate UI options.
