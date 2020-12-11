@@ -618,11 +618,11 @@ def _map_distance_from_tropical_forest_edge(
                 each forest LULC code is in `forest_codes`.
         Returns:
             numpy.ndarray with the same shape as lulc_array. All pixels are
-                0 (forest), 1 (non-forest), or -1 (nodata).
+                0 (forest), 1 (non-forest), or 255 (nodata).
         """
         non_forest_mask = ~numpy.isin(lulc_array, forest_codes)
         nodata_mask = lulc_array == lulc_nodata
-        # where LULC has nodata, set value to nodata value (-1)
+        # where LULC has nodata, set value to nodata value (255)
         # where LULC has data, set to 0 if LULC is a forest type, 1 if it's not
         return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
 
