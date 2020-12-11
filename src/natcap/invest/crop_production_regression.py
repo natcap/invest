@@ -218,11 +218,13 @@ def execute(args):
         args['landcover_raster_path'] (string): path to landcover raster
         args['landcover_to_crop_table_path'] (string): path to a table that
             converts landcover types to crop names that has two headers:
+
             * lucode: integer value corresponding to a landcover code in
               `args['landcover_raster_path']`.
             * crop_name: a string that must match one of the crops in
               args['model_data_path']/climate_regression_yield_tables/[cropname]_*
               A ValueError is raised if strings don't match.
+
         args['fertilization_rate_table_path'] (string): path to CSV table
             that contains fertilization rates for the crops in the simulation,
             though it can contain additional crops not used in the simulation.
@@ -235,10 +237,12 @@ def execute(args):
             value. (optional, if value is None, then skipped)
         args['model_data_path'] (string): path to the InVEST Crop Production
             global data directory.  This model expects that the following
-            directories are subdirectories of this path
+            directories are subdirectories of this path:
+
             * climate_bin_maps (contains [cropname]_climate_bin.tif files)
             * climate_percentile_yield (contains
               [cropname]_percentile_yield_table.csv files)
+              
             Please see the InVEST user's guide chapter on crop production for
             details about how to download these data.
 

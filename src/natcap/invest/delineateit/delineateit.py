@@ -643,9 +643,11 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
         flow_dir_raster_path_band (tuple): tuple of (raster path, band index)
             indicating the flow direction raster to use. Pixel values are D8
             values [0 - 7] in this order:
+
                 321
                 4x0
                 567
+                
         target_vector_path (string): path to save pour point vector to.
 
     Returns:

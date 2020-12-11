@@ -253,9 +253,11 @@ def execute(args):
         args['valuation_table_path'] (string): (optional) if a non-empty
             string, a path to an input CSV table of
             hydropower stations with the following fields to calculate
-            valuation:
-                ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
-                'cost', 'height', 'kw_price')
+            valuation: 
+            
+                - 'ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
+                - 'cost', 'height', 'kw_price')
+
             Required if ``calculate_valuation`` is True.
 
         args['n_workers'] (int): (optional) The number of worker processes to

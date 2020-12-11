@@ -643,32 +643,31 @@ def load_msa_parameter_table(
             what level between msa_lu 8 and 9 to define the general GLOBIO
             code "12" to.
 
+    Returns:
+        dictionary of the form:
 
-        returns a dictionary of the form
-            {
-                'msa_f': {
-                    valuea: msa_f_value, ...
-                    valueb: ...
-                    '<': (bound, msa_f_value),
-                    '>': (bound, msa_f_value)}
-                'msa_i_other_table': {
-                    valuea: msa_i_value, ...
-                    valueb: ...
-                    '<': (bound, msa_i_other_value),
-                    '>': (bound, msa_i_other_value)}
-                'msa_i_primary': {
-                    valuea: msa_i_primary_value, ...
-                    valueb: ...
-                    '<': (bound, msa_i_primary_value),
-                    '>': (bound, msa_i_primary_value)}
-                'msa_lu': {
-                    valuea: msa_lu_value, ...
-                    valueb: ...
-                    '<': (bound, msa_lu_value),
-                    '>': (bound, msa_lu_value)
-                    12: (msa_lu_8 * (1.0 - intensification_fraction) +
-                         msa_lu_9 * intensification_fraction}
-            }
+            {'msa_f': {
+                valuea: msa_f_value, ...
+                valueb: ...
+                '<': (bound, msa_f_value),
+                '>': (bound, msa_f_value)}
+            'msa_i_other_table': {
+                valuea: msa_i_value, ...
+                valueb: ...
+                '<': (bound, msa_i_other_value),
+                '>': (bound, msa_i_other_value)}
+            'msa_i_primary': {
+                valuea: msa_i_primary_value, ...
+                valueb: ...
+                '<': (bound, msa_i_primary_value),
+                '>': (bound, msa_i_primary_value)}
+            'msa_lu': {
+                valuea: msa_lu_value, ...
+                valueb: ...
+                '<': (bound, msa_lu_value),
+                '>': (bound, msa_lu_value)
+                12: (msa_lu_8 * (1.0 - intensification_fraction) + 
+                msa_lu_9 * intensification_fraction}}
 
     """
     msa_table = utils.read_csv_to_dataframe(
