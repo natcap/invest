@@ -332,7 +332,6 @@ def execute(args):
         args=(
             (flood_vol_raster_path, 1),
             reprojected_aoi_path),
-        store_result=True,
         dependent_task_list=[flood_vol_task, reprojected_aoi_task],
         task_name='zonal_statistics over the flood_volume raster')
 
@@ -341,7 +340,6 @@ def execute(args):
         args=(
             (runoff_retention_raster_path, 1),
             reprojected_aoi_path),
-        store_result=True,
         dependent_task_list=[runoff_retention_task],
         task_name='zonal_statistics over runoff_retention raster')
 
@@ -350,7 +348,6 @@ def execute(args):
         args=(
             (runoff_retention_vol_raster_path, 1),
             reprojected_aoi_path),
-        store_result=True,
         dependent_task_list=[runoff_retention_vol_task],
         task_name='zonal_statistics over runoff_retention_volume raster')
 
@@ -380,7 +377,6 @@ def execute(args):
             args=(reprojected_aoi_path,
                   reprojected_structures_path,
                   args['infrastructure_damage_loss_table_path']),
-            store_result=True,
             dependent_task_list=[
                 reprojected_aoi_task,
                 reproject_built_infrastructure_task],
