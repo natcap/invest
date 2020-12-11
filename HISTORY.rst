@@ -114,6 +114,8 @@ Unreleased Changes (3.9)
     * Fixed a broken link to the local User's Guide
     * Fixed bug that was causing overflow errors to appear in the logs when 
       running with the sample data.
+    * Mask out nodata areas of the carbon map output. Now there should be no
+      output data outside of the input LULC rasater area.
 * GLOBIO
     * Fixing a bug with how the ``msa`` results were masked and operated on
       that could cause bad results in the ``msa`` outputs.

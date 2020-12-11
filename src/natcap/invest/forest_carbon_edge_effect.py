@@ -24,8 +24,8 @@ LOGGER = logging.getLogger(__name__)
 # grid cells are 100km. Becky says 500km is a good upper bound to search
 DISTANCE_UPPER_BOUND = 500e3
 
-# helpful to have a global nodata defined for all the carbon map rasters
-CARBON_MAP_NODATA = -9999
+# helpful to have a global nodata defined for the whole model
+NODATA_VALUE = -1
 
 ARGS_SPEC = {
     "model_name": "Forest Carbon Edge Effect Model",
@@ -378,7 +378,7 @@ def execute(args):
         func=pygeoprocessing.raster_calculator,
         args=(carbon_maps_band_list, combine_carbon_maps,
               output_file_registry['carbon_map'], gdal.GDT_Float32,
-              CARBON_MAP_NODATA),
+              NODATA_VALUE),
         target_path_list=[output_file_registry['carbon_map']],
         task_name='combine_carbon_maps')
 
@@ -415,10 +415,10 @@ def combine_carbon_maps(*carbon_maps):
     nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=numpy.bool)
     nodata_mask[:] = True
     for carbon_map in carbon_maps:
-        valid_mask = carbon_map != CARBON_MAP_NODATA
+        valid_mask = carbon_map != NODATA_VALUE
         nodata_mask &= ~valid_mask
         result[valid_mask] += carbon_map[valid_mask]
-    result[nodata_mask] = CARBON_MAP_NODATA
+    result[nodata_mask] = NODATA_VALUE
     return result
 
 
@@ -550,7 +550,7 @@ def _calculate_lulc_carbon_map(
             is_tropical_forest = 0
         if ignore_tropical_type and is_tropical_forest == 1:
             # if tropical forest above ground, lookup table is nodata
-            lucode_to_per_cell_carbon[int(lucode)] = CARBON_MAP_NODATA
+            lucode_to_per_cell_carbon[int(lucode)] = NODATA_VALUE
         else:
             try:
                 lucode_to_per_cell_carbon[int(lucode)] = float(
@@ -570,7 +570,7 @@ def _calculate_lulc_carbon_map(
 
     utils.reclassify_raster(
         (lulc_raster_path, 1), lucode_to_per_cell_carbon,
-        carbon_map_path, gdal.GDT_Float32, CARBON_MAP_NODATA,
+        carbon_map_path, gdal.GDT_Float32, NODATA_VALUE,
         reclass_error_details)
 
 
@@ -607,15 +607,23 @@ def _map_distance_from_tropical_forest_edge(
         if int(ludata['is_tropical_forest']) == 1]
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
-    forest_mask_nodata = 255
     lulc_nodata = pygeoprocessing.get_raster_info(
         base_lulc_raster_path)['nodata']
 
+    forest_mask_nodata = 255
     def mask_non_forest_op(lulc_array):
-        """Converts forest lulc codes to 1."""
-        non_forest_mask = ~numpy.in1d(
-            lulc_array.flatten(), forest_codes).reshape(lulc_array.shape)
+        """Convert forest lulc codes to 0.
+        Args:
+            lulc_array (numpy.ndarray): array representing a LULC raster where
+                each forest LULC code is in `forest_codes`.
+        Returns:
+            numpy.ndarray with the same shape as lulc_array. All pixels are
+                0 (forest), 1 (non-forest), or 255 (nodata).
+        """
+        non_forest_mask = ~numpy.isin(lulc_array, forest_codes)
         nodata_mask = lulc_array == lulc_nodata
+        # where LULC has nodata, set value to nodata value (255)
+        # where LULC has data, set to 0 if LULC is a forest type, 1 if it's not
         return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
 
     pygeoprocessing.raster_calculator(
@@ -623,8 +631,29 @@ def _map_distance_from_tropical_forest_edge(
         target_non_forest_mask_path, gdal.GDT_Byte, forest_mask_nodata)
 
     # Do the distance transform on non-forest pixels
+    # This is the distance from each pixel to the nearest pixel with value 1.
+    #   - for forest pixels, this is the distance to the forest edge
+    #   - for non-forest pixels, this is 0
+    #   - for nodata pixels, distance is calculated but is meaningless
     pygeoprocessing.distance_transform_edt(
         (target_non_forest_mask_path, 1), edge_distance_path)
+
+    # mask out the meaningless distance pixels so they don't affect the output
+    lulc_raster = gdal.OpenEx(base_lulc_raster_path)
+    lulc_band = lulc_raster.GetRasterBand(1)
+    edge_distance_raster = gdal.OpenEx(edge_distance_path, gdal.GA_Update)
+    edge_distance_band = edge_distance_raster.GetRasterBand(1)
+
+    for offset_dict in pygeoprocessing.iterblocks((base_lulc_raster_path, 1), offset_only=True):
+        # where LULC has nodata, overwrite edge distance with nodata value
+        lulc_block = lulc_band.ReadAsArray(**offset_dict)
+        distance_block = edge_distance_band.ReadAsArray(**offset_dict)
+        masked_distance_block = numpy.where(
+            lulc_block == lulc_nodata, NODATA_VALUE, distance_block)
+        edge_distance_band.WriteArray(
+            masked_distance_block, 
+            xoff=offset_dict['xoff'], 
+            yoff=offset_dict['yoff'])
 
 
 def _build_spatial_index(
@@ -746,8 +775,8 @@ def _calculate_tropical_forest_edge_carbon_map(
     # fill nodata, in case we skip entire memory blocks that are non-forest
     pygeoprocessing.new_raster_from_base(
         edge_distance_path, tropical_forest_edge_carbon_map_path,
-        gdal.GDT_Float32, band_nodata_list=[CARBON_MAP_NODATA],
-        fill_value_list=[CARBON_MAP_NODATA])
+        gdal.GDT_Float32, band_nodata_list=[NODATA_VALUE],
+        fill_value_list=[NODATA_VALUE])
     edge_carbon_raster = gdal.OpenEx(
         tropical_forest_edge_carbon_map_path, gdal.GA_Update)
     edge_carbon_band = edge_carbon_raster.GetRasterBand(1)
@@ -778,6 +807,7 @@ def _calculate_tropical_forest_edge_carbon_map(
             last_time = current_time
         n_cells_processed += (
             edge_distance_data['win_xsize'] * edge_distance_data['win_ysize'])
+        # only forest pixels will have an edge distance > 0
         valid_edge_distance_mask = (edge_distance_block > 0)
 
         # if no valid forest pixels to calculate, skip to the next block
@@ -881,7 +911,7 @@ def _calculate_tropical_forest_edge_carbon_map(
                       biomass[valid_denom], axis=1) / denom[valid_denom])
 
         # Ensure the result has nodata everywhere the distance was invalid
-        result = numpy.full(edge_distance_block.shape, CARBON_MAP_NODATA, 
+        result = numpy.full(edge_distance_block.shape, NODATA_VALUE, 
             dtype=numpy.float32)
         # convert biomass to carbon in this stage
         result[valid_edge_distance_mask] = (
