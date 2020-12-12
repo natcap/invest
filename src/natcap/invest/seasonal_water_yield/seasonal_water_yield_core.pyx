@@ -683,7 +683,7 @@ def route_baseflow_sum(
         stream_path, target_b_path, target_b_sum_path):
     """Route Baseflow through MFD as described in Equation 11.
 
-    Parameters:
+    Args:
         flow_dir_mfd_path (string): path to a pygeoprocessing multiple flow
             direction raster.
         l_path (string): path to local recharge raster.
@@ -696,10 +696,10 @@ def route_baseflow_sum(
         target_b_sum_path (string): path to created raster for per-pixel
             upstream sum of baseflow.
 
-`    Returns:
+    Returns:
         None.
-
     """
+
     # used for time-delayed logging
     cdef time_t last_log_time
     last_log_time = ctime(NULL)

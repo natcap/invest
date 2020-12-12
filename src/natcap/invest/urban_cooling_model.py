@@ -763,6 +763,7 @@ def calculate_uhi_result_vector(
             if no valuation occurred.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
+            
                 * avg_cc
                 * avg_tmp_an
                 * avd_eng_cn

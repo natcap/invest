@@ -751,13 +751,16 @@ def execute(args):
     line as shown:
 
     nohup python -u -c "import natcap.invest.recreation.recmodel_server;
-        args={'hostname':'$LOCALIP',
-              'port':$REC_SERVER_PORT,
-              'raw_csv_point_data_path': $POINT_DATA_PATH,
-              'max_year': $MAX_YEAR,
-              'min_year': $MIN_YEAR,
-              'cache_workspace': $CACHE_WORKSPACE_PATH'};
-        natcap.invest.recreation.recmodel_server.execute(args)"
+    args={
+
+        'hostname':'$LOCALIP',
+        'port':$REC_SERVER_PORT,
+        'raw_csv_point_data_path': $POINT_DATA_PATH,
+        'max_year': $MAX_YEAR,
+        'min_year': $MIN_YEAR,
+        'cache_workspace': $CACHE_WORKSPACE_PATH'};
+        
+    natcap.invest.recreation.recmodel_server.execute(args)"
 
     Parameters:
         args['raw_csv_point_data_path'] (string): path to a csv file of the

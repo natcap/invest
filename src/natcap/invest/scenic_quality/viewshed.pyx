@@ -16,6 +16,7 @@ http://desktop.arcgis.com/en/arcmap/10.3/tools/spatial-analyst-toolbox/using-vie
 Consistent with the routing functionality of pygeoprocessing, neighbor
 directions follow the right-hand rule where neighbor indexes are interpreted
 as:
+
     # 321
     # 4X0
     # 567

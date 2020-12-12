@@ -469,10 +469,9 @@ def build_lookup_from_csv(
             string values. default=True.
 
     Returns:
-        lookup_dict (dict): a dictionary of the form {
-                key_field_0: {csv_header_0: value0, csv_header_1: value1...},
-                key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}
-            }
+        lookup_dict (dict): a dictionary of the form 
+        {key_field_0: {csv_header_0: value0, csv_header_1: value1...},
+        key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}}
 
         if ``to_lower`` all strings including key_fields and values are
         converted to lowercase unicode.
@@ -831,9 +830,10 @@ def reclassify_raster(
             ``pygeoprocessing.ReclassificationMissingValuesError``.
             keys must be {'raster_name', 'column_name', 'table_name'}. Values
             each key represent:
+
                 'raster_name' - string for the raster name being reclassified
-                'column_name' - name of the table column that ``value_map``
-                    dictionary keys came from.
+                'column_name' - name of the table column that ``value_map`` 
+                dictionary keys came from.
                 'table_name' - table name that ``value_map`` came from.
 
     Returns:

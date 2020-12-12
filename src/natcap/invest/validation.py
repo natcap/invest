@@ -870,7 +870,8 @@ def invest_validator(validate_func):
     Raises:
         AssertionError when an invalid format is found.
 
-    Example:
+    Example::
+    
         from natcap.invest import validation
         @validation.invest_validator
         def validate(args, limit_to=None):

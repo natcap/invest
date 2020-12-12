@@ -4,54 +4,54 @@ import logging
 LOGGER = logging.getLogger('natcap.invest.reporting.table_generator')
 
 def generate_table(table_dict, attributes=None):
-    """Takes in a dictionary representation of a table and generates a String of
-        the the table in the form of hmtl
+    """Takes in a dictionary representation of a table and generates a string 
+    of the the table in the form of hmtl
 
-        table_dict - a dictionary with the following arguments:
-            'cols'- a list of dictionaries that defines the column
+    Args:
+        table_dict: a dictionary with the following arguments:
+
+            'cols': a list of dictionaries that defines the column
                 structure for the table (required). The order of the
                 columns from left to right is depicted by the index
                 of the column dictionary in the list. Each dictionary
                 in the list has the following keys and values:
-                    'name' - a string for the column name (required)
-                    'total' - a boolean for whether the column should be
-                        totaled (required)
-                    'attr' - a dictionary that has key value pairs for
-                        optional tag attributes (optional). Ex:
-                        'attr': {'class': 'offsets'}
-                    'td_class' - a String to assign as a class name to
-                            the table data tags under the column. Each
-                            table data tag under the column will have a class
-                            attribute assigned to 'td_class' value (optional)
 
-            'rows' - a list of dictionaries that represent the rows. Each
+                'name' (string): the column name (required)
+                'total' (boolean): whether to total the column
+                'attr' (dict, optional): tag attributes. 
+                Ex: 'attr': {'class': 'offsets'}
+                'td_class' (string, optional): a String to assign as a class 
+                name to the table data tags under the column. Each table data 
+                tag under the column will have a class attribute assigned to 
+                'td_class' value.
+
+            'rows': a list of dictionaries that represent the rows. Each
                 dictionaries keys should match the column names found in
-                'cols' (possibly empty list) (required) Example:
-                [{col_name_1: value, col_name_2: value, ...},
-                 {col_name_1: value, col_name_2: value, ...},
-                 ...]
+                'cols' (possibly empty list) (required) Example:[
+                {col_name_1: value, col_name_2: value, ...},
+                {col_name_1: value, col_name_2: value, ...}, ...]
 
-            'checkbox' - a boolean value for whether there should be a
+            'checkbox': a boolean value for whether there should be a
                 checkbox column. If True a 'selected total' row will be added
                 to the bottom of the table that will show the total of the
                 columns selected (optional)
 
-            'checkbox_pos' - an integer value for in which column
+            'checkbox_pos': an integer value for in which column
                 position the the checkbox column should appear
                 (optional)
 
-            'total'- a boolean value for whether there should be a constant
+            'total': a boolean value for whether there should be a constant
                 total row at the bottom of the table that sums the column
                 values (optional)
 
-            'attributes' - a dictionary of html table attributes. The attribute
-                    name is the key which gets set to the value of the key.
-                    (optional)
-                    Example: {'class': 'sorttable', 'id': 'parcel_table'}
+            'attributes': a dictionary of html table attributes. The attribute
+                name is the key which gets set to the value of the key.
+                (optional)
+                Example: {'class': 'sorttable', 'id': 'parcel_table'}
 
-            returns - a string representing an html table
+    Returns:
+        string representing an html table
     """
-
     LOGGER.info('Generating HTML Table String')
 
     # Initialize the string that will store the html representation of the table
@@ -307,32 +307,33 @@ def get_dictionary_values_ordered(dict_list, key_name):
 
 def add_checkbox_column(col_list, row_list, checkbox_pos=1):
     """Insert a new column into the list of column dictionaries so that it
-        is the second column dictionary found in the list. Also add the
-        checkbox column header to the list of row dictionaries and
-        subsequent checkbox value
+    is the second column dictionary found in the list. Also add the
+    checkbox column header to the list of row dictionaries and
+    subsequent checkbox value
 
-        'col_list'- a list of dictionaries that defines the column
+    Args:
+        col_list: a list of dictionaries that defines the column
             structure for the table (required). The order of the
             columns from left to right is depicted by the index
             of the column dictionary in the list. Each dictionary
             in the list has the following keys and values:
-                'name' - a string for the column name (required)
-                'total' - a boolean for whether the column should be
-                    totaled (required)
 
-        'row_list' - a list of dictionaries that represent the rows. Each
-            dictionaries keys should match the column names found in
-            'col_list' (required) Example:
-            [{col_name_1: value, col_name_2: value, ...},
-             {col_name_1: value, col_name_2: value, ...},
-             ...]
+                'name' - a string for the column name
+                'total' - a boolean for whether the column should be totaled
+
+        row_list: a list of dictionaries that represent the rows. Each
+            dictionary's keys should match the column names found in
+            'col_list' (required) Example: [
+            {col_name_1: value, col_name_2: value, ...}, 
+            {col_name_1: value, col_name_2: value, ...}, ...]
 
         checkbox_pos - an integer for the position of the checkbox
             column. Defaulted at 1 (optional)
 
-        returns - a tuple of the updated column and rows list of dictionaries
-            in that order"""
-
+    Returns: 
+        a tuple of the updated column and rows list of dictionaries
+            in that order
+    """
     LOGGER.debug('Adding a checkbox column to the column structure')
     # Insert a new column dictionary in the list in the second spot
     col_list.insert(checkbox_pos, {'name':'Select', 'total':False,
@@ -349,23 +350,24 @@ def add_checkbox_column(col_list, row_list, checkbox_pos=1):
 
 def get_row_data(row_list, col_headers):
     """Construct the rows in a 2D List from the list of dictionaries,
-        using col_headers to properly order the row data.
+    using col_headers to properly order the row data.
 
-        'row_list' - a list of dictionaries that represent the rows. Each
+    Args:
+        row_list: a list of dictionaries that represent the rows. Each
             dictionaries keys should match the column names found in
             'col_headers'. The rows will be ordered the same as they are found
-            in the dictionary list (required) Example:
-            [{'col_name_1':'9/13', 'col_name_3':'expensive',
-                'col_name_2':'chips'},
-             {'col_name_1':'3/13', 'col_name_2':'cheap',
-                'col_name_3':'peanuts'},
-             {'col_name_1':'5/12', 'col_name_2':'moderate',
-                'col_name_3':'mints'}]
+            in the dictionary list (required) Example: [
+            {'col_name_1':'9/13', 'col_name_3':'high', 'col_name_2':'chips'},
+            {'col_name_1':'3/13', 'col_name_2':'low', 'col_name_3':'peanuts'},
+            {'col_name_1':'5/12', 'col_name_2':'med', 'col_name_3':'mints'}]
 
-        col_headers - a List of the names of the column headers in order
+        col_headers: a list of the names of the column headers in order
+
             example : [col_name_1, col_name_2, col_name_3...]
-
-        return - a 2D list with each inner list representing a row"""
+    
+    Returns:
+        a 2D list with each inner list representing a row
+    """
     LOGGER.debug('Compile and return row data as a 2D list')
     # Initialize a list to hold output rows represented as lists
     row_data = []
