@@ -140,7 +140,7 @@ def execute(args):
           the provided ``flow_threshold`` parameter.  Values of 1 are
           streams, values of 0 are not.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string):  The selected folder is used as the
             workspace all intermediate and output files will be written.If the
             selected folder does not exist, it will be created. If datasets
@@ -323,7 +323,7 @@ def _vector_may_contain_points(vector_path, layer_id=0):
 
     This function is intended to be used by the InVEST UI only.
 
-    Parameters:
+    Args:
         vector_path (string): The path to a vector on disk.
         layer_id=0 (int or string): The ID or name of the layer to check.
 
@@ -353,7 +353,7 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     marked as stream pixels.  Any non-nodata pixels below ``threshold`` are
     marked as non-stream pixels.
 
-    Parameters:
+    Args:
         flow_accum (numpy array): A numpy array of flow accumulation values.
         src_nodata (number): A number indicating the nodata value of the
             flow accumulation array.
@@ -396,7 +396,7 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
     Any geometries that are empty or do not intersect the DEM will not be
     included in ``target_vector_path``.
 
-    Parameters:
+    Args:
         outlet_vector_path (string): The path to an outflow vector.  The first
             layer of the vector only will be inspected.
         dem_path (string): The path to a DEM on disk.
@@ -507,7 +507,7 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
     the source vector.  Any points that are outside of the stream raster will
     not be included in the output vector.
 
-    Parameters:
+    Args:
         points_vector_path (string): A path to a vector on disk containing
             point geometries.  Must be in the same projection as the stream
             raster.
@@ -761,7 +761,7 @@ def _find_raster_pour_points(flow_dir_raster_path_band):
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

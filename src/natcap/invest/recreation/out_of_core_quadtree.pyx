@@ -41,7 +41,7 @@ class OutOfCoreQuadTree(object):
             pickle_filename=None):
         """Make a new quadtree node with a given initial_bounding_box range.
 
-        Parameters:
+        Args:
             bounding_box (list): list of [x_min, y_min x_max, y_max]
             max_points_per_node (int): maximum number of points before a node
                 is subdivided
@@ -87,7 +87,7 @@ class OutOfCoreQuadTree(object):
     def build_node_shapes(self, ogr_polygon_layer):
         """Add features to an ogr.Layer to visualize quadtree segmentation.
 
-        Parameters:
+        Args:
             ogr_polygon_layer (ogr.layer): an ogr polygon layer with fields
                 'n_points' (int) and 'bb_box' (string) defined.
         Returns:
@@ -184,7 +184,7 @@ class OutOfCoreQuadTree(object):
         the maximum number of points allowed per node and is already not at
         the maximum level.
 
-        Parameters:
+        Args:
             point_list (numpy.ndarray): a numpy array of
                 (data, x_coord, y_coord) tuples
             left_bound (int): left index inclusive of points to consider under
@@ -245,7 +245,7 @@ class OutOfCoreQuadTree(object):
     def _bounding_box_intersect(self, bb):
         """Test if this node's bounding intersects another.
 
-        Parameters:
+        Args:
             bb (list): bounding box of form [xmin, ymin, xmax, ymax]
 
         Returns:
@@ -276,7 +276,7 @@ class OutOfCoreQuadTree(object):
         contained in the shapely_prepared_polygon that are stored in `self`'s
         representation of a quadtree.
 
-        Parameters:
+        Args:
             shapely_polygon (ogr.DataSource): a polygon datasource to bound
                 against
 
@@ -321,7 +321,7 @@ class OutOfCoreQuadTree(object):
         (data, lat, lng) tuples that are contained in the leaf nodes that
         intersect that bounding box.
 
-        Parameters:
+        Args:
             bounding_box (list): of the form [xmin, ymin, xmax, ymax]
 
         Returns:
@@ -362,7 +362,7 @@ cdef _sort_list_to_quads(
         Modifies the values of `left_y_split_index`, `x_split_index`, and
         `right_y_split_index` to report split.
 
-        Parameters:
+        Args:
             point_list (numpy.ndarray): structured numpy array of
                 (data, x_coord, y_coord) points. This parameter will be
                 modified to have sorted points
@@ -401,7 +401,7 @@ cdef _sort_list_to_quads(
 def _in_box(bounding_box, x_coord, y_coord):
     """Test if coordinate is contained in the bounding box.
 
-    Parameters:
+    Args:
         bounding_box (list): of form [xmin, ymin, xmax, ymax]
         x_coord, y_coord (int): x and y coordinate to test.
 

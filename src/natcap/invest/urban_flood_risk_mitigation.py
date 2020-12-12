@@ -429,9 +429,9 @@ def _write_summary_vector(
     If ``damage_per_aoi_stats`` is provided, then these additional columns will
     be written to the vector::
 
-        * ``'aff.bld'``: Potential damage to built infrastructure in $,
+        * ``'aff_bld'``: Potential damage to built infrastructure in $,
           per watershed.
-        * ``'serv.blt'``: Spatial indicator of the importance of the runoff
+        * ``'serv_blt'``: Spatial indicator of the importance of the runoff
           retention service
 
     Args:
@@ -480,7 +480,7 @@ def _write_summary_vector(
     if not damage_per_aoi_stats:
         damage_per_aoi_stats = {}
     else:
-        target_fields += ['aff.bld', 'serv.blt']
+        target_fields += ['aff_bld', 'serv_blt']
 
     for field_name in target_fields:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
@@ -512,11 +512,11 @@ def _write_summary_vector(
             pixel_count = runoff_ret_vol_stats[feature_id]['count']
             if pixel_count > 0:
                 damage_sum = damage_per_aoi_stats[feature_id]
-                target_feature.SetField('aff.bld', damage_sum)
+                target_feature.SetField('aff_bld', damage_sum)
 
-                # This is the service.built equation.
+                # This is the service_built equation.
                 target_feature.SetField(
-                    'serv.blt', (
+                    'serv_blt', (
                         damage_sum * runoff_ret_vol_stats[feature_id]['sum']))
 
         if feature_id in flood_volume_stats:

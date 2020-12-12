@@ -487,6 +487,29 @@ class TestRecServer(unittest.TestCase):
         # we know what the first date is
         self.assertEqual(val[0][0], datetime.date(2013, 3, 16))
 
+    def test_numpy_pickling_queue(self):
+        """Recreation test _numpy_dumps and _numpy_loads"""
+        from natcap.invest.recreation import recmodel_server
+
+        numpy_array_queue = multiprocessing.Queue()
+        array = numpy.empty(1, dtype='datetime64,f4')
+        numpy_array_queue.put(recmodel_server._numpy_dumps(array))
+
+        out_array = recmodel_server._numpy_loads(numpy_array_queue.get())
+        numpy.testing.assert_equal(out_array, array)
+        # without _numpy_loads, the queue pickles the array imperfectly,
+        # adding a metadata value to the `datetime64` dtype.
+        # assert that this doesn't happen. 'f0' is the first subdtype.
+        self.assertEqual(out_array.dtype['f0'].metadata, None)
+
+        # assert that saving the array does not raise a warning
+        with warnings.catch_warnings(record=True) as ws:
+            # cause all warnings to always be triggered
+            warnings.simplefilter("always")
+            numpy.save(os.path.join(self.workspace_dir, 'out'), out_array)
+            # assert that no warning was raised
+            self.assertTrue(len(ws) == 0)
+
     @_timeout(30.0)
     def test_regression_local_server(self):
         """Recreation base regression test on sample data on local server.

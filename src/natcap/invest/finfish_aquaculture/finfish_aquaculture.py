@@ -473,7 +473,7 @@ def format_temp_table(temp_path, ff_aqua_args):
 def validate(args, limit_to=None):
     """Validate an input dictionary for Finfish Aquaculture.
 
-    Parameters:
+    Args:
         args (dict): The args dictionary.
         limit_to=None (str or None): If a string key, only this args parameter
             will be validated.  If ``None``, all args parameters will be

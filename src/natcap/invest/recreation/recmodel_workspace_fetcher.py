@@ -23,7 +23,7 @@ def execute(args):
     `args['workspace_id'] + '.zip'` and contains the zipped workspace of that
     model run.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): path to workspace directory
         args['hostname'] (string): FQDN to recreation server
         args['port'] (string or int): port on hostname for recreation server

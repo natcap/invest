@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := ae3a596ca875687415095635977e6363c564c26a
+GIT_SAMPLE_DATA_REPO_REV    := b7a51f189315e08484b5ba997a5c1de88ab7f06d
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 817adf2ffb68a5b5c636e5d8a08c20acd4c8ea81
+GIT_TEST_DATA_REPO_REV      := 6fd5fa39cd9d81080caa7581f9acca7b9fadb7c8
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 682503a4f6373b81363924387bc74f3d17fb9979
+GIT_UG_REPO_REV              := bbfa26dc0c9158d13d209c1bc61448a9166708da
 
 ENV = env
 ifeq ($(OS),Windows_NT)
@@ -214,19 +214,16 @@ $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
 
 
-# Python environment management
+# Python conda environment management
 env:
-    ifeq ($(OS),Windows_NT)
-		$(PYTHON) -m virtualenv --system-site-packages $(ENV)
-		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-gui.txt"
-		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -I -r requirements-dev.txt"
-		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
-    else
 		$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
-		$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8
+		$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
 		$(CONDA) env update -p $(ENV) --file requirements-all.yml
-		$(BASHLIKE_SHELL_COMMAND) "source activate ./$(ENV) && $(MAKE) install"
-    endif
+		@echo "----------------------------"
+		@echo "To finish the conda env install:"
+		@echo ">> conda activate ./$(ENV)"
+		@echo ">> make install"
+
 
 # compatible with pip>=7.0.0
 # REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
@@ -333,13 +330,13 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vc
 	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
 DMG_CONFIG_FILE := installer/darwin/dmgconf.py
-mac_dmg: $(MAC_DISK_IMAGE_FILE) 
+mac_dmg: $(MAC_DISK_IMAGE_FILE)
 $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
 	dmgbuild -Dinvestdir=$(MAC_APPLICATION_BUNDLE) -s $(DMG_CONFIG_FILE) "InVEST $(VERSION)" $(MAC_DISK_IMAGE_FILE)
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
-$(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR)
-	./installer/darwin/build_app_bundle.sh $(VERSION) $(INVEST_BINARIES_DIR) $(MAC_APPLICATION_BUNDLE)
+$(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
+	./installer/darwin/build_app_bundle.sh $(VERSION) $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) $(MAC_APPLICATION_BUNDLE)
 
 mac_zipfile: $(MAC_BINARIES_ZIP_FILE)
 $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)

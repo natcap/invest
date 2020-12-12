@@ -248,7 +248,7 @@ _TARGET_NODATA = -1
 def execute(args):
     """Nutrient Delivery Ratio.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string):  path to current workspace
         args['dem_path'] (string): path to digital elevation map raster
         args['lulc_path'] (string): a path to landcover map raster
@@ -315,7 +315,7 @@ def execute(args):
     def _validate_inputs(nutrients_to_process, lucode_to_parameters):
         """Validate common errors in inputs.
 
-        Parameters:
+        Args:
             nutrients_to_process (list): list of 'n' and/or 'p'
             lucode_to_parameters (dictionary): biophysical input table mapping
                 lucode to dictionary of table parameters.  Used to validate
@@ -720,7 +720,7 @@ def execute(args):
 def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
     """Rescale slope to proportion and threshold to between 0.005 and 1.0.
 
-    Parameters:
+    Args:
         slope_path (string): a raster with slope values in percent.
         target_threshold_slope_path (string): generated raster with slope
             values as a proportion (100% is 1.0) and thresholded to values
@@ -752,7 +752,7 @@ def _add_fields_to_shapefile(
         field_pickle_map, field_header_order, target_vector_path):
     """Add fields and values to an OGR layer open for writing.
 
-    Parameters:
+    Args:
         field_pickle_map (dict): maps field name to a pickle file that is a
             result of pygeoprocessing.zonal_stats with FIDs that match
             `target_vector_path`.
@@ -791,7 +791,7 @@ def _add_fields_to_shapefile(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation
@@ -848,7 +848,7 @@ def validate(args, limit_to=None):
 def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
     """Calculate normalize raster by dividing by the mean value.
 
-    Parameters:
+    Args:
         base_raster_path_band (tuple): raster path/band tuple to calculate
             mean.
         target_normalized_raster_path (string): path to target normalized
@@ -905,7 +905,7 @@ def _calculate_load(
         target_load_raster):
     """Calculate load raster by mapping landcover and multiplying by area.
 
-    Parameters:
+    Args:
         lulc_raster_path (string): path to integer landcover raster.
         lucode_to_parameters (dict): a mapping of landcover IDs to a
             dictionary indexed by the value of `load_{load_type}` that
@@ -947,7 +947,7 @@ def _calculate_load(
 def _multiply_rasters(raster_path_list, target_nodata, target_result_path):
     """Multiply the rasters in `raster_path_list`.
 
-    Parameters:
+    Args:
         raster_path_list (list): list of single band raster paths.
         target_nodata (float): desired target nodata value.
         target_result_path (string): path to float 32 target raster
@@ -985,7 +985,7 @@ def _map_surface_load(
         subsurface_proportion_type, target_surface_load_path):
     """Calculate surface load from landcover raster.
 
-    Parameters:
+    Args:
         modified_load_path (string): path to modified load raster with units
             of kg/pixel.
         lulc_raster_path (string): path to landcover raster.
@@ -1036,7 +1036,7 @@ def _map_subsurface_load(
         subsurface_proportion_type, target_sub_load_path):
     """Calculate subsurface load from landcover raster.
 
-    Parameters:
+    Args:
         modified_load_path (string): path to modified load raster.
         lulc_raster_path (string): path to landcover raster.
         lucode_to_parameters (dict): maps landcover codes to a dictionary that
@@ -1086,7 +1086,7 @@ def _map_lulc_to_val_mask_stream(
         target_eff_path):
     """Make retention efficiency raster from landcover.
 
-    Parameters:
+    Args:
         lulc_raster_path (string): path to landcover raster.
         stream_path (string) path to stream layer 0, no stream 1 stream.
         lucode_to_parameters (dict) mapping of landcover code to a dictionary
@@ -1179,7 +1179,7 @@ def d_up_calculation(s_bar_path, flow_accum_path, target_d_up_path):
 def invert_raster_values(base_raster_path, target_raster_path):
     """Invert (1/x) the values in `base`.
 
-    Parameters:
+    Args:
         base_raster_path (string): path to floating point raster.
         target_raster_path (string): path to created output raster whose
             values are 1/x of base.
@@ -1327,7 +1327,7 @@ def _aggregate_and_pickle_total(
         base_raster_path_band, aggregate_vector_path, target_pickle_path):
     """Aggregate base raster path to vector path FIDs and pickle result.
 
-    Parameters:
+    Args:
         base_raster_path_band (tuple): raster/path band to aggregate over.
         aggregate_vector_path (string): path to vector to use geometry to
             aggregate over.
