@@ -100,7 +100,7 @@ cdef class _ManagedRaster:
     def __cinit__(self, raster_path, band_id, write_mode):
         """Create new instance of Managed Raster.
 
-        Parameters:
+        Args:
             raster_path (char*): path to raster that has block sizes that are
                 powers of 2. If not, an exception is raised.
             band_id (int): which band in `raster_path` to index. Uses GDAL
@@ -380,7 +380,7 @@ cpdef calculate_local_recharge(
     Note all input rasters must be in the same coordinate system and
     have the same dimensions.
 
-    Parameters:
+    Args:
         precip_path_list (list): list of paths to monthly precipitation
             rasters. (model input)
         et0_path_list (list): path to monthly ET0 rasters. (model input)
@@ -417,8 +417,8 @@ cpdef calculate_local_recharge(
     cdef int xi, yi, xj, yj, flow_dir_j, p_ij_base
     cdef int win_xsize, win_ysize, n_dir
     cdef int raster_x_size, raster_y_size
-    cdef float pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
-    cdef float et0_nodata, precip_nodata, qf_nodata, kc_nodata
+    cdef double pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
+    cdef float qf_nodata, kc_nodata
 
     cdef int j_neighbor_end_index, mfd_dir_sum
     cdef float mfd_direction_array[8]
@@ -441,19 +441,27 @@ cpdef calculate_local_recharge(
     raster_x_size, raster_y_size = flow_dir_raster_info['raster_size']
     cdef _ManagedRaster flow_raster = _ManagedRaster(flow_dir_mfd_path, 1, 0)
 
+    # make sure that user input nodata values are defined
+    # set to -1 if not defined
+    # precipitation and evapotranspiration data should 
+    # always be non-negative
     et0_m_raster_list = []
     et0_m_nodata_list = []
     for et0_path in et0_path_list:
         et0_m_raster_list.append(_ManagedRaster(et0_path, 1, 0))
-        et0_m_nodata_list.append(
-            pygeoprocessing.get_raster_info(et0_path)['nodata'][0])
+        nodata = pygeoprocessing.get_raster_info(et0_path)['nodata'][0]
+        if nodata is None:
+            nodata = -1
+        et0_m_nodata_list.append(nodata)
 
     precip_m_raster_list = []
     precip_m_nodata_list = []
     for precip_m_path in precip_path_list:
         precip_m_raster_list.append(_ManagedRaster(precip_m_path, 1, 0))
-        precip_m_nodata_list.append(
-            pygeoprocessing.get_raster_info(precip_m_path)['nodata'][0])
+        nodata = pygeoprocessing.get_raster_info(precip_m_path)['nodata'][0]
+        if nodata is None:
+            nodata = -1
+        precip_m_nodata_list.append(nodata)
 
     qf_m_raster_list = []
     qf_m_nodata_list = []
@@ -675,7 +683,7 @@ def route_baseflow_sum(
         stream_path, target_b_path, target_b_sum_path):
     """Route Baseflow through MFD as described in Equation 11.
 
-    Parameters:
+    Args:
         flow_dir_mfd_path (string): path to a pygeoprocessing multiple flow
             direction raster.
         l_path (string): path to local recharge raster.

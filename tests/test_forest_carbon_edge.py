@@ -57,6 +57,18 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 args['workspace_dir'], 'aggregated_carbon_stocks.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.shp'))
 
+        expected_carbon_raster = gdal.OpenEx(os.path.join(REGRESSION_DATA, 
+                                                          'carbon_map.tif'))
+        expected_carbon_band = expected_carbon_raster.GetRasterBand(1)
+        expected_carbon_array = expected_carbon_band.ReadAsArray()
+        actual_carbon_raster = gdal.OpenEx(os.path.join(REGRESSION_DATA, 
+                                                        'carbon_map.tif'))
+        actual_carbon_band = actual_carbon_raster.GetRasterBand(1)
+        actual_carbon_array = actual_carbon_band.ReadAsArray()
+        self.assertTrue(numpy.allclose(expected_carbon_array, 
+                                       actual_carbon_array))
+
+
     def test_carbon_dup_output(self):
         """Forest Carbon Edge: test for existing output overlap."""
         from natcap.invest import forest_carbon_edge_effect
@@ -150,6 +162,46 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         expected_message = 'Could not interpret carbon pool value'
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
+    
+    def test_missing_lulc_value(self):
+        """Forest Carbon Edge: test with missing LULC value."""
+        from natcap.invest import forest_carbon_edge_effect
+        import pandas
+
+        args = {
+            'aoi_vector_path': os.path.join(
+                REGRESSION_DATA, 'input', 'small_aoi.shp'),
+            'biomass_to_carbon_conversion_factor': '0.47',
+            'biophysical_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'forest_edge_carbon_lu_table.csv'),
+            'compute_forest_edge_effects': True,
+            'lulc_raster_path': os.path.join(
+                REGRESSION_DATA, 'input', 'small_lulc.tif'),
+            'n_nearest_model_points': 10,
+            'pools_to_calculate': 'all',
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
+                REGRESSION_DATA, 'input', 'core_data',
+                'forest_carbon_edge_regression_model_parameters.shp'),
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1
+        }
+
+        bad_biophysical_table_path = os.path.join(
+            self.workspace_dir, 'bad_biophysical_table.csv')
+
+        bio_df = pandas.read_csv(args['biophysical_table_path'])
+        bio_df = bio_df[bio_df['lucode'] != 4]
+        bio_df.to_csv(bad_biophysical_table_path)
+        bio_df = None
+
+        args['biophysical_table_path'] = bad_biophysical_table_path
+        with self.assertRaises(ValueError) as cm:
+            forest_carbon_edge_effect.execute(args)
+        expected_message = (
+            "The missing values found in the LULC raster but not the table"
+            " are: [4.]")
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
 
     def test_missing_aoi(self):
         """Forest carbon edge: ensure missing AOI causes exception."""
@@ -180,7 +232,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         self.assertTrue(expected_message in actual_message, actual_message)
 
     def test_carbon_nodata_lulc(self):
-        """Forest Carbon Edge: ensure nodata lulc raster cause exception"""
+        """Forest Carbon Edge: ensure nodata lulc raster cause exception."""
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
@@ -210,7 +262,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
 
-        Parameters:
+        Args:
             base_list_path (string): a path to a file that has one relative
                 file path per line.
             directory_path (string): a path to a directory whose contents will
@@ -241,7 +293,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             expected_vector_path):
         """Test workspace state against expected aggregate results.
 
-        Parameters:
+        Args:
             workspace_dir (string): path to the completed model workspace
             id_fieldname (string): fieldname of the unique ID.
             field_list (list of string): list of fields to check
@@ -319,7 +371,8 @@ class ForestCarbonEdgeValidationTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
         from natcap.invest import validation
 
-        validation_errors = forest_carbon_edge_effect.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = forest_carbon_edge_effect.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(self.base_required_keys)
         self.assertEqual(invalid_keys, expected_missing_keys)

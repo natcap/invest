@@ -185,7 +185,7 @@ def execute(args):
         args['lulc_path'])
     target_pixel_size = lulc_raster_info['pixel_size']
     pixel_area = abs(target_pixel_size[0] * target_pixel_size[1])
-    target_sr_wkt = lulc_raster_info['projection']
+    target_sr_wkt = lulc_raster_info['projection_wkt']
 
     soil_raster_info = pygeoprocessing.get_raster_info(
         args['soils_hydrological_group_raster_path'])
@@ -198,7 +198,7 @@ def execute(args):
             ['mode', 'mode'],
             target_pixel_size, 'intersection'),
         kwargs={
-            'target_sr_wkt': target_sr_wkt,
+            'target_projection_wkt': target_sr_wkt,
             'base_vector_path_list': [args['aoi_watersheds_path']],
             'raster_align_index': 0},
         target_path_list=[aligned_lulc_path, aligned_soils_path],
@@ -332,6 +332,7 @@ def execute(args):
         args=(
             (flood_vol_raster_path, 1),
             reprojected_aoi_path),
+        store_result=True,
         dependent_task_list=[flood_vol_task, reprojected_aoi_task],
         task_name='zonal_statistics over the flood_volume raster')
 
@@ -340,6 +341,7 @@ def execute(args):
         args=(
             (runoff_retention_raster_path, 1),
             reprojected_aoi_path),
+        store_result=True,
         dependent_task_list=[runoff_retention_task],
         task_name='zonal_statistics over runoff_retention raster')
 
@@ -348,6 +350,7 @@ def execute(args):
         args=(
             (runoff_retention_vol_raster_path, 1),
             reprojected_aoi_path),
+        store_result=True,
         dependent_task_list=[runoff_retention_vol_task],
         task_name='zonal_statistics over runoff_retention_volume raster')
 
@@ -377,6 +380,7 @@ def execute(args):
             args=(reprojected_aoi_path,
                   reprojected_structures_path,
                   args['infrastructure_damage_loss_table_path']),
+            store_result=True,
             dependent_task_list=[
                 reprojected_aoi_task,
                 reproject_built_infrastructure_task],
@@ -425,9 +429,9 @@ def _write_summary_vector(
     If ``damage_per_aoi_stats`` is provided, then these additional columns will
     be written to the vector::
 
-        * ``'aff.bld'``: Potential damage to built infrastructure in $,
+        * ``'aff_bld'``: Potential damage to built infrastructure in $,
           per watershed.
-        * ``'serv.blt'``: Spatial indicator of the importance of the runoff
+        * ``'serv_blt'``: Spatial indicator of the importance of the runoff
           retention service
 
     Args:
@@ -459,24 +463,24 @@ def _write_summary_vector(
     source_aoi_layer = source_aoi_vector.GetLayer()
     source_geom_type = source_aoi_layer.GetGeomType()
     source_srs_wkt = pygeoprocessing.get_vector_info(
-        source_aoi_vector_path)['projection']
+        source_aoi_vector_path)['projection_wkt']
     source_srs = osr.SpatialReference()
     source_srs.ImportFromWkt(source_srs_wkt)
 
     esri_driver = gdal.GetDriverByName('ESRI Shapefile')
     target_watershed_vector = esri_driver.Create(
         target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
-    layer_name = str(os.path.splitext(os.path.basename(
-        target_vector_path))[0])
+    layer_name = os.path.splitext(os.path.basename(
+        target_vector_path))[0]
     LOGGER.debug("creating layer %s", layer_name)
     target_watershed_layer = target_watershed_vector.CreateLayer(
-        str(layer_name), source_srs, source_geom_type)
+        layer_name, source_srs, source_geom_type)
 
     target_fields = ['rnf_rt_idx', 'rnf_rt_m3', 'flood_vol']
     if not damage_per_aoi_stats:
         damage_per_aoi_stats = {}
     else:
-        target_fields += ['aff.bld', 'serv.blt']
+        target_fields += ['aff_bld', 'serv_blt']
 
     for field_name in target_fields:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
@@ -508,11 +512,11 @@ def _write_summary_vector(
             pixel_count = runoff_ret_vol_stats[feature_id]['count']
             if pixel_count > 0:
                 damage_sum = damage_per_aoi_stats[feature_id]
-                target_feature.SetField('aff.bld', damage_sum)
+                target_feature.SetField('aff_bld', damage_sum)
 
-                # This is the service.built equation.
+                # This is the service_built equation.
                 target_feature.SetField(
-                    'serv.blt', (
+                    'serv_blt', (
                         damage_sum * runoff_ret_vol_stats[feature_id]['sum']))
 
         if feature_id in flood_volume_stats:

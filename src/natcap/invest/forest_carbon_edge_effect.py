@@ -24,13 +24,13 @@ LOGGER = logging.getLogger(__name__)
 # grid cells are 100km. Becky says 500km is a good upper bound to search
 DISTANCE_UPPER_BOUND = 500e3
 
-# helpful to have a global nodata defined for all the carbon map rasters
-CARBON_MAP_NODATA = -9999
+# helpful to have a global nodata defined for the whole model
+NODATA_VALUE = -1
 
 ARGS_SPEC = {
     "model_name": "Forest Carbon Edge Effect Model",
     "module": __name__,
-    "userguide_html": "forest_carbon_edge_effect.html",
+    "userguide_html": "carbon_edge.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },
@@ -148,7 +148,7 @@ def execute(args):
     InVEST Carbon Edge Model calculates the carbon due to edge effects in
     tropical forest pixels.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): a path to the directory that will write
             output and other temporary files during calculation. (required)
         args['results_suffix'] (string): a string to append to any output file
@@ -187,7 +187,8 @@ def execute(args):
 
                 Note the "n/a" in ``c_above`` are optional since that field
                 is ignored when ``is_tropical_forest==1``.
-        args['lulc_raster_path'] (string): path to a integer landcover code raster
+        args['lulc_raster_path'] (string): path to a integer landcover code
+            raster
         args['pools_to_calculate'] (string): if "all" then all carbon pools
             will be calculted.  If any other value only above ground carbon
             pools will be calculated and expect only a 'c_above' header in
@@ -199,9 +200,9 @@ def execute(args):
             biophysical table to have 'is_tropical_forest' forest field, and
             any landcover codes that have a 1 in this column calculate carbon
             stocks using the Chaplin-Kramer et. al method and ignore 'c_above'.
-        args['tropical_forest_edge_carbon_model_vector_path'] (string): path to a
-            shapefile that defines the regions for the local carbon edge
-            models.  Has at least the fields 'method', 'theta1', 'theta2',
+        args['tropical_forest_edge_carbon_model_vector_path'] (string):
+            path to a shapefile that defines the regions for the local carbon
+            edge models.  Has at least the fields 'method', 'theta1', 'theta2',
             'theta3'.  Where 'method' is an int between 1..3 describing the
             biomass regression model, and the thetas are floating point numbers
             that have different meanings depending on the 'method' parameter.
@@ -324,7 +325,8 @@ def execute(args):
                 task_name='calculate_lulc_%s_map' % carbon_pool_type)
 
     if args['compute_forest_edge_effects']:
-        # generate a map of pixel distance to forest edge from the landcover map
+        # generate a map of pixel distance to forest edge from the landcover
+        # map
         LOGGER.info('Calculating distance from forest edge')
         map_distance_task = task_graph.add_task(
             func=_map_distance_from_tropical_forest_edge,
@@ -376,7 +378,7 @@ def execute(args):
         func=pygeoprocessing.raster_calculator,
         args=(carbon_maps_band_list, combine_carbon_maps,
               output_file_registry['carbon_map'], gdal.GDT_Float32,
-              CARBON_MAP_NODATA),
+              NODATA_VALUE),
         target_path_list=[output_file_registry['carbon_map']],
         task_name='combine_carbon_maps')
 
@@ -387,7 +389,8 @@ def execute(args):
             func=_aggregate_carbon_map,
             args=(args['aoi_vector_path'], output_file_registry['carbon_map'],
                   output_file_registry['aggregated_result_vector']),
-            target_path_list=[output_file_registry['aggregated_result_vector']],
+            target_path_list=[
+                output_file_registry['aggregated_result_vector']],
             task_name='combine_carbon_maps',
             dependent_task_list=[combine_carbon_maps_task])
 
@@ -399,7 +402,7 @@ def execute(args):
 def combine_carbon_maps(*carbon_maps):
     """Combine the carbon maps and leave nodata where all inputs were nodata.
 
-    Parameters:
+    Args:
         *carbon_maps (array): arrays of carbon stocks stored in different pool
             types.
 
@@ -412,21 +415,22 @@ def combine_carbon_maps(*carbon_maps):
     nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=numpy.bool)
     nodata_mask[:] = True
     for carbon_map in carbon_maps:
-        valid_mask = carbon_map != CARBON_MAP_NODATA
+        valid_mask = carbon_map != NODATA_VALUE
         nodata_mask &= ~valid_mask
         result[valid_mask] += carbon_map[valid_mask]
-    result[nodata_mask] = CARBON_MAP_NODATA
+    result[nodata_mask] = NODATA_VALUE
     return result
 
 
 def _aggregate_carbon_map(
         aoi_vector_path, carbon_map_path, target_aggregate_vector_path):
     """Helper function to aggregate carbon values for the given serviceshed.
+
     Generates a new shapefile that's a copy of 'aoi_vector_path' in
     'workspace_dir' with mean and sum values from the raster at
     'carbon_map_path'
 
-    Parameters:
+    Args:
         aoi_vector_path (string): path to shapefile that will be used to
             aggregate raster at'carbon_map_path'.
         workspace_dir (string): path to a directory that function can copy
@@ -504,12 +508,11 @@ def _aggregate_carbon_map(
 def _calculate_lulc_carbon_map(
         lulc_raster_path, biophysical_table_path, carbon_pool_type,
         ignore_tropical_type, compute_forest_edge_effects, carbon_map_path):
-    """Calculates the carbon on the map based on non-forest landcover types
-    only.
+    """Calculates the carbon on the map from non-forest landcover types only.
 
-    Parameters:
-        lulc_raster_path (string): a filepath to the landcover map that contains
-            integer landcover codes
+    Args:
+        lulc_raster_path (string): a filepath to the landcover map that
+            contains integer landcover codes
         biophysical_table_path (string): a filepath to a csv table that indexes
             landcover codes to surface carbon, contains at least the fields
             'lucode' (landcover integer code), 'is_tropical_forest' (0 or 1
@@ -529,7 +532,6 @@ def _calculate_lulc_carbon_map(
         None
 
     """
-
     # classify forest pixels from lulc
     biophysical_table = utils.build_lookup_from_csv(
         biophysical_table_path, 'lucode', to_lower=False)
@@ -548,7 +550,7 @@ def _calculate_lulc_carbon_map(
             is_tropical_forest = 0
         if ignore_tropical_type and is_tropical_forest == 1:
             # if tropical forest above ground, lookup table is nodata
-            lucode_to_per_cell_carbon[int(lucode)] = CARBON_MAP_NODATA
+            lucode_to_per_cell_carbon[int(lucode)] = NODATA_VALUE
         else:
             try:
                 lucode_to_per_cell_carbon[int(lucode)] = float(
@@ -561,18 +563,26 @@ def _calculate_lulc_carbon_map(
                      biophysical_table[lucode][carbon_pool_type]))
 
     # map aboveground carbon from table to lulc that is not forest
-    pygeoprocessing.reclassify_raster(
+    reclass_error_details = {
+        'raster_name': 'LULC',
+        'column_name': 'lucode',
+        'table_name': 'Biophysical'}
+
+    utils.reclassify_raster(
         (lulc_raster_path, 1), lucode_to_per_cell_carbon,
-        carbon_map_path, gdal.GDT_Float32, CARBON_MAP_NODATA)
+        carbon_map_path, gdal.GDT_Float32, NODATA_VALUE,
+        reclass_error_details)
 
 
 def _map_distance_from_tropical_forest_edge(
         base_lulc_raster_path, biophysical_table_path, edge_distance_path,
         target_non_forest_mask_path):
-    """Generates a raster of forest edge distances where each pixel is the
+    """Generates a raster of forest edge distances.
+
+    Generates a raster of forest edge distances where each pixel is the
     distance to the edge of the forest in meters.
 
-    Parameters:
+    Args:
         base_lulc_raster_path (string): path to the landcover raster that
             contains integer landcover codes
         biophysical_table_path (string): path to a csv table that indexes
@@ -589,7 +599,6 @@ def _map_distance_from_tropical_forest_edge(
         None
 
     """
-
     # Build a list of forest lucodes
     biophysical_table = utils.build_lookup_from_csv(
         biophysical_table_path, 'lucode', to_lower=False)
@@ -598,15 +607,23 @@ def _map_distance_from_tropical_forest_edge(
         if int(ludata['is_tropical_forest']) == 1]
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
-    forest_mask_nodata = 255
     lulc_nodata = pygeoprocessing.get_raster_info(
         base_lulc_raster_path)['nodata']
 
+    forest_mask_nodata = 255
     def mask_non_forest_op(lulc_array):
-        """converts forest lulc codes to 1"""
-        non_forest_mask = ~numpy.in1d(
-            lulc_array.flatten(), forest_codes).reshape(lulc_array.shape)
+        """Convert forest lulc codes to 0.
+        Args:
+            lulc_array (numpy.ndarray): array representing a LULC raster where
+                each forest LULC code is in `forest_codes`.
+        Returns:
+            numpy.ndarray with the same shape as lulc_array. All pixels are
+                0 (forest), 1 (non-forest), or 255 (nodata).
+        """
+        non_forest_mask = ~numpy.isin(lulc_array, forest_codes)
         nodata_mask = lulc_array == lulc_nodata
+        # where LULC has nodata, set value to nodata value (255)
+        # where LULC has data, set to 0 if LULC is a forest type, 1 if it's not
         return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
 
     pygeoprocessing.raster_calculator(
@@ -614,18 +631,41 @@ def _map_distance_from_tropical_forest_edge(
         target_non_forest_mask_path, gdal.GDT_Byte, forest_mask_nodata)
 
     # Do the distance transform on non-forest pixels
+    # This is the distance from each pixel to the nearest pixel with value 1.
+    #   - for forest pixels, this is the distance to the forest edge
+    #   - for non-forest pixels, this is 0
+    #   - for nodata pixels, distance is calculated but is meaningless
     pygeoprocessing.distance_transform_edt(
         (target_non_forest_mask_path, 1), edge_distance_path)
+
+    # mask out the meaningless distance pixels so they don't affect the output
+    lulc_raster = gdal.OpenEx(base_lulc_raster_path)
+    lulc_band = lulc_raster.GetRasterBand(1)
+    edge_distance_raster = gdal.OpenEx(edge_distance_path, gdal.GA_Update)
+    edge_distance_band = edge_distance_raster.GetRasterBand(1)
+
+    for offset_dict in pygeoprocessing.iterblocks((base_lulc_raster_path, 1), offset_only=True):
+        # where LULC has nodata, overwrite edge distance with nodata value
+        lulc_block = lulc_band.ReadAsArray(**offset_dict)
+        distance_block = edge_distance_band.ReadAsArray(**offset_dict)
+        masked_distance_block = numpy.where(
+            lulc_block == lulc_nodata, NODATA_VALUE, distance_block)
+        edge_distance_band.WriteArray(
+            masked_distance_block, 
+            xoff=offset_dict['xoff'], 
+            yoff=offset_dict['yoff'])
 
 
 def _build_spatial_index(
         base_raster_path, local_model_dir,
         tropical_forest_edge_carbon_model_vector_path,
         target_spatial_index_pickle_path):
-    """Build a kd-tree index of the locally projected globally georeferenced
+    """Build a kd-tree index.
+
+    Build a kd-tree index of the locally projected globally georeferenced
     carbon edge model parameters.
 
-    Parameters:
+    Args:
         base_raster_path (string): path to a raster that is used to define the
             bounding box and projection of the local model.
         local_model_dir (string): path to a directory where we can write a
@@ -647,12 +687,11 @@ def _build_spatial_index(
         None
 
     """
-
     # Reproject the global model into local coordinate system
     carbon_model_reproject_path = os.path.join(
         local_model_dir, 'local_carbon_shape.shp')
     lulc_projection_wkt = pygeoprocessing.get_raster_info(
-        base_raster_path)['projection']
+        base_raster_path)['projection_wkt']
     pygeoprocessing.reproject_vector(
         tropical_forest_edge_carbon_model_vector_path, lulc_projection_wkt,
         carbon_model_reproject_path)
@@ -698,7 +737,7 @@ def _calculate_tropical_forest_edge_carbon_map(
     """Calculates the carbon on the forest pixels accounting for their global
     position with respect to precalculated edge carbon models.
 
-    Parameters:
+    Args:
         edge_distance_path (string): path to the a raster where each pixel
             contains the pixel distance to forest edge.
         spatial_index_pickle_path (string): path to the pickle file that
@@ -724,8 +763,11 @@ def _calculate_tropical_forest_edge_carbon_map(
         None
 
     """
-
-    # load spatial indeces from pickle file
+    # load spatial indices from pickle file
+    # let d = number of precalculated model cells (2217 for sample data)
+    #   kd_tree.data.shape: (d, 2)
+    #   theta_model_parameters.shape: (d, 3)
+    #   method_model_parameter.shape: (d,)
     kd_tree, theta_model_parameters, method_model_parameter = pickle.load(
         open(spatial_index_pickle_path, 'rb'))
 
@@ -733,8 +775,8 @@ def _calculate_tropical_forest_edge_carbon_map(
     # fill nodata, in case we skip entire memory blocks that are non-forest
     pygeoprocessing.new_raster_from_base(
         edge_distance_path, tropical_forest_edge_carbon_map_path,
-        gdal.GDT_Float32, band_nodata_list=[CARBON_MAP_NODATA],
-        fill_value_list=[CARBON_MAP_NODATA])
+        gdal.GDT_Float32, band_nodata_list=[NODATA_VALUE],
+        fill_value_list=[NODATA_VALUE])
     edge_carbon_raster = gdal.OpenEx(
         tropical_forest_edge_carbon_map_path, gdal.GA_Update)
     edge_carbon_band = edge_carbon_raster.GetRasterBand(1)
@@ -765,6 +807,7 @@ def _calculate_tropical_forest_edge_carbon_map(
             last_time = current_time
         n_cells_processed += (
             edge_distance_data['win_xsize'] * edge_distance_data['win_ysize'])
+        # only forest pixels will have an edge distance > 0
         valid_edge_distance_mask = (edge_distance_block > 0)
 
         # if no valid forest pixels to calculate, skip to the next block
@@ -795,6 +838,8 @@ def _calculate_tropical_forest_edge_carbon_map(
             row_coords[valid_edge_distance_mask].ravel(),
             col_coords[valid_edge_distance_mask].ravel()))
         # note, the 'n_jobs' parameter was introduced in SciPy 0.16.0
+        # for each forest point x, for each of its k nearest neighbors
+        # shape of distances and indexes: (x, k)
         distances, indexes = kd_tree.query(
             coord_points, k=n_nearest_model_points,
             distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
@@ -803,51 +848,50 @@ def _calculate_tropical_forest_edge_carbon_map(
             distances = distances.reshape(distances.shape[0], 1)
             indexes = indexes.reshape(indexes.shape[0], 1)
 
-        # the 3 is for the 3 thetas in the carbon model
+        # 3 is for the 3 thetas in the carbon model. thetas shape: (x, k, 3)
         thetas = numpy.zeros((indexes.shape[0], indexes.shape[1], 3))
         valid_index_mask = (indexes != kd_tree.n)
         thetas[valid_index_mask] = theta_model_parameters[
             indexes[valid_index_mask]]
 
-        # the 3 is for the 3 models (asym, exp, linear)
-        biomass_model = numpy.zeros(
-            (indexes.shape[0], indexes.shape[1], 3))
         # reshape to an N,nearest_points so we can multiply by thetas
         valid_edge_distances_km = numpy.repeat(
             edge_distance_block[valid_edge_distance_mask] * cell_size_km,
             n_nearest_model_points).reshape(-1, n_nearest_model_points)
 
-        # asymptotic model
+        # For each forest pixel x, for each of its k nearest neighbors, the 
+        # chosen regression method (1, 2, or 3). model_index shape: (x, k)
+        model_index = numpy.zeros(indexes.shape, dtype=numpy.int8) 
+        model_index[valid_index_mask] = ( 
+            method_model_parameter[indexes[valid_index_mask]]) 
+
+        # biomass shape: (x, k)
+        biomass = numpy.zeros((indexes.shape[0], indexes.shape[1]), 
+            dtype=numpy.float32)
+
+        # mask shapes: (x, k)
+        mask_1 = model_index == 1
+        mask_2 = model_index == 2
+        mask_3 = model_index == 3
+
+        # exponential model
         # biomass_1 = t1 - t2 * exp(-t3 * edge_dist_km)
-        biomass_model[:, :, 0] = (
-            thetas[:, :, 0] - thetas[:, :, 1] * numpy.exp(
-                -thetas[:, :, 2] * valid_edge_distances_km)
+        biomass[mask_1] = (
+            thetas[mask_1][:,0] - thetas[mask_1][:,1] * numpy.exp(
+                -thetas[mask_1][:,2] * valid_edge_distances_km[mask_1])
             ) * cell_area_ha
 
         # logarithmic model
         # biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
-        biomass_model[:, :, 1] = (
-            thetas[:, :, 0] + thetas[:, :, 1] * numpy.log(
-                valid_edge_distances_km)) * cell_area_ha
+        biomass[mask_2] = (
+            thetas[mask_2][:,0] + thetas[mask_2][:,1] * numpy.log(
+                valid_edge_distances_km[mask_2])) * cell_area_ha
 
         # linear regression
         # biomass_3 = t1 + t2 * edge_dist_km
-        biomass_model[:, :, 2] = (
-            (thetas[:, :, 0] + thetas[:, :, 1] * valid_edge_distances_km) *
-            cell_area_ha)
-
-        # Collapse the biomass down to the valid models
-        model_index = numpy.zeros(indexes.shape, dtype=numpy.int8)
-        model_index[valid_index_mask] = (
-            method_model_parameter[indexes[valid_index_mask]] - 1)
-
-        # reduce the axis=1 dimensionality of the model by selecting the
-        # appropriate value via the model_index array. Got this trick from
-        # http://stackoverflow.com/questions/18702746/reduce-a-dimension-of-numpy-array-by-selecting
-        biomass_y, biomass_x = numpy.meshgrid(
-            numpy.arange(biomass_model.shape[1]),
-            numpy.arange(biomass_model.shape[0]))
-        biomass = biomass_model[biomass_x, biomass_y, model_index]
+        biomass[mask_3] = (
+            thetas[mask_3][:,0] + thetas[mask_3][:,1] *
+            valid_edge_distances_km[mask_3]) * cell_area_ha
 
         # reshape the array so that each set of points is in a separate
         # dimension, here distances are distances to each valid model
@@ -867,9 +911,8 @@ def _calculate_tropical_forest_edge_carbon_map(
                       biomass[valid_denom], axis=1) / denom[valid_denom])
 
         # Ensure the result has nodata everywhere the distance was invalid
-        result = numpy.empty(
-            edge_distance_block.shape, dtype=numpy.float32)
-        result[:] = CARBON_MAP_NODATA
+        result = numpy.full(edge_distance_block.shape, NODATA_VALUE, 
+            dtype=numpy.float32)
         # convert biomass to carbon in this stage
         result[valid_edge_distance_mask] = (
             average_biomass * biomass_to_carbon_conversion_factor)
@@ -883,7 +926,7 @@ def _calculate_tropical_forest_edge_carbon_map(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

@@ -1,5 +1,9 @@
+# Configuration script for DMGBuild
+#
+# __file__ is not available within this script, so we're just assuming that
+# this is being executed relative to the InVEST project root.
 import os
-CWD = os.path.join('installer', 'darwin')
+MAC_INSTALLER_DIR = os.path.join('installer', 'darwin')
 
 def get_size(start_path = '.'):
     total_size = 0
@@ -14,21 +18,26 @@ print('Volume size: %s' % size)
 print('Packaging dirname %s' % defines['investdir'])
 _invest_dirname = os.path.basename(defines['investdir'])
 
-badge_icon = os.path.join(CWD, 'invest.icns')
+badge_icon = os.path.join(MAC_INSTALLER_DIR, 'invest.icns')
 symlinks = {'Applications': '/Applications'}
 files = [defines['investdir']]
 
 icon_locations = {
-    _invest_dirname: (100, 120),
-    'Applications': (350, 120)
+    _invest_dirname: (220, 290),
+    'Applications': (670, 290)
 }
-icon_size = 70
+icon_size = 100
 text_size = 12
 
 # Window Settings
-window_rect = ((0, 10000), (450, 375))
-background = os.path.join(CWD, 'background.png')
+window_rect = ((100, 100), (900, 660))
+background = os.path.join(MAC_INSTALLER_DIR, 'background.png')
 #background = 'builtin-arrow'
 default_view = 'icon-view'
 
-
+format = 'UDZO'
+license = {
+    # LICENSE.txt assumed to live in the project root.
+    'licenses': {'en_US': 'LICENSE.txt'},
+    'default-language': 'en_US',
+}

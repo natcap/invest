@@ -86,7 +86,7 @@ def open_workspace(dirname):
         * On Windows: ``explorer``
         * On Linux: ``xdg-open``
 
-    Parameters:
+    Args:
         dirname (string): The folder to open.
     """
     LOGGER.debug("Opening dirname %s", dirname)
@@ -119,7 +119,7 @@ def open_workspace(dirname):
 def center_window(window_ptr):
     """Center the provided window on the current screen.
 
-    Parameters:
+    Args:
         window_ptr (QtWidgets.QWidget): a reference to a Qt window.
     """
     geometry = window_ptr.frameGeometry()
@@ -137,7 +137,7 @@ class Validator(QtCore.QObject):
     def __init__(self, parent):
         """Initialize the Validator instance.
 
-        Parameters:
+        Args:
             parent (QtWidgets.QWidget): The parent qwidget.  This will be the
                 parent of the validation thread.
         """
@@ -157,7 +157,7 @@ class Validator(QtCore.QObject):
     def validate(self, target, args, limit_to=None):
         """Validate the provided args with the provided target.
 
-        Parameters:
+        Args:
             target (callable): The validation callable.  Must adhere to the
                 InVEST validation API.
             args (dict): The arguments dictionary to validate.
@@ -204,7 +204,7 @@ class MessageArea(QtWidgets.QLabel):
 
         The label is shown when the error status is set.
 
-        Parameters:
+        Args:
             is_error (bool): If ``True``, a green success style will be used.
                 If ``False``, a red failure style will be used instead.
 
@@ -225,7 +225,7 @@ class QLogHandler(logging.StreamHandler):
     def __init__(self, stream_widget):
         """Initialize the logging handler.
 
-        Parameters:
+        Args:
             stream_widget (QtWidgets.QWidget): A QWidget that supports the
                 python streams API.
         """
@@ -267,7 +267,7 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
         called from any thread, and the signal/slot framework will cause the
         message to actually be rendered on an iteration of the event loop.
 
-        Parameters:
+        Args:
             message (string): The message to be written to the message pane.
 
         Returns:
@@ -284,7 +284,7 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
         Calling this method from a thread other than the main thread will
         cause an error from within Qt.
 
-        Parameters:
+        Args:
             message (string): The message to be appended to the end of the
                 QMessagePane.
 
@@ -438,7 +438,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
     def finish(self, exception):
         """Notify the user that model processing has finished.
 
-        Parameters:
+        Args:
             exception (Exception or None): The exception object
                 If the error encountered.  None if no error found.
 
@@ -516,7 +516,7 @@ class InfoButton(QtWidgets.QPushButton):
     def __init__(self, default_message=None):
         """Initialize an instance of InfoButton.
 
-        Parameters:
+        Args:
             default_message=None (string or None).  If not None, the message
                 that the button should show by default when clicked.
 
@@ -532,7 +532,7 @@ class InfoButton(QtWidgets.QPushButton):
     def _show_popup(self, clicked=False):
         """Slot for QPushButton.clicked() signal.
 
-        Parameters:
+        Args:
             clicked=False: This parameter will always be false, so long as the
                 InfoButton instance isn't checkable.  The parameter still has
                 to be here to match the signature the clicked signal expects.
@@ -570,7 +570,7 @@ class ValidButton(InfoButton):
     def set_errors(self, errors):
         """Set the error message and style based on the provided errors.
 
-        Parameters:
+        Args:
             errors (list): A list of strings.  If this list is empty, the
                 style of the button is set to green, indicating validation
                 success.  If this list is not empty, the strings in this list
@@ -601,7 +601,7 @@ class HelpButton(InfoButton):
     def __init__(self, default_message=None):
         """Initialize the HelpButton.
 
-        Parameters:
+        Args:
             default_message=None (string): The default message of this button.
                 See InfoButton.__init__ for more information.
 
@@ -626,7 +626,7 @@ class ValidationWorker(QtCore.QObject):
     def __init__(self, target, args, limit_to=None):
         """Initialize the ValidationWorker.
 
-        Parameters:
+        Args:
             target (callable): The validation function.  Must adhere to the
                 InVEST validation API.
             args (dict): The arguments dictionary to validate.
@@ -714,7 +714,7 @@ class FileDialog(object):
     def save_file(self, title, start_dir=None, savefile=None):
         """Prompt the user to save a file.
 
-        Parameters:
+        Args:
             title (string): The title of the save file dialog.
             start_dir=None (string): The starting directory.  If ``None``,
                 the last-accessed directory will be fetched from
@@ -757,7 +757,7 @@ class FileDialog(object):
     def open_file(self, title, start_dir=None, filters=()):
         """Prompt the user for a file to open.
 
-        Parameters:
+        Args:
             title (string): The title of the dialog.
             start_dir=None (string): The starting directory.  If ``None``,
                 the last-accessed directory will be fetched from the invest
@@ -801,7 +801,7 @@ class FileDialog(object):
     def open_folder(self, title, start_dir=None):
         """Prompt the user for a directory to open.
 
-        Parameters:
+        Args:
             title (string): The title of the dialog.
             start_dir=None (string): The starting directory.  If ``None``,
                 the last-accessed directory will be fetched from the invest
@@ -850,7 +850,7 @@ class AbstractFileSystemButton(QtWidgets.QPushButton):
     def __init__(self, dialog_title):
         """Initialize the AbstractFileSystemButton.
 
-        Parameters:
+        Args:
             dialog_title (string): The title of the filesystem dialog owned
                 by this object.
 
@@ -897,7 +897,7 @@ class FileButton(AbstractFileSystemButton):
     def __init__(self, dialog_title):
         """Initialize the FileButton.
 
-        Parameters:
+        Args:
             dialog_title (string): The title of the file selection dialog.
 
         Returns:
@@ -914,7 +914,7 @@ class SaveFileButton(AbstractFileSystemButton):
     def __init__(self, dialog_title, default_savefile):
         """Initialize the SaveFileButton.
 
-        Parameters:
+        Args:
             dialog_title (string): The title of the file selection dialog.
             default_savefile (string): The file basename to use by default.
                 The user may override this filename within the dialog.
@@ -935,7 +935,7 @@ class FolderButton(AbstractFileSystemButton):
     def __init__(self, dialog_title):
         """Initialize the FolderButton.
 
-        Parameters:
+        Args:
             dialog_title (string): The title of the folder selection dialog.
 
         Returns:
@@ -997,7 +997,7 @@ class InVESTModelInput(QtCore.QObject):
                  args_key=None):
         """Initialize the InVESTModelInput instance.
 
-        Parameters:
+        Args:
             label (string): The string label of the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1038,7 +1038,7 @@ class InVESTModelInput(QtCore.QObject):
         Emits the signal ``self.sufficiency_changed`` if sufficiency has
         changed.
 
-        Parameters:
+        Args:
             value_or_interactivity: The value passed from a signal that
                 has triggered this slot.
 
@@ -1097,7 +1097,7 @@ class InVESTModelInput(QtCore.QObject):
         window.  Visibility here indicates whether the widgets
         should be considered by the package as being visible.
 
-        Parameters:
+        Args:
             visible_hint (bool): Whether the InVESTModelInput instance should be
                 considered to be visible.
 
@@ -1129,7 +1129,7 @@ class InVESTModelInput(QtCore.QObject):
         Note:
             This method must be reimplemented by subclasses.
 
-        Parameters:
+        Args:
             value: The new value of the InVESTModelInput.
 
         Raises:
@@ -1143,7 +1143,7 @@ class InVESTModelInput(QtCore.QObject):
         Emits the ``interactivity_changed`` signal if the interactivity
         changes.
 
-        Parameters:
+        Args:
             enabled (bool): Whether inputs should be interactive.
 
         Returns:
@@ -1159,7 +1159,7 @@ class InVESTModelInput(QtCore.QObject):
     def add_to(self, layout):
         """Add the component widgets of this InVESTModelInput to a QGridLayout.
 
-        Parameters:
+        Args:
             layout (QtWidgets.QGridLayout): A QGridLayout to which all
                 component widgets should be added.
 
@@ -1212,7 +1212,7 @@ class GriddedInput(InVESTModelInput):
                  args_key=None, hideable=False, validator=None):
         """Initialize this GriddedInput instance.
 
-        Parameters:
+        Args:
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1323,7 +1323,7 @@ class GriddedInput(InVESTModelInput):
         with self._validator.  If the validity of the input changes, the
         ``validity_changed`` signal is emitted with the new validity.
 
-        Parameters:
+        Args:
             validation_warnings (list): A list of string validation warnings
                 returned from the validation callable.
 
@@ -1383,7 +1383,7 @@ class GriddedInput(InVESTModelInput):
         This method causes the ``hidden_changed`` signal to be emitted with
         the new hidden state.
 
-        Parameters:
+        Args:
             show_widgets (bool): Whether the component widgets should
                 be shown or hidden.
 
@@ -1400,7 +1400,7 @@ class GriddedInput(InVESTModelInput):
     def set_hidden(self, hidden):
         """Set the hidden state of component widgets.
 
-        Parameters:
+        Args:
             hidden (bool): The new hidden state.  ``False`` indicates that
                 component widgets should be visible.  ``True`` indicates that
                 component widgets should be hidden.
@@ -1440,7 +1440,7 @@ class Text(GriddedInput):
             This textfield may accept ``DragEnterEvent``s and ``DropEvent``s,
             but will only do so if the event has text MIME data.
 
-            Parameters:
+            Args:
                 starting_value='' (string): The starting value of the
                     QLineEdit.
 
@@ -1456,7 +1456,7 @@ class Text(GriddedInput):
             Overridden from QtWidget.dragEnterEvent.  Will only accept the
             event if the event's mime data has text, but does not have URLs.
 
-            Parameters:
+            Args:
                 event (QDragEnterEvent): The QDragEnterEvent to analyze.
 
             Returns:
@@ -1478,7 +1478,7 @@ class Text(GriddedInput):
             event.  Any text in the MIME data of the ``event`` provided will
             be set as the text of this textfield.
 
-            Parameters:
+            Args:
                 event (QDropEvent): The QDropEvent to analyze.
 
             Returns:
@@ -1493,7 +1493,7 @@ class Text(GriddedInput):
                  args_key=None, hideable=False, validator=None):
         """Initialize a Text input.
 
-        Parameters:
+        Args:
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1526,7 +1526,7 @@ class Text(GriddedInput):
         NOTE: Validation is no longer triggered by this signal handler,
         everything is handled at the model level.
 
-        Parameters:
+        Args:
             new_text (string): The new string value of the textfield.
 
         Returns:
@@ -1551,7 +1551,7 @@ class Text(GriddedInput):
         may be hidden again by calling ``self.set_hidden(True)``.  Note that
         the value of the input will be preserved.
 
-        Parameters:
+        Args:
             value (string, int, or float): The value to use for the new value
                 of the textfield.
 
@@ -1612,7 +1612,7 @@ class _Path(Text):
         def __init__(self, starting_value=''):
             """Initialize the FileField instance.
 
-            Parameters:
+            Args:
                 starting_value='' (string): The starting value of the
                     QLineEdit.
 
@@ -1628,7 +1628,7 @@ class _Path(Text):
             Overridden from QtWidget.dragEnterEvent.  Will only accept the
             event if the event's mime data has exactly 1 URL in its MIME data.
 
-            Parameters:
+            Args:
                 event (QDragEnterEvent): The QDragEnterEvent to analyze.
 
             Returns:
@@ -1655,7 +1655,7 @@ class _Path(Text):
             slightly to correct for filesystem-specific issues in the path
             given.
 
-            Parameters:
+            Args:
                 event (QDropEvent): The QDropEvent to analyze.
 
             Returns:
@@ -1686,7 +1686,7 @@ class _Path(Text):
         def _emit_textchanged(self, triggered):
             """Slot for re-emitting the textchanged signal with current text.
 
-            Parameters:
+            Args:
                 triggered (bool): Ignored.
 
             Returns:
@@ -1701,7 +1701,7 @@ class _Path(Text):
             menu. When clicked, this menu action will cause the
             ``textChanged`` signal to be emitted.
 
-            Parameters:
+            Args:
                 event (QEvent): The context menu event.
 
             Returns:
@@ -1719,7 +1719,7 @@ class _Path(Text):
                  args_key=None, hideable=False, validator=None):
         """Initialize the _Path instance.
 
-        Parameters:
+        Args:
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1756,7 +1756,7 @@ class _Path(Text):
     def _handle_file_button_selection(self, value):
         """Handle the case when the user presses 'cancel' in the file dialog.
 
-        Parameters:
+        Args:
             value (string): The path selected.  This path will be ``''`` if the
                 dialog was cancelled.
 
@@ -1774,7 +1774,7 @@ class Folder(_Path):
                  args_key=None, hideable=False, validator=None):
         """Initialize the Folder instance.
 
-        Parameters:
+        Args:
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1813,7 +1813,7 @@ class File(_Path):
                  args_key=None, hideable=False, validator=None):
         """Initialize the File instance.
 
-        Parameters:
+        Args:
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1854,7 +1854,7 @@ class SaveFile(_Path):
                  default_savefile='new_file.txt'):
         """Initialize the SaveFile instance.
 
-        Parameters:
+        Args:
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1897,7 +1897,7 @@ class Checkbox(GriddedInput):
     def __init__(self, label, helptext=None, interactive=True, args_key=None):
         """Initialize the Checkbox instance.
 
-        Parameters:
+        Args:
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -1951,7 +1951,7 @@ class Checkbox(GriddedInput):
     def set_value(self, value):
         """Set the value of the checkbox.
 
-        Parameters:
+        Args:
             value (bool): The new check state of the checkbox. If ``True``,
                 the checkbox will be checked.
         """
@@ -1967,7 +1967,7 @@ class Dropdown(GriddedInput):
 
         Like the Checkbox class, a Dropdown is always valid.
 
-        Parameters:
+        Args:
             label (string): The string label to use for the input.
             helptext=None (string): The helptext string used to display more
                 information about the input.  If ``None``, no extra information
@@ -2027,7 +2027,7 @@ class Dropdown(GriddedInput):
 
         ``value_changed`` will be emitted with the text of the new selection.
 
-        Parameters:
+        Args:
             newindex (int): The index of the new selection.
 
         Returns:
@@ -2044,7 +2044,7 @@ class Dropdown(GriddedInput):
     def set_options(self, options, return_value_map=None):
         """Set the available options for this dropdown.
 
-        Parameters:
+        Args:
             options (iterable): The new options for the dropdown.
             return_value_map=None (dict or None): If a dict, keys must exactly
                 match the values of ``options``.  Values will be returned when
@@ -2100,7 +2100,7 @@ class Dropdown(GriddedInput):
     def set_value(self, value):
         """Set the current index of the dropdown based on the value.
 
-        Parameters:
+        Args:
             value: The option to select in the dropdown. This value should
                 match either a value in the options iterable set via
                 ``Dropdown.set_options`` or the ``options`` parameter to
@@ -2152,7 +2152,7 @@ class Label(QtWidgets.QLabel):
 
         Labels may contain links, which will be opened externally if possible.
 
-        Parameters:
+        Args:
             text (string): The text of the label.
 
         Returns:
@@ -2166,7 +2166,7 @@ class Label(QtWidgets.QLabel):
     def add_to(self, layout):
         """Add this widget to a QGridLayout.
 
-        Parameters:
+        Args:
             layout (QGridLayout): The layout to which this Label will be
                 added.  The Label will span all columns.
 
@@ -2193,7 +2193,7 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
                  expanded=True, args_key=None):
         """Initialize a Container.
 
-        Parameters:
+        Args:
             label (string): The label of the Container.
             interactive=True (bool): Whether the user can interact with this
                 container.
@@ -2241,7 +2241,7 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
     def _hide_widgets(self, check_state):
         """A slot for hiding and showing all widgets in this Container.
 
-        Parameters:
+        Args:
             check_state (bool): Whether the container's checkbox is checked.
                 If the Container has just been collapsed, ``check_state`` will
                 be ``False``.
@@ -2264,7 +2264,7 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
 
         Reimplemented from QWidget.showEvent.
 
-        Parameters:
+        Args:
             event (QEvent): The current QEvent.  Ignored.
         """
         if self.isCheckable():
@@ -2285,7 +2285,7 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
     def expanded(self, value):
         """Set the container's expanded state.
 
-        Parameters:
+        Args:
             value (bool): The new expanded state.  ``True`` indicates that
                 the container will be expanded.
 
@@ -2323,7 +2323,7 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
         InVESTModelInput and/or its component widgets to a QGridLayout that is
         owned by the Container.
 
-        Parameters:
+        Args:
             input_obj (InVESTModelInput): An instance of Input to add to the
                 Container's layout.
 
@@ -2345,17 +2345,12 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
         self.sufficiency_changed.connect(input_obj.set_interactive)
         self.sufficiency_changed.connect(input_obj.set_visible)
 
-        if isinstance(input_obj, Multi):
-            def _update_sizehints():
-                self.setMinimumSize(self.sizeHint())
-            input_obj.input_added.connect(_update_sizehints)
-
     def add_to(self, layout):
         """Define how to add this Container to a QGridLayout.
 
         The container will occupy all columns.
 
-        Parameters:
+        Args:
             layout (QGridLayout): A QGridLayout to which this Container will
                 be added.
 
@@ -2383,239 +2378,10 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
 
         This is the same as setting the value of ``self.expanded``.
 
-        Parameters:
+        Args:
             value (bool): The new expanded state of the Container.
         """
         self.expanded = value
-
-
-class Multi(Container):
-    """InVESTModelInput that can dynamically add inputs based on a template."""
-
-    value_changed = QtCore.Signal(list)
-    input_added = QtCore.Signal()
-
-    class _RemoveButton(QtWidgets.QPushButton):
-        """A custom button for removing inputs added to a Multi."""
-
-        remove_requested = QtCore.Signal(int)
-
-        def __init__(self, index):
-            """Initialize the button.
-
-            Parameters:
-                index (int): The row index of the input that this button
-                    is associated with.
-
-            Returns:
-                ``None``
-            """
-            QtWidgets.QPushButton.__init__(self)
-            self.setIcon(ICON_MINUS)
-            self.index = index
-            self.pressed.connect(self._remove)
-
-        @QtCore.Slot()
-        def _remove(self):
-            """A slot to emit the ``remove_requested`` signal.
-
-            Parameters:
-                clicked (bool): Whether the button was pressed. Ignored.
-
-            Returns:
-                ``None``
-            """
-            self.remove_requested.emit(self.index)
-
-    def __init__(self, label, callable_, interactive=True, args_key=None,
-                 link_text='Add Another'):
-        """Initialize the Multi instance.
-
-        The Multi input is a Container with a link at the bottom that creates
-        and adds another input when the link is clicked.
-
-        Parameters:
-            label (string): The label of the Multi.
-            callable_ (callable): The callable to use for creating a new input
-                on demand.  The callable must take no parameters and must
-                return a single InVESTModelInput instance.  Multiple Inputs may be
-                grouped together into a Container instance returned from the
-                callable.  Each InVESTModelInput must have a ``value`` method.
-            interactive=True (bool): Whether the user can interact with the
-                input.
-            args_key=None (string): The args key of the input.
-            link_text='Add Another' (string): The text of the link to add
-                another input.
-
-        Returns:
-            ``None``
-        """
-        self.items = []
-        Container.__init__(self,
-                           label=label,
-                           interactive=interactive,
-                           args_key=args_key,
-                           expandable=False,
-                           expanded=True)
-
-        if not hasattr(callable_, '__call__'):
-            raise ValueError("Callable passed to Multi is not callable.")
-
-        self.callable_ = callable_
-        self.add_link = QtWidgets.QLabel(
-            '<a href="add_new">%s</a>' % link_text)
-        self.add_link.linkActivated.connect(self._add_templated_item)
-        self._append_add_link()
-        self.remove_buttons = []
-
-    def value(self):
-        """The value of the Multi.
-
-        Returns:
-            A list of values from the items added to the Multi.
-        """
-        return [input_.value() for input_ in self.items]
-
-    def set_value(self, values):
-        """Set the value of the Multi.
-
-        Parameters:
-            values (list): A list of values to add to the multi.
-                One input will be created for each value in ``values``.
-                The value of each input will be set by calling the input's
-                ``set_value`` method.
-
-        Returns:
-            ``None``
-        """
-        self.clear()
-        for input_value in values:
-            new_input_instance = self.callable_()
-            new_input_instance.set_value(input_value)
-            self.add_item(new_input_instance)
-
-        self.value_changed.emit(list(values))
-
-    def _value_changed(self, new_value):
-        """A slot to re-emit that the value has changed.
-
-        Parameters:
-            new_value: The value of the contained input that changed.
-
-        Returns:
-            ``None``.
-        """
-        self.value_changed.emit(self.value())
-
-    @QtCore.Slot(str)
-    def _add_templated_item(self, link_text):
-        """A slot to add a templated item to the Multi.
-
-        Parameters:
-            link_text (string): a string from the triggering signal.  Ignored.
-
-        Returns:
-            ``None``
-        """
-        self.add_item()
-
-    def add_item(self, new_input=None):
-        """Add an item to the Multi.
-
-        Parameters:
-            new_input=None (InVESTModelInput): The input instance to add to the Multi.
-                If ``None``, a new input will be created by calling
-                ``self.callable_()``
-
-        Returns:
-            ``None``
-        """
-        if new_input is None:
-            new_input = self.callable_()
-
-        new_input.add_to(self.layout())
-        new_input.value_changed.connect(self._value_changed)
-        self.items.append(new_input)
-
-        layout = self.layout()
-        rightmost_item = layout.itemAtPosition(
-            layout.rowCount()-1, layout.columnCount()-1)
-
-        # When there isn't a widget in the last column, we can put the minus
-        # button there instead of using another widget space.
-        if rightmost_item is None:
-            col_index = layout.columnCount()-1
-        else:
-            col_index = layout.columnCount()
-
-        new_remove_button = Multi._RemoveButton(
-            index=max(0, len(self.items)-1))
-        new_remove_button.remove_requested.connect(self.remove)
-        self.remove_buttons.append(new_remove_button)
-
-        layout.addWidget(new_remove_button,
-                         layout.rowCount()-1,  # current last row
-                         col_index,
-                         1,  # span 1 row
-                         1)  # span 1 column
-        self.setMinimumSize(self.sizeHint())
-        self.update()
-        self.input_added.emit()
-
-    def _append_add_link(self):
-        """Add the 'add another' link to the end of the input list.
-
-        Returns:
-            ``None``
-        """
-        layout = self.layout()
-        layout.addWidget(self.add_link,
-                         layout.rowCount(),  # make new last row
-                         0,  # target starting column
-                         1,  # row span
-                         layout.columnCount())  # span all columns
-
-    def clear_layout(self):
-        """Remove all widgets within the multi from the layout.
-
-        Returns:
-            None.
-        """
-        layout = self.layout()
-        for i in reversed(range(layout.count())):
-            layout.itemAt(i).widget().setParent(None)
-        self._append_add_link()
-
-    def clear(self):
-        """Clear all inputs that have been added to the Multi.
-
-        Returns:
-            ``None``
-        """
-        self.clear_layout()
-        self.items = []
-        self.remove_buttons = []
-
-    def remove(self, index):
-        """Remove a specific input from the Multi.
-
-        Parameters:
-            index (int): The index of the row to remove.  1-based.
-
-        Returns:
-            ``None``
-        """
-        # clear all widgets from the layout.
-        self.clear_layout()
-
-        self.items.pop(index)
-        self.remove_buttons.pop(index)
-        old_items = self.items[:]
-        self.items = []
-        self.remove_buttons = []
-        for item in old_items:
-            self.add_item(item)
-        self.value_changed.emit(self.value())
 
 
 class FormScrollArea(QtWidgets.QScrollArea):
@@ -2634,7 +2400,7 @@ class FormScrollArea(QtWidgets.QScrollArea):
     def update_scroll_border(self, range_min, range_max):
         """Show or hide the border of the scrolling area as needed.
 
-        Parameters:
+        Args:
             range_min (int): The scroll area's range minimum.
             range_max (int): The scroll area's range maximum.
 
@@ -2717,7 +2483,7 @@ class Form(QtWidgets.QWidget):
         This method creates and starts a new execution.Executor thread
         instance for the execution of the target.
 
-        Parameters:
+        Args:
             target (callable): A function to execute.
             args=() (iterable): Positional arguments to pass to the target.
             kwargs=None (dict): Keyword args to pass to the target.
@@ -2755,7 +2521,7 @@ class Form(QtWidgets.QWidget):
     def add_input(self, input):
         """Add an input to the Form.
 
-        Parameters:
+        Args:
             input (InVESTModelInput): The Input instance to add to the Form.
 
         Returns:

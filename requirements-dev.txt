@@ -18,15 +18,9 @@ pypiwin32; sys_platform == 'win32'  # pip-only
 setuptools>=8.0
 Sphinx>=1.3.1,!=1.7.1
 sphinx-rtd-theme
-PyInstaller==3.5  # pip-only
+PyInstaller==3.5 # pip-only
 setuptools_scm
 requests
 coverage
 xlwt
-
-# Specifying dmgbuild and some dependencies.  Dmgbuild will probably work
-# with some other package versions, but I haven't had time to try to get
-# other versions to work.
-dmgbuild==1.1.0; sys_platform == 'darwin'  # pip-only
-mac-alias==1.1.0; sys_platform == 'darwin'  # pip-only
-ds-store==1.0.1; sys_platform == 'darwin'  # pip-only
+dmgbuild==1.4.2; sys_platform == 'darwin'  # pip-only

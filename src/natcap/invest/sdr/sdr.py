@@ -12,7 +12,6 @@ import logging
 
 from osgeo import gdal
 from osgeo import ogr
-from osgeo import osr
 import numpy
 
 import pygeoprocessing
@@ -30,7 +29,7 @@ ARGS_SPEC = {
     "userguide_html": "sdr.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
-                         "lulc_path", "drainage_path", "watersheds_path",],
+                         "lulc_path", "drainage_path", "watersheds_path", ],
         "different_projections_ok": True,
     },
     "args": {
@@ -231,7 +230,7 @@ def execute(args):
     using the sediment delivery ratio model described in the InVEST user's
     guide.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
@@ -328,7 +327,7 @@ def execute(args):
     min_pixel_size = numpy.min(numpy.abs(dem_raster_info['pixel_size']))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
-    target_sr_wkt = dem_raster_info['projection']
+    target_sr_wkt = dem_raster_info['projection_wkt']
     vector_mask_options = {'mask_vector_path': args['watersheds_path']}
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
@@ -336,7 +335,7 @@ def execute(args):
             base_list, aligned_list, interpolation_list,
             target_pixel_size, 'intersection'),
         kwargs={
-            'target_sr_wkt': target_sr_wkt,
+            'target_projection_wkt': target_sr_wkt,
             'base_vector_path_list': (args['watersheds_path'],),
             'raster_align_index': 0,
             'vector_mask_options': vector_mask_options,
@@ -488,7 +487,7 @@ def execute(args):
         copy_duplicate_artifact=True,
         target_path_list=[f_reg['rkls_path']],
         dependent_task_list=[
-            align_task, drainage_raster_path_task[1]],
+            align_task, drainage_raster_path_task[1], ls_factor_task],
         task_name='calculate RKLS')
 
     usle_task = task_graph.add_task(
@@ -733,7 +732,7 @@ def _calculate_ls_factor(
     aspect ratio weighted by proportional flow to account for multiple flow
     direction.
 
-    Parameters:
+    Args:
         flow_accumulation_path (string): path to raster, pixel values are the
             contributing upstream area at that cell. Pixel size is square.
         slope_path (string): path to slope raster as a percent
@@ -759,7 +758,7 @@ def _calculate_ls_factor(
     def ls_factor_function(percent_slope, flow_accumulation, avg_aspect):
         """Calculate the LS' factor.
 
-        Parameters:
+        Args:
             percent_slope (numpy.ndarray): slope in percent
             flow_accumulation (numpy.ndarray): upstream pixels
             avg_aspect (numpy.ndarray): the weighted average aspect from MFD
@@ -768,6 +767,8 @@ def _calculate_ls_factor(
             ls_factor
 
         """
+        # avg aspect intermediate output should always have a defined
+        # nodata value from pygeoprocessing
         valid_mask = (
             (~numpy.isclose(avg_aspect, avg_aspect_nodata)) &
             (percent_slope != slope_nodata) &
@@ -804,15 +805,17 @@ def _calculate_ls_factor(
             beta[big_slope_mask] / (1 + beta[big_slope_mask]))
         m_exp[~big_slope_mask] = m_table[m_indexes]
 
+        # from McCool paper: "as a final check against excessively long slope
+        # length calculations ... cap of 333m"
+        # from Rafa, this should really be the upstream area capped to
+        # "333^2 m^2" because McCool is 1D
+        contributing_area[contributing_area > 333**2] = 333**2
+
         ls_prime_factor = (
             ((contributing_area + cell_area)**(m_exp+1) -
              contributing_area ** (m_exp+1)) /
             ((cell_size ** (m_exp + 2)) * (avg_aspect[valid_mask]**m_exp) *
              (22.13**m_exp)))
-
-        # from McCool paper: "as a final check against excessively long slope
-        # length calculations ... cap of 333m"
-        ls_prime_factor[ls_prime_factor > 333] = 333
 
         result[valid_mask] = ls_prime_factor * slope_factor
         return result
@@ -832,7 +835,7 @@ def _calculate_rkls(
 
     (revised universal soil loss equation with no C or P).
 
-    Parameters:
+    Args:
         ls_factor_path (string): path to LS raster that has square pixels in
             meter units.
         erosivity_path (string): path to per pixel erosivity raster
@@ -859,7 +862,7 @@ def _calculate_rkls(
     def rkls_function(ls_factor, erosivity, erodibility, stream):
         """Calculate the RKLS equation.
 
-        Parameters:
+        Args:
             ls_factor (numpy.ndarray): length/slope factor
         erosivity (numpy.ndarray): related to peak rainfall events
         erodibility (numpy.ndarray): related to the potential for soil to
@@ -901,7 +904,7 @@ def _calculate_rkls(
 def _threshold_slope(slope_path, out_thresholded_slope_path):
     """Threshold the slope between 0.005 and 1.0.
 
-    Parameters:
+    Args:
         slope_path (string): path to a raster of slope in percent
         out_thresholded_slope_path (string): path to output raster of
             thresholded slope between 0.005 and 1.0
@@ -934,7 +937,7 @@ def _threshold_slope(slope_path, out_thresholded_slope_path):
 def _add_drainage(stream_path, drainage_path, out_stream_and_drainage_path):
     """Combine stream and drainage masks into one raster mask.
 
-    Parameters:
+    Args:
         stream_path (string): path to stream raster mask where 1 indicates
             a stream, and 0 is a valid landscape pixel but not a stream.
         drainage_raster_path (string): path to 1/0 mask of drainage areas.
@@ -963,7 +966,7 @@ def _calculate_w(
 
     W is a factor in calculating d_up accumulation for SDR.
 
-    Parameters:
+    Args:
         biophysical_table (dict): map of LULC codes to dictionaries that
             contain at least a 'usle_c' field
         lulc_path (string): path to LULC raster
@@ -985,9 +988,13 @@ def _calculate_w(
             lulc_to_c = lulc_to_c.copy()
             lulc_to_c[0] = 0.0
 
-    pygeoprocessing.reclassify_raster(
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Biophysical'}
+
+    utils.reclassify_raster(
         (lulc_path, 1), lulc_to_c, w_factor_path, gdal.GDT_Float32,
-        _TARGET_NODATA, values_required=True)
+        _TARGET_NODATA, reclass_error_details)
 
     def threshold_w(w_val):
         """Threshold w to 0.001."""
@@ -1005,7 +1012,7 @@ def _calculate_w(
 def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
     """Map LULC to C*P value.
 
-    Parameters:
+    Args:
         biophysical_table (dict): map of lulc codes to dictionaries that
             contain at least the entry 'usle_c" and 'usle_p' corresponding to
             those USLE components.
@@ -1025,9 +1032,14 @@ def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
         # replace so 0 is used by default. Ensure this exists in lookup.
         if 0 not in lulc_to_cp:
             lulc_to_cp[0] = 0.0
-    pygeoprocessing.reclassify_raster(
+
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Biophysical'}
+
+    utils.reclassify_raster(
         (lulc_path, 1), lulc_to_cp, cp_factor_path, gdal.GDT_Float32,
-        _TARGET_NODATA, values_required=True)
+        _TARGET_NODATA, reclass_error_details)
 
 
 def _calculate_usle(
@@ -1055,7 +1067,7 @@ def _calculate_bar_factor(
 
     Used for calculating S and W bar in the SDR operation.
 
-    Parameters:
+    Args:
         dem_path (string): path to DEM raster
         factor_path (string): path to arbitrary factor raster
         flow_accumulation_path (string): path to flow accumulation raster
@@ -1086,9 +1098,11 @@ def _calculate_bar_factor(
     def bar_op(base_accumulation, flow_accumulation):
         """Aggregate accumulation from base divided by the flow accum."""
         result = numpy.empty(base_accumulation.shape, dtype=numpy.float32)
-        valid_mask = (
-            ~numpy.isclose(base_accumulation, _TARGET_NODATA) &
-            ~numpy.isclose(flow_accumulation, flow_accumulation_nodata))
+        # flow accumulation intermediate output should always have a defined
+        # nodata value from pygeoprocessing
+        valid_mask = ~(
+            numpy.isclose(base_accumulation, _TARGET_NODATA) |
+            numpy.isclose(flow_accumulation, flow_accumulation_nodata))
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
             base_accumulation[valid_mask] / flow_accumulation[valid_mask])
@@ -1300,7 +1314,7 @@ def _calculate_sed_retention(
 
         RKLS * SDR_bare - USLE * SDR
 
-    Parameters:
+    Args:
         rkls_path (string): path to RKLS raster
         usle_path (string): path to USLE raster
         stream_path (string): path to stream/drainage mask
@@ -1384,7 +1398,7 @@ def _generate_report(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

@@ -106,13 +106,21 @@ class UrbanCoolingModel(model.InVESTModel):
             self._enable_cc_options)
         self.add_input(self.cc_method)
 
-        self.valuation_container = inputs.Container(
-            args_key='do_valuation',
+        self.energy_valuation_container = inputs.Container(
+            args_key='do_energy_valuation',
             expandable=True,
             expanded=True,
             interactive=True,
-            label='Run Valuation Model')
-        self.add_input(self.valuation_container)
+            label='Run Energy Savings Valuation Model')
+        self.add_input(self.energy_valuation_container)
+
+        self.productivity_valuation_container = inputs.Container(
+            args_key='do_productivity_valuation',
+            expandable=True,
+            expanded=True,
+            interactive=True,
+            label='Run Work Productivity Valuation Model')
+        self.add_input(self.productivity_valuation_container)
 
         self.building_vector_path = inputs.File(
             args_key='building_vector_path',
@@ -121,16 +129,7 @@ class UrbanCoolingModel(model.InVESTModel):
                 "least the field 'type'."),
             label='Building Footprints (Vector)',
             validator=self.validator)
-        self.valuation_container.add_input(self.building_vector_path)
-
-        self.avg_rel_humidity = inputs.Text(
-            args_key='avg_rel_humidity',
-            label='Average relative humidity (0-100%)',
-            helptext=(
-                "The average relative humidity (0-100%)."),
-            validator=self.validator)
-        self.valuation_container.add_input(self.avg_rel_humidity)
-        self.avg_rel_humidity.set_value("30")
+        self.energy_valuation_container.add_input(self.building_vector_path)
 
         self.energy_consumption_table_path = inputs.File(
             args_key='energy_consumption_table_path',
@@ -140,7 +139,16 @@ class UrbanCoolingModel(model.InVESTModel):
                 "and 'consumption'."),
             label='Energy Consumption Table (CSV)',
             validator=self.validator)
-        self.valuation_container.add_input(self.energy_consumption_table_path)
+        self.energy_valuation_container.add_input(self.energy_consumption_table_path)
+
+        self.avg_rel_humidity = inputs.Text(
+            args_key='avg_rel_humidity',
+            label='Average relative humidity (0-100%)',
+            helptext=(
+                "The average relative humidity (0-100%)."),
+            validator=self.validator)
+        self.productivity_valuation_container.add_input(self.avg_rel_humidity)
+        self.avg_rel_humidity.set_value("30")
 
         self.cooling_capacity_container = inputs.Container(
             expandable=True,
@@ -198,14 +206,16 @@ class UrbanCoolingModel(model.InVESTModel):
             self.cc_weight_shade.args_key: self.cc_weight_shade.value(),
             self.cc_weight_albedo.args_key: self.cc_weight_albedo.value(),
             self.cc_weight_eti.args_key: self.cc_weight_eti.value(),
-            self.valuation_container.args_key: self.valuation_container.value(),
+            self.energy_valuation_container.args_key: self.energy_valuation_container.value(),
+            self.productivity_valuation_container.args_key: self.productivity_valuation_container.value(),
         }
-        if self.valuation_container.value():
+        if self.energy_valuation_container.value():
             args[self.energy_consumption_table_path.args_key] = (
                 self.energy_consumption_table_path.value())
-            args[self.avg_rel_humidity.args_key] = (
-                self.avg_rel_humidity.value())
             args[self.building_vector_path.args_key] = (
                 self.building_vector_path.value())
+        if self.productivity_valuation_container.value():
+            args[self.avg_rel_humidity.args_key] = (
+                self.avg_rel_humidity.value())
 
         return args

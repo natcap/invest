@@ -261,7 +261,7 @@ cdef class _ManagedRaster:
     def __cinit__(self, raster_path, band_id, write_mode):
         """Create new instance of Managed Raster.
 
-        Parameters:
+        Args:
             raster_path (char*): path to raster that has block sizes that are
                 powers of 2. If not, an exception is raised.
             band_id (int): which band in `raster_path` to index. Uses GDAL
@@ -544,7 +544,7 @@ def viewshed(dem_raster_path_band,
              aux_filepath=None):
     """Compute the Wang et al. reference-plane based viewshed.
 
-    Parameters:
+    Args:
         dem_raster_path_band (tuple): A tuple of (path, band_index) where
             ``path`` is a path to a GDAL-compatible raster on disk and
             ``band_index`` is the 1-based band index.  This DEM must be tiled
@@ -680,7 +680,7 @@ def viewshed(dem_raster_path_band,
 
     # get the pixel size in terms of meters.
     dem_srs = osr.SpatialReference()
-    dem_srs.ImportFromWkt(dem_raster_info['projection'])
+    dem_srs.ImportFromWkt(dem_raster_info['projection_wkt'])
     linear_units = dem_srs.GetLinearUnits()
     cdef double pixel_size = utils.mean_pixel_size_and_area(
         dem_raster_info['pixel_size'])[0]*linear_units

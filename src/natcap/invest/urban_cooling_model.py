@@ -135,16 +135,22 @@ ARGS_SPEC = {
                 "city."
             ),
         },
-        "do_valuation": {
-            "name": "Run Valuation Model",
+        "do_energy_valuation": {
+            "name": "Run Energy Savings Valuation Model",
             "type": "boolean",
             "required": True,
-            "about": "Select to run the valuation model."
+            "about": "Select to run the energy savings valuation model."
+        },
+        "do_productivity_valuation": {
+            "name": "Run Work Productivity Valuation Model",
+            "type": "boolean",
+            "required": True,
+            "about": "Select to run the work productivity valuation model."
         },
         "avg_rel_humidity": {
             "name": "Average relative humidity (0-100%)",
             "type": "number",
-            "required": "do_valuation",
+            "required": "do_productivity_valuation",
             "validation_options": {
                 "expression": "(value >= 0) and (value <= 100)",
             },
@@ -156,7 +162,7 @@ ARGS_SPEC = {
         "building_vector_path": {
             "name": "Buildings vector",
             "type": "vector",
-            "required": "do_valuation",
+            "required": "do_energy_valuation",
             "validation_options": {
                 "required_fields": ["type"],
             },
@@ -171,7 +177,7 @@ ARGS_SPEC = {
         "energy_consumption_table_path": {
             "name": "Energy consumption table",
             "type": "csv",
-            "required": "do_valuation",
+            "required": "do_energy_valuation",
             "validation_options": {
                 "required_fields": ["type", "consumption"],
             },
@@ -261,15 +267,17 @@ def execute(args):
         args['t_air_average_radius'] (float): radius of the averaging filter
             for turning T_air_nomix into T_air.
         args['uhi_max'] (float): Magnitude of the UHI effect.
-        args['do_valuation'] (bool): if True, consider the valuation
-            parameters for buildings.
+        args['do_energy_valuation'] (bool): if True, calculate energy savings 
+            valuation for buildings.
+        args['do_productivity_valuation'] (bool): if True, calculate work 
+            productivity valuation based on humidity and temperature.
         args['avg_rel_humidity'] (float): (optional, depends on
-            'do_valuation') Average relative humidity (0-100%).
+            'do_productivity_valuation') Average relative humidity (0-100%).
         args['building_vector_path']: (str) (optional, depends on
-            'do_valuation') path to a vector of building footprints that
+            'do_energy_valuation') path to a vector of building footprints that
             contains at least the field 'type'.
         args['energy_consumption_table_path'] (str): (optional, depends on
-            'do_valuation') path to a table that maps building types to
+            'do_energy_valuation') path to a table that maps building types to
             energy consumption. Must contain at least the fields 'type' and
             'consumption'.
         args['cc_method'] (str): Either "intensity" or "factors".  If
@@ -369,7 +377,7 @@ def execute(args):
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
             'raster_align_index': 1,
-            'target_sr_wkt': lulc_raster_info['projection']},
+            'target_projection_wkt': lulc_raster_info['projection_wkt']},
         target_path_list=aligned_raster_path_list,
         task_name='align rasters')
 
@@ -380,6 +388,9 @@ def execute(args):
     else:
         reclassification_props += ('building_intensity',)
 
+    reclass_error_details = {
+        'raster_name': 'LULC', 'column_name': 'lucode',
+        'table_name': 'Biophysical'}
     for prop in reclassification_props:
         prop_map = dict(
             (lucode, x[prop])
@@ -388,11 +399,10 @@ def execute(args):
         prop_raster_path = os.path.join(
             intermediate_dir, '%s%s.tif' % (prop, file_suffix))
         prop_task = task_graph.add_task(
-            func=pygeoprocessing.reclassify_raster,
+            func=utils.reclassify_raster,
             args=(
                 (aligned_lulc_raster_path, 1), prop_map, prop_raster_path,
-                gdal.GDT_Float32, TARGET_NODATA),
-            kwargs={'values_required': True},
+                gdal.GDT_Float32, TARGET_NODATA, reclass_error_details),
             target_path_list=[prop_raster_path],
             dependent_task_list=[align_task],
             task_name='reclassify to %s' % prop)
@@ -432,7 +442,7 @@ def execute(args):
             green_area_sum_raster_path),
         kwargs={
             'working_dir': intermediate_dir,
-            'ignore_nodata': True},
+            'ignore_nodata_and_edges': True},
         target_path_list=[green_area_sum_raster_path],
         dependent_task_list=[
             task_path_prop_map['green_area'][0],  # reclassed green area task
@@ -551,7 +561,7 @@ def execute(args):
     intermediate_uhi_result_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
-            args['aoi_vector_path'], lulc_raster_info['projection'],
+            args['aoi_vector_path'], lulc_raster_info['projection_wkt'],
             intermediate_aoi_vector_path),
         kwargs={'driver_name': 'ESRI Shapefile'},
         target_path_list=[intermediate_aoi_vector_path],
@@ -583,8 +593,8 @@ def execute(args):
     light_loss_stats_pickle_path = None
     heavy_loss_stats_pickle_path = None
     energy_consumption_vector_path = None
-    if bool(args['do_valuation']):
-        LOGGER.info('Starting valuation')
+    if bool(args['do_productivity_valuation']):
+        LOGGER.info('Starting work productivity valuation')
         # work productivity
         wbgt_raster_path = os.path.join(
             intermediate_dir, 'wbgt%s.tif' % file_suffix)
@@ -617,45 +627,6 @@ def execute(args):
                 dependent_task_list=[wbgt_task],
                 task_name='work loss: %s' % os.path.basename(loss_raster_path))
             loss_task_path_map[loss_type] = (work_loss_task, loss_raster_path)
-
-        intermediate_building_vector_path = os.path.join(
-            intermediate_dir,
-            'reprojected_buildings%s.shp' % file_suffix)
-        intermediate_building_vector_task = task_graph.add_task(
-            func=pygeoprocessing.reproject_vector,
-            args=(
-                args['building_vector_path'], lulc_raster_info['projection'],
-                intermediate_building_vector_path),
-            kwargs={'driver_name': 'ESRI Shapefile'},
-            target_path_list=[intermediate_building_vector_path],
-            task_name='reproject building vector')
-
-        # zonal stats over buildings for t_air
-        t_air_stats_pickle_path = os.path.join(
-            intermediate_dir, 't_air_stats.pickle')
-        pickle_t_air_task = task_graph.add_task(
-            func=pickle_zonal_stats,
-            args=(
-                intermediate_building_vector_path,
-                t_air_raster_path, t_air_stats_pickle_path),
-            target_path_list=[t_air_stats_pickle_path],
-            dependent_task_list=[
-                t_air_task, intermediate_building_vector_task],
-            task_name='pickle t-air stats over buildings')
-
-        energy_consumption_vector_path = os.path.join(
-            args['workspace_dir'], 'buildings_with_stats%s.shp' % file_suffix)
-        _ = task_graph.add_task(
-            func=calculate_energy_savings,
-            args=(
-                t_air_stats_pickle_path, t_ref_raw,
-                uhi_max_raw, args['energy_consumption_table_path'],
-                intermediate_building_vector_path,
-                energy_consumption_vector_path),
-            target_path_list=[energy_consumption_vector_path],
-            dependent_task_list=[
-                pickle_t_air_task, intermediate_building_vector_task],
-            task_name='calculate energy savings task')
 
         # pickle WBGT
         wbgt_stats_pickle_path = os.path.join(
@@ -695,6 +666,48 @@ def execute(args):
                 loss_task_path_map['heavy'][0],
                 intermediate_uhi_result_vector_task],
             task_name='pickle heavy_loss stats')
+
+    if bool(args['do_energy_valuation']):
+        LOGGER.info('Starting energy savings valuation')
+        intermediate_building_vector_path = os.path.join(
+            intermediate_dir,
+            'reprojected_buildings%s.shp' % file_suffix)
+        intermediate_building_vector_task = task_graph.add_task(
+            func=pygeoprocessing.reproject_vector,
+            args=(
+                args['building_vector_path'],
+                lulc_raster_info['projection_wkt'],
+                intermediate_building_vector_path),
+            kwargs={'driver_name': 'ESRI Shapefile'},
+            target_path_list=[intermediate_building_vector_path],
+            task_name='reproject building vector')
+
+        # zonal stats over buildings for t_air
+        t_air_stats_pickle_path = os.path.join(
+            intermediate_dir, 't_air_stats.pickle')
+        pickle_t_air_task = task_graph.add_task(
+            func=pickle_zonal_stats,
+            args=(
+                intermediate_building_vector_path,
+                t_air_raster_path, t_air_stats_pickle_path),
+            target_path_list=[t_air_stats_pickle_path],
+            dependent_task_list=[
+                t_air_task, intermediate_building_vector_task],
+            task_name='pickle t-air stats over buildings')
+
+        energy_consumption_vector_path = os.path.join(
+            args['workspace_dir'], 'buildings_with_stats%s.shp' % file_suffix)
+        _ = task_graph.add_task(
+            func=calculate_energy_savings,
+            args=(
+                t_air_stats_pickle_path, t_ref_raw,
+                uhi_max_raw, args['energy_consumption_table_path'],
+                intermediate_building_vector_path,
+                energy_consumption_vector_path),
+            target_path_list=[energy_consumption_vector_path],
+            dependent_task_list=[
+                pickle_t_air_task, intermediate_building_vector_task],
+            task_name='calculate energy savings task')
 
     # final reporting can't be done until everything else is complete so
     # stop here
@@ -1074,6 +1087,7 @@ def calc_t_air_nomix_op(t_ref_val, hm_array, uhi_max):
     """
     result = numpy.empty(hm_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
+    # TARGET_NODATA should never be None
     valid_mask = ~numpy.isclose(hm_array, TARGET_NODATA)
     result[valid_mask] = t_ref_val + (1-hm_array[valid_mask]) * uhi_max
     return result
@@ -1134,9 +1148,10 @@ def calc_eti_op(
     """Calculate ETI = (K_c * ET_0) / ET_max."""
     result = numpy.empty(kc_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = ~(
-        numpy.isclose(kc_array, kc_nodata) |
-        numpy.isclose(et0_array, et0_nodata))
+    # kc intermediate output should always have a nodata value defined
+    valid_mask = ~numpy.isclose(kc_array, kc_nodata)
+    if et0_nodata is not None:
+        valid_mask &= ~numpy.isclose(et0_array, et0_nodata)
     result[valid_mask] = (
         kc_array[valid_mask] * et0_array[valid_mask] / et_max)
     return result
@@ -1165,7 +1180,10 @@ def calculate_wbgt(
 
     def wbgt_op(avg_rel_humidity, t_air_array):
         wbgt = numpy.empty(t_air_array.shape, dtype=numpy.float32)
-        valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
+
+        valid_mask = slice(None)
+        if t_air_nodata is not None:
+            valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
         wbgt[:] = TARGET_NODATA
         t_air_valid = t_air_array[valid_mask]
         e_i = (
@@ -1386,7 +1404,7 @@ def convolve_2d_by_exponential(
     pygeoprocessing.convolve_2d(
         (signal_raster_path, 1), (exponential_kernel_path, 1),
         target_convolve_raster_path, working_dir=temporary_working_dir,
-        ignore_nodata=True)
+        ignore_nodata_and_edges=True)
     shutil.rmtree(temporary_working_dir)
 
 

@@ -143,7 +143,7 @@ def execute(args):
 
     Main entry point for proximity based scenario generator model.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string): output directory for intermediate,
             temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
@@ -264,7 +264,7 @@ def _mask_raster_by_vector(
         base_raster_path_band, vector_path, working_dir, target_raster_path):
     """Mask pixels outside of the vector to nodata.
 
-    Parameters:
+    Args:
         base_raster_path (string): path/band tuple to raster to process
         vector_path (string): path to single layer raster that is used to
             indicate areas to preserve from the base raster.  Areas outside
@@ -324,7 +324,7 @@ def _mask_raster_by_vector(
     try:
         shutil.rmtree(tmp_dir)
     except OSError:
-        LOGGER.warn("Unable to delete temporary file %s", mask_raster_path)
+        LOGGER.warning("Unable to delete temporary file %s", mask_raster_path)
 
 
 def _convert_landscape(
@@ -338,7 +338,7 @@ def _convert_landscape(
     away from the focal types, while if `score_weight` is negative conversion
     marches toward the focal types.
 
-    Parameters:
+    Args:
         base_lulc_path (string): path to landcover raster that will be used as
             the base landcover map to agriculture pixels
         replacement_lucode (int): agriculture landcover code type found in the
@@ -498,14 +498,14 @@ def _convert_landscape(
     try:
         shutil.rmtree(temp_dir)
     except OSError:
-        LOGGER.warn(
+        LOGGER.warning(
             "Could not delete temporary working directory '%s'", temp_dir)
 
 
 def _log_stats(stats_cache, pixel_area, stats_path):
     """Write pixel change statistics to a file in tabular format.
 
-    Parameters:
+    Args:
         stats_cache (dict): a dictionary mapping pixel lucodes to number of
             pixels changed
         pixel_area (float): size of pixels in hectares so an area column can
@@ -529,7 +529,7 @@ def _log_stats(stats_cache, pixel_area, stats_path):
 def _sort_to_disk(dataset_path, score_weight=1.0):
     """Return an iterable of non-nodata pixels in sorted order.
 
-    Parameters:
+    Args:
         dataset_path (string): a path to a floating point GDAL dataset
         score_weight (float): a number to multiply all values by, which can be
             used to reverse the order of the iteration if negative.
@@ -595,7 +595,7 @@ def _sort_to_disk(dataset_path, score_weight=1.0):
             index_cache, score_cache):
         """Flushe the current cache to a heap and return it.
 
-        Parameters:
+        Args:
             index_cache (1d numpy.array): contains flat indexes to the
                 score pixels `score_cache`
             score_cache (1d numpy.array): contains score pixels
@@ -673,7 +673,7 @@ def _convert_by_score(
         stats_cache, score_weight):
     """Convert up to max pixels in ranked order of score.
 
-    Parameters:
+    Args:
         score_path (string): path to a raster whose non-nodata values score the
             pixels to convert.  The pixels in `out_raster_path` are converted
             from the lowest score to the highest.  This scale can be modified
@@ -706,7 +706,7 @@ def _convert_by_score(
         to be invoked inside the processing loop and again at the end to
         finalize the scan.
 
-        Parameters:
+        Args:
             data_array (numpy array): 1D array of valid data in buffer
             row_array (numpy array): 1D array to indicate row indexes for
                 `data_array`
@@ -818,7 +818,7 @@ def _convert_by_score(
 def _make_gaussian_kernel_path(sigma, kernel_path):
     """Create a 2D Gaussian kernel.
 
-    Parameters:
+    Args:
         sigma (float): the sigma as in the classic Gaussian function
         kernel_path (string): path to raster on disk to write the gaussian
             kernel.
@@ -875,7 +875,7 @@ def _make_gaussian_kernel_path(sigma, kernel_path):
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation

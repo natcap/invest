@@ -12,7 +12,7 @@ import time
 import tempfile
 import shutil
 import textwrap
-import imp
+import importlib
 import uuid
 import json
 
@@ -697,7 +697,7 @@ class PathTest(TextTest):
             input_instance.set_value(u'/tmp/fooДЖЩя')
             input_instance.path_select_button.path_selected.emit(
                 u'/tmp/fooДЖЩя')
-            self.assertEquals(input_instance.value(), u'/tmp/fooДЖЩя')
+            self.assertEqual(input_instance.value(), u'/tmp/fooДЖЩя')
 
     def test_textfield_drag_n_drop(self):
         input_instance = self.__class__.create_input(label='text')
@@ -1193,17 +1193,6 @@ class ContainerTest(InVESTModelInputTest):
         with self.assertRaises(ValueError):
             input_instance.set_value(False)
 
-    def test_add_input_multi_coverage(self):
-        # Multis need a special case because the whole container needs to be
-        # resized via a callback when a new input is added to the multi.
-        from natcap.invest.ui import inputs
-        input_instance = self.__class__.create_input(label='foo')
-        multi = inputs.Multi(label='Some multi element',
-                             callable_=functools.partial(inputs.Text,
-                                                         label='text input'))
-        input_instance.add_input(multi)
-        multi.add_item()
-
     def test_helptext(self):
         pass
 
@@ -1211,120 +1200,6 @@ class ContainerTest(InVESTModelInputTest):
         pass
 
     def test_required(self):
-        pass
-
-    def test_set_required(self):
-        pass
-
-
-@unittest.skip('skipping MultiTest class. See issue #3936')
-class MultiTest(ContainerTest):
-    @staticmethod
-    def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import Multi
-
-        if 'callable_' not in kwargs:
-            kwargs['callable_'] = MultiTest.create_sample_callable(
-                label='some text')
-        return Multi(*args, **kwargs)
-
-    @staticmethod
-    def create_sample_callable(*args, **kwargs):
-        from natcap.invest.ui.inputs import Text
-        return functools.partial(Text, *args, **kwargs)
-
-    def test_setup_callable_not_callable(self):
-        with self.assertRaises(ValueError):
-            self.__class__.create_input(
-                label='foo',
-                callable_=None)
-
-    def test_value_changed_signal_emitted(self):
-        input_instance = self.__class__.create_input(
-            label='foo',
-            callable_=self.__class__.create_sample_callable(label='foo'))
-
-        callback = mock.Mock()
-        input_instance.value_changed.connect(callback)
-        self.assertEqual(input_instance.value(), [])
-
-        with wait_on_signal(self.qt_app, input_instance.value_changed):
-            input_instance.set_value(('aaa', 'bbb'))
-
-        callback.assert_called_with(['aaa', 'bbb'])
-
-    def test_value_changed_signal(self):
-        input_instance = self.__class__.create_input(
-            label='foo',
-            callable_=self.__class__.create_sample_callable(label='foo'))
-
-        callback = mock.Mock()
-        input_instance.value_changed.connect(callback)
-        self.assertEqual(input_instance.value(), [])
-
-        with wait_on_signal(self.qt_app, input_instance.value_changed):
-            input_instance.value_changed.emit(['aaa', 'bbb'])
-
-        callback.assert_called_with(['aaa', 'bbb'])
-
-    def test_value(self):
-        input_instance = self.__class__.create_input(
-            label='foo',
-            callable_=self.__class__.create_sample_callable(label='foo'))
-
-        self.assertEqual(input_instance.value(), [])  # default value
-
-    def test_set_value(self):
-        input_instance = self.__class__.create_input(
-            label='foo',
-            callable_=self.__class__.create_sample_callable(label='foo'))
-
-        self.assertEqual(input_instance.value(), [])  # default value
-        input_instance.set_value(('aaa', 'bbb'))
-        self.assertEqual(input_instance.value(), ['aaa', 'bbb'])
-
-    def test_remove_item_by_button(self):
-        input_instance = self.__class__.create_input(
-            label='foo',
-            callable_=self.__class__.create_sample_callable(label='foo'))
-
-        self.assertEqual(input_instance.value(), [])  # default value
-        input_instance.set_value(('aaa', 'bbb', 'ccc'))
-        self.assertEqual(input_instance.value(), ['aaa', 'bbb', 'ccc'])
-
-        # reach into the Multi and press the 'bbb' remove button
-        QTest.mouseClick(input_instance.remove_buttons[1],
-                         QtCore.Qt.LeftButton)
-
-        self.assertEqual(input_instance.value(), ['aaa', 'ccc'])
-
-    def test_add_item_by_link(self):
-        input_instance = self.__class__.create_input(
-            label='foo',
-            callable_=self.__class__.create_sample_callable(label='foo'))
-        input_instance.add_link.linkActivated.emit('add_new')
-
-        self.assertEqual(input_instance.value(), [''])
-
-    def test_clear(self):
-        input_instance = self.__class__.create_input(
-            label='foo',
-            callable_=self.__class__.create_sample_callable(label='foo'))
-
-        # Add a few text inputs to this multi
-        for _ in range(3):
-            input_instance.add_item()
-
-        input_instance.clear()
-        self.assertEqual(input_instance.value(), [])
-
-    def test_set_value_nonexpandable(self):
-        pass
-
-    def test_expanded(self):
-        pass
-
-    def test_expandable(self):
         pass
 
     def test_set_required(self):
@@ -2995,7 +2870,8 @@ class ModelTests(_QtTest):
 
             module_name = str(uuid.uuid4()) + 'testscript'
             try:
-                module = imp.load_source(module_name, python_file)
+                spec = importlib.util.spec_from_file_location(module_name, python_file)
+                module = importlib.util.module_from_spec(spec)
                 self.assertEqual(module.args, model_ui.assemble_args())
             finally:
                 del sys.modules[module_name]

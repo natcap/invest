@@ -1,10 +1,165 @@
-.. :changelog:
+..
+  Changes should be grouped for readability.
 
-..
-..
-..
-  Unreleased Changes
-  ------------------
+  InVEST model names:
+  - Carbon
+  - Coastal Blue Carbon
+  - Coastal Vulnerability
+  - Crop Production
+  - Delineateit
+  - Finfish
+  - Fisheries
+  - Forest Carbon Edge Effects
+  - Globio
+  - Habitat Quality
+  - HRA
+  - Annual Water Yield
+  - NDR
+  - Pollination
+  - Recreation
+  - Routedem
+  - Scenario Generator
+  - Scenic Quality
+  - SDR
+  - Seasonal Water Yield
+  - Urban Cooling
+  - Urban Flood Risk
+  - Wave Energy
+  - Wind Energy
+
+  Everything else:
+  - General
+
+
+.. :changelog:
+3.9.0 (2020-12-11)
+------------------
+* General:
+    * Deprecating GDAL 2 and adding support for GDAL 3.
+    * Adding function in utils.py to handle InVEST coordindate transformations.
+    * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
+        * ``convolve_2d()`` keyword ``ignore_nodata`` to
+          ``ignore_nodata_and_edges``.
+        * ``get_raster_info()`` / ``get_vector_info()`` keyword ``projection`` 
+          to ``projection_wkt``.
+    * Improve consistency and context for error messages related to raster
+      reclassification across models by using ``utils.reclassify_raster``.
+    * Fixed bug that was causing a TypeError when certain input rasters had an
+      undefined nodata value. Undefined nodata values should now work
+      everywhere.
+    * Include logging in python script generated from
+      "Save to python script..." in the "Development" menu. Now logging
+      messages from the model execution will show up when you run the script.
+    * InVEST is now a 64-bit binary built against Python 3.7.
+    * Adding Python 3.8 support for InVEST testing.
+    * Add warning message to installer for 32-bit computers about installing
+      64-bit software.
+    * Stop running validation extra times when model inputs autofill, saving
+      a small but noticeable amount of time in launching a model.
+    * The number of files included in the python source distribution has been
+      reduced to just those needed to install the python package and run tests.
+    * Code-sign the macOS distribution, and switch to a DMG distribution format.
+    * No longer include the HTML docs or HISTORY.rst in the macOS distribution.
+    * Bumped the ``shapely`` requirements to ``>=1.7.1`` to address a library
+      import issue on Mac OS Big Sur.
+    * Fixing model local documentation links for Windows and Mac binaries.
+    * The InVEST binary builds now launch on Mac OS 11 "Big Sur".  This was
+      addressed by defining the ``QT_MAC_WANTS_LAYER`` environment variable.
+    * Fixed the alphabetical ordering of Windows Start Menu shortcuts.
+* Annual Water Yield:
+    * Fixing bug that limited ``rsupply`` result when ``wyield_mn`` or
+      ``consump_mn`` was 0.
+* Coastal Blue Carbon
+    * Refactor of Coastal Blue Carbon that implements TaskGraph for task
+      management across the model and fixes a wide range of issues with the model
+      that were returning incorrect results in all cases.
+    * Corrected an issue with the model where available memory would be exhausted
+      on a large number of timesteps.
+    * In addition to the ``execute`` entrypoint, another entrypoint,
+      ``execute_transition_analysis`` has been added that allows access to the
+      transition analysis timeseries loop at a lower level.  This will enable
+      users comfortable with python to provide spatially-explicit maps of
+      accumulation rates, half lives and other parameters that can only be
+      provided via tables to ``execute``.
+    * Snapshot years and rasters, including the baseline year/raster, are now all
+      provided via a table mapping snapshot years to the path to a raster on
+      disk.  The baseline year is the earliest year of these.
+    * The model's "initial" and "lulc lookup" and "transient" tables have been
+      combined into a single "biophysical" table, indexed by LULC code/LULC class
+      name, that includes all of the columns from all of these former tables.
+    * The "analysis year" is now a required input that must be >= the final
+      snapshot year in the snapshots CSV.
+    * Litter can now accumulate at an annual rate if desired.
+    * The model now produces many more files, which allows for greater
+      flexibility in post-processing of model outputs.
+* Coastal Vulnerability
+    * 'shore_points_missing_geomorphology.gpkg' output file name now includes
+      the suffix if any, and its one layer now is renamed from
+      'missing_geomorphology' to be the same as the file name
+      (including suffix).
+    * Fixed a memory bug that occurred during shore point interpolation when
+      dealing with very large landmass vectors.
+* Delineateit
+    * The layer in the 'preprocessed_geometries.gpkg' output is renamed from
+      'verified_geometries' to be the same as the file name (including suffix).
+    * The layer in the 'snapped_outlets.gpkg' output is renamed from
+      'snapped' to be the same as the file name (including suffix).
+    * The layer in the 'watersheds.gpkg' output has been renamed from
+      'watersheds' to match the name of the vector file (including the suffix).
+    * Added pour point detection option as an alternative to providing an
+      outlet features vector.
+* Finfish
+    * Fixed a bug where the suffix input was not being used for output paths.
+* Forest Carbon Edge Effect
+    * Fixed a broken link to the local User's Guide
+    * Fixed bug that was causing overflow errors to appear in the logs when 
+      running with the sample data.
+    * Mask out nodata areas of the carbon map output. Now there should be no
+      output data outside of the input LULC rasater area.
+* GLOBIO
+    * Fixing a bug with how the ``msa`` results were masked and operated on
+      that could cause bad results in the ``msa`` outputs.
+* Habitat Quality:
+    * Refactor of Habitat Quality that implements TaskGraph
+    * Threat files are now indicated in the Threat Table csv input under
+      required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``.
+    * Threat and Sensitivity column names are now case-insensitive.
+    * Sensitivity threat columns now match threat names from Threat Table
+      exactly, without the need for "L_". "L_" prefix is deprecated.
+    * Threat raster input folder has been removed.
+    * Validation enhancements that check whether threat raster paths are valid.
+    * HQ update to User's Guide.
+    * Changing sample data to reflect Threat Table csv input changes and
+      bumping revision.
+    * More comprehensive testing for Habitat Quality and validation.
+    * Checking if Threat raster values are between 0 and 1 range, raising
+      ValueError if not. No longer snapping values less than 0 to 0 and greater
+      than 1 to 1.
+    * Fixing bug that was setting Threat raster values to 1 even if they were
+      floats between 0 and 1.
+    * Updating how threats are decayed across distance. Before, nodata edges
+      were ignored causing values on the edges to maintain a higher threat
+      value. Now, the decay does not ignore those nodata edges causing values
+      on the edges to decay more quickly. The area of study should have
+      adequate boundaries to account for these edge effects.
+    * Update default half saturation value for sample data to 0.05 from 0.1.
+* Seasonal Water Yield
+    * Fixed a bug where precip or eto rasters of ``GDT_Float64`` with values
+      greater than 32-bit would overflow to ``-inf``.
+* SDR:
+    * Fixing an issue where the LS factor should be capped to an upstream area
+      of 333^2 m^2. In previous versions the LS factor was erroneously capped
+      to "333" leading to high export spikes in some pixels.
+    * Fixed an issue where sediment deposition progress logging was not
+      progressing linearly.
+    * Fixed a task dependency bug that in rare cases could cause failure.
+* Urban Cooling
+    * Split energy savings valuation and work productivity valuation into
+      separate UI options.
+* Urban Flood Risk
+    * Changed output field names ``aff.bld`` and ``serv.blt`` to ``aff_bld``
+      and ``serv_blt`` respectively to fix an issue where ArcGIS would not 
+      display properly.
 
 3.8.9 (2020-09-15)
 ------------------
@@ -131,9 +286,10 @@
 
 3.8.3 (2020-05-29)
 ------------------
-* SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
-  available standard C library definition.  This new definition helps to avoid
-  some compiler issues on Windows.
+* sdr
+  * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
+    available standard C library definition. This new definition helps to avoid
+    some compiler issues on Windows.
 
 3.8.2 (2020-05-15)
 ------------------

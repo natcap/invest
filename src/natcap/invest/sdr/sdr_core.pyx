@@ -84,7 +84,7 @@ cdef class _ManagedRaster:
     def __cinit__(self, raster_path, band_id, write_mode):
         """Create new instance of Managed Raster.
 
-        Parameters:
+        Args:
             raster_path (char*): path to raster that has block sizes that are
                 powers of 2. If not, an exception is raised.
             band_id (int): which band in `raster_path` to index. Uses GDAL
@@ -358,7 +358,7 @@ def calculate_sediment_deposition(
         target_sediment_deposition_path):
     """Calculate sediment deposition layer
 
-        Parameters:
+        Args:
             mfd_flow_direction_path (string): a path to a raster with
                 pygeoprocessing.routing MFD flow direction values.
             e_prime_path (string): path to a raster that shows sources of
@@ -373,7 +373,7 @@ def calculate_sediment_deposition(
             None.
 
     """
-    LOGGER.info('calculate sediment deposition')
+    LOGGER.info('Calculate sediment deposition')
     cdef float sediment_deposition_nodata = -1.0
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, target_sediment_deposition_path,
@@ -419,8 +419,8 @@ def calculate_sediment_deposition(
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
 
-        LOGGER.info('%.2f%% complete', 100.0 * (
-            (seed_row * seed_col) / float(n_cols*n_rows)))
+        LOGGER.info('Sediment deposition %.2f%% complete', 100.0 * (
+            (xoff * yoff) / float(n_cols*n_rows)))
 
         for row_index in range(win_ysize):
             seed_row = yoff + row_index
@@ -571,7 +571,7 @@ def calculate_sediment_deposition(
                         global_col, global_row, r_i)
                     f_raster.set(global_col, global_row, f_i)
 
-    LOGGER.info('100% complete')
+    LOGGER.info('Sediment deposition 100% complete')
     sediment_deposition_raster.close()
 
 
@@ -582,7 +582,7 @@ def calculate_average_aspect(
     Calculates the average aspect ratio weighted by proportional flow
     direction.
 
-    Parameters:
+    Args:
         mfd_flow_direction_path (string): The path to an MFD flow direction
             raster.
         target_average_aspect_path (string): The path to where the calculated

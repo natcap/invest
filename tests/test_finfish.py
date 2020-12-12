@@ -4,8 +4,6 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
-
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'aquaculture',
@@ -25,7 +23,7 @@ EXPECTED_FILE_LIST = [
 def _make_harvest_shp(workspace_dir):
     """Within workspace, make an output folder with dummy Finfish_Harvest.shp.
 
-    Parameters:
+    Args:
         workspace_dir: path to workspace for creating the output folder.
     """
     output_path = os.path.join(workspace_dir, 'output')
@@ -50,7 +48,7 @@ class FinfishTests(unittest.TestCase):
 
     @staticmethod
     def generate_base_args(workspace_dir):
-        """Generate an args list that is consistent for both regression tests"""
+        """Generate args list that is consistent for both regression tests."""
         args = {
             'farm_ID': 'FarmID',
             'farm_op_tbl': os.path.join(SAMPLE_DATA, 'Farm_Operations.csv'),
@@ -70,6 +68,7 @@ class FinfishTests(unittest.TestCase):
     def test_finfish_full_run(self):
         """Finfish: regression test to run model with all options on."""
         import natcap.invest.finfish_aquaculture.finfish_aquaculture
+        from natcap.invest.utils import _assert_vectors_equal
 
         args = FinfishTests.generate_base_args(self.workspace_dir)
         args['discount'] = 0.000192
@@ -83,13 +82,41 @@ class FinfishTests(unittest.TestCase):
         natcap.invest.finfish_aquaculture.finfish_aquaculture.execute(args)
         FinfishTests._test_same_files(
             EXPECTED_FILE_LIST, args['workspace_dir'])
-        pygeoprocessing.testing.assert_vectors_equal(
+        _assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest.shp'),
-            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'), 1E-6)
+            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'))
+
+    def test_finfish_full_run_suffix(self):
+        """Finfish: regression test to run model with suffix."""
+        import natcap.invest.finfish_aquaculture.finfish_aquaculture
+        from natcap.invest.utils import _assert_vectors_equal
+
+        args = FinfishTests.generate_base_args(self.workspace_dir)
+        args['discount'] = 0.000192
+        args['do_valuation'] = True
+        args['frac_p'] = 0.3
+        args['num_monte_carlo_runs'] = 10
+        args['p_per_kg'] = 2.25
+        args['results_suffix'] = 'test'
+
+        _make_harvest_shp(self.workspace_dir)  # to test if it's recreated
+
+        natcap.invest.finfish_aquaculture.finfish_aquaculture.execute(args)
+        expected_shp_path = os.path.join(
+            self.workspace_dir, 'output', 'Finfish_Harvest_test.shp')
+        expected_html_path = os.path.join(
+            self.workspace_dir, 'output', 'Harvest_Results_test.html')
+        self.assertTrue(
+            os.path.isfile(expected_shp_path),
+            'Finfish path with suffix failed.')
+        self.assertTrue(
+            os.path.isfile(expected_html_path),
+            'Finfish path with suffix failed.')
 
     def test_finfish_mc_no_valuation(self):
         """Finfish: run model with MC analysis and no valuation."""
         import natcap.invest.finfish_aquaculture.finfish_aquaculture
+        from natcap.invest.utils import _assert_vectors_equal
 
         args = FinfishTests.generate_base_args(self.workspace_dir)
         args['do_valuation'] = False
@@ -99,15 +126,15 @@ class FinfishTests(unittest.TestCase):
 
         FinfishTests._test_same_files(
             EXPECTED_FILE_LIST, args['workspace_dir'])
-        pygeoprocessing.testing.assert_vectors_equal(
+        _assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest_no_valuation.shp'),
-            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'), 1E-6)
+            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'))
 
     @staticmethod
     def _test_same_files(base_path_list, directory_path):
         """Assert files in `base_path_list` are in `directory_path`.
 
-        Parameters:
+        Args:
             base_path_list (list): list of strings which are relative
                 file paths.
             directory_path (string): a path to a directory whose contents will
@@ -162,7 +189,8 @@ class FinfishValidationTests(unittest.TestCase):
         from natcap.invest.finfish_aquaculture import finfish_aquaculture
         from natcap.invest import validation
 
-        validation_errors = finfish_aquaculture.validate({})  # empty args dict.
+        # empty args dict.
+        validation_errors = finfish_aquaculture.validate({})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys +

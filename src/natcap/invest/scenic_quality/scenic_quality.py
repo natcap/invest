@@ -256,7 +256,7 @@ def execute(args):
     reprojected_aoi_task = graph.add_task(
         pygeoprocessing.reproject_vector,
         args=(args['aoi_path'],
-              dem_raster_info['projection'],
+              dem_raster_info['projection_wkt'],
               file_registry['aoi_reprojected']),
         target_path_list=[file_registry['aoi_reprojected']],
         task_name='reproject_aoi_to_dem')
@@ -264,7 +264,7 @@ def execute(args):
     reprojected_viewpoints_task = graph.add_task(
         pygeoprocessing.reproject_vector,
         args=(args['structure_path'],
-              dem_raster_info['projection'],
+              dem_raster_info['projection_wkt'],
               file_registry['structures_reprojected']),
         target_path_list=[file_registry['structures_reprojected']],
         task_name='reproject_structures_to_dem')
@@ -300,6 +300,7 @@ def execute(args):
         _determine_valid_viewpoints,
         args=(file_registry['clipped_dem'],
               file_registry['structures_clipped']),
+        store_result=True,
         dependent_task_list=[clipped_viewpoints_task, clipped_dem_task],
         task_name='determine_valid_viewpoints')
 
@@ -758,7 +759,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
     # convert the distance transform to meters
     spatial_reference = osr.SpatialReference()
-    spatial_reference.ImportFromWkt(vis_raster_info['projection'])
+    spatial_reference.ImportFromWkt(vis_raster_info['projection_wkt'])
     linear_units = spatial_reference.GetLinearUnits()
     pixel_size_in_m = utils.mean_pixel_size_and_area(
         vis_raster_info['pixel_size'])[0] * linear_units
@@ -992,13 +993,13 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
 
     def _mask_zeros(valuation_matrix):
         """Assign zeros to nodata, excluding them from percentile calc."""
-        nonzero = ~numpy.isclose(valuation_matrix, 0.0)
-        nodata = numpy.isclose(valuation_matrix, raster_nodata)
-        valid_indexes = (~nodata & nonzero)
+        valid_mask = ~numpy.isclose(valuation_matrix, 0.0)
+        if raster_nodata is not None:
+            valid_mask &= ~numpy.isclose(valuation_matrix, raster_nodata)
         visual_quality = numpy.empty(valuation_matrix.shape,
                                      dtype=numpy.float64)
         visual_quality[:] = _VALUATION_NODATA
-        visual_quality[valid_indexes] = valuation_matrix[valid_indexes]
+        visual_quality[valid_mask] = valuation_matrix[valid_mask]
         return visual_quality
 
     masked_raster_path = os.path.join(temp_dir, 'zeros_masked.tif')

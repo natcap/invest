@@ -248,7 +248,7 @@ _TARGET_NODATA = -1
 def execute(args):
     """Nutrient Delivery Ratio.
 
-    Parameters:
+    Args:
         args['workspace_dir'] (string):  path to current workspace
         args['dem_path'] (string): path to digital elevation map raster
         args['lulc_path'] (string): a path to landcover map raster
@@ -315,7 +315,7 @@ def execute(args):
     def _validate_inputs(nutrients_to_process, lucode_to_parameters):
         """Validate common errors in inputs.
 
-        Parameters:
+        Args:
             nutrients_to_process (list): list of 'n' and/or 'p'
             lucode_to_parameters (dictionary): biophysical input table mapping
                 lucode to dictionary of table parameters.  Used to validate
@@ -720,7 +720,7 @@ def execute(args):
 def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
     """Rescale slope to proportion and threshold to between 0.005 and 1.0.
 
-    Parameters:
+    Args:
         slope_path (string): a raster with slope values in percent.
         target_threshold_slope_path (string): generated raster with slope
             values as a proportion (100% is 1.0) and thresholded to values
@@ -752,7 +752,7 @@ def _add_fields_to_shapefile(
         field_pickle_map, field_header_order, target_vector_path):
     """Add fields and values to an OGR layer open for writing.
 
-    Parameters:
+    Args:
         field_pickle_map (dict): maps field name to a pickle file that is a
             result of pygeoprocessing.zonal_stats with FIDs that match
             `target_vector_path`.
@@ -791,7 +791,7 @@ def _add_fields_to_shapefile(
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
-    Parameters:
+    Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
         limit_to (str): (optional) if not None indicates that validation
@@ -848,7 +848,7 @@ def validate(args, limit_to=None):
 def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
     """Calculate normalize raster by dividing by the mean value.
 
-    Parameters:
+    Args:
         base_raster_path_band (tuple): raster path/band tuple to calculate
             mean.
         target_normalized_raster_path (string): path to target normalized
@@ -864,7 +864,11 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
         base_raster_path_band[0])['nodata'][base_raster_path_band[1]-1]
     for _, raster_block in pygeoprocessing.iterblocks(
             base_raster_path_band):
-        valid_block = raster_block[~numpy.isclose(raster_block, base_nodata)]
+        valid_mask = slice(None)
+        if base_nodata is not None:
+            valid_mask = ~numpy.isclose(raster_block, base_nodata)
+
+        valid_block = raster_block[valid_mask]
         value_sum += numpy.sum(valid_block)
         value_count += valid_block.size
 
@@ -876,7 +880,10 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
         """Divide values by mean."""
         result = numpy.empty(array.shape, dtype=numpy.float32)
         result[:] = numpy.float32(base_nodata)
-        valid_mask = ~numpy.isclose(array, base_nodata)
+
+        valid_mask = slice(None)
+        if base_nodata is not None:
+            valid_mask = ~numpy.isclose(array, base_nodata)
         result[valid_mask] = array[valid_mask]
         if value_mean != 0:
             result[valid_mask] /= value_mean
@@ -898,7 +905,7 @@ def _calculate_load(
         target_load_raster):
     """Calculate load raster by mapping landcover and multiplying by area.
 
-    Parameters:
+    Args:
         lulc_raster_path (string): path to integer landcover raster.
         lucode_to_parameters (dict): a mapping of landcover IDs to a
             dictionary indexed by the value of `load_{load_type}` that
@@ -940,7 +947,7 @@ def _calculate_load(
 def _multiply_rasters(raster_path_list, target_nodata, target_result_path):
     """Multiply the rasters in `raster_path_list`.
 
-    Parameters:
+    Args:
         raster_path_list (list): list of single band raster paths.
         target_nodata (float): desired target nodata value.
         target_result_path (string): path to float 32 target raster
@@ -954,10 +961,10 @@ def _multiply_rasters(raster_path_list, target_nodata, target_result_path):
         """Multiply non-nodata stacks."""
         result = numpy.empty(array_nodata_list[0].shape)
         result[:] = target_nodata
-        valid_mask = ~numpy.isclose(
-            array_nodata_list[0], array_nodata_list[1])
-        for array, nodata in zip(*[iter(array_nodata_list[2:])]*2):
-            valid_mask &= ~numpy.isclose(array, nodata)
+        valid_mask = numpy.full(result.shape, True)
+        for array, nodata in zip(*[iter(array_nodata_list)]*2):
+            if nodata is not None:
+                valid_mask &= ~numpy.isclose(array, nodata)
         result[valid_mask] = array_nodata_list[0][valid_mask]
         for array in array_nodata_list[2::2]:
             result[valid_mask] *= array[valid_mask]
@@ -978,7 +985,7 @@ def _map_surface_load(
         subsurface_proportion_type, target_surface_load_path):
     """Calculate surface load from landcover raster.
 
-    Parameters:
+    Args:
         modified_load_path (string): path to modified load raster with units
             of kg/pixel.
         lulc_raster_path (string): path to landcover raster.
@@ -1029,7 +1036,7 @@ def _map_subsurface_load(
         subsurface_proportion_type, target_sub_load_path):
     """Calculate subsurface load from landcover raster.
 
-    Parameters:
+    Args:
         modified_load_path (string): path to modified load raster.
         lulc_raster_path (string): path to landcover raster.
         lucode_to_parameters (dict): maps landcover codes to a dictionary that
@@ -1079,7 +1086,7 @@ def _map_lulc_to_val_mask_stream(
         target_eff_path):
     """Make retention efficiency raster from landcover.
 
-    Parameters:
+    Args:
         lulc_raster_path (string): path to landcover raster.
         stream_path (string) path to stream layer 0, no stream 1 stream.
         lucode_to_parameters (dict) mapping of landcover code to a dictionary
@@ -1172,7 +1179,7 @@ def d_up_calculation(s_bar_path, flow_accum_path, target_d_up_path):
 def invert_raster_values(base_raster_path, target_raster_path):
     """Invert (1/x) the values in `base`.
 
-    Parameters:
+    Args:
         base_raster_path (string): path to floating point raster.
         target_raster_path (string): path to created output raster whose
             values are 1/x of base.
@@ -1188,7 +1195,10 @@ def invert_raster_values(base_raster_path, target_raster_path):
         """Calculate inverse of S factor."""
         result = numpy.empty(base_val.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
-        valid_mask = ~numpy.isclose(base_val, base_nodata)
+        valid_mask = slice(None)
+        if base_nodata is not None:
+            valid_mask = ~numpy.isclose(base_val, base_nodata)
+
         zero_mask = base_val == 0.0
         result[valid_mask & ~zero_mask] = (
             1.0 / base_val[valid_mask & ~zero_mask])
@@ -1260,6 +1270,8 @@ def _calculate_sub_ndr(
 
     def _sub_ndr_op(dist_to_channel_array):
         """Calculate subsurface NDR."""
+        # nodata value from this ntermediate output should always be 
+        # defined by pygeoprocessing, not None
         valid_mask = ~numpy.isclose(
             dist_to_channel_array, dist_to_channel_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
@@ -1290,11 +1302,12 @@ def _calculate_export(
             modified_load_array, ndr_array, modified_sub_load_array,
             sub_ndr_array):
         """Combine NDR and subsurface NDR."""
-        valid_mask = (
-            ~numpy.isclose(modified_load_array, load_nodata) &
-            ~numpy.isclose(ndr_array, ndr_nodata) &
-            ~numpy.isclose(modified_sub_load_array, subsurface_load_nodata) &
-            ~numpy.isclose(sub_ndr_array, sub_ndr_nodata))
+        # these intermediate outputs should always have defined nodata
+        # values assigned by pygeoprocessing
+        valid_mask = ~(numpy.isclose(modified_load_array, load_nodata) |
+            numpy.isclose(ndr_array, ndr_nodata) |
+            numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
+            numpy.isclose(sub_ndr_array, sub_ndr_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1314,7 +1327,7 @@ def _aggregate_and_pickle_total(
         base_raster_path_band, aggregate_vector_path, target_pickle_path):
     """Aggregate base raster path to vector path FIDs and pickle result.
 
-    Parameters:
+    Args:
         base_raster_path_band (tuple): raster/path band to aggregate over.
         aggregate_vector_path (string): path to vector to use geometry to
             aggregate over.

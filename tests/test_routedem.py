@@ -89,7 +89,8 @@ class RouteDEMTests(unittest.TestCase):
         RouteDEMTests._make_dem(args['dem_path'])
         routedem.execute(args)
 
-        filled_raster_path = os.path.join(args['workspace_dir'], 'filled_foo.tif')
+        filled_raster_path = os.path.join(
+            args['workspace_dir'], 'filled_foo.tif')
         self.assertTrue(
             os.path.exists(filled_raster_path),
             'Filled DEM not created.')
@@ -116,7 +117,8 @@ class RouteDEMTests(unittest.TestCase):
         RouteDEMTests._make_dem(args['dem_path'])
         routedem.execute(args)
 
-        filled_raster_path = os.path.join(args['workspace_dir'], 'filled_foo.tif')
+        filled_raster_path = os.path.join(
+            args['workspace_dir'], 'filled_foo.tif')
         self.assertTrue(
             os.path.exists(filled_raster_path),
             'Filled DEM not created.')
@@ -228,7 +230,8 @@ class RouteDEMTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_flow_accum,
             gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 'flow_accumulation_foo.tif')).ReadAsArray(),
+                args['workspace_dir'], 
+                'flow_accumulation_foo.tif')).ReadAsArray(),
             rtol=0, atol=1e-6)
 
         expected_flow_direction = numpy.empty((10, 9), dtype=numpy.uint8)
@@ -241,10 +244,12 @@ class RouteDEMTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_flow_direction,
             gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 'flow_direction_foo.tif')).ReadAsArray(),
+                args['workspace_dir'], 
+                'flow_direction_foo.tif')).ReadAsArray(),
             rtol=0, atol=1e-6)
 
-        expected_downstream_distance = numpy.empty((10, 9), dtype=numpy.float64)
+        expected_downstream_distance = numpy.empty(
+            (10, 9), dtype=numpy.float64)
         expected_downstream_distance[:, 0:5] = numpy.flipud(numpy.arange(5))
         expected_downstream_distance[2:, 5:] = numpy.arange(1, 5)
         expected_downstream_distance[0, 5:] = numpy.arange(4)
@@ -254,7 +259,8 @@ class RouteDEMTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_downstream_distance,
             gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 'downstream_distance_foo.tif')).ReadAsArray(),
+                args['workspace_dir'], 
+                'downstream_distance_foo.tif')).ReadAsArray(),
             rtol=0, atol=1e-6)
 
     def test_routedem_mfd(self):

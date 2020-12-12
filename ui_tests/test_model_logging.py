@@ -1,27 +1,14 @@
 """InVEST Model Logging tests."""
 
-import time
-import threading
 import unittest
 import tempfile
 import shutil
-import socket
-import urllib
 import os
-import logging
-
-try:
-    from io import StringIO
-    from urllib.parse import urlencode
-except ImportError:
-    str = unicode
-    from StringIO import StringIO
-    from urllib import urlencode
 
 from osgeo import gdal
 from osgeo import osr
+from osgeo import ogr
 import pygeoprocessing
-import pygeoprocessing.testing
 import shapely.geometry
 import numpy
 import numpy.testing
@@ -64,11 +51,9 @@ class ModelLoggingTests(unittest.TestCase):
         raster = None
 
         vector_path = os.path.join(self.workspace_dir, 'vector.gpkg')
-        pygeoprocessing.testing.create_vector_on_disk(
-            [shapely.geometry.LineString([(4, -4), (10, -10)])],
-            projection=srs_wkt,
-            vector_format='GPKG',
-            filename=vector_path)
+        pygeoprocessing.shapely_geometry_to_vector(
+            [shapely.geometry.LineString([(4, -4), (10, -10)])], vector_path,
+            srs_wkt, "GPKG", ogr_geom_type=ogr.wkbLineString)
 
         model_args = {
             'raster': raster_path,
@@ -76,9 +61,18 @@ class ModelLoggingTests(unittest.TestCase):
             'not_a_gis_input': 'foobar'
         }
 
+        args_spec = {
+            'args': {
+                'raster': {'type': 'raster'},
+                'vector': {'type': 'vector'},
+                'not_a_gis_input': {'type': 'freestyle_string'}
+            }
+        }
+
         output_logfile = os.path.join(self.workspace_dir, 'logfile.txt')
         with utils.log_to_file(output_logfile):
-            bb_inter, bb_union = usage._calculate_args_bounding_box(model_args)
+            bb_inter, bb_union = usage._calculate_args_bounding_box(
+                model_args, args_spec)
 
         numpy.testing.assert_allclose(
             bb_inter, [-87.234108, -85.526151, -87.233424, -85.526205])

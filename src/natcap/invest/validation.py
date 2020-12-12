@@ -1,6 +1,5 @@
 """Common validation utilities for InVEST models."""
 import ast
-import codecs
 import inspect
 import logging
 import pprint
@@ -17,6 +16,8 @@ import pandas
 import xlrd
 from osgeo import gdal, osr
 import numpy
+
+from . import utils
 
 
 #: A flag to pass to the validation context manager indicating that all keys
@@ -516,10 +517,8 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
     try:
         # Check if the file encoding is UTF-8 BOM first
         encoding = None
-        with open(filepath, 'rb') as file_obj:
-            first_line = file_obj.readline()
-            if first_line.startswith(codecs.BOM_UTF8):
-                encoding = 'utf-8-sig'
+        if utils.has_utf8_bom(filepath):
+            encoding = 'utf-8-sig'
 
         # engine=python handles unknown characters by replacing them with a
         # replacement character, instead of raising an error
@@ -578,7 +577,7 @@ def check_spatial_overlap(spatial_filepaths_list,
 
         if different_projections_ok:
             bounding_box = pygeoprocessing.transform_bounding_box(
-                bounding_box, info['projection'], wgs84_wkt)
+                bounding_box, info['projection_wkt'], wgs84_wkt)
 
         if all([numpy.isinf(coord) for coord in bounding_box]):
             LOGGER.warning(
@@ -623,7 +622,7 @@ def timeout(func, *args, timeout=5, **kwargs):
         message_queue.put(func(*args, **kwargs))
 
     thread = threading.Thread(target=wrapper_func)
-    LOGGER.info(f'Starting file checking thread with timeout={timeout}')
+    LOGGER.debug(f'Starting file checking thread with timeout={timeout}')
     thread.start()
     thread.join(timeout=timeout)
 
@@ -635,7 +634,7 @@ def timeout(func, *args, timeout=5, **kwargs):
         return None
 
     else:
-        LOGGER.info('File checking thread completed.')
+        LOGGER.debug('File checking thread completed.')
         # get any warning messages returned from the thread
         return message_queue.get()
 
@@ -895,7 +894,7 @@ def invest_validator(validate_func):
             assert isinstance(key, str), (
                 'All args keys must be strings.')
 
-        # Pytest in importlib mode makes it impossible for test modules to 
+        # Pytest in importlib mode makes it impossible for test modules to
         # import one another. This causes a problem in test_validation.py,
         # which gets imported into itself here and fails.
         # Since this decorator might not be needed in the future,
