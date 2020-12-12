@@ -34,7 +34,7 @@
 .. :changelog:
 
 Unreleased Changes (3.9.1)
-------------------------
+--------------------------
 * General:
     * Updated documentation on installing InVEST from source.
     * Restructured API reference docs and removed outdated and redundant pages.
@@ -132,7 +132,7 @@ Unreleased Changes (3.9.1)
       required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``.
     * Threat and Sensitivity column names are now case-insensitive.
     * Sensitivity threat columns now match threat names from Threat Table
-      exactly, without the need for "L\_". "L\_" prefix is deprecated.
+      exactly, without the need for ``L_``. ``L_`` prefix is deprecated.
     * Threat raster input folder has been removed.
     * Validation enhancements that check whether threat raster paths are valid.
     * HQ update to User's Guide.
@@ -293,11 +293,10 @@ Unreleased Changes (3.9.1)
 
 3.8.3 (2020-05-29)
 ------------------
-* sdr
-
-  * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
-    available standard C library definition. This new definition helps to avoid
-    some compiler issues on Windows.
+* SDR
+    * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
+      available standard C library definition. This new definition helps to avoid
+      some compiler issues on Windows.
 
 3.8.2 (2020-05-15)
 ------------------

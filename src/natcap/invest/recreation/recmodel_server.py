@@ -516,7 +516,10 @@ def _parse_input_csv(
         user_day_lng_lat['f1'] = hashes
         user_day_lng_lat['f2'] = result['lng']
         user_day_lng_lat['f3'] = result['lat']
-        numpy_array_queue.put(user_day_lng_lat)
+        # multiprocessing.Queue pickles the array. Pickling isn't perfect and
+        # it modifies the `datetime64` dtype metadata, causing a warning later.
+        # To avoid this we dump the array to a string before adding to queue.
+        numpy_array_queue.put(_numpy_dumps(user_day_lng_lat))
     numpy_array_queue.put('STOP')
 
 

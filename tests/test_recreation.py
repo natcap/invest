@@ -483,7 +483,7 @@ class TestRecServer(unittest.TestCase):
         recmodel_server._parse_input_csv(
             block_offset_size_queue, self.resampled_data_path,
             numpy_array_queue)
-        val = numpy_array_queue.get()
+        val = recmodel_server._numpy_loads(numpy_array_queue.get())
         # we know what the first date is
         self.assertEqual(val[0][0], datetime.date(2013, 3, 16))
 
