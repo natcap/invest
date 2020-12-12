@@ -75,7 +75,7 @@ def _collect_spatial_files(filepath, data_dir, folder_prefix):
         explicitly exclude CSV files from this function.  This is to maintain
         readibility of the final textfile.
 
-    Parameters:
+    Args:
         filepath (string): The filepath to analyze.
         data_dir (string): The path to the data directory.
         folder_prefix (string): A descriptive prefix for the folder name, 
@@ -155,7 +155,7 @@ def _collect_spatial_files(filepath, data_dir, folder_prefix):
 def _collect_filepath(path, data_dir, folder_prefix):
     """Collect files on disk into the data directory of an archive.
 
-    Parameters:
+    Args:
         path (string): The path to examine.  Must exist on disk.
         data_dir (string): The path to the data directory, where any data
             files will be stored.
@@ -199,7 +199,7 @@ class _ArgsKeyFilter(logging.Filter):
     def __init__(self, args_key):
         """Initialize the filter.
 
-        Parameters:
+        Args:
             args_key (string): The args key to be added to all records.
 
         Returns:
@@ -214,7 +214,7 @@ class _ArgsKeyFilter(logging.Filter):
         Adds the ``args_key`` attribute to the record from the ``args_key``
         that this filter was initialized with.
 
-        Parameters:
+        Args:
             record (logging.Record): The log record.
 
         Returns:
@@ -231,7 +231,7 @@ def format_args_dict(args_dict, model_name):
     representing each key and value in the arg dict.  Keys are in ascending,
     sorted order.  Both columns are left-aligned.
 
-    Parameters:
+    Args:
         args_dict (dict): The args dictionary to format.
         model_name (string): The model name (in python package import format)
 
@@ -256,7 +256,7 @@ def format_args_dict(args_dict, model_name):
 def get_datastack_info(filepath):
     """Get information about a datastack.
 
-    Parameters:
+    Args:
         filepath (string): The path to a file on disk that can be extracted as
             a datastack, parameter set, or logfile.
 
@@ -301,7 +301,7 @@ def get_datastack_info(filepath):
 def build_datastack_archive(args, model_name, datastack_path):
     """Build an InVEST datastack from an arguments dict.
 
-    Parameters:
+    Args:
         args (dict): The arguments dictionary to include in the datastack.
         model_name (string): The python-importable module string of the model
             these args are for.
@@ -402,7 +402,7 @@ def build_datastack_archive(args, model_name, datastack_path):
 def extract_datastack_archive(datastack_path, dest_dir_path):
     """Extract a datastack to a given folder.
 
-    Parameters:
+    Args:
         datastack_path (string): The path to a datastack archive on disk.
         dest_dir_path (string): The path to a directory.  The contents of the
             demonstration datastack archive will be extracted into this
@@ -452,7 +452,7 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
 def build_parameter_set(args, model_name, paramset_path, relative=False):
     """Record a parameter set to a file on disk.
 
-    Parameters:
+    Args:
         args (dict): The args dictionary to record to the parameter set.
         model_name (string): An identifier string for the callable or InVEST
             model that would accept the arguments given.
@@ -504,7 +504,7 @@ def extract_parameter_set(paramset_path):
     Any string values found will have environment variables expanded.  See
     :py:ref:os.path.expandvars and :py:ref:os.path.expanduser for details.
 
-    Parameters:
+    Args:
         paramset_path (string): The file containing a parameter set.
 
     Returns:
@@ -568,7 +568,7 @@ def extract_parameters_from_logfile(logfile_path):
     same line as ``"Arguments"``, but IUI-formatted logfiles (without model
     name and InVEST version information) are also supported.
 
-    Parameters:
+    Args:
         logfile_path (string): The path to an InVEST logfile on disk.
 
     Returns:
@@ -619,7 +619,7 @@ def extract_parameters_from_logfile(logfile_path):
 
             Leave the value be if the value cannot be cast to either one.
 
-            Parameters:
+            Args:
                 value: The parameter value to try to cast.
 
             Returns:

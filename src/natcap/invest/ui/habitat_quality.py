@@ -11,7 +11,7 @@ class HabitatQuality(model.InVESTModel):
             label='Habitat Quality',
             target=natcap.invest.habitat_quality.execute,
             validator=natcap.invest.habitat_quality.validate,
-            localdoc='../documentation/habitat_quality.html')
+            localdoc='habitat_quality.html')
         self.current_landcover = inputs.File(
             args_key='lulc_cur_path',
             helptext=(
@@ -148,7 +148,7 @@ class HabitatQuality(model.InVESTModel):
             args_key='half_saturation_constant',
             helptext=(
                 "A positive floating point value that is defaulted at "
-                "0.5. This is the value of the parameter k in equation "
+                "0.05. This is the value of the parameter k in equation "
                 "(4). In general, set k to half of the highest grid "
                 "cell degradation value on the landscape.  To perform "
                 "this model calibration the model must be run once in "
