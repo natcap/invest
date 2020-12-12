@@ -32,8 +32,8 @@
 
 
 .. :changelog:
-Unreleased Changes (3.9)
-------------------------
+3.9.0 (2020-12-11)
+------------------
 * General:
     * Deprecating GDAL 2 and adding support for GDAL 3.
     * Adding function in utils.py to handle InVEST coordindate transformations.
@@ -152,6 +152,7 @@ Unreleased Changes (3.9)
       to "333" leading to high export spikes in some pixels.
     * Fixed an issue where sediment deposition progress logging was not
       progressing linearly.
+    * Fixed a task dependency bug that in rare cases could cause failure.
 * Urban Cooling
     * Split energy savings valuation and work productivity valuation into
       separate UI options.
@@ -159,12 +160,6 @@ Unreleased Changes (3.9)
     * Changed output field names ``aff.bld`` and ``serv.blt`` to ``aff_bld``
       and ``serv_blt`` respectively to fix an issue where ArcGIS would not 
       display properly.
-
-..
-..
-..
-  Unreleased Changes
-  ------------------
 
 3.8.9 (2020-09-15)
 ------------------
