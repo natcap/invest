@@ -13,7 +13,7 @@ import threading
 import collections
 import logging
 import queue
-from io import StringIO
+from io import BytesIO, StringIO
 
 import Pyro4
 import numpy
