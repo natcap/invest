@@ -115,6 +115,7 @@ function openAboutWindow(parentWindow) {
       nodeIntegration: true,
     },
   });
+  child.setMenu(null);
   child.loadURL(`file://${__dirname}/about.html`);
 }
 

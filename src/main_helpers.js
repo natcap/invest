@@ -1,6 +1,7 @@
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const { app } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const { getLogger } = require('./logger');
 
@@ -37,14 +38,15 @@ export function findInvestBinaries(isDevMode) {
       const binaryPath = path.join(process.resourcesPath, 'invest');
       investExe = path.join(binaryPath, `invest${ext}`);
     }
+    let investVersion;
     try {
-      fs.accessSync(investExe, fs.constants.X_OK);
+      investVersion = execFileSync(investExe, ['--version']);
     } catch (error) {
       logger.error(error);
       throw error;
     }
-    logger.info(`Found invest binaries ${investExe}`);
-    resolve(investExe);
+    logger.info(`Found invest binaries ${investExe} for version ${investVersion}`);
+    resolve([investExe, `${investVersion}`.trim(os.EOL)]);
   });
 }
 

@@ -1,25 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <script>
-      const { remote } = require('electron')
-      const version = remote.app.getVersion()
-    </script>
-  </head>
   <body>
     <h3>About InVEST</h3>
     <span id='invest-version'>
-      <b>Version: </b> 
+      <b>InVEST Version: </b> 
     </span>
-    <script>
-      const node = document.getElementById('invest-version')
-      const text = document.createTextNode(version)
-      node.appendChild(text)
-    </script>
+    <br/>
+    <span id='workbench-version'>
+      <b>Workbench Version: </b> 
+    </span>
     <br/> <br/>
 
     Documentation: <a href="http://releases.naturalcapitalproject.org/
-    invest-userguide/latest/">online</a><br/>
+    invest-userguide/latest/">http://releases.naturalcapitalproject.org/
+    invest-userguide/latest/</a><br/>
     Homepage: <a href="http://naturalcapitalproject.org">
                 naturalcapitalproject.org</a><br/>
     Copyright 2017, The Natural Capital Project<br/>
@@ -32,49 +26,49 @@
     <h2>Open-Source Licenses</h2>
     <table>
         <tr>
-          <td>'PyInstaller'</td>
-          <td>'GPL'</td>
-          <td><a href='http://pyinstaller.org'></td>
+          <td>PyInstaller</td>
+          <td>GPL</td>
+          <td><a href='http://pyinstaller.org'>http://pyinstaller.org</a></td>
         </tr>
         <tr>
-          <td>'GDAL'</td>
-          <td>'MIT and others'</td>
-          <td><a href='http://gdal.org'></td>
+          <td>GDAL</td>
+          <td>MIT and others</td>
+          <td><a href='http://gdal.org'>http://gdal.org</a></td>
         </tr>
         <tr>
-          <td>'numpy'</td>
-          <td>'BSD'</td>
-          <td><a href='http://numpy.org'></td>
+          <td>numpy</td>
+          <td>BSD</td>
+          <td><a href='http://numpy.org'>http://numpy.org</a></td>
         </tr>
         <tr>
-          <td>'pyamg'</td>
-          <td>'BSD'</td>
-          <td><a href='http://github.com/pyamg/pyamg'></td>
+          <td>pyamg</td>
+          <td>BSD</td>
+          <td><a href='http://github.com/pyamg/pyamg'>http://github.com/pyamg/pyamg</a></td>
         </tr>
         <tr>
-          <td>'pygeoprocessing'</td>
-          <td>'BSD'</td>
-          <td><a href='https://github.com/natcap/pygeoprocessing'></td>
+          <td>pygeoprocessing</td>
+          <td>BSD</td>
+          <td><a href='https://github.com/natcap/pygeoprocessing'>https://github.com/natcap/pygeoprocessing</a></td>
        </tr>
         <tr>
-          <td>'PyQt'</td>
-          <td>'GPL'</td>
-          <td><a href='https://riverbankcomputing.com/software/pyqt/intro'></td>
+          <td>PyQt</td>
+          <td>GPL</td>
+          <td><a href='https://riverbankcomputing.com/software/pyqt/intro'>https://riverbankcomputing.com/software/pyqt/intro</a></td>
        </tr>
         <tr>
-          <td>'rtree'</td>
-          <td>'LGPL'</td>
-          <td><a href='http://toblerity.org/rtree/'></td>
+          <td>rtree</td>
+          <td>LGPL</td>
+          <td><a href='http://toblerity.org/rtree/'>http://toblerity.org/rtree/</a></td>
         </tr>
         <tr>
-          <td>'scipy'</td>
-          <td>'BSD'</td>
-          <td><a href='http://www.scipy.org/'></td>
+          <td>scipy</td>
+          <td>BSD</td>
+          <td><a href='http://www.scipy.org/'>http://www.scipy.org/</a></td>
         </tr>
         <tr>
-          <td>'shapely'</td>
-          <td>'BSD'</td>
-          <td><a href='http://github.com/Toblerity/Shapely'></td>
+          <td>shapely</td>
+          <td>BSD</td>
+          <td><a href='http://github.com/Toblerity/Shapely'>http://github.com/Toblerity/Shapely</a></td>
         </tr>
     </table>
     <br/>
@@ -83,4 +77,22 @@
       component on your installation medium.
     </p>
   </body>
+  <script>
+    const { ipcRenderer, remote } = require('electron');
+    const { getLogger } = require('./logger');
+    const logger = getLogger(__filename.split('/').slice(-1)[0]);
+    const node1 = document.getElementById('invest-version')
+    ipcRenderer.on('variable-reply', (event, arg) => {
+      logger.debug(arg.investVersion);
+      const text1 = document.createTextNode(arg.investVersion)
+      node1.appendChild(text1)
+    })
+    ipcRenderer.send('variable-request', 'ping');
+
+    var workbenchVersion = remote.app.getVersion();
+    logger.debug(workbenchVersion);
+    const node2 = document.getElementById('workbench-version')
+    const text2 = document.createTextNode(workbenchVersion)
+    node2.appendChild(text2)
+  </script>
 </html>
