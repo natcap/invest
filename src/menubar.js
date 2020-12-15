@@ -107,25 +107,21 @@ function openAboutWindow(parentWindow) {
   const child = new BrowserWindow({
     parent: parentWindow,
     modal: true,
-    width: 600,
-    height: 600,
+    width: 700,
+    height: 800,
     frame: true,
     webPreferences: {
       enableRemoteModule: true,
       nodeIntegration: true,
+      minimumFontSize: 18,
     },
   });
   child.setMenu(null);
   child.loadURL(`file://${__dirname}/about.html`);
+  if (process.env.ELECTRON_ENV) {
+    child.webContents.openDevTools();
+  }
 }
-
-// const aboutMessageBox = {
-//   title: "About InVEST",
-//   message: ``,
-//   detail: `InVEST workbench version ${app.getVersion()}`,
-//   type: 'info',
-//   buttons: ['OK']
-// }
 
 module.exports.menuTemplate = menuTemplate;
 // const menubar = Menu.buildFromTemplate(template)

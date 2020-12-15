@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
   <body>
-    <h3>About InVEST</h3>
+    <h1>About InVEST</h1>
     <span id='invest-version'>
-      <b>InVEST Version: </b> 
+      <h3>InVEST Version: </h3> 
     </span>
-    <br/>
+    <br/><br/>
     <span id='workbench-version'>
-      <b>Workbench Version: </b> 
+      <h3>Workbench Version: </h3> 
     </span>
     <br/> <br/>
 
@@ -78,21 +78,15 @@
     </p>
   </body>
   <script>
-    const { ipcRenderer, remote } = require('electron');
-    const { getLogger } = require('./logger');
-    const logger = getLogger(__filename.split('/').slice(-1)[0]);
-    const node1 = document.getElementById('invest-version')
+    const { ipcRenderer } = require('electron');
+    const node1 = document.getElementById('invest-version');
+    const node2 = document.getElementById('workbench-version');
     ipcRenderer.on('variable-reply', (event, arg) => {
-      logger.debug(arg.investVersion);
       const text1 = document.createTextNode(arg.investVersion)
       node1.appendChild(text1)
+      const text2 = document.createTextNode(arg.workbenchVersion)
+      node2.appendChild(text2)
     })
     ipcRenderer.send('variable-request', 'ping');
-
-    var workbenchVersion = remote.app.getVersion();
-    logger.debug(workbenchVersion);
-    const node2 = document.getElementById('workbench-version')
-    const text2 = document.createTextNode(workbenchVersion)
-    node2.appendChild(text2)
   </script>
 </html>

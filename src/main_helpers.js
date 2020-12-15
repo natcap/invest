@@ -10,7 +10,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
  * Find paths to local invest executeable under dev or production environments.
  *
  * @param {boolean} isDevMode - a boolean designating dev mode or not.
- * @returns {Promise} Resolves filepath to invest binary
+ * @returns {Promise} Resolves array w/ invest binary path & version strings.
  */
 export function findInvestBinaries(isDevMode) {
   return new Promise(resolve => {
@@ -54,7 +54,6 @@ export function findInvestBinaries(isDevMode) {
  * Spawn a child process running the Python Flask app.
  *
  * @param  {string} investExe - path to executeable that launches flask app.
- * @param {boolean} isDevMode - a boolean designating dev mode or not.
  * @returns {undefined}
  */
 export function createPythonFlaskProcess(investExe) {

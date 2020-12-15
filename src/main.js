@@ -1,5 +1,5 @@
-const isDevMode = process.argv[2] === '--dev';
-if (isDevMode) {
+process.env.ELECTRON_ENV = process.argv[2] === '--dev';
+if (process.env.ELECTRON_ENV) {
   // in dev mode we can have babel transpile modules on import
   require("@babel/register");
   // load the '.env' file from the project root
@@ -24,6 +24,7 @@ const {
 } = require('./main_helpers');
 const { getLogger } = require('./logger');
 const { menuTemplate } = require('./menubar');
+const pkg = require('../package.json');
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -40,12 +41,15 @@ const createWindow = async () => {
   // The main process needs to know the location of the invest server binary.
   // The renderer process needs the invest cli binary. We can find them
   // together here and pass data to the renderer upon request.
-  const [investExe, investVersion] = await findInvestBinaries(isDevMode);
+  const [investExe, investVersion] = await findInvestBinaries(process.env.ELECTRON_ENV);
   createPythonFlaskProcess(investExe);
+  logger.debug(pkg.version);
   const mainProcessVars = {
     investExe: investExe,
     investVersion: investVersion,
+    workbenchVersion: pkg.version,
   };
+  logger.debug(mainProcessVars.workbenchVersion)
   ipcMain.on('variable-request', (event, arg) => {
     event.reply('variable-reply', mainProcessVars);
   });
@@ -81,7 +85,7 @@ const createWindow = async () => {
   // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
   // https://github.com/electron/electron/issues/23662
   mainWindow.webContents.on('did-frame-finish-load', async () => {
-    if (isDevMode) {
+    if (process.env.ELECTRON_ENV) {
       const {
         default: installExtension, REACT_DEVELOPER_TOOLS
       } = require('electron-devtools-installer');
