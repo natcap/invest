@@ -662,7 +662,8 @@ def execute(args):
     total_accumulation_rasters = {}  # Across all 3 pools
     total_accumulation_tasks = {}
     prior_transition_year = baseline_lulc_year
-    for current_transition_year in sorted(transition_years) + [analysis_year]:
+    for current_transition_year in sorted(
+            transition_years.union([analysis_year])):
         total_accumulation_rasters[current_transition_year] = os.path.join(
             output_dir, ACCUMULATION_SINCE_TRANSITION_RASTER_PATTERN.format(
                 start_year=prior_transition_year,
@@ -1987,7 +1988,7 @@ def _extract_snapshots_from_table(csv_path):
 
     No validation is performed on the years or raster paths.
 
-    Parameters:
+    Args:
         csv_path (string): The path to a CSV on disk containing snapshot
             years and a corresponding transition raster path.  Snapshot years
             may be in any order in the CSV, but must be integers and no two
@@ -2020,7 +2021,7 @@ def _extract_snapshots_from_table(csv_path):
 def validate(args, limit_to=None):
     """Validate an input dictionary for Coastal Blue Carbon.
 
-    Parameters:
+    Args:
         args (dict): The args dictionary.
         limit_to=None (str or None): If a string key, only this args parameter
             will be validated.  If ``None``, all args parameters will be
