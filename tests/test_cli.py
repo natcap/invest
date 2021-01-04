@@ -333,8 +333,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: serve entry-point exists; flask app can import."""
         from natcap.invest import cli
 
-        with unittest.mock.patch('natcap.invest.web_api.app.run',
-                return_value=None) as patched_app:
+        with unittest.mock.patch('natcap.invest.ui_server.app.run',
+                                 return_value=None) as patched_app:
             with self.assertRaises(SystemExit) as exit_cm:
                 cli.main(['serve'])
         self.assertEqual(exit_cm.exception.code, 0)
@@ -343,8 +343,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: serve entry-point parses port subargument."""
         from natcap.invest import cli
 
-        with unittest.mock.patch('natcap.invest.web_api.app.run',
-                return_value=None) as patched_app:
+        with unittest.mock.patch('natcap.invest.ui_server.app.run',
+                                 return_value=None) as patched_app:
             with self.assertRaises(SystemExit) as exit_cm:
                 cli.main(['serve', '--port', '12345'])
         self.assertEqual(exit_cm.exception.code, 0)

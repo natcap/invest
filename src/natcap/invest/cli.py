@@ -576,8 +576,8 @@ def main(user_args=None):
                         'App terminated with exit code %s\n' % app_exitcode)
 
     if args.subcommand == 'serve':
-        import natcap.invest.web_api
-        natcap.invest.web_api.app.run(port=args.port)
+        import natcap.invest.ui_server
+        natcap.invest.ui_server.app.run(port=args.port)
         parser.exit(0)
 
 if __name__ == '__main__':
