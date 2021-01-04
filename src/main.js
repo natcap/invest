@@ -1,5 +1,5 @@
-process.env.ELECTRON_ENV = process.argv[2] === '--dev';
-if (process.env.ELECTRON_ENV) {
+process.env.ELECTRON_DEV_MODE = process.argv[2] === '--dev';
+if (process.env.ELECTRON_DEV_MODE) {
   // in dev mode we can have babel transpile modules on import
   require("@babel/register");
   // load the '.env' file from the project root
@@ -41,7 +41,7 @@ const createWindow = async () => {
   // The main process needs to know the location of the invest server binary.
   // The renderer process needs the invest cli binary. We can find them
   // together here and pass data to the renderer upon request.
-  const [investExe, investVersion] = await findInvestBinaries(process.env.ELECTRON_ENV);
+  const [investExe, investVersion] = await findInvestBinaries(process.env.ELECTRON_DEV_MODE);
   createPythonFlaskProcess(investExe);
   logger.debug(pkg.version);
   const mainProcessVars = {
@@ -70,6 +70,9 @@ const createWindow = async () => {
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
+      additionalArguments: [
+        process.env.ELECTRON_DEV_MODE ? '--dev' : 'packaged'
+      ],
     },
   });
 
@@ -85,7 +88,7 @@ const createWindow = async () => {
   // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
   // https://github.com/electron/electron/issues/23662
   mainWindow.webContents.on('did-frame-finish-load', async () => {
-    if (process.env.ELECTRON_ENV) {
+    if (process.env.ELECTRON_DEV_MODE) {
       const {
         default: installExtension, REACT_DEVELOPER_TOOLS
       } = require('electron-devtools-installer');

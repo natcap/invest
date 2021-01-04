@@ -1,6 +1,6 @@
 const { remote, ipcRenderer } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 
-const isDevMode = remote.process.argv[2] === '--dev';
+const isDevMode = process.argv.includes('--dev');
 if (isDevMode) {
   // in dev mode we can have babel transpile modules on import
   require('@babel/register'); // eslint-disable-line import/no-extraneous-dependencies

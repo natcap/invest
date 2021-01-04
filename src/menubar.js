@@ -118,7 +118,7 @@ function openAboutWindow(parentWindow) {
   });
   child.setMenu(null);
   child.loadURL(`file://${__dirname}/about.html`);
-  if (process.env.ELECTRON_ENV) {
+  if (process.env.ELECTRON_DEV_MODE) {
     child.webContents.openDevTools();
   }
 }
