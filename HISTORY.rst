@@ -32,6 +32,12 @@
 
 
 .. :changelog:
+Unreleased
+----------
+* General:
+    * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
+    and server on the localhost, to support the workbench.
+
 3.9.0 (2020-12-11)
 ------------------
 * General:
