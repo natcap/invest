@@ -12,6 +12,7 @@ import functools
 import logging
 import json
 import queue
+import multiprocessing
 
 import Pyro4
 import numpy
@@ -20,6 +21,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 import taskgraph
+import warnings
 
 from natcap.invest import utils
 
