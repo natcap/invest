@@ -32,12 +32,13 @@
 
 
 .. :changelog:
-
 Unreleased Changes (3.9.1)
 --------------------------
 * General:
     * Updated documentation on installing InVEST from source.
     * Restructured API reference docs and removed outdated and redundant pages.
+    * Include logger name in the logging format. This is helpful for the cython
+      modules, which can't log module, function, or line number info.
 
 3.9.0 (2020-12-11)
 ------------------
