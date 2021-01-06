@@ -181,7 +181,6 @@ def convert_survival_matrix(vars_dict):
     D_ha = vars_dict['Hab_dep_ha']          # D_ah
     t_a = vars_dict['Hab_class_mvmt_a']     # T_a
     n_a = vars_dict['Hab_dep_num_a']        # n_h
-    n_a[n_a == 0] = 0
     num_habitats = len(vars_dict['Habitats'])
     num_classes = len(vars_dict['Classes'])
     num_regions = len(vars_dict['Regions'])
@@ -215,7 +214,10 @@ def convert_survival_matrix(vars_dict):
     H_xa = H_xha.sum(axis=1)
 
     # Divide by number of habitats and cancel non-class-transition elements
-    H_xa_weighted = np.where(n_a == 0, 0, (H_xa * t_a) / n_a)
+    # numpy.where may do the math on all elements regardless of the condition
+    # replace 0s with -1s so that we don't divide by zero
+    n_a[n_a == 0] = -1  
+    H_xa_weighted = np.where(n_a < 0, 0, (H_xa * t_a) / n_a)
 
     # Add unchanged elements back in to matrix
     nan_elements = np.isnan(H_xa_weighted)
