@@ -167,20 +167,6 @@ jobs:
 
             - name: Install homebrew dependencies
               run: |
-                  # There's an issue with the latest versions of homebrew and a
-                  # pending SSL version removal from the MacOS images used by
-                  # github actions that was causing ``brew update`` to fail with
-                  # a nonzero exit code and break our binary builds.
-                  #
-                  # This is the issue we were seeing:
-                  #     https://github.com/actions/virtual-environments/issues/1864
-                  #
-                  # This is the workaround (patched for our use case):
-                  #     https://github.com/actions/virtual-environments/issues/1811#issuecomment-708480190
-                  brew uninstall openssl@1.0.2t
-                  brew uninstall python@2.7.17
-                  brew untap local/openssl
-                  brew untap local/python2
                   brew update
                   brew install pandoc
 
