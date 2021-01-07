@@ -886,7 +886,10 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                 """
             ).strip())
         with self.assertRaises(UnicodeDecodeError) as cm:
-            utils.read_csv_to_dataframe(csv_file)
+            # In pandas 1.2.0, there's a bug where sep=None combined
+            # with this UnicodeDecodeError leaves the file handle open,
+            # and our tearDown function errors. So setting sep=',' for now.
+            utils.read_csv_to_dataframe(csv_file, sep=',')
         self.assertTrue("decode byte" in str(cm.exception))
 
     def test_override_default_encoding(self):
