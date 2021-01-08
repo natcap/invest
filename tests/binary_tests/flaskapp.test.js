@@ -6,6 +6,10 @@ import { argsDictFromObject } from '../../src/utils';
 
 const dotenv = require('dotenv');
 dotenv.config();
+// This could be optionally configured already in '.env'
+if (!process.env.PORT) {
+  process.env.PORT = 56788;
+}
 
 jest.setTimeout(250000); // This test is slow in CI
 

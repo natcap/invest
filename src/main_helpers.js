@@ -59,7 +59,7 @@ export function createPythonFlaskProcess(investExe) {
   if (investExe) {
     const pythonServerProcess = spawn(
       path.basename(investExe),
-      ['serve'],
+      ['serve', '--port', process.env.PORT],
       { env: { PATH: path.dirname(investExe) } }
     );
 

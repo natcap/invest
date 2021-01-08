@@ -20,7 +20,10 @@ const { getLogger } = require('./logger');
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
-const PORT = (process.env.PORT || '5000').trim();
+// This could be optionally configured already in '.env'
+if (!process.env.PORT) {
+  process.env.PORT = 56789;
+}
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.

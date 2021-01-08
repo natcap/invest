@@ -15,7 +15,7 @@ In production, the invest exe comes from prebuilt binaries that are an artifact 
 
 For development, choose either:  
   **A.** Duplicate the production setup by fetching prebuilt binaries `npm run fetch-invest`  
-  **B.** Use an any other locally installed, compatible, invest CLI (e.g. from a local python environment). To configure this, see `.env-example`
+  **B.** Use any other locally installed, compatible, invest CLI (e.g. from a local python environment). To configure this, see `.env-example`
 
 * `npm start`
 
