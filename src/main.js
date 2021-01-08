@@ -20,7 +20,10 @@ const { getLogger } = require('./logger');
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
-const PORT = (process.env.PORT || '5000').trim();
+// This could be optionally configured already in '.env'
+if (!process.env.PORT) {
+  process.env.PORT = 56789;
+}
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -30,13 +33,13 @@ const createWindow = async () => {
   // The main process needs to know the location of the invest server binary.
   // The renderer process needs the invest cli binary. We can find them
   // together here and pass data to the renderer upon request.
-  const binaries = await findInvestBinaries(isDevMode);
-  const mainProcessVars = { investExe: binaries.invest };
+  const investExe = await findInvestBinaries(isDevMode);
+  const mainProcessVars = { investExe: investExe };
   ipcMain.on('variable-request', (event, arg) => {
     event.reply('variable-reply', mainProcessVars);
   });
 
-  createPythonFlaskProcess(binaries.server, isDevMode);
+  createPythonFlaskProcess(investExe);
   // Wait for a response from the server before loading the app
   await getFlaskIsReady();
 

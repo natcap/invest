@@ -4,16 +4,19 @@ import * as server_requests from '../../src/server_requests';
 import { findInvestBinaries, createPythonFlaskProcess } from '../../src/main_helpers';
 import { argsDictFromObject } from '../../src/utils';
 
-// If SERVER is defined in .env, this appends it to global process.env
 const dotenv = require('dotenv');
 dotenv.config();
+// This could be optionally configured already in '.env'
+if (!process.env.PORT) {
+  process.env.PORT = 56788;
+}
 
 jest.setTimeout(250000); // This test is slow in CI
 
 const isDevMode = true; // otherwise need to mock process.resourcesPath
 beforeAll(async () => {
-  const binaries = await findInvestBinaries(isDevMode);
-  createPythonFlaskProcess(binaries.server, isDevMode);
+  const investExe = await findInvestBinaries(isDevMode);
+  createPythonFlaskProcess(investExe);
   // In the CI the flask app takes more than 10x as long to startup.
   // Especially so on macos.
   // So, allowing many retries, especially because the error
