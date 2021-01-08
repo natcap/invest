@@ -30,7 +30,13 @@ from unittest.mock import MagicMock
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
 INVEST_ROOT_DIR = os.path.join(DOCS_SOURCE_DIR, '..', '..')
 INVEST_BUILD_DIR = os.path.join(INVEST_ROOT_DIR, 'build')
-INVEST_LIB_DIR = None  # not known until after install
+
+# get name of build/lib directory; this depends on the OS and python version
+# e.g. lib.macosx-10.9-x86_64-3.8
+for path in os.listdir(INVEST_BUILD_DIR):
+    if path.startswith('lib'):
+        INVEST_LIB_DIR = os.path.join(INVEST_BUILD_DIR, path)
+        break
 
 # -- General configuration ------------------------------------------------
 
@@ -58,17 +64,6 @@ master_doc = 'index'
 # General information about the project.
 project = 'InVEST'
 copyright = f'{datetime.now().year}, The Natural Capital Project'
-
-# install so that this file and others can access natcap.invest.__version__
-subprocess.run(['python', 'setup.py', 'install'], 
-               cwd=INVEST_ROOT_DIR)
-
-# get name of build/lib directory; this depends on the OS and python version
-# e.g. lib.macosx-10.9-x86_64-3.8
-for path in os.listdir(INVEST_BUILD_DIR):
-    if path.startswith('lib'):
-        INVEST_LIB_DIR = os.path.join(INVEST_BUILD_DIR, path)
-        break
 
 import natcap.invest
 # The full version, including alpha/beta/rc tags.
