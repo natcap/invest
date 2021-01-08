@@ -53,7 +53,7 @@ jobs:
       run: |
           conda upgrade -y pip setuptools
           conda install toml requests
-          conda install gdal==2.4.4
+          conda install gdal>=3.1.2
           conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
           python ./scripts/convert-requirements-to-conda-yml.py \
                 requirements.txt \
