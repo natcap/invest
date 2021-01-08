@@ -15,7 +15,9 @@ const PORT = 9009;
 // to avoid need to install first on windows or extract on mac.
 let binaryPath;
 if (process.platform === 'darwin') {
+  console.log('darwin');
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
+  console.log(glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*'));
   [binaryPath] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
 } else if (process.platform === 'win32') {
   [binaryPath] = glob.sync('./dist/win-unpacked/InVEST*.exe');
@@ -70,11 +72,13 @@ beforeAll(async () => {
   await new Promise((resolve) => setTimeout(resolve, 5000));
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
+  console.log('getting browser...');
   browser = await puppeteer.connect({
     browserWSEndpoint: data.webSocketDebuggerUrl, // this works
     // browserURL: `http://localhost:${PORT}`,    // this also works
     defaultViewport: { width: 1000, height: 800 },
   });
+  console.log(browser);
   makeAOI();
 });
 
