@@ -188,7 +188,6 @@ class WindEnergyUnitTests(unittest.TestCase):
             'operation_maintenance_cost': .035,
             'miscellaneous_capex_cost': .05
         }
-        print(result)
         self.assertDictEqual(expected_result, result)
 
     def test_calculate_grid_dist_on_raster(self):
