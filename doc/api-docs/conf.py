@@ -30,6 +30,7 @@ from unittest.mock import MagicMock
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
 INVEST_ROOT_DIR = os.path.join(DOCS_SOURCE_DIR, '..', '..')
 INVEST_SOURCE_DIR = os.path.join(INVEST_ROOT_DIR, 'src')
+INVEST_BUILD_DIR = os.path.join(INVEST_ROOT_DIR, 'build')
 sys.path.insert(0, INVEST_SOURCE_DIR)
 
 # -- General configuration ------------------------------------------------
@@ -187,7 +188,7 @@ apidoc.main([
     '--templatedir', os.path.join(DOCS_SOURCE_DIR, 'templates'),  # use custom templates
     '--separate',  # make a separate page for each module
     '--no-toc',  # table of contents page is redundant
-    INVEST_SOURCE_DIR
+    INVEST_BUILD_DIR
 ])
 
 
@@ -243,8 +244,8 @@ MODEL_ENTRYPOINTS_FILE = os.path.join(DOCS_SOURCE_DIR, 'models.rst')
 # write out to a file models.rst in the source directory
 all_modules = {}
 for _loader, name, _is_pkg in itertools.chain(
-        pkgutil.walk_packages(path=[INVEST_SOURCE_DIR]),  # catch packages
-        pkgutil.iter_modules(path=[INVEST_SOURCE_DIR])):  # catch modules
+        pkgutil.walk_packages(path=[INVEST_BUILD_DIR]),  # catch packages
+        pkgutil.iter_modules(path=[INVEST_BUILD_DIR])):  # catch modules
 
     if (any([name.endswith(x) for x in EXCLUDED_MODULES]) or
         name.startswith('natcap.invest.ui')):
