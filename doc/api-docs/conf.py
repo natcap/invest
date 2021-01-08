@@ -18,7 +18,6 @@ import os
 import pkgutil
 import subprocess
 import sys
-import warnings
 
 from sphinx.ext import apidoc
 from unittest.mock import MagicMock
@@ -29,10 +28,8 @@ from unittest.mock import MagicMock
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
 INVEST_ROOT_DIR = os.path.join(DOCS_SOURCE_DIR, '..', '..')
-INVEST_SOURCE_DIR = os.path.join(INVEST_ROOT_DIR, 'src')
 INVEST_BUILD_DIR = os.path.join(INVEST_ROOT_DIR, 'build')
 INVEST_LIB_DIR = None  # not known until after install
-sys.path.insert(0, INVEST_SOURCE_DIR)
 
 # -- General configuration ------------------------------------------------
 
@@ -93,7 +90,6 @@ pygments_style = 'sphinx'
 
 # If true, keep warnings as "system message" paragraphs in the built documents.
 keep_warnings = False
-#keep_warnings = True
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -158,11 +154,6 @@ texinfo_documents = [
 
 
 # -- Prepare for sphinx build ---------------------------------------------
-
-# build cython extensions in-place so that sphinx can find the .so files
-# alongside the source code
-subprocess.run(['python', 'setup.py', 'build_ext', '--inplace'], 
-               cwd=INVEST_ROOT_DIR)
 
 # As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
 # Classes involved in multiple inheritance from a mocked class: 
