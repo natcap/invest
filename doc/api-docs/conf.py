@@ -19,6 +19,7 @@ import pkgutil
 import subprocess
 import sys
 
+from datetime import datetime
 from sphinx.ext import apidoc
 from unittest.mock import MagicMock
 
@@ -56,7 +57,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'InVEST'
-copyright = '2020, The Natural Capital Project'
+copyright = f'{datetime.now().year}, The Natural Capital Project'
 
 # install so that this file and others can access natcap.invest.__version__
 subprocess.run(['python', 'setup.py', 'install'], 
