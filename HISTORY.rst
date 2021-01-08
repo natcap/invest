@@ -32,11 +32,17 @@
 
 
 .. :changelog:
-Unreleased
-----------
+workbench-alpha
+---------------
 * General:
     * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
     and server on the localhost, to support the workbench.
+
+3.9.1
+-----
+* General:
+    * Include logger name in the logging format. This is helpful for the cython
+      modules, which can't log module, function, or line number info.
 
 3.9.0 (2020-12-11)
 ------------------
