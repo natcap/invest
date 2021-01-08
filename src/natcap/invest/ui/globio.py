@@ -11,7 +11,7 @@ class GLOBIO(model.InVESTModel):
             label='GLOBIO',
             target=natcap.invest.globio.execute,
             validator=natcap.invest.globio.validate,
-            localdoc='../documentation/globio.html')
+            localdoc='globio.html')
 
         self.lulc_to_globio_table_path = inputs.File(
             args_key='lulc_to_globio_table_path',

@@ -487,7 +487,7 @@ def execute(args):
         copy_duplicate_artifact=True,
         target_path_list=[f_reg['rkls_path']],
         dependent_task_list=[
-            align_task, drainage_raster_path_task[1]],
+            align_task, drainage_raster_path_task[1], ls_factor_task],
         task_name='calculate RKLS')
 
     usle_task = task_graph.add_task(

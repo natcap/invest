@@ -328,3 +328,23 @@ class CLIHeadlessTests(unittest.TestCase):
         # Validation returned successfully, so error code 0 even though there
         # are warnings.
         self.assertEqual(exit_cm.exception.code, 0)
+
+    def test_serve(self):
+        """CLI: serve entry-point exists; flask app can import."""
+        from natcap.invest import cli
+
+        with unittest.mock.patch('natcap.invest.ui_server.app.run',
+                                 return_value=None) as patched_app:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main(['serve'])
+        self.assertEqual(exit_cm.exception.code, 0)
+
+    def test_serve_port_argument(self):
+        """CLI: serve entry-point parses port subargument."""
+        from natcap.invest import cli
+
+        with unittest.mock.patch('natcap.invest.ui_server.app.run',
+                                 return_value=None) as patched_app:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main(['serve', '--port', '12345'])
+        self.assertEqual(exit_cm.exception.code, 0)

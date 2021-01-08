@@ -57,6 +57,18 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 args['workspace_dir'], 'aggregated_carbon_stocks.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.shp'))
 
+        expected_carbon_raster = gdal.OpenEx(os.path.join(REGRESSION_DATA, 
+                                                          'carbon_map.tif'))
+        expected_carbon_band = expected_carbon_raster.GetRasterBand(1)
+        expected_carbon_array = expected_carbon_band.ReadAsArray()
+        actual_carbon_raster = gdal.OpenEx(os.path.join(REGRESSION_DATA, 
+                                                        'carbon_map.tif'))
+        actual_carbon_band = actual_carbon_raster.GetRasterBand(1)
+        actual_carbon_array = actual_carbon_band.ReadAsArray()
+        self.assertTrue(numpy.allclose(expected_carbon_array, 
+                                       actual_carbon_array))
+
+
     def test_carbon_dup_output(self):
         """Forest Carbon Edge: test for existing output overlap."""
         from natcap.invest import forest_carbon_edge_effect

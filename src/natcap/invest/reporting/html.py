@@ -217,10 +217,10 @@ def cell_format(data):
     """Formats the data to put in a table cell."""
     if isinstance(data, int):
         # Add commas to integers.
-        return locale.format("%d", data, grouping=True)
+        return locale.format_string("%d", data, grouping=True)
     elif isinstance(data, float):
         # Add commas to floats, and round to 2 decimal places.
-        return locale.format("%.2f", data, grouping=True)
+        return locale.format_string("%.2f", data, grouping=True)
     else:
         return str(data)
 

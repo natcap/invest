@@ -11,7 +11,7 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
             label='UrbanFloodRiskMitigation',
             target=natcap.invest.urban_flood_risk_mitigation.execute,
             validator=natcap.invest.urban_flood_risk_mitigation.validate,
-            localdoc='../documentation/urban_flood_risk_mitigation.html')
+            localdoc='urban_flood_mitigation.html')
 
         self.aoi_watersheds_path = inputs.File(
             args_key='aoi_watersheds_path',

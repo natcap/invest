@@ -286,7 +286,7 @@ def execute(args):
     missing_lucodes = set(crop_lucodes).difference(
         set(unique_lucodes))
     if len(missing_lucodes) > 0:
-        LOGGER.warn(
+        LOGGER.warning(
             "The following lucodes are in the landcover to crop table but "
             "aren't in the landcover raster: %s", missing_lucodes)
 

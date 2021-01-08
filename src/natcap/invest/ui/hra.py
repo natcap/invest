@@ -10,7 +10,7 @@ class HabitatRiskAssessment(model.InVESTModel):
             label='Habitat Risk Assessment',
             target=hra.execute,
             validator=hra.validate,
-            localdoc='../documentation/habitat_risk_assessment.html')
+            localdoc='habitat_risk_assessment.html')
 
         self.info_table_path = inputs.File(
             args_key='info_table_path',

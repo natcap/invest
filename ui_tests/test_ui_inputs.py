@@ -12,7 +12,7 @@ import time
 import tempfile
 import shutil
 import textwrap
-import imp
+import importlib
 import uuid
 import json
 
@@ -697,7 +697,7 @@ class PathTest(TextTest):
             input_instance.set_value(u'/tmp/fooДЖЩя')
             input_instance.path_select_button.path_selected.emit(
                 u'/tmp/fooДЖЩя')
-            self.assertEquals(input_instance.value(), u'/tmp/fooДЖЩя')
+            self.assertEqual(input_instance.value(), u'/tmp/fooДЖЩя')
 
     def test_textfield_drag_n_drop(self):
         input_instance = self.__class__.create_input(label='text')
@@ -2870,7 +2870,8 @@ class ModelTests(_QtTest):
 
             module_name = str(uuid.uuid4()) + 'testscript'
             try:
-                module = imp.load_source(module_name, python_file)
+                spec = importlib.util.spec_from_file_location(module_name, python_file)
+                module = importlib.util.module_from_spec(spec)
                 self.assertEqual(module.args, model_ui.assemble_args())
             finally:
                 del sys.modules[module_name]

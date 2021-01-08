@@ -11,7 +11,7 @@ class SDR(model.InVESTModel):
             label='Sediment Delivery Ratio Model (SDR)',
             target=natcap.invest.sdr.sdr.execute,
             validator=natcap.invest.sdr.sdr.validate,
-            localdoc='../documentation/sdr.html')
+            localdoc='sdr.html')
         self.dem_path = inputs.File(
             args_key='dem_path',
             helptext=(

@@ -622,7 +622,7 @@ def timeout(func, *args, timeout=5, **kwargs):
         message_queue.put(func(*args, **kwargs))
 
     thread = threading.Thread(target=wrapper_func)
-    LOGGER.info(f'Starting file checking thread with timeout={timeout}')
+    LOGGER.debug(f'Starting file checking thread with timeout={timeout}')
     thread.start()
     thread.join(timeout=timeout)
 
@@ -634,7 +634,7 @@ def timeout(func, *args, timeout=5, **kwargs):
         return None
 
     else:
-        LOGGER.info('File checking thread completed.')
+        LOGGER.debug('File checking thread completed.')
         # get any warning messages returned from the thread
         return message_queue.get()
 
