@@ -31,6 +31,7 @@ DOCS_SOURCE_DIR = os.path.dirname(__file__)
 INVEST_ROOT_DIR = os.path.join(DOCS_SOURCE_DIR, '..', '..')
 INVEST_SOURCE_DIR = os.path.join(INVEST_ROOT_DIR, 'src')
 INVEST_BUILD_DIR = os.path.join(INVEST_ROOT_DIR, 'build')
+INVEST_LIB_DIR = None  # not known until after install
 sys.path.insert(0, INVEST_SOURCE_DIR)
 
 # -- General configuration ------------------------------------------------
@@ -63,6 +64,14 @@ copyright = '2020, The Natural Capital Project'
 # install so that this file and others can access natcap.invest.__version__
 subprocess.run(['python', 'setup.py', 'install'], 
                cwd=INVEST_ROOT_DIR)
+
+# get name of build/lib directory; this depends on the OS and python version
+# e.g. lib.macosx-10.9-x86_64-3.8
+for path in os.listdir(INVEST_BUILD_DIR):
+    if path.startswith('lib'):
+        INVEST_LIB_DIR = os.path.join(INVEST_BUILD_DIR, path)
+        break
+
 import natcap.invest
 # The full version, including alpha/beta/rc tags.
 release = natcap.invest.__version__
@@ -188,7 +197,7 @@ apidoc.main([
     '--templatedir', os.path.join(DOCS_SOURCE_DIR, 'templates'),  # use custom templates
     '--separate',  # make a separate page for each module
     '--no-toc',  # table of contents page is redundant
-    INVEST_BUILD_DIR
+    INVEST_LIB_DIR
 ])
 
 
@@ -244,8 +253,8 @@ MODEL_ENTRYPOINTS_FILE = os.path.join(DOCS_SOURCE_DIR, 'models.rst')
 # write out to a file models.rst in the source directory
 all_modules = {}
 for _loader, name, _is_pkg in itertools.chain(
-        pkgutil.walk_packages(path=[INVEST_BUILD_DIR]),  # catch packages
-        pkgutil.iter_modules(path=[INVEST_BUILD_DIR])):  # catch modules
+        pkgutil.walk_packages(path=[INVEST_LIB_DIR]),  # catch packages
+        pkgutil.iter_modules(path=[INVEST_LIB_DIR])):  # catch modules
 
     if (any([name.endswith(x) for x in EXCLUDED_MODULES]) or
         name.startswith('natcap.invest.ui')):
