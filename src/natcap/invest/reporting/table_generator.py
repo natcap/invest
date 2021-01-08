@@ -8,7 +8,7 @@ def generate_table(table_dict, attributes=None):
     of the the table in the form of hmtl
 
     Args:
-        table_dict: a dictionary with the following arguments:
+        table_dict (dict): a dictionary with the following arguments:
 
             'cols': a list of dictionaries that defines the column
                 structure for the table (required). The order of the
@@ -44,10 +44,9 @@ def generate_table(table_dict, attributes=None):
                 total row at the bottom of the table that sums the column
                 values (optional)
 
-            'attributes': a dictionary of html table attributes. The attribute
-                name is the key which gets set to the value of the key.
-                (optional)
-                Example: {'class': 'sorttable', 'id': 'parcel_table'}
+        attributes (dict, optional): a dictionary of html table attributes. 
+            The attribute name is the key which gets set to the value of the 
+            key. Example: {'class': 'sorttable', 'id': 'parcel_table'}
 
     Returns:
         string representing an html table

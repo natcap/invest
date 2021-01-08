@@ -1,4 +1,4 @@
-# requirements-docs.txt
+# requirements-docs.yml
 # ---------------------
 # This file records the packages needed to build on readthedocs.org.
 # It assumes that the natcap.invest package is being
