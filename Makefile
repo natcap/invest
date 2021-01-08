@@ -12,7 +12,7 @@ GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
 GIT_UG_REPO_REV              := bbfa26dc0c9158d13d209c1bc61448a9166708da
 
-ENV = env
+ENV = "./env"
 ifeq ($(OS),Windows_NT)
 	# Double $$ indicates windows environment variable
 	NULL := $$null
@@ -221,7 +221,7 @@ env:
 		$(CONDA) env update -p $(ENV) --file requirements-all.yml
 		@echo "----------------------------"
 		@echo "To finish the conda env install:"
-		@echo ">> conda activate ./$(ENV)"
+		@echo ">> conda activate $(ENV)"
 		@echo ">> make install"
 
 
