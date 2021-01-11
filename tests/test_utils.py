@@ -871,7 +871,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         self.assertEqual(df['HEADER2'][1], 5)
 
     def test_non_utf8_encoding(self):
-        """utils: test that non-ASCII characters raise an error"""
+        """utils: test non-ASCII chars with non-UTF8 encoding raises error"""
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
