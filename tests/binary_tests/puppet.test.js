@@ -61,16 +61,21 @@ function makeAOI() {
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
+  console.log('before spawn process');
   electronProcess = spawn(
     `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
     { shell: true }
   );
+  console.log('after spawn process');
   electronProcess.stderr.on('data', (data) => {
     console.log(`${data}`);
   });
+  console.log('before setTimeout');
   // so we don't make the next fetch too early
   await new Promise((resolve) => setTimeout(resolve, 5000));
+  console.log('before fetch');
   const res = await fetch(`http://localhost:${PORT}/json/version`);
+  console.log('after fetch');
   const data = JSON.parse(await res.text());
   console.log('getting browser...');
   browser = await puppeteer.connect({
