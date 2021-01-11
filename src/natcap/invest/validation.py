@@ -13,7 +13,6 @@ import warnings
 
 import pygeoprocessing
 import pandas
-import xlrd
 from osgeo import gdal, osr
 import numpy
 
@@ -529,9 +528,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         if excel_ok:
             try:
                 dataframe = pandas.read_excel(filepath)
-            # XLRDError is for backwards compatibility with pandas<1.2.0
-            # ValueError is for pandas>=1.2.0
-            except (xlrd.biffh.XLRDError, ValueError):
+            except ValueError:
                 return "File could not be opened as a CSV or Excel file."
         else:
             return ("File could not be opened as a CSV. "

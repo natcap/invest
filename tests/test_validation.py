@@ -676,7 +676,7 @@ class CSVValidation(unittest.TestCase):
             {'foo': 2, 'bar': 3, 'baz': 4},
             {'foo': 3, 'bar': 4, 'baz': 5}])
 
-        target_file = os.path.join(self.workspace_dir, 'test.xls')
+        target_file = os.path.join(self.workspace_dir, 'test.xlsx')
         df.to_excel(target_file)
 
         error_msg = validation.check_csv(
