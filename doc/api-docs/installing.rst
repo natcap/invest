@@ -161,4 +161,4 @@ Installing from our source tree
 The latest development version of InVEST can be installed from our
 git source tree if you have a compiler installed::
 
-    $ pip install "git+https://github.com/natcap/invest@master#egg=natcap.invest"
+    $ pip install "git+https://github.com/natcap/invest@main#egg=natcap.invest"
