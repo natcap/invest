@@ -89,6 +89,20 @@ jobs:
                   conda install ${{ matrix.numpy }} toml twine
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
+            - name: Build wheel
+              shell: bash -l {0}
+              run: |
+                  python setup.py bdist_wheel
+                  python -m twine check dist/*
+
+            - name: Install runtime dependencies
+              shell: bash -l {0}
+              run: |
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                    requirements.txt requirements-dev.txt \
+                    requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
+
             - name: Conda Environment Listing
               shell: bash -l {0}
               run: |
@@ -109,20 +123,6 @@ jobs:
                   echo "Start Differences between Conda Environments"
                   diff conda-env.txt conda-env-artifact.txt
                   echo "End Differences between Conda Environments"
-
-            - name: Build wheel
-              shell: bash -l {0}
-              run: |
-                  python setup.py bdist_wheel
-                  python -m twine check dist/*
-
-            - name: Install runtime dependencies
-              shell: bash -l {0}
-              run: |
-                  python ./scripts/convert-requirements-to-conda-yml.py \
-                    requirements.txt requirements-dev.txt \
-                    requirements-gui.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
 
             - name: Run model tests
               shell: bash -l {0}
