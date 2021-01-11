@@ -89,6 +89,27 @@ jobs:
                   conda install ${{ matrix.numpy }} toml twine
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
+            - name: Conda Environment Listing
+              shell: bash -l {0}
+              run: |
+                  conda list
+                  conda list --export > conda-env.txt
+
+            - name: Compare Conda Environments
+              continue-on-error: true
+              uses: actions/download-artifact@v2
+              with:
+                  name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
+                  path: ./conda-env-artifact.txt
+
+            - name: Compare Conda Environments
+              continue-on-error: true
+              shell: bash -l {0}
+              run: |
+                  echo "Start Differences between Conda Environments"
+                  diff conda-env.txt conda-env-artifact.txt
+                  echo "End Differences between Conda Environments"
+
             - name: Build wheel
               shell: bash -l {0}
               run: |
@@ -109,10 +130,15 @@ jobs:
                   pip install $(find dist -name "natcap.invest*.whl")
                   make test
 
-            - uses: actions/upload-artifact@v1
+            - uses: actions/upload-artifact@v2
               with:
                   name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
                   path: dist
+
+            - uses: actions/upload-artifact@v2
+              with:
+                  name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
+                  path: ./conda-env.txt
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
@@ -191,7 +217,7 @@ jobs:
                   # natcap.invest from source and that it imports.
                   python -c "from natcap.invest import *"
 
-            - uses: actions/upload-artifact@v1
+            - uses: actions/upload-artifact@v2
               with:
                   name: Source distribution
                   path: dist
