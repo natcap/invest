@@ -109,7 +109,7 @@ jobs:
                   conda list
                   conda list --export > conda-env.txt
 
-            - name: Compare Conda Environments
+            - name: Download Conda Env Artifact
               continue-on-error: true
               uses: actions/download-artifact@v2
               with:
