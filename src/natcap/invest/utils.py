@@ -587,7 +587,8 @@ def read_csv_to_dataframe(
         dataframe = pandas.read_csv(
             path, engine=engine, encoding=encoding, sep=sep, **kwargs)
     except UnicodeDecodeError as error:
-        LOGGER.error(f'{path} must be encoded as utf-8')
+        LOGGER.error(
+            f'{path} must be encoded as utf-8 or avoid non-ASCII characters')
         raise error
     # this won't work on integer types, which happens if you set header=None
     # however, there's little reason to use this function if there's no header
