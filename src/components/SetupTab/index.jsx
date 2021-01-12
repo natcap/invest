@@ -16,25 +16,26 @@ import { argsDictFromObject } from '../../utils';
 /** Toggle properties that control the display of argument inputs.
  *
  * This function returns a copy of the SetupTab argsValues object
- * after updating the 'ui_option' property of any arguments listed
- * in the 'ui_control' array of `argsSpec[argkey]`.
+ * after updating the 'control_option' property of any arguments listed
+ * in the 'control_targets' array of `argsSpec[argkey]`.
  *
  * @param {object} argsSpec - an InVEST model's ARGS_SPEC.
  * @param {object} uiSpec - the model's UI spec.
  * @param {object} argsValues - of the shape returned by `initializeArgValues`.
  * @param {string} argkey - a key of the argsSpec and argsValues objects
- *    that contains a 'ui_control' property.
+ *    that contains a 'control_targets' property.
  *
  * @returns {object} a copy of `argsValues`
  */
 function toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey) {
   const updatedValues = { ...argsValues };
-  uiSpec.args[argkey].ui_control.forEach((dependentKey) => {
+
+  uiSpec.argsOptions[argkey].control_targets.forEach((dependentKey) => {
     if (!updatedValues[argkey].value) {
       // apply the display option specified in the UI spec
-      updatedValues[dependentKey].ui_option = argsSpec[dependentKey].ui_option;
+      updatedValues[dependentKey].control_option = argsSpec[dependentKey].control_option;
     } else {
-      updatedValues[dependentKey].ui_option = undefined;
+      updatedValues[dependentKey].control_option = undefined;
     }
   });
   return updatedValues;
@@ -125,7 +126,7 @@ export default class SetupTab extends React.Component {
     // uiSpec.order is a 2D array so flatten it before iterating
     uiSpec.order.flat().forEach((argkey) => {
       const argumentSpec = { ...argsSpec[argkey] };
-      if (uiSpec.args[argkey].ui_control) {
+      if (uiSpec.argsOptions[argkey] && uiSpec.argsOptions[argkey].control_targets) {
         argsValues = toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey);
       }
     });
@@ -193,7 +194,7 @@ export default class SetupTab extends React.Component {
     let { argsValues } = this.state;
     argsValues[key].value = value;
     argsValues[key].touched = true;
-    if (this.props.argsSpec[key].ui_control) {
+    if (this.props.argsSpec[key].control_targets) {
       const updatedArgsValues = toggleDependentInputs(
         this.props.argsSpec, argsValues, key
       );
@@ -213,7 +214,7 @@ export default class SetupTab extends React.Component {
     Object.keys(argsSpec).forEach((argkey) => {
       if (argkey === 'n_workers') { return; }
       const argumentSpec = Object.assign({}, argsSpec[argkey]);
-      if (argumentSpec.ui_control) {
+      if (argumentSpec.control_targets) {
         argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
       }
     });

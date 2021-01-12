@@ -11,6 +11,7 @@ import {
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
+import { fileRegistry } from '../src/constants';
 import InvestTab from '../src/components/InvestTab';
 import App from '../src/app';
 import {
@@ -374,6 +375,15 @@ describe('InVEST subprocess testing', () => {
     model_name: 'Eco Model',
     module: 'natcap.invest.dot',
   };
+
+  const uiSpec = {
+    order: [['workspace_dir', 'results_suffix']],
+    args: {'workspace_dir': {}, 'results_suffix': {}}
+  }
+  const uiSpecFilePath = path.join(
+    fileRegistry.INVEST_UI_DATA, `${spec.module}.json`
+  );
+  fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
 
   const dummyTextToLog = JSON.stringify(spec.args);
   let fakeWorkspace;

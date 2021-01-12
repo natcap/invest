@@ -6,51 +6,47 @@
         ["do_redd", "lulc_redd_path"],
         ["do_valuation", "price_per_metric_ton_of_c", "discount_rate", "rate_change"]
     ],
-    "args": {
-        "workspace_dir": {},
-        "results_suffix": {},
-        "lulc_cur_path": {},
+    "argsOptions": {
         "calc_sequestration": {
-            "ui_option": "disable",
-            "ui_control": [
+            "control_option": "disable",
+            "control_targets": [
                 "lulc_fut_year",
                 "lulc_cur_year",
                 "lulc_fut_path"
             ]
         },
         "do_redd": {
-            "ui_control": [
+            "control_targets": [
                 "lulc_redd_path"
             ]
         },
         "do_valuation": {
-            "ui_control": [
+            "control_targets": [
                 "rate_change",
                 "discount_rate",
                 "price_per_metric_ton_of_c"
             ]
         },
         "lulc_fut_path": {
-            "ui_option": "disable"
+            "control_option": "disable"
         },
         "lulc_redd_path": {
-            "ui_option": "disable"
+            "control_option": "disable"
         },
-        "carbon_pools_path": {},
         "lulc_cur_year": {
-            "ui_option": "disable"
+            "control_option": "disable"
         },
         "lulc_fut_year": {
-            "ui_option": "disable"
+            "control_option": "disable"
         },
         "price_per_metric_ton_of_c": {
-            "ui_option": "disable"
+            "control_option": "disable"
         },
         "discount_rate": {
-            "ui_option": "disable"
+            "control_option": "disable"
         },
         "rate_change": {
-            "ui_option": "disable"
+            "control_option": "disable"
         }
     }
 }
