@@ -54,10 +54,7 @@ describe('Save InVEST Model Setup Buttons', () => {
   );
   const uiSpec = {
     order: [['workspace']],
-    args: {
-      workspace: {},
-      port: {},
-    }
+    argsOptions: {}
   };
   fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
 
@@ -214,11 +211,7 @@ describe('InVEST Run Button', () => {
 
   const uiSpec = {
     order: [['a'], ['b', 'c']],
-    args: {
-      a: {},
-      b: {},
-      c: {}
-    }
+    argsOptions: {}
   };
   const uiSpecFilePath = path.join(
     fileRegistry.INVEST_UI_DATA, `${spec.module}.json`

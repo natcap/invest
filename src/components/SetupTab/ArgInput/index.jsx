@@ -96,6 +96,7 @@ export default class ArgInput extends React.PureComponent {
       const typeLabel = argSpec.type === 'freestyle_string'
         ? 'string'
         : argSpec.type;
+      console.log('rendering input with class', `arg-${control_option}`);
       Input = (
         <Form.Group
           as={Row}

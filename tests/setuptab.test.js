@@ -61,9 +61,7 @@ describe('Arguments form input types', () => {
 
     uiSpec = {
       order: [['arg']],
-      args: {
-        arg: {}
-      }
+      argsOptions: {}
     }
     fetchValidation.mockResolvedValue(
       [[Object.keys(baseSpec.args), validationMessage]]
@@ -147,9 +145,7 @@ describe('Arguments form interactions', () => {
 
     uiSpec = {
       order: [['arg']],
-      args: {
-        arg: {}
-      }
+      argsOptions: {}
     }
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), validationMessage]]
@@ -284,25 +280,25 @@ describe('UI spec functionality', () => {
 
     const uiSpec = {
       order: [['controller', 'arg2'], ['arg3', 'arg4']],
-      args: {
+      argsOptions: {
         controller: {
-          ui_control: ['arg2', 'arg3', 'arg4'],
+          control_targets: ['arg2', 'arg3', 'arg4'],
         },
         arg2: {
-          ui_option: 'disable',
+          control_option: 'disable',
         },
         arg3: {
-          ui_option: 'hide',
+          control_option: 'hide',
         },
         arg4: {
-          ui_option: 'foo', // an invalid option should be ignored
+          control_option: 'foo', // an invalid option should be ignored
         },
       }
     };
     // arg5 is deliberately missing to demonstrate that that is okay.
 
     const {
-      findByLabelText, findByTestId
+      findByLabelText, findByTestId, queryByLabelText
     } = renderSetupFromSpec(spec, uiSpec);
     const controller = await findByLabelText(
       RegExp(`${spec.args.controller.name}`)
@@ -310,7 +306,9 @@ describe('UI spec functionality', () => {
     const arg2 = await findByLabelText(RegExp(`${spec.args.arg2.name}`));
     const arg3 = await findByLabelText(RegExp(`${spec.args.arg3.name}`));
     const arg4 = await findByLabelText(RegExp(`${spec.args.arg4.name}`));
-    const arg5 = await findByLabelText(RegExp(`${spec.args.arg5.name}`));
+    const arg5 = await queryByLabelText(RegExp(`${spec.args.arg5.name}`));
+    expect(arg5).toBeNull();
+
     // The 'hide' style is applied to the whole Form.Group which
     // includes the Label and Input. Right now, the only good way
     // to query the Form.Group node is using a data-testid property.
@@ -358,22 +356,19 @@ describe('UI spec functionality', () => {
         controller: {
           name: 'afoo',
           type: 'csv',
-          ui_control: ['arg2'],
+          control_targets: ['arg2'],
         },
         arg2: {
           name: 'bfoo',
           type: 'number',
-          ui_option: 'disable',
+          control_option: 'disable',
         },
       },
     };
 
     const uiSpec = {
       order: [['controller', 'arg2']],
-      args: {
-        controller: {},
-        arg2: {}
-      }
+      argsOptions: {}
     }
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const controller = await findByLabelText(
@@ -428,15 +423,9 @@ describe('UI spec functionality', () => {
     };
 
     const uiSpec = {
+      // intentionally leaving out arg6, it should not be in the setup form
       order: [['arg4'], ['arg3', 'arg2'], ['arg1'], ['arg5']],
-      args: {
-        arg1: {},
-        arg2: {},
-        arg3: {},
-        arg4: {},
-        arg5: {},
-        arg6: {} // should not be included in the setup form
-      }
+      argsOptions: {}
     };
 
     const { findByTestId } = renderSetupFromSpec(spec, uiSpec);
@@ -486,11 +475,7 @@ describe('Misc form validation stuff', () => {
 
     const uiSpec = {
       order: [['a', 'b', 'c']],
-      args: {
-        a: {},
-        b: {},
-        c: {}
-      }
+      argsOptions: {}
     }
 
     // Mocking to return the payload so we can assert we always send
@@ -524,10 +509,7 @@ describe('Misc form validation stuff', () => {
     };
     const uiSpec = {
       order: [['vector', 'raster']],
-      args: {
-        vector: {},
-        raster: {}
-      }
+      argsOptions: {}
     }
     const vectorValue = './vector.shp';
     const expectedVal1 = '-84.9';
@@ -599,10 +581,7 @@ describe('Form drag-and-drop', () => {
     };
     const uiSpec = {
       order: [['arg1', 'arg2']],
-      args: {
-        arg1: {},
-        arg2: {}
-      }
+      argsOptions: {}
     }
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 

@@ -309,7 +309,7 @@ export default class SetupTab extends React.Component {
           )
           : <span>Run</span>
       );
-
+      console.log('rendering argsform with argsValues:', argsValues);
       return (
         <Container fluid>
           <Row>

@@ -378,7 +378,7 @@ describe('InVEST subprocess testing', () => {
 
   const uiSpec = {
     order: [['workspace_dir', 'results_suffix']],
-    args: {'workspace_dir': {}, 'results_suffix': {}}
+    argsOptions: {}
   }
   const uiSpecFilePath = path.join(
     fileRegistry.INVEST_UI_DATA, `${spec.module}.json`
