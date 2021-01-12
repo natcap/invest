@@ -70,7 +70,7 @@ export default class ArgInput extends React.PureComponent {
       isValid,
       selectFile,
       touched,
-      ui_option,
+      control_option,
       value,
     } = this.props;
     let { validationMessage } = this.props;
@@ -100,7 +100,7 @@ export default class ArgInput extends React.PureComponent {
         <Form.Group
           as={Row}
           key={argkey}
-          className={`arg-${ui_option}`}
+          className={`arg-${control_option}`}
           data-testid={`group-${argkey}`}
         >
           <FormLabel argkey={argkey}>
@@ -121,7 +121,7 @@ export default class ArgInput extends React.PureComponent {
                 onFocus={handleChange}
                 isValid={touched && isValid}
                 isInvalid={validationMessage}
-                disabled={ui_option === 'disable'}
+                disabled={control_option === 'disable'}
               />
               {
                 ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type)
@@ -195,7 +195,7 @@ export default class ArgInput extends React.PureComponent {
     // Dropdown menus for args with options
     } else if (argSpec.type === 'option_string') {
       Input = (
-        <Form.Group as={Row} key={argkey} className={`arg-${ui_option}`} data-testid={`group-${argkey}`}>
+        <Form.Group as={Row} key={argkey} className={`arg-${control_option}`} data-testid={`group-${argkey}`}>
           <FormLabel argkey={argkey}>
             <span>{argSpec.name}</span>
           </FormLabel>
@@ -209,7 +209,7 @@ export default class ArgInput extends React.PureComponent {
                 value={value}
                 onChange={handleChange}
                 onFocus={handleChange}
-                disabled={ui_option === 'disable'}
+                disabled={control_option === 'disable'}
               >
                 {argSpec.validation_options.options.map((opt) =>
                   <option value={opt} key={opt}>{opt}</option>
@@ -240,7 +240,7 @@ ArgInput.propTypes = {
   argSpec: PropTypes.object.isRequired,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
   touched: PropTypes.bool,
-  ui_option: PropTypes.string,
+  control_option: PropTypes.string,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
   handleChange: PropTypes.func.isRequired,
@@ -250,7 +250,7 @@ ArgInput.propTypes = {
 ArgInput.defaultProps = {
   value: undefined,
   touched: false,
-  ui_option: undefined,
+  control_option: undefined,
   isValid: undefined,
   validationMessage: '',
 };
