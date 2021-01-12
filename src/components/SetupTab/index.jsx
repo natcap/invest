@@ -28,7 +28,6 @@ import { argsDictFromObject } from '../../utils';
  * @returns {object} a copy of `argsValues`
  */
 function toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey) {
-  console.log('toggleDependentInputs');
   const updatedValues = { ...argsValues };
   uiSpec.args[argkey].ui_control.forEach((dependentKey) => {
     if (!updatedValues[argkey].value) {
@@ -57,7 +56,6 @@ function toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey) {
  *       validation.
  */
 function initializeArgValues(argsSpec, uiSpec, argsDict) {
-  console.log('initializeArgValues');
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValues = {};
   // Object.keys(argsSpec).forEach((argkey) => {
@@ -119,9 +117,7 @@ export default class SetupTab extends React.Component {
     * that only needs to compute when this.props.argsSpec changes,
     * not on every re-render.
     */
-    console.log('componentDidMount');
     const { argsInitValues, argsSpec, uiSpec } = this.props;
-    console.log('uiSpec:', uiSpec);
 
     let { argsValues } = initializeArgValues(argsSpec, uiSpec, argsInitValues || {});
 
@@ -233,7 +229,6 @@ export default class SetupTab extends React.Component {
    * @returns undefined
    */
   async investValidate(argsValues) {
-    console.log('investValidate');
     const { argsSpec, pyModuleName } = this.props;
     const argsValidation = Object.assign({}, this.state.argsValidation);
     const keyset = new Set(Object.keys(argsSpec));

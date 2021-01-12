@@ -73,8 +73,6 @@ export default class ArgsForm extends React.Component {
     } = this.props;
     const formItems = [];
     let k = 0;
-    console.log('args validation:', argsValidation);
-    console.log('argsOrder:', argsOrder);
     argsOrder.forEach((groupArray) => {
       k += 1;
       const groupItems = [];
