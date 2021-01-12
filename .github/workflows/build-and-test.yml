@@ -131,6 +131,7 @@ jobs:
               run: |
                   echo "Start Differences between Conda Environments"
                   ls -lh
+                  ls ./conda-env-artifact
                   diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
                   echo "End Differences between Conda Environments"
 
