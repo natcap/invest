@@ -40,3 +40,8 @@ globally installed packages are on the PATH.
 
 To run javascript outside the electron runtime, but with the same ECMAscript features and babel configurations, use `node -r @babel/register script.js`.  
 
+## Client logfile locations:
+
+Windows: "C:\Users\dmf\AppData\Roaming\invest-workbench\"
+Mac:
+Linux: "~/.config/invest-workbench/"
