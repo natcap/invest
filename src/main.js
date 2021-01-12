@@ -14,7 +14,6 @@ const {
   screen,
   nativeTheme,
   Menu,
-  // MenuItem,
 } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const {
   getFlaskIsReady, shutdownPythonProcess
@@ -36,20 +35,19 @@ if (!process.env.PORT) {
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
+
 /** Create an Electron browser window and start the flask application. */
 const createWindow = async () => {
-  // The main process needs to know the location of the invest server binary.
-  // The renderer process needs the invest cli binary. We can find them
-  // together here and pass data to the renderer upon request.
-  const [investExe, investVersion] = await findInvestBinaries(process.env.ELECTRON_DEV_MODE);
+  const [investExe, investVersion] = await findInvestBinaries(
+    process.env.ELECTRON_DEV_MODE
+  );
   createPythonFlaskProcess(investExe);
-  logger.debug(pkg.version);
+  logger.info(`Running invest-workbench version ${pkg.version}`);
   const mainProcessVars = {
     investExe: investExe,
     investVersion: investVersion,
     workbenchVersion: pkg.version,
   };
-  logger.debug(mainProcessVars.workbenchVersion)
   ipcMain.on('variable-request', (event, arg) => {
     event.reply('variable-reply', mainProcessVars);
   });
