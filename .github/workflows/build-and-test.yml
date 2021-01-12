@@ -123,7 +123,7 @@ jobs:
                   workflow: build-and-test.yml
                   workflow_conclusion: success
                   name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
-                  path: ./conda-env-artifact.txt
+                  path: ./conda-env-artifact
 
             - name: Compare Conda Environments
               continue-on-error: true
@@ -131,7 +131,7 @@ jobs:
               run: |
                   echo "Start Differences between Conda Environments"
                   ls -lh
-                  diff ./conda-env.txt ./conda-env-artifact.txt
+                  diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
                   echo "End Differences between Conda Environments"
 
             - name: Run model tests
