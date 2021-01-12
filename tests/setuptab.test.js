@@ -308,7 +308,6 @@ describe('UI spec functionality', () => {
     const arg4 = await findByLabelText(RegExp(`${spec.args.arg4.name}`));
     const arg5 = await queryByLabelText(RegExp(`${spec.args.arg5.name}`));
     expect(arg5).toBeNull();
-
     // The 'hide' style is applied to the whole Form.Group which
     // includes the Label and Input. Right now, the only good way
     // to query the Form.Group node is using a data-testid property.
@@ -324,9 +323,6 @@ describe('UI spec functionality', () => {
       // so is not actually controlled.
       expect(arg4).toBeVisible();
       expect(arg4).toBeEnabled();
-      // This input is not controlled.
-      expect(arg5).toBeVisible();
-      expect(arg5).toBeEnabled();
     });
     // fireEvent.change doesn't trigger the change handler but .click does
     // even though React demands an onChange handler for controlled checkbox inputs.
@@ -342,8 +338,6 @@ describe('UI spec functionality', () => {
       expect(arg3).toBeVisible();
       expect(arg4).toBeEnabled();
       expect(arg4).toBeVisible();
-      expect(arg5).toBeEnabled();
-      expect(arg5).toBeVisible();
     });
   });
 
@@ -355,20 +349,25 @@ describe('UI spec functionality', () => {
       args: {
         controller: {
           name: 'afoo',
-          type: 'csv',
-          control_targets: ['arg2'],
+          type: 'csv'
         },
         arg2: {
           name: 'bfoo',
-          type: 'number',
-          control_option: 'disable',
-        },
+          type: 'number'
+        }
       },
     };
 
     const uiSpec = {
       order: [['controller', 'arg2']],
-      argsOptions: {}
+      argsOptions: {
+        controller: {
+          control_targets: ['arg2']
+        },
+        arg2: {
+          control_option: 'disable'
+        }
+      }
     }
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const controller = await findByLabelText(

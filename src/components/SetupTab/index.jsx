@@ -19,7 +19,6 @@ import { argsDictFromObject } from '../../utils';
  * after updating the 'control_option' property of any arguments listed
  * in the 'control_targets' array of `argsSpec[argkey]`.
  *
- * @param {object} argsSpec - an InVEST model's ARGS_SPEC.
  * @param {object} uiSpec - the model's UI spec.
  * @param {object} argsValues - of the shape returned by `initializeArgValues`.
  * @param {string} argkey - a key of the argsSpec and argsValues objects
@@ -27,13 +26,13 @@ import { argsDictFromObject } from '../../utils';
  *
  * @returns {object} a copy of `argsValues`
  */
-function toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey) {
+function toggleDependentInputs(uiSpec, argsValues, argkey) {
   const updatedValues = { ...argsValues };
-
   uiSpec.argsOptions[argkey].control_targets.forEach((dependentKey) => {
     if (!updatedValues[argkey].value) {
+
       // apply the display option specified in the UI spec
-      updatedValues[dependentKey].control_option = argsSpec[dependentKey].control_option;
+      updatedValues[dependentKey].control_option = uiSpec.argsOptions[dependentKey].control_option;
     } else {
       updatedValues[dependentKey].control_option = undefined;
     }
@@ -46,7 +45,8 @@ function toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey) {
  * One object will store input form values and track if the input has been
  * touched. The other object stores data returned by invest validation.
  *
- * @param {object} argsSpec - merge of an InVEST model's ARGS_SPEC.args and UI Spec.
+ * @param {object} argsSpec - an InVEST model's ARGS_SPEC.args 
+ * @param {object} uiSpec - the model's UI Spec.
  * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
  *
  * @returns {object} to destructure into two args,
@@ -127,7 +127,7 @@ export default class SetupTab extends React.Component {
     uiSpec.order.flat().forEach((argkey) => {
       const argumentSpec = { ...argsSpec[argkey] };
       if (uiSpec.argsOptions[argkey] && uiSpec.argsOptions[argkey].control_targets) {
-        argsValues = toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey);
+        argsValues = toggleDependentInputs(uiSpec, argsValues, argkey);
       }
     });
 
@@ -194,9 +194,10 @@ export default class SetupTab extends React.Component {
     let { argsValues } = this.state;
     argsValues[key].value = value;
     argsValues[key].touched = true;
-    if (this.props.argsSpec[key].control_targets) {
+    if (this.props.uiSpec.argsOptions[key] && 
+        this.props.uiSpec.argsOptions[key].control_targets) {
       const updatedArgsValues = toggleDependentInputs(
-        this.props.argsSpec, argsValues, key
+        this.props.uiSpec, argsValues, key
       );
       argsValues = updatedArgsValues;
     }
@@ -209,13 +210,12 @@ export default class SetupTab extends React.Component {
     *
     * @params {object} argsDict - key: value pairs of InVEST arguments.
     */
-    const { argsSpec } = this.props;
-    let { argsValues } = initializeArgValues(argsSpec, argsDict);
-    Object.keys(argsSpec).forEach((argkey) => {
+    let { argsValues } = initializeArgValues(this.props.argsSpec, this.props.uiSpec, argsDict);
+    Object.keys(this.props.argsSpec).forEach((argkey) => {
       if (argkey === 'n_workers') { return; }
-      const argumentSpec = Object.assign({}, argsSpec[argkey]);
-      if (argumentSpec.control_targets) {
-        argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
+      if (this.props.uiSpec.argsOptions[argkey] && 
+          this.props.uiSpec.argsOptions[argkey].control_targets) {
+        argsValues = toggleDependentInputs(this.props.uiSpec, argsValues, argkey);
       }
     });
 
@@ -309,7 +309,6 @@ export default class SetupTab extends React.Component {
           )
           : <span>Run</span>
       );
-      console.log('rendering argsform with argsValues:', argsValues);
       return (
         <Container fluid>
           <Row>
