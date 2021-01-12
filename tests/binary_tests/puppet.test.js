@@ -88,13 +88,16 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  console.log('afterAll');
   try {
     await browser.close();
   } catch (error) {
     console.log(binaryPath);
     console.error(error);
   }
+  console.log('cleaning up tmp dir');
   cleanupDir(TMP_DIR);
+  console.log('electronProcess kill');
   // I thought this business would be necessary to kill the spawned shell
   // process running electron - since that's how we kill a similar spawned
   // subprocess in the app, but actually it is not.
