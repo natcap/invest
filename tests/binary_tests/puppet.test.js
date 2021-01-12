@@ -68,7 +68,7 @@ beforeAll(async () => {
   );
   console.log('after spawn process');
   electronProcess.stderr.on('data', (data) => {
-    console.log(`${data}`);
+    console.log('data:', `${data}`);
   });
   console.log('before setTimeout');
   // so we don't make the next fetch too early
