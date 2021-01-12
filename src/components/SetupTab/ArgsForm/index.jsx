@@ -66,15 +66,16 @@ export default class ArgsForm extends React.Component {
 
   render() {
     const {
-      sortedArgKeys,
+      argsOrder,
       argsSpec,
       argsValues,
       argsValidation,
     } = this.props;
     const formItems = [];
     let k = 0;
-
-    sortedArgKeys.forEach((groupArray) => {
+    console.log('args validation:', argsValidation);
+    console.log('argsOrder:', argsOrder);
+    argsOrder.forEach((groupArray) => {
       k += 1;
       const groupItems = [];
       groupArray.forEach((argkey) => {
@@ -134,7 +135,7 @@ ArgsForm.propTypes = {
       type: PropTypes.string,
     }),
   ).isRequired,
-  sortedArgKeys: PropTypes.arrayOf(
+  argsOrder: PropTypes.arrayOf(
     PropTypes.arrayOf(PropTypes.string),
   ).isRequired,
   updateArgValues: PropTypes.func.isRequired,

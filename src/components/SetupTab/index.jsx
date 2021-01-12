@@ -28,6 +28,7 @@ import { argsDictFromObject } from '../../utils';
  * @returns {object} a copy of `argsValues`
  */
 function toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey) {
+  console.log('toggleDependentInputs');
   const updatedValues = { ...argsValues };
   uiSpec.args[argkey].ui_control.forEach((dependentKey) => {
     if (!updatedValues[argkey].value) {
@@ -56,12 +57,11 @@ function toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey) {
  *       validation.
  */
 function initializeArgValues(argsSpec, argsDict) {
+  console.log('initializeArgValues');
   const initIsEmpty = Object.keys(argsDict).length === 0;
-  const argsValidation = {};
   const argsValues = {};
   console.log('argsSpec:', argsSpec);
   Object.keys(argsSpec).forEach((argkey) => {
-    argsValidation[argkey] = {};
     // 'hidden' args should not be assigned default values by the UI.
     // They are hidden because they rarely need to be parameterized
     // by the user, and the default is probably hardcoded into the
@@ -85,19 +85,23 @@ function initializeArgValues(argsSpec, argsDict) {
       touched: !initIsEmpty, // touch them only if initializing with values
     };
   });
-  console.log('argsValues:', argsValues);
-  return ({ argsValues: argsValues, argsValidation: argsValidation });
+  return ({ argsValues: argsValues });
 }
 
 /** Renders an arguments form, execute button, and save buttons. */
 export default class SetupTab extends React.Component {
   constructor(props) {
     super(props);
+    // map each arg to an empty object, to fill in later
+    const argsValidation = Object.keys(props.argsSpec).reduce((acc, argkey) => {
+      acc[argkey] = {};
+      return acc;
+    }, {});
     this.state = {
       argsValues: null,
-      argsValidation: {},
+      argsValidation: argsValidation,
       argsValid: false,
-      sortedArgKeys: null,
+      argsOrder: null,
     };
 
     this.savePythonScript = this.savePythonScript.bind(this);
@@ -117,24 +121,16 @@ export default class SetupTab extends React.Component {
     * that only needs to compute when this.props.argsSpec changes,
     * not on every re-render.
     */
+    console.log('componentDidMount');
     const { argsInitValues, argsSpec, uiSpec } = this.props;
-    // extend the args spec with the UI spec
     console.log('uiSpec:', uiSpec);
-    Object.keys(argsSpec).forEach((key) => {
-      Object.assign(argsSpec[key], uiSpec[key]);
-    });
-    const argGroups = {};
-    let {
-      argsValues, argsValidation
-    } = initializeArgValues(argsSpec, argsInitValues || {});
 
+    let { argsValues } = initializeArgValues(argsSpec, argsInitValues || {});
 
     // Update any dependent args in response to each arg's value
-    // uiSpec.order is a 2D array
-    // Iterate over the sections
+    // uiSpec.order is a 2D array, iterate over the sections
     uiSpec.order.forEach((section) => {
       section.forEach((argkey) => {
-        console.log(argkey);
         const argumentSpec = { ...argsSpec[argkey] };
         if (uiSpec.args[argkey].ui_control) {
           argsValues = toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey);
@@ -145,8 +141,7 @@ export default class SetupTab extends React.Component {
     console.log('sorted arg keys:', uiSpec.order);
     this.setState({
       argsValues: argsValues,
-      argsValidation: argsValidation,
-      sortedArgKeys: uiSpec.order,
+      argsOrder: uiSpec.order,
     }, () => this.investValidate(this.state.argsValues));
   }
 
@@ -224,7 +219,7 @@ export default class SetupTab extends React.Component {
     * @params {object} argsDict - key: value pairs of InVEST arguments.
     */
     const { argsSpec } = this.props;
-    let { argsValues, argsValidation } = initializeArgValues(argsSpec, argsDict);
+    let { argsValues } = initializeArgValues(argsSpec, argsDict);
     Object.keys(argsSpec).forEach((argkey) => {
       if (argkey === 'n_workers') { return; }
       const argumentSpec = Object.assign({}, argsSpec[argkey]);
@@ -234,8 +229,7 @@ export default class SetupTab extends React.Component {
     });
 
     this.setState({
-      argsValues: argsValues,
-      argsValidation: argsValidation,
+      argsValues: argsValues
     }, () => this.investValidate(this.state.argsValues));
   }
 
@@ -245,6 +239,7 @@ export default class SetupTab extends React.Component {
    * @returns undefined
    */
   async investValidate(argsValues) {
+    console.log('investValidate');
     const { argsSpec, pyModuleName } = this.props;
     const argsValidation = Object.assign({}, this.state.argsValidation);
     const keyset = new Set(Object.keys(argsSpec));
@@ -299,7 +294,7 @@ export default class SetupTab extends React.Component {
       argsValues,
       argsValid,
       argsValidation,
-      sortedArgKeys,
+      argsOrder,
     } = this.state;
     if (argsValues) {
       const {
@@ -333,7 +328,7 @@ export default class SetupTab extends React.Component {
               argsSpec={argsSpec}
               argsValues={argsValues}
               argsValidation={argsValidation}
-              sortedArgKeys={sortedArgKeys}
+              argsOrder={argsOrder}
               pyModuleName={pyModuleName}
               updateArgValues={this.updateArgValues}
               batchUpdateArgs={this.batchUpdateArgs}
