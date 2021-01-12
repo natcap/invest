@@ -56,18 +56,17 @@ function toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey) {
  *     {object} argsValidation - stores properties that update in response to
  *       validation.
  */
-function initializeArgValues(argsSpec, argsDict) {
+function initializeArgValues(argsSpec, uiSpec, argsDict) {
   console.log('initializeArgValues');
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValues = {};
-  console.log('argsSpec:', argsSpec);
-  Object.keys(argsSpec).forEach((argkey) => {
-    // 'hidden' args should not be assigned default values by the UI.
-    // They are hidden because they rarely need to be parameterized
-    // by the user, and the default is probably hardcoded into the
-    // invest model (e.g. Rec model's 'port' & 'hostname' args).
-    if (argkey === 'n_workers'
-      || argsSpec[argkey].order === 'hidden') { return; }
+  // Object.keys(argsSpec).forEach((argkey) => {
+  // Args that aren't displayed should not be assigned default values 
+  // by the UI, so iterate over uiSpec.order rather than argsSpec.
+  // They are hidden because they rarely need to be parameterized
+  // by the user, and the default is probably hardcoded into the
+  // invest model (e.g. Rec model's 'port' & 'hostname' args).
+  uiSpec.order.flat().forEach((argkey) => {
     // When initializing with undefined values, assign defaults so that,
     // a) values are handled well by the html inputs and
     // b) the object exported to JSON on "Save" or "Execute" includes defaults.
@@ -100,8 +99,7 @@ export default class SetupTab extends React.Component {
     this.state = {
       argsValues: null,
       argsValidation: argsValidation,
-      argsValid: false,
-      argsOrder: null,
+      argsValid: false
     };
 
     this.savePythonScript = this.savePythonScript.bind(this);
@@ -125,23 +123,19 @@ export default class SetupTab extends React.Component {
     const { argsInitValues, argsSpec, uiSpec } = this.props;
     console.log('uiSpec:', uiSpec);
 
-    let { argsValues } = initializeArgValues(argsSpec, argsInitValues || {});
+    let { argsValues } = initializeArgValues(argsSpec, uiSpec, argsInitValues || {});
 
     // Update any dependent args in response to each arg's value
-    // uiSpec.order is a 2D array, iterate over the sections
-    uiSpec.order.forEach((section) => {
-      section.forEach((argkey) => {
-        const argumentSpec = { ...argsSpec[argkey] };
-        if (uiSpec.args[argkey].ui_control) {
-          argsValues = toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey);
-        }
-      });
-    })
+    // uiSpec.order is a 2D array so flatten it before iterating
+    uiSpec.order.flat().forEach((argkey) => {
+      const argumentSpec = { ...argsSpec[argkey] };
+      if (uiSpec.args[argkey].ui_control) {
+        argsValues = toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey);
+      }
+    });
 
-    console.log('sorted arg keys:', uiSpec.order);
     this.setState({
-      argsValues: argsValues,
-      argsOrder: uiSpec.order,
+      argsValues: argsValues
     }, () => this.investValidate(this.state.argsValues));
   }
 
@@ -293,8 +287,7 @@ export default class SetupTab extends React.Component {
     const {
       argsValues,
       argsValid,
-      argsValidation,
-      argsOrder,
+      argsValidation
     } = this.state;
     if (argsValues) {
       const {
@@ -328,7 +321,7 @@ export default class SetupTab extends React.Component {
               argsSpec={argsSpec}
               argsValues={argsValues}
               argsValidation={argsValidation}
-              argsOrder={argsOrder}
+              argsOrder={this.props.uiSpec.order}
               pyModuleName={pyModuleName}
               updateArgValues={this.updateArgValues}
               batchUpdateArgs={this.batchUpdateArgs}
