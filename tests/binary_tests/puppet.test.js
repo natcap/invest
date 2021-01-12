@@ -77,6 +77,7 @@ beforeAll(async () => {
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   console.log('after fetch');
   const data = JSON.parse(await res.text());
+  console.log('res.text data:', data);
   console.log('getting browser...');
   browser = await puppeteer.connect({
     browserWSEndpoint: data.webSocketDebuggerUrl, // this works
@@ -89,12 +90,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   console.log('afterAll');
-  try {
-    await browser.close();
-  } catch (error) {
-    console.log(binaryPath);
-    console.error(error);
-  }
+  // try {
+  //   await browser.close();
+  // } catch (error) {
+  //   console.log(binaryPath);
+  //   console.error(error);
+  // }
   console.log('cleaning up tmp dir');
   cleanupDir(TMP_DIR);
   console.log('electronProcess kill');
@@ -114,49 +115,50 @@ afterAll(async () => {
 });
 
 test('Run a real invest model', async () => {
-  const { findByText, findByLabelText, findByRole } = queries;
-  await waitFor(() => {
-    expect(browser.isConnected()).toBeTruthy();
-  });
-  const page = (await browser.pages())[0];
-  const doc = await getDocument(page);
+  console.log('in test');
+  // const { findByText, findByLabelText, findByRole } = queries;
+  // await waitFor(() => {
+  //   expect(browser.isConnected()).toBeTruthy();
+  // });
+  // const page = (await browser.pages())[0];
+  // const doc = await getDocument(page);
 
-  // Setting up Recreation model because it has very few data requirements
-  const investTable = await findByRole(doc, 'table');
-  const button = await findByRole(investTable, 'button', { name: /Visitation/ });
-  button.click();
-  const workspace = await findByLabelText(doc, /Workspace/);
-  await workspace.type(TMP_DIR, { delay: 10 });
-  const aoi = await findByLabelText(doc, /Area of Interest/);
-  await aoi.type(TMP_AOI_PATH, { delay: 10 });
-  const startYear = await findByLabelText(doc, /Start Year/);
-  await startYear.type('2008', { delay: 10 });
-  const endYear = await findByLabelText(doc, /End Year/);
-  await endYear.type('2012', { delay: 10 });
+  // // Setting up Recreation model because it has very few data requirements
+  // const investTable = await findByRole(doc, 'table');
+  // const button = await findByRole(investTable, 'button', { name: /Visitation/ });
+  // button.click();
+  // const workspace = await findByLabelText(doc, /Workspace/);
+  // await workspace.type(TMP_DIR, { delay: 10 });
+  // const aoi = await findByLabelText(doc, /Area of Interest/);
+  // await aoi.type(TMP_AOI_PATH, { delay: 10 });
+  // const startYear = await findByLabelText(doc, /Start Year/);
+  // await startYear.type('2008', { delay: 10 });
+  // const endYear = await findByLabelText(doc, /End Year/);
+  // await endYear.type('2012', { delay: 10 });
 
-  const runButton = await findByText(doc, 'Run');
-  // Button is disabled until validation completes
-  await waitFor(async () => {
-    const isEnabled = await page.evaluate(
-      (btn) => !btn.disabled,
-      runButton
-    );
-    expect(isEnabled).toBeTruthy();
-  });
+  // const runButton = await findByText(doc, 'Run');
+  // // Button is disabled until validation completes
+  // await waitFor(async () => {
+  //   const isEnabled = await page.evaluate(
+  //     (btn) => !btn.disabled,
+  //     runButton
+  //   );
+  //   expect(isEnabled).toBeTruthy();
+  // });
 
-  runButton.click();
-  const logTab = await findByText(doc, 'Log');
-  // Log tab is not active until after the invest logfile is opened
-  await waitFor(async () => {
-    const prop = await logTab.getProperty('className');
-    const vals = await prop.jsonValue();
-    expect(vals.includes('active')).toBeTruthy();
-  });
+  // runButton.click();
+  // const logTab = await findByText(doc, 'Log');
+  // // Log tab is not active until after the invest logfile is opened
+  // await waitFor(async () => {
+  //   const prop = await logTab.getProperty('className');
+  //   const vals = await prop.jsonValue();
+  //   expect(vals.includes('active')).toBeTruthy();
+  // });
 
-  const cancelButton = await findByText(doc, 'Cancel Run');
-  cancelButton.click();
-  await waitFor(async () => {
-    expect(await findByText(doc, 'Run Canceled'));
-    expect(await findByText(doc, 'Open Workspace'));
-  });
+  // const cancelButton = await findByText(doc, 'Cancel Run');
+  // cancelButton.click();
+  // await waitFor(async () => {
+  //   expect(await findByText(doc, 'Run Canceled'));
+  //   expect(await findByText(doc, 'Open Workspace'));
+  // });
 });
