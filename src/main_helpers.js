@@ -65,7 +65,6 @@ export function createPythonFlaskProcess(investExe) {
     );
 
     logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-    logger.debug(investExe);
     pythonServerProcess.stdout.on('data', (data) => {
       logger.debug(`${data}`);
     });

@@ -124,5 +124,3 @@ function openAboutWindow(parentWindow) {
 }
 
 module.exports.menuTemplate = menuTemplate;
-// const menubar = Menu.buildFromTemplate(template)
-// module.exports.menubar = menubar
