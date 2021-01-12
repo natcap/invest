@@ -130,7 +130,8 @@ jobs:
               shell: bash -l {0}
               run: |
                   echo "Start Differences between Conda Environments"
-                  diff conda-env.txt conda-env-artifact.txt
+                  ls -lh
+                  diff ./conda-env.txt ./conda-env-artifact.txt
                   echo "End Differences between Conda Environments"
 
             - name: Run model tests
