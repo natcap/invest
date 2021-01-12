@@ -19,16 +19,17 @@ import { argsDictFromObject } from '../../utils';
  * after updating the 'ui_option' property of any arguments listed
  * in the 'ui_control' array of `argsSpec[argkey]`.
  *
- * @param {object} argsSpec - merge of an InVEST model's ARGS_SPEC and UI Spec.
+ * @param {object} argsSpec - an InVEST model's ARGS_SPEC.
+ * @param {object} uiSpec - the model's UI spec.
  * @param {object} argsValues - of the shape returned by `initializeArgValues`.
  * @param {string} argkey - a key of the argsSpec and argsValues objects
  *    that contains a 'ui_control' property.
  *
  * @returns {object} a copy of `argsValues`
  */
-function toggleDependentInputs(argsSpec, argsValues, argkey) {
+function toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey) {
   const updatedValues = { ...argsValues };
-  argsSpec[argkey].ui_control.forEach((dependentKey) => {
+  uiSpec.args[argkey].ui_control.forEach((dependentKey) => {
     if (!updatedValues[argkey].value) {
       // apply the display option specified in the UI spec
       updatedValues[dependentKey].ui_option = argsSpec[dependentKey].ui_option;
@@ -58,6 +59,7 @@ function initializeArgValues(argsSpec, argsDict) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValidation = {};
   const argsValues = {};
+  console.log('argsSpec:', argsSpec);
   Object.keys(argsSpec).forEach((argkey) => {
     argsValidation[argkey] = {};
     // 'hidden' args should not be assigned default values by the UI.
@@ -83,6 +85,7 @@ function initializeArgValues(argsSpec, argsDict) {
       touched: !initIsEmpty, // touch them only if initializing with values
     };
   });
+  console.log('argsValues:', argsValues);
   return ({ argsValues: argsValues, argsValidation: argsValidation });
 }
 
@@ -116,6 +119,7 @@ export default class SetupTab extends React.Component {
     */
     const { argsInitValues, argsSpec, uiSpec } = this.props;
     // extend the args spec with the UI spec
+    console.log('uiSpec:', uiSpec);
     Object.keys(argsSpec).forEach((key) => {
       Object.assign(argsSpec[key], uiSpec[key]);
     });
@@ -124,57 +128,26 @@ export default class SetupTab extends React.Component {
       argsValues, argsValidation
     } = initializeArgValues(argsSpec, argsInitValues || {});
 
-    Object.keys(argsSpec).forEach((argkey) => {
-      // these argkeys do not get rendered inputs
-      if (argkey === 'n_workers'
-        || argsSpec[argkey].order === 'hidden') { return; }
 
-      // Update any dependent args in response to this arg's value
-      const argumentSpec = { ...argsSpec[argkey] };
-      if (argumentSpec.ui_control) {
-        argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
-      }
+    // Update any dependent args in response to each arg's value
+    // uiSpec.order is a 2D array
+    // Iterate over the sections
+    uiSpec.order.forEach((section) => {
+      section.forEach((argkey) => {
+        console.log(argkey);
+        const argumentSpec = { ...argsSpec[argkey] };
+        if (uiSpec.args[argkey].ui_control) {
+          argsValues = toggleDependentInputs(argsSpec, uiSpec, argsValues, argkey);
+        }
+      });
+    })
 
-      // Sort the arg into it's input group
-      // order is optional in the spec, but to be exlplicit about
-      // what happens with sorting, defaulting to 100.0.
-      if (typeof argumentSpec.order !== 'number') {
-        argumentSpec.order = 100.0;
-      }
-      // Groups are defined by the whole number digits
-      const g = Math.floor(argumentSpec.order);
-      const orderArgPair = { [argumentSpec.order]: argkey };
-      if (argGroups[g]) {
-        argGroups[g].push(orderArgPair);
-      } else {
-        argGroups[g] = [orderArgPair];
-      }
-    });
-
-    // sort the groups by the group number (keys of argGroups)
-    const sortedGroups = Object.entries(argGroups).sort(
-      (a, b) => a[0] - b[0]
-    );
-    // sort args within the groups
-    const sortedArgKeys = [];
-    sortedGroups.forEach((groupArray) => {
-      if (groupArray.length > 1) {
-        // [1] is the array of objects keyed by their order number
-        const sortedGroup = groupArray[1].sort(
-          (a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0])
-        );
-        sortedArgKeys.push(
-          // drop the order numbers now that argkeys are sorted
-          sortedGroup.map((item) => Object.values(item)[0])
-        );
-      }
-    });
+    console.log('sorted arg keys:', uiSpec.order);
     this.setState({
       argsValues: argsValues,
       argsValidation: argsValidation,
-      sortedArgKeys: sortedArgKeys,
+      sortedArgKeys: uiSpec.order,
     }, () => this.investValidate(this.state.argsValues));
-    // }
   }
 
   /**
