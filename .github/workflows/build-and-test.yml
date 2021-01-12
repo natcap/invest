@@ -109,10 +109,19 @@ jobs:
                   conda list
                   conda list --export > conda-env.txt
 
+            #- name: Download Conda Env Artifact
+            #  continue-on-error: true
+            #  uses: actions/download-artifact@v2
+            #  with:
+            #      name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
+            #      path: ./conda-env-artifact.txt
+            #
             - name: Download Conda Env Artifact
               continue-on-error: true
-              uses: actions/download-artifact@v2
+              uses: dawidd6/action-download-artifact@v2
               with:
+                  workflow: build-and-test.yml
+                  workflow_conclusion: success
                   name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
                   path: ./conda-env-artifact.txt
 
