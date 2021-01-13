@@ -12,9 +12,10 @@ The JSON file has two required top-level keys:
 * `"argsOptions"`: A mapping from arg keys to configuration options for displaying the corresponding input fields.
     Each arg key is optional; if no configuration options apply, you can leave it out of this mapping.
     Currently two configuration options are recognized:
+
         * `"control_targets"`: A list of arg keys whose rendering is affected by the state of this arg key.
             Each arg key in this list must also exist in `"argsOptions"` and have a `"control_option"` property.
+            
         * `"control_option"`: A string that determines the CSS style to apply to this arg's input field, conditional
             on the state of the controlling field. If `"control_option": "x"`, then the style `arg-x` is applied.
             Currently `"disable"`, `"hide"`, and `"group"` are available.
-            
