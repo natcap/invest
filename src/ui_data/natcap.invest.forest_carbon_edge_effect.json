@@ -1,39 +1,25 @@
 {
-    "workspace_dir": {
-        "order": null
-    },
-    "results_suffix": {
-        "order": null
-    },
-    "n_nearest_model_points": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "compute_forest_edge_effects": {
-        "order": null,
-        "ui_control": [
-            "tropical_forest_edge_carbon_model_vector_path",
-            "biomass_to_carbon_conversion_factor"
-        ]
-    },
-    "aoi_vector_path": {
-        "order": null
-    },
-    "biophysical_table_path": {
-        "order": null
-    },
-    "lulc_raster_path": {
-        "order": null
-    },
-    "pools_to_calculate": {
-        "order": null
-    },
-    "tropical_forest_edge_carbon_model_vector_path": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "biomass_to_carbon_conversion_factor": {
-        "order": null,
-        "ui_option": "disable"
+    "order": [
+        ["workspace_dir", "results_suffix"],
+        ["lulc_raster_path", "biophysical_table_path", "pools_to_calculate"],
+        ["compute_forest_edge_effects", "tropical_forest_edge_carbon_model_vector_path", "n_nearest_model_points", "biomass_to_carbon_conversion_factor"],
+        ["aoi_vector_path"]
+    ],
+    "argsOptions": {
+        "n_nearest_model_points": {
+            "control_option": "disable"
+        },
+        "compute_forest_edge_effects": {
+            "control_targets": [
+                "tropical_forest_edge_carbon_model_vector_path",
+                "biomass_to_carbon_conversion_factor"
+            ]
+        },
+        "tropical_forest_edge_carbon_model_vector_path": {
+            "control_option": "disable"
+        },
+        "biomass_to_carbon_conversion_factor": {
+            "control_option": "disable"
+        }
     }
 }

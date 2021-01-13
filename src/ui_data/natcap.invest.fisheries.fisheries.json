@@ -9,36 +9,38 @@
         ["val_cont", "frac_post_process", "unit_price"]
 
     ],
-    "do_batch": {
-        "ui_control": [
-            "population_csv_dir",
-            "population_csv_path"
-        ]
-    },
-    "population_csv_path": {
-        "ui_option": "disable"
-    },
-    "population_csv_dir": {
-        "ui_option": "disable"
-    },
-    "migr_cont": {
-        "ui_control": [
-            "migration_dir"
-        ]
-    },
-    "migration_dir": {
-        "ui_option": "disable"
-    },
-    "val_cont": {
-        "ui_control": [
-            "frac_post_process",
-            "unit_price"
-        ]
-    },
-    "frac_post_process": {
-        "ui_option": "disable"
-    },
-    "unit_price": {
-        "ui_option": "disable"
+    "argsOptions": {
+        "do_batch": {
+            "control_targets": [
+                "population_csv_dir",
+                "population_csv_path"
+            ]
+        },
+        "population_csv_path": {
+            "control_option": "disable"
+        },
+        "population_csv_dir": {
+            "control_option": "disable"
+        },
+        "migr_cont": {
+            "control_targets": [
+                "migration_dir"
+            ]
+        },
+        "migration_dir": {
+            "control_option": "disable"
+        },
+        "val_cont": {
+            "control_targets": [
+                "frac_post_process",
+                "unit_price"
+            ]
+        },
+        "frac_post_process": {
+            "control_option": "disable"
+        },
+        "unit_price": {
+            "control_option": "disable"
+        }
     }
 }

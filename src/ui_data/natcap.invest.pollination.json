@@ -1,20 +1,8 @@
 {
-    "workspace_dir": {
-        "order": null
-    },
-    "results_suffix": {
-        "order": null
-    },
-    "landcover_raster_path": {
-        "order": null
-    },
-    "guild_table_path": {
-        "order": null
-    },
-    "landcover_biophysical_table_path": {
-        "order": null
-    },
-    "farm_vector_path": {
-        "order": null
-    }
+    "order": [
+        ["workspace_dir", "results_suffix"],
+        ["landcover_raster_path", "landcover_biophysical_table_path"],
+        ["guild_table_path", "farm_vector_path"]
+    ],
+    "argsOptions": {}
 }

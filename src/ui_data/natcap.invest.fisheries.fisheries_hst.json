@@ -1,23 +1,7 @@
 {
-    "workspace_dir": {
-        "order": null
-    },
-    "results_suffix": {
-        "order": null
-    },
-    "sexsp": {
-        "order": null
-    },
-    "population_csv_path": {
-        "order": null
-    },
-    "habitat_dep_csv_path": {
-        "order": null
-    },
-    "habitat_chg_csv_path": {
-        "order": null
-    },
-    "gamma": {
-        "order": null
-    }
+    "order": [
+        ["workspace_dir", "results_suffix"],
+        ["sexsp", "population_csv_path", "habitat_dep_csv_path", "habitat_chg_csv_path", "gamma"]
+    ],
+    "argsOptions": {}
 }
