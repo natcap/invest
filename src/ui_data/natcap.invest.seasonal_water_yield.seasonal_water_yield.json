@@ -8,10 +8,6 @@
         ["user_defined_climate_zones", "climate_zone_table_path", "climate_zone_raster_path"],
         ["user_defined_local_recharge", "l_path"],
         ["monthly_alpha", "monthly_alpha_path"]
-
-
-
-
     ],
     "argsOptions": {
         "user_defined_local_recharge": {
