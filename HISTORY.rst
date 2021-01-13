@@ -40,6 +40,9 @@ Unreleased Changes (3.9.1)
     * Restructured API reference docs and removed outdated and redundant pages.
     * Include logger name in the logging format. This is helpful for the cython
       modules, which can't log module, function, or line number info.
+* Fisheries Habitat Scenario Tool
+    * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
+      This bug did not affect the output.
 
 3.9.0 (2020-12-11)
 ------------------

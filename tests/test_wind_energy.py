@@ -182,9 +182,11 @@ class WindEnergyUnitTests(unittest.TestCase):
             csv_path, parameter_list)
 
         expected_result = {
-            'air_density': 1.225, 'exponent_power_curve': 2.0,
-            'decommission_cost': 0.037000000000000005,
-            'operation_maintenance_cost': .035, 'miscellaneous_capex_cost': .05
+            'air_density': 1.225,
+            'exponent_power_curve': 2.0,
+            'decommission_cost': 0.037,
+            'operation_maintenance_cost': .035,
+            'miscellaneous_capex_cost': .05
         }
         self.assertDictEqual(expected_result, result)
 
