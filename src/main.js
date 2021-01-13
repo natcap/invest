@@ -1,5 +1,5 @@
-process.env.ELECTRON_DEV_MODE = process.argv[2] === '--dev';
-if (process.env.ELECTRON_DEV_MODE) {
+const ELECTRON_DEV_MODE = process.argv[2] === '--dev';
+if (ELECTRON_DEV_MODE) {
   // in dev mode we can have babel transpile modules on import
   require("@babel/register");
   // load the '.env' file from the project root
@@ -29,7 +29,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 // This could be optionally configured already in '.env'
 if (!process.env.PORT) {
-  process.env.PORT = 56789;
+  process.env.PORT = '56789';
 }
 
 // Keep a global reference of the window object, if you don't, the window will
@@ -39,7 +39,7 @@ let mainWindow;
 /** Create an Electron browser window and start the flask application. */
 const createWindow = async () => {
   const [investExe, investVersion] = await findInvestBinaries(
-    process.env.ELECTRON_DEV_MODE
+    ELECTRON_DEV_MODE
   );
   createPythonFlaskProcess(investExe);
   logger.info(`Running invest-workbench version ${pkg.version}`);
@@ -69,12 +69,14 @@ const createWindow = async () => {
       nodeIntegration: true,
       enableRemoteModule: true,
       additionalArguments: [
-        process.env.ELECTRON_DEV_MODE ? '--dev' : 'packaged'
+        ELECTRON_DEV_MODE ? '--dev' : 'packaged'
       ],
     },
   });
 
-  const menubar = Menu.buildFromTemplate(menuTemplate(mainWindow));
+  const menubar = Menu.buildFromTemplate(
+    menuTemplate(mainWindow, ELECTRON_DEV_MODE)
+  );
   Menu.setApplicationMenu(menubar);
 
   // and load the index.html of the app.
@@ -86,7 +88,7 @@ const createWindow = async () => {
   // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
   // https://github.com/electron/electron/issues/23662
   mainWindow.webContents.on('did-frame-finish-load', async () => {
-    if (process.env.ELECTRON_DEV_MODE) {
+    if (ELECTRON_DEV_MODE) {
       const {
         default: installExtension, REACT_DEVELOPER_TOOLS
       } = require('electron-devtools-installer');
