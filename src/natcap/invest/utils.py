@@ -470,10 +470,9 @@ def build_lookup_from_csv(
             string values. default=True.
 
     Returns:
-        lookup_dict (dict): a dictionary of the form {
-                key_field_0: {csv_header_0: value0, csv_header_1: value1...},
-                key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}
-            }
+        lookup_dict (dict): a dictionary of the form 
+        {key_field_0: {csv_header_0: value0, csv_header_1: value1...},
+        key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}}
 
         if ``to_lower`` all strings including key_fields and values are
         converted to lowercase unicode.
@@ -583,8 +582,13 @@ def read_csv_to_dataframe(
     # allow encoding kwarg to override this if it's provided
     if not encoding and has_utf8_bom(path):
         encoding = 'utf-8-sig'
-    dataframe = pandas.read_csv(path, engine=engine, encoding=encoding,
-                                sep=sep, **kwargs)
+    try:
+        dataframe = pandas.read_csv(
+            path, engine=engine, encoding=encoding, sep=sep, **kwargs)
+    except UnicodeDecodeError as error:
+        LOGGER.error(
+            f'{path} must be encoded as utf-8 or avoid non-ASCII characters')
+        raise error
     # this won't work on integer types, which happens if you set header=None
     # however, there's little reason to use this function if there's no header
     dataframe.columns = dataframe.columns.str.strip()
@@ -832,9 +836,10 @@ def reclassify_raster(
             ``pygeoprocessing.ReclassificationMissingValuesError``.
             keys must be {'raster_name', 'column_name', 'table_name'}. Values
             each key represent:
+
                 'raster_name' - string for the raster name being reclassified
-                'column_name' - name of the table column that ``value_map``
-                    dictionary keys came from.
+                'column_name' - name of the table column that ``value_map`` 
+                dictionary keys came from.
                 'table_name' - table name that ``value_map`` came from.
 
     Returns:
