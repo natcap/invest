@@ -65,6 +65,7 @@ export default class ArgInput extends React.PureComponent {
     const {
       argkey,
       argSpec,
+      enabled,
       handleBoolChange,
       handleChange,
       isValid,
@@ -73,6 +74,7 @@ export default class ArgInput extends React.PureComponent {
       ui_option,
       value,
     } = this.props;
+    console.log(argkey, 'enabled:', enabled);
     let { validationMessage } = this.props;
     let Input;
 
@@ -100,8 +102,8 @@ export default class ArgInput extends React.PureComponent {
         <Form.Group
           as={Row}
           key={argkey}
-          className={`arg-${ui_option}`}
           data-testid={`group-${argkey}`}
+          className={enabled ? '' : 'arg-disable'}
         >
           <FormLabel argkey={argkey}>
             <span>
@@ -195,7 +197,7 @@ export default class ArgInput extends React.PureComponent {
     // Dropdown menus for args with options
     } else if (argSpec.type === 'option_string') {
       Input = (
-        <Form.Group as={Row} key={argkey} className={`arg-${ui_option}`} data-testid={`group-${argkey}`}>
+        <Form.Group as={Row} key={argkey} data-testid={`group-${argkey}`}>
           <FormLabel argkey={argkey}>
             <span>{argSpec.name}</span>
           </FormLabel>
