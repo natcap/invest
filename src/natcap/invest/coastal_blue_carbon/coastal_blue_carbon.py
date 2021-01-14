@@ -296,7 +296,7 @@ ARGS_SPEC = {
 
 
 def execute(args):
-    """Model Coastal Blue Carbon over a time series.
+    """Coastal Blue Carbon.
 
     Args:
         args['workspace_dir'] (string): the path to a workspace directory where

@@ -113,10 +113,15 @@ TEST_DATAVALIDATOR := $(PYTHON) -m pytest -vs scripts/invest-autovalidate.py
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
 INVEST_BINARIES_DIR_ZIP := $(OSNAME)_invest_binaries.zip
-APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
+
+APIDOCS_BUILD_DIR := $(BUILD_DIR)/sphinx/apidocs
+APIDOCS_TARGET_DIR := $(DIST_DIR)/apidocs
 APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
-USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
+
+USERGUIDE_BUILD_DIR := $(BUILD_DIR)/sphinx/userguide
+USERGUIDE_TARGET_DIR := $(DIST_DIR)/userguide
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
+
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
@@ -258,25 +263,25 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	$(INVEST_BINARIES_DIR)/invest list
 
 # Documentation.
-# API docs are copied to dist/apidocs
+# API docs are built in build/sphinx and copied to dist/apidocs
+apidocs: $(APIDOCS_TARGET_DIR) $(APIDOCS_ZIP_FILE)
+$(APIDOCS_TARGET_DIR): | $(DIST_DIR)
+	# -a: always build all files
+	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs --build-dir $(APIDOCS_BUILD_DIR)
+	# only copy over the built html files, not the doctrees
+	$(COPYDIR) $(APIDOCS_BUILD_DIR)/html $(APIDOCS_TARGET_DIR)
+
+$(APIDOCS_ZIP_FILE): $(APIDOCS_TARGET_DIR)
+	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_TARGET_DIR))"
+
 # Userguide HTML docs are copied to dist/userguide
-# Userguide PDF file is copied to dist/InVEST_<version>_.pdf
-apidocs: $(APIDOCS_HTML_DIR) $(APIDOCS_ZIP_FILE)
-$(APIDOCS_HTML_DIR): | $(DIST_DIR)
-	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
-	$(COPYDIR) build/sphinx/html $(APIDOCS_HTML_DIR)
+userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
+$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
+	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
+	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
 
-$(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
-	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_HTML_DIR))"
-
-userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
-$(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
-	-$(RMDIR) $(USERGUIDE_HTML_DIR)
-	$(COPYDIR) build/userguide/html dist/userguide
-
-$(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
-	cd $(DIST_DIR) && $(ZIP) -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))
+$(USERGUIDE_ZIP_FILE): $(USERGUIDE_TARGET_DIR)
+	cd $(DIST_DIR) && $(ZIP) -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_TARGET_DIR))
 
 # Tracking the expected zipfiles here avoids a race condition where we can't
 # know which data zipfiles to create until the data repo is cloned.
@@ -334,16 +339,16 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vc
 
 DMG_CONFIG_FILE := installer/darwin/dmgconf.py
 mac_dmg: $(MAC_DISK_IMAGE_FILE)
-$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
+$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
 	dmgbuild -Dinvestdir=$(MAC_APPLICATION_BUNDLE) -s $(DMG_CONFIG_FILE) "InVEST $(VERSION)" $(MAC_DISK_IMAGE_FILE)
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
-$(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
-	./installer/darwin/build_app_bundle.sh $(VERSION) $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) $(MAC_APPLICATION_BUNDLE)
+$(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR)
+	./installer/darwin/build_app_bundle.sh $(VERSION) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR) $(MAC_APPLICATION_BUNDLE)
 
 mac_zipfile: $(MAC_BINARIES_ZIP_FILE)
-$(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
-	./installer/darwin/build_zip.sh $(VERSION) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
+$(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
+	./installer/darwin/build_zip.sh $(VERSION) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
 
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"

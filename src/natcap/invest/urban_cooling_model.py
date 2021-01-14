@@ -245,7 +245,7 @@ ARGS_SPEC = {
 
 
 def execute(args):
-    """Urban Cooling Model.
+    """Urban Cooling.
 
     Args:
         args['workspace_dir'] (str): path to target output directory.
@@ -763,6 +763,7 @@ def calculate_uhi_result_vector(
             if no valuation occurred.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
+            
                 * avg_cc
                 * avg_tmp_an
                 * avd_eng_cn
