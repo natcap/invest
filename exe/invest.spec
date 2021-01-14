@@ -30,7 +30,8 @@ kwargs = {
         'distutils',
         'distutils.dist',
         'rtree',  # mac builds aren't picking up rtree by default.
-        'pkg_resources.py2_warn'
+        'pkg_resources.py2_warn',
+        'cmath'
     ],
     'datas': [('qt.conf', '.'), proj_datas],
     'cipher': block_cipher,
