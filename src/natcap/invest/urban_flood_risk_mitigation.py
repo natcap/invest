@@ -113,7 +113,7 @@ ARGS_SPEC = {
 
 
 def execute(args):
-    """Urban Flood Risk Mitigation model.
+    """Urban Flood Risk Mitigation.
 
     The model computes the peak flow attenuation for each pixel, delineates
     areas benefiting from this service, then calculates the monetary value of
