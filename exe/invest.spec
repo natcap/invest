@@ -71,8 +71,8 @@ elif is_win:
 
     # add rtree dependency dynamic libraries from conda environment
     a.binaries += [
-        (os.path.basename(name), name, 'BINARY') for name in
-        glob.glob(os.path.join(conda_env, 'Library/bin/spatialindex*.dll'))]
+        (os.path.join('rtree', os.path.basename(name)), name, "BINARY") for name in
+        glob.glob(os.path.join(conda_env, 'Library', 'bin', 'spatialindex*.dll'))]
     # .exe extension is required if we're on windows.
     exename += '.exe'
 
