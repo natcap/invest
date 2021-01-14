@@ -191,7 +191,7 @@ _VALUE_NODATA = float(numpy.finfo(numpy.float32).min)
 
 
 def execute(args):
-    """InVEST Carbon Model.
+    """Carbon.
 
     Calculate the amount of carbon stocks given a landscape, or the difference
     due to a future change, and/or the tradeoffs between that and a REDD

@@ -324,20 +324,20 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
     description. The outer key is farm number, and the inner key is a string
     description of the parameter.
 
-    Input:
+    Args:
         op_path: URI to CSV table of static variables for calculations
         farm_ID: The string to look for in order to identify the column in
             which the farm numbers are stored. That column data will become the
             keys for the dictionary output.
         ff_aqua_args: Dictionary of arguments being created in order to be
             passed to the aquaculture core function.
-    Output:
         ff_aqua_args['farm_op_dict']: A dictionary that is built up to store
             the static parameters for the aquaculture model run. This is a 2D
             dictionary, where the outer key is the farm ID number, and the
             inner keys are strings of parameter names.
 
-    Returns nothing.
+    Returns:
+        None
     """
     # NOTE: Have to do some explicit calls to strings here. This is BAD. Don't
     # do it if you don't have to. THESE EXPLICIT STRINGS COME FROM THE "Farm

@@ -139,6 +139,12 @@ setup(
             language="c++"),
     ],
     cmdclass={'build_ext': Cython.Build.build_ext},
+    command_options={
+        'build_sphinx': {
+            'source_dir': ('setup.py', 'doc/api-docs'),
+            'build_dir': ('setup.py', 'doc/api-docs-build'),
+            'config_dir': ('setup.py', 'doc/api-docs')}},
+
     entry_points={
         'console_scripts': [
             'invest = natcap.invest.cli:main'
@@ -152,5 +158,5 @@ setup(
             'reporting_data/*.js',
             'reporting_data/*.css',
         ],
-    }
+    },
 )
