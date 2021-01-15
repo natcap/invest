@@ -96,8 +96,7 @@ class Element(object):
     Example:
         doc = html.HTMLDocument(...)
         details_elem = doc.add(html.Element('details'))
-        details_elem.add(
-            html.Element('img', src='images/my_pic.png', end_tag=False))
+        details_elem.add(html.Element('img', src='my_pic.png', end_tag=False))
     """
     def __init__(self, tag, content='', end_tag=True, **attrs):
         self.tag = tag
@@ -164,9 +163,9 @@ class Table(object):
                 row_id_header='Farm ID')
 
         produces the following header:
+            '          Weight                            Value                     '
+            'Farm ID   Mean    Standard Deviation        Mean    Standard deviation'
 
-                  Weight                            Value
-        Farm ID   Mean    Standard Deviation        Mean    Standard deviation
         """
 
         # Add the top-level header with the outer categories.

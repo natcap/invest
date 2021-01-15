@@ -221,7 +221,7 @@ _EXPECTED_FARM_HEADERS = [
 
 
 def execute(args):
-    """InVEST Pollination Model.
+    """Pollination.
 
     Args:
         args['workspace_dir'] (string): a path to the output workspace folder.
@@ -233,6 +233,7 @@ def execute(args):
         args['guild_table_path'] (string): file path to a table indicating
             the bee species to analyze in this model run.  Table headers
             must include:
+            
                 * 'species': a bee species whose column string names will
                     be referred to in other tables and the model will output
                     analyses per species.
