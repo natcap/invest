@@ -4,7 +4,7 @@ const {
 
 const isMac = process.platform === 'darwin';
 
-function menuTemplate(parentWindow) {
+function menuTemplate(parentWindow, isDevMode) {
   // Much of this template comes straight from the docs
   // https://www.electronjs.org/docs/api/menu
   const template = [
@@ -91,19 +91,14 @@ function menuTemplate(parentWindow) {
       ]
     },
     {
-      role: 'help',
-      submenu: [
-        {
-          label: 'About',
-          click: () => openAboutWindow(parentWindow)
-        }
-      ]
+      label: 'About',
+      click: () => openAboutWindow(parentWindow, isDevMode),
     }
   ]
   return template
 }
 
-function openAboutWindow(parentWindow) {
+function openAboutWindow(parentWindow, isDevMode) {
   const child = new BrowserWindow({
     parent: parentWindow,
     modal: true,
@@ -118,7 +113,7 @@ function openAboutWindow(parentWindow) {
   });
   child.setMenu(null);
   child.loadURL(`file://${__dirname}/about.html`);
-  if (process.env.ELECTRON_DEV_MODE) {
+  if (isDevMode) {
     child.webContents.openDevTools();
   }
 }
