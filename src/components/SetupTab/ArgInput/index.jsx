@@ -103,6 +103,7 @@ export default class ArgInput extends React.PureComponent {
           as={Row}
           key={argkey}
           data-testid={`group-${argkey}`}
+          // this grays out the label but doesn't actually disable the field
           className={enabled ? '' : 'arg-disable'}
         >
           <FormLabel argkey={argkey}>
@@ -123,11 +124,11 @@ export default class ArgInput extends React.PureComponent {
                 onFocus={handleChange}
                 isValid={touched && isValid}
                 isInvalid={validationMessage}
-                disabled={ui_option === 'disable'}
+                disabled={!enabled}
               />
               {
                 ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type)
-                  ? (
+                  ? (  // add a file selector button for path input types
                     <InputGroup.Append>
                       <Button
                         id={argkey}
@@ -135,6 +136,7 @@ export default class ArgInput extends React.PureComponent {
                         value={argSpec.type} // dialog will limit options accordingly
                         name={argkey}
                         onClick={selectFile}
+                        disabled={!enabled}
                       >
                         Browse
                       </Button>
@@ -164,7 +166,11 @@ export default class ArgInput extends React.PureComponent {
       // instead React avoids setting the property altogether. Hence, !! to
       // cast undefined to false.
       Input = (
-        <Form.Group as={Row} key={argkey} data-testid={`group-${argkey}`}>
+        <Form.Group 
+          as={Row} 
+          key={argkey} 
+          data-testid={`group-${argkey}`}
+          className={enabled ? '' : 'arg-disable'}>
           <FormLabel argkey={argkey}>
             <span>{argSpec.name}</span>
           </FormLabel>
@@ -179,6 +185,7 @@ export default class ArgInput extends React.PureComponent {
               checked={!!value} // double bang casts undefined to false
               onChange={handleBoolChange}
               name={argkey}
+              disabled={!enabled}
             />
             <Form.Check
               id={argkey}
@@ -189,6 +196,7 @@ export default class ArgInput extends React.PureComponent {
               checked={!value} // undefined becomes true, that's okay
               onChange={handleBoolChange}
               name={argkey}
+              disabled={!enabled}
             />
           </Col>
         </Form.Group>
@@ -197,7 +205,11 @@ export default class ArgInput extends React.PureComponent {
     // Dropdown menus for args with options
     } else if (argSpec.type === 'option_string') {
       Input = (
-        <Form.Group as={Row} key={argkey} data-testid={`group-${argkey}`}>
+        <Form.Group 
+          as={Row} 
+          key={argkey} 
+          data-testid={`group-${argkey}`}
+          className={enabled ? '' : 'arg-disable'}>
           <FormLabel argkey={argkey}>
             <span>{argSpec.name}</span>
           </FormLabel>
@@ -211,7 +223,7 @@ export default class ArgInput extends React.PureComponent {
                 value={value}
                 onChange={handleChange}
                 onFocus={handleChange}
-                disabled={ui_option === 'disable'}
+                disabled={!enabled}
               >
                 {argSpec.validation_options.options.map((opt) =>
                   <option value={opt} key={opt}>{opt}</option>

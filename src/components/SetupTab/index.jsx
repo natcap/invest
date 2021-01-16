@@ -13,6 +13,9 @@ import {
 import { fetchValidation, saveToPython } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 
+const fisheriesArgsEnabled = require('../../ui_data/input_field_dependencies');
+console.log(fisheriesArgsEnabled);
+
 /** Toggle properties that control the display of argument inputs.
  *
  * This function returns a copy of the SetupTab argsValues object
@@ -95,6 +98,7 @@ export default class SetupTab extends React.Component {
       argsValidation: {},
       argsValid: false,
       sortedArgKeys: null,
+      argsEnabled: null
     };
 
     this.savePythonScript = this.savePythonScript.bind(this);
@@ -169,10 +173,18 @@ export default class SetupTab extends React.Component {
         );
       }
     });
+
+    // a mapping from each arg key to a boolean value saying whether the field is enabled
+    // initialize all to true
+    const argsEnabled = sortedArgKeys.flat().reduce((acc, argkey) => {
+      acc[argkey] = true;
+      return acc;
+    }, {});
     this.setState({
       argsValues: argsValues,
       argsValidation: argsValidation,
       sortedArgKeys: sortedArgKeys,
+      argsEnabled: fisheriesArgsEnabled
     }, () => this.investValidate(this.state.argsValues));
     // }
   }
@@ -232,15 +244,10 @@ export default class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
-    let { argsValues } = this.state;
+    let { argsValues, argsEnabled } = this.state;
     argsValues[key].value = value;
     argsValues[key].touched = true;
-    if (this.props.argsSpec[key].ui_control) {
-      const updatedArgsValues = toggleDependentInputs(
-        this.props.argsSpec, argsValues, key
-      );
-      argsValues = updatedArgsValues;
-    }
+
     this.setState({ argsValues: argsValues });
     this.investValidate(argsValues);
   }
@@ -327,6 +334,7 @@ export default class SetupTab extends React.Component {
       argsValid,
       argsValidation,
       sortedArgKeys,
+      argsEnabled
     } = this.state;
     if (argsValues) {
       const {
@@ -360,6 +368,7 @@ export default class SetupTab extends React.Component {
               argsSpec={argsSpec}
               argsValues={argsValues}
               argsValidation={argsValidation}
+              argsEnabled={argsEnabled}
               sortedArgKeys={sortedArgKeys}
               pyModuleName={pyModuleName}
               updateArgValues={this.updateArgValues}

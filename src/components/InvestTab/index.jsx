@@ -21,6 +21,7 @@ import { findMostRecentLogfile, cleanupDir } from '../../utils';
 import { fileRegistry } from '../../constants';
 import { getLogger } from '../../logger';
 
+
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 // to translate to the invest CLI's verbosity flag:

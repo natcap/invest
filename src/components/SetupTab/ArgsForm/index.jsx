@@ -18,15 +18,6 @@ export default class ArgsForm extends React.Component {
   constructor(props) {
     super(props);
 
-    this.state = {
-      // a mapping from each arg key to a boolean value saying whether the field is enabled
-      // initialize all to true
-      argsEnabled: props.sortedArgKeys.reduce((acc, argkey) => {
-        acc[argkey] = true;
-        return acc;
-      }, {});
-    }
-
     this.handleChange = this.handleChange.bind(this);
     this.handleBoolChange = this.handleBoolChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
@@ -80,10 +71,12 @@ export default class ArgsForm extends React.Component {
       argsSpec,
       argsValues,
       argsValidation,
+      argsEnabled
     } = this.props;
     const formItems = [];
     let k = 0;
 
+    console.log('sorted arg keys', sortedArgKeys);
     sortedArgKeys.forEach((groupArray) => {
       k += 1;
       const groupItems = [];
@@ -94,7 +87,7 @@ export default class ArgsForm extends React.Component {
             argkey={argkey}
             argSpec={argsSpec[argkey]}
             value={argsValues[argkey].value}
-            enabled={this.state.argsEnabled[argkey]}
+            enabled={argsEnabled[argkey]}
             touched={argsValues[argkey].touched}
             ui_option={argsValues[argkey].ui_option}
             isValid={argsValidation[argkey].valid}
