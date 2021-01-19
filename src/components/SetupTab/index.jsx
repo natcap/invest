@@ -13,34 +13,7 @@ import {
 import { fetchValidation, saveToPython } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 
-const fisheriesArgsEnabled = require('../../ui_data/input_field_dependencies');
-console.log(fisheriesArgsEnabled);
 
-/** Toggle properties that control the display of argument inputs.
- *
- * This function returns a copy of the SetupTab argsValues object
- * after updating the 'ui_option' property of any arguments listed
- * in the 'ui_control' array of `argsSpec[argkey]`.
- *
- * @param {object} argsSpec - merge of an InVEST model's ARGS_SPEC and UI Spec.
- * @param {object} argsValues - of the shape returned by `initializeArgValues`.
- * @param {string} argkey - a key of the argsSpec and argsValues objects
- *    that contains a 'ui_control' property.
- *
- * @returns {object} a copy of `argsValues`
- */
-function toggleDependentInputs(argsSpec, argsValues, argkey) {
-  const updatedValues = { ...argsValues };
-  argsSpec[argkey].ui_control.forEach((dependentKey) => {
-    if (!updatedValues[argkey].value) {
-      // apply the display option specified in the UI spec
-      updatedValues[dependentKey].ui_option = argsSpec[dependentKey].ui_option;
-    } else {
-      updatedValues[dependentKey].ui_option = undefined;
-    }
-  });
-  return updatedValues;
-}
 
 /** Setup the objects that store InVEST argument values in SetupTab state.
  *
@@ -98,7 +71,7 @@ export default class SetupTab extends React.Component {
       argsValidation: {},
       argsValid: false,
       sortedArgKeys: null,
-      argsEnabled: null
+      argsEnabled: {}
     };
 
     this.savePythonScript = this.savePythonScript.bind(this);
@@ -108,6 +81,33 @@ export default class SetupTab extends React.Component {
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.insertNWorkers = this.insertNWorkers.bind(this);
+    this.setEnabledState = this.setEnabledState.bind(this);
+  }
+
+  /**
+   * 
+   * 
+   * @returns {object} updated argsEnabled object mapping each arg key
+   *                   to a boolean (true = enabled, false = disabled)
+   */
+  setEnabledState() {
+    console.log('setuptab state:', this.state);
+    const argsEnabled = this.state.argsEnabled;
+    const argsEnabledConditions = this.props.argsEnabledConditions;
+    console.log('conditions:', argsEnabledConditions);
+
+    for (const key of Object.keys(this.state.argsValues)) {
+      console.log(key);
+      if (argsEnabledConditions && argsEnabledConditions[key]) {
+        console.log('defined');
+        argsEnabled[key] = argsEnabledConditions[key]['function'](...argsEnabledConditions[key]['args'], this.state);
+      } else {
+        // if there's no UI spec for this model or this particular key, default to true (enabled)
+        argsEnabled[key] = true;
+      }
+    }
+    console.log('enabled state:', argsEnabled);
+    this.setState({argsEnabled: argsEnabled});
   }
 
   componentDidMount() {
@@ -135,9 +135,6 @@ export default class SetupTab extends React.Component {
 
       // Update any dependent args in response to this arg's value
       const argumentSpec = { ...argsSpec[argkey] };
-      if (argumentSpec.ui_control) {
-        argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
-      }
 
       // Sort the arg into it's input group
       // order is optional in the spec, but to be exlplicit about
@@ -180,13 +177,17 @@ export default class SetupTab extends React.Component {
       acc[argkey] = true;
       return acc;
     }, {});
+
+
     this.setState({
       argsValues: argsValues,
       argsValidation: argsValidation,
       sortedArgKeys: sortedArgKeys,
-      argsEnabled: fisheriesArgsEnabled
-    }, () => this.investValidate(this.state.argsValues));
-    // }
+      argsEnabled: argsEnabled
+    }, () => {
+      this.investValidate(this.state.argsValues);
+      this.setEnabledState();
+    });
   }
 
   /**
@@ -244,12 +245,13 @@ export default class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
-    let { argsValues, argsEnabled } = this.state;
+    let { argsValues } = this.state;
     argsValues[key].value = value;
     argsValues[key].touched = true;
 
     this.setState({ argsValues: argsValues });
     this.investValidate(argsValues);
+    this.setEnabledState();
   }
 
   batchUpdateArgs(argsDict) {
@@ -262,9 +264,6 @@ export default class SetupTab extends React.Component {
     Object.keys(argsSpec).forEach((argkey) => {
       if (argkey === 'n_workers') { return; }
       const argumentSpec = Object.assign({}, argsSpec[argkey]);
-      if (argumentSpec.ui_control) {
-        argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
-      }
     });
 
     this.setState({
