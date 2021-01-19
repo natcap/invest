@@ -5,6 +5,7 @@ from datetime import datetime
 import importlib
 import json
 import logging
+from osgeo import gdal
 import pprint
 import textwrap
 
@@ -100,6 +101,24 @@ def get_invest_validate():
     results = model_module.validate(args_dict, limit_to=limit_to)
     LOGGER.debug(results)
     return json.dumps(results)
+
+
+@app.route('/colnames', methods=['POST'])
+def get_vector_colnames():
+    """Get a list of column names from a vector.
+
+    Body (JSON string):
+        vector_path (string): path to a vector file
+    Returns:
+        a JSON string.
+    """
+    payload = request.get_json()
+    LOGGER.debug(payload)
+    vector_path = payload['vector_path']
+    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
+    colnames = [defn.GetName() for defn in vector.GetLayer().schema]
+    LOGGER.debug(colnames)
+    return json.dumps(colnames)
 
 
 @app.route('/post_datastack_file', methods=['POST'])
