@@ -38,6 +38,9 @@ workbench-alpha
 * General:
     * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
       and server on the localhost, to support the workbench.
+    * Add ``/colnames`` endpoint to the server API. This endpoint accepts a
+      vector filepath and returns a list of the vector's column names (used to
+      determine options for a dropdown menu input).
 
 Unreleased Changes (3.9.1)
 --------------------------
