@@ -38,6 +38,9 @@
 * General:
     * Include logger name in the logging format. This is helpful for the cython
       modules, which can't log module, function, or line number info.
+* Finfish:
+    * Rename ARGS_SPEC property ``module_name`` to ``model_name`` to be 
+      consistent with the other models.
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
