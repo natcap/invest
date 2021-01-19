@@ -112,6 +112,24 @@ export function fetchDatastackFromFile(payload) {
 }
 
 /**
+ * Get a list of the column names of a vector file.
+ *
+ * @param {string} payload - path to file
+ * @returns {Promise} resolves array
+ */
+export function getVectorColumnNames(payload) {
+  return (
+    fetch(`${HOSTNAME}:${process.env.PORT}/get_colnames`, {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
+}
+
+/**
  * Write invest model arguments to a python script.
  *
  * @param  {object} payload {
