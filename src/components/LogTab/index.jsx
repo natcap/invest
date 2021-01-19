@@ -80,10 +80,7 @@ export default class LogTab extends React.Component {
     };
     this.tail = null;
     const { pyModuleName } = this.props;
-    const primaryPyLogger = `${pyModuleName}`.split('.').slice(-1)[0];
-    const primaryPattern = new RegExp(
-      `${INVEST_LOG_PATTERN} ${primaryPyLogger}`
-    );
+    const primaryPattern = new RegExp(pyModuleName);
     this.logPatterns = {
       'invest-log-error': /(Traceback)|(^\s*[A-Z]{1}[a-z]*Error)|(ERROR)|(^\s\s*)/,
       'invest-log-primary': primaryPattern,
