@@ -15,8 +15,8 @@ import Portal from '../Portal';
 import { getLogger } from '../../logger';
 
 const logger = getLogger(__filename.split('/').slice(-2).join('/'));
-const INVEST_LOG_PATTERN = '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}';
-// e.g. '2020-10-16 07:13:04,325 carbon.execute() ...'
+const INVEST_LOG_PREFIX = '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}';
+// e.g. '2020-10-16 07:13:04,325 (natcap.invest.carbon) INFO ...'
 
 const LOG_TEXT_TAG = 'span';
 const ALLOWED_HTML_OPTIONS = {

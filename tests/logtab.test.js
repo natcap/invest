@@ -2,12 +2,27 @@ import path from 'path';
 import fs from 'fs';
 import React from 'react';
 import {
-  fireEvent, render, waitFor, within
+  render, waitFor, within
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import LogTab from '../src/components/LogTab';
 import { cleanupDir } from '../src/utils';
+
+function renderLogTab(logfilePath, primaryPythonLogger) {
+  const { ...utils } = render(
+    <LogTab
+      jobStatus="success"
+      logfile={logfilePath}
+      logStdErr=""
+      procID={undefined}
+      pyModuleName={primaryPythonLogger}
+      terminateInvestProcess={() => {}}
+      sidebarFooterElementId="divID"
+    />
+  );
+  return utils;
+}
 
 describe('LogTab', () => {
   let workspace;
@@ -39,16 +54,8 @@ workspace_dir                 C:/Users/dmf/projects/invest-workbench/runs/awy
   });
 
   test('Text in logfile is rendered', async () => {
-    const { findByText } = render(
-      <LogTab
-        jobStatus="success"
-        logfile={logfilePath}
-        logStdErr=""
-        procID={undefined}
-        pyModuleName={primaryPythonLogger}
-        terminateInvestProcess={() => {}}
-        sidebarFooterElementId="divID"
-      />
+    const { findByText } = renderLogTab(
+      logfilePath, primaryPythonLogger
     );
 
     const log = await findByText(new RegExp(uniqueText));
@@ -56,16 +63,8 @@ workspace_dir                 C:/Users/dmf/projects/invest-workbench/runs/awy
   });
 
   test('message from non-primary invest logger is plain', async () => {
-    const { findByText } = render(
-      <LogTab
-        jobStatus="success"
-        logfile={logfilePath}
-        logStdErr=""
-        procID={undefined}
-        pyModuleName={primaryPythonLogger}
-        terminateInvestProcess={() => {}}
-        sidebarFooterElementId="divID"
-      />
+    const { findByText } = renderLogTab(
+      logfilePath, primaryPythonLogger
     );
 
     const log = await findByText(new RegExp(uniqueText));
@@ -73,16 +72,8 @@ workspace_dir                 C:/Users/dmf/projects/invest-workbench/runs/awy
   });
 
   test('messages from primary invest logger are highlighted', async () => {
-    const { findAllByText } = render(
-      <LogTab
-        jobStatus="success"
-        logfile={logfilePath}
-        logStdErr=""
-        procID={undefined}
-        pyModuleName={primaryPythonLogger}
-        terminateInvestProcess={() => {}}
-        sidebarFooterElementId="divID"
-      />
+    const { findAllByText } = renderLogTab(
+      logfilePath, primaryPythonLogger
     );
 
     const messages = await findAllByText(new RegExp(primaryPythonLogger));
