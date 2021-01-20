@@ -101,8 +101,8 @@ export default class SetupTab extends React.Component {
    *                   to a boolean (true = enabled, false = disabled)
    */
   async callUISpecFunctions() {
-    const enabledFunctions = this.props.newUiSpec.enabledConditions;
-    const dropdownFunctions = this.props.newUiSpec.dropdownOptions;
+    const enabledFunctions = this.props.uiConfig.enabledConditions;
+    const dropdownFunctions = this.props.uiConfig.dropdownOptions;
 
     if (enabledFunctions) {
       const argsEnabled = this.state.argsEnabled;

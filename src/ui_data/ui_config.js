@@ -87,4 +87,4 @@ const newUiSpec = {
 }
 
 
-module.exports = { newUiSpec };
+module.exports = { uiConfig };

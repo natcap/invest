@@ -21,7 +21,7 @@ import { findMostRecentLogfile, cleanupDir } from '../../utils';
 import { fileRegistry } from '../../constants';
 import { getLogger } from '../../logger';
 
-const { newUiSpec } = require('../../ui_data/input_field_dependencies');
+const { uiConfig } = require('../../ui_data/input_field_dependencies');
 
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -350,7 +350,7 @@ export default class InvestTab extends React.Component {
                   pyModuleName={modelSpec.module}
                   modelName={modelSpec.model_name}
                   argsSpec={argsSpec}
-                  newUiSpec={newUiSpec[modelSpec.model_name] || {}}
+                  uiConfig={uiConfig[modelSpec.model_name] || {}}
                   uiSpec={uiSpec}
                   argsInitValues={argsValues}
                   investExecute={this.investExecute}
