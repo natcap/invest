@@ -1,3 +1,7 @@
+/* These tests cover how an existing logfile is rendered. Other tests in
+app.test.js cover the integrations between the log components and others,
+like how starting and stopping invest subprocesses trigger log updates.
+*/
 import path from 'path';
 import fs from 'fs';
 import React from 'react';
