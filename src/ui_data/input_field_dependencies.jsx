@@ -14,7 +14,7 @@ import { getVectorColumnNames } from '../server_requests';
 
 // const uiSpec = {
 //     modelName: {  
-//        enabledConditions: {
+//        category: {
 //            arg: {
 //                 function: f,
 //                 args: ['arg1', 'arg2']
@@ -23,13 +23,13 @@ import { getVectorColumnNames } from '../server_requests';
 //     }
 // }
 // where
-// - modelName equals ARGS_SPEC.model_name
-// - `args` is a list of the args needed to determine whether `arg` is enabled
-// - `f` is a function that takes `args.length + 1` arguments.
+// - `modelName` equals `ARGS_SPEC.model_name`
+// - `category` is a category that the SetupTab component looks for
+// - `f` is a function that accepts `SetupTab.state` as its one argument 
 //     - in the `enabledConditions` section, `f` returns a boolean where true = enabled, false = disabled
 //     - in the `dropdownOptions` section, `f` returns a list of dropdown options.
 
-// When the SetupTab component renders, it calls `f(...args, this.state)` to get
+// When the SetupTab component renders, it calls `f(this.state)` to get
 // the enabled state of each input, and dropdown options if any.
 
 
@@ -42,7 +42,7 @@ function isSufficient(argkey, state) {
 const newUiSpec = {
     'Coastal Blue Carbon': {
         'enabledConditions': {
-            use_price_table: {isSufficient.bind(null, 'do_valuation'),
+            use_price_table: isSufficient.bind(null, 'do_valuation'),
             price: (state => !isSufficient('use_price_table', state)),
             inflation_rate: (state => !isSufficient('use_price_table', state)),
             price_table: isSufficient.bind(null, 'use_price_table'),
@@ -54,8 +54,8 @@ const newUiSpec = {
             farm_ID: (async (state) => {
                     const result = await getVectorColumnNames(state.argsValues['ff_farm_loc'].value);
                     return result.colnames || [];
-                })
-            }
+                }
+            )
         },
         enabledConditions: {
             farm_ID: isSufficient.bind(null, 'ff_farm_loc'),
@@ -67,8 +67,7 @@ const newUiSpec = {
             discount: isSufficient.bind(null, 'do_valuation')
         }
     },
-
-    Fisheries: {
+    'Fisheries': {
         enabledConditions: {
             population_csv_path: (state => !isSufficient('do_batch', state)),
             population_csv_dir: isSufficient.bind(null, 'do_batch'), 

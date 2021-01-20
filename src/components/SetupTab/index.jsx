@@ -84,41 +84,37 @@ export default class SetupTab extends React.Component {
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.insertNWorkers = this.insertNWorkers.bind(this);
-    this.setEnabledState = this.setEnabledState.bind(this);
+    this.callUISpecFunctions = this.callUISpecFunctions.bind(this);
   }
 
   /**
-   * 
+   * Call functions from the UI spec to determine the enabled/disabled 
+   * state and dropdown options for each input, if applicable.
    * 
    * @returns {object} updated argsEnabled object mapping each arg key
    *                   to a boolean (true = enabled, false = disabled)
    */
-  async setEnabledState() {
+  async callUISpecFunctions() {
     console.log('ui spec:', this.props.newUiSpec);
     console.log('argsValues:', this.state.argsValues);
     const argsEnabled = this.state.argsEnabled;
-    const argsEnabledConditions = this.props.newUiSpec.enabledConditions;
-    console.log('conditions:', argsEnabledConditions);
-    console.log('dropdowns:', this.props.newUiSpec.dropdownOptions);
+    const argsDropdownOptions = this.state.argsDropdownOptions;
+    const enabledFunctions = this.props.newUiSpec.enabledConditions;
+    const dropdownFunctions = this.props.newUiSpec.dropdownOptions;
+    console.log('conditions:', enabledFunctions);
+    console.log('dropdowns:', dropdownFunctions);
 
-    for (const key of Object.keys(this.state.argsValues)) {
-      if (argsEnabledConditions && argsEnabledConditions[key]) {
-        argsEnabled[key] = argsEnabledConditions[key](this.state);
-      } else {
-        // if there's no UI spec for this model or this particular key, default to true (enabled)
-        argsEnabled[key] = true;
+    if (enabledFunctions) {
+      for (const key in enabledFunctions) {
+        argsEnabled[key] = enabledFunctions[key](this.state);
       }
+      this.setState({argsEnabled: argsEnabled});
     }
-    this.setState({argsEnabled: argsEnabled});
-
-    if (this.props.newUiSpec.dropdownOptions) {
-      let argsDropdownOptions = this.state.argsDropdownOptions;
-
-      const dropdownOptions = this.props.newUiSpec.dropdownOptions;
-      for (const key in dropdownOptions) {
-        argsDropdownOptions[key] = await dropdownOptions[key](this.state);
+    
+    if (dropdownFunctions) {
+      for (const key in dropdownFunctions) {
+        argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
       }
-      console.log('args dropdown options:', argsDropdownOptions);
       this.setState({argsDropdownOptions: argsDropdownOptions});
     }
   }
@@ -184,8 +180,7 @@ export default class SetupTab extends React.Component {
       }
     });
 
-    // a mapping from each arg key to a boolean value saying whether the field is enabled
-    // initialize all to true
+    // all args default to being enabled
     const argsEnabled = sortedArgKeys.flat().reduce((acc, argkey) => {
       acc[argkey] = true;
       return acc;
@@ -201,7 +196,7 @@ export default class SetupTab extends React.Component {
     }, () => {
       console.log('state has been set');
       this.investValidate(this.state.argsValues);
-      this.setEnabledState();
+      this.callUISpecFunctions();
     });
   }
 
@@ -266,7 +261,7 @@ export default class SetupTab extends React.Component {
 
     this.setState({ argsValues: argsValues });
     this.investValidate(argsValues);
-    this.setEnabledState();
+    this.callUISpecFunctions();
   }
 
   batchUpdateArgs(argsDict) {
