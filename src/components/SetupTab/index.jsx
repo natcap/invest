@@ -103,7 +103,7 @@ export default class SetupTab extends React.Component {
 
     for (const key of Object.keys(this.state.argsValues)) {
       if (argsEnabledConditions && argsEnabledConditions[key]) {
-        argsEnabled[key] = argsEnabledConditions[key]['function'](...argsEnabledConditions[key]['args'], this.state);
+        argsEnabled[key] = argsEnabledConditions[key](this.state);
       } else {
         // if there's no UI spec for this model or this particular key, default to true (enabled)
         argsEnabled[key] = true;
@@ -116,7 +116,7 @@ export default class SetupTab extends React.Component {
 
       const dropdownOptions = this.props.newUiSpec.dropdownOptions;
       for (const key in dropdownOptions) {
-        argsDropdownOptions[key] = await dropdownOptions[key]['function'](...dropdownOptions[key]['args'], this.state);
+        argsDropdownOptions[key] = await dropdownOptions[key](this.state);
       }
       console.log('args dropdown options:', argsDropdownOptions);
       this.setState({argsDropdownOptions: argsDropdownOptions});
