@@ -118,10 +118,16 @@ export function fetchDatastackFromFile(payload) {
  * @returns {Promise} resolves array
  */
 export function getVectorColumnNames(payload) {
+  console.log('get vector column names');
+  console.log('payload:', payload);
+  console.log(JSON.stringify({vector_path: payload}));
+  if (!payload) {
+    return [];
+  }
   return (
     fetch(`${HOSTNAME}:${process.env.PORT}/get_colnames`, {
       method: 'post',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({vector_path: payload}),
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())

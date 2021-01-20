@@ -71,12 +71,12 @@ export default class ArgsForm extends React.Component {
       argsSpec,
       argsValues,
       argsValidation,
-      argsEnabled
+      argsEnabled,
+      argsDropdownOptions
     } = this.props;
     const formItems = [];
     let k = 0;
 
-    console.log('sorted arg keys', sortedArgKeys);
     sortedArgKeys.forEach((groupArray) => {
       k += 1;
       const groupItems = [];
@@ -90,6 +90,7 @@ export default class ArgsForm extends React.Component {
             enabled={argsEnabled[argkey]}
             touched={argsValues[argkey].touched}
             ui_option={argsValues[argkey].ui_option}
+            dropdownOptions={argsDropdownOptions[argkey]}
             isValid={argsValidation[argkey].valid}
             validationMessage={argsValidation[argkey].validationMessage}
             handleChange={this.handleChange}

@@ -34,6 +34,7 @@ function initializeArgValues(argsSpec, argsDict) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValidation = {};
   const argsValues = {};
+  const argsDropdownOptions = {};
   Object.keys(argsSpec).forEach((argkey) => {
     argsValidation[argkey] = {};
     // 'hidden' args should not be assigned default values by the UI.
@@ -51,6 +52,7 @@ function initializeArgValues(argsSpec, argsDict) {
     } else if (argsSpec[argkey].type === 'option_string') {
       value = argsDict[argkey]
         || argsSpec[argkey].validation_options.options[0]; // default to first
+      argsDropdownOptions[argkey] = argsSpec[argkey].validation_options.options;
     } else {
       value = argsDict[argkey] || '';
     }
@@ -59,7 +61,7 @@ function initializeArgValues(argsSpec, argsDict) {
       touched: !initIsEmpty, // touch them only if initializing with values
     };
   });
-  return ({ argsValues: argsValues, argsValidation: argsValidation });
+  return ({ argsValues: argsValues, argsValidation: argsValidation, argsDropdownOptions: argsDropdownOptions });
 }
 
 /** Renders an arguments form, execute button, and save buttons. */
@@ -71,7 +73,8 @@ export default class SetupTab extends React.Component {
       argsValidation: {},
       argsValid: false,
       sortedArgKeys: null,
-      argsEnabled: {}
+      argsEnabled: {},
+      argsDropdownOptions: null
     };
 
     this.savePythonScript = this.savePythonScript.bind(this);
@@ -90,24 +93,34 @@ export default class SetupTab extends React.Component {
    * @returns {object} updated argsEnabled object mapping each arg key
    *                   to a boolean (true = enabled, false = disabled)
    */
-  setEnabledState() {
-    console.log('setuptab state:', this.state);
+  async setEnabledState() {
+    console.log('ui spec:', this.props.newUiSpec);
+    console.log('argsValues:', this.state.argsValues);
     const argsEnabled = this.state.argsEnabled;
-    const argsEnabledConditions = this.props.argsEnabledConditions;
+    const argsEnabledConditions = this.props.newUiSpec.enabledConditions;
     console.log('conditions:', argsEnabledConditions);
+    console.log('dropdowns:', this.props.newUiSpec.dropdownOptions);
 
     for (const key of Object.keys(this.state.argsValues)) {
-      console.log(key);
       if (argsEnabledConditions && argsEnabledConditions[key]) {
-        console.log('defined');
         argsEnabled[key] = argsEnabledConditions[key]['function'](...argsEnabledConditions[key]['args'], this.state);
       } else {
         // if there's no UI spec for this model or this particular key, default to true (enabled)
         argsEnabled[key] = true;
       }
     }
-    console.log('enabled state:', argsEnabled);
     this.setState({argsEnabled: argsEnabled});
+
+    if (this.props.newUiSpec.dropdownOptions) {
+      let argsDropdownOptions = this.state.argsDropdownOptions;
+
+      const dropdownOptions = this.props.newUiSpec.dropdownOptions;
+      for (const key in dropdownOptions) {
+        argsDropdownOptions[key] = await dropdownOptions[key]['function'](...dropdownOptions[key]['args'], this.state);
+      }
+      console.log('args dropdown options:', argsDropdownOptions);
+      this.setState({argsDropdownOptions: argsDropdownOptions});
+    }
   }
 
   componentDidMount() {
@@ -125,7 +138,7 @@ export default class SetupTab extends React.Component {
     });
     const argGroups = {};
     let {
-      argsValues, argsValidation
+      argsValues, argsValidation, argsDropdownOptions
     } = initializeArgValues(argsSpec, argsInitValues || {});
 
     Object.keys(argsSpec).forEach((argkey) => {
@@ -178,13 +191,15 @@ export default class SetupTab extends React.Component {
       return acc;
     }, {});
 
-
+    console.log('args values:', argsValues);
     this.setState({
       argsValues: argsValues,
       argsValidation: argsValidation,
       sortedArgKeys: sortedArgKeys,
-      argsEnabled: argsEnabled
+      argsEnabled: argsEnabled,
+      argsDropdownOptions: argsDropdownOptions
     }, () => {
+      console.log('state has been set');
       this.investValidate(this.state.argsValues);
       this.setEnabledState();
     });
@@ -333,7 +348,8 @@ export default class SetupTab extends React.Component {
       argsValid,
       argsValidation,
       sortedArgKeys,
-      argsEnabled
+      argsEnabled,
+      argsDropdownOptions
     } = this.state;
     if (argsValues) {
       const {
@@ -368,6 +384,7 @@ export default class SetupTab extends React.Component {
               argsValues={argsValues}
               argsValidation={argsValidation}
               argsEnabled={argsEnabled}
+              argsDropdownOptions={argsDropdownOptions}
               sortedArgKeys={sortedArgKeys}
               pyModuleName={pyModuleName}
               updateArgValues={this.updateArgValues}

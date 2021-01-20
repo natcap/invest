@@ -21,8 +21,7 @@ import { findMostRecentLogfile, cleanupDir } from '../../utils';
 import { fileRegistry } from '../../constants';
 import { getLogger } from '../../logger';
 
-const { enabledConditions } = require('../../ui_data/input_field_dependencies');
-console.log(enabledConditions);
+const { newUiSpec } = require('../../ui_data/input_field_dependencies');
 
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -61,8 +60,6 @@ async function investGetSpec(modelName) {
         logger.error(err.stack);
       }
     }
-    console.log('model spec:', modelSpec);
-    console.log('args spec:', args);
     return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
   }
   logger.error(`no spec found for ${modelName}`);
@@ -353,7 +350,7 @@ export default class InvestTab extends React.Component {
                   pyModuleName={modelSpec.module}
                   modelName={modelSpec.model_name}
                   argsSpec={argsSpec}
-                  argsEnabledConditions={enabledConditions[modelSpec.model_name]}
+                  newUiSpec={newUiSpec[modelSpec.model_name]}
                   uiSpec={uiSpec}
                   argsInitValues={argsValues}
                   investExecute={this.investExecute}

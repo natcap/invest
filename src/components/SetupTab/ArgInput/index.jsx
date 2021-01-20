@@ -69,12 +69,13 @@ export default class ArgInput extends React.PureComponent {
       handleBoolChange,
       handleChange,
       isValid,
+      optionsList,
       selectFile,
       touched,
       ui_option,
+      dropdownOptions,
       value,
     } = this.props;
-    console.log(argkey, 'enabled:', enabled);
     let { validationMessage } = this.props;
     let Input;
 
@@ -225,7 +226,7 @@ export default class ArgInput extends React.PureComponent {
                 onFocus={handleChange}
                 disabled={!enabled}
               >
-                {argSpec.validation_options.options.map((opt) =>
+                {dropdownOptions.map((opt) =>
                   <option value={opt} key={opt}>{opt}</option>
                 )}
               </Form.Control>
