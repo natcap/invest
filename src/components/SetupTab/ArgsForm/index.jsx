@@ -17,7 +17,6 @@ function dragoverHandler(event) {
 export default class ArgsForm extends React.Component {
   constructor(props) {
     super(props);
-
     this.handleChange = this.handleChange.bind(this);
     this.handleBoolChange = this.handleBoolChange.bind(this);
     this.selectFile = this.selectFile.bind(this);

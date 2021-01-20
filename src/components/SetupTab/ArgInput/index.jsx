@@ -69,7 +69,6 @@ export default class ArgInput extends React.PureComponent {
       handleBoolChange,
       handleChange,
       isValid,
-      optionsList,
       selectFile,
       touched,
       ui_option,
@@ -78,7 +77,6 @@ export default class ArgInput extends React.PureComponent {
     } = this.props;
     let { validationMessage } = this.props;
     let Input;
-
     // Messages with this pattern include validation feedback about
     // multiple inputs, but the whole message is repeated for each input.
     // It's more readable if filtered on the individual input.
@@ -88,6 +86,8 @@ export default class ArgInput extends React.PureComponent {
         validationMessage, value
       );
     }
+
+    const className = enabled ? null : 'arg-disable';
 
     // These types need a text input, and some also need a file browse button
     if (
@@ -105,7 +105,7 @@ export default class ArgInput extends React.PureComponent {
           key={argkey}
           data-testid={`group-${argkey}`}
           // this grays out the label but doesn't actually disable the field
-          className={enabled ? '' : 'arg-disable'}
+          className={className}
         >
           <FormLabel argkey={argkey}>
             <span>
@@ -171,7 +171,7 @@ export default class ArgInput extends React.PureComponent {
           as={Row} 
           key={argkey} 
           data-testid={`group-${argkey}`}
-          className={enabled ? '' : 'arg-disable'}>
+          className={className}>
           <FormLabel argkey={argkey}>
             <span>{argSpec.name}</span>
           </FormLabel>
@@ -210,7 +210,7 @@ export default class ArgInput extends React.PureComponent {
           as={Row} 
           key={argkey} 
           data-testid={`group-${argkey}`}
-          className={enabled ? '' : 'arg-disable'}>
+          className={className}>
           <FormLabel argkey={argkey}>
             <span>{argSpec.name}</span>
           </FormLabel>
@@ -261,6 +261,8 @@ ArgInput.propTypes = {
   handleChange: PropTypes.func.isRequired,
   handleBoolChange: PropTypes.func.isRequired,
   selectFile: PropTypes.func.isRequired,
+  enabled: PropTypes.bool.isRequired,
+  dropdownOptions: PropTypes.array
 };
 ArgInput.defaultProps = {
   value: undefined,

@@ -34,9 +34,11 @@ function initializeArgValues(argsSpec, argsDict) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValidation = {};
   const argsValues = {};
+  const argsEnabled = {};
   const argsDropdownOptions = {};
   Object.keys(argsSpec).forEach((argkey) => {
     argsValidation[argkey] = {};
+    argsEnabled[argkey] = true;  // all args default to being enabled
     // 'hidden' args should not be assigned default values by the UI.
     // They are hidden because they rarely need to be parameterized
     // by the user, and the default is probably hardcoded into the
@@ -61,7 +63,11 @@ function initializeArgValues(argsSpec, argsDict) {
       touched: !initIsEmpty, // touch them only if initializing with values
     };
   });
-  return ({ argsValues: argsValues, argsValidation: argsValidation, argsDropdownOptions: argsDropdownOptions });
+  return ({ 
+    argsValues: argsValues, 
+    argsValidation: argsValidation, 
+    argsDropdownOptions: argsDropdownOptions,
+    argsEnabled: argsEnabled });
 }
 
 /** Renders an arguments form, execute button, and save buttons. */
@@ -95,23 +101,21 @@ export default class SetupTab extends React.Component {
    *                   to a boolean (true = enabled, false = disabled)
    */
   async callUISpecFunctions() {
-    console.log('ui spec:', this.props.newUiSpec);
-    console.log('argsValues:', this.state.argsValues);
-    const argsEnabled = this.state.argsEnabled;
-    const argsDropdownOptions = this.state.argsDropdownOptions;
     const enabledFunctions = this.props.newUiSpec.enabledConditions;
     const dropdownFunctions = this.props.newUiSpec.dropdownOptions;
-    console.log('conditions:', enabledFunctions);
-    console.log('dropdowns:', dropdownFunctions);
 
     if (enabledFunctions) {
+      const argsEnabled = this.state.argsEnabled;
       for (const key in enabledFunctions) {
+        console.log('calling enabled function for', key);
         argsEnabled[key] = enabledFunctions[key](this.state);
+        console.log('result:', argsEnabled[key]);
       }
       this.setState({argsEnabled: argsEnabled});
     }
     
     if (dropdownFunctions) {
+      const argsDropdownOptions = this.state.argsDropdownOptions;
       for (const key in dropdownFunctions) {
         argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
       }
@@ -134,7 +138,10 @@ export default class SetupTab extends React.Component {
     });
     const argGroups = {};
     let {
-      argsValues, argsValidation, argsDropdownOptions
+      argsValues, 
+      argsValidation, 
+      argsDropdownOptions,
+      argsEnabled
     } = initializeArgValues(argsSpec, argsInitValues || {});
 
     Object.keys(argsSpec).forEach((argkey) => {
@@ -180,13 +187,6 @@ export default class SetupTab extends React.Component {
       }
     });
 
-    // all args default to being enabled
-    const argsEnabled = sortedArgKeys.flat().reduce((acc, argkey) => {
-      acc[argkey] = true;
-      return acc;
-    }, {});
-
-    console.log('args values:', argsValues);
     this.setState({
       argsValues: argsValues,
       argsValidation: argsValidation,
@@ -194,7 +194,6 @@ export default class SetupTab extends React.Component {
       argsEnabled: argsEnabled,
       argsDropdownOptions: argsDropdownOptions
     }, () => {
-      console.log('state has been set');
       this.investValidate(this.state.argsValues);
       this.callUISpecFunctions();
     });
@@ -259,9 +258,12 @@ export default class SetupTab extends React.Component {
     argsValues[key].value = value;
     argsValues[key].touched = true;
 
-    this.setState({ argsValues: argsValues });
-    this.investValidate(argsValues);
-    this.callUISpecFunctions();
+    this.setState({ 
+      argsValues: argsValues 
+    }, () => {
+        this.investValidate(argsValues);
+        this.callUISpecFunctions();
+      });
   }
 
   batchUpdateArgs(argsDict) {
@@ -270,7 +272,11 @@ export default class SetupTab extends React.Component {
     * @params {object} argsDict - key: value pairs of InVEST arguments.
     */
     const { argsSpec } = this.props;
-    let { argsValues, argsValidation } = initializeArgValues(argsSpec, argsDict);
+    let { 
+      argsValues, 
+      argsValidation,
+      argsDropdownOptions,
+      argsEnabled } = initializeArgValues(argsSpec, argsDict);
     Object.keys(argsSpec).forEach((argkey) => {
       if (argkey === 'n_workers') { return; }
       const argumentSpec = Object.assign({}, argsSpec[argkey]);
@@ -279,7 +285,12 @@ export default class SetupTab extends React.Component {
     this.setState({
       argsValues: argsValues,
       argsValidation: argsValidation,
-    }, () => this.investValidate(this.state.argsValues));
+      argsDropdownOptions: argsDropdownOptions,
+      argsEnabled: argsEnabled
+    }, () => {
+      this.investValidate(this.state.argsValues);
+      this.callUISpecFunctions();
+    });
   }
 
   /** Validate an arguments dictionary using the InVEST model's validate function.

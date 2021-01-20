@@ -350,7 +350,7 @@ export default class InvestTab extends React.Component {
                   pyModuleName={modelSpec.module}
                   modelName={modelSpec.model_name}
                   argsSpec={argsSpec}
-                  newUiSpec={newUiSpec[modelSpec.model_name]}
+                  newUiSpec={newUiSpec[modelSpec.model_name] || {}}
                   uiSpec={uiSpec}
                   argsInitValues={argsValues}
                   investExecute={this.investExecute}
