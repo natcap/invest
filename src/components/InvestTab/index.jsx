@@ -21,7 +21,7 @@ import { findMostRecentLogfile, cleanupDir } from '../../utils';
 import { fileRegistry } from '../../constants';
 import { getLogger } from '../../logger';
 
-const { uiConfig } = require('../../ui_data/input_field_dependencies');
+const { uiConfig } = require('../../ui_data/ui_config');
 
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);

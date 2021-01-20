@@ -1,33 +1,23 @@
 import { getVectorColumnNames } from '../server_requests';
 
 // Some input fields are rendered differently conditional upon the state of other input fields.
-// Right now, the conditional properties are:
-//  - enabled/disabled state
-//  - options for a dropdown menu
-// and state properties they depend on are:
-//  - enabled/disabled state
-//  - value
-// 
-// We want to leave open the possibility of adding more conditional properties
-// or dependencies, so I tried to generalize this UI spec implementation so that
-// any function of the `SetupTab.state` can determine any prop of the `ArgsForm`.
-
+// This file describes these dependencies between fields.
+//
+// Format:
 // const uiSpec = {
 //     modelName: {  
 //        category: {
-//            arg: {
-//                 function: f,
-//                 args: ['arg1', 'arg2']
-//             }
+//            arg: f
 //         }
 //     }
 // }
 // where
 // - `modelName` equals `ARGS_SPEC.model_name`
 // - `category` is a category that the SetupTab component looks for
+//    (currently `enabledFunctions` or `dropdownFunctions`)
 // - `f` is a function that accepts `SetupTab.state` as its one argument 
-//     - in the `enabledConditions` section, `f` returns a boolean where true = enabled, false = disabled
-//     - in the `dropdownOptions` section, `f` returns a list of dropdown options.
+//     - in the `enabledFunctions` section, `f` returns a boolean where true = enabled, false = disabled
+//     - in the `dropdownFunctions` section, `f` returns a list of dropdown options.
 
 // When the SetupTab component renders, it calls `f(this.state)` to get
 // the enabled state of each input, and dropdown options if any.
@@ -39,25 +29,27 @@ function isSufficient(argkey, state) {
 }
 
 
-const newUiSpec = {
+const uiConfig = {
     'Coastal Blue Carbon': {
-        'enabledConditions': {
-            use_price_table: isSufficient.bind(null, 'do_valuation'),
-            price: (state => !isSufficient('use_price_table', state)),
-            inflation_rate: (state => !isSufficient('use_price_table', state)),
-            price_table: isSufficient.bind(null, 'use_price_table'),
-            discount_rate: isSufficient.bind(null, 'do_valuation'),
+        enabledFunctions: {
+            use_price_table: isSufficient.bind(null, 'do_economic_analysis'),
+            price: (state => isSufficient('do_economic_analysis', state) && 
+                !isSufficient('use_price_table', state)),
+            inflation_rate: (state => isSufficient('do_economic_analysis', state) && 
+                !isSufficient('use_price_table', state)),
+            price_table_path: isSufficient.bind(null, 'use_price_table'),
+            discount_rate: isSufficient.bind(null, 'do_economic_analysis'),
         }
     },
     'Finfish Aquaculture': {
-        dropdownOptions: {
+        dropdownFunctions: {
             farm_ID: (async (state) => {
                     const result = await getVectorColumnNames(state.argsValues['ff_farm_loc'].value);
                     return result.colnames || [];
                 }
             )
         },
-        enabledConditions: {
+        enabledFunctions: {
             farm_ID: isSufficient.bind(null, 'ff_farm_loc'),
             g_param_a_sd: isSufficient.bind(null, 'use_uncertainty'),
             g_param_b_sd: isSufficient.bind(null, 'use_uncertainty'),
@@ -68,7 +60,7 @@ const newUiSpec = {
         }
     },
     'Fisheries': {
-        enabledConditions: {
+        enabledFunctions: {
             population_csv_path: (state => !isSufficient('do_batch', state)),
             population_csv_dir: isSufficient.bind(null, 'do_batch'), 
             spawn_units: (state => isSufficient('recruitment_type', state) && 

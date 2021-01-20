@@ -101,15 +101,13 @@ export default class SetupTab extends React.Component {
    *                   to a boolean (true = enabled, false = disabled)
    */
   async callUISpecFunctions() {
-    const enabledFunctions = this.props.uiConfig.enabledConditions;
-    const dropdownFunctions = this.props.uiConfig.dropdownOptions;
+    const enabledFunctions = this.props.uiConfig.enabledFunctions;
+    const dropdownFunctions = this.props.uiConfig.dropdownFunctions;
 
     if (enabledFunctions) {
       const argsEnabled = this.state.argsEnabled;
       for (const key in enabledFunctions) {
-        console.log('calling enabled function for', key);
         argsEnabled[key] = enabledFunctions[key](this.state);
-        console.log('result:', argsEnabled[key]);
       }
       this.setState({argsEnabled: argsEnabled});
     }
@@ -186,6 +184,7 @@ export default class SetupTab extends React.Component {
         );
       }
     });
+
 
     this.setState({
       argsValues: argsValues,

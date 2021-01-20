@@ -118,9 +118,6 @@ export function fetchDatastackFromFile(payload) {
  * @returns {Promise} resolves array
  */
 export function getVectorColumnNames(payload) {
-  console.log('get vector column names');
-  console.log('payload:', payload);
-  console.log(JSON.stringify({vector_path: payload}));
   if (!payload) {
     return [];
   }
