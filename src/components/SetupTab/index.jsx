@@ -206,10 +206,11 @@ export default class SetupTab extends React.Component {
     * @params {object} argsDict - key: value pairs of InVEST arguments.
     */
     let argsValues = initializeArgValues(this.props.argsSpec, this.props.uiSpec, argsDict);
+    const { uiSpec } = this.props;
     Object.keys(uiSpec.order).forEach((argkey) => {
-      if (this.props.uiSpec.argsOptions[argkey] && 
-          this.props.uiSpec.argsOptions[argkey].control_targets) {
-        argsValues = toggleDependentInputs(this.props.uiSpec, argsValues, argkey);
+      if (uiSpec.argsOptions[argkey] && 
+          uiSpec.argsOptions[argkey].control_targets) {
+        argsValues = toggleDependentInputs(uiSpec, argsValues, argkey);
       }
     });
 
