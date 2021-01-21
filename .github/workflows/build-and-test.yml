@@ -109,13 +109,6 @@ jobs:
                   conda list
                   conda list --export > conda-env.txt
 
-            #- name: Download Conda Env Artifact
-            #  continue-on-error: true
-            #  uses: actions/download-artifact@v2
-            #  with:
-            #      name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
-            #      path: ./conda-env-artifact.txt
-            #
             - name: Download Conda Env Artifact
               continue-on-error: true
               uses: dawidd6/action-download-artifact@v2
@@ -129,9 +122,7 @@ jobs:
               continue-on-error: true
               shell: bash -l {0}
               run: |
-                  echo "--- Start Differences between Conda Environments ---"
                   diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
-                  echo "--- End Differences between Conda Environments ---"
 
             - name: Run model tests
               shell: bash -l {0}
