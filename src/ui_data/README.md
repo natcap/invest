@@ -18,4 +18,4 @@ The JSON file has two required top-level keys:
             
         * `"control_option"`: A string that determines the CSS style to apply to this arg's input field, conditional
             on the state of the controlling field. If `"control_option": "x"`, then the style `arg-x` is applied.
-            Currently `"disable"`, `"hide"`, and `"group"` are available.
+            Currently `"disable"` and `"hide"` are available.

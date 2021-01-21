@@ -342,9 +342,6 @@ describe('UI spec functionality', () => {
   });
 
   test('expect non-boolean controller can disable/hide optional inputs', async () => {
-    // Normally the UI options are loaded from a seperate spec on disk
-    // that is merged with ARGS_SPEC. But for testing, it's convenient
-    // to just use one spec. And it works just the same.
     const spec = {
       args: {
         controller: {

@@ -383,13 +383,15 @@ describe('InVEST subprocess testing', () => {
   const uiSpecFilePath = path.join(
     fileRegistry.INVEST_UI_DATA, `${spec.module}.json`
   );
-  fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
 
   const dummyTextToLog = JSON.stringify(spec.args);
   let fakeWorkspace;
   let mockInvestProc;
 
   beforeEach(() => {
+    // this can't go into the testing workspace because the model
+    // will look for it in /ui_data 
+    fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
@@ -423,6 +425,7 @@ describe('InVEST subprocess testing', () => {
 
   afterEach(async () => {
     mockInvestProc = null;
+    fs.unlinkSync(uiSpecFilePath);
     cleanupDir(fakeWorkspace);
     await InvestJob.clearStore();
     jest.resetAllMocks();

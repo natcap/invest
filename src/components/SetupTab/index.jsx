@@ -59,7 +59,6 @@ function toggleDependentInputs(uiSpec, argsValues, argkey) {
 function initializeArgValues(argsSpec, uiSpec, argsDict) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValues = {};
-  // Object.keys(argsSpec).forEach((argkey) => {
   // Args that aren't displayed should not be assigned default values 
   // by the UI, so iterate over uiSpec.order rather than argsSpec.
   // They are hidden because they rarely need to be parameterized
@@ -83,7 +82,7 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
       touched: !initIsEmpty, // touch them only if initializing with values
     };
   });
-  return ({ argsValues: argsValues });
+  return argsValues;
 }
 
 /** Renders an arguments form, execute button, and save buttons. */
@@ -120,12 +119,11 @@ export default class SetupTab extends React.Component {
     */
     const { argsInitValues, argsSpec, uiSpec } = this.props;
 
-    let { argsValues } = initializeArgValues(argsSpec, uiSpec, argsInitValues || {});
+    let argsValues = initializeArgValues(argsSpec, uiSpec, argsInitValues || {});
 
     // Update any dependent args in response to each arg's value
     // uiSpec.order is a 2D array so flatten it before iterating
     uiSpec.order.flat().forEach((argkey) => {
-      const argumentSpec = { ...argsSpec[argkey] };
       if (uiSpec.argsOptions[argkey] && uiSpec.argsOptions[argkey].control_targets) {
         argsValues = toggleDependentInputs(uiSpec, argsValues, argkey);
       }
@@ -191,18 +189,15 @@ export default class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
-    let { argsValues } = this.state;
+    const { argsValues } = this.state;
+    const { uiSpec } = this.props;
     argsValues[key].value = value;
     argsValues[key].touched = true;
-    if (this.props.uiSpec.argsOptions[key] && 
-        this.props.uiSpec.argsOptions[key].control_targets) {
-      const updatedArgsValues = toggleDependentInputs(
-        this.props.uiSpec, argsValues, key
-      );
-      argsValues = updatedArgsValues;
+    if (uiSpec.argsOptions[key] && uiSpec.argsOptions[key].control_targets) {
+      const updatedArgsValues = toggleDependentInputs(uiSpec, argsValues, key);
     }
-    this.setState({ argsValues: argsValues });
-    this.investValidate(argsValues);
+    this.setState({ argsValues: updatedArgsValues });
+    this.investValidate(updatedArgsValues);
   }
 
   batchUpdateArgs(argsDict) {
@@ -210,9 +205,8 @@ export default class SetupTab extends React.Component {
     *
     * @params {object} argsDict - key: value pairs of InVEST arguments.
     */
-    let { argsValues } = initializeArgValues(this.props.argsSpec, this.props.uiSpec, argsDict);
-    Object.keys(this.props.argsSpec).forEach((argkey) => {
-      if (argkey === 'n_workers') { return; }
+    let argsValues = initializeArgValues(this.props.argsSpec, this.props.uiSpec, argsDict);
+    Object.keys(uiSpec.order).forEach((argkey) => {
       if (this.props.uiSpec.argsOptions[argkey] && 
           this.props.uiSpec.argsOptions[argkey].control_targets) {
         argsValues = toggleDependentInputs(this.props.uiSpec, argsValues, argkey);
