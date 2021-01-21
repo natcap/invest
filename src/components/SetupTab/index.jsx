@@ -189,15 +189,15 @@ export default class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
-    const { argsValues } = this.state;
+    let { argsValues } = this.state;
     const { uiSpec } = this.props;
     argsValues[key].value = value;
     argsValues[key].touched = true;
     if (uiSpec.argsOptions[key] && uiSpec.argsOptions[key].control_targets) {
-      const updatedArgsValues = toggleDependentInputs(uiSpec, argsValues, key);
+      argsValues = toggleDependentInputs(uiSpec, argsValues, key);
     }
-    this.setState({ argsValues: updatedArgsValues });
-    this.investValidate(updatedArgsValues);
+    this.setState({ argsValues: argsValues });
+    this.investValidate(argsValues);
   }
 
   batchUpdateArgs(argsDict) {
