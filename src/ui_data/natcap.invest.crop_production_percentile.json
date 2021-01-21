@@ -1,7 +1,0 @@
-{
-    "order": [
-        ["workspace_dir", "results_suffix"],
-        ["landcover_raster_path", "landcover_to_crop_table_path", "aggregate_polygon_path", "model_data_path"]
-    ],
-    "argsOptions": {}
-}

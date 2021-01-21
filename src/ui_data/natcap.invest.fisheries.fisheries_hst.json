@@ -1,7 +1,0 @@
-{
-    "order": [
-        ["workspace_dir", "results_suffix"],
-        ["sexsp", "population_csv_path", "habitat_dep_csv_path", "habitat_chg_csv_path", "gamma"]
-    ],
-    "argsOptions": {}
-}

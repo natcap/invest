@@ -42,7 +42,7 @@ async function investGetSpec(modelName) {
   const spec = await getSpec(modelName);
   if (spec) {
     const { args, ...modelSpec } = spec;
-    const uiSpecs = require('../../ui_data/ui_config');
+    const uiSpecs = require('../../ui_config');
     const uiSpec = uiSpecs[modelSpec.model_name];
     if (uiSpec) {
       return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
