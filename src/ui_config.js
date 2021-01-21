@@ -1,4 +1,5 @@
-import { getVectorColumnNames } from '../server_requests';
+import { getVectorColumnNames } from './server_requests';
+
 
 // Some input fields are rendered differently conditional upon the state of other input fields.
 // This file describes these dependencies between fields.
@@ -28,6 +29,10 @@ function isSufficient(argkey, state) {
     return state.argsEnabled[argkey] && !!state.argsValues.[argkey].value;
 }
 
+function isNotSufficient(argkey, state) {
+    return !isSufficient(argkey, state);
+}
+
 
 const uiSpec = {
     'InVEST Carbon Model': {
@@ -37,7 +42,20 @@ const uiSpec = {
             ["calc_sequestration", "lulc_fut_path", "lulc_cur_year", "lulc_fut_year"],
             ["do_redd", "lulc_redd_path"],
             ["do_valuation", "price_per_metric_ton_of_c", "discount_rate", "rate_change"]
-        ]
+        ],
+        enabledFunctions: {
+            lulc_cur_year: isSufficient.bind(null, 'calc_sequestration'),
+            lulc_fut_year: isSufficient.bind(null, 'calc_sequestration'),
+            lulc_fut_path: isSufficient.bind(null, 'calc_sequestration'),
+            
+            do_redd: isSufficient.bind(null, 'calc_sequestration'),
+            lulc_redd_path: isSufficient.bind(null, 'do_redd'),
+
+            do_valuation: isSufficient.bind(null, 'calc_sequestration'),
+            price_per_metric_ton_of_c: isSufficient.bind(null, 'do_valuation'),
+            discount_rate: isSufficient.bind(null, 'do_valuation'),
+            rate_change: isSufficient.bind(null, 'do_valuation'),
+        }
     },
     'Coastal Blue Carbon': {
         order: [
@@ -48,9 +66,9 @@ const uiSpec = {
         enabledFunctions: {
             use_price_table: isSufficient.bind(null, 'do_economic_analysis'),
             price: (state => isSufficient('do_economic_analysis', state) && 
-                !isSufficient('use_price_table', state)),
+                isNotSufficient('use_price_table', state)),
             inflation_rate: (state => isSufficient('do_economic_analysis', state) && 
-                !isSufficient('use_price_table', state)),
+                isNotSufficient('use_price_table', state)),
             price_table_path: isSufficient.bind(null, 'use_price_table'),
             discount_rate: isSufficient.bind(null, 'do_economic_analysis'),
         }
@@ -71,7 +89,19 @@ const uiSpec = {
             ["geomorphology_vector_path", "geomorphology_fill_value"],
             ["population_raster_path", "population_radius"],
             ["slr_vector_path", "slr_field"]
-        ]
+        ],
+        dropdownFunctions: {
+            slr_field: (async (state) => {
+                    const result = await getVectorColumnNames(state.argsValues['slr_vector_path'].value);
+                    return result.colnames || [];
+                }
+            )
+        },
+        enabledFunctions: {
+            slr_field: isSufficient.bind(null, 'slr_vector_path'),
+            geomorphology_fill_value: isSufficient.bind(null, 'geomorphology_vector_path'),
+            population_radius: isSufficient.bind(null, 'population_raster_path'),
+        }
     },
     'Crop Production Percentile Model': {
         order: [
@@ -88,9 +118,16 @@ const uiSpec = {
     'DelineateIt: Watershed Delineation': {
         order: [
             ["workspace_dir", "results_suffix"],
-            ["dem_path", "outlet_vector_path"],
-            ["snap_points", "flow_threshold", "snap_distance", "skip_invalid_geometry"]
-        ]
+            ["dem_path", "detect_pour_points", "outlet_vector_path", "skip_invalid_geometry"],
+            ["snap_points", "flow_threshold", "snap_distance"]
+        ],
+        enabledFunctions: {
+            outlet_vector_path: isNotSufficient.bind(null, 'detect_pour_points'),
+            skip_invalid_geometry: isNotSufficient.bind(null, 'detect_pour_points'),
+            // TODO snap_points enabled on _vector_may_contain_points, need new endpoint
+            flow_threshold: isSufficient.bind(null, 'snap_points'),
+            snap_distance: isSufficient.bind(null, 'snap_points')
+        }
     },
     'Finfish Aquaculture': {
         order: [
@@ -130,7 +167,7 @@ const uiSpec = {
 
         ],
         enabledFunctions: {
-            population_csv_path: (state => !isSufficient('do_batch', state)),
+            population_csv_path: isNotSufficient.bind(null, 'do_batch'),
             population_csv_dir: isSufficient.bind(null, 'do_batch'), 
             spawn_units: (state => isSufficient('recruitment_type', state) && 
                 ['Beverton-Holt', 'Ricker'].includes(state.argsValues['recruitment_type'].value)),
@@ -145,22 +182,42 @@ const uiSpec = {
             unit_price: isSufficient.bind(null, 'val_cont'),
         }
     },
+    'Fisheries Habitat Scenario Tool': {
+        order: [
+            ["workspace_dir", "results_suffix"],
+            ["population_csv_path", "sexsp"],
+            ["habitat_dep_csv_path", "habitat_chg_csv_path", "gamma"]
+        ]
+    },
     'Forest Carbon Edge Effect Model': {
         order: [
             ["workspace_dir", "results_suffix"],
             ["lulc_raster_path", "biophysical_table_path", "pools_to_calculate"],
             ["compute_forest_edge_effects", "tropical_forest_edge_carbon_model_vector_path", "n_nearest_model_points", "biomass_to_carbon_conversion_factor"],
             ["aoi_vector_path"]
-        ]
+        ],
+        enabledFunctions: {
+            tropical_forest_edge_carbon_model_vector_path: isSufficient.bind(null, 'compute_forest_edge_effects'),
+            n_nearest_model_points: isSufficient.bind(null, 'compute_forest_edge_effects'),
+            biomass_to_carbon_conversion_factor: isSufficient.bind(null, 'compute_forest_edge_effects')
+        }
     },
     'GLOBIO': {
         order: [
             ["workspace_dir", "results_suffix"],
-            ["lulc_to_globio_table_path", "aoi_path", "lulc_path", "infrastructure_dir"],
-            ["pasture_path", "potential_vegetation_path", "primary_threshold", "pasture_threshold"],
-            ["intensification_fraction", "msa_parameters_path"],
-            ["predefined_globio", "globio_lulc_path"]
-        ]
+            ["predefined_globio", "globio_lulc_path"],
+            ["lulc_to_globio_table_path", "lulc_path", "pasture_path", "potential_vegetation_path", "primary_threshold", "pasture_threshold"],
+            ["aoi_path", "infrastructure_dir", "intensification_fraction", "msa_parameters_path"]
+        ],
+        enabledFunctions: {
+            globio_lulc_path: isSufficient.bind(null, 'predefined_globio'),
+            lulc_to_globio_table_path: isNotSufficient.bind(null, 'predefined_globio'),
+            lulc_path: isNotSufficient.bind(null, 'predefined_globio'),
+            pasture_path: isNotSufficient.bind(null, 'predefined_globio'),
+            potential_vegetation_path: isNotSufficient.bind(null, 'predefined_globio'),
+            primary_threshold: isNotSufficient.bind(null, 'predefined_globio'),
+            pasture_threshold: isNotSufficient.bind(null, 'predefined_globio')
+        }
     },
     'Habitat Quality': {
         order: [
