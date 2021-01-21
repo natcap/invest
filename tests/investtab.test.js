@@ -53,20 +53,19 @@ describe('Save InVEST Model Setup Buttons', () => {
     fileRegistry.INVEST_UI_DATA, `${spec.module}.json`
   );
   const uiSpec = {
-    workspace: { order: 0.1 },
-    port: { order: 'hidden' },
+    order: [['workspace']],
+    argsOptions: {}
   };
   fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
 
   // args expected to be in the saved JSON / Python dictionary
-  const expectedArgKeys = [];
-  Object.keys(spec.args).forEach((key) => {
-    if (uiSpec[key].order !== 'hidden') { expectedArgKeys.push(key); }
-  });
+  const expectedArgKeys = uiSpec.order.flat();
   expectedArgKeys.push('n_workers'); // never in the spec, always in the args dict
 
-  getSpec.mockResolvedValue(spec);
-  fetchValidation.mockResolvedValue([]);
+  beforeAll(() => {
+    getSpec.mockResolvedValue(spec);
+    fetchValidation.mockResolvedValue([]);
+  });
 
   afterAll(() => {
     fs.unlinkSync(uiSpecFilePath);
@@ -192,29 +191,39 @@ describe('Save InVEST Model Setup Buttons', () => {
 
 describe('InVEST Run Button', () => {
   const spec = {
-    module: 'natcap.invest.foo',
-    model_name: 'Foo Model',
+    module: 'natcap.invest.bar',
+    model_name: 'Bar Model',
     args: {
       a: {
-        name: 'afoo',
+        name: 'abar',
         type: 'freestyle_string',
       },
       b: {
-        name: 'bfoo',
+        name: 'bbar',
         type: 'number',
       },
       c: {
-        name: 'cfoo',
+        name: 'cbar',
         type: 'csv',
       },
     },
   };
+
+  const uiSpec = {
+    order: [['a'], ['b', 'c']],
+    argsOptions: {}
+  };
+  const uiSpecFilePath = path.join(
+    fileRegistry.INVEST_UI_DATA, `${spec.module}.json`
+  );
+  fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
 
   beforeAll(() => {
     getSpec.mockResolvedValue(spec);
   });
 
   afterAll(() => {
+    fs.unlinkSync(uiSpecFilePath);
     jest.resetAllMocks();
   });
 

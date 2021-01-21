@@ -14,13 +14,13 @@ import { fetchValidation, saveToPython } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 
 
-
 /** Setup the objects that store InVEST argument values in SetupTab state.
  *
  * One object will store input form values and track if the input has been
  * touched. The other object stores data returned by invest validation.
  *
- * @param {object} argsSpec - merge of an InVEST model's ARGS_SPEC.args and UI Spec.
+ * @param {object} argsSpec - an InVEST model's ARGS_SPEC.args 
+ * @param {object} uiSpec - the model's UI Spec.
  * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
  *
  * @returns {object} to destructure into two args,
@@ -30,9 +30,8 @@ import { argsDictFromObject } from '../../utils';
  *     {object} argsValidation - stores properties that update in response to
  *       validation.
  */
-function initializeArgValues(argsSpec, argsDict) {
+function initializeArgValues(argsSpec, uiSpec, argsDict) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
-  const argsValidation = {};
   const argsValues = {};
   const argsEnabled = {};
   const argsDropdownOptions = {};
@@ -74,6 +73,11 @@ function initializeArgValues(argsSpec, argsDict) {
 export default class SetupTab extends React.Component {
   constructor(props) {
     super(props);
+    // map each arg to an empty object, to fill in later
+    const argsValidation = Object.keys(props.argsSpec).reduce((acc, argkey) => {
+      acc[argkey] = {};
+      return acc;
+    }, {});
     this.state = {
       argsValues: null,
       argsValidation: {},
@@ -142,10 +146,7 @@ export default class SetupTab extends React.Component {
       argsEnabled
     } = initializeArgValues(argsSpec, argsInitValues || {});
 
-    Object.keys(argsSpec).forEach((argkey) => {
-      // these argkeys do not get rendered inputs
-      if (argkey === 'n_workers'
-        || argsSpec[argkey].order === 'hidden') { return; }
+    let argsValues = initializeArgValues(argsSpec, uiSpec, argsInitValues || {});
 
       // Update any dependent args in response to this arg's value
       const argumentSpec = { ...argsSpec[argkey] };
@@ -254,6 +255,7 @@ export default class SetupTab extends React.Component {
    */
   updateArgValues(key, value) {
     let { argsValues } = this.state;
+    const { uiSpec } = this.props;
     argsValues[key].value = value;
     argsValues[key].touched = true;
 
@@ -380,7 +382,6 @@ export default class SetupTab extends React.Component {
           )
           : <span>Run</span>
       );
-
       return (
         <Container fluid>
           <Row>
@@ -391,6 +392,7 @@ export default class SetupTab extends React.Component {
               argsEnabled={argsEnabled}
               argsDropdownOptions={argsDropdownOptions}
               sortedArgKeys={sortedArgKeys}
+              argsOrder={this.props.uiSpec.order}
               pyModuleName={pyModuleName}
               updateArgValues={this.updateArgValues}
               batchUpdateArgs={this.batchUpdateArgs}

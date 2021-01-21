@@ -71,8 +71,8 @@ export default class ArgInput extends React.PureComponent {
       isValid,
       selectFile,
       touched,
-      ui_option,
       dropdownOptions,
+      control_option,
       value,
     } = this.props;
     let { validationMessage } = this.props;
@@ -255,7 +255,7 @@ ArgInput.propTypes = {
   argSpec: PropTypes.object.isRequired,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
   touched: PropTypes.bool,
-  ui_option: PropTypes.string,
+  control_option: PropTypes.string,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
   handleChange: PropTypes.func.isRequired,
@@ -267,7 +267,7 @@ ArgInput.propTypes = {
 ArgInput.defaultProps = {
   value: undefined,
   touched: false,
-  ui_option: undefined,
+  control_option: undefined,
   isValid: undefined,
   validationMessage: '',
 };

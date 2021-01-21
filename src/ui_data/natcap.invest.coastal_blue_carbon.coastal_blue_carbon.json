@@ -1,77 +1,29 @@
 {
-    "workspace_dir": {
-        "order": null
-    },
-    "results_suffix": {
-        "order": null
-    },
-    "lulc_lookup_uri": {
-        "order": null
-    },
-    "lulc_transition_matrix_uri": {
-        "order": null
-    },
-    "carbon_pool_initial_uri": {
-        "order": null
-    },
-    "carbon_pool_transient_uri": {
-        "order": null
-    },
-    "lulc_baseline_map_uri": {
-        "order": null
-    },
-    "lulc_baseline_year": {
-        "order": null
-    },
-    "lulc_transition_maps_list": {
-        "order": null,
-        "ui_option": "disable",
-        "ui_control": [
-            "lulc_transition_years_list"
-        ]
-    },
-    "lulc_transition_years_list": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "analysis_year": {
-        "order": null
-    },
-    "do_economic_analysis": {
-        "order": null,
-        "ui_control": [
-            "inflation_rate",
-            "discount_rate",
-            "price"
-        ]
-    },
-    "do_price_table": {
-        "order": null,
-        "ui_control": [
-            "inflation_rate",
-            "price_table_uri",
-            "price"
-        ]
-    },
-    "price": {
-        "order": null,
-        "ui_option": "disable",
-        "ui_control": [
-            "inflation_rate",
-            "price_table_uri",
-            "price"
-        ]
-    },
-    "inflation_rate": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "price_table_uri": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "discount_rate": {
-        "order": null,
-        "ui_option": "disable"
+    "order": [
+        ["workspace_dir", "results_suffix"],
+        ["landcover_snapshot_csv", "biophysical_table_path", "landcover_transitions_table", "analysis_year"],
+        ["do_economic_analysis", "use_price_table", "price", "inflation_rate", "price_table_path", "discount_rate"]
+    ],
+    "argsOptions": {
+        "do_economic_analysis": {
+            "control_targets": [
+                "use_price_table", "price", "inflation_rate", "price_table_path", "discount_rate"
+            ]
+        },
+        "use_price_table": {
+            "control_option": "disable"
+        },
+        "price": {
+            "control_option": "disable"
+        },
+        "inflation_rate": {
+            "control_option": "disable"
+        },
+        "price_table_path": {
+            "control_option": "disable"
+        },
+        "discount_rate": {
+            "control_option": "disable"
+        } 
     }
 }

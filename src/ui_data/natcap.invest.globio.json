@@ -1,13 +1,14 @@
 {
-    "workspace_dir": {
-        "order": null
-    },
-    "results_suffix": {
-        "order": null
-    },
+    "order": [
+        ["workspace_dir", "results_suffix"],
+        ["lulc_to_globio_table_path", "aoi_path", "lulc_path", "infrastructure_dir"],
+        ["pasture_path", "potential_vegetation_path", "primary_threshold", "pasture_threshold"],
+        ["intensification_fraction", "msa_parameters_path"],
+        ["predefined_globio", "globio_lulc_path"]
+
+    ],
     "predefined_globio": {
-        "order": null,
-        "ui_control": [
+        "control_targets": [
             "lulc_to_globio_table_path",
             "globio_lulc_path",
             "potential_vegetation_path",
@@ -18,43 +19,24 @@
         ]
     },
     "lulc_path": {
-        "order": null,
-        "ui_option": "disable"
+        "control_option": "disable"
     },
     "lulc_to_globio_table_path": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "infrastructure_dir": {
-        "order": null
+        "control_option": "disable"
     },
     "pasture_path": {
-        "order": null,
-        "ui_option": "disable"
+        "control_option": "disable"
     },
     "potential_vegetation_path": {
-        "order": null,
-        "ui_option": "disable"
+        "control_option": "disable"
     },
     "pasture_threshold": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "intensification_fraction": {
-        "order": null
+        "control_option": "disable"
     },
     "primary_threshold": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "msa_parameters_path": {
-        "order": null
-    },
-    "aoi_path": {
-        "order": null
+        "control_option": "disable"
     },
     "globio_lulc_path": {
-        "order": null,
-        "ui_option": "disable"
+        "control_option": "disable"
     }
 }

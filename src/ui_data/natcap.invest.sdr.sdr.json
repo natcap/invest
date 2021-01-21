@@ -1,41 +1,10 @@
 {
-    "workspace_dir": {
-        "order": null
-    },
-    "results_suffix": {
-        "order": null
-    },
-    "dem_path": {
-        "order": null
-    },
-    "erosivity_path": {
-        "order": null
-    },
-    "erodibility_path": {
-        "order": null
-    },
-    "lulc_path": {
-        "order": null
-    },
-    "watersheds_path": {
-        "order": null
-    },
-    "biophysical_table_path": {
-        "order": null
-    },
-    "threshold_flow_accumulation": {
-        "order": null
-    },
-    "k_param": {
-        "order": null
-    },
-    "sdr_max": {
-        "order": null
-    },
-    "ic_0_param": {
-        "order": null
-    },
-    "drainage_path": {
-        "order": null
-    }
+    "order": [
+        ["workspace_dir", "results_suffix"],
+        ["dem_path", "erosivity_path", "erodibility_path"],
+        ["lulc_path", "biophysical_table_path"],
+        ["watersheds_path", "drainage_path"],
+        ["threshold_flow_accumulation", "k_param", "sdr_max", "ic_0_param"]
+    ],
+    "argsOptions": {}    
 }

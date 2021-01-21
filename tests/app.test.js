@@ -11,6 +11,7 @@ import {
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
+import { fileRegistry } from '../src/constants';
 import InvestTab from '../src/components/InvestTab';
 import App from '../src/app';
 import {
@@ -375,11 +376,22 @@ describe('InVEST subprocess testing', () => {
     module: 'natcap.invest.dot',
   };
 
+  const uiSpec = {
+    order: [['workspace_dir', 'results_suffix']],
+    argsOptions: {}
+  }
+  const uiSpecFilePath = path.join(
+    fileRegistry.INVEST_UI_DATA, `${spec.module}.json`
+  );
+
   const dummyTextToLog = JSON.stringify(spec.args);
   let fakeWorkspace;
   let mockInvestProc;
 
   beforeEach(() => {
+    // this can't go into the testing workspace because the model
+    // will look for it in /ui_data 
+    fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
@@ -413,6 +425,7 @@ describe('InVEST subprocess testing', () => {
 
   afterEach(async () => {
     mockInvestProc = null;
+    fs.unlinkSync(uiSpecFilePath);
     cleanupDir(fakeWorkspace);
     await InvestJob.clearStore();
     jest.resetAllMocks();

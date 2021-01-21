@@ -1,32 +1,8 @@
 {
-    "workspace_dir": {
-        "order": null
-    },
-    "results_suffix": {
-        "order": null
-    },
-    "lulc_cur_path": {
-        "order": null
-    },
-    "lulc_fut_path": {
-        "order": null
-    },
-    "lulc_bas_path": {
-        "order": null
-    },
-    "threat_raster_folder": {
-        "order": null
-    },
-    "threats_table_path": {
-        "order": null
-    },
-    "access_vector_path": {
-        "order": null
-    },
-    "sensitivity_table_path": {
-        "order": null
-    },
-    "half_saturation_constant": {
-        "order": null
-    }
+    "order": [
+        ["workspace_dir", "results_suffix"],
+        ["lulc_cur_path", "lulc_fut_path", "lulc_bas_path"],
+        ["threats_table_path", "access_vector_path", "sensitivity_table_path", "half_saturation_constant"]
+    ],
+    "argsOptions": {}
 }

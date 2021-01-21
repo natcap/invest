@@ -1,81 +1,46 @@
 {
-    "workspace_dir": {
-        "order": 1.2
-    },
-    "results_suffix": {
-        "order": 1.3
-    },
-    "aoi_vector_path": {
-        "order": 1.4
-    },
-    "total_timesteps": {
-        "order": 1.5
-    },
-    "population_type": {
-        "order": 1.6
-    },
-    "sexsp": {
-        "order": 1.7
-    },
-    "harvest_units": {
-        "order": 1.8
-    },
-    "do_batch": {
-        "order": 1.9,
-        "ui_control": [
-            "population_csv_dir",
-            "population_csv_path"
-        ]
-    },
-    "population_csv_path": {
-        "order": 2.0,
-        "ui_option": "disable"
-    },
-    "population_csv_dir": {
-        "order": 2.1,
-        "ui_option": "disable"
-    },
-    "spawn_units": {
-        "order": 0.0
-    },
-    "total_init_recruits": {
-        "order": 0.1
-    },
-    "recruitment_type": {
-        "order": 0.2
-    },
-    "alpha": {
-        "order": 0.3
-    },
-    "beta": {
-        "order": 0.4
-    },
-    "total_recur_recruits": {
-        "order": 0.5
-    },
-    "migr_cont": {
-        "order": 0.6,
-        "ui_control": [
-            "migration_dir"
-        ]
-    },
-    "migration_dir": {
-        "order": 0.7,
-        "ui_option": "disable"
-    },
-    "val_cont": {
-        "order": 0.8,
-        "ui_control": [
-            "frac_post_process",
-            "unit_price"
-        ]
-    },
-    "frac_post_process": {
-        "order": 0.9,
-        "ui_option": "disable"
-    },
-    "unit_price": {
-        "order": 1.0,
-        "ui_option": "disable"
+    "order": [
+        ["workspace_dir", "results_suffix"],
+        ["aoi_vector_path", "total_timesteps"],
+        ["population_type", "sexsp", "harvest_units"],
+        ["do_batch", "population_csv_path", "population_csv_dir"],
+        ["total_init_recruits", "recruitment_type", "spawn_units", "alpha", "beta", "total_recur_recruits"],
+        ["migr_cont", "migration_dir"],
+        ["val_cont", "frac_post_process", "unit_price"]
+
+    ],
+    "argsOptions": {
+        "do_batch": {
+            "control_targets": [
+                "population_csv_dir",
+                "population_csv_path"
+            ]
+        },
+        "population_csv_path": {
+            "control_option": "disable"
+        },
+        "population_csv_dir": {
+            "control_option": "disable"
+        },
+        "migr_cont": {
+            "control_targets": [
+                "migration_dir"
+            ]
+        },
+        "migration_dir": {
+            "control_option": "disable"
+        },
+        "val_cont": {
+            "control_targets": [
+                "frac_post_process",
+                "unit_price"
+            ]
+        },
+        "frac_post_process": {
+            "control_option": "disable"
+        },
+        "unit_price": {
+            "control_option": "disable"
+        }
     }
 }

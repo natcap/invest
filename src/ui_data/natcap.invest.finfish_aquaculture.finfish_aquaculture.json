@@ -1,69 +1,44 @@
 {
-    "workspace_dir": {
-        "order": null
-    },
-    "ff_farm_loc": {
-        "order": null
-    },
-    "farm_ID": {
-        "order": null
-    },
-    "g_param_a": {
-        "order": null
-    },
-    "g_param_b": {
-        "order": null
-    },
-    "g_param_tau": {
-        "order": null
-    },
-    "use_uncertainty": {
-        "order": null,
-        "ui_control": [
-            "g_param_b_sd",
-            "g_param_a_sd",
-            "num_monte_carlo_runs"
-        ]
-    },
-    "g_param_a_sd": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "g_param_b_sd": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "num_monte_carlo_runs": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "water_temp_tbl": {
-        "order": null
-    },
-    "farm_op_tbl": {
-        "order": null
-    },
-    "outplant_buffer": {
-        "order": null
-    },
-    "do_valuation": {
-        "order": null,
-        "ui_control": [
-            "frac_p",
-            "discount",
-            "p_per_kg"
-        ]
-    },
-    "p_per_kg": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "frac_p": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "discount": {
-        "order": null,
-        "ui_option": "disable"
+    "order": [
+        ["workspace_dir"],
+        ["ff_farm_loc", "farm_ID"],
+        ["g_param_a", "g_param_b", "g_param_tau"],
+        ["use_uncertainty", "g_param_a_sd", "g_param_b_sd", "num_monte_carlo_runs"],
+        ["water_temp_tbl", "farm_op_tbl", "outplant_buffer"],
+        ["do_valuation", "p_per_kg", "frac_p", "discount"]
+    ],
+    "argsOptions": {
+        "use_uncertainty": {
+            "control_targets": [
+                "g_param_b_sd",
+                "g_param_a_sd",
+                "num_monte_carlo_runs"
+            ]
+        },
+        "g_param_a_sd": {
+            "control_option": "disable"
+        },
+        "g_param_b_sd": {
+            "control_option": "disable"
+        },
+        "num_monte_carlo_runs": {
+            "control_option": "disable"
+        },
+        "do_valuation": {
+            "control_targets": [
+                "frac_p",
+                "discount",
+                "p_per_kg"
+            ]
+        },
+        "p_per_kg": {
+            "control_option": "disable"
+        },
+        "frac_p": {
+            "control_option": "disable"
+        },
+        "discount": {
+            "control_option": "disable"
+        }
     }
 }

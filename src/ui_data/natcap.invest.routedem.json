@@ -1,39 +1,37 @@
 {
-    "workspace_dir": {
-        "order": null
-    },
-    "results_suffix": {
-        "order": null
-    },
-    "dem_path": {
-        "order": null
-    },
-    "dem_band_index": {
-        "order": null
-    },
-    "algorithm": {
-        "order": null
-    },
-    "calculate_flow_direction": {
-        "order": null
-    },
-    "calculate_flow_accumulation": {
-        "order": null
-    },
-    "calculate_stream_threshold": {
-        "order": null,
-        "ui_control": [
-            "threshold_flow_accumulation"
-        ]
-    },
-    "threshold_flow_accumulation": {
-        "order": null,
-        "ui_option": "disable"
-    },
-    "calculate_downstream_distance": {
-        "order": null
-    },
-    "calculate_slope": {
-        "order": null
-    }
+    "order": [
+        ["workspace_dir", "results_suffix"],
+        ["dem_path", "dem_band_index"],
+        ["calculate_slope"],
+        ["algorithm"],
+        ["calculate_flow_direction"],
+        ["calculate_flow_accumulation"],
+        ["calculate_stream_threshold", "threshold_flow_accumulation", "calculate_downstream_distance"]
+    ],
+    "argsOptions": {
+        "calculate_flow_direction": {
+            "control_targets": [
+                "calculate_flow_accumulation"
+            ]
+        },
+        "calculate_flow_accumulation": {
+            "control_option": "disable",
+            "control_targets": [
+                "calculate_stream_threshold"
+            ]
+        },
+        "calculate_stream_threshold": {
+            "control_option": "disable",
+            "control_targets": [
+                "threshold_flow_accumulation",
+                "calculate_downstream_distance"
+            ]
+        },
+        "threshold_flow_accumulation": {
+            "control_option": "disable"
+        },
+        "calculate_downstream_distance": {
+            "control_option": "disable"
+        }
+    } 
 }
