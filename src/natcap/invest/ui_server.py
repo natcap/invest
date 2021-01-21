@@ -109,6 +109,7 @@ def get_vector_colnames():
 
     Body (JSON string):
         vector_path (string): path to a vector file
+        
     Returns:
         a JSON string.
     """
