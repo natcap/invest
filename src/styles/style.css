@@ -258,24 +258,25 @@ input[type=text]::placeholder {
 /* InVEST Log Tab */
 #log-display {
 	overflow: auto;
-  white-space: pre-wrap;
+	white-space: pre-wrap;
 	height: 85vh;
-  background-color: #191919;
+	/*background-color: #191919;*/
 }
 
 #log-text {
 	font-family: monospace;
 	font-size:1.3rem;
-	color: #e5e5e5;
+	color: #000;
 }
 
 #log-text .invest-log-primary {
-	color: #fff;
-	font-size: 1.2rem;
+	color: #000;
+	font-weight: bold;
 }
 
 #log-text .invest-log-error {
-	color: #ffc13e;
+	color: #f13232;
+	font-weight: bold;
 }
 
 .invest-sidebar-col .alert {

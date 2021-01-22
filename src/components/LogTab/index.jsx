@@ -15,14 +15,15 @@ import Portal from '../Portal';
 import { getLogger } from '../../logger';
 
 const logger = getLogger(__filename.split('/').slice(-2).join('/'));
-const INVEST_LOG_PATTERN = '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}';
-// e.g. '2020-10-16 07:13:04,325 carbon.execute() ...'
 
 const LOG_TEXT_TAG = 'span';
 const ALLOWED_HTML_OPTIONS = {
   allowedTags: [LOG_TEXT_TAG],
   allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
 };
+const LOG_ERROR_REGEX = /(Traceback)|(([A-Z]{1}[a-z]*){1,}Error)|(ERROR)|(^\s\s*)/;
+const INVEST_LOG_PREFIX = '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}';
+// e.g. '2020-10-16 07:13:04,325 (natcap.invest.carbon) INFO ...'
 
 class LogDisplay extends React.Component {
   constructor(props) {
@@ -79,14 +80,9 @@ export default class LogTab extends React.Component {
       logdata: null,
     };
     this.tail = null;
-    const { pyModuleName } = this.props;
-    const primaryPyLogger = `${pyModuleName}`.split('.').slice(-1)[0];
-    const primaryPattern = new RegExp(
-      `${INVEST_LOG_PATTERN} ${primaryPyLogger}`
-    );
     this.logPatterns = {
-      'invest-log-error': /(Traceback)|(^\s*[A-Z]{1}[a-z]*Error)|(ERROR)|(^\s\s*)/,
-      'invest-log-primary': primaryPattern,
+      'invest-log-error': LOG_ERROR_REGEX,
+      'invest-log-primary': new RegExp(this.props.pyModuleName),
     };
 
     this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
@@ -203,7 +199,7 @@ export default class LogTab extends React.Component {
         }
       } else {
         // Placeholder for a recent job re-loaded, logStdErr data doesn't persist.
-        lastCall = 'Error (see Log for details)';
+        lastCall = 'Model ended with error - see Log for details';
       }
 
       ModelStatusAlert = (
