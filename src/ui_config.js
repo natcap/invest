@@ -1,4 +1,4 @@
-import { getVectorColumnNames } from './server_requests';
+import { getVectorColumnNames, getVectorHasPoints } from './server_requests';
 
 
 // Some input fields are rendered differently conditional upon the state of other input fields.
@@ -32,6 +32,13 @@ function isSufficient(argkey, state) {
 function isNotSufficient(argkey, state) {
     return !isSufficient(argkey, state);
 }
+
+async function test() {
+    const result = await getVectorHasPoints('/Users/emily/Downloads/InVEST_3.9.0_sample_data/Aquaculture/Input');
+    console.log('test:', result);
+}
+
+test();
 
 
 const uiSpec = {
@@ -124,7 +131,10 @@ const uiSpec = {
         enabledFunctions: {
             outlet_vector_path: isNotSufficient.bind(null, 'detect_pour_points'),
             skip_invalid_geometry: isNotSufficient.bind(null, 'detect_pour_points'),
-            // TODO snap_points enabled on _vector_may_contain_points, need new endpoint
+            snap_points: (async (state) => {
+                const hasPoints = await getVectorHasPoints(state.argsValues['outlet_vector_path'].value);
+                return (isSufficient('outlet_vector_path', state) && hasPoints) || isSufficient('detect_pour_points', state);
+            }),
             flow_threshold: isSufficient.bind(null, 'snap_points'),
             snap_distance: isSufficient.bind(null, 'snap_points')
         }
@@ -140,8 +150,8 @@ const uiSpec = {
         ],
         dropdownFunctions: {
             farm_ID: (async (state) => {
-                    const result = await getVectorColumnNames(state.argsValues['ff_farm_loc'].value);
-                    return result.colnames || [];
+                    const colnames = await getVectorColumnNames(state.argsValues['ff_farm_loc'].value);
+                    return result;
                 }
             )
         },
@@ -242,8 +252,12 @@ const uiSpec = {
             ["precipitation_path", "eto_path", "depth_to_root_rest_layer_path", "pawc_path"],
             ["lulc_path", "biophysical_table_path", "seasonality_constant"],
             ["watersheds_path", "sub_watersheds_path"],
-            ["demand_table_path", "valuation_table_path"]
-        ]
+            ["do_scarcity_and_valuation", "demand_table_path", "valuation_table_path"]
+        ],
+        enabledFunctions: {
+            demand_table_path: isSufficient.bind(null, 'do_scarcity_and_valuation'),
+            valuation_table_path: isSufficient.bind(null, 'do_scarcity_and_valuation')
+        }
     },
     'Nutrient Delivery Ratio Model (NDR)': {
         order: [
@@ -252,7 +266,13 @@ const uiSpec = {
             ["calc_p", "subsurface_critical_length_p", "subsurface_eff_p"],
             ["calc_n", "subsurface_critical_length_n", "subsurface_eff_n"],
             ["threshold_flow_accumulation", "k_param"],
-        ]
+        ],
+        enabledFunctions: {
+            subsurface_critical_length_p: isSufficient.bind(null, 'calc_p'),
+            subsurface_eff_p: isSufficient.bind(null, 'calc_p'),
+            subsurface_critical_length_n: isSufficient.bind(null, 'calc_n'),
+            subsurface_eff_n: isSufficient.bind(null, 'calc_n')
+        }
     },
     'Crop Pollination': {
         order: [
@@ -267,7 +287,13 @@ const uiSpec = {
             ["aoi_path", "start_year", "end_year"],
             ["compute_regression", "predictor_table_path", "scenario_predictor_table_path"],
             ["grid_aoi", "grid_type", "cell_size"]
-        ]
+        ],
+        enabledFunctions: {
+            predictor_table_path: isSufficient.bind(null, 'compute_regression'),
+            scenario_predictor_table_path: isSufficient.bind(null, 'compute_regression'),
+            grid_type: isSufficient.bind(null, 'grid_aoi'),
+            cell_size: isSufficient.bind(null, 'grid_aoi')
+        }
     },
     'RouteDEM': {
         order: [
@@ -278,7 +304,13 @@ const uiSpec = {
             ["calculate_flow_direction"],
             ["calculate_flow_accumulation"],
             ["calculate_stream_threshold", "threshold_flow_accumulation", "calculate_downstream_distance"]
-        ]
+        ],
+        enabledFunctions: {
+            calculate_flow_accumulation: isSufficient.bind(null, 'calculate_flow_direction'),
+            calculate_stream_threshold: isSufficient.bind(null, 'calculate_flow_accumulation'),
+            threshold_flow_accumulation: isSufficient.bind(null, 'calculate_stream_threshold'),
+            calculate_downstream_distance: isSufficient.bind(null, 'calculate_stream_threshold')
+        }
     },
     'Scenario Generator: Proximity Based': {
         order: [
@@ -293,7 +325,13 @@ const uiSpec = {
             ["workspace_dir", "results_suffix"],
             ["aoi_path", "structure_path", "dem_path", "refraction"],
             ["do_valuation", "valuation_function", "a_coef", "b_coef", "max_valuation_radius"]
-        ]
+        ],
+        enabledFunctions: {
+            valuation_function: isSufficient.bind(null, 'do_valuation'),
+            a_coef: isSufficient.bind(null, 'do_valuation'),
+            b_coef: isSufficient.bind(null, 'do_valuation'),
+            max_valuation_radius: isSufficient.bind(null, 'do_valuation')
+        }
     },
     'Sediment Delivery Ratio Model (SDR)': {
         order: [
@@ -307,14 +345,24 @@ const uiSpec = {
     'Seasonal Water Yield': {
         order: [
             ["workspace_dir", "results_suffix"],
-            ["et0_dir", "precip_dir", "rain_events_table_path"],
             ["lulc_raster_path", "biophysical_table_path"],
-            ["dem_raster_path", "soil_group_path", "aoi_path"],
-            ["threshold_flow_accumulation", "alpha_m", "beta_i", "gamma"],
-            ["user_defined_climate_zones", "climate_zone_table_path", "climate_zone_raster_path"],
-            ["user_defined_local_recharge", "l_path"],
-            ["monthly_alpha", "monthly_alpha_path"]
-        ]
+            ["dem_raster_path", "aoi_path"],
+            ["threshold_flow_accumulation", "beta_i", "gamma"],
+            ["user_defined_local_recharge", "l_path", "et0_dir", "precip_dir", "soil_group_path"],
+            ["monthly_alpha", "alpha_m", "monthly_alpha_path"],
+            ["user_defined_climate_zones", "rain_events_table_path", "climate_zone_table_path", "climate_zone_raster_path"],
+        ],
+        enabledFunctions: {
+            l_path: isSufficient.bind(null, 'user_defined_local_recharge'),
+            et0_dir: isNotSufficient.bind(null, 'user_defined_local_recharge'),
+            precip_dir: isNotSufficient.bind(null, 'user_defined_local_recharge'),
+            soil_group_path: isNotSufficient.bind(null, 'user_defined_local_recharge'),
+            rain_events_table_path: isNotSufficient.bind(null, 'user_defined_climate_zones'),
+            climate_zone_table_path: isSufficient.bind(null, 'user_defined_climate_zones'),
+            climate_zone_raster_path: isSufficient.bind(null, 'user_defined_climate_zones'),
+            monthly_alpha_path: isSufficient.bind(null, 'monthly_alpha'),
+            alpha_m: isNotSufficient.bind(null, 'monthly_alpha')
+        }
     },
     'Urban Cooling Model': {
         order: [
@@ -327,6 +375,7 @@ const uiSpec = {
             ["user_defined_local_recharge", "l_path"],
             ["monthly_alpha", "monthly_alpha_path"]
         ]
+        // how to handle default values?
     },
     'Urban Flood Risk Mitigation': {
         order: [
@@ -335,6 +384,42 @@ const uiSpec = {
             ["lulc_path", "curve_number_table_path", "soils_hydrological_group_raster_path"],
             ["built_infrastructure_vector_path", "infrastructure_damage_loss_table_path"]
         ]
+    },
+    'Wave Energy': {
+        order: [
+            ["workspace_dir", "results_suffix"],
+            ["wave_base_data_path", "analysis_area_path", "aoi_path", "dem_path"],
+            ["machine_perf_path", "machine_param_path"],
+            ["valuation_container", "land_gridPts_path", "machine_econ_path", "number_of_machines"]
+        ],
+        enabledFunctions: {
+            land_gridPts_path: isSufficient.bind(null, 'valuation_container'),
+            machine_econ_path: isSufficient.bind(null, 'valuation_container'),
+            number_of_machines: isSufficient.bind(null, 'valuation_container')
+        }
+    },
+    'Wind Energy': {
+        order: [
+            ["workspace_dir", "results_suffix"],
+            ["wind_data_path", "aoi_vector_path", "bathymetry_path", "land_polygon_vector_path", "global_wind_parameters_path"],
+            ["turbine_parameters_path", "number_of_turbines", "min_depth", "max_depth", "min_distance", "max_distance"],
+            ["valuation_container", "foundation_cost", "discount_rate", "grid_points_path", "avg_grid_distance", "price_table", "wind_schedule", "wind_price", "rate_change"]
+        ],
+        enabledFunctions: {
+            land_polygon_vector_path: isSufficient.bind(null, 'aoi_vector_path'),
+            min_distance: isSufficient.bind(null, 'land_polygon_vector_path'),
+            max_distance: isSufficient.bind(null, 'land_polygon_vector_path'),
+            foundation_cost: isSufficient.bind(null, 'valuation_container'),
+            discount_rate: isSufficient.bind(null, 'valuation_container'),
+            grid_points_path: isSufficient.bind(null, 'valuation_container'),
+            avg_grid_distance: isSufficient.bind(null, 'valuation_container'),
+            price_table: isSufficient.bind(null, 'valuation_container'),
+            wind_schedule: isSufficient.bind(null, 'price_table'),
+            wind_price: (state => { return isSufficient('valuation_container', state) &&
+                isNotSufficient('price_table', state)}),
+            rate_change: (state => {return isSufficient('valuation_container', state) &&
+                isNotSufficient('price_table', state)})                
+        }
     }
 }
 
