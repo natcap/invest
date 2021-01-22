@@ -11,64 +11,144 @@
     </span>
     <br/> <br/>
 
-    Documentation: <a href="http://releases.naturalcapitalproject.org/
-    invest-userguide/latest/">http://releases.naturalcapitalproject.org/
-    invest-userguide/latest/</a><br/>
-    Homepage: <a href="http://naturalcapitalproject.org">
-                naturalcapitalproject.org</a><br/>
-    Copyright 2017, The Natural Capital Project<br/>
-    License:
-    <a href="https://github.com/natcap/invest/blob/master/LICENSE.txt">
-                BSD 3-clause</a><br/>
-    Project page: <a href="https://github.com/natcap/invest">
-                github.com/natcap/invest</a><br/>
+    Documentation: 
+    <a
+      href="http://releases.naturalcapitalproject.org/invest-userguide/latest/"
+      onClick="handleClick(event)">
+      http://releases.naturalcapitalproject.org/invest-userguide/latest/
+    </a>
+    <br/>
+    Homepage: 
+    <a
+      href="https://naturalcapitalproject.stanford.edu/"
+      onClick="handleClick(event)">
+      https://naturalcapitalproject.stanford.edu/
+    </a>
+    <br/>
+    Copyright 2021, The Natural Capital Project
+    <br/>
+    License: 
+    <a
+      href="https://github.com/natcap/invest/blob/master/LICENSE.txt"
+      onClick="handleClick(event)">
+      BSD 3-clause
+    </a>
+    <br/>
+    Project pages: 
+    <br/>
+    <a
+      href="https://github.com/natcap/invest"
+      onClick="handleClick(event)">
+      github.com/natcap/invest
+    </a>
+    <br/>
+    <a
+      href="https://github.com/natcap/invest-workbench"
+      onClick="handleClick(event)">
+      github.com/natcap/invest-workbench
+    </a>
+    <br/>
 
     <h2>Open-Source Licenses</h2>
     <table>
         <tr>
           <td>PyInstaller</td>
           <td>GPL</td>
-          <td><a href='http://pyinstaller.org'>http://pyinstaller.org</a></td>
+          <td>
+            <a
+              href='http://pyinstaller.org'
+              onClick="handleClick(event)">
+              http://pyinstaller.org
+            </a>
+          </td>
         </tr>
         <tr>
           <td>GDAL</td>
           <td>MIT and others</td>
-          <td><a href='http://gdal.org'>http://gdal.org</a></td>
+          <td>
+            <a
+              href='http://gdal.org'
+              onClick="handleClick(event)">
+              http://gdal.org
+            </a>
+          </td>
         </tr>
         <tr>
           <td>numpy</td>
           <td>BSD</td>
-          <td><a href='http://numpy.org'>http://numpy.org</a></td>
+          <td>
+            <a
+              href='http://numpy.org'
+              onClick="handleClick(event)">
+              http://numpy.org
+            </a>
+          </td>
         </tr>
         <tr>
           <td>pyamg</td>
           <td>BSD</td>
-          <td><a href='http://github.com/pyamg/pyamg'>http://github.com/pyamg/pyamg</a></td>
+          <td>
+            <a
+              href='http://github.com/pyamg/pyamg'
+              onClick="handleClick(event)">
+              http://github.com/pyamg/pyamg
+            </a>
+          </td>
         </tr>
         <tr>
           <td>pygeoprocessing</td>
           <td>BSD</td>
-          <td><a href='https://github.com/natcap/pygeoprocessing'>https://github.com/natcap/pygeoprocessing</a></td>
+          <td>
+            <a
+              href='https://github.com/natcap/pygeoprocessing'
+              onClick="handleClick(event)">
+              https://github.com/natcap/pygeoprocessing
+            </a>
+          </td>
        </tr>
         <tr>
           <td>PyQt</td>
           <td>GPL</td>
-          <td><a href='https://riverbankcomputing.com/software/pyqt/intro'>https://riverbankcomputing.com/software/pyqt/intro</a></td>
+          <td>
+            <a
+              href='https://riverbankcomputing.com/software/pyqt/intro'
+              onClick="handleClick(event)">
+              https://riverbankcomputing.com/software/pyqt/intro
+            </a>
+          </td>
        </tr>
         <tr>
           <td>rtree</td>
           <td>LGPL</td>
-          <td><a href='http://toblerity.org/rtree/'>http://toblerity.org/rtree/</a></td>
+          <td>
+            <a
+              href='http://toblerity.org/rtree/'
+              onClick="handleClick(event)">
+              http://toblerity.org/rtree/
+            </a>
+          </td>
         </tr>
         <tr>
           <td>scipy</td>
           <td>BSD</td>
-          <td><a href='http://www.scipy.org/'>http://www.scipy.org/</a></td>
+          <td>
+            <a
+              href='http://www.scipy.org/'
+              onClick="handleClick(event)">
+              http://www.scipy.org/
+            </a>
+          </td>
         </tr>
         <tr>
           <td>shapely</td>
           <td>BSD</td>
-          <td><a href='http://github.com/Toblerity/Shapely'>http://github.com/Toblerity/Shapely</a></td>
+          <td>
+            <a
+              href='http://github.com/Toblerity/Shapely'
+              onClick="handleClick(event)">
+              http://github.com/Toblerity/Shapely
+            </a>
+          </td>
         </tr>
     </table>
     <br/>
@@ -78,7 +158,7 @@
     </p>
   </body>
   <script>
-    const { ipcRenderer } = require('electron');
+    const { ipcRenderer, shell } = require('electron');
     const node1 = document.getElementById('invest-version');
     const node2 = document.getElementById('workbench-version');
     ipcRenderer.on('variable-reply', (event, arg) => {
@@ -88,5 +168,10 @@
       node2.appendChild(text2)
     })
     ipcRenderer.send('variable-request', 'ping');
+
+    function handleClick(event) {
+      event.preventDefault();
+      shell.openExternal(event.target.href);
+    }
   </script>
 </html>
