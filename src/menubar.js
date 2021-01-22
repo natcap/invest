@@ -121,7 +121,7 @@ function openAboutWindow(parentWindow, isDevMode) {
     },
   });
   child.setMenu(null);
-  child.loadURL(`file://${__dirname}/about.html`);
+  child.loadURL(`file://${__dirname}/static/about.html`);
   if (isDevMode) {
     child.webContents.openDevTools();
   }
@@ -141,7 +141,7 @@ function openReportWindow(parentWindow, isDevMode) {
     },
   });
   child.setMenu(null);
-  child.loadURL(`file://${__dirname}/report_a_problem.html`);
+  child.loadURL(`file://${__dirname}/static/report_a_problem.html`);
   if (isDevMode) {
     child.webContents.openDevTools();
   }

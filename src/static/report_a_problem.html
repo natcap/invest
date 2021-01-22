@@ -16,7 +16,7 @@
     <p>
       <b>Please include the most recent logfile, or all of them.</b>
     </p>
-    <button type="button" onclick="handleClick()">
+    <button type="button" onclick="handleButtonClick()">
       Find My Logs
     </button>
     <p>
@@ -33,7 +33,7 @@
   </body>
   <script>
     const { shell, ipcRenderer } = require('electron');
-    const { getLogger } = require('./logger');
+    const { getLogger } = require('../logger');
     const logger = getLogger(__filename.split('/').slice(-1)[0]);
     ipcRenderer.on('variable-reply', (event, arg) => {
       userDataPath = arg.userDataPath;
