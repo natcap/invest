@@ -96,7 +96,7 @@ export default class SetupTab extends React.Component {
     if (enabledFunctions) {
       const argsEnabled = this.state.argsEnabled;
       for (const key in enabledFunctions) {
-        argsEnabled[key] = enabledFunctions[key](this.state);
+        argsEnabled[key] = await enabledFunctions[key](this.state);
       }
       this.setState({argsEnabled: argsEnabled});
     }
@@ -119,7 +119,6 @@ export default class SetupTab extends React.Component {
     * not on every re-render.
     */
     const { argsInitValues, argsSpec, uiSpec } = this.props;
-    console.log('uiSpec:', uiSpec);
 
     const {
       argsValues, 
@@ -250,7 +249,6 @@ export default class SetupTab extends React.Component {
   async investValidate(argsValues) {
     const { argsSpec, pyModuleName } = this.props;
     const argsValidation = this.state.argsValidation;
-    console.log('argsValidation:', argsValidation);
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
       model_module: pyModuleName,
@@ -265,7 +263,6 @@ export default class SetupTab extends React.Component {
         const argkeys = result[0]; // array of arg keys
         const message = result[1]; // string that describes those args
         argkeys.forEach((key) => {
-          console.log('arg key', key, 'invalid');
           argsValidation[key].validationMessage = message;
           argsValidation[key].valid = false;
           keyset.delete(key);
@@ -273,7 +270,6 @@ export default class SetupTab extends React.Component {
       });
       // validated all, so ones left in keyset are valid
       keyset.forEach((k) => {
-        console.log('key', k, 'is valid');
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';
       });
@@ -308,7 +304,6 @@ export default class SetupTab extends React.Component {
       argsEnabled,
       argsDropdownOptions
     } = this.state;
-    console.log('argsEnabled:', argsEnabled)
     if (argsValues) {
       const {
         argsSpec,

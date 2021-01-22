@@ -117,11 +117,8 @@ export function fetchDatastackFromFile(payload) {
  * @param {string} payload - path to file
  * @returns {Promise} resolves array
  */
-export function getVectorColumnNames(payload) {
-  if (!payload) {
-    return [];
-  }
-  return (
+export async function getVectorColumnNames(payload) {
+  const result = await (
     fetch(`${HOSTNAME}:${process.env.PORT}/get_colnames`, {
       method: 'post',
       body: JSON.stringify({vector_path: payload}),
@@ -130,6 +127,26 @@ export function getVectorColumnNames(payload) {
       .then((response) => response.json())
       .catch((error) => logger.error(error.stack))
   );
+  return result.colnames;
+}
+
+/**
+ * Get a boolean indicating whether a vector file may contain points.
+ *
+ * @param {string} payload - path to file
+ * @returns {Promise} resolves boolean
+ */
+export async function getVectorHasPoints(payload) {
+  const result = await (
+    fetch(`${HOSTNAME}:${process.env.PORT}/vector_has_points`, {
+      method: 'post',
+      body: JSON.stringify({vector_path: payload}),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
+  return result.has_points;
 }
 
 /**
