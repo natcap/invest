@@ -119,7 +119,7 @@ export function fetchDatastackFromFile(payload) {
  */
 export async function getVectorColumnNames(payload) {
   const result = await (
-    fetch(`${HOSTNAME}:${process.env.PORT}/get_colnames`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/colnames`, {
       method: 'post',
       body: JSON.stringify({vector_path: payload}),
       headers: { 'Content-Type': 'application/json' },

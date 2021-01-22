@@ -33,20 +33,13 @@ function isNotSufficient(argkey, state) {
     return !isSufficient(argkey, state);
 }
 
-async function test() {
-    const result = await getVectorHasPoints('/Users/emily/Downloads/InVEST_3.9.0_sample_data/Aquaculture/Input');
-    console.log('test:', result);
-}
-
-test();
-
 
 const uiSpec = {
     'InVEST Carbon Model': {
         order: [
             ["workspace_dir", "results_suffix"],
             ["lulc_cur_path", "carbon_pools_path"],
-            ["calc_sequestration", "lulc_fut_path", "lulc_cur_year", "lulc_fut_year"],
+            ["calc_sequestration", "lulc_cur_year", "lulc_fut_path", "lulc_fut_year"],
             ["do_redd", "lulc_redd_path"],
             ["do_valuation", "price_per_metric_ton_of_c", "discount_rate", "rate_change"]
         ],
@@ -99,8 +92,8 @@ const uiSpec = {
         ],
         dropdownFunctions: {
             slr_field: (async (state) => {
-                    const result = await getVectorColumnNames(state.argsValues['slr_vector_path'].value);
-                    return result.colnames || [];
+                    const colnames = await getVectorColumnNames(state.argsValues['slr_vector_path'].value);
+                    return colnames;
                 }
             )
         },
@@ -113,13 +106,13 @@ const uiSpec = {
     'Crop Production Percentile Model': {
         order: [
             ["workspace_dir", "results_suffix"],
-            ["landcover_raster_path", "landcover_to_crop_table_path", "aggregate_polygon_path", "model_data_path"]
+            ["model_data_path", "landcover_raster_path", "landcover_to_crop_table_path", "aggregate_polygon_path"]
         ]
     },
     'Crop Production Regression Model': {
         order: [
             ["workspace_dir", "results_suffix"],
-            ["landcover_raster_path", "landcover_to_crop_table_path", "fertilization_rate_table_path", "aggregate_polygon_path", "model_data_path"]
+            ["model_data_path", "landcover_raster_path", "landcover_to_crop_table_path", "fertilization_rate_table_path", "aggregate_polygon_path"]
         ]
     },
     'DelineateIt: Watershed Delineation': {
@@ -141,7 +134,7 @@ const uiSpec = {
     },
     'Finfish Aquaculture': {
         order: [
-            ["workspace_dir"],
+            ["workspace_dir", "results_suffix"],
             ["ff_farm_loc", "farm_ID"],
             ["g_param_a", "g_param_b", "g_param_tau"],
             ["use_uncertainty", "g_param_a_sd", "g_param_b_sd", "num_monte_carlo_runs"],
@@ -151,7 +144,7 @@ const uiSpec = {
         dropdownFunctions: {
             farm_ID: (async (state) => {
                     const colnames = await getVectorColumnNames(state.argsValues['ff_farm_loc'].value);
-                    return result;
+                    return colnames;
                 }
             )
         },
@@ -252,12 +245,8 @@ const uiSpec = {
             ["precipitation_path", "eto_path", "depth_to_root_rest_layer_path", "pawc_path"],
             ["lulc_path", "biophysical_table_path", "seasonality_constant"],
             ["watersheds_path", "sub_watersheds_path"],
-            ["do_scarcity_and_valuation", "demand_table_path", "valuation_table_path"]
-        ],
-        enabledFunctions: {
-            demand_table_path: isSufficient.bind(null, 'do_scarcity_and_valuation'),
-            valuation_table_path: isSufficient.bind(null, 'do_scarcity_and_valuation')
-        }
+            ["demand_table_path", "valuation_table_path"]
+        ]
     },
     'Nutrient Delivery Ratio Model (NDR)': {
         order: [
@@ -367,15 +356,17 @@ const uiSpec = {
     'Urban Cooling Model': {
         order: [
             ["workspace_dir", "results_suffix"],
-            ["et0_dir", "precip_dir", "rain_events_table_path"],
-            ["lulc_raster_path", "biophysical_table_path"],
-            ["dem_raster_path", "soil_group_path", "aoi_path"],
-            ["threshold_flow_accumulation", "alpha_m", "beta_i", "gamma"],
-            ["user_defined_climate_zones", "climate_zone_table_path", "climate_zone_raster_path"],
-            ["user_defined_local_recharge", "l_path"],
-            ["monthly_alpha", "monthly_alpha_path"]
-        ]
-        // how to handle default values?
+            ["lulc_raster_path", "ref_eto_raster_path", "aoi_vector_path", "biophysical_table_path"],
+            ["t_ref", "uhi_max", "t_air_average_radius", "green_area_cooling_distance", "cc_method"],
+            ["do_energy_valuation", "building_vector_path", "energy_consumption_table_path"],
+            ["do_productivity_valuation", "avg_rel_humidity"],
+            ["cc_weight_shade", "cc_weight_albedo", "cc_weight_eti"]
+        ],
+        enabledFunctions: {
+            building_vector_path: isSufficient.bind(null, 'do_energy_valuation'),
+            energy_consumption_table_path: isSufficient.bind(null, 'do_energy_valuation'),
+            avg_rel_humidity: isSufficient.bind(null, 'do_productivity_valuation')
+        }
     },
     'Urban Flood Risk Mitigation': {
         order: [
