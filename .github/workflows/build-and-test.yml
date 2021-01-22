@@ -103,16 +103,45 @@ jobs:
                     requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
 
+            - name: Conda Environment Listing
+              shell: bash -l {0}
+              run: |
+                  conda list
+                  conda list --export > conda-env.txt
+
+            - name: Download Conda Env Artifact
+              continue-on-error: true
+              # Using 'dawidd6' since 'download-artifact' GH action doesn't
+              # support downloading artifacts from prior workflow runs
+              uses: dawidd6/action-download-artifact@v2
+              with:
+                  workflow: build-and-test.yml
+                  # Get frozen conda env artifact from last successful workflow
+                  workflow_conclusion: success
+                  name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
+                  path: ./conda-env-artifact
+
+            - name: Compare Conda Environments
+              continue-on-error: true
+              shell: bash -l {0}
+              run: |
+                  diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
+
             - name: Run model tests
               shell: bash -l {0}
               run: |
                   pip install $(find dist -name "natcap.invest*.whl")
                   make test
 
-            - uses: actions/upload-artifact@v1
+            - uses: actions/upload-artifact@v2
               with:
                   name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
                   path: dist
+
+            - uses: actions/upload-artifact@v2
+              with:
+                  name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
+                  path: ./conda-env.txt
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
@@ -191,7 +220,7 @@ jobs:
                   # natcap.invest from source and that it imports.
                   python -c "from natcap.invest import *"
 
-            - uses: actions/upload-artifact@v1
+            - uses: actions/upload-artifact@v2
               with:
                   name: Source distribution
                   path: dist
