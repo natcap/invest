@@ -8,6 +8,9 @@ import collections
 import pprint
 import multiprocessing
 import json
+import warnings
+import platform
+import os
 
 try:
     from . import __version__
@@ -531,6 +534,16 @@ def main(user_args=None):
     # testing of the model interfaces.
     if (args.subcommand == 'run' and not args.headless or
             args.subcommand == 'quickrun'):
+
+        # Creating this warning for future us to alert us to potential issues
+        # if/when we forget to define QT_MAC_WANTS_LAYER at runtime.
+        if (platform.system() == "Darwin" and
+                "QT_MAC_WANTS_LAYER"  not in os.environ):
+            warnings.warn(
+                "Mac OS X Big Sur may require the 'QT_MAC_WANTS_LAYER' "
+                "environment variable to be defined in order to run.  If "
+                "the application hangs on startup, set 'QT_MAC_WANTS_LAYER=1' "
+                "in the shell running this CLI.", RuntimeWarning)
 
         from natcap.invest.ui import inputs
 
