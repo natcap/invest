@@ -1,6 +1,4 @@
-const {
-  app, BrowserWindow, Menu, getCurrentWindow
-} = require('electron');
+const { app, BrowserWindow } = require('electron');
 
 const isMac = process.platform === 'darwin';
 
@@ -92,11 +90,11 @@ function menuTemplate(parentWindow, isDevMode) {
     },
     {
       label: 'About',
-      click: () => openAboutWindow(parentWindow, isDevMode),
-    },
-    {
-      label: 'Help',
       submenu: [
+        {
+          label: 'About InVEST',
+          click: () => openAboutWindow(parentWindow, isDevMode),
+        },
         {
           label: 'Report a problem',
           click: () => openReportWindow(parentWindow, isDevMode),
