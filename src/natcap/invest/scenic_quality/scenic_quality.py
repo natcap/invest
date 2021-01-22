@@ -68,7 +68,7 @@ ARGS_SPEC = {
                 "must intersect the Digital Elevation Model (DEM)."),
         },
         "structure_path": {
-            "name": "Features Impacted Scenic Quality",
+            "name": "Features Impacting Scenic Quality",
             "type": "vector",
             "required": True,
             "about": (
