@@ -13,6 +13,7 @@ from flask import Flask
 from flask import request
 import natcap.invest.cli
 import natcap.invest.datastack
+from natcap.invest.delineateit import delineateit
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
@@ -106,6 +107,7 @@ def get_invest_validate():
 @app.route('/colnames', methods=['POST'])
 def get_vector_colnames():
     """Get a list of column names from a vector.
+    This is used to fill in dropdown menu options in a couple models.
 
     Body (JSON string):
         vector_path (string): path to a vector file
@@ -116,10 +118,38 @@ def get_vector_colnames():
     payload = request.get_json()
     LOGGER.debug(payload)
     vector_path = payload['vector_path']
-    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-    colnames = [defn.GetName() for defn in vector.GetLayer().schema]
-    LOGGER.debug(colnames)
-    return json.dumps(colnames)
+    try:
+        vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
+        colnames = [defn.GetName() for defn in vector.GetLayer().schema]
+    except:
+        LOGGER.error(f'Could not read column names from vector {vector_path}')
+        colnames = []
+    LOGGER.debug({'colnames': colnames})
+    return json.dumps({'colnames': colnames})
+
+
+@app.route('/vector_has_points', methods=['POST'])
+def get_vector_has_points():
+    """Return boolean indicating if a vector may contain points.
+    This is used by the DelineateIt UI to determine if the 'snap points' 
+    option should be enabled.
+
+    Body (JSON string):
+        vector_path (string): path to a vector file
+
+    Returns:
+        a boolean.
+    """
+    payload = request.get_json()
+    LOGGER.debug(payload)
+    vector_path = payload['vector_path']
+    try:
+        has_points = delineateit._vector_may_contain_points(vector_path)
+    except:
+        LOGGER.error(f'Could not determine if vector {vector_path} contains points.')
+        has_points = True  # it may still contain points
+    LOGGER.debug({'has_points': has_points})
+    return json.dumps({'has_points': has_points})
 
 
 @app.route('/post_datastack_file', methods=['POST'])
