@@ -111,9 +111,12 @@ jobs:
 
             - name: Download Conda Env Artifact
               continue-on-error: true
+              # Using 'dawidd6' since 'download-artifact' GH action doesn't
+              # support downloading artifacts from prior workflow runs
               uses: dawidd6/action-download-artifact@v2
               with:
                   workflow: build-and-test.yml
+                  # Get frozen conda env artifact from last successful workflow
                   workflow_conclusion: success
                   name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
                   path: ./conda-env-artifact
