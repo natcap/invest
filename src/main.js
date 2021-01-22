@@ -47,6 +47,7 @@ const createWindow = async () => {
     investExe: investExe,
     investVersion: investVersion,
     workbenchVersion: pkg.version,
+    userDataPath: app.getPath('userData'),
   };
   ipcMain.on('variable-request', (event, arg) => {
     event.reply('variable-reply', mainProcessVars);

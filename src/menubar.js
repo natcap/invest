@@ -93,9 +93,18 @@ function menuTemplate(parentWindow, isDevMode) {
     {
       label: 'About',
       click: () => openAboutWindow(parentWindow, isDevMode),
-    }
-  ]
-  return template
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Report a problem',
+          click: () => openReportWindow(parentWindow, isDevMode),
+        },
+      ],
+    },
+  ];
+  return template;
 }
 
 function openAboutWindow(parentWindow, isDevMode) {
@@ -113,6 +122,26 @@ function openAboutWindow(parentWindow, isDevMode) {
   });
   child.setMenu(null);
   child.loadURL(`file://${__dirname}/about.html`);
+  if (isDevMode) {
+    child.webContents.openDevTools();
+  }
+}
+
+function openReportWindow(parentWindow, isDevMode) {
+  const child = new BrowserWindow({
+    parent: parentWindow,
+    modal: true,
+    width: 700,
+    height: 800,
+    frame: true,
+    webPreferences: {
+      enableRemoteModule: true,
+      nodeIntegration: true,
+      minimumFontSize: 18,
+    },
+  });
+  child.setMenu(null);
+  child.loadURL(`file://${__dirname}/report_a_problem.html`);
   if (isDevMode) {
     child.webContents.openDevTools();
   }
