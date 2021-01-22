@@ -582,13 +582,9 @@ def read_csv_to_dataframe(
     # allow encoding kwarg to override this if it's provided
     if not encoding and has_utf8_bom(path):
         encoding = 'utf-8-sig'
-    try:
-        dataframe = pandas.read_csv(
-            path, engine=engine, encoding=encoding, sep=sep, **kwargs)
-    except UnicodeDecodeError as error:
-        LOGGER.error(
-            f'{path} must be encoded as utf-8 or avoid non-ASCII characters')
-        raise error
+    dataframe = pandas.read_csv(path, engine=engine, encoding=encoding,
+                                sep=sep, **kwargs)
+
     # this won't work on integer types, which happens if you set header=None
     # however, there's little reason to use this function if there's no header
     dataframe.columns = dataframe.columns.str.strip()
