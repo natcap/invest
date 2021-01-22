@@ -40,7 +40,13 @@ Unreleased Changes (3.9.1)
     * Restructured API reference docs and removed outdated and redundant pages.
     * Include logger name in the logging format. This is helpful for the cython
       modules, which can't log module, function, or line number info.
-    * Fix bug in makefile that prevented ``make env`` from working properly.
+    * Fixed a bug in makefile that prevented ``make env`` from working properly.
+    * Fixed an issue with the InVEST application launching on Mac OS X 11
+      "Big Sur".  When launching the InVEST ``.app`` bundle, the environment
+      variable ``QT_MAC_WANTS_LAYER`` is defined.  If running InVEST through
+      python, this environment variable may need to be defined by hand like
+      so: ``QT_MAC_WANTS_LAYER=1 python -m natcap.invest``.  A warning will
+      be raised if this environment variable is not present on mac.
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
@@ -53,7 +59,7 @@ Unreleased Changes (3.9.1)
     * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
         * ``convolve_2d()`` keyword ``ignore_nodata`` to
           ``ignore_nodata_and_edges``.
-        * ``get_raster_info()`` / ``get_vector_info()`` keyword ``projection`` 
+        * ``get_raster_info()`` / ``get_vector_info()`` keyword ``projection``
           to ``projection_wkt``.
     * Improve consistency and context for error messages related to raster
       reclassification across models by using ``utils.reclassify_raster``.
@@ -125,7 +131,7 @@ Unreleased Changes (3.9.1)
     * Fixed a bug where the suffix input was not being used for output paths.
 * Forest Carbon Edge Effect
     * Fixed a broken link to the local User's Guide
-    * Fixed bug that was causing overflow errors to appear in the logs when 
+    * Fixed bug that was causing overflow errors to appear in the logs when
       running with the sample data.
     * Mask out nodata areas of the carbon map output. Now there should be no
       output data outside of the input LULC rasater area.
@@ -171,7 +177,7 @@ Unreleased Changes (3.9.1)
       separate UI options.
 * Urban Flood Risk
     * Changed output field names ``aff.bld`` and ``serv.blt`` to ``aff_bld``
-      and ``serv_blt`` respectively to fix an issue where ArcGIS would not 
+      and ``serv_blt`` respectively to fix an issue where ArcGIS would not
       display properly.
 
 3.8.9 (2020-09-15)
