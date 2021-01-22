@@ -650,7 +650,7 @@ class CSVValidation(unittest.TestCase):
         self.assertTrue('missing from this table' in error_msg)
 
     def test_csv_not_utf_8(self):
-        """Validation: test non-UTF8 CSVs w/ non-ASCII chars return msg."""
+        """Validation: test that non-UTF8 CSVs can validate."""
         from natcap.invest import validation
 
         df = pandas.DataFrame([
@@ -664,8 +664,12 @@ class CSVValidation(unittest.TestCase):
         # https://en.wikipedia.org/wiki/ISO/IEC_8859-5
         df.to_csv(target_file, encoding='iso8859_5')
 
+        # Note that non-UTF8 encodings should pass this check, but aren't
+        # actually being read correctly. Characters outside the ASCII set may
+        # be replaced with a replacement character.
+        # UTF16, UTF32, etc. will still raise an error.
         error_msg = validation.check_csv(target_file)
-        self.assertTrue('File must be encoded as a UTF-8 CSV' in error_msg)
+        self.assertEqual(error_msg, None)
 
     def test_excel_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in excel."""
