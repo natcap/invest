@@ -119,6 +119,7 @@ export default class LogTab extends React.Component {
     try {
       this.tail = new Tail(logfile, {
         fromBeginning: true,
+        logger: logger,
       });
       let markup = Object.assign('', this.state.logdata);
       this.tail.on('line', (data) => {
