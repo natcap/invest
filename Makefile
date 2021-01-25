@@ -226,7 +226,7 @@ env:
 	$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
 	$(CONDA) env update -p $(ENV) --file requirements-all.yml
 	@echo "----------------------------"
-	@echo "To finish the conda env install:"
+	@echo "To activate the new conda environment and install natcap.invest:"
 	@echo ">> conda activate $(ENV)"
 	@echo ">> make install"
 
