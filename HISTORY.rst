@@ -40,6 +40,7 @@ Unreleased Changes (3.9.1)
     * Restructured API reference docs and removed outdated and redundant pages.
     * Include logger name in the logging format. This is helpful for the cython
       modules, which can't log module, function, or line number info.
+    * Fixed a bug in makefile that prevented ``make env`` from working properly.
     * Fixed an issue with the InVEST application launching on Mac OS X 11
       "Big Sur".  When launching the InVEST ``.app`` bundle, the environment
       variable ``QT_MAC_WANTS_LAYER`` is defined.  If running InVEST through
