@@ -37,7 +37,7 @@
     });
     ipcRenderer.send('variable-request', 'ping');
     logger.debug('PROBLEM REPORT: process dump');
-    logger.debug(JSON.stringify(process));
+    logger.debug(JSON.stringify(process, null, 2));
 
     function handleButtonClick() {
       shell.openPath(userDataPath);
