@@ -376,13 +376,6 @@ describe('InVEST subprocess testing', () => {
     module: 'natcap.invest.dot',
   };
 
-  const uiSpec = {
-    order: [['workspace_dir', 'results_suffix']],
-    argsOptions: {}
-  }
-  const uiSpecFilePath = path.join(
-    fileRegistry.INVEST_UI_DATA, `${spec.module}.json`
-  );
 
   const dummyTextToLog = JSON.stringify(spec.args);
   let fakeWorkspace;
@@ -391,7 +384,6 @@ describe('InVEST subprocess testing', () => {
   beforeEach(() => {
     // this can't go into the testing workspace because the model
     // will look for it in /ui_data 
-    fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
@@ -421,14 +413,23 @@ describe('InVEST subprocess testing', () => {
       fs.writeFileSync(logfilePath, dummyTextToLog + os.EOL);
       return mockInvestProc;
     });
+
+    // mock out the whole UI config module
+    jest.mock('../src/ui_config', () => {
+      return {
+        'Eco Model': {
+          order: [['workspace_dir', 'results_suffix']]
+        }
+      }
+    });
   });
 
   afterEach(async () => {
     mockInvestProc = null;
-    fs.unlinkSync(uiSpecFilePath);
     cleanupDir(fakeWorkspace);
     await InvestJob.clearStore();
     jest.resetAllMocks();
+    jest.resetModules();
   });
 
   test('exit without error - expect log display', async () => {

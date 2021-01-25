@@ -59,10 +59,7 @@ describe('Arguments form input types', () => {
       },
     };
 
-    uiSpec = {
-      order: [['arg']],
-      argsOptions: {}
-    }
+    uiSpec = {order: [['arg']]}
     fetchValidation.mockResolvedValue(
       [[Object.keys(baseSpec.args), validationMessage]]
     );
@@ -143,10 +140,7 @@ describe('Arguments form interactions', () => {
       },
     };
 
-    uiSpec = {
-      order: [['arg']],
-      argsOptions: {}
-    }
+    uiSpec = {order: [['arg']]}
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), validationMessage]]
     );
@@ -251,17 +245,17 @@ describe('UI spec functionality', () => {
     jest.resetAllMocks();
   });
 
-  test('A UI spec with a boolean controller arg', async () => {
+  test('A UI spec with conditionally enabled args', async () => {
     const spec = {
       module: 'natcap.invest.dummy',
       args: {
-        controller: {
+        arg1: {
           name: 'Afoo',
           type: 'boolean',
         },
         arg2: {
           name: 'Bfoo',
-          type: 'number',
+          type: 'boolean',
         },
         arg3: {
           name: 'Cfoo',
@@ -270,121 +264,94 @@ describe('UI spec functionality', () => {
         arg4: {
           name: 'Dfoo',
           type: 'number',
-        },
-        arg5: {
-          name: 'Efoo',
-          type: 'number',
-        },
-      },
+        }
+      }
     };
 
     const uiSpec = {
-      order: [['controller', 'arg2'], ['arg3', 'arg4']],
-      argsOptions: {
-        controller: {
-          control_targets: ['arg2', 'arg3', 'arg4'],
-        },
-        arg2: {
-          control_option: 'disable',
-        },
-        arg3: {
-          control_option: 'hide',
-        },
-        arg4: {
-          control_option: 'foo', // an invalid option should be ignored
-        },
+      order: [['arg1', 'arg2'], ['arg3', 'arg4']],
+      enabledFunctions: {
+        // enabled if arg1 is sufficient
+        arg2: (state => state.argsEnabled['arg1'] && !!state.argsValues['arg1'].value),
+        // enabled if arg1 and arg2 are sufficient
+        arg3: (state => state.argsEnabled['arg1'] && !!state.argsValues['arg1'].value &&
+                       (state.argsEnabled['arg2'] && !!state.argsValues['arg2'].value)),
+        // enabled if arg1 is sufficient and arg2 is not sufficient
+        arg4: (state => state.argsEnabled['arg1'] && !!state.argsValues['arg1'].value &&
+                      !(state.argsEnabled['arg2'] && !!state.argsValues['arg2'].value))
       }
     };
-    // arg5 is deliberately missing to demonstrate that that is okay.
 
-    const {
-      findByLabelText, findByTestId, queryByLabelText
-    } = renderSetupFromSpec(spec, uiSpec);
-    const controller = await findByLabelText(
-      RegExp(`${spec.args.controller.name}`)
-    );
+    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const arg1 = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
     const arg2 = await findByLabelText(RegExp(`${spec.args.arg2.name}`));
     const arg3 = await findByLabelText(RegExp(`${spec.args.arg3.name}`));
     const arg4 = await findByLabelText(RegExp(`${spec.args.arg4.name}`));
-    const arg5 = await queryByLabelText(RegExp(`${spec.args.arg5.name}`));
-    expect(arg5).toBeNull();
-    // The 'hide' style is applied to the whole Form.Group which
-    // includes the Label and Input. Right now, the only good way
-    // to query the Form.Group node is using a data-testid property.
-    const arg3Group = await findByTestId('group-arg3');
 
     await waitFor(() => {
       // Boolean Radios should default to "false" when a spec is loaded,
       // so controlled inputs should be hidden/disabled.
       expect(arg2).toBeDisabled();
-      expect(arg3Group).toHaveClass('arg-hide');
-
-      // This input is controlled, but has an invalid option
-      // so is not actually controlled.
-      expect(arg4).toBeVisible();
-      expect(arg4).toBeEnabled();
+      expect(arg3).toBeDisabled();
+      expect(arg4).toBeDisabled();
     });
     // fireEvent.change doesn't trigger the change handler but .click does
     // even though React demands an onChange handler for controlled checkbox inputs.
     // https://github.com/testing-library/react-testing-library/issues/156
-    fireEvent.click(controller, { target: { value: 'true' } });
-    // controller.click();
+    fireEvent.click(arg1, { target: { value: 'true' } });
 
-    // Now everything should be visible/enabled.
+    // Check how the state changes as we click the checkboxes
     await waitFor(() => {
       expect(arg2).toBeEnabled();
-      expect(arg2).toBeVisible();
-      expect(arg3).toBeEnabled();
-      expect(arg3).toBeVisible();
+      expect(arg3).toBeDisabled();
       expect(arg4).toBeEnabled();
-      expect(arg4).toBeVisible();
+    });
+
+    fireEvent.click(arg2, { target: { value: 'true' } });
+    await waitFor(() => {
+      expect(arg2).toBeEnabled();
+      expect(arg3).toBeEnabled();
+      expect(arg4).toBeDisabled();
     });
   });
 
-  test('expect non-boolean controller can disable/hide optional inputs', async () => {
+  test('expect dropdown options can be dynamic', async () => {
+    const mockGetVectorColumnNames = jest.fn(state => {
+      if (state.argsValues.arg1.value) {
+        return ['Field1'];
+      } else {
+        return [];
+      }
+    });
     const spec = {
       args: {
-        controller: {
+        arg1: {
           name: 'afoo',
-          type: 'csv'
+          type: 'vector'
         },
         arg2: {
           name: 'bfoo',
-          type: 'number'
+          type: 'option_string',
+          validation_options: {
+            options: []
+          }
         }
       },
     };
-
     const uiSpec = {
-      order: [['controller', 'arg2']],
-      argsOptions: {
-        controller: {
-          control_targets: ['arg2']
-        },
-        arg2: {
-          control_option: 'disable'
-        }
+      order: [['arg1', 'arg2']],
+      dropdownFunctions: {
+        arg2: mockGetVectorColumnNames
       }
-    }
-    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
-    const controller = await findByLabelText(
-      RegExp(`${spec.args.controller.name}`)
-    );
-    const arg2 = await findByLabelText(
-      RegExp(`${spec.args.arg2.name}`)
-    );
+    };
+    const { findByLabelText, findByText, queryByText } = renderSetupFromSpec(spec, uiSpec);
+    const arg1 = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
+    let option = await queryByText('Field1');
+    expect(option).toBeNull();
 
-    // The optional input should be disabled while the controlling input
-    // has a falsy value (undefined or '')
-    await waitFor(() => {
-      expect(arg2).toBeDisabled();
-    });
-
-    fireEvent.change(controller, { target: { value: 'foo.csv' } });
-    // Now everything should be enabled.
-    await waitFor(() => {
-      expect(arg2).toBeEnabled();
-    });
+    // check that the dropdown option appears when the text field gets a value
+    fireEvent.change(arg1, { target: { value: 'a vector'}});
+    option = await findByText('Field1');  // will raise an error if not found
   });
 
   test('Grouping and sorting of args', async () => {
@@ -420,8 +387,7 @@ describe('UI spec functionality', () => {
 
     const uiSpec = {
       // intentionally leaving out arg6, it should not be in the setup form
-      order: [['arg4'], ['arg3', 'arg2'], ['arg1'], ['arg5']],
-      argsOptions: {}
+      order: [['arg4'], ['arg3', 'arg2'], ['arg1'], ['arg5']]
     };
 
     const { findByTestId } = renderSetupFromSpec(spec, uiSpec);
@@ -469,10 +435,7 @@ describe('Misc form validation stuff', () => {
       },
     };
 
-    const uiSpec = {
-      order: [['a', 'b', 'c']],
-      argsOptions: {}
-    }
+    const uiSpec = {order: [['a', 'b', 'c']]}
 
     // Mocking to return the payload so we can assert we always send
     // correct payload to this endpoint.
@@ -503,10 +466,7 @@ describe('Misc form validation stuff', () => {
         },
       },
     };
-    const uiSpec = {
-      order: [['vector', 'raster']],
-      argsOptions: {}
-    }
+    const uiSpec = {order: [['vector', 'raster']]}
     const vectorValue = './vector.shp';
     const expectedVal1 = '-84.9';
     const vectorBox = `[${expectedVal1}, 19.1, -69.1, 29.5]`;
@@ -575,10 +535,7 @@ describe('Form drag-and-drop', () => {
         arg2: 'square',
       },
     };
-    const uiSpec = {
-      order: [['arg1', 'arg2']],
-      argsOptions: {}
-    }
+    const uiSpec = {order: [['arg1', 'arg2']]}
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);

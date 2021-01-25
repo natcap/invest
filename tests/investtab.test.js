@@ -49,26 +49,22 @@ describe('Save InVEST Model Setup Buttons', () => {
     },
   };
 
-  const uiSpecFilePath = path.join(
-    fileRegistry.INVEST_UI_DATA, `${spec.module}.json`
-  );
-  const uiSpec = {
-    order: [['workspace']],
-    argsOptions: {}
-  };
-  fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
-
   // args expected to be in the saved JSON / Python dictionary
-  const expectedArgKeys = uiSpec.order.flat();
-  expectedArgKeys.push('n_workers'); // never in the spec, always in the args dict
+  const expectedArgKeys = ['workspace', 'n_workers'];
 
   beforeAll(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
+    // mock out the whole UI config module
+    jest.mock('../src/ui_config', () => {
+      return {'Foo Model': {order: [['workspace']]}}
+    });
   });
 
   afterAll(() => {
-    fs.unlinkSync(uiSpecFilePath);
+    // the API for removing mocks is confusing (see https://github.com/facebook/jest/issues/7136)
+    // not sure why, but resetModules is needed to unmock the ui_config
+    jest.resetModules();
     jest.resetAllMocks();
     // Careful with reset because "resetting a spy results
     // in a function with no return value". I had been using spies to observe
@@ -209,21 +205,16 @@ describe('InVEST Run Button', () => {
     },
   };
 
-  const uiSpec = {
-    order: [['a'], ['b', 'c']],
-    argsOptions: {}
-  };
-  const uiSpecFilePath = path.join(
-    fileRegistry.INVEST_UI_DATA, `${spec.module}.json`
-  );
-  fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
-
   beforeAll(() => {
     getSpec.mockResolvedValue(spec);
+    // mock out the whole UI config module
+    jest.mock('../src/ui_config', () => {
+      return {'Bar Model': {order: [['a'], ['b', 'c']]}}
+    });
   });
 
   afterAll(() => {
-    fs.unlinkSync(uiSpecFilePath);
+    jest.resetModules();
     jest.resetAllMocks();
   });
 

@@ -26,7 +26,7 @@ import { getVectorColumnNames, getVectorHasPoints } from './server_requests';
 
 
 function isSufficient(argkey, state) {
-    return state.argsEnabled[argkey] && !!state.argsValues.[argkey].value;
+    return state.argsEnabled[argkey] && !!state.argsValues[argkey].value;
 }
 
 function isNotSufficient(argkey, state) {

@@ -232,9 +232,7 @@ export default class SetupTab extends React.Component {
 
     this.setState({
       argsValues: argsValues,
-      argsValidation: argsValidation,
       argsDropdownOptions: argsDropdownOptions,
-      argsEnabled: argsEnabled
     }, () => {
       this.investValidate(this.state.argsValues);
       this.callUISpecFunctions();
