@@ -10,11 +10,13 @@ import textwrap
 
 from flask import Flask
 from flask import request
+from flask.logging import default_handler
 import natcap.invest.cli
 import natcap.invest.datastack
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
+LOGGER.addHandler(default_handler)
 
 app = Flask(__name__)
 
