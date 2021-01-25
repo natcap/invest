@@ -60,11 +60,12 @@ export function createPythonFlaskProcess(investExe) {
     const pythonServerProcess = spawn(
       path.basename(investExe),
       ['serve', '--port', process.env.PORT],
-      { env: {
+      {
+        env: {
           PATH: path.dirname(investExe),
-          QT_MAC_WANTS_LAYER: 1
+        },
       }
-    });
+    );
 
     logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
     logger.debug(investExe);
