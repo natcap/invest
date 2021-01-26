@@ -12,7 +12,7 @@ GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
 GIT_UG_REPO_REV              := bbfa26dc0c9158d13d209c1bc61448a9166708da
 
-ENV = env
+ENV = "./env"
 ifeq ($(OS),Windows_NT)
 	# Double $$ indicates windows environment variable
 	NULL := $$null
@@ -224,13 +224,14 @@ fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PAT
 
 # Python conda environment management
 env:
-		$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
-		$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
-		$(CONDA) env update -p $(ENV) --file requirements-all.yml
-		@echo "----------------------------"
-		@echo "To finish the conda env install:"
-		@echo ">> conda activate ./$(ENV)"
-		@echo ">> make install"
+	@echo "NOTE: requires 'requests' be installed in base Python"
+	$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+	$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
+	$(CONDA) env update -p $(ENV) --file requirements-all.yml
+	@echo "----------------------------"
+	@echo "To activate the new conda environment and install natcap.invest:"
+	@echo ">> conda activate $(ENV)"
+	@echo ">> make install"
 
 
 # compatible with pip>=7.0.0
