@@ -118,12 +118,14 @@ def get_vector_colnames():
     payload = request.get_json()
     LOGGER.debug(payload)
     vector_path = payload['vector_path']
-    try:
-        vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-        colnames = [defn.GetName() for defn in vector.GetLayer().schema]
-    except:
-        LOGGER.error(f'Could not read column names from vector {vector_path}')
-        colnames = []
+    colnames = []  
+    # a lot of times the path will be empty so don't even try to open it
+    if vector_path:  
+        try:
+            vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
+            colnames = [defn.GetName() for defn in vector.GetLayer().schema]
+        except:
+            LOGGER.error(f'Could not read column names from {vector_path}')
     LOGGER.debug({'colnames': colnames})
     return json.dumps({'colnames': colnames})
 
@@ -143,11 +145,15 @@ def get_vector_has_points():
     payload = request.get_json()
     LOGGER.debug(payload)
     vector_path = payload['vector_path']
-    try:
-        has_points = delineateit._vector_may_contain_points(vector_path)
-    except:
-        LOGGER.error(f'Could not determine if vector {vector_path} contains points.')
-        has_points = True  # it may still contain points
+    # default True because it may have point geometries unless proven otherwise
+    has_points = True
+    # a lot of times the path will be empty so don't even try to open it
+    if vector_path:
+        try:
+            has_points = delineateit._vector_may_contain_points(vector_path)
+        except:
+            LOGGER.error(
+                f'Could not tell if vector {vector_path} contains points.')
     LOGGER.debug({'has_points': has_points})
     return json.dumps({'has_points': has_points})
 
