@@ -6,17 +6,20 @@ import importlib
 import json
 import logging
 import pprint
+import sys
 import textwrap
 
 from flask import Flask
 from flask import request
-from flask.logging import default_handler
 import natcap.invest.cli
 import natcap.invest.datastack
+from natcap.invest.utils import LOG_FMT
 
-logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(default_handler)
+handler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter(LOG_FMT)
+handler.setFormatter(formatter)
+LOGGER.addHandler(handler)
 
 app = Flask(__name__)
 
