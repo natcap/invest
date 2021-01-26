@@ -108,12 +108,11 @@ function menuTemplate(parentWindow, isDevMode) {
 function openAboutWindow(parentWindow, isDevMode) {
   const child = new BrowserWindow({
     parent: parentWindow,
-    modal: true,
     width: 700,
     height: 800,
     frame: true,
     webPreferences: {
-      enableRemoteModule: true,
+      enableRemoteModule: false,
       nodeIntegration: true,
       minimumFontSize: 18,
     },
@@ -128,7 +127,6 @@ function openAboutWindow(parentWindow, isDevMode) {
 function openReportWindow(parentWindow, isDevMode) {
   const child = new BrowserWindow({
     parent: parentWindow,
-    modal: true,
     width: 700,
     height: 800,
     frame: true,
