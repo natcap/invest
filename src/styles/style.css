@@ -205,6 +205,10 @@ body {
 }
 
 /* InVEST Argument Forms */
+.args-form.dragging {
+  opacity: 0.2;
+}
+
 .arg-group {
 	margin-top: 2.0rem;
 	margin-bottom: 2.0rem;
@@ -229,6 +233,10 @@ body {
 	direction: rtl;
 	text-align: left;
 	unicode-bidi: plaintext;
+}
+
+input.input-dragging {
+  border: 4px dashed #cccccc;
 }
 
 input[type=text]::placeholder {

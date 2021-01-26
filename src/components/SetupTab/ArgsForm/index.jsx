@@ -8,7 +8,8 @@ import ArgInput from '../ArgInput';
 import { fetchDatastackFromFile } from '../../../server_requests';
 import { boolStringToBoolean } from '../../../utils';
 
-function dragoverHandler(event) {
+/** Prevent the default case for onDragOver so onDrop event will be fired. */
+function dragOverHandler(event) {
   event.preventDefault();
   event.dataTransfer.dropEffect = 'move';
 }
@@ -18,14 +19,24 @@ export default class ArgsForm extends React.Component {
   constructor(props) {
     super(props);
     this.handleChange = this.handleChange.bind(this);
+    this.inputDropHandler = this.inputDropHandler.bind(this);
     this.handleBoolChange = this.handleBoolChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
-    this.onDragDrop = this.onDragDrop.bind(this);
+    this.onArchiveDragDrop = this.onArchiveDragDrop.bind(this);
+    this.dragEnterHandler = this.dragEnterHandler.bind(this);
+    this.dragLeaveHandler = this.dragLeaveHandler.bind(this);
+    this.formRef = React.createRef(); // For dragging CSS
+    this.dragDepth = 0;  // To determine Form dragging CSS 
   }
 
-  async onDragDrop(event) {
+  async onArchiveDragDrop(event) {
     /** Handle drag-drop of datastack JSON files and InVEST logfiles */
     event.preventDefault();
+    event.stopPropagation();
+    // No longer dragging so reset dragging depth and remove CSS
+    this.dragDepth = 0;
+    const formElement = this.formRef.current;
+    formElement.classList.remove("dragging");
 
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
@@ -40,8 +51,43 @@ export default class ArgsForm extends React.Component {
     }
   }
 
+  /** Handle drag enter events for the Form elements. */
+  dragEnterHandler(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'move';
+    this.dragDepth++;
+    const formElement = this.formRef.current;
+    if (!formElement.classList.contains("dragging")) {
+      formElement.classList.add("dragging");
+    }
+  }
+
+  /** Handle drag leave events for the Form elements. */
+  dragLeaveHandler(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragDepth--;
+    const formElement = this.formRef.current;
+    if (this.dragDepth <= 0 ) {
+        formElement.classList.remove("dragging");
+    }
+  }
+
+  /** Handle drop events for input elements from the ArgInput components. */
+  inputDropHandler(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const { name, value } = event.target; // the arg's key and type
+    // TODO: could add more filters based on argType (e.g. only show .csv)
+    const fileList = event.dataTransfer.files;
+    if (fileList.length) {
+      this.props.updateArgValues(name, fileList[0].path); 
+    }
+  }
+
   handleChange(event) {
-    /** Pass input value up to SetupTab for storage & validation. */
+    /** Pass input value up to setuptab for storage & validation. */
     const { name, value } = event.target;
     this.props.updateArgValues(name, value);
   }
@@ -89,6 +135,7 @@ export default class ArgsForm extends React.Component {
             isValid={argsValidation[argkey].valid}
             validationMessage={argsValidation[argkey].validationMessage}
             handleChange={this.handleChange}
+            inputDropHandler={this.inputDropHandler}
             handleBoolChange={this.handleBoolChange}
             selectFile={this.selectFile}
           />
@@ -103,11 +150,14 @@ export default class ArgsForm extends React.Component {
 
     return (
       <Form
+        ref={this.formRef}
         data-testid="setup-form"
         className="args-form"
         validated={false}
-        onDrop={this.onDragDrop}
-        onDragOver={dragoverHandler}
+        onDrop={this.onArchiveDragDrop}
+        onDragOver={dragOverHandler}
+        onDragEnter={this.dragEnterHandler}
+        onDragLeave={this.dragLeaveHandler}
       >
         {formItems}
       </Form>

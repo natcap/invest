@@ -9,6 +9,7 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 
+
 /**
  * Filter a message that refers to many spatial inputs' bounding boxes.
  *
@@ -60,13 +61,34 @@ Feedback.defaultProps = {
   message: '',
 };
 
+/** Prevent the default case for onDragOver so onDrop event will be fired. */
+function dragOverHandler(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+}
+
+function dragEnterHandler(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.dataTransfer.dropEffect = 'move';
+  event.target.classList.add('input-dragging');
+}
+
+function dragLeavingHandler(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.target.classList.remove('input-dragging');
+}
+
 export default class ArgInput extends React.PureComponent {
+
   render() {
     const {
       argkey,
       argSpec,
       handleBoolChange,
       handleChange,
+      inputDropHandler,
       isValid,
       selectFile,
       touched,
@@ -122,6 +144,10 @@ export default class ArgInput extends React.PureComponent {
                 isValid={touched && isValid}
                 isInvalid={validationMessage}
                 disabled={ui_option === 'disable'}
+                onDrop={inputDropHandler}
+                onDragOver={dragOverHandler}
+                onDragEnter={dragEnterHandler}
+                onDragLeave={dragLeavingHandler}
               />
               {
                 ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type)
