@@ -45,6 +45,9 @@ workbench-alpha
       accepts a vector filepath and returns a boolean indicating whether the
       vector might have point geometries (can't be certain because the type could
       be ``ogr.wkbUnknown``). This is used by the DelineateIt UI.
+    * Rename finfish ARGS_SPEC ``module_name`` to ``model_name`` to be consistent
+      with all other models.
+    * Minor rephrasing of some ``ARGS_SPEC.args.arg.name`` values.
 
 Unreleased Changes (3.9.1)
 --------------------------
