@@ -3,6 +3,7 @@ import { remote } from 'electron'; // eslint-disable-line import/no-extraneous-d
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
+import Dropdown from 'react-bootstrap/Dropdown';
 
 import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
@@ -32,13 +33,9 @@ export default class LoadButton extends React.Component {
 
   render() {
     return (
-      <Button
-        className="mx-3"
-        onClick={this.browseFile}
-        variant="outline-dark"
-      >
+      <Dropdown.Item onClick={this.browseFile}>
         Load Parameters
-      </Button>
+      </Dropdown.Item>
     );
   }
 }

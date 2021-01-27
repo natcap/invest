@@ -6,6 +6,7 @@ import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
+import Dropdown from 'react-bootstrap/Dropdown';
 
 /** Render a dialog with a form for configuring global invest settings */
 export default class SettingsModal extends React.Component {
@@ -75,13 +76,9 @@ export default class SettingsModal extends React.Component {
 
     return (
       <React.Fragment>
-        <Button
-          className="mx-3"
-          variant="outline-dark"
-          onClick={this.handleShow}
-        >
+        <Dropdown.Item onClick={this.handleShow}>
           Settings
-        </Button>
+        </Dropdown.Item>
 
         <Modal show={this.state.show} onHide={this.handleClose}>
           <Form>

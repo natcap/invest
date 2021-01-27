@@ -10,6 +10,7 @@ body {
 /*Top Navigation*/
 
 .navbar {
+	padding-bottom: 0px;
 	border-bottom: 3px solid var(--invest-green);
 	background-color: #fff
 }
@@ -39,11 +40,9 @@ body {
 	pointer-events: none;
 }
 
-.navbar .btn {
-	background-color: #6c757d;
-	color: #ffffff;
-	font-weight: 600;
-	font-size: 1.2rem;
+.kebab-menu {
+	color: black;
+	font-size: 2rem;
 }
 
 .close-tab.btn {

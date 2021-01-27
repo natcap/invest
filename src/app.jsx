@@ -176,6 +176,7 @@ export default class App extends React.Component {
       );
     });
 
+    // define a custom toggle component to have 3 dots and no dropdown caret
     const CustomToggle = React.forwardRef(({ children, onClick }, ref) => (
       <a
         href=""
@@ -185,7 +186,7 @@ export default class App extends React.Component {
           onClick(e);
         }}
       >
-        <i className="material-icons mdc-button__icon" aria-hidden="true">
+        <i className="material-icons mdc-button__icon kebab-menu" aria-hidden="true">
           more_vert
         </i>
         {children}
@@ -214,24 +215,18 @@ export default class App extends React.Component {
           </Nav>
         </Navbar.Collapse>
         <Dropdown>
-          <Dropdown.Toggle as={CustomToggle}>
-          </Dropdown.Toggle>
+          <Dropdown.Toggle as={CustomToggle} />
 
           <Dropdown.Menu align="right">
-            <Dropdown.Item>
-              <LoadButton
-                openInvestModel={this.openInvestModel}
-                batchUpdateArgs={this.batchUpdateArgs}
-              />
-            </Dropdown.Item>
-            <Dropdown.Item>
-              <SettingsModal
-                className="mx-3"
-                saveSettings={this.saveSettings}
-                investSettings={investSettings}
-                clearStorage={this.clearRecentJobs}
-              />
-            </Dropdown.Item>
+            <LoadButton
+              openInvestModel={this.openInvestModel}
+              batchUpdateArgs={this.batchUpdateArgs}
+            />
+            <SettingsModal
+              saveSettings={this.saveSettings}
+              investSettings={investSettings}
+              clearStorage={this.clearRecentJobs}
+            />
           </Dropdown.Menu>
         </Dropdown>
         </Navbar>
