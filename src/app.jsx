@@ -8,6 +8,7 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
+import Dropdown from 'react-bootstrap/Dropdown';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -174,6 +175,23 @@ export default class App extends React.Component {
         </TabPane>
       );
     });
+
+    const CustomToggle = React.forwardRef(({ children, onClick }, ref) => (
+      <a
+        href=""
+        ref={ref}
+        onClick={e => {
+          e.preventDefault();
+          onClick(e);
+        }}
+      >
+        <i className="material-icons mdc-button__icon" aria-hidden="true">
+          more_vert
+        </i>
+        {children}
+      </a>
+    ));
+
     return (
       <TabContainer activeKey={activeTab}>
         <Navbar expand="lg">
@@ -194,17 +212,28 @@ export default class App extends React.Component {
           >
             {investNavItems}
           </Nav>
-          <LoadButton
-            openInvestModel={this.openInvestModel}
-            batchUpdateArgs={this.batchUpdateArgs}
-          />
-          <SettingsModal
-            className="mx-3"
-            saveSettings={this.saveSettings}
-            investSettings={investSettings}
-            clearStorage={this.clearRecentJobs}
-          />
         </Navbar.Collapse>
+        <Dropdown>
+          <Dropdown.Toggle as={CustomToggle}>
+          </Dropdown.Toggle>
+
+          <Dropdown.Menu align="right">
+            <Dropdown.Item>
+              <LoadButton
+                openInvestModel={this.openInvestModel}
+                batchUpdateArgs={this.batchUpdateArgs}
+              />
+            </Dropdown.Item>
+            <Dropdown.Item>
+              <SettingsModal
+                className="mx-3"
+                saveSettings={this.saveSettings}
+                investSettings={investSettings}
+                clearStorage={this.clearRecentJobs}
+              />
+            </Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
         </Navbar>
         <TabContent id="top-tab-content">
           <TabPane eventKey="home" title="Home">
