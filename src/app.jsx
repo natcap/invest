@@ -147,16 +147,14 @@ export default class App extends React.Component {
       investNavItems.push(
         <Nav.Item key={job.metadata.navID}>
           <Nav.Link eventKey={job.metadata.navID}>
-            <React.Fragment>
-              {job.metadata.modelHumanName}
-              <Button
-                className="close-tab"
-                variant="outline-dark"
-                onClick={() => this.closeInvestModel(job.metadata.navID)}
-              >
-                x
-              </Button>
-            </React.Fragment>
+            {job.metadata.modelHumanName}
+            <Button
+              className="close-tab"
+              variant="outline-dark"
+              onClick={() => this.closeInvestModel(job.metadata.navID)}
+            >
+              x
+            </Button>
           </Nav.Link>
         </Nav.Item>
       );
@@ -195,41 +193,39 @@ export default class App extends React.Component {
 
     return (
       <TabContainer activeKey={activeTab}>
-        <Navbar expand="lg">
-        <Nav.Link 
-          onSelect={this.switchTabs} 
-          eventKey="home">
-          <Navbar.Brand >
+        <Navbar>
+          <Navbar.Brand>
+            <Nav.Link 
+              onSelect={this.switchTabs} 
+              eventKey="home">
               InVEST
+            </Nav.Link>
           </Navbar.Brand>
-        </Nav.Link>
-        <Navbar.Toggle aria-controls="basic-navbar-nav" />
-        <Navbar.Collapse>
           <Nav
-            variant="pills"
-            className="mr-auto"
+            className="mr-auto horizontal-scroll"
+            variant="tabs"
             activeKey={activeTab}
             onSelect={this.switchTabs}
           >
             {investNavItems}
           </Nav>
-        </Navbar.Collapse>
-        <Dropdown>
-          <Dropdown.Toggle as={CustomToggle} />
 
-          <Dropdown.Menu align="right">
-            <LoadButton
-              openInvestModel={this.openInvestModel}
-              batchUpdateArgs={this.batchUpdateArgs}
-            />
-            <SettingsModal
-              saveSettings={this.saveSettings}
-              investSettings={investSettings}
-              clearStorage={this.clearRecentJobs}
-            />
-          </Dropdown.Menu>
-        </Dropdown>
+          <Dropdown>
+            <Dropdown.Toggle as={CustomToggle} />
+            <Dropdown.Menu align="right">
+              <LoadButton
+                openInvestModel={this.openInvestModel}
+                batchUpdateArgs={this.batchUpdateArgs}
+              />
+              <SettingsModal
+                saveSettings={this.saveSettings}
+                investSettings={investSettings}
+                clearStorage={this.clearRecentJobs}
+              />
+            </Dropdown.Menu>
+          </Dropdown>
         </Navbar>
+
         <TabContent id="top-tab-content">
           <TabPane eventKey="home" title="Home">
             <HomeTab

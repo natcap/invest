@@ -22,27 +22,26 @@ body {
   color: #999999;
 }
 
-.navbar-light .navbar-nav .nav-link.active {
-	background-color: ghostwhite;
-}
-
 .nav-link {
 	color: gray;
 	font-size: 1.3rem;
 	font-weight: 550;
 }
 
-.navbar .navbar-brand {
+.navbar .navbar-brand .nav-link {
 	color: var(--invest-green);
 	font-weight: 600;
 	font-size: 2.0rem;
 	letter-spacing: 1px;
-	pointer-events: none;
 }
 
 .kebab-menu {
 	color: black;
 	font-size: 2rem;
+}
+
+.horizontal-scroll {
+	overflow-y: scroll;
 }
 
 .close-tab.btn {
@@ -71,6 +70,10 @@ body {
 	display: block;
 	height: 87vh;
 	overflow-y: auto;
+}
+
+.no-top-border {
+	border-top: none !important;
 }
 
 .invest-button {
