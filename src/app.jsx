@@ -177,6 +177,9 @@ export default class App extends React.Component {
     return (
       <TabContainer activeKey={activeTab}>
         <Navbar expand="lg">
+        <Navbar.Brand>InVEST</Navbar.Brand>
+        <Navbar.Toggle aria-controls="basic-navbar-nav" />
+        <Navbar.Collapse>
           <Nav
             variant="pills"
             className="mr-auto"
@@ -190,7 +193,6 @@ export default class App extends React.Component {
             </Nav.Item>
             {investNavItems}
           </Nav>
-          <Navbar.Brand>InVEST</Navbar.Brand>
           <LoadButton
             openInvestModel={this.openInvestModel}
             batchUpdateArgs={this.batchUpdateArgs}
@@ -201,6 +203,7 @@ export default class App extends React.Component {
             investSettings={investSettings}
             clearStorage={this.clearRecentJobs}
           />
+        </Navbar.Collapse>
         </Navbar>
         <TabContent id="top-tab-content">
           <TabPane eventKey="home" title="Home">

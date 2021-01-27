@@ -1,6 +1,5 @@
 body {
 	--invest-green: #148F68;
-	--navbar-height: 65px;
 	background-color: rgba(0,0,0,0);
 	margin: 0;
 	padding: 1rem;
@@ -9,14 +8,12 @@ body {
 /*Top Navigation*/
 
 .navbar {
-	padding-bottom: 0;
-	height: var(--navbar-height);
 	border-bottom: 3px solid var(--invest-green);
 	background-color: #fff
 }
 
 .navbar-light .navbar-nav .nav-link {
-	background-color: transparent;
+  background-color: transparent;
   padding-right: 2rem;
   padding-left: 2rem;
   color: #999999;
