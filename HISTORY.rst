@@ -38,16 +38,18 @@ workbench-alpha
 * General:
     * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
       and server on the localhost, to support the workbench.
-    * Add ``/colnames`` POST endpoint to the server API. This endpoint accepts a
-      vector filepath and returns a list of the vector's column names (used to
-      determine options for a dropdown menu input).
+    * Add ``/colnames`` POST endpoint to the server API. This endpoint accepts
+      a vector filepath and returns a list of the vector's column names (used 
+      to determine options for a dropdown menu input).
     * Add ``/vector_has_points`` POST endpoint to the server API. This endpoint
       accepts a vector filepath and returns a boolean indicating whether the
-      vector might have point geometries (can't be certain because the type could
-      be ``ogr.wkbUnknown``). This is used by the DelineateIt UI.
-    * Rename finfish ARGS_SPEC ``module_name`` to ``model_name`` to be consistent
-      with all other models.
+      vector might have point geometries (can't be certain because the type 
+      could be ``ogr.wkbUnknown``). This is used by the DelineateIt UI.
+    * Rename finfish ARGS_SPEC ``module_name`` to ``model_name`` to be 
+      consistent with all other models.
     * Minor rephrasing of some ``ARGS_SPEC.args.arg.name`` values.
+    * Dynamically populated dropdown inputs' arg specs now have a ``type`` of
+      ``option_string`` and ``validation_options['options']`` is an empty list.
 
 Unreleased Changes (3.9.1)
 --------------------------
