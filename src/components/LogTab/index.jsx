@@ -117,10 +117,34 @@ export default class LogTab extends React.Component {
 
   tailLogfile(logfile) {
     try {
-      this.tail = new Tail(logfile, {
-        fromBeginning: true,
-        logger: logger,
-      });
+      if (process.platform === 'win32') {
+        /* On Windows, node's `fs.watch` only reports back to node about the
+         * logfile changing when the file is closed.  Python's FileHandler,
+         * however, only closes the file when the logfile is closed at model
+         * completion.  The workaround here is to use node's `fs.watchFile`,
+         * which polls the modification times.  The interval here may need to
+         * be tweaked.
+         *
+         * See experiment at
+         * https://github.com/phargogh/experiment-windows-node-fs-watch
+         * */
+        this.tail = new Tail(logfile, {
+          fromBeginning: true,
+          useWatchFile: true,
+          fsWatchOptions: {
+            persistent: true,
+            interval: 250, // .25s
+          },
+          logger: logger,
+        });
+      } else {
+        /* All other OSes seem to report back as expected, so use `fs.watch` is
+         * easier and cheaper. */
+        this.tail = new Tail(logfile, {
+          fromBeginning: true,
+          logger: logger,
+        });
+      }
       let markup = Object.assign('', this.state.logdata);
       this.tail.on('line', (data) => {
         const line = `${data}${os.EOL}`;
