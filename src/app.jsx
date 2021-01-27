@@ -177,7 +177,13 @@ export default class App extends React.Component {
     return (
       <TabContainer activeKey={activeTab}>
         <Navbar expand="lg">
-        <Navbar.Brand>InVEST</Navbar.Brand>
+        <Nav.Link 
+          onSelect={this.switchTabs} 
+          eventKey="home">
+          <Navbar.Brand >
+              InVEST
+          </Navbar.Brand>
+        </Nav.Link>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse>
           <Nav
@@ -186,11 +192,6 @@ export default class App extends React.Component {
             activeKey={activeTab}
             onSelect={this.switchTabs}
           >
-            <Nav.Item>
-              <Nav.Link eventKey="home">
-                Home
-              </Nav.Link>
-            </Nav.Item>
             {investNavItems}
           </Nav>
           <LoadButton
