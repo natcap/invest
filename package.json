@@ -58,9 +58,9 @@
   },
   "invest": {
     "hostname": "https://storage.googleapis.com",
-    "bucket": "natcap-dev-build-artifacts",
-    "fork": "invest/davemfish",
-    "version": "3.8.9.post1130+gdd914a7a",
+    "bucket": "releases.naturalcapitalproject.org",
+    "fork": "natcap",
+    "version": "3.9.0.post147+gcc5a7cfe",
     "target": {
       "macos": "mac_invest_binaries.zip",
       "windows": "windows_invest_binaries.zip"

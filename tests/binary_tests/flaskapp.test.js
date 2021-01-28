@@ -15,7 +15,7 @@ jest.setTimeout(250000); // This test is slow in CI
 
 const isDevMode = true; // otherwise need to mock process.resourcesPath
 beforeAll(async () => {
-  const investExe = await findInvestBinaries(isDevMode);
+  const [investExe, investVersion] = await findInvestBinaries(isDevMode);
   createPythonFlaskProcess(investExe);
   // In the CI the flask app takes more than 10x as long to startup.
   // Especially so on macos.
