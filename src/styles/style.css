@@ -28,7 +28,7 @@ body {
 	font-weight: 550;
 }
 
-.navbar .navbar-brand .nav-link {
+.navbar-brand .nav-link {
 	color: var(--invest-green);
 	font-weight: 600;
 	font-size: 2.0rem;

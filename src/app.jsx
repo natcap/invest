@@ -202,8 +202,8 @@ export default class App extends React.Component {
             </Nav.Link>
           </Navbar.Brand>
           <Nav
+            variant="pills"
             className="mr-auto horizontal-scroll"
-            variant="tabs"
             activeKey={activeTab}
             onSelect={this.switchTabs}
           >
