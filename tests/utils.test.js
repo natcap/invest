@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import {
-  findMostRecentLogfile, boolStringToBoolean, cleanupDir
+  findMostRecentLogfile, boolStringToBoolean
 } from '../src/utils';
 
 function setupDir() {
@@ -22,7 +22,9 @@ test('findMostRecentLogfile ignores files that are not invest logs', async () =>
 
   // File b was created more recently, but it's not an invest log
   expect(recent).toEqual(a);
-  cleanupDir(dir);
+  fs.unlinkSync(a);
+  fs.unlinkSync(b);
+  fs.rmdirSync(dir);
 });
 
 test('findMostRecentLogfile regex matcher', async () => {
@@ -49,14 +51,17 @@ test('findMostRecentLogfile regex matcher', async () => {
   fs.closeSync(fs.openSync(c, 'w'));
   recent = await findMostRecentLogfile(dir);
   expect(recent).toEqual(c);
-  cleanupDir(dir);
+  fs.unlinkSync(a);
+  fs.unlinkSync(b);
+  fs.unlinkSync(c);
+  fs.rmdirSync(dir);
 });
 
 test('findMostRecentLogfile returns undefined when no logiles exist', async () => {
   const dir = setupDir();
   expect(await findMostRecentLogfile(dir))
     .toBeUndefined();
-  cleanupDir(dir);
+  fs.rmdirSync(dir);
 });
 
 test('boolStringToBoolean converts various strings to bools', () => {

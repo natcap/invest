@@ -11,7 +11,6 @@ import {
 import '@testing-library/jest-dom';
 
 import LogTab from '../src/components/LogTab';
-import { cleanupDir } from '../src/utils';
 
 function renderLogTab(logfilePath, primaryPythonLogger) {
   const { ...utils } = render(
@@ -73,7 +72,8 @@ ValueError: Values in the LULC raster were found that are not represented under 
   });
 
   afterEach(() => {
-    cleanupDir(workspace);
+    fs.unlinkSync(logfilePath);
+    fs.rmdirSync(workspace);
   });
 
   test('Text in logfile is rendered', async () => {
