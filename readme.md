@@ -20,8 +20,9 @@ For development, choose either:
 * `npm start`
 
 _Optional: using the react-devtools extension_  
-Before running `npm start`, in a second shell launch `react-devtools`.  
-Then run `npm start` and the electron app should communicate with the
+
+Before running `npm start`, in a second shell launch `react-devtools` (or `npx react-devtools` if you don't have a global install). Then run `npm start`.  
+The electron app should communicate with the
 standalone react-devtools window. There's an oustanding issue in electron
 preventing react-devtools from integrating with the electron browser's devtools window. https://github.com/electron/electron/issues/23662
 
@@ -48,6 +49,6 @@ To run javascript outside the electron runtime, but with the same ECMAscript fea
 
 ## Client logfile locations:
 
-Windows: "C:\Users\dmf\AppData\Roaming\invest-workbench\"
-Mac: "~/Library/Application Support/invest-workbench/"
-Linux: "~/.config/invest-workbench/"
+Windows: "C:\Users\dmf\AppData\Roaming\invest-workbench\"  
+Mac: "\~/Library/Application Support/invest-workbench/"  
+Linux: "\~/.config/invest-workbench/"  
