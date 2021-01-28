@@ -11,6 +11,7 @@ import { boolStringToBoolean } from '../../../utils';
 /** Prevent the default case for onDragOver so onDrop event will be fired. */
 function dragOverHandler(event) {
   event.preventDefault();
+  event.stopPropagation();
   event.dataTransfer.dropEffect = 'move';
 }
 
@@ -78,11 +79,12 @@ export default class ArgsForm extends React.Component {
   inputDropHandler(event) {
     event.preventDefault();
     event.stopPropagation();
+    event.target.classList.remove("input-dragging");
     const { name, value } = event.target; // the arg's key and type
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const fileList = event.dataTransfer.files;
     if (fileList.length) {
-      this.props.updateArgValues(name, fileList[0].path); 
+      this.props.updateArgValues(name, fileList[0].path);
     }
   }
 

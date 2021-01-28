@@ -581,3 +581,209 @@ describe('Form drag-and-drop', () => {
       .toHaveValue(mockDatastack.args.arg2);
   });
 });
+
+describe('Form drag-and-drop', () => {
+  afterEach(() => {
+    fetchValidation.mockReset();
+    fetchDatastackFromFile.mockReset();
+  });
+
+  test('Drag enter/drop of a datastack sets .dragging class', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const mockDatastack = {
+      module_name: spec.module,
+      args: {
+        arg1: 'circle',
+        arg2: 'square',
+      },
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const setupForm = await findByTestId('setup-form');
+
+    const fileDragEvent = createEvent.dragEnter(setupForm);
+    const fileArray = ['foo.txt'];
+    Object.defineProperty(fileDragEvent, 'dataTransfer', {
+      value: { files: fileArray }
+    });
+    fireEvent(setupForm, fileDragEvent);
+
+    expect(setupForm).toHaveClass("dragging");
+
+    const fileDropEvent = createEvent.drop(setupForm);
+    Object.defineProperty(fileDropEvent, 'dataTransfer', {
+      value: { files: fileArray }
+    });
+    fireEvent(setupForm, fileDropEvent);
+
+    expect(await findByLabelText(RegExp(`${spec.args.arg1.name}`)))
+      .toHaveValue(mockDatastack.args.arg1);
+    expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
+      .toHaveValue(mockDatastack.args.arg2);
+    expect(setupForm).not.toHaveClass("dragging");
+  });
+});
+
+describe('Form drag-and-drop', () => {
+  afterEach(() => {
+    fetchValidation.mockReset();
+    fetchDatastackFromFile.mockReset();
+  });
+
+  test('Drag enter/leave of a datastack sets .dragging class', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const mockDatastack = {
+      module_name: spec.module,
+      args: {
+        arg1: 'circle',
+        arg2: 'square',
+      },
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const setupForm = await findByTestId('setup-form');
+
+    const fileDragEnterEvent = createEvent.dragEnter(setupForm);
+    const fileArray = ['foo.txt'];
+    Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
+      value: { files: fileArray }
+    });
+    fireEvent(setupForm, fileDragEnterEvent);
+
+    expect(setupForm).toHaveClass("dragging");
+
+    const fileDragLeaveEvent = createEvent.dragLeave(setupForm);
+    fireEvent(setupForm, fileDragLeaveEvent);
+
+    expect(setupForm).not.toHaveClass("dragging");
+  });
+});
+
+describe('Form drag-and-drop', () => {
+  afterEach(() => {
+    fetchValidation.mockReset();
+  });
+
+  test('Drag enter/drop of a file sets .input-dragging class on input', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const setupForm = await findByTestId('setup-form');
+    const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
+
+    const fileDragEvent = createEvent.dragEnter(setupInput);
+    const fileList = ["file-path"];
+    //const fileList = [new File(['dummy content'], 'foo.txt', {type: "text/plain",})];
+    Object.defineProperty(fileDragEvent, 'dataTransfer', {
+      value: { files: fileList }
+    });
+    fireEvent(setupInput, fileDragEvent);
+
+    expect(setupForm).not.toHaveClass("dragging");
+    expect(setupInput).toHaveClass("input-dragging");
+
+    const fileDropEvent = createEvent.drop(setupInput);
+    Object.defineProperty(fileDropEvent, 'dataTransfer', {
+      value: { files: fileList }
+    });
+    fireEvent(setupInput, fileDropEvent);
+
+    expect(setupInput).not.toHaveClass("input-dragging");
+    expect(setupForm).not.toHaveClass("dragging");
+    expect(setupInput).toHaveValue( 'foo.txt' );
+  });
+});
+
+describe('Form drag-and-drop', () => {
+  afterEach(() => {
+    fetchValidation.mockReset();
+  });
+
+  test('Drag enter/leave of a file sets .input-dragging class on input', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
+
+    const fileDragEnterEvent = createEvent.dragEnter(setupInput);
+    const fileArray = ["file-path"];
+    Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
+      value: { files: fileArray }
+    });
+    fireEvent(setupInput, fileDragEnterEvent);
+
+    expect(setupInput).toHaveClass("input-dragging");
+
+    const fileDragLeaveEvent = createEvent.dragLeave(setupInput);
+    Object.defineProperty(fileDragLeaveEvent, 'dataTransfer', {
+      value: { files: fileArray }
+    });
+    fireEvent(setupInput, fileDragLeaveEvent);
+
+    expect(setupInput).not.toHaveClass("input-dragging");
+  });
+});

@@ -272,6 +272,7 @@ ArgInput.propTypes = {
   handleChange: PropTypes.func.isRequired,
   handleBoolChange: PropTypes.func.isRequired,
   selectFile: PropTypes.func.isRequired,
+  inputDropHandler:PropTypes.func.isRequired,
 };
 ArgInput.defaultProps = {
   value: undefined,
