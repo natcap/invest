@@ -156,6 +156,6 @@ test('validate the UI spec', async () => {
         });
       }
     }
-    expect(has_order_property).toBeTrue();
+    expect(has_order_property).toBe(true);
   });
 });
