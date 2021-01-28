@@ -13,18 +13,18 @@ class EndpointFunctionTests(unittest.TestCase):
         test_client = ui_server.app.test_client()
         # an empty path
         response = test_client.post('/colnames', json={'vector_path': ''})
-        colnames = json.loads(response.get_data(as_text=True))['colnames']
+        colnames = json.loads(response.get_data(as_text=True))
         self.assertEqual(colnames, [])
         # a vector with one column
         path = os.path.join(
             TEST_DATA_PATH, 'aquaculture', 'Input', 'Finfish_Netpens.shp')
         response = test_client.post('/colnames', json={'vector_path': path})
-        colnames = json.loads(response.get_data(as_text=True))['colnames']
+        colnames = json.loads(response.get_data(as_text=True))
         self.assertEqual(colnames, ['FarmID'])
         # a non-vector file shouldn't raise an error
         path = os.path.join(TEST_DATA_PATH, 'ndr', 'input', 'dem.tif')
         response = test_client.post('/colnames', json={'vector_path': path})
-        colnames = json.loads(response.get_data(as_text=True))['colnames']
+        colnames = json.loads(response.get_data(as_text=True))
         self.assertEqual(colnames, [])
 
     def test_get_vector_has_points(self):
