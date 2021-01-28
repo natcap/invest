@@ -72,10 +72,6 @@ body {
 	overflow-y: auto;
 }
 
-.no-top-border {
-	border-top: none !important;
-}
-
 .invest-button {
 	color: var(--invest-green);
 	font-weight: 600;
@@ -138,6 +134,8 @@ body {
 /* InVEST Model Tab */
 
 .invest-sidebar-col {
+	display: flex;
+	flex-direction: column;
 	padding-right: 0rem;
 }
 
@@ -160,25 +158,17 @@ body {
 	padding-left: 2rem;
 }
 
-.invest-sidebar-col .row {
-	padding:inherit;
-}
-
-.invest-sidebar-col .row a {
-	padding:inherit;
+.sidebar-row {
+	display: flex;
+	flex-direction: column;
 	font-size: 1.3rem;
+	padding: inherit;
 }
-
 
 .sidebar-footer {
-	position: absolute;
-	bottom: 0rem;
-	right: 0;
-	left: 0;
-	margin-right:2rem;
-	margin-left:2rem;
-	padding-left: inherit;
-	padding-right: inherit;
+    margin-top: auto;
+    padding-bottom: 2rem;
+    padding-right: 2rem;
 }
 
 .sidebar-footer .btn-primary {
