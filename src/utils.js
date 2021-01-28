@@ -98,6 +98,10 @@ export function cleanupDir(dir) {
         cleanupDir(filepath);
       }
     });
-    fs.rmdirSync(dir);
+    try { // I can't see why, but sometimes the dir still contains files
+      fs.rmdirSync(dir);
+    } catch {
+      cleanupDir(dir);
+    }
   }
 }
