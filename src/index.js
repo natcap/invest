@@ -7,6 +7,7 @@ if (isDevMode) {
   // load the '.env' file from the project root
   const dotenv = require('dotenv'); // eslint-disable-line import/no-extraneous-dependencies
   dotenv.config();
+  require('react-devtools');
 }
 
 const _interopRequireDefault = require('@babel/runtime/helpers/interopRequireDefault');

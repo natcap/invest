@@ -115,6 +115,7 @@
     "jest-environment-jsdom-sixteen": "^1.0.3",
     "pptr-testing-library": "^0.6.4",
     "puppeteer-core": "^5.5.0",
+    "react-devtools": "^4.10.1",
     "react-test-renderer": "^17.0.1"
   },
   "browserslist": {
