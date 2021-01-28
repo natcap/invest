@@ -372,7 +372,7 @@ describe('InVEST subprocess testing', () => {
         type: 'freestyle_string',
       }
     },
-    model_name: 'Eco Model',
+    model_name: 'EcoModel',
     module: 'natcap.invest.dot',
   };
 
@@ -382,8 +382,6 @@ describe('InVEST subprocess testing', () => {
   let mockInvestProc;
 
   beforeEach(() => {
-    // this can't go into the testing workspace because the model
-    // will look for it in /ui_data 
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
@@ -415,13 +413,9 @@ describe('InVEST subprocess testing', () => {
     });
 
     // mock out the whole UI config module
-    jest.mock('../src/ui_config', () => {
-      return {
-        'Eco Model': {
-          order: [['workspace_dir', 'results_suffix']]
-        }
-      }
-    });
+    // brackets around spec.model_name turns it into a valid literal key
+    const mockUISpec = {[spec.model_name]: {order: [Object.keys(spec.args)]}};
+    jest.mock('../src/ui_config', () => mockUISpec);
   });
 
   afterEach(async () => {

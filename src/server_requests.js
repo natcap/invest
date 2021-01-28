@@ -117,8 +117,8 @@ export function fetchDatastackFromFile(payload) {
  * @param {string} payload - path to file
  * @returns {Promise} resolves array
  */
-export async function getVectorColumnNames(payload) {
-  const result = await (
+export function getVectorColumnNames(payload) {
+  return (
     fetch(`${HOSTNAME}:${process.env.PORT}/colnames`, {
       method: 'post',
       body: JSON.stringify({vector_path: payload}),
@@ -127,7 +127,6 @@ export async function getVectorColumnNames(payload) {
       .then((response) => response.json())
       .catch((error) => logger.error(error.stack))
   );
-  return result.colnames;
 }
 
 /**
@@ -136,17 +135,17 @@ export async function getVectorColumnNames(payload) {
  * @param {string} payload - path to file
  * @returns {Promise} resolves boolean
  */
-export async function getVectorHasPoints(payload) {
-  const result = await (
+export function getVectorHasPoints(payload) {
+  return (
     fetch(`${HOSTNAME}:${process.env.PORT}/vector_has_points`, {
       method: 'post',
       body: JSON.stringify({vector_path: payload}),
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
+      .then((json) => json.has_points)
       .catch((error) => logger.error(error.stack))
   );
-  return result.has_points;
 }
 
 /**

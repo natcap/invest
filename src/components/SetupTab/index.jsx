@@ -27,8 +27,8 @@ import { argsDictFromObject } from '../../utils';
  *   each with the same keys as argsSpec:
  *     {object} argsValues - stores properties that update in response to
  *       user interaction
- *     {object} argsValidation - stores properties that update in response to
- *       validation.
+ *     {object} argsDropdownOptions - stores lists of dropdown options for
+ *       args of type 'option_string'.
  */
 function initializeArgValues(argsSpec, uiSpec, argsDict) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
@@ -82,34 +82,6 @@ export default class SetupTab extends React.Component {
     this.callUISpecFunctions = this.callUISpecFunctions.bind(this);
   }
 
-  /**
-   * Call functions from the UI spec to determine the enabled/disabled 
-   * state and dropdown options for each input, if applicable.
-   * 
-   * @returns {object} updated argsEnabled object mapping each arg key
-   *                   to a boolean (true = enabled, false = disabled)
-   */
-  async callUISpecFunctions() {
-    const enabledFunctions = this.props.uiSpec.enabledFunctions;
-    const dropdownFunctions = this.props.uiSpec.dropdownFunctions;
-
-    if (enabledFunctions) {
-      const argsEnabled = this.state.argsEnabled;
-      for (const key in enabledFunctions) {
-        argsEnabled[key] = await enabledFunctions[key](this.state);
-      }
-      this.setState({argsEnabled: argsEnabled});
-    }
-    
-    if (dropdownFunctions) {
-      const argsDropdownOptions = this.state.argsDropdownOptions;
-      for (const key in dropdownFunctions) {
-        argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
-      }
-      this.setState({argsDropdownOptions: argsDropdownOptions});
-    }
-  }
-
   componentDidMount() {
     /*
     * Including the `key` property on SetupTab tells React to
@@ -146,9 +118,39 @@ export default class SetupTab extends React.Component {
       argsEnabled: argsEnabled,
       argsDropdownOptions: argsDropdownOptions
     }, () => {
-      this.investValidate(this.state.argsValues);
+      this.investValidate();
       this.callUISpecFunctions();
     });
+  }
+
+  /**
+   * Call functions from the UI spec to determine the enabled/disabled 
+   * state and dropdown options for each input, if applicable.
+   * 
+   * @returns {undefined}
+   */
+  async callUISpecFunctions() {
+    const { enabledFunctions, dropdownFunctions } = this.props.uiSpec;
+
+    if (enabledFunctions) {
+      // this model has some fields that are conditionally enabled
+      const argsEnabled = this.state.argsEnabled;
+      for (const key in enabledFunctions) {
+        // evaluate the function to determine if it should be enabled
+        argsEnabled[key] = await enabledFunctions[key](this.state);
+      }
+      this.setState({argsEnabled: argsEnabled});
+    }
+    
+    if (dropdownFunctions) {
+      // this model has a dropdown that's dynamically populated
+      const argsDropdownOptions = this.state.argsDropdownOptions;
+      for (const key in dropdownFunctions) {
+        // evaluate the function to get a list of dropdown options
+        argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
+      }
+      this.setState({argsDropdownOptions: argsDropdownOptions});
+    }
   }
 
   /**
@@ -207,14 +209,13 @@ export default class SetupTab extends React.Component {
    */
   updateArgValues(key, value) {
     let { argsValues } = this.state;
-    const { uiSpec } = this.props;
     argsValues[key].value = value;
     argsValues[key].touched = true;
 
     this.setState({ 
       argsValues: argsValues 
     }, () => {
-        this.investValidate(argsValues);
+        this.investValidate();
         this.callUISpecFunctions();
       });
   }
@@ -234,19 +235,18 @@ export default class SetupTab extends React.Component {
       argsValues: argsValues,
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
-      this.investValidate(this.state.argsValues);
+      this.investValidate();
       this.callUISpecFunctions();
     });
   }
 
   /** Validate an arguments dictionary using the InVEST model's validate function.
    *
-   * @param {object} argsValues - of the shape returned by `initializeArgValues`.
    * @returns undefined
    */
-  async investValidate(argsValues) {
+  async investValidate() {
     const { argsSpec, pyModuleName } = this.props;
-    const argsValidation = this.state.argsValidation;
+    const { argsValues, argsValidation } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
       model_module: pyModuleName,

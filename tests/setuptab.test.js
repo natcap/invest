@@ -59,7 +59,7 @@ describe('Arguments form input types', () => {
       },
     };
 
-    uiSpec = {order: [['arg']]}
+    uiSpec = {order: [Object.keys(baseSpec.args)]}
     fetchValidation.mockResolvedValue(
       [[Object.keys(baseSpec.args), validationMessage]]
     );
@@ -140,7 +140,7 @@ describe('Arguments form interactions', () => {
       },
     };
 
-    uiSpec = {order: [['arg']]}
+    uiSpec = {order: [Object.keys(spec.args)]}
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), validationMessage]]
     );
@@ -269,7 +269,7 @@ describe('UI spec functionality', () => {
     };
 
     const uiSpec = {
-      order: [['arg1', 'arg2'], ['arg3', 'arg4']],
+      order: [Object.keys(spec.args)],
       enabledFunctions: {
         // enabled if arg1 is sufficient
         arg2: (state => state.argsEnabled['arg1'] && !!state.argsValues['arg1'].value),
@@ -316,7 +316,7 @@ describe('UI spec functionality', () => {
   });
 
   test('expect dropdown options can be dynamic', async () => {
-    const mockGetVectorColumnNames = jest.fn(state => {
+    const mockGetVectorColumnNames = (state => {
       if (state.argsValues.arg1.value) {
         return ['Field1'];
       } else {
@@ -339,7 +339,7 @@ describe('UI spec functionality', () => {
       },
     };
     const uiSpec = {
-      order: [['arg1', 'arg2']],
+      order: [Object.keys(spec.args)],
       dropdownFunctions: {
         arg2: mockGetVectorColumnNames
       }
@@ -390,7 +390,7 @@ describe('UI spec functionality', () => {
       order: [['arg4'], ['arg3', 'arg2'], ['arg1'], ['arg5']]
     };
 
-    const { findByTestId } = renderSetupFromSpec(spec, uiSpec);
+    const { findByTestId, queryByText } = renderSetupFromSpec(spec, uiSpec);
     const form = await findByTestId('setup-form');
 
     await waitFor(() => {
@@ -409,6 +409,8 @@ describe('UI spec functionality', () => {
       expect(form.childNodes[3])
         .toHaveTextContent(RegExp(`${spec.args.arg5.name}`));
     });
+    const arg6 = await queryByText('F');
+    expect(arg6).toBeNull();
   });
 });
 
@@ -435,7 +437,7 @@ describe('Misc form validation stuff', () => {
       },
     };
 
-    const uiSpec = {order: [['a', 'b', 'c']]}
+    const uiSpec = {order: [Object.keys(spec.args)]}
 
     // Mocking to return the payload so we can assert we always send
     // correct payload to this endpoint.
@@ -466,7 +468,7 @@ describe('Misc form validation stuff', () => {
         },
       },
     };
-    const uiSpec = {order: [['vector', 'raster']]}
+    const uiSpec = {order: [Object.keys(spec.args)]}
     const vectorValue = './vector.shp';
     const expectedVal1 = '-84.9';
     const vectorBox = `[${expectedVal1}, 19.1, -69.1, 29.5]`;
@@ -535,7 +537,7 @@ describe('Form drag-and-drop', () => {
         arg2: 'square',
       },
     };
-    const uiSpec = {order: [['arg1', 'arg2']]}
+    const uiSpec = {order: [Object.keys(spec.args)]}
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);

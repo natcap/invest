@@ -88,7 +88,6 @@ export default class ArgsForm extends React.Component {
             enabled={argsEnabled[argkey]}
             touched={argsValues[argkey].touched}
             dropdownOptions={argsDropdownOptions[argkey]}
-            control_option={argsValues[argkey].control_option}
             isValid={argsValidation[argkey].valid}
             validationMessage={argsValidation[argkey].validationMessage}
             handleChange={this.handleChange}

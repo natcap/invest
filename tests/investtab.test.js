@@ -35,7 +35,7 @@ function renderInvestTab() {
 describe('Save InVEST Model Setup Buttons', () => {
   const spec = {
     module: 'natcap.invest.foo',
-    model_name: 'Foo Model',
+    model_name: 'FooModel',
     args: {
       workspace: {
         name: 'Workspace',
@@ -56,9 +56,9 @@ describe('Save InVEST Model Setup Buttons', () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     // mock out the whole UI config module
-    jest.mock('../src/ui_config', () => {
-      return {'Foo Model': {order: [['workspace']]}}
-    });
+    // brackets around spec.model_name turns it into a valid literal key
+    const mockUISpec = {[spec.model_name]: {order: [Object.keys(spec.args)]}}
+    jest.mock('../src/ui_config', () => mockUISpec);
   });
 
   afterAll(() => {
@@ -188,7 +188,7 @@ describe('Save InVEST Model Setup Buttons', () => {
 describe('InVEST Run Button', () => {
   const spec = {
     module: 'natcap.invest.bar',
-    model_name: 'Bar Model',
+    model_name: 'BarModel',
     args: {
       a: {
         name: 'abar',
@@ -208,9 +208,9 @@ describe('InVEST Run Button', () => {
   beforeAll(() => {
     getSpec.mockResolvedValue(spec);
     // mock out the whole UI config module
-    jest.mock('../src/ui_config', () => {
-      return {'Bar Model': {order: [['a'], ['b', 'c']]}}
-    });
+    // brackets around spec.model_name turns it into a valid literal key
+    let mockUISpec = {[spec.model_name]: {order: [Object.keys(spec.args)]}}
+    jest.mock('../src/ui_config', () => mockUISpec);
   });
 
   afterAll(() => {

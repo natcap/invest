@@ -6,6 +6,7 @@ import { getVectorColumnNames, getVectorHasPoints } from './server_requests';
 //
 // Format:
 // const uiSpec = {
+//     order: [['arg']]
 //     modelName: {  
 //        category: {
 //            arg: f
@@ -13,12 +14,16 @@ import { getVectorColumnNames, getVectorHasPoints } from './server_requests';
 //     }
 // }
 // where
+// - `order` is a 2D array of args in the order that they should be rendered.
+//    Args within each nested array are visually grouped together.
 // - `modelName` equals `ARGS_SPEC.model_name`
 // - `category` is a category that the SetupTab component looks for
 //    (currently `enabledFunctions` or `dropdownFunctions`)
 // - `f` is a function that accepts `SetupTab.state` as its one argument 
 //     - in the `enabledFunctions` section, `f` returns a boolean where true = enabled, false = disabled
 //     - in the `dropdownFunctions` section, `f` returns a list of dropdown options.
+//       Note: Most dropdown inputs will have a static list of options defined in the ARGS_SPEC.
+//       This is only for dynamically populating a dropdown.
 
 // When the SetupTab component renders, it calls `f(this.state)` to get
 // the enabled state of each input, and dropdown options if any.
@@ -91,11 +96,7 @@ const uiSpec = {
             ["slr_vector_path", "slr_field"]
         ],
         dropdownFunctions: {
-            slr_field: (async (state) => {
-                    const colnames = await getVectorColumnNames(state.argsValues['slr_vector_path'].value);
-                    return colnames;
-                }
-            )
+            slr_field: ((state) => getVectorColumnNames(state.argsValues['slr_vector_path'].value))
         },
         enabledFunctions: {
             slr_field: isSufficient.bind(null, 'slr_vector_path'),
@@ -142,11 +143,7 @@ const uiSpec = {
             ["do_valuation", "p_per_kg", "frac_p", "discount"]
         ],
         dropdownFunctions: {
-            farm_ID: (async (state) => {
-                    const colnames = await getVectorColumnNames(state.argsValues['ff_farm_loc'].value);
-                    return colnames;
-                }
-            )
+            farm_ID: ((state) => getVectorColumnNames(state.argsValues['ff_farm_loc'].value))
         },
         enabledFunctions: {
             farm_ID: isSufficient.bind(null, 'ff_farm_loc'),
