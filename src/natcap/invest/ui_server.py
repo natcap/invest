@@ -126,8 +126,8 @@ def get_vector_colnames():
             colnames = [defn.GetName() for defn in vector.GetLayer().schema]
         except:
             LOGGER.error(f'Could not read column names from {vector_path}')
-    LOGGER.debug({'colnames': colnames})
-    return json.dumps({'colnames': colnames})
+    LOGGER.debug(colnames)
+    return json.dumps(colnames)
 
 
 @app.route('/vector_has_points', methods=['POST'])
