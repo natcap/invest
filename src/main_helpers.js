@@ -1,6 +1,7 @@
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const { app } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const { getLogger } = require('./logger');
 
@@ -9,7 +10,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
  * Find paths to local invest executeable under dev or production environments.
  *
  * @param {boolean} isDevMode - a boolean designating dev mode or not.
- * @returns {Promise} Resolves filepath to invest binary
+ * @returns {Promise} Resolves array w/ invest binary path & version strings.
  */
 export function findInvestBinaries(isDevMode) {
   return new Promise(resolve => {
@@ -37,14 +38,15 @@ export function findInvestBinaries(isDevMode) {
       const binaryPath = path.join(process.resourcesPath, 'invest');
       investExe = path.join(binaryPath, `invest${ext}`);
     }
+    let investVersion;
     try {
-      fs.accessSync(investExe, fs.constants.X_OK);
+      investVersion = execFileSync(investExe, ['--version']);
     } catch (error) {
       logger.error(error);
       throw error;
     }
-    logger.info(`Found invest binaries ${investExe}`);
-    resolve(investExe);
+    logger.info(`Found invest binaries ${investExe} for version ${investVersion}`);
+    resolve([investExe, `${investVersion}`.trim(os.EOL)]);
   });
 }
 
@@ -52,7 +54,6 @@ export function findInvestBinaries(isDevMode) {
  * Spawn a child process running the Python Flask app.
  *
  * @param  {string} investExe - path to executeable that launches flask app.
- * @param {boolean} isDevMode - a boolean designating dev mode or not.
  * @returns {undefined}
  */
 export function createPythonFlaskProcess(investExe) {
@@ -64,7 +65,6 @@ export function createPythonFlaskProcess(investExe) {
     );
 
     logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-    logger.debug(investExe);
     pythonServerProcess.stdout.on('data', (data) => {
       logger.debug(`${data}`);
     });
