@@ -135,15 +135,15 @@ export function getVectorColumnNames(payload) {
  * @param {string} payload - path to file
  * @returns {Promise} resolves boolean
  */
-export function getVectorHasPoints(payload) {
+export function getVectorMayHavePoints(payload) {
   return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/vector_has_points`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/vector_may_have_points`, {
       method: 'post',
       body: JSON.stringify({vector_path: payload}),
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
-      .then((json) => json.has_points)
+      .then((json) => json.may_have_points)
       .catch((error) => logger.error(error.stack))
   );
 }

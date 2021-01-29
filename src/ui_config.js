@@ -1,4 +1,4 @@
-import { getVectorColumnNames, getVectorHasPoints } from './server_requests';
+import { getVectorColumnNames, getVectorMayHavePoints } from './server_requests';
 
 
 // Some input fields are rendered differently conditional upon the state of other input fields.
@@ -126,8 +126,8 @@ const uiSpec = {
             outlet_vector_path: isNotSufficient.bind(null, 'detect_pour_points'),
             skip_invalid_geometry: isNotSufficient.bind(null, 'detect_pour_points'),
             snap_points: (async (state) => {
-                const hasPoints = await getVectorHasPoints(state.argsValues['outlet_vector_path'].value);
-                return (isSufficient('outlet_vector_path', state) && hasPoints) || isSufficient('detect_pour_points', state);
+                const mayHavePoints = await getVectorMayHavePoints(state.argsValues['outlet_vector_path'].value);
+                return (isSufficient('outlet_vector_path', state) && mayHavePoints) || isSufficient('detect_pour_points', state);
             }),
             flow_threshold: isSufficient.bind(null, 'snap_points'),
             snap_distance: isSufficient.bind(null, 'snap_points')
