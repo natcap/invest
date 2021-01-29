@@ -131,8 +131,8 @@ def get_vector_colnames():
     return json.dumps(colnames)
 
 
-@app.route('/vector_has_points', methods=['POST'])
-def get_vector_has_points():
+@app.route('/vector_may_have_points', methods=['POST'])
+def get_vector_may_have_points():
     """Return boolean indicating if a vector may contain points.
     This is used by the DelineateIt UI to determine if the 'snap points' 
     option should be enabled.
@@ -147,17 +147,18 @@ def get_vector_has_points():
     LOGGER.debug(payload)
     vector_path = payload['vector_path']
     # default True because it may have point geometries unless proven otherwise
-    has_points = True
+    may_have_points = True
     # a lot of times the path will be empty so don't even try to open it
     if vector_path:
         try:
-            has_points = delineateit._vector_may_contain_points(vector_path)
+            may_have_points = delineateit._vector_may_contain_points(
+                vector_path)
         except:
             LOGGER.error(
-                f'Could not tell if vector {vector_path} contains points. '
+                f'Could not tell if vector {vector_path} may contain points. '
                 f'ERROR: {e.message}')
-    LOGGER.debug({'has_points': has_points})
-    return json.dumps({'has_points': has_points})
+    LOGGER.debug({'may_have_points': may_have_points})
+    return json.dumps({'may_have_points': may_have_points})
 
 
 @app.route('/post_datastack_file', methods=['POST'])
