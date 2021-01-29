@@ -15,7 +15,7 @@ import { fileRegistry } from '../src/constants';
 import InvestTab from '../src/components/InvestTab';
 import App from '../src/app';
 import {
-  getInvestList, getSpec, fetchValidation, fetchDatastackFromFile
+  getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
 } from '../src/server_requests';
 import InvestJob from '../src/InvestJob';
 import { cleanupDir } from '../src/utils';
@@ -40,7 +40,7 @@ afterAll(async () => {
 
 describe('Various ways to open and close InVEST models', () => {
   beforeAll(() => {
-    getInvestList.mockResolvedValue(MOCK_INVEST_LIST);
+    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
   });
@@ -210,7 +210,7 @@ describe('Various ways to open and close InVEST models', () => {
 
 describe('Display recently executed InVEST jobs', () => {
   beforeEach(() => {
-    getInvestList.mockResolvedValue({});
+    getInvestModelNames.mockResolvedValue({});
   });
   afterEach(async () => {
     await InvestJob.clearStore();
@@ -286,7 +286,7 @@ describe('Display recently executed InVEST jobs', () => {
 
 describe('InVEST global settings: dialog interactions', () => {
   beforeEach(() => {
-    getInvestList.mockResolvedValue({});
+    getInvestModelNames.mockResolvedValue({});
   });
   afterEach(() => {
     jest.resetAllMocks();
@@ -395,7 +395,7 @@ describe('InVEST subprocess testing', () => {
     });
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    getInvestList.mockResolvedValue(
+    getInvestModelNames.mockResolvedValue(
       { Carbon: { internal_name: 'carbon' } }
     );
 
