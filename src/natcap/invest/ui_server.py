@@ -124,8 +124,9 @@ def get_vector_colnames():
         try:
             vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
             colnames = [defn.GetName() for defn in vector.GetLayer().schema]
-        except:
-            LOGGER.error(f'Could not read column names from {vector_path}')
+        except Exception as e:
+            LOGGER.error(f'Could not read column names from {vector_path}. '
+                         f'ERROR: {e.message}')
     LOGGER.debug(colnames)
     return json.dumps(colnames)
 
@@ -153,7 +154,8 @@ def get_vector_has_points():
             has_points = delineateit._vector_may_contain_points(vector_path)
         except:
             LOGGER.error(
-                f'Could not tell if vector {vector_path} contains points.')
+                f'Could not tell if vector {vector_path} contains points. '
+                f'ERROR: {e.message}')
     LOGGER.debug({'has_points': has_points})
     return json.dumps({'has_points': has_points})
 
