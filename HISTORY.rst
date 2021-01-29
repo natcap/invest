@@ -41,7 +41,7 @@ workbench-alpha
     * Add ``/colnames`` POST endpoint to the server API. This endpoint accepts
       a vector filepath and returns a list of the vector's column names (used 
       to determine options for a dropdown menu input).
-    * Add ``/vector_has_points`` POST endpoint to the server API. This endpoint
+    * Add ``/vector_may_have_points`` POST endpoint to the server API. This endpoint
       accepts a vector filepath and returns a boolean indicating whether the
       vector might have point geometries (can't be certain because the type 
       could be ``ogr.wkbUnknown``). This is used by the DelineateIt UI.
