@@ -24,6 +24,7 @@ jest.mock('child_process');
 jest.mock('../src/server_requests');
 
 const MOCK_MODEL_LIST_KEY = 'Carbon';
+const MOCK_MODEL_LIST_KEY2 = '';
 const MOCK_MODEL_RUN_NAME = 'carbon';
 const MOCK_INVEST_LIST = {
   [MOCK_MODEL_LIST_KEY]: {
@@ -111,13 +112,14 @@ describe('Various ways to open and close InVEST models', () => {
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
-    const { findByText, findByLabelText, findByRole } = render(
+    const { findByText, findByLabelText, findByRole, getByTitle } = render(
       <App investExe="foo" />
     );
 
+    fireEvent.click(getByTitle('More options'));
     const loadButton = await findByText('Load Parameters');
     fireEvent.click(loadButton);
-    const executeButton = await findByRole('button', { name: /Run/ });
+    const executeButton = await findByRole('button', {name: /Run/});
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
     const input = await findByLabelText(/Carbon Pools/);
@@ -132,13 +134,14 @@ describe('Various ways to open and close InVEST models', () => {
     };
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
 
-    const { findByText } = render(
+    const { findByText, findByRole, getByTitle } = render(
       <App investExe="foo" />
     );
 
+    fireEvent.click(getByTitle('More options'));
     const loadButton = await findByText('Load Parameters');
-    const homeTab = await findByText('Home');
     fireEvent.click(loadButton);
+    const homeTab = await findByRole('tabpanel', {name: /Home/});
     // expect we're on the same tab we started on instead of switching to Setup
     expect(homeTab.classList.contains('active')).toBeTruthy();
     // These are the calls that would have triggered if a file was selected
@@ -152,6 +155,7 @@ describe('Various ways to open and close InVEST models', () => {
       findByTitle,
       findByRole,
       findAllByText,
+      getByTitle
     } = render(<App investExe="foo" />);
 
     // Open first model
@@ -181,6 +185,7 @@ describe('Various ways to open and close InVEST models', () => {
     };
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+    fireEvent.click(getByTitle('More options'));
     const loadButton = await findByText('Load Parameters');
     fireEvent.click(loadButton);
     const tabPanelB = await findByTitle(mockDatastack.model_human_name);
@@ -202,7 +207,7 @@ describe('Various ways to open and close InVEST models', () => {
     // Close the other open model
     fireEvent.click(closeButtonArray[0]);
     expect(setupTabA).not.toBeInTheDocument();
-    const homeTab = await findByText('Home');
+    const homeTab = await findByRole('tabpanel', {name: /Home/});
     expect(homeTab.classList.contains('active')).toBeTruthy();
   });
 });
@@ -268,7 +273,7 @@ describe('Display recently executed InVEST jobs', () => {
     });
     const recentJobs = await job1.save();
 
-    const { getByText, findByText } = render(<App investExe="foo" />);
+    const { getByText, findByText, getByTitle } = render(<App investExe="foo" />);
 
     await waitFor(() => {
       recentJobs.forEach((job) => {
@@ -276,6 +281,7 @@ describe('Display recently executed InVEST jobs', () => {
           .toBeTruthy();
       });
     });
+    fireEvent.click(getByTitle('More options'));
     fireEvent.click(getByText('Settings'));
     fireEvent.click(getByText('Clear'));
     const node = await findByText(/No recent InVEST runs/);
@@ -292,11 +298,12 @@ describe('InVEST global settings: dialog interactions', () => {
   });
   test('Set the python logging level to pass to the invest CLI', async () => {
     const DEFAULT = 'INFO';
-    const { getByText, getByLabelText } = render(
+    const { getByText, getByLabelText, getByTitle } = render(
       <App investExe="foo" />
     );
 
     // Check the default settings
+    fireEvent.click(getByTitle('More options'));
     fireEvent.click(getByText('Settings'));
     await waitFor(() => {
       // waiting because the selected value depends on passed props
@@ -324,10 +331,11 @@ describe('InVEST global settings: dialog interactions', () => {
     const badValue = 'a';
     const labelText = 'Taskgraph n_workers parameter';
 
-    const { getByText, getByLabelText } = render(
+    const { getByText, getByLabelText, getByTitle } = render(
       <App investExe="foo" />
     );
 
+    fireEvent.click(getByTitle('More options'));
     fireEvent.click(getByText('Settings'));
     const input = getByLabelText(labelText, { exact: false });
 
@@ -347,6 +355,7 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(input).toHaveValue(newValue);
     // The real test: still newValue after saving and re-opening
     fireEvent.click(getByText('Save Changes'));
+    fireEvent.click(getByTitle('More options'));
     fireEvent.click(getByText('Settings'));
     await waitFor(() => { // the value to test is inherited through props
       expect(input).toHaveValue(newValue);

@@ -184,7 +184,8 @@ export default class App extends React.Component {
           onClick(e);
         }}
       >
-        <i className="material-icons mdc-button__icon kebab-menu" aria-hidden="true">
+        <i className="material-icons mdc-button__icon kebab-menu"
+          title="More options">
           more_vert
         </i>
         {children}
