@@ -153,7 +153,7 @@ def get_vector_may_have_points():
         try:
             may_have_points = delineateit._vector_may_contain_points(
                 vector_path)
-        except:
+        except Exception as e:
             LOGGER.error(
                 f'Could not tell if vector {vector_path} may contain points. '
                 f'ERROR: {e}')
