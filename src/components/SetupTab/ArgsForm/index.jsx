@@ -83,6 +83,9 @@ export default class ArgsForm extends React.Component {
     const { name, value } = event.target; // the arg's key and type
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const fileList = event.dataTransfer.files;
+    console.log(fileList);
+    console.log(fileList[0]);
+    console.log(fileList[0].path);
     if (fileList.length) {
       this.props.updateArgValues(name, fileList[0].path);
     }
