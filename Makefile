@@ -351,9 +351,9 @@ $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARG
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
-CERT_FILE := StanfordUniversity.crt
-KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
-P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
+CERT_FILE := codesigning-2021.crt
+KEY_FILE := Stanford-natcap-code-signing-cert-expires-2024-01-26.key.pem
+P12_FILE := Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
 KEYCHAIN_NAME := codesign_keychain
 codesign_mac:
 	# download the p12 certificate file from google cloud
@@ -371,7 +371,7 @@ codesign_mac:
 	# this is essential to avoid the UI password prompt
 	security set-key-partition-list -S apple-tool:,apple: -s -k '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
-	codesign --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
+	codesign --timestamp --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
 	# relock the keychain (not sure if this is important?)
 	security lock-keychain '$(KEYCHAIN_NAME)'
 
