@@ -45,6 +45,9 @@ export function findInvestBinaries(isDevMode) {
     }
     logger.info(`Found invest binaries ${investExe}`);
     resolve(investExe);
+  }).catch(error => {
+    console.log(error.message);
+    console.log('InVEST binaries are probably missing.');
   });
 }
 
