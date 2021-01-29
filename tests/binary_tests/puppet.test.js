@@ -6,8 +6,6 @@ import { spawn } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
-import { cleanupDir } from '../../src/utils';
-
 jest.setTimeout(120000); // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
 
@@ -85,7 +83,10 @@ afterAll(async () => {
     console.log(binaryPath);
     console.error(error);
   }
-  cleanupDir(TMP_DIR);
+  // being extra careful with recursive rm
+  if (TMP_DIR.startsWith('tests/data')) {
+    fs.rmdirSync(TMP_DIR, { recursive: true });
+  }
   // I thought this business would be necessary to kill the spawned shell
   // process running electron - since that's how we kill a similar spawned
   // subprocess in the app, but actually it is not.

@@ -90,10 +90,6 @@ const createWindow = async () => {
   // https://github.com/electron/electron/issues/23662
   mainWindow.webContents.on('did-frame-finish-load', async () => {
     if (ELECTRON_DEV_MODE) {
-      const {
-        default: installExtension, REACT_DEVELOPER_TOOLS
-      } = require('electron-devtools-installer');
-      await installExtension(REACT_DEVELOPER_TOOLS);
       mainWindow.webContents.openDevTools();
     }
   });
