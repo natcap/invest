@@ -126,7 +126,7 @@ def get_vector_colnames():
             colnames = [defn.GetName() for defn in vector.GetLayer().schema]
         except Exception as e:
             LOGGER.error(f'Could not read column names from {vector_path}. '
-                         f'ERROR: {e.message}')
+                         f'ERROR: {e}')
     LOGGER.debug(colnames)
     return json.dumps(colnames)
 
@@ -156,7 +156,7 @@ def get_vector_may_have_points():
         except:
             LOGGER.error(
                 f'Could not tell if vector {vector_path} may contain points. '
-                f'ERROR: {e.message}')
+                f'ERROR: {e}')
     LOGGER.debug({'may_have_points': may_have_points})
     return json.dumps({'may_have_points': may_have_points})
 
