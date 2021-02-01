@@ -70,7 +70,6 @@ function dragOverHandler(event) {
   } else {
     event.dataTransfer.dropEffect = 'copy';
   }
-
 }
 
 function dragEnterHandler(event) {
