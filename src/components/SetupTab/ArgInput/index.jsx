@@ -64,19 +64,30 @@ Feedback.defaultProps = {
 /** Prevent the default case for onDragOver so onDrop event will be fired. */
 function dragOverHandler(event) {
   event.preventDefault();
-  event.dataTransfer.dropEffect = 'move';
+  event.stopPropagation();
+  if (event.target.disabled) {
+    event.dataTransfer.dropEffect = 'none';
+  } else {
+    event.dataTransfer.dropEffect = 'copy';
+  }
+
 }
 
 function dragEnterHandler(event) {
   event.preventDefault();
   event.stopPropagation();
-  event.dataTransfer.dropEffect = 'move';
-  event.target.classList.add('input-dragging');
+  if (event.target.disabled) {
+    event.dataTransfer.dropeffect = 'none';
+  } else {
+    event.dataTransfer.dropEffect = 'copy';
+    event.target.classList.add('input-dragging');
+  }
 }
 
 function dragLeavingHandler(event) {
   event.preventDefault();
   event.stopPropagation();
+  event.dataTransfer.dropEffect = 'copy';
   event.target.classList.remove('input-dragging');
 }
 
