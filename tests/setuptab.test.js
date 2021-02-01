@@ -569,9 +569,16 @@ describe('Form drag-and-drop', () => {
     // Below is a patch similar to the one noted here:
     // https://github.com/testing-library/react-testing-library/issues/339
     const fileDropEvent = createEvent.drop(setupForm);
-    const fileArray = ['foo.txt'];
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.json' },
+      length: { value: 1 },
+    });
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
-      value: { files: fileArray }
+      value: { files: [fileValue] }
     });
     fireEvent(setupForm, fileDropEvent);
 
@@ -579,13 +586,6 @@ describe('Form drag-and-drop', () => {
       .toHaveValue(mockDatastack.args.arg1);
     expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
       .toHaveValue(mockDatastack.args.arg2);
-  });
-});
-
-describe('Form drag-and-drop', () => {
-  afterEach(() => {
-    fetchValidation.mockReset();
-    fetchDatastackFromFile.mockReset();
   });
 
   test('Drag enter/drop of a datastack sets .dragging class', async () => {
@@ -619,9 +619,16 @@ describe('Form drag-and-drop', () => {
     const setupForm = await findByTestId('setup-form');
 
     const fileDragEvent = createEvent.dragEnter(setupForm);
-    const fileArray = ['foo.txt'];
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.json' },
+      length: { value: 1 },
+    });
     Object.defineProperty(fileDragEvent, 'dataTransfer', {
-      value: { files: fileArray }
+      value: { files: [fileValue] }
     });
     fireEvent(setupForm, fileDragEvent);
 
@@ -629,7 +636,7 @@ describe('Form drag-and-drop', () => {
 
     const fileDropEvent = createEvent.drop(setupForm);
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
-      value: { files: fileArray }
+      value: { files: [fileValue] }
     });
     fireEvent(setupForm, fileDropEvent);
 
@@ -638,13 +645,6 @@ describe('Form drag-and-drop', () => {
     expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
       .toHaveValue(mockDatastack.args.arg2);
     expect(setupForm).not.toHaveClass("dragging");
-  });
-});
-
-describe('Form drag-and-drop', () => {
-  afterEach(() => {
-    fetchValidation.mockReset();
-    fetchDatastackFromFile.mockReset();
   });
 
   test('Drag enter/leave of a datastack sets .dragging class', async () => {
@@ -678,9 +678,16 @@ describe('Form drag-and-drop', () => {
     const setupForm = await findByTestId('setup-form');
 
     const fileDragEnterEvent = createEvent.dragEnter(setupForm);
-    const fileArray = ['foo.txt'];
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.json' },
+      length: { value: 1 },
+    });
     Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
-      value: { files: fileArray }
+      value: { files: [fileValue] }
     });
     fireEvent(setupForm, fileDragEnterEvent);
 
@@ -690,12 +697,6 @@ describe('Form drag-and-drop', () => {
     fireEvent(setupForm, fileDragLeaveEvent);
 
     expect(setupForm).not.toHaveClass("dragging");
-  });
-});
-
-describe('Form drag-and-drop', () => {
-  afterEach(() => {
-    fetchValidation.mockReset();
   });
 
   test('Drag enter/drop of a file sets .input-dragging class on input', async () => {
@@ -721,10 +722,16 @@ describe('Form drag-and-drop', () => {
     const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
 
     const fileDragEvent = createEvent.dragEnter(setupInput);
-    const fileList = ["file-path"];
-    //const fileList = [new File(['dummy content'], 'foo.txt', {type: "text/plain",})];
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.txt' },
+      length: { value: 1 },
+    });
     Object.defineProperty(fileDragEvent, 'dataTransfer', {
-      value: { files: fileList }
+      value: { files: [fileValue] }
     });
     fireEvent(setupInput, fileDragEvent);
 
@@ -733,19 +740,13 @@ describe('Form drag-and-drop', () => {
 
     const fileDropEvent = createEvent.drop(setupInput);
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
-      value: { files: fileList }
+      value: { files: [fileValue] }
     });
     fireEvent(setupInput, fileDropEvent);
 
     expect(setupInput).not.toHaveClass("input-dragging");
     expect(setupForm).not.toHaveClass("dragging");
     expect(setupInput).toHaveValue( 'foo.txt' );
-  });
-});
-
-describe('Form drag-and-drop', () => {
-  afterEach(() => {
-    fetchValidation.mockReset();
   });
 
   test('Drag enter/leave of a file sets .input-dragging class on input', async () => {
@@ -770,9 +771,16 @@ describe('Form drag-and-drop', () => {
     const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
 
     const fileDragEnterEvent = createEvent.dragEnter(setupInput);
-    const fileArray = ["file-path"];
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.txt' },
+      length: { value: 1 },
+    });
     Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
-      value: { files: fileArray }
+      value: { files: [fileValue] }
     });
     fireEvent(setupInput, fileDragEnterEvent);
 
@@ -780,10 +788,59 @@ describe('Form drag-and-drop', () => {
 
     const fileDragLeaveEvent = createEvent.dragLeave(setupInput);
     Object.defineProperty(fileDragLeaveEvent, 'dataTransfer', {
-      value: { files: fileArray }
+      value: { files: [fileValue] }
     });
     fireEvent(setupInput, fileDragLeaveEvent);
 
     expect(setupInput).not.toHaveClass("input-dragging");
   });
+
+  test('Drag and drop on a disabled input element.', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+          disabled: true,
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
+
+    const fileDragEnterEvent = createEvent.dragEnter(setupInput);
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.txt' },
+      length: { value: 1 },
+    });
+    Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
+      value: { files: [fileValue] }
+    });
+    fireEvent(setupInput, fileDragEnterEvent);
+
+    expect(setupInput).toHaveClass("input-dragging");
+
+    const fileDragLeaveEvent = createEvent.dragLeave(setupInput);
+    Object.defineProperty(fileDragLeaveEvent, 'dataTransfer', {
+      value: { files: [fileValue] }
+    });
+    fireEvent(setupInput, fileDragLeaveEvent);
+
+    expect(setupInput).not.toHaveClass("input-dragging");
+    expect(setupInput).not.toHaveValue("foo.txt");
+  });
+
 });
