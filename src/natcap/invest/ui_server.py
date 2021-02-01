@@ -5,7 +5,7 @@ from datetime import datetime
 import importlib
 import json
 import logging
-from osgeo import gdal
+from osgeo import gdal, ogr
 import pprint
 import textwrap
 
@@ -151,19 +151,24 @@ def get_vector_may_have_points():
     payload = request.get_json()
     LOGGER.debug(payload)
     vector_path = payload['vector_path']
-    # default True because it may have point geometries unless proven otherwise
-    may_have_points = True
     # a lot of times the path will be empty so don't even try to open it
     if vector_path:
+        may_have_points = False
         try:
-            may_have_points = delineateit._vector_may_contain_points(
-                vector_path)
+            vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
+            layer = vector.GetLayer(0)
+            if layer.GetGeomType() in (ogr.wkbPoint, ogr.wkbUnknown):
+                may_have_points = True
+            LOGGER.debug({'may_have_points': may_have_points})
+            return json.dumps({'may_have_points': may_have_points})
         except Exception as e:
             LOGGER.exception(
                 f'Could not tell if vector {vector_path} may contain points. '
                 f'ERROR: {e}')
-    LOGGER.debug({'may_have_points': may_have_points})
-    return json.dumps({'may_have_points': may_have_points})
+    else:
+        LOGGER.error(f'Empty vector path.')
+    # 422 Unprocessable Entity
+    return json.dumps({'may_have_points': False}), 422
 
 
 @app.route('/post_datastack_file', methods=['POST'])

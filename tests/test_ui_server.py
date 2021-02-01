@@ -20,6 +20,7 @@ class EndpointFunctionTests(unittest.TestCase):
         # an empty path
         response = test_client.post('/colnames', json={'vector_path': ''})
         colnames = json.loads(response.get_data(as_text=True))
+        self.assertEqual(response.status_code, 422)
         self.assertEqual(colnames, [])
         # a vector with one column
         path = os.path.join(
@@ -27,10 +28,11 @@ class EndpointFunctionTests(unittest.TestCase):
         response = test_client.post('/colnames', json={'vector_path': path})
         colnames = json.loads(response.get_data(as_text=True))
         self.assertEqual(colnames, ['FarmID'])
-        # a non-vector file shouldn't raise an error
+        # a non-vector file
         path = os.path.join(TEST_DATA_PATH, 'ndr', 'input', 'dem.tif')
         response = test_client.post('/colnames', json={'vector_path': path})
         colnames = json.loads(response.get_data(as_text=True))
+        self.assertEqual(response.status_code, 422)
         self.assertEqual(colnames, [])
 
     def test_get_vector_may_have_points(self):
@@ -43,7 +45,8 @@ class EndpointFunctionTests(unittest.TestCase):
             json={'vector_path': ''})
         may_have_points = json.loads(
             response.get_data(as_text=True))['may_have_points']
-        self.assertEqual(may_have_points, True)
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(may_have_points, False)
         # a vector with no point geometries
         path = os.path.join(
             TEST_DATA_PATH, 'aquaculture', 'Input', 'Finfish_Netpens.shp')
@@ -69,4 +72,5 @@ class EndpointFunctionTests(unittest.TestCase):
             json={'vector_path': path})
         may_have_points = json.loads(
             response.get_data(as_text=True))['may_have_points']
+        self.assertEqual(response.status_code, 422)
         self.assertEqual(may_have_points, False)
