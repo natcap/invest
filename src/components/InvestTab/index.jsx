@@ -63,6 +63,13 @@ async function investGetSpec(modelName) {
   return undefined;
 }
 
+/** Prevent the default case for onDragOver so onDrop event will be fired. */
+function dragOverHandler(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.dataTransfer.dropEffect = 'none';
+}
+
 /**
  * Render an invest model setup form, log display, etc.
  * Manage launching of an invest model in a child process.
@@ -301,7 +308,7 @@ export default class InvestTab extends React.Component {
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
         <Row>
-          <Col sm={3} className="invest-sidebar-col">
+          <Col sm={3} className="invest-sidebar-col" onDragOver={dragOverHandler}>
             <Nav
               className="flex-column"
               id="vertical tabs"

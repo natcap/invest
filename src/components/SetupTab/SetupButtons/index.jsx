@@ -4,6 +4,13 @@ import Button from 'react-bootstrap/Button';
 
 import SaveFileButton from '../../SaveFileButton';
 
+/** Prevent the default case for onDragOver so onDrop event will be fired. */
+function dragOverHandler(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.dataTransfer.dropEffect = 'none';
+}
+
 export function SaveParametersButtons(props) {
   return (
     <React.Fragment>
@@ -29,6 +36,7 @@ export function RunButton(props) {
       size="lg"
       onClick={props.wrapInvestExecute}
       disabled={props.disabled}
+      onDragOver={dragOverHandler}
     >
       {props.buttonText}
     </Button>
