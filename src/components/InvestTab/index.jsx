@@ -233,7 +233,12 @@ export default class InvestTab extends React.Component {
         procID: null,
       }, () => {
         saveJob(job);
-        cleanupDir(tempDir);
+        fs.unlink(datastackPath, (err) => {
+          if (err) { logger.error(err); }
+          fs.rmdir(tempDir, (e) => {
+            if (e) { logger.error(e); }
+          });
+        });
       });
     });
   }
