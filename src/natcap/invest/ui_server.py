@@ -118,19 +118,24 @@ def get_vector_colnames():
     payload = request.get_json()
     LOGGER.debug(payload)
     vector_path = payload['vector_path']
-    colnames = []  
     # a lot of times the path will be empty so don't even try to open it
     if vector_path:  
         try:
             vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
             colnames = [defn.GetName() for defn in vector.GetLayer().schema]
+            LOGGER.debug(colnames)
+            return json.dumps(colnames)
         except Exception as e:
             LOGGER.error(f'Could not read column names from {vector_path}. '
                          f'ERROR: {e}')
-    LOGGER.debug(colnames)
-    return json.dumps(colnames)
-
-
+    else:
+        LOGGER.error(f'Empty vector path.')
+    # 422 Unprocessable Entity: the server understands the content type
+    # of the request entity, and the syntax of the request entity is 
+    # correct, but it was unable to process the contained instructions. 
+    return json.dumps([]), 422
+    
+    
 @app.route('/vector_may_have_points', methods=['POST'])
 def get_vector_may_have_points():
     """Return boolean indicating if a vector may contain points.
