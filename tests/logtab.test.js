@@ -73,7 +73,15 @@ ValueError: Values in the LULC raster were found that are not represented under 
 
   afterEach(() => {
     fs.unlinkSync(logfilePath);
-    fs.rmdirSync(workspace);
+    try {
+      fs.rmdirSync(workspace);
+    } catch {
+      const files = fs.readdirSync(workspace);
+      console.log(files)
+      files.forEach((file) => {
+        fs.unlinkSync(file);
+      });
+    }
   });
 
   test('Text in logfile is rendered', async () => {
