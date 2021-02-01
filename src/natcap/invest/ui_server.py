@@ -126,7 +126,7 @@ def get_vector_colnames():
             LOGGER.debug(colnames)
             return json.dumps(colnames)
         except Exception as e:
-            LOGGER.error(f'Could not read column names from {vector_path}. '
+            LOGGER.exception(f'Could not read column names from {vector_path}. '
                          f'ERROR: {e}')
     else:
         LOGGER.error(f'Empty vector path.')
@@ -135,7 +135,7 @@ def get_vector_colnames():
     # correct, but it was unable to process the contained instructions. 
     return json.dumps([]), 422
     
-    
+
 @app.route('/vector_may_have_points', methods=['POST'])
 def get_vector_may_have_points():
     """Return boolean indicating if a vector may contain points.
@@ -159,7 +159,7 @@ def get_vector_may_have_points():
             may_have_points = delineateit._vector_may_contain_points(
                 vector_path)
         except Exception as e:
-            LOGGER.error(
+            LOGGER.exception(
                 f'Could not tell if vector {vector_path} may contain points. '
                 f'ERROR: {e}')
     LOGGER.debug({'may_have_points': may_have_points})
