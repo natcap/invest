@@ -24,7 +24,6 @@ jest.mock('child_process');
 jest.mock('../src/server_requests');
 
 const MOCK_MODEL_LIST_KEY = 'Carbon';
-const MOCK_MODEL_LIST_KEY2 = '';
 const MOCK_MODEL_RUN_NAME = 'carbon';
 const MOCK_INVEST_LIST = {
   [MOCK_MODEL_LIST_KEY]: {
@@ -119,7 +118,7 @@ describe('Various ways to open and close InVEST models', () => {
     fireEvent.click(getByTitle('More options'));
     const loadButton = await findByText('Load Parameters');
     fireEvent.click(loadButton);
-    const executeButton = await findByRole('button', {name: /Run/});
+    const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
     const input = await findByLabelText(/Carbon Pools/);
