@@ -41,14 +41,15 @@ export default class ArgsForm extends React.Component {
 
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
-      throw alert('Only drop one file at a time.');
+      alert('Only drop one file at a time.');
+      return;
     }
     const datastack = await fetchDatastackFromFile(fileList[0].path);
 
     if (datastack.module_name === this.props.pyModuleName) {
       this.props.batchUpdateArgs(datastack.args);
     } else {
-      throw alert(
+      alert(
         "Cannot update inputs with dropped file. Please use saved datastack files or model logfiles.")
     }
   }
@@ -89,10 +90,11 @@ export default class ArgsForm extends React.Component {
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
-      throw alert('Only drop one file at a time.');
-    }
-    if (fileList.length) {
+      alert('Only drop one file at a time.');
+    } else if (fileList.length === 1) {
       this.props.updateArgValues(name, fileList[0].path);
+    } else {
+        throw "Error handling input file drop"
     }
   }
 
