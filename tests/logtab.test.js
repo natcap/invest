@@ -73,15 +73,8 @@ ValueError: Values in the LULC raster were found that are not represented under 
 
   afterEach(() => {
     fs.unlinkSync(logfilePath);
-    try {
-      fs.rmdirSync(workspace);
-    } catch {
-      const files = fs.readdirSync(workspace);
-      console.log(files)
-      files.forEach((file) => {
-        fs.unlinkSync(file);
-      });
-    }
+    fs.rmdirSync(workspace, { maxRetries: 5 });
+    // retries because in Windows GHA, often get ENOTEMPTY: directory not empty
   });
 
   test('Text in logfile is rendered', async () => {
