@@ -30,7 +30,7 @@
     "mac": {
       "category": "public.app-category.business",
       "icon": "build/icon.png",
-      "target": "zip"
+      "target": "dmg"
     },
     "linux": {
       "target": [
