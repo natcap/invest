@@ -12,7 +12,7 @@ import { boolStringToBoolean } from '../../../utils';
 function dragOverHandler(event) {
   event.preventDefault();
   event.stopPropagation();
-  event.dataTransfer.dropEffect = 'move';
+  event.dataTransfer.dropEffect = 'copy';
 }
 
 /** Renders a form with a list of input components. */
@@ -41,14 +41,15 @@ export default class ArgsForm extends React.Component {
 
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
-      throw alert('only drop one file at a time.');
+      throw alert('Only drop one file at a time.');
     }
     const datastack = await fetchDatastackFromFile(fileList[0].path);
 
     if (datastack.module_name === this.props.pyModuleName) {
       this.props.batchUpdateArgs(datastack.args);
     } else {
-      throw alert(`Parameter/Log file for ${datastack.module_name} does not match this model: ${this.props.pyModuleName}`)
+      throw alert(
+        "Cannot update inputs with dropped file. Please use saved datastack files or model logfiles.")
     }
   }
 
@@ -56,7 +57,7 @@ export default class ArgsForm extends React.Component {
   dragEnterHandler(event) {
     event.preventDefault();
     event.stopPropagation();
-    event.dataTransfer.dropEffect = 'move';
+    event.dataTransfer.dropEffect = 'copy';
     this.dragDepth++;
     const formElement = this.formRef.current;
     if (!formElement.classList.contains("dragging")) {
@@ -80,12 +81,16 @@ export default class ArgsForm extends React.Component {
     event.preventDefault();
     event.stopPropagation();
     event.target.classList.remove("input-dragging");
+    // Don't take any action on disabled elements
+    if (event.target.disabled) {
+       return;
+    }
     const { name, value } = event.target; // the arg's key and type
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const fileList = event.dataTransfer.files;
-    console.log(fileList);
-    console.log(fileList[0]);
-    console.log(fileList[0].path);
+    if (fileList.length !== 1) {
+      throw alert('Only drop one file at a time.');
+    }
     if (fileList.length) {
       this.props.updateArgValues(name, fileList[0].path);
     }
