@@ -44,7 +44,6 @@ body {
 }
 
 .horizontal-scroll {
-	overflow-y: hidden;
 	overflow-x: auto;
 }
 
