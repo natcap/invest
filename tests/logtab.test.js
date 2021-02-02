@@ -5,9 +5,7 @@ like how starting and stopping invest subprocesses trigger log updates.
 import path from 'path';
 import fs from 'fs';
 import React from 'react';
-import {
-  render, waitFor, within
-} from '@testing-library/react';
+import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import LogTab from '../src/components/LogTab';
@@ -27,10 +25,20 @@ function renderLogTab(logfilePath, primaryPythonLogger) {
   return utils;
 }
 
+function makeLogFile(text) {
+  const workspace = fs.mkdtempSync(path.join('tests/data', 'log-'));
+  const logfilePath = path.join(workspace, 'logfile.txt');
+  fs.writeFileSync(logfilePath, text);
+  return logfilePath;
+}
+
+function cleanupLogFile(logfilePath) {
+  fs.unlink(logfilePath, () => {
+    fs.rmdirSync(path.dirname(logfilePath));
+  });
+}
+
 describe('LogTab', () => {
-  let workspace;
-  let logfilePath;
-  const logfileName = 'logfile.txt';
   const uniqueText = 'utils.prepare_workspace';
   const primaryPythonLogger = 'natcap.invest.hydropower.hydropower_water_yield';
 
@@ -65,37 +73,30 @@ ValueError: Values in the LULC raster were found that are not represented under 
 2021-01-19 14:08:32,780 (natcap.invest.utils) utils.prepare_workspace(130) INFO Elapsed time: 3.5s
 `;
 
-  beforeEach(() => {
-    workspace = fs.mkdtempSync(path.join('tests/data', 'log-'));
-    logfilePath = path.join(workspace, logfileName);
-    fs.writeFileSync(logfilePath, logText);
-  });
-
-  afterEach(() => {
-    fs.unlinkSync(logfilePath);
-    fs.rmdirSync(workspace, { maxRetries: 5 });
-    // retries because in Windows GHA, often get ENOTEMPTY: directory not empty
-  });
-
   test('Text in logfile is rendered', async () => {
+    const logfilePath = makeLogFile(logText);
     const { findByText } = renderLogTab(
       logfilePath, primaryPythonLogger
     );
 
     const log = await findByText(new RegExp(uniqueText));
     expect(log).toBeInTheDocument();
+    cleanupLogFile(logfilePath);
   });
 
   test('message from non-primary invest logger is plain', async () => {
+    const logfilePath = makeLogFile(logText);
     const { findByText } = renderLogTab(
       logfilePath, primaryPythonLogger
     );
 
     const log = await findByText(new RegExp(uniqueText));
     expect(log).not.toHaveClass();
+    cleanupLogFile(logfilePath);
   });
 
   test('messages from primary invest logger are highlighted', async () => {
+    const logfilePath = makeLogFile(logText);
     const { findAllByText } = renderLogTab(
       logfilePath, primaryPythonLogger
     );
@@ -104,9 +105,11 @@ ValueError: Values in the LULC raster were found that are not represented under 
     messages.forEach((msg) => {
       expect(msg).toHaveClass('invest-log-primary');
     });
+    cleanupLogFile(logfilePath);
   });
 
   test('error messages are highlighted', async () => {
+    const logfilePath = makeLogFile(logText);
     const { findAllByText } = renderLogTab(
       logfilePath, primaryPythonLogger
     );
@@ -140,5 +143,6 @@ ValueError: Values in the LULC raster were found that are not represented under 
     errorMessages.forEach((msg) => {
       expect(msg).toHaveClass('invest-log-error');
     });
+    cleanupLogFile(logfilePath);
   });
 });
