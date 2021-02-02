@@ -16,8 +16,8 @@ body {
 
 .navbar-light .navbar-nav .nav-link {
   background-color: transparent;
-  padding-right: 2rem;
-  padding-left: 2rem;
+  padding-right: 1rem;
+  padding-left: 1rem;
   color: #999999;
 }
 
@@ -34,12 +34,17 @@ body {
 	letter-spacing: 1px;
 }
 
+.nav-item {
+	white-space: nowrap;
+}
+
 .kebab-menu {
 	color: black;
 	font-size: 2rem;
 }
 
 .horizontal-scroll {
+	overflow-y: hidden;
 	overflow-x: auto;
 }
 
