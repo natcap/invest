@@ -21,6 +21,10 @@ body {
   color: #999999;
 }
 
+.navbar-light .navbar-nav .nav-link.active {
+	background-color: ghostwhite;
+}
+
 .nav-link {
 	color: gray;
 	font-size: 1.3rem;
@@ -34,8 +38,9 @@ body {
 	letter-spacing: 1px;
 }
 
-.nav-item {
+.navbar-nav .nav-item {
 	white-space: nowrap;
+	height: 4rem;
 }
 
 .kebab-menu {
