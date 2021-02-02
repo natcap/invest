@@ -74,11 +74,30 @@ export default class SettingsModal extends React.Component {
 
     const nWorkersIsValid = validateNWorkers(this.state.localSettings.nWorkers)
 
+    // define a custom toggle component to have 3 dots and no dropdown caret
+    const CustomButton = React.forwardRef(({ children, onClick }, ref) => (
+      <a
+        href=""
+        ref={ref}
+        onClick={e => {
+          e.preventDefault();
+          onClick(e);
+        }}
+      >
+        <i className="material-icons mdc-button__icon settings-icon"
+          title="More options">
+          settings
+        </i>
+        {children}
+      </a>
+    ));
+
     return (
       <React.Fragment>
-        <Dropdown.Item onClick={this.handleShow}>
-          Settings
-        </Dropdown.Item>
+        <Button
+          as={CustomButton}
+          onClick={this.handleShow}
+        />
 
         <Modal show={this.state.show} onHide={this.handleClose}>
           <Form>

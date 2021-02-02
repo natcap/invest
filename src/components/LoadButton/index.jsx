@@ -33,9 +33,13 @@ export default class LoadButton extends React.Component {
 
   render() {
     return (
-      <Dropdown.Item onClick={this.browseFile}>
+      <Button
+        className="mx-3"
+        onClick={this.browseFile}
+        variant="outline-dark"
+      >
         Load Parameters
-      </Dropdown.Item>
+      </Button>
     );
   }
 }

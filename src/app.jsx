@@ -174,24 +174,6 @@ export default class App extends React.Component {
       );
     });
 
-    // define a custom toggle component to have 3 dots and no dropdown caret
-    const CustomToggle = React.forwardRef(({ children, onClick }, ref) => (
-      <a
-        href=""
-        ref={ref}
-        onClick={e => {
-          e.preventDefault();
-          onClick(e);
-        }}
-      >
-        <i className="material-icons mdc-button__icon kebab-menu"
-          title="More options">
-          more_vert
-        </i>
-        {children}
-      </a>
-    ));
-
     return (
       <TabContainer activeKey={activeTab}>
         <Navbar>
@@ -211,20 +193,18 @@ export default class App extends React.Component {
             {investNavItems}
           </Nav>
 
-          <Dropdown>
-            <Dropdown.Toggle as={CustomToggle} />
-            <Dropdown.Menu align="right">
-              <LoadButton
-                openInvestModel={this.openInvestModel}
-                batchUpdateArgs={this.batchUpdateArgs}
-              />
-              <SettingsModal
-                saveSettings={this.saveSettings}
-                investSettings={investSettings}
-                clearStorage={this.clearRecentJobs}
-              />
-            </Dropdown.Menu>
-          </Dropdown>
+          <LoadButton
+            openInvestModel={this.openInvestModel}
+            batchUpdateArgs={this.batchUpdateArgs}
+          />
+
+          <SettingsModal
+            className="mx-3"
+            saveSettings={this.saveSettings}
+            investSettings={investSettings}
+            clearStorage={this.clearRecentJobs}
+          />
+
         </Navbar>
 
         <TabContent id="top-tab-content">

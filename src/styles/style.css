@@ -40,12 +40,12 @@ body {
 
 .navbar-nav .nav-item {
 	white-space: nowrap;
-	height: 4rem;
 }
 
-.kebab-menu {
+.settings-icon {
 	color: black;
 	font-size: 2rem;
+	vertical-align: middle;
 }
 
 .horizontal-scroll {
