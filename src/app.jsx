@@ -19,6 +19,13 @@ import InvestJob from './InvestJob';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
+/** Prevent the default case for onDragOver so onDrop event will be fired. */
+function dragOverHandler(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.dataTransfer.dropEffect = 'none';
+}
+
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
  */
@@ -152,6 +159,7 @@ export default class App extends React.Component {
                 className="close-tab"
                 variant="outline-dark"
                 onClick={() => this.closeInvestModel(job.metadata.navID)}
+                onDragOver={dragOverHandler}
               >
                 x
               </Button>
@@ -176,21 +184,22 @@ export default class App extends React.Component {
     });
     return (
       <TabContainer activeKey={activeTab}>
-        <Navbar expand="lg">
+        <Navbar expand="lg" onDragOver={dragOverHandler}>
           <Nav
             variant="pills"
             className="mr-auto"
             activeKey={activeTab}
             onSelect={this.switchTabs}
+            onDragOver={dragOverHandler}
           >
             <Nav.Item>
-              <Nav.Link eventKey="home">
+              <Nav.Link eventKey="home" onDragOver={dragOverHandler}>
                 Home
               </Nav.Link>
             </Nav.Item>
             {investNavItems}
           </Nav>
-          <Navbar.Brand>InVEST</Navbar.Brand>
+          <Navbar.Brand onDragOver={dragOverHandler}>InVEST</Navbar.Brand>
           <LoadButton
             openInvestModel={this.openInvestModel}
             batchUpdateArgs={this.batchUpdateArgs}
