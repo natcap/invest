@@ -6,6 +6,7 @@ import {
 import '@testing-library/jest-dom';
 
 import SetupTab from '../src/components/SetupTab';
+import ArgInput from '../src/components/SetupTab/ArgInput';
 import {
   fetchDatastackFromFile, fetchValidation,
 } from '../src/server_requests';
@@ -665,15 +666,6 @@ describe('Form drag-and-drop', () => {
       [[Object.keys(spec.args), 'invalid because']]
     );
 
-    const mockDatastack = {
-      module_name: spec.module,
-      args: {
-        arg1: 'circle',
-        arg2: 'square',
-      },
-    };
-    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
-
     const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
     const setupForm = await findByTestId('setup-form');
 
@@ -799,10 +791,13 @@ describe('Form drag-and-drop', () => {
     const spec = {
       module: `natcap.invest.${MODULE}`,
       args: {
+        controller: {
+          name: 'Afoo',
+          type: 'boolean',
+        },
         arg1: {
           name: 'Workspace',
           type: 'directory',
-          disabled: true,
         },
         arg2: {
           name: 'AOI',
@@ -810,12 +805,24 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
+    const uiSpec = {
+      controller: {
+        ui_control: ['arg1', 'arg2'],
+      },
+      arg1: {
+        ui_option: 'foo', // an invalid option should be ignored
+      },
+      arg2: {
+        ui_option: "disable"
+      },
+    };
+
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), 'invalid because']]
     );
 
-    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
-    const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
+    const setupInput = await findByLabelText(RegExp(`${spec.args.arg2.name}`));
 
     const fileDragEnterEvent = createEvent.dragEnter(setupInput);
     // `dataTransfer.files` normally returns a `FileList` object. Since we are
@@ -823,7 +830,7 @@ describe('Form drag-and-drop', () => {
     // with properties that mimic FileList object
     const fileValue = {};
     Object.defineProperties(fileValue, {
-      path: { value: 'foo.txt' },
+      path: { value: 'foo.shp' },
       length: { value: 1 },
     });
     Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
@@ -831,13 +838,13 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupInput, fileDragEnterEvent);
 
-    expect(setupInput).toHaveClass("input-dragging");
+    expect(setupInput).not.toHaveClass("input-dragging");
 
-    const fileDragLeaveEvent = createEvent.dragLeave(setupInput);
-    Object.defineProperty(fileDragLeaveEvent, 'dataTransfer', {
+    const fileDropEvent = createEvent.drop(setupInput);
+    Object.defineProperty(fileDropEvent, 'dataTransfer', {
       value: { files: [fileValue] }
     });
-    fireEvent(setupInput, fileDragLeaveEvent);
+    fireEvent(setupInput, fileDropEvent);
 
     expect(setupInput).not.toHaveClass("input-dragging");
     expect(setupInput).not.toHaveValue("foo.txt");
