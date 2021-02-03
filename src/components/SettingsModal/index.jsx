@@ -73,7 +73,7 @@ export default class SettingsModal extends React.Component {
 
     const nWorkersIsValid = validateNWorkers(this.state.localSettings.nWorkers)
 
-    // define a custom button component to have a gear icon and no backgroundp
+    // define a custom button component to have a gear icon and no background
     const CustomButton = React.forwardRef(({ children, onClick }, ref) => (
       <a
         href=""
