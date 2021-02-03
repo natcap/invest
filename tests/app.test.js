@@ -110,7 +110,7 @@ describe('Various ways to open and close InVEST models', () => {
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
-    const { findByText, findByLabelText, findByRole, getByTitle } = render(
+    const { findByText, findByLabelText, findByRole } = render(
       <App investExe="foo" />
     );
 
@@ -131,7 +131,7 @@ describe('Various ways to open and close InVEST models', () => {
     };
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
 
-    const { findByText, findByRole, getByTitle } = render(
+    const { findByText, findByRole } = render(
       <App investExe="foo" />
     );
 
@@ -150,8 +150,7 @@ describe('Various ways to open and close InVEST models', () => {
       findByText,
       findByTitle,
       findByRole,
-      findAllByText,
-      getByTitle
+      findAllByText
     } = render(<App investExe="foo" />);
 
     // Open first model

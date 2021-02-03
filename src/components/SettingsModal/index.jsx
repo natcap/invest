@@ -6,7 +6,6 @@ import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
-import Dropdown from 'react-bootstrap/Dropdown';
 
 /** Render a dialog with a form for configuring global invest settings */
 export default class SettingsModal extends React.Component {
