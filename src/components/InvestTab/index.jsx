@@ -20,6 +20,7 @@ import { getSpec, writeParametersToFile } from '../../server_requests';
 import { findMostRecentLogfile, cleanupDir } from '../../utils';
 import { fileRegistry } from '../../constants';
 import { getLogger } from '../../logger';
+import { dragOverHandlerNone } from '../../utils.js';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -61,13 +62,6 @@ async function investGetSpec(modelName) {
   }
   logger.error(`no spec found for ${modelName}`);
   return undefined;
-}
-
-/** Prevent the default case for onDragOver so onDrop event will be fired. */
-function dragOverHandler(event) {
-  event.preventDefault();
-  event.stopPropagation();
-  event.dataTransfer.dropEffect = 'none';
 }
 
 /**
@@ -308,7 +302,7 @@ export default class InvestTab extends React.Component {
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
         <Row>
-          <Col sm={3} className="invest-sidebar-col" onDragOver={dragOverHandler}>
+          <Col sm={3} className="invest-sidebar-col" onDragOver={dragOverHandlerNone}>
             <Nav
               className="flex-column"
               id="vertical tabs"

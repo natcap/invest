@@ -9,7 +9,6 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 
-
 /**
  * Filter a message that refers to many spatial inputs' bounding boxes.
  *

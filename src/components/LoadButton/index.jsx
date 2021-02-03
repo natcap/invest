@@ -6,13 +6,7 @@ import Button from 'react-bootstrap/Button';
 
 import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
-
-/** Prevent the default case for onDragOver so onDrop event will be fired. */
-function dragOverHandler(event) {
-  event.preventDefault();
-  event.stopPropagation();
-  event.dataTransfer.dropEffect = 'none';
-}
+import { dragOverHandlerNone } from '../../utils.js';
 
 /**
  * Render a button that loads args from a datastack, parameterset, or logfile.
@@ -43,7 +37,7 @@ export default class LoadButton extends React.Component {
         className="mx-3"
         onClick={this.browseFile}
         variant="outline-dark"
-        onDragOver={dragOverHandler}
+        onDragOver={dragOverHandlerNone}
       >
         Load Parameters
       </Button>

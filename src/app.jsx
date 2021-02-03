@@ -16,15 +16,9 @@ import SettingsModal from './components/SettingsModal';
 import { getInvestList } from './server_requests';
 import { getLogger } from './logger';
 import InvestJob from './InvestJob';
+import { dragOverHandlerNone } from './utils.js';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-
-/** Prevent the default case for onDragOver so onDrop event will be fired. */
-function dragOverHandler(event) {
-  event.preventDefault();
-  event.stopPropagation();
-  event.dataTransfer.dropEffect = 'none';
-}
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -159,7 +153,7 @@ export default class App extends React.Component {
                 className="close-tab"
                 variant="outline-dark"
                 onClick={() => this.closeInvestModel(job.metadata.navID)}
-                onDragOver={dragOverHandler}
+                onDragOver={dragOverHandlerNone}
               >
                 x
               </Button>
@@ -184,22 +178,22 @@ export default class App extends React.Component {
     });
     return (
       <TabContainer activeKey={activeTab}>
-        <Navbar expand="lg" onDragOver={dragOverHandler}>
+        <Navbar expand="lg" onDragOver={dragOverHandlerNone}>
           <Nav
             variant="pills"
             className="mr-auto"
             activeKey={activeTab}
             onSelect={this.switchTabs}
-            onDragOver={dragOverHandler}
+            onDragOver={dragOverHandlerNone}
           >
             <Nav.Item>
-              <Nav.Link eventKey="home" onDragOver={dragOverHandler}>
+              <Nav.Link eventKey="home" onDragOver={dragOverHandlerNone}>
                 Home
               </Nav.Link>
             </Nav.Item>
             {investNavItems}
           </Nav>
-          <Navbar.Brand onDragOver={dragOverHandler}>InVEST</Navbar.Brand>
+          <Navbar.Brand onDragOver={dragOverHandlerNone}>InVEST</Navbar.Brand>
           <LoadButton
             openInvestModel={this.openInvestModel}
             batchUpdateArgs={this.batchUpdateArgs}
