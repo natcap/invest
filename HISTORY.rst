@@ -47,6 +47,8 @@ Unreleased Changes (3.9.1)
       python, this environment variable may need to be defined by hand like
       so: ``QT_MAC_WANTS_LAYER=1 python -m natcap.invest``.  A warning will
       be raised if this environment variable is not present on mac.
+    * Fixing an issue on Mac OS X where saving the InVEST application to a
+      filepath containing spaces would prevent the application from launching.
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
