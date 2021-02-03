@@ -738,7 +738,7 @@ describe('Form drag-and-drop', () => {
 
     expect(setupInput).not.toHaveClass("input-dragging");
     expect(setupForm).not.toHaveClass("dragging");
-    expect(setupInput).toHaveValue( 'foo.txt' );
+    expect(setupInput).toHaveValue("foo.txt");
   });
 
   test('Drag enter/leave of a file sets .input-dragging class on input', async () => {
