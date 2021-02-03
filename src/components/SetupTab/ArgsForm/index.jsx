@@ -50,7 +50,7 @@ export default class ArgsForm extends React.Component {
       this.props.batchUpdateArgs(datastack.args);
     } else {
       alert(
-        "Cannot update inputs with dropped file. Please use saved datastack files or model logfiles.")
+        `Parameter/Log file for ${datastack.module_name} does not match this model: ${this.props.pyModuleName}`);
     }
   }
 
