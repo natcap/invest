@@ -50,6 +50,9 @@ Unreleased Changes (3.9.1)
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
+* SDR
+    * Fixed a bug in validation that did not warn against different coordinate
+      systems (all SDR inputs must share a common coordinate system).
 
 3.9.0 (2020-12-11)
 ------------------
