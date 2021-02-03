@@ -84,9 +84,9 @@ export default class ArgsForm extends React.Component {
     event.target.classList.remove("input-dragging");
     // Don't take any action on disabled elements
     if (event.target.disabled) {
-       return;
+      return;
     }
-    const { name, value } = event.target; // the arg's key and type
+    const { name } = event.target; // the arg's key and type
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
@@ -94,12 +94,12 @@ export default class ArgsForm extends React.Component {
     } else if (fileList.length === 1) {
       this.props.updateArgValues(name, fileList[0].path);
     } else {
-        throw "Error handling input file drop"
+      throw "Error handling input file drop"
     }
   }
 
   handleChange(event) {
-    /** Pass input value up to setuptab for storage & validation. */
+    /** Pass input value up to SetupTab for storage & validation. */
     const { name, value } = event.target;
     this.props.updateArgValues(name, value);
   }
