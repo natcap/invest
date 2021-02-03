@@ -95,7 +95,7 @@ describe('Various ways to open and close InVEST models', () => {
     );
   });
 
-  test('LoadParameters: Dialog callback renders SetupTab', async () => {
+  test('Open File: Dialog callback renders SetupTab', async () => {
     const mockDialogData = {
       filePaths: ['foo.json']
     };
@@ -114,9 +114,8 @@ describe('Various ways to open and close InVEST models', () => {
       <App investExe="foo" />
     );
 
-    fireEvent.click(getByTitle('More options'));
-    const loadButton = await findByText('Load Parameters');
-    fireEvent.click(loadButton);
+    const openButton = await findByText('Open');
+    fireEvent.click(openButton);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
@@ -125,7 +124,7 @@ describe('Various ways to open and close InVEST models', () => {
     expect(input).toHaveValue(mockDatastack.args.carbon_pools_path);
   });
 
-  test('LoadParameters: Dialog callback is canceled', async () => {
+  test('Open File: Dialog callback is canceled', async () => {
     // Resembles callback data if the dialog was canceled
     const mockDialogData = {
       filePaths: []
@@ -136,9 +135,8 @@ describe('Various ways to open and close InVEST models', () => {
       <App investExe="foo" />
     );
 
-    fireEvent.click(getByTitle('More options'));
-    const loadButton = await findByText('Load Parameters');
-    fireEvent.click(loadButton);
+    const openButton = await findByText('Open');
+    fireEvent.click(openButton);
     const homeTab = await findByRole('tabpanel', {name: /Home/});
     // expect we're on the same tab we started on instead of switching to Setup
     expect(homeTab.classList.contains('active')).toBeTruthy();
@@ -169,7 +167,7 @@ describe('Various ways to open and close InVEST models', () => {
     });
     expect(getSpec).toHaveBeenCalledTimes(1);
 
-    // Open another model (via Load button for convenience)
+    // Open another model (via Open button for convenience)
     const mockDialogData = {
       filePaths: ['foo.json']
     };
@@ -183,9 +181,8 @@ describe('Various ways to open and close InVEST models', () => {
     };
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
-    fireEvent.click(getByTitle('More options'));
-    const loadButton = await findByText('Load Parameters');
-    fireEvent.click(loadButton);
+    const openButton = await findByText('Open');
+    fireEvent.click(openButton);
     const tabPanelB = await findByTitle(mockDatastack.model_human_name);
     const setupTabB = await within(tabPanelB).findByText('Setup');
     expect(setupTabB.classList.contains('active')).toBeTruthy();
@@ -279,8 +276,7 @@ describe('Display recently executed InVEST jobs', () => {
           .toBeTruthy();
       });
     });
-    fireEvent.click(getByTitle('More options'));
-    fireEvent.click(getByText('Settings'));
+    fireEvent.click(getByTitle('settings'));
     fireEvent.click(getByText('Clear'));
     const node = await findByText(/No recent InVEST runs/);
     expect(node).toBeInTheDocument();
@@ -301,8 +297,7 @@ describe('InVEST global settings: dialog interactions', () => {
     );
 
     // Check the default settings
-    fireEvent.click(getByTitle('More options'));
-    fireEvent.click(getByText('Settings'));
+    fireEvent.click(getByTitle('settings'));
     await waitFor(() => {
       // waiting because the selected value depends on passed props
       expect(getByText(DEFAULT).selected).toBeTruthy();
@@ -333,8 +328,7 @@ describe('InVEST global settings: dialog interactions', () => {
       <App investExe="foo" />
     );
 
-    fireEvent.click(getByTitle('More options'));
-    fireEvent.click(getByText('Settings'));
+    fireEvent.click(getByTitle('settings'));
     const input = getByLabelText(labelText, { exact: false });
 
     // Check the default settings
@@ -353,8 +347,7 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(input).toHaveValue(newValue);
     // The real test: still newValue after saving and re-opening
     fireEvent.click(getByText('Save Changes'));
-    fireEvent.click(getByTitle('More options'));
-    fireEvent.click(getByText('Settings'));
+    fireEvent.click(getByTitle('settings'));
     await waitFor(() => { // the value to test is inherited through props
       expect(input).toHaveValue(newValue);
     });

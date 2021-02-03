@@ -74,7 +74,7 @@ export default class SettingsModal extends React.Component {
 
     const nWorkersIsValid = validateNWorkers(this.state.localSettings.nWorkers)
 
-    // define a custom toggle component to have 3 dots and no dropdown caret
+    // define a custom button component to have a gear icon and no backgroundp
     const CustomButton = React.forwardRef(({ children, onClick }, ref) => (
       <a
         href=""
@@ -85,7 +85,7 @@ export default class SettingsModal extends React.Component {
         }}
       >
         <i className="material-icons mdc-button__icon settings-icon"
-          title="More options">
+          title="settings">
           settings
         </i>
         {children}

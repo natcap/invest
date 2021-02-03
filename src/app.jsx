@@ -8,7 +8,6 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
-import Dropdown from 'react-bootstrap/Dropdown';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -192,19 +191,16 @@ export default class App extends React.Component {
           >
             {investNavItems}
           </Nav>
-
           <LoadButton
             openInvestModel={this.openInvestModel}
             batchUpdateArgs={this.batchUpdateArgs}
           />
-
           <SettingsModal
             className="mx-3"
             saveSettings={this.saveSettings}
             investSettings={investSettings}
             clearStorage={this.clearRecentJobs}
           />
-
         </Navbar>
 
         <TabContent id="top-tab-content">
