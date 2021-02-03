@@ -199,7 +199,7 @@ ARGS_SPEC = {
                 "A path to a GDAL-compatible raster.  Pixels indicate the "
                 "amount of local recharge in mm.  Required if "
                 "args['user_defined_local_recharge'] is True."),
-            "name": "Local Recharge ("
+            "name": "Local Recharge (Advanced)"
         },
         "user_defined_climate_zones": {
             "type": "boolean",

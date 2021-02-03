@@ -106,7 +106,7 @@ ARGS_SPEC = {
                 "in the outlet vector will not be included in the "
                 "delineation.  If ``False``, an invalid geometry "
                 "will cause DelineateIt to crash."),
-            "name": "Crash on invalid geometries"
+            "name": "Skip invalid geometries"
         }
     }
 }

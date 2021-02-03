@@ -103,7 +103,7 @@ ARGS_SPEC = {
             ),
         },
         "t_air_average_radius": {
-            "name": "T_air moving average radius (m)",
+            "name": "Air Temperature Maximum Blending Distance (m)",
             "type": "number",
             "required": True,
             "validation_options": {
