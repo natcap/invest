@@ -14,7 +14,7 @@ package.
 
 For those wishing to do batch-processing with InVEST without setting up a
 Python scripting environment, see :ref:`cli` for examples of how to run
-InVEST models from the command-line. 
+InVEST models from the command-line.
 
 ==================================
 Setting up your Python environment
@@ -30,7 +30,7 @@ Setting up your Python environment
 
    The ``pip`` utility for installing python packages is already included with
    Python 2.7.9 and later. Be sure to add ``C:\Python37\Scripts`` (or your custom
-   install location) to the Windows PATH environment variable so that ``pip`` can 
+   install location) to the Windows PATH environment variable so that ``pip`` can
    be called from the command line without needing to use its full path.
 
    After this is done (and you've opened a new command-line window), you will be
@@ -188,13 +188,14 @@ script above, replace the execution call with the following loop:
 
 .. code-block:: python
 
-    #Loops through the values 500, 550, 600, ... 1000
-    for threshold_flow_accumulation in range(500, 1001, 50):
-        #set the accumulation threshold to the current value in the loop
-        args['threshold_flow_accumulation'] = threshold_flow_accumulation
-        #set the suffix to be accum### for the current threshold_flow_accumulation
-        args['suffix'] = 'accum' + str(threshold_flow_accumulation)
-        natcap.invest.ndr.ndr.execute(args)
+    if __name__ == '__main__':
+        #Loops through the values 500, 550, 600, ... 1000
+        for threshold_flow_accumulation in range(500, 1001, 50):
+            #set the accumulation threshold to the current value in the loop
+            args['threshold_flow_accumulation'] = threshold_flow_accumulation
+            #set the suffix to be accum### for the current threshold_flow_accumulation
+            args['suffix'] = 'accum' + str(threshold_flow_accumulation)
+            natcap.invest.ndr.ndr.execute(args)
 
 This loop executes the InVEST nutrient model 10 times for accumulation values
 ``500, 550, 600, ... 1000`` and adds a suffix to the output files so results
@@ -212,14 +213,16 @@ example, replace the last line in the UI generated Python script with:
 
     import os
     landcover_dir = r'C:\User\Rich\Desktop\landcover_data'
-    #Loop over all the filenames in the landcover dir
-    for landcover_file in os.listdir(landcover_dir):
-        #Point the landuse uri parameter at the directory+filename
-        args['lulc_uri'] = os.path.join(landcover_dir, landcover_file)
-        #Make a useful suffix so we can differentiate the results
-        args['suffix'] = 'landmap' + os.path.splitext(landcover_file)[0]
-        #call the nutrient model
-        natcap.invest.ndr.ndr.execute(args)
+
+    if __name__ == '__main__':
+        #Loop over all the filenames in the landcover dir
+        for landcover_file in os.listdir(landcover_dir):
+            #Point the landuse uri parameter at the directory+filename
+            args['lulc_uri'] = os.path.join(landcover_dir, landcover_file)
+            #Make a useful suffix so we can differentiate the results
+            args['suffix'] = 'landmap' + os.path.splitext(landcover_file)[0]
+            #call the nutrient model
+            natcap.invest.ndr.ndr.execute(args)
 
 This loop covers all the files located in
 ``C:\User\Rich\Desktop\landcover_data``
@@ -259,6 +262,44 @@ this is a common use case, the ``logging`` package provides functionality
 for many more complex logging features.  For more
 advanced use of the python logging module, refer to the Python project's
 `Logging Cookbook <https://docs.python.org/2/howto/logging-cookbook.html>`_
+
+=====================================
+Example: Enabling Parallel Processing
+=====================================
+
+.. note::
+   This is an in-development feature and should be used with caution.
+
+Most InVEST models accept an optional entry in the ``args`` dictionary
+representing the number of parallel workers.  Acceptable values for this
+number are:
+
+* ``-1``, representing synchronous execution (this is the default across
+  InVEST)
+* ``0`` representing threaded task management
+* Any other positive integer represents the number of processes that will be
+  created to handle tasks.  ``2*multiprocessing.cpu_count()`` is usually a good
+  number.
+
+.. warning::
+   If you use this feature, you **must** wrap your script in a
+   ``if __name__ == '__main__':`` condition.  Failure to do so will result
+   in a fork bomb (https://en.wikipedia.org/wiki/Fork_bomb).
+
+Using the parameter study example, this might look like:
+
+.. code-block:: python
+    if __name__ == '__main__':
+       args['n_workers'] = 4  # Use 4 processes
+
+       #Loops through the values 500, 550, 600, ... 1000
+       for threshold_flow_accumulation in range(500, 1001, 50):
+           #set the accumulation threshold to the current value in the loop
+           args['threshold_flow_accumulation'] = threshold_flow_accumulation
+           #set the suffix to be accum### for the current threshold_flow_accumulation
+           args['suffix'] = 'accum' + str(threshold_flow_accumulation)
+           natcap.invest.ndr.ndr.execute(args)
+
 
 =======
 Summary
