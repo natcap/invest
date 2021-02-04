@@ -22,13 +22,16 @@ switch (process.platform) {
 
 const HOSTNAME = pkg.invest.hostname;
 const BUCKET = pkg.invest.bucket;
-const FORK = pkg.invest.fork;
+// forknames are only in the path on the dev-builds bucket
+const FORK = BUCKET === 'releases.naturalcapitalproject.org'
+  ? '' : pkg.invest.fork;
+const REPO = 'invest';
 const VERSION = pkg.invest.version;
 const SRCFILE = `${filePrefix}_invest_binaries.zip`;
 const DESTFILE = path.resolve('build/binaries.zip');
 
 const urladdress = url.resolve(
-  HOSTNAME, path.join(BUCKET, FORK, VERSION, SRCFILE)
+  HOSTNAME, path.join(BUCKET, REPO, FORK, VERSION, SRCFILE)
 );
 
 /**

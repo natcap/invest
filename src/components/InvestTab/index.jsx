@@ -20,6 +20,7 @@ import { getSpec, writeParametersToFile } from '../../server_requests';
 import { findMostRecentLogfile, cleanupDir } from '../../utils';
 import { fileRegistry } from '../../constants';
 import { getLogger } from '../../logger';
+import { dragOverHandlerNone } from '../../utils.js';
 
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -225,7 +226,12 @@ export default class InvestTab extends React.Component {
         procID: null,
       }, () => {
         saveJob(job);
-        cleanupDir(tempDir);
+        fs.unlink(datastackPath, (err) => {
+          if (err) { logger.error(err); }
+          fs.rmdir(tempDir, (e) => {
+            if (e) { logger.error(e); }
+          });
+        });
       });
     });
   }
@@ -289,7 +295,7 @@ export default class InvestTab extends React.Component {
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
         <Row>
-          <Col sm={3} className="invest-sidebar-col">
+          <Col sm={3} className="invest-sidebar-col" onDragOver={dragOverHandlerNone}>
             <Nav
               className="flex-column"
               id="vertical tabs"

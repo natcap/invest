@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <body>
+    <p>
+      Hello Workbench-alpha tester! 
+    </p>
+      Please help us by reporting problems (nothing too small or too large) to:  davefisher@stanford.edu
+    </p>
+    <p>
+      Include a brief description of the problem and attach the logfile
+      that you can find using the button below. (There may be up to four logfiles with names like "invest-workbench-log-2020-04-20.txt".)
+      <b>Please include the most recent logfile, or all of them.</b>
+    </p>
+    <button type="button" onclick="handleButtonClick()">
+      Find My Logs
+    </button>
+    <br/>
+    <br/>
+    <p>
+      View a list of the issues already on our todo list:
+    </p>
+      <a
+        href="https://github.com/natcap/invest-workbench/issues"
+        onClick="handleLinkClick(event)">
+        https://github.com/natcap/invest-workbench/issues
+      </a>
+    <p>
+      If you have a github account, you're most welcome to join the discussions there too.
+    </p>
+  </body>
+  <script>
+    const { shell, ipcRenderer } = require('electron');
+    const { getLogger } = require('../logger');
+    const logger = getLogger(__filename.split('/').slice(-1)[0]);
+    ipcRenderer.on('variable-reply', (event, arg) => {
+      userDataPath = arg.userDataPath;
+    });
+    ipcRenderer.send('variable-request', 'ping');
+    logger.debug('PROBLEM REPORT: process dump');
+    logger.debug(JSON.stringify(process, null, 2));
+
+    function handleButtonClick() {
+      shell.openPath(userDataPath);
+    }
+    function handleLinkClick(event) {
+      event.preventDefault();
+      shell.openExternal(event.target.href);
+    }
+  </script>
+</html>

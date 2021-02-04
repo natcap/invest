@@ -84,20 +84,13 @@ export function argsDictFromObject(args) {
   return argsDict;
 }
 
-/** Convenience function to recursively remove a directory.
- *
- * @param {string} dir - path to a directory
- */
-export function cleanupDir(dir) {
-  if (fs.existsSync(dir)) {
-    fs.readdirSync(dir).forEach((filename) => {
-      const filepath = path.join(dir, filename);
-      if (fs.lstatSync(filepath).isFile()) {
-        fs.unlinkSync(filepath);
-      } else {
-        cleanupDir(filepath);
-      }
-    });
-    fs.rmdirSync(dir);
-  }
+/** Prevent the default case for onDragOver and set dropEffect to none.
+*
+*@param {Event} event - an ondragover event.
+*/
+export function dragOverHandlerNone(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.dataTransfer.dropEffect = 'none';
 }
+
