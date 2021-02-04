@@ -44,7 +44,7 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
  *
  * @returns {Promise} resolves object
  */
-export function getInvestList() {
+export function getInvestModelNames() {
   return (
     fetch(`${HOSTNAME}:${process.env.PORT}/models`, {
       method: 'get',
