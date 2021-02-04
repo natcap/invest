@@ -847,7 +847,7 @@ describe('Form drag-and-drop', () => {
     fireEvent(setupInput, fileDropEvent);
 
     expect(setupInput).not.toHaveClass("input-dragging");
-    expect(setupInput).not.toHaveValue("foo.txt");
+    expect(setupInput).toHaveValue("");
   });
 
 });
