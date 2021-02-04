@@ -3,13 +3,7 @@ import React from 'react';
 import Button from 'react-bootstrap/Button';
 
 import SaveFileButton from '../../SaveFileButton';
-
-/** Prevent the default case for onDragOver so onDrop event will be fired. */
-function dragOverHandler(event) {
-  event.preventDefault();
-  event.stopPropagation();
-  event.dataTransfer.dropEffect = 'none';
-}
+import { dragOverHandlerNone } from '../../../utils.js';
 
 export function SaveParametersButtons(props) {
   return (
@@ -36,7 +30,7 @@ export function RunButton(props) {
       size="lg"
       onClick={props.wrapInvestExecute}
       disabled={props.disabled}
-      onDragOver={dragOverHandler}
+      onDragOver={dragOverHandlerNone}
     >
       {props.buttonText}
     </Button>
