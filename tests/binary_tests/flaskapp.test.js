@@ -15,7 +15,7 @@ jest.setTimeout(250000); // This test is slow in CI
 
 const isDevMode = true; // otherwise need to mock process.resourcesPath
 beforeAll(async () => {
-  const investExe = await findInvestBinaries(isDevMode);
+  const [investExe, investVersion] = await findInvestBinaries(isDevMode);
   createPythonFlaskProcess(investExe);
   // In the CI the flask app takes more than 10x as long to startup.
   // Especially so on macos.
@@ -125,7 +125,6 @@ test('write parameters to python script', async () => {
 
 test('validate the UI spec', async () => {
   const models = await server_requests.getInvestModelNames();
-  console.log('models:', models);
   const modelInternalNames = Object.keys(models).map(
     key => models[key].internal_name);
   const uiSpec = require('../../src/ui_config');
@@ -136,7 +135,6 @@ test('validate the UI spec', async () => {
 
   argsSpecs.forEach((argsSpec) => {
     // make sure that we actually got an args spec
-    console.log(argsSpec);
     expect(argsSpec.model_name).toBeDefined();
     let has_order_property = false;
     // expect each arg in the UI spec to exist in the args spec

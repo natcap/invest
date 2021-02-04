@@ -6,6 +6,7 @@ import {
 import '@testing-library/jest-dom';
 
 import SetupTab from '../src/components/SetupTab';
+import ArgInput from '../src/components/SetupTab/ArgInput';
 import {
   fetchDatastackFromFile, fetchValidation,
 } from '../src/server_requests';
@@ -553,9 +554,16 @@ describe('Form drag-and-drop', () => {
     // Below is a patch similar to the one noted here:
     // https://github.com/testing-library/react-testing-library/issues/339
     const fileDropEvent = createEvent.drop(setupForm);
-    const fileArray = ['foo.txt'];
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.json' },
+      length: { value: 1 },
+    });
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
-      value: { files: fileArray }
+      value: { files: [fileValue] }
     });
     fireEvent(setupForm, fileDropEvent);
 
@@ -564,4 +572,266 @@ describe('Form drag-and-drop', () => {
     expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
       .toHaveValue(mockDatastack.args.arg2);
   });
+
+  test('Drag enter/drop of a datastack sets .dragging class', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const mockDatastack = {
+      module_name: spec.module,
+      args: {
+        arg1: 'circle',
+        arg2: 'square',
+      },
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const setupForm = await findByTestId('setup-form');
+
+    const fileDragEvent = createEvent.dragEnter(setupForm);
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.json' },
+      length: { value: 1 },
+    });
+    Object.defineProperty(fileDragEvent, 'dataTransfer', {
+      value: { files: [fileValue] }
+    });
+    fireEvent(setupForm, fileDragEvent);
+
+    expect(setupForm).toHaveClass("dragging");
+
+    const fileDropEvent = createEvent.drop(setupForm);
+    Object.defineProperty(fileDropEvent, 'dataTransfer', {
+      value: { files: [fileValue] }
+    });
+    fireEvent(setupForm, fileDropEvent);
+
+    expect(await findByLabelText(RegExp(`${spec.args.arg1.name}`)))
+      .toHaveValue(mockDatastack.args.arg1);
+    expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
+      .toHaveValue(mockDatastack.args.arg2);
+    expect(setupForm).not.toHaveClass("dragging");
+  });
+
+  test('Drag enter/leave of a datastack sets .dragging class', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const setupForm = await findByTestId('setup-form');
+
+    const fileDragEnterEvent = createEvent.dragEnter(setupForm);
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.json' },
+      length: { value: 1 },
+    });
+    Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
+      value: { files: [fileValue] }
+    });
+    fireEvent(setupForm, fileDragEnterEvent);
+
+    expect(setupForm).toHaveClass("dragging");
+
+    const fileDragLeaveEvent = createEvent.dragLeave(setupForm);
+    fireEvent(setupForm, fileDragLeaveEvent);
+
+    expect(setupForm).not.toHaveClass("dragging");
+  });
+
+  test('Drag enter/drop of a file sets .input-dragging class on input', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const setupForm = await findByTestId('setup-form');
+    const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
+
+    const fileDragEvent = createEvent.dragEnter(setupInput);
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.txt' },
+      length: { value: 1 },
+    });
+    Object.defineProperty(fileDragEvent, 'dataTransfer', {
+      value: { files: [fileValue] }
+    });
+    fireEvent(setupInput, fileDragEvent);
+
+    expect(setupForm).not.toHaveClass("dragging");
+    expect(setupInput).toHaveClass("input-dragging");
+
+    const fileDropEvent = createEvent.drop(setupInput);
+    Object.defineProperty(fileDropEvent, 'dataTransfer', {
+      value: { files: [fileValue] }
+    });
+    fireEvent(setupInput, fileDropEvent);
+
+    expect(setupInput).not.toHaveClass("input-dragging");
+    expect(setupForm).not.toHaveClass("dragging");
+    expect(setupInput).toHaveValue("foo.txt");
+  });
+
+  test('Drag enter/leave of a file sets .input-dragging class on input', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
+
+    const fileDragEnterEvent = createEvent.dragEnter(setupInput);
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.txt' },
+      length: { value: 1 },
+    });
+    Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
+      value: { files: [fileValue] }
+    });
+    fireEvent(setupInput, fileDragEnterEvent);
+
+    expect(setupInput).toHaveClass("input-dragging");
+
+    const fileDragLeaveEvent = createEvent.dragLeave(setupInput);
+    Object.defineProperty(fileDragLeaveEvent, 'dataTransfer', {
+      value: { files: [fileValue] }
+    });
+    fireEvent(setupInput, fileDragLeaveEvent);
+
+    expect(setupInput).not.toHaveClass("input-dragging");
+  });
+
+  test('Drag and drop on a disabled input element.', async () => {
+    const spec = {
+      module: `natcap.invest.${MODULE}`,
+      args: {
+        controller: {
+          name: 'Afoo',
+          type: 'boolean',
+        },
+        arg1: {
+          name: 'Workspace',
+          type: 'directory',
+        },
+        arg2: {
+          name: 'AOI',
+          type: 'vector',
+        },
+      },
+    };
+    const uiSpec = {
+      controller: {
+        ui_control: ['arg1', 'arg2'],
+      },
+      arg1: {
+        ui_option: 'foo', // an invalid option should be ignored
+      },
+      arg2: {
+        ui_option: "disable"
+      },
+    };
+
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), 'invalid because']]
+    );
+
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
+    const setupInput = await findByLabelText(RegExp(`${spec.args.arg2.name}`));
+
+    const fileDragEnterEvent = createEvent.dragEnter(setupInput);
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.shp' },
+      length: { value: 1 },
+    });
+    Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
+      value: { files: [fileValue] }
+    });
+    fireEvent(setupInput, fileDragEnterEvent);
+
+    expect(setupInput).not.toHaveClass("input-dragging");
+
+    const fileDropEvent = createEvent.drop(setupInput);
+    Object.defineProperty(fileDropEvent, 'dataTransfer', {
+      value: { files: [fileValue] }
+    });
+    fireEvent(setupInput, fileDropEvent);
+
+    expect(setupInput).not.toHaveClass("input-dragging");
+    expect(setupInput).toHaveValue("");
+  });
+
 });

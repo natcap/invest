@@ -18,7 +18,6 @@ import {
   getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
 } from '../src/server_requests';
 import InvestJob from '../src/InvestJob';
-import { cleanupDir } from '../src/utils';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 
 jest.mock('child_process');
@@ -379,6 +378,7 @@ describe('InVEST subprocess testing', () => {
 
   const dummyTextToLog = JSON.stringify(spec.args);
   let fakeWorkspace;
+  let logfilePath;
   let mockInvestProc;
 
   beforeEach(() => {
@@ -406,7 +406,7 @@ describe('InVEST subprocess testing', () => {
         'en-US', { hour12: false }
       ).replace(/:/g, '_');
       const logfileName = `InVEST-natcap.invest.model-log-9999-99-99--${timestamp}.txt`;
-      const logfilePath = path.join(fakeWorkspace, logfileName);
+      logfilePath = path.join(fakeWorkspace, logfileName);
       // line-ending is critical; the log is read with `tail.on('line'...)`
       fs.writeFileSync(logfilePath, dummyTextToLog + os.EOL);
       return mockInvestProc;
@@ -420,7 +420,10 @@ describe('InVEST subprocess testing', () => {
 
   afterEach(async () => {
     mockInvestProc = null;
-    cleanupDir(fakeWorkspace);
+    // being extra careful with recursive rm
+    if (fakeWorkspace.startsWith('tests/data')) {
+      fs.rmdirSync(fakeWorkspace, { recursive: true });
+    }
     await InvestJob.clearStore();
     jest.resetAllMocks();
     jest.resetModules();

@@ -19,6 +19,13 @@ For development, choose either:
 
 * `npm start`
 
+_Optional: using the react-devtools extension_  
+
+Before running `npm start`, in a second shell launch `react-devtools` (or `npx react-devtools` if you don't have a global install). Then run `npm start`.  
+The electron app should communicate with the
+standalone react-devtools window. There's an oustanding issue in electron
+preventing react-devtools from integrating with the electron browser's devtools window. https://github.com/electron/electron/issues/23662
+
 ## To package this app for distribution  
 
 `npm run build`  - calls babel to transpile ES6 and jsx code to commonjs; moves other resources (CSS, JSON) to the build directory
@@ -40,3 +47,8 @@ globally installed packages are on the PATH.
 
 To run javascript outside the electron runtime, but with the same ECMAscript features and babel configurations, use `node -r @babel/register script.js`.  
 
+## Client logfile locations:
+
+Windows: "C:\Users\dmf\AppData\Roaming\invest-workbench\"  
+Mac: "\~/Library/Application Support/invest-workbench/"  
+Linux: "\~/.config/invest-workbench/"  
