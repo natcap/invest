@@ -60,13 +60,44 @@ Feedback.defaultProps = {
   message: '',
 };
 
+/** Prevent the default case for onDragOver so onDrop event will be fired. */
+function dragOverHandler(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.target.disabled) {
+    event.dataTransfer.dropEffect = 'none';
+  } else {
+    event.dataTransfer.dropEffect = 'copy';
+  }
+}
+
+function dragEnterHandler(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.target.disabled) {
+    event.dataTransfer.dropeffect = 'none';
+  } else {
+    event.dataTransfer.dropEffect = 'copy';
+    event.target.classList.add('input-dragging');
+  }
+}
+
+function dragLeavingHandler(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.dataTransfer.dropEffect = 'copy';
+  event.target.classList.remove('input-dragging');
+}
+
 export default class ArgInput extends React.PureComponent {
+
   render() {
     const {
       argkey,
       argSpec,
       handleBoolChange,
       handleChange,
+      inputDropHandler,
       isValid,
       selectFile,
       touched,
@@ -122,6 +153,10 @@ export default class ArgInput extends React.PureComponent {
                 isValid={touched && isValid}
                 isInvalid={validationMessage}
                 disabled={ui_option === 'disable'}
+                onDrop={inputDropHandler}
+                onDragOver={dragOverHandler}
+                onDragEnter={dragEnterHandler}
+                onDragLeave={dragLeavingHandler}
               />
               {
                 ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type)
@@ -246,6 +281,7 @@ ArgInput.propTypes = {
   handleChange: PropTypes.func.isRequired,
   handleBoolChange: PropTypes.func.isRequired,
   selectFile: PropTypes.func.isRequired,
+  inputDropHandler:PropTypes.func.isRequired,
 };
 ArgInput.defaultProps = {
   value: undefined,
