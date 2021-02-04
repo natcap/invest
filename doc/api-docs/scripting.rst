@@ -289,6 +289,7 @@ number are:
 Using the parameter study example, this might look like:
 
 .. code-block:: python
+
     if __name__ == '__main__':
        args['n_workers'] = 4  # Use 4 processes
 
