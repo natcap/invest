@@ -21,7 +21,6 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
   const spec = { ...baseSpec };
   if (!spec.modelName) { spec.modelName = 'Eco Model'; }
   if (!spec.module) { spec.module = 'natcap.invest.dot'; }
-
   const { ...utils } = render(
     <SetupTab
       pyModuleName={spec.module}
@@ -587,6 +586,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
+    const uiSpec = {order: [Object.keys(spec.args)]}
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), 'invalid because']]
     );
@@ -600,7 +600,7 @@ describe('Form drag-and-drop', () => {
     };
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
-    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
 
     const fileDragEvent = createEvent.dragEnter(setupForm);
@@ -646,11 +646,12 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
+    const uiSpec = {order: [Object.keys(spec.args)]}
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), 'invalid because']]
     );
 
-    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
 
     const fileDragEnterEvent = createEvent.dragEnter(setupForm);
@@ -689,11 +690,12 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
+    const uiSpec = {order: [Object.keys(spec.args)]}
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), 'invalid because']]
     );
 
-    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
     const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
 
@@ -739,11 +741,12 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
+    const uiSpec = {order: [Object.keys(spec.args)]}
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), 'invalid because']]
     );
 
-    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec);
+    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
     const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
 
     const fileDragEnterEvent = createEvent.dragEnter(setupInput);
@@ -775,10 +778,6 @@ describe('Form drag-and-drop', () => {
     const spec = {
       module: `natcap.invest.${MODULE}`,
       args: {
-        controller: {
-          name: 'Afoo',
-          type: 'boolean',
-        },
         arg1: {
           name: 'Workspace',
           type: 'directory',
@@ -790,15 +789,10 @@ describe('Form drag-and-drop', () => {
       },
     };
     const uiSpec = {
-      controller: {
-        ui_control: ['arg1', 'arg2'],
-      },
-      arg1: {
-        ui_option: 'foo', // an invalid option should be ignored
-      },
-      arg2: {
-        ui_option: "disable"
-      },
+      order: [Object.keys(spec.args)],
+      enabledFunctions: {
+        arg2: (state => false)  // make this arg always disabled
+      }
     };
 
     fetchValidation.mockResolvedValue(
