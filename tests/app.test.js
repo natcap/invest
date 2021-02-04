@@ -150,7 +150,7 @@ describe('Various ways to open and close InVEST models', () => {
       findByText,
       findByTitle,
       findByRole,
-      findAllByText
+      findAllByText,
     } = render(<App investExe="foo" />);
 
     // Open first model
