@@ -39,7 +39,7 @@ export default class LoadButton extends React.Component {
         variant="outline-dark"
         onDragOver={dragOverHandlerNone}
       >
-        Load Parameters
+        Open
       </Button>
     );
   }
