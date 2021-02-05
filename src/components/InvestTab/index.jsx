@@ -334,14 +334,14 @@ export default class InvestTab extends React.Component {
                 </Nav.Link>
               </Nav.Item>
             </Nav>
-            <Row className="flex-column">
+            <div className="sidebar-row">
               <ResourcesLinks
                 moduleName={modelRunName}
                 docs={modelSpec.userguide_html}
               />
-            </Row>
-            <Row
-              className="flex-column sidebar-footer"
+            </div>
+            <div
+              className="sidebar-row sidebar-footer"
               id={sidebarFooterElementId}
             />
           </Col>
