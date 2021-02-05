@@ -83,7 +83,7 @@
     "react-hot-loader": "^4.13.0",
     "react-lazylog": "^4.5.3",
     "sanitize-html": "^2.2.0",
-    "tail": "^2.0.4",
+    "tail": "^2.2.0",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.0"
   },

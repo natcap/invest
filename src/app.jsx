@@ -16,6 +16,7 @@ import SettingsModal from './components/SettingsModal';
 import { getInvestList } from './server_requests';
 import { getLogger } from './logger';
 import InvestJob from './InvestJob';
+import { dragOverHandlerNone } from './utils.js';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -151,6 +152,7 @@ export default class App extends React.Component {
               className="close-tab"
               variant="outline-dark"
               onClick={() => this.closeInvestModel(job.metadata.navID)}
+              onDragOver={dragOverHandlerNone}
             >
               x
             </Button>
@@ -175,11 +177,12 @@ export default class App extends React.Component {
 
     return (
       <TabContainer activeKey={activeTab}>
-        <Navbar>
-          <Navbar.Brand>
+        <Navbar onDragOver={dragOverHandlerNone}>
+          <Navbar.Brand onDragOver={dragOverHandlerNone}>
             <Nav.Link 
               onSelect={this.switchTabs} 
-              eventKey="home">
+              eventKey="home"
+              onDragOver={dragOverHandlerNone}>
               InVEST
             </Nav.Link>
           </Navbar.Brand>
@@ -188,6 +191,7 @@ export default class App extends React.Component {
             className="mr-auto horizontal-scroll"
             activeKey={activeTab}
             onSelect={this.switchTabs}
+            onDragOver={dragOverHandlerNone}
           >
             {investNavItems}
           </Nav>
