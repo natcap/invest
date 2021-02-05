@@ -13,7 +13,7 @@ import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
 import LoadButton from './components/LoadButton';
 import SettingsModal from './components/SettingsModal';
-import { getInvestList } from './server_requests';
+import { getInvestModelNames } from './server_requests';
 import { getLogger } from './logger';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils.js';
@@ -43,7 +43,7 @@ export default class App extends React.Component {
 
   /** Initialize the list of available invest models and recent invest jobs. */
   async componentDidMount() {
-    const investList = await getInvestList();
+    const investList = await getInvestModelNames();
     const recentJobs = await InvestJob.getJobStore();
     // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?

@@ -11,10 +11,11 @@ import {
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
+import { fileRegistry } from '../src/constants';
 import InvestTab from '../src/components/InvestTab';
 import App from '../src/app';
 import {
-  getInvestList, getSpec, fetchValidation, fetchDatastackFromFile
+  getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
 } from '../src/server_requests';
 import InvestJob from '../src/InvestJob';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
@@ -38,7 +39,7 @@ afterAll(async () => {
 
 describe('Various ways to open and close InVEST models', () => {
   beforeAll(() => {
-    getInvestList.mockResolvedValue(MOCK_INVEST_LIST);
+    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
   });
@@ -208,7 +209,7 @@ describe('Various ways to open and close InVEST models', () => {
 
 describe('Display recently executed InVEST jobs', () => {
   beforeEach(() => {
-    getInvestList.mockResolvedValue({});
+    getInvestModelNames.mockResolvedValue({});
   });
   afterEach(async () => {
     await InvestJob.clearStore();
@@ -284,7 +285,7 @@ describe('Display recently executed InVEST jobs', () => {
 
 describe('InVEST global settings: dialog interactions', () => {
   beforeEach(() => {
-    getInvestList.mockResolvedValue({});
+    getInvestModelNames.mockResolvedValue({});
   });
   afterEach(() => {
     jest.resetAllMocks();
@@ -370,9 +371,10 @@ describe('InVEST subprocess testing', () => {
         type: 'freestyle_string',
       }
     },
-    model_name: 'Eco Model',
+    model_name: 'EcoModel',
     module: 'natcap.invest.dot',
   };
+
 
   const dummyTextToLog = JSON.stringify(spec.args);
   let fakeWorkspace;
@@ -393,7 +395,7 @@ describe('InVEST subprocess testing', () => {
     });
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    getInvestList.mockResolvedValue(
+    getInvestModelNames.mockResolvedValue(
       { Carbon: { internal_name: 'carbon' } }
     );
 
@@ -409,6 +411,11 @@ describe('InVEST subprocess testing', () => {
       fs.writeFileSync(logfilePath, dummyTextToLog + os.EOL);
       return mockInvestProc;
     });
+
+    // mock out the whole UI config module
+    // brackets around spec.model_name turns it into a valid literal key
+    const mockUISpec = {[spec.model_name]: {order: [Object.keys(spec.args)]}};
+    jest.mock('../src/ui_config', () => mockUISpec);
   });
 
   afterEach(async () => {
@@ -419,6 +426,7 @@ describe('InVEST subprocess testing', () => {
     }
     await InvestJob.clearStore();
     jest.resetAllMocks();
+    jest.resetModules();
   });
 
   test('exit without error - expect log display', async () => {

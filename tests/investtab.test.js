@@ -35,7 +35,7 @@ function renderInvestTab() {
 describe('Save InVEST Model Setup Buttons', () => {
   const spec = {
     module: 'natcap.invest.foo',
-    model_name: 'Foo Model',
+    model_name: 'FooModel',
     args: {
       workspace: {
         name: 'Workspace',
@@ -49,27 +49,22 @@ describe('Save InVEST Model Setup Buttons', () => {
     },
   };
 
-  const uiSpecFilePath = path.join(
-    fileRegistry.INVEST_UI_DATA, `${spec.module}.json`
-  );
-  const uiSpec = {
-    workspace: { order: 0.1 },
-    port: { order: 'hidden' },
-  };
-  fs.writeFileSync(uiSpecFilePath, JSON.stringify(uiSpec));
-
   // args expected to be in the saved JSON / Python dictionary
-  const expectedArgKeys = [];
-  Object.keys(spec.args).forEach((key) => {
-    if (uiSpec[key].order !== 'hidden') { expectedArgKeys.push(key); }
-  });
-  expectedArgKeys.push('n_workers'); // never in the spec, always in the args dict
+  const expectedArgKeys = ['workspace', 'n_workers'];
 
-  getSpec.mockResolvedValue(spec);
-  fetchValidation.mockResolvedValue([]);
+  beforeAll(() => {
+    getSpec.mockResolvedValue(spec);
+    fetchValidation.mockResolvedValue([]);
+    // mock out the whole UI config module
+    // brackets around spec.model_name turns it into a valid literal key
+    const mockUISpec = {[spec.model_name]: {order: [Object.keys(spec.args)]}}
+    jest.mock('../src/ui_config', () => mockUISpec);
+  });
 
   afterAll(() => {
-    fs.unlinkSync(uiSpecFilePath);
+    // the API for removing mocks is confusing (see https://github.com/facebook/jest/issues/7136)
+    // not sure why, but resetModules is needed to unmock the ui_config
+    jest.resetModules();
     jest.resetAllMocks();
     // Careful with reset because "resetting a spy results
     // in a function with no return value". I had been using spies to observe
@@ -192,19 +187,19 @@ describe('Save InVEST Model Setup Buttons', () => {
 
 describe('InVEST Run Button', () => {
   const spec = {
-    module: 'natcap.invest.foo',
-    model_name: 'Foo Model',
+    module: 'natcap.invest.bar',
+    model_name: 'BarModel',
     args: {
       a: {
-        name: 'afoo',
+        name: 'abar',
         type: 'freestyle_string',
       },
       b: {
-        name: 'bfoo',
+        name: 'bbar',
         type: 'number',
       },
       c: {
-        name: 'cfoo',
+        name: 'cbar',
         type: 'csv',
       },
     },
@@ -212,9 +207,14 @@ describe('InVEST Run Button', () => {
 
   beforeAll(() => {
     getSpec.mockResolvedValue(spec);
+    // mock out the whole UI config module
+    // brackets around spec.model_name turns it into a valid literal key
+    let mockUISpec = {[spec.model_name]: {order: [Object.keys(spec.args)]}}
+    jest.mock('../src/ui_config', () => mockUISpec);
   });
 
   afterAll(() => {
+    jest.resetModules();
     jest.resetAllMocks();
   });
 

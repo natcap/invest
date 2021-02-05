@@ -59,8 +59,8 @@
   "invest": {
     "hostname": "https://storage.googleapis.com",
     "bucket": "releases.naturalcapitalproject.org",
-    "fork": "natcap",
-    "version": "3.9.0.post147+gcc5a7cfe",
+    "fork": "invest",
+    "version": "3.9.0.post235+g296690d7",
     "target": {
       "macos": "mac_invest_binaries.zip",
       "windows": "windows_invest_binaries.zip"

@@ -95,18 +95,18 @@ export default class ArgInput extends React.PureComponent {
     const {
       argkey,
       argSpec,
+      enabled,
       handleBoolChange,
       handleChange,
       inputDropHandler,
       isValid,
       selectFile,
       touched,
-      ui_option,
+      dropdownOptions,
       value,
     } = this.props;
     let { validationMessage } = this.props;
     let Input;
-
     // Messages with this pattern include validation feedback about
     // multiple inputs, but the whole message is repeated for each input.
     // It's more readable if filtered on the individual input.
@@ -116,6 +116,8 @@ export default class ArgInput extends React.PureComponent {
         validationMessage, value
       );
     }
+
+    const className = enabled ? null : 'arg-disable';
 
     // These types need a text input, and some also need a file browse button
     if (
@@ -131,8 +133,9 @@ export default class ArgInput extends React.PureComponent {
         <Form.Group
           as={Row}
           key={argkey}
-          className={`arg-${ui_option}`}
           data-testid={`group-${argkey}`}
+          // this grays out the label but doesn't actually disable the field
+          className={className}
         >
           <FormLabel argkey={argkey}>
             <span>
@@ -152,7 +155,7 @@ export default class ArgInput extends React.PureComponent {
                 onFocus={handleChange}
                 isValid={touched && isValid}
                 isInvalid={validationMessage}
-                disabled={ui_option === 'disable'}
+                disabled={!enabled}
                 onDrop={inputDropHandler}
                 onDragOver={dragOverHandler}
                 onDragEnter={dragEnterHandler}
@@ -160,7 +163,7 @@ export default class ArgInput extends React.PureComponent {
               />
               {
                 ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type)
-                  ? (
+                  ? (  // add a file selector button for path input types
                     <InputGroup.Append>
                       <Button
                         id={argkey}
@@ -168,6 +171,7 @@ export default class ArgInput extends React.PureComponent {
                         value={argSpec.type} // dialog will limit options accordingly
                         name={argkey}
                         onClick={selectFile}
+                        disabled={!enabled}
                       >
                         Browse
                       </Button>
@@ -197,7 +201,11 @@ export default class ArgInput extends React.PureComponent {
       // instead React avoids setting the property altogether. Hence, !! to
       // cast undefined to false.
       Input = (
-        <Form.Group as={Row} key={argkey} data-testid={`group-${argkey}`}>
+        <Form.Group 
+          as={Row} 
+          key={argkey} 
+          data-testid={`group-${argkey}`}
+          className={className}>
           <FormLabel argkey={argkey}>
             <span>{argSpec.name}</span>
           </FormLabel>
@@ -212,6 +220,7 @@ export default class ArgInput extends React.PureComponent {
               checked={!!value} // double bang casts undefined to false
               onChange={handleBoolChange}
               name={argkey}
+              disabled={!enabled}
             />
             <Form.Check
               id={argkey}
@@ -222,6 +231,7 @@ export default class ArgInput extends React.PureComponent {
               checked={!value} // undefined becomes true, that's okay
               onChange={handleBoolChange}
               name={argkey}
+              disabled={!enabled}
             />
           </Col>
         </Form.Group>
@@ -230,7 +240,11 @@ export default class ArgInput extends React.PureComponent {
     // Dropdown menus for args with options
     } else if (argSpec.type === 'option_string') {
       Input = (
-        <Form.Group as={Row} key={argkey} className={`arg-${ui_option}`} data-testid={`group-${argkey}`}>
+        <Form.Group 
+          as={Row} 
+          key={argkey} 
+          data-testid={`group-${argkey}`}
+          className={className}>
           <FormLabel argkey={argkey}>
             <span>{argSpec.name}</span>
           </FormLabel>
@@ -244,9 +258,9 @@ export default class ArgInput extends React.PureComponent {
                 value={value}
                 onChange={handleChange}
                 onFocus={handleChange}
-                disabled={ui_option === 'disable'}
+                disabled={!enabled}
               >
-                {argSpec.validation_options.options.map((opt) =>
+                {dropdownOptions.map((opt) =>
                   <option value={opt} key={opt}>{opt}</option>
                 )}
               </Form.Control>
@@ -275,18 +289,18 @@ ArgInput.propTypes = {
   argSpec: PropTypes.object.isRequired,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
   touched: PropTypes.bool,
-  ui_option: PropTypes.string,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
   handleChange: PropTypes.func.isRequired,
   handleBoolChange: PropTypes.func.isRequired,
   selectFile: PropTypes.func.isRequired,
+  enabled: PropTypes.bool.isRequired,
+  dropdownOptions: PropTypes.arrayOf(PropTypes.string),
   inputDropHandler:PropTypes.func.isRequired,
 };
 ArgInput.defaultProps = {
   value: undefined,
   touched: false,
-  ui_option: undefined,
   isValid: undefined,
   validationMessage: '',
 };
