@@ -689,21 +689,21 @@ describe('Tab closing and switching', () => {
     fireEvent.click(homeTab);
     fireEvent.click(carbon);
     modelTabs = await findAllByRole('tab', { name: /Carbon/ });
-    expect(modelTabs.length).toEqual(3);  // 3 carbon modelTabs open
+    expect(modelTabs.length).toEqual(3);  // 3 carbon tabs open
     const tab3 = modelTabs[2];
     const tab3EventKey = tab3.getAttribute('data-rb-event-key');
     expect(tab3.classList.contains('active')).toBeTruthy();
     expect(tab2.classList.contains('active')).toBeFalsy();
     expect(tab1.classList.contains('active')).toBeFalsy();
     expect(homeTab.classList.contains('active')).toBeFalsy();
-    // make sure that we switched away from the first modelTabs
+    // make sure that we switched away from the first model tabs
     expect(tab3EventKey).not.toEqual(tab2EventKey);
     expect(tab3EventKey).not.toEqual(tab1EventKey);
 
     // Click the close button on the middle tab
     const tab2CloseButton = await within(tab2).getByRole('button', { name: /x/ });
     fireEvent.click(tab2CloseButton);
-    // Now there should only be 2 model modelTabs open
+    // Now there should only be 2 model tabs open
     modelTabs = await findAllByRole('tab', { name: /Carbon/ });
     expect(modelTabs.length).toEqual(2);
     // Should have switched to tab3, the next tab to the right
@@ -716,17 +716,17 @@ describe('Tab closing and switching', () => {
     // Now there should only be 1 model tab open
     modelTabs = await findAllByRole('tab', { name: /Carbon/ });
     expect(modelTabs.length).toEqual(1);
-    // No modelTabs to the right, so it should switch to the next tab to the left.
+    // No model tabs to the right, so it should switch to the next tab to the left.
     expect(tab1.classList.contains('active')).toBeTruthy();
     expect(homeTab.classList.contains('active')).toBeFalsy();
 
     // Click the close button on the last tab
     const tab1CloseButton = await within(tab1).getByRole('button', { name: /x/ });
     fireEvent.click(tab1CloseButton);
-    // Now there should be no model modelTabs open.
+    // Now there should be no model tabs open.
     modelTabs = await queryAllByRole('tab', { name: /Carbon/ });
     expect(modelTabs.length).toEqual(0);
-    // No more modelTabs, so it should switch back to the home tab.
+    // No more model tabs, so it should switch back to the home tab.
     expect(homeTab.classList.contains('active')).toBeTruthy();
   });
 });
