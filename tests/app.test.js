@@ -626,3 +626,96 @@ describe('InVEST subprocess testing', () => {
     spy.mockRestore();
   });
 });
+describe('Tab closing and switching', () => {
+  beforeAll(() => {
+    getInvestList.mockResolvedValue(MOCK_INVEST_LIST);
+    getSpec.mockResolvedValue(SAMPLE_SPEC);
+    fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+  });
+  afterEach(async () => {
+    jest.clearAllMocks(); // clears usage data, does not reset/restore
+    await InvestJob.clearStore(); // should call because a test calls job.save()
+  });
+
+  test('', async () => {
+    const { 
+      getByRole,
+      findByText, 
+      findByRole, 
+      findAllByRole, 
+      queryAllByRole } = render(
+      <App investExe="foo" />
+    );
+
+    const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
+    const homeTab = await findByText('Home');
+
+    // Open a model tab and expect that it's active
+    fireEvent.click(carbon);
+    let modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs.length).toEqual(1);  // one carbon tab open
+    const tab1 = modelTabs[0];
+    const tab1EventKey = tab1.getAttribute('data-rb-event-key');
+    expect(tab1.classList.contains('active')).toBeTruthy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+
+    // Open a second model tab and expect that it's active
+    fireEvent.click(homeTab);
+    fireEvent.click(carbon);
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs.length).toEqual(2);  // 2 carbon modelTabs open
+    const tab2 = modelTabs[1];
+    const tab2EventKey = tab2.getAttribute('data-rb-event-key');
+    expect(tab2.classList.contains('active')).toBeTruthy();
+    expect(tab1.classList.contains('active')).toBeFalsy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+    // make sure that we switched away from the first tab
+    expect(tab2EventKey).not.toEqual(tab1EventKey);
+
+    // Open a third model tab and expect that it's active
+    fireEvent.click(homeTab);
+    fireEvent.click(carbon);
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs.length).toEqual(3);  // 3 carbon modelTabs open
+    const tab3 = modelTabs[2];
+    const tab3EventKey = tab3.getAttribute('data-rb-event-key');
+    expect(tab3.classList.contains('active')).toBeTruthy();
+    expect(tab2.classList.contains('active')).toBeFalsy();
+    expect(tab1.classList.contains('active')).toBeFalsy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+    // make sure that we switched away from the first modelTabs
+    expect(tab3EventKey).not.toEqual(tab2EventKey);
+    expect(tab3EventKey).not.toEqual(tab1EventKey);
+
+    console.log(tab1EventKey, tab2EventKey, tab3EventKey);
+
+    // Click the close button on the middle tab
+    const tab2CloseButton = await within(tab2).getByRole('button', { name: /x/ });
+    fireEvent.click(tab2CloseButton);
+    // Now there should only be 2 model modelTabs open
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs.length).toEqual(2);
+    // Should have switched to tab3, the next tab to the right
+    expect(tab3.classList.contains('active')).toBeTruthy();
+    expect(tab1.classList.contains('active')).toBeFalsy();
+
+    // Click the close button on the right tab
+    const tab3CloseButton = await within(tab3).getByRole('button', { name: /x/ });
+    fireEvent.click(tab3CloseButton);
+    // Now there should only be 1 model tab open
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs.length).toEqual(1);
+    // No modelTabs to the right, so it should switch to the next tab to the left.
+    expect(tab1.classList.contains('active')).toBeTruthy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+
+    // Click the close button on the last tab
+    const tab1CloseButton = await within(tab1).getByRole('button', { name: /x/ });
+    fireEvent.click(tab1CloseButton);
+    // Now there should be no model modelTabs open.
+    modelTabs = await queryAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs.length).toEqual(0);
+    // No more modelTabs, so it should switch back to the home tab.
+    expect(homeTab.classList.contains('active')).toBeTruthy();
+  });
+});
