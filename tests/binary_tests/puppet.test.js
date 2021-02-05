@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import glob from 'glob';
 import fetch from 'node-fetch';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
@@ -149,3 +149,24 @@ test('Run a real invest model', async () => {
     expect(await findByText(doc, 'Open Workspace'));
   });
 });
+
+// Test for duplicate application launch.
+// We have the binary path, so now let's launch a new subprocess with the same binary
+// The test is that the subprocess exits within a certain reasonable timeout.
+// Also verify that window 1 has focus.
+test('App re-launch will exit and focus on first instance', async (done) => {
+  await waitFor(() => {
+    expect(browser.isConnected()).toBeTruthy();
+  });
+
+  // this should return quickly
+  const secondElectronProcess = spawnSync(
+    `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
+    { shell: true }
+  );
+
+
+}, 5000);
+
+// Test that when window 1 is minimized and application is launched again,
+// window 1 is restored and focused opon.
