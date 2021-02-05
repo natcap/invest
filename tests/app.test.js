@@ -636,9 +636,13 @@ describe('InVEST subprocess testing', () => {
 });
 describe('Tab closing and switching', () => {
   beforeAll(() => {
-    getInvestList.mockResolvedValue(MOCK_INVEST_LIST);
+    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+    // mock out the whole UI config module
+    // brackets around spec.model_name turns it into a valid literal key
+    const mockUISpec = {[SAMPLE_SPEC.model_name]: {order: [Object.keys(SAMPLE_SPEC.args)]}};
+    jest.mock('../src/ui_config', () => mockUISpec);
   });
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore
@@ -656,7 +660,7 @@ describe('Tab closing and switching', () => {
     );
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
-    const homeTab = await findByText('Home');
+    const homeTab = await findByRole('tabpanel', {name: /Home/});
 
     // Open a model tab and expect that it's active
     fireEvent.click(carbon);
@@ -694,8 +698,6 @@ describe('Tab closing and switching', () => {
     // make sure that we switched away from the first modelTabs
     expect(tab3EventKey).not.toEqual(tab2EventKey);
     expect(tab3EventKey).not.toEqual(tab1EventKey);
-
-    console.log(tab1EventKey, tab2EventKey, tab3EventKey);
 
     // Click the close button on the middle tab
     const tab2CloseButton = await within(tab2).getByRole('button', { name: /x/ });
