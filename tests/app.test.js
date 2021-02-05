@@ -663,7 +663,7 @@ describe('Tab closing and switching', () => {
     fireEvent.click(homeTab);
     fireEvent.click(carbon);
     modelTabs = await findAllByRole('tab', { name: /Carbon/ });
-    expect(modelTabs.length).toEqual(2);  // 2 carbon modelTabs open
+    expect(modelTabs.length).toEqual(2);  // 2 carbon tabs open
     const tab2 = modelTabs[1];
     const tab2EventKey = tab2.getAttribute('data-rb-event-key');
     expect(tab2.classList.contains('active')).toBeTruthy();
