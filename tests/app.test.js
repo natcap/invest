@@ -644,9 +644,10 @@ describe('Tab closing and switching', () => {
     const mockUISpec = {[SAMPLE_SPEC.model_name]: {order: [Object.keys(SAMPLE_SPEC.args)]}};
     jest.mock('../src/ui_config', () => mockUISpec);
   });
-  afterEach(async () => {
-    jest.clearAllMocks(); // clears usage data, does not reset/restore
-    await InvestJob.clearStore(); // should call because a test calls job.save()
+
+  afterAll(async () => {
+    jest.resetAllMocks();
+    jest.resetModules();
   });
 
   test('', async () => {
