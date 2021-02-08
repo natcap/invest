@@ -12,11 +12,10 @@
 # scripts/convert-requirements-to-conda-yml.py as though it can only be found
 # on pip.
 
-GDAL>=3.1.2
+GDAL>=3.2.1
 Pyro4==4.77  # pip-only
 pandas>=1.2.1
 geos<3.9.0
-proj>=7.2.0
 numpy>=1.11.0,!=1.16.0
 Rtree>=0.8.2,!=0.9.1
 Shapely>=1.7.1,<2.0.0
