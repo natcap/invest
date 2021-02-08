@@ -117,7 +117,7 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   // If we don't get the lock, then we assume another instance has the lock.
   logger.info('Another instance already has the application lock; exiting');
-  app.quit();
+  app.exit(1);
 } else {
   // On mac, it's possible to bypass above single instance constraint by
   // launching the app through the CLI.  If this happens, focus on the main

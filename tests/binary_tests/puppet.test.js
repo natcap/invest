@@ -159,12 +159,17 @@ test('App re-launch will exit and focus on first instance', async (done) => {
     expect(browser.isConnected()).toBeTruthy();
   });
 
-  // this should return quickly
-  const secondElectronProcess = spawnSync(
+  // this should return quickly.  The test timeout is there in case the new i
+  // process hangs for some reason.
+  const otherElectronProcess = spawnSync(
     `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
     { shell: true }
   );
 
+  otherElectronProcess.on('exit', (code, signal) => {
+    expect(code).toBe(1);
+    expect(browser.hidden()).toBeFalsy();
+  });
 
 }, 5000);
 
