@@ -47,6 +47,8 @@ Unreleased Changes (3.9.1)
       python, this environment variable may need to be defined by hand like
       so: ``QT_MAC_WANTS_LAYER=1 python -m natcap.invest``.  A warning will
       be raised if this environment variable is not present on mac.
+    * Fixing an issue on Mac OS X where saving the InVEST application to a
+      filepath containing spaces would prevent the application from launching.
     * Fixed an issue on Mac OS when certain models would loop indefinitely and
       never complete.  This was addressed by bumping the ``taskgraph``
       requirement version to ``0.10.3``
