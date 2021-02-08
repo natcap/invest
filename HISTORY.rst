@@ -56,6 +56,8 @@ Unreleased Changes (3.9.1)
 * SDR
     * Fixed a bug in validation that did not warn against different coordinate
       systems (all SDR inputs must share a common coordinate system).
+* Wind Energy
+    * Raising ValueError when AOI does not intersect Wind Data points.
 
 3.9.0 (2020-12-11)
 ------------------

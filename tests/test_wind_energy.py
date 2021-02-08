@@ -734,6 +734,32 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
+    def test_clip_vector_value_error(self):
+        """WindEnergy: Test AOI doesn't intersect Wind Data points."""
+        from natcap.invest import wind_energy
+        from natcap.invest.utils import _assert_vectors_equal
+
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args['aoi_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'New_England_US_Aoi.shp')
+
+        # Make up some Wind Data points that live outside AOI
+        wind_data_csv = os.path.join(args['workspace_dir'], 'temp-wind-data.csv')
+        with open(wind_data_csv, 'w') as open_table:
+            open_table.write('LONG,LATI,LAM,K,REF\n')
+            open_table.write('-60.5,25.0,7.59,2.6,10\n')
+            open_table.write('-59.5,24.0,7.59,2.6,10\n')
+            open_table.write('-58.5,24.5,7.59,2.6,10\n')
+            open_table.write('-58.95,24.95,7.59,2.6,10\n')
+            open_table.write('-57.95,24.95,7.59,2.6,10\n')
+            open_table.write('-57.95,25.95,7.59,2.6,10\n')
+
+        args['wind_data_path'] = wind_data_csv
+
+        # AOI and wind data should not overlap, leading to a ValueError in 
+        # clip_vector_by_vector
+        self.assertRaises(ValueError, wind_energy.execute, args)
+
 
 class WindEnergyValidationTests(unittest.TestCase):
     """Tests for the Wind Energy Model ARGS_SPEC and validation."""
