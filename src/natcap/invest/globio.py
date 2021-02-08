@@ -650,7 +650,7 @@ def _msa_calculation(
     def msa_op(msa_f, msa_lu, msa_i):
         """Calculate the MSA which is the product of the sub MSAs."""
         result = numpy.full_like(msa_f, msa_nodata, dtype=numpy.float32)
-        valid_mask = numpy.ones(msa_f.shape, dtype=numpy.bool)
+        valid_mask = numpy.ones(msa_f.shape, dtype=bool)
         for msa_array, nodata_val in zip([msa_f, msa_lu, msa_i], nodata_array):
             if nodata_val is not None:
                 valid_mask &= ~numpy.isclose(msa_array, nodata_val)

@@ -412,7 +412,7 @@ def combine_carbon_maps(*carbon_maps):
 
     """
     result = numpy.zeros(carbon_maps[0].shape)
-    nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=numpy.bool)
+    nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=bool)
     nodata_mask[:] = True
     for carbon_map in carbon_maps:
         valid_mask = carbon_map != NODATA_VALUE
@@ -842,7 +842,7 @@ def _calculate_tropical_forest_edge_carbon_map(
         # shape of distances and indexes: (x, k)
         distances, indexes = kd_tree.query(
             coord_points, k=n_nearest_model_points,
-            distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
+            distance_upper_bound=DISTANCE_UPPER_BOUND, workers=-1)
 
         if n_nearest_model_points == 1:
             distances = distances.reshape(distances.shape[0], 1)
