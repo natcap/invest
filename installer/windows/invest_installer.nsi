@@ -140,7 +140,7 @@ Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile ..\..\dist\InVEST_${FORKNAME}${VERSION}_${ARCHITECTURE}_Setup.exe
 InstallDir "C:\InVEST_${VERSION}_${ARCHITECTURE}"
 ShowInstDetails show
-RequestExecutionLevel admin
+RequestExecutionLevel user
 
 ; This function allows us to test to see if a process is currently running.
 ; If the process name passed in is actually found, a message box is presented
