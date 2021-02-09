@@ -1295,7 +1295,7 @@ def _calculate_npv(
             npv[:] = NODATA_FLOAT32_MIN
 
             matrix_sum = numpy.zeros(npv.shape, dtype=numpy.float32)
-            valid_pixels = numpy.ones(npv.shape, dtype=numpy.bool)
+            valid_pixels = numpy.ones(npv.shape, dtype=bool)
             for matrix in sequestration_matrices:
                 valid_pixels &= ~numpy.isclose(matrix, NODATA_FLOAT32_MIN)
                 matrix_sum[valid_pixels] += matrix[valid_pixels]
@@ -1570,7 +1570,7 @@ def _calculate_net_sequestration(
         # and then assume that the Emissions raster has the extra spatial
         # nuances of the landscape (like nodata holes).
         valid_accumulation_pixels = numpy.ones(accumulation_matrix.shape,
-                                               dtype=numpy.bool)
+                                               dtype=bool)
         if accumulation_nodata is not None:
             valid_accumulation_pixels &= (
                 ~numpy.isclose(accumulation_matrix, accumulation_nodata))
@@ -1695,7 +1695,7 @@ def _sum_n_rasters(
         sum_array[:] = 0.0
 
         # Assume everything is valid until proven otherwise
-        pixels_touched = numpy.zeros(sum_array.shape, dtype=numpy.bool)
+        pixels_touched = numpy.zeros(sum_array.shape, dtype=bool)
         for (_, band, nodata) in raster_tuple_list:
             if time.time() - last_log_time >= 5.0:
                 percent_complete = round(
@@ -1901,7 +1901,7 @@ def _reclassify_accumulation_transition(
         output_matrix[:] = NODATA_FLOAT32_MIN
 
         valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
-                                  dtype=numpy.bool)
+                                  dtype=bool)
         if from_nodata is not None:
             valid_pixels &= (landuse_transition_from_matrix != from_nodata)
 
@@ -1963,7 +1963,7 @@ def _reclassify_disturbance_magnitude(
         output_matrix[:] = NODATA_FLOAT32_MIN
 
         valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
-                                  dtype=numpy.bool)
+                                  dtype=bool)
         if from_nodata is not None:
             valid_pixels &= (landuse_transition_from_matrix != from_nodata)
 

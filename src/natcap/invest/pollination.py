@@ -1247,7 +1247,7 @@ class _SumRasters(object):
 
     def __call__(self, *array_list):
         """Calculate sum of array_list and account for nodata."""
-        valid_mask = numpy.zeros(array_list[0].shape, dtype=numpy.bool)
+        valid_mask = numpy.zeros(array_list[0].shape, dtype=bool)
         result = numpy.empty_like(array_list[0])
         result[:] = 0
         for array in array_list:

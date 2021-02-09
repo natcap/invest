@@ -1261,10 +1261,10 @@ def flat_disk_kernel(max_distance, kernel_filepath):
             # matrices to float64 matrices.
             row_indices, col_indices = numpy.indices((row_block_width,
                                                       col_block_width),
-                                                     dtype=numpy.float)
+                                                     dtype=float)
 
-            row_indices += numpy.float(row_offset - max_distance)
-            col_indices += numpy.float(col_offset - max_distance)
+            row_indices += float(row_offset - max_distance)
+            col_indices += float(col_offset - max_distance)
 
             kernel_index_distances = numpy.hypot(
                 row_indices, col_indices)
