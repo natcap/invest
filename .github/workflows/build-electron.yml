@@ -49,7 +49,7 @@ jobs:
       if: matrix.os != 'macos-latest'
       with:
         run: npm run test-electron-app
-    
+
     - name: Upload installer artifacts
       uses: actions/upload-artifact@v2-preview
       if: ${{ always() }}

@@ -171,7 +171,7 @@ test('App re-launch will exit and focus on first instance', async (done) => {
     expect(browser.hidden()).toBeFalsy();
   });
 
-}, 5000);
+});
 
 // Test that when window 1 is minimized and application is launched again,
 // window 1 is restored and focused opon.
