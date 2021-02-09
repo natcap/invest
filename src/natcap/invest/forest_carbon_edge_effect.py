@@ -833,11 +833,10 @@ def _calculate_tropical_forest_edge_carbon_map(
         col_coords, row_coords = numpy.meshgrid(col_range, row_range)
 
         # query nearest points for every point in the grid
-        # n_jobs=-1 means use all available CPUs
+        # workers=-1 means use all available CPUs
         coord_points = list(zip(
             row_coords[valid_edge_distance_mask].ravel(),
             col_coords[valid_edge_distance_mask].ravel()))
-        # note, the 'n_jobs' parameter was introduced in SciPy 0.16.0
         # for each forest point x, for each of its k nearest neighbors
         # shape of distances and indexes: (x, k)
         distances, indexes = kd_tree.query(
