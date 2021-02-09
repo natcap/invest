@@ -412,7 +412,7 @@ def combine_carbon_maps(*carbon_maps):
 
     """
     result = numpy.zeros(carbon_maps[0].shape)
-    nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=numpy.bool)
+    nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=bool)
     nodata_mask[:] = True
     for carbon_map in carbon_maps:
         valid_mask = carbon_map != NODATA_VALUE
@@ -833,16 +833,15 @@ def _calculate_tropical_forest_edge_carbon_map(
         col_coords, row_coords = numpy.meshgrid(col_range, row_range)
 
         # query nearest points for every point in the grid
-        # n_jobs=-1 means use all available CPUs
+        # workers=-1 means use all available CPUs
         coord_points = list(zip(
             row_coords[valid_edge_distance_mask].ravel(),
             col_coords[valid_edge_distance_mask].ravel()))
-        # note, the 'n_jobs' parameter was introduced in SciPy 0.16.0
         # for each forest point x, for each of its k nearest neighbors
         # shape of distances and indexes: (x, k)
         distances, indexes = kd_tree.query(
             coord_points, k=n_nearest_model_points,
-            distance_upper_bound=DISTANCE_UPPER_BOUND, n_jobs=-1)
+            distance_upper_bound=DISTANCE_UPPER_BOUND, workers=-1)
 
         if n_nearest_model_points == 1:
             distances = distances.reshape(distances.shape[0], 1)
