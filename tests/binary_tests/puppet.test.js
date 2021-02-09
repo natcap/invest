@@ -154,7 +154,7 @@ test('Run a real invest model', async () => {
 // We have the binary path, so now let's launch a new subprocess with the same binary
 // The test is that the subprocess exits within a certain reasonable timeout.
 // Also verify that window 1 has focus.
-test('App re-launch will exit and focus on first instance', async (done) => {
+test('App re-launch will exit and focus on first instance', async () => {
   await waitFor(() => {
     expect(browser.isConnected()).toBeTruthy();
   });
@@ -166,11 +166,8 @@ test('App re-launch will exit and focus on first instance', async (done) => {
     { shell: true }
   );
 
-  otherElectronProcess.on('exit', (code, signal) => {
-    expect(code).toBe(1);
-    expect(browser.hidden()).toBeFalsy();
-  });
-
+  expect(otherElectronProcess.status).toBe(1);
+  expect(browser.hidden()).toBeFalsy();
 });
 
 // Test that when window 1 is minimized and application is launched again,
