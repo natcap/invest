@@ -104,13 +104,14 @@ export default class App extends React.Component {
     // Switch to the next tab if there is one, or the previous, or home.
     let switchTo = 'home';
     if (openJobs[index]) {
-      switchTo = openJobs[index].navID;
+      switchTo = openJobs[index].metadata.navID;
     } else if (openJobs[index - 1]) {
-      switchTo = openJobs[index - 1].navID;
+      switchTo = openJobs[index - 1].metadata.navID;
     }
+    this.switchTabs(switchTo);
     this.setState({
       openJobs: openJobs
-    }, () => this.switchTabs(switchTo));
+    });
   }
 
   /** Save data describing an invest job to a persistent JSON file.
@@ -151,7 +152,10 @@ export default class App extends React.Component {
             <Button
               className="close-tab"
               variant="outline-dark"
-              onClick={() => this.closeInvestModel(job.metadata.navID)}
+              onClick={(event) => {
+                event.stopPropagation();
+                this.closeInvestModel(job.metadata.navID);
+              }}
               onDragOver={dragOverHandlerNone}
             >
               x
