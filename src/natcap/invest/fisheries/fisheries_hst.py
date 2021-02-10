@@ -22,7 +22,7 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "sexsp": {
-            "name": "Population Classes are Sex-Specific",
+            "name": "population classes are sex-specific",
             "type": "option_string",
             "required": True,
             "validation_options": {
@@ -34,7 +34,7 @@ ARGS_SPEC = {
                 "distinguished by sex."),
         },
         "population_csv_path": {
-            "name": "Population Parameters File",
+            "name": "population parameters",
             "type": "csv",
             "required": True,
             "about": (
@@ -47,7 +47,7 @@ ARGS_SPEC = {
                 "file."),
         },
         "habitat_dep_csv_path": {
-            "name": "Habitat Dependency Parameters File",
+            "name": "habitat dependency parameters",
             "type": "csv",
             "required": True,
             "about": (
@@ -59,7 +59,7 @@ ARGS_SPEC = {
                 "documentation for help on how to format this file."),
         },
         "habitat_chg_csv_path": {
-            "name": "Habitat Area Change File",
+            "name": "habitat area change",
             "type": "csv",
             "required": True,
             "about": (
@@ -72,7 +72,7 @@ ARGS_SPEC = {
                 "to format this file."),
         },
         "gamma": {
-            "name": "Gamma",
+            "name": "gamma",
             "type": "number",
             "required": True,
             "validation_options": {
