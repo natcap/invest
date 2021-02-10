@@ -38,15 +38,12 @@ export function findInvestBinaries(isDevMode) {
       const binaryPath = path.join(process.resourcesPath, 'invest');
       investExe = path.join(binaryPath, `invest${ext}`);
     }
-    let investVersion;
-    try {
-      investVersion = execFileSync(investExe, ['--version']);
-    } catch (error) {
-      logger.error(error);
-      throw error;
-    }
+    let investVersion = execFileSync(investExe, ['--version']);
     logger.info(`Found invest binaries ${investExe} for version ${investVersion}`);
     resolve([investExe, `${investVersion}`.trim(os.EOL)]);
+  }).catch(error => {
+    logger.error(error.message);
+    logger.error('InVEST binaries are probably missing.');
   });
 }
 
@@ -60,7 +57,7 @@ export function createPythonFlaskProcess(investExe) {
   if (investExe) {
     const pythonServerProcess = spawn(
       path.basename(investExe),
-      ['serve', '--port', process.env.PORT],
+      ['--debug', 'serve', '--port', process.env.PORT],
       {
         env: {
           PATH: path.dirname(investExe),

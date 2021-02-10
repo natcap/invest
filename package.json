@@ -30,7 +30,7 @@
     "mac": {
       "category": "public.app-category.business",
       "icon": "build/icon.png",
-      "target": "zip"
+      "target": "dmg"
     },
     "linux": {
       "target": [
@@ -59,8 +59,8 @@
   "invest": {
     "hostname": "https://storage.googleapis.com",
     "bucket": "releases.naturalcapitalproject.org",
-    "fork": "natcap",
-    "version": "3.9.0.post147+gcc5a7cfe",
+    "fork": "invest",
+    "version": "3.9.0.post235+g296690d7",
     "target": {
       "macos": "mac_invest_binaries.zip",
       "windows": "windows_invest_binaries.zip"
@@ -74,6 +74,7 @@
     "esm": "^3.2.25",
     "glob": "^7.1.6",
     "localforage": "^1.9.0",
+    "material-design-icons": "^3.0.1",
     "node-fetch": "^2.6.1",
     "prop-types": "^15.7.2",
     "react": "^17.0.1",
@@ -82,7 +83,7 @@
     "react-hot-loader": "^4.13.0",
     "react-lazylog": "^4.5.3",
     "sanitize-html": "^2.2.0",
-    "tail": "^2.0.4",
+    "tail": "^2.2.0",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.0"
   },

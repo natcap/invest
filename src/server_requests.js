@@ -44,7 +44,7 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
  *
  * @returns {Promise} resolves object
  */
-export function getInvestList() {
+export function getInvestModelNames() {
   return (
     fetch(`${HOSTNAME}:${process.env.PORT}/models`, {
       method: 'get',
@@ -107,6 +107,43 @@ export function fetchDatastackFromFile(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
+}
+
+/**
+ * Get a list of the column names of a vector file.
+ *
+ * @param {string} payload - path to file
+ * @returns {Promise} resolves array
+ */
+export function getVectorColumnNames(payload) {
+  return (
+    fetch(`${HOSTNAME}:${process.env.PORT}/colnames`, {
+      method: 'post',
+      body: JSON.stringify({vector_path: payload}),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
+}
+
+/**
+ * Get a boolean indicating whether a vector file may contain points.
+ *
+ * @param {string} payload - path to file
+ * @returns {Promise} resolves boolean
+ */
+export function getVectorMayHavePoints(payload) {
+  return (
+    fetch(`${HOSTNAME}:${process.env.PORT}/vector_may_have_points`, {
+      method: 'post',
+      body: JSON.stringify({vector_path: payload}),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      .then((json) => json.may_have_points)
       .catch((error) => logger.error(error.stack))
   );
 }

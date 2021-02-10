@@ -13,59 +13,28 @@ import {
 import { fetchValidation, saveToPython } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 
-/** Toggle properties that control the display of argument inputs.
- *
- * This function returns a copy of the SetupTab argsValues object
- * after updating the 'ui_option' property of any arguments listed
- * in the 'ui_control' array of `argsSpec[argkey]`.
- *
- * @param {object} argsSpec - merge of an InVEST model's ARGS_SPEC and UI Spec.
- * @param {object} argsValues - of the shape returned by `initializeArgValues`.
- * @param {string} argkey - a key of the argsSpec and argsValues objects
- *    that contains a 'ui_control' property.
- *
- * @returns {object} a copy of `argsValues`
- */
-function toggleDependentInputs(argsSpec, argsValues, argkey) {
-  const updatedValues = { ...argsValues };
-  argsSpec[argkey].ui_control.forEach((dependentKey) => {
-    if (!updatedValues[argkey].value) {
-      // apply the display option specified in the UI spec
-      updatedValues[dependentKey].ui_option = argsSpec[dependentKey].ui_option;
-    } else {
-      updatedValues[dependentKey].ui_option = undefined;
-    }
-  });
-  return updatedValues;
-}
 
 /** Setup the objects that store InVEST argument values in SetupTab state.
  *
  * One object will store input form values and track if the input has been
  * touched. The other object stores data returned by invest validation.
  *
- * @param {object} argsSpec - merge of an InVEST model's ARGS_SPEC.args and UI Spec.
+ * @param {object} argsSpec - an InVEST model's ARGS_SPEC.args 
+ * @param {object} uiSpec - the model's UI Spec.
  * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
  *
  * @returns {object} to destructure into two args,
  *   each with the same keys as argsSpec:
  *     {object} argsValues - stores properties that update in response to
  *       user interaction
- *     {object} argsValidation - stores properties that update in response to
- *       validation.
+ *     {object} argsDropdownOptions - stores lists of dropdown options for
+ *       args of type 'option_string'.
  */
-function initializeArgValues(argsSpec, argsDict) {
+function initializeArgValues(argsSpec, uiSpec, argsDict) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
-  const argsValidation = {};
   const argsValues = {};
-  Object.keys(argsSpec).forEach((argkey) => {
-    argsValidation[argkey] = {};
-    // 'hidden' args should not be assigned default values by the UI.
-    // They are hidden because they rarely need to be parameterized
-    // by the user, and the default is probably hardcoded into the
-    // invest model (e.g. Rec model's 'port' & 'hostname' args).
-    if (argkey === 'n_workers'
-      || argsSpec[argkey].order === 'hidden') { return; }
+  const argsDropdownOptions = {};
+  uiSpec.order.flat().forEach((argkey) => {
     // When initializing with undefined values, assign defaults so that,
     // a) values are handled well by the html inputs and
     // b) the object exported to JSON on "Save" or "Execute" includes defaults.
@@ -75,6 +44,7 @@ function initializeArgValues(argsSpec, argsDict) {
     } else if (argsSpec[argkey].type === 'option_string') {
       value = argsDict[argkey]
         || argsSpec[argkey].validation_options.options[0]; // default to first
+      argsDropdownOptions[argkey] = argsSpec[argkey].validation_options.options;
     } else {
       value = argsDict[argkey] || '';
     }
@@ -83,18 +53,23 @@ function initializeArgValues(argsSpec, argsDict) {
       touched: !initIsEmpty, // touch them only if initializing with values
     };
   });
-  return ({ argsValues: argsValues, argsValidation: argsValidation });
+  return ({ 
+    argsValues: argsValues, 
+    argsDropdownOptions: argsDropdownOptions,
+  });
 }
 
 /** Renders an arguments form, execute button, and save buttons. */
 export default class SetupTab extends React.Component {
   constructor(props) {
     super(props);
+
     this.state = {
       argsValues: null,
-      argsValidation: {},
+      argsValidation: null,
       argsValid: false,
-      sortedArgKeys: null,
+      argsEnabled: null,
+      argsDropdownOptions: null
     };
 
     this.savePythonScript = this.savePythonScript.bind(this);
@@ -104,6 +79,7 @@ export default class SetupTab extends React.Component {
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.insertNWorkers = this.insertNWorkers.bind(this);
+    this.callUISpecFunctions = this.callUISpecFunctions.bind(this);
   }
 
   componentDidMount() {
@@ -115,66 +91,66 @@ export default class SetupTab extends React.Component {
     * not on every re-render.
     */
     const { argsInitValues, argsSpec, uiSpec } = this.props;
-    // extend the args spec with the UI spec
-    Object.keys(argsSpec).forEach((key) => {
-      Object.assign(argsSpec[key], uiSpec[key]);
-    });
-    const argGroups = {};
-    let {
-      argsValues, argsValidation
-    } = initializeArgValues(argsSpec, argsInitValues || {});
 
-    Object.keys(argsSpec).forEach((argkey) => {
-      // these argkeys do not get rendered inputs
-      if (argkey === 'n_workers'
-        || argsSpec[argkey].order === 'hidden') { return; }
+    const {
+      argsValues, 
+      argsDropdownOptions,
+    } = initializeArgValues(argsSpec, uiSpec, argsInitValues || {});
 
-      // Update any dependent args in response to this arg's value
-      const argumentSpec = { ...argsSpec[argkey] };
-      if (argumentSpec.ui_control) {
-        argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
-      }
+    // map each arg to an empty object, to fill in later
+    // here we use the argsSpec because it includes all args, even ones like
+    // n_workers, which do get validated.
+    const argsValidation = Object.keys(argsSpec).reduce((acc, argkey) => {
+      acc[argkey] = {};
+      return acc;
+    }, {});
+    // here we only use the keys in uiSpec.order because args that 
+    // aren't displayed in the form don't need an enabled/disabled state.
+    // all args default to being enabled
+    const argsEnabled = uiSpec.order.flat().reduce((acc, argkey) => {
+      acc[argkey] = true;
+      return acc;
+    }, {})
 
-      // Sort the arg into it's input group
-      // order is optional in the spec, but to be exlplicit about
-      // what happens with sorting, defaulting to 100.0.
-      if (typeof argumentSpec.order !== 'number') {
-        argumentSpec.order = 100.0;
-      }
-      // Groups are defined by the whole number digits
-      const g = Math.floor(argumentSpec.order);
-      const orderArgPair = { [argumentSpec.order]: argkey };
-      if (argGroups[g]) {
-        argGroups[g].push(orderArgPair);
-      } else {
-        argGroups[g] = [orderArgPair];
-      }
-    });
-
-    // sort the groups by the group number (keys of argGroups)
-    const sortedGroups = Object.entries(argGroups).sort(
-      (a, b) => a[0] - b[0]
-    );
-    // sort args within the groups
-    const sortedArgKeys = [];
-    sortedGroups.forEach((groupArray) => {
-      if (groupArray.length > 1) {
-        // [1] is the array of objects keyed by their order number
-        const sortedGroup = groupArray[1].sort(
-          (a, b) => parseFloat(Object.keys(a)[0]) - parseFloat(Object.keys(b)[0])
-        );
-        sortedArgKeys.push(
-          // drop the order numbers now that argkeys are sorted
-          sortedGroup.map((item) => Object.values(item)[0])
-        );
-      }
-    });
     this.setState({
       argsValues: argsValues,
       argsValidation: argsValidation,
-      sortedArgKeys: sortedArgKeys,
-    }, () => this.investValidate(this.state.argsValues));
-    // }
+      argsEnabled: argsEnabled,
+      argsDropdownOptions: argsDropdownOptions
+    }, () => {
+      this.investValidate();
+      this.callUISpecFunctions();
+    });
+  }
+
+  /**
+   * Call functions from the UI spec to determine the enabled/disabled 
+   * state and dropdown options for each input, if applicable.
+   * 
+   * @returns {undefined}
+   */
+  async callUISpecFunctions() {
+    const { enabledFunctions, dropdownFunctions } = this.props.uiSpec;
+
+    if (enabledFunctions) {
+      // this model has some fields that are conditionally enabled
+      const argsEnabled = this.state.argsEnabled;
+      for (const key in enabledFunctions) {
+        // evaluate the function to determine if it should be enabled
+        argsEnabled[key] = await enabledFunctions[key](this.state);
+      }
+      this.setState({argsEnabled: argsEnabled});
+    }
+    
+    if (dropdownFunctions) {
+      // this model has a dropdown that's dynamically populated
+      const argsDropdownOptions = this.state.argsDropdownOptions;
+      for (const key in dropdownFunctions) {
+        // evaluate the function to get a list of dropdown options
+        argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
+      }
+      this.setState({argsDropdownOptions: argsDropdownOptions});
+    }
   }
 
   /**
@@ -235,14 +211,13 @@ export default class SetupTab extends React.Component {
     let { argsValues } = this.state;
     argsValues[key].value = value;
     argsValues[key].touched = true;
-    if (this.props.argsSpec[key].ui_control) {
-      const updatedArgsValues = toggleDependentInputs(
-        this.props.argsSpec, argsValues, key
-      );
-      argsValues = updatedArgsValues;
-    }
-    this.setState({ argsValues: argsValues });
-    this.investValidate(argsValues);
+
+    this.setState({ 
+      argsValues: argsValues 
+    }, () => {
+        this.investValidate();
+        this.callUISpecFunctions();
+      });
   }
 
   batchUpdateArgs(argsDict) {
@@ -250,30 +225,28 @@ export default class SetupTab extends React.Component {
     *
     * @params {object} argsDict - key: value pairs of InVEST arguments.
     */
-    const { argsSpec } = this.props;
-    let { argsValues, argsValidation } = initializeArgValues(argsSpec, argsDict);
-    Object.keys(argsSpec).forEach((argkey) => {
-      if (argkey === 'n_workers') { return; }
-      const argumentSpec = Object.assign({}, argsSpec[argkey]);
-      if (argumentSpec.ui_control) {
-        argsValues = toggleDependentInputs(argsSpec, argsValues, argkey);
-      }
-    });
+    const { argsSpec, uiSpec } = this.props;
+    let { 
+      argsValues, 
+      argsDropdownOptions,
+    } = initializeArgValues(argsSpec, uiSpec, argsDict);
 
     this.setState({
       argsValues: argsValues,
-      argsValidation: argsValidation,
-    }, () => this.investValidate(this.state.argsValues));
+      argsDropdownOptions: argsDropdownOptions,
+    }, () => {
+      this.investValidate();
+      this.callUISpecFunctions();
+    });
   }
 
   /** Validate an arguments dictionary using the InVEST model's validate function.
    *
-   * @param {object} argsValues - of the shape returned by `initializeArgValues`.
    * @returns undefined
    */
-  async investValidate(argsValues) {
+  async investValidate() {
     const { argsSpec, pyModuleName } = this.props;
-    const argsValidation = Object.assign({}, this.state.argsValidation);
+    const { argsValues, argsValidation } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
       model_module: pyModuleName,
@@ -326,7 +299,8 @@ export default class SetupTab extends React.Component {
       argsValues,
       argsValid,
       argsValidation,
-      sortedArgKeys,
+      argsEnabled,
+      argsDropdownOptions
     } = this.state;
     if (argsValues) {
       const {
@@ -335,6 +309,7 @@ export default class SetupTab extends React.Component {
         sidebarSetupElementId,
         sidebarFooterElementId,
         isRunning,
+        uiSpec
       } = this.props;
 
       const buttonText = (
@@ -352,7 +327,6 @@ export default class SetupTab extends React.Component {
           )
           : <span>Run</span>
       );
-
       return (
         <Container fluid>
           <Row>
@@ -360,7 +334,9 @@ export default class SetupTab extends React.Component {
               argsSpec={argsSpec}
               argsValues={argsValues}
               argsValidation={argsValidation}
-              sortedArgKeys={sortedArgKeys}
+              argsEnabled={argsEnabled}
+              argsDropdownOptions={argsDropdownOptions}
+              argsOrder={uiSpec.order}
               pyModuleName={pyModuleName}
               updateArgValues={this.updateArgValues}
               batchUpdateArgs={this.batchUpdateArgs}

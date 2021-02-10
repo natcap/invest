@@ -83,3 +83,14 @@ export function argsDictFromObject(args) {
   });
   return argsDict;
 }
+
+/** Prevent the default case for onDragOver and set dropEffect to none.
+*
+*@param {Event} event - an ondragover event.
+*/
+export function dragOverHandlerNone(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.dataTransfer.dropEffect = 'none';
+}
+

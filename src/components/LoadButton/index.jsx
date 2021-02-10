@@ -6,6 +6,7 @@ import Button from 'react-bootstrap/Button';
 
 import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
+import { dragOverHandlerNone } from '../../utils.js';
 
 /**
  * Render a button that loads args from a datastack, parameterset, or logfile.
@@ -36,8 +37,9 @@ export default class LoadButton extends React.Component {
         className="mx-3"
         onClick={this.browseFile}
         variant="outline-dark"
+        onDragOver={dragOverHandlerNone}
       >
-        Load Parameters
+        Open
       </Button>
     );
   }
