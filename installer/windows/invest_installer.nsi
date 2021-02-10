@@ -351,16 +351,16 @@ Section "InVEST Tools" Section_InVEST_Tools
     ; Inspired by the example at
     ; nsis.sourceforge.net/A_simple_installer_with_start_menu_shortcut_and_uninstaller
     !define REGISTRY_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_PUBLISHER} ${PRODUCT_NAME} ${PRODUCT_VERSION}"
-    WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayName"          "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-    WriteRegStr HKLM "${REGISTRY_PATH}" "UninstallString"      "${UNINSTALL_PATH}"
-    WriteRegStr HKLM "${REGISTRY_PATH}" "QuietUninstallString" "${UNINSTALL_PATH} /S"
-    WriteRegStr HKLM "${REGISTRY_PATH}" "InstallLocation"      "$INSTDIR"
-    WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayIcon"          "${INVEST_ICON}"
-    WriteRegStr HKLM "${REGISTRY_PATH}" "Publisher"            "${PRODUCT_PUBLISHER}"
-    WriteRegStr HKLM "${REGISTRY_PATH}" "URLInfoAbout"         "${PRODUCT_WEB_SITE}"
-    WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayVersion"       "${PRODUCT_VERSION}"
-    WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoModify" 1
-    WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoRepair" 1
+    WriteRegStr HKCU "${REGISTRY_PATH}" "DisplayName"          "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+    WriteRegStr HKCU "${REGISTRY_PATH}" "UninstallString"      "${UNINSTALL_PATH}"
+    WriteRegStr HKCU "${REGISTRY_PATH}" "QuietUninstallString" "${UNINSTALL_PATH} /S"
+    WriteRegStr HKCU "${REGISTRY_PATH}" "InstallLocation"      "$INSTDIR"
+    WriteRegStr HKCU "${REGISTRY_PATH}" "DisplayIcon"          "${INVEST_ICON}"
+    WriteRegStr HKCU "${REGISTRY_PATH}" "Publisher"            "${PRODUCT_PUBLISHER}"
+    WriteRegStr HKCU "${REGISTRY_PATH}" "URLInfoAbout"         "${PRODUCT_WEB_SITE}"
+    WriteRegStr HKCU "${REGISTRY_PATH}" "DisplayVersion"       "${PRODUCT_VERSION}"
+    WriteRegDWORD HKCU "${REGISTRY_PATH}" "NoModify" 1
+    WriteRegDWORD HKCU "${REGISTRY_PATH}" "NoRepair" 1
 
 
     ; Actually install the information we want to disk.
@@ -413,7 +413,7 @@ Section "uninstall"
   rmdir /r "$INSTDIR"
 
   ; Delete the entire registry key for this version of RIOS.
-  DeleteRegKey HKLM "${REGISTRY_PATH}"
+  DeleteRegKey HKCU "${REGISTRY_PATH}"
 SectionEnd
 
 Var LocalDataZip
