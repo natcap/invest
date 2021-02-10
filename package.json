@@ -29,19 +29,19 @@
     "artifactName": "invest-workbench_${os}_${arch}_${version}.${ext}",
     "mac": {
       "category": "public.app-category.business",
-      "icon": "build/icon.png",
+      "icon": "resources/icon.png",
       "target": "dmg"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "icon": "build/icon.png",
+      "icon": "resources/icon.png",
       "category": "Science"
     },
     "win": {
       "target": "nsis",
-      "icon": "build/icon.png"
+      "icon": "resources/icon.png"
     },
     "files": [
       "build/**/*",
