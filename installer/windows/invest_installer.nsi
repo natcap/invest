@@ -298,7 +298,8 @@ FunctionEnd
 
 Section "InVEST Tools" Section_InVEST_Tools
     AddSize 230793  ; This size is based on Windows build of InVEST 3.4.0
-    SetShellVarContext current 
+    ; current is the default and doesn't require admin-level privileges.
+    SetShellVarContext current
     SectionIn RO ;require this section
 
     ; Write the uninstaller to disk
@@ -404,8 +405,7 @@ Section "MSVCRT 2008 Runtime (Recommended)" Sec_VCRedist2008
 SectionEnd
 
 Section "uninstall"
-  ; Need to enforce execution level as admin.  See
-  ; nsis.sourceforge.net/Shortcuts_removal_fails_on_Windows_Vista
+  ; current is the default and doesn't require admin-level privileges.
   SetShellVarContext current
   rmdir /r "$SMPROGRAMS\${PACKAGE_NAME}"
 
