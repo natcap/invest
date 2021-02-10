@@ -758,7 +758,11 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # AOI and wind data should not overlap, leading to a ValueError in 
         # clip_vector_by_vector
-        self.assertRaises(ValueError, wind_energy.execute, args)
+        with self.assertRaises(ValueError) as cm:
+            wind_energy.execute(args)
+
+        self.assertTrue(
+            "returned 0 features. If an AOI was" in str(cm.exception))
 
 
 class WindEnergyValidationTests(unittest.TestCase):

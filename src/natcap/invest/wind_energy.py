@@ -2406,6 +2406,9 @@ def _clip_vector_by_vector(
     base_layer.Clip(clip_layer, target_layer)
 
     empty_clip = False
+    # Check if the feature count is less than 1, indicating the two vectors
+    # did not intersect. This will raise a ValueError below. GetFeatureCount
+    # can return -1 if the count is not known or too expensive to compute.
     if target_layer.GetFeatureCount() <= 0:
         empty_clip = True
 
