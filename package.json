@@ -29,19 +29,19 @@
     "artifactName": "invest-workbench_${os}_${arch}_${version}.${ext}",
     "mac": {
       "category": "public.app-category.business",
-      "icon": "resources/invest-in-shadow.png",
+      "icon": "resources/invest-in-shadow-white.png",
       "target": "dmg"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "icon": "resources/invest-in-shadow.png",
+      "icon": "resources/invest-in-shadow-white.png",
       "category": "Science"
     },
     "win": {
       "target": "nsis",
-      "icon": "resources/invest-in-shadow.png"
+      "icon": "resources/invest-in-shadow-white.png"
     },
     "files": [
       "build/**/*",

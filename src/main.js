@@ -35,6 +35,7 @@ if (!process.env.PORT) {
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
+let splashScreen;
 
 /** Create an Electron browser window and start the flask application. */
 const createWindow = async () => {
@@ -66,6 +67,7 @@ const createWindow = async () => {
     width: width,
     height: height,
     useContentSize: true,
+    show: true, // see comment in 'ready-to-show' listener
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
@@ -74,14 +76,30 @@ const createWindow = async () => {
       ],
     },
   });
-
   const menubar = Menu.buildFromTemplate(
     menuTemplate(mainWindow, ELECTRON_DEV_MODE)
   );
   Menu.setApplicationMenu(menubar);
 
-  // and load the index.html of the app.
+  splashScreen = new BrowserWindow({
+    width: 574, // dims set to match the image in splash.html
+    height: 500,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+  });
+  splashScreen.loadURL(`file://${__dirname}/static/splash.html`);
   mainWindow.loadURL(`file://${__dirname}/index.html`);
+
+  mainWindow.once('ready-to-show', () => {
+    splashScreen.destroy();
+    // We should be able to hide mainWindow until it's ready,
+    // but there's a bug where a window initialized with { show: false }
+    // will load with invisible elements until it's touched/resized, etc.
+    // https://github.com/electron/electron/issues/27353
+    // So for now, we have the splashScreen over a blank, white mainWindow.
+    // mainWindow.show();
+  });
 
   // Open the DevTools.
   // The timing of this is fussy due a chromium bug. It seems to only
