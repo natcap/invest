@@ -631,6 +631,7 @@ describe('InVEST subprocess testing', () => {
     spy.mockRestore();
   });
 });
+
 describe('Tab closing and switching', () => {
   beforeAll(() => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
