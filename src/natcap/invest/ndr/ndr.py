@@ -41,7 +41,7 @@ ARGS_SPEC = {
                 "the elevation model (recommended when unusual streams are "
                 "observed.) See the Working with the DEM section of the "
                 "InVEST User's Guide for more information."),
-            "name": "DEM"
+            "name": "digital elevation model"
         },
         "lulc_path": {
             "type": "raster",
@@ -53,7 +53,7 @@ ARGS_SPEC = {
                 "A GDAL-supported raster file containing integer values "
                 "representing the LULC code for each cell.  The LULC code "
                 "should be an integer."),
-            "name": "Land Use"
+            "name": "land use"
         },
         "runoff_proxy_path": {
             "type": "raster",
@@ -62,7 +62,7 @@ ARGS_SPEC = {
                 "Weighting factor to nutrient loads.  Internally this value "
                 "is normalized by its average values so a variety of data "
                 "can be used including precipitation or quickflow."),
-            "name": "Nutrient Runoff Proxy"
+            "name": "nutrient runoff proxy"
         },
         "watersheds_path": {
             "type": "vector",
@@ -77,7 +77,7 @@ ARGS_SPEC = {
                 "where water quality will be analyzed.  It must have the "
                 "integer field 'ws_id' where the values uniquely identify "
                 "each watershed."),
-            "name": "Watersheds"
+            "name": "watersheds"
         },
         "biophysical_table_path": {
             "validation_options": {
@@ -91,19 +91,19 @@ ARGS_SPEC = {
                 "must contain the fields 'lucode', 'load_n' (or p), 'eff_n' "
                 "(or p), and 'crit_len_n' (or p) depending on which "
                 "nutrients are selected."),
-            "name": "Biophysical Table"
+            "name": "biophysical table"
         },
         "calc_p": {
             "type": "boolean",
             "required": True,
             "about": "Select to calculate phosphorous export.",
-            "name": "Calculate phosphorous retention"
+            "name": "calculate phosphorous retention"
         },
         "calc_n": {
             "type": "boolean",
             "required": True,
             "about": "Select to calculate nitrogen export.",
-            "name": "Calculate Nitrogen Retention"
+            "name": "calculate nitrogen retention"
         },
         "threshold_flow_accumulation": {
             "validation_options": {
@@ -116,7 +116,7 @@ ARGS_SPEC = {
                 "before it's considered part of a stream such that "
                 "retention stops and the remaining export is exported to the "
                 "stream.  Used to define streams from the DEM."),
-            "name": "Threshold Flow Accumulation"
+            "name": "threshold flow accumulation"
         },
         "k_param": {
             "type": "number",
@@ -132,7 +132,7 @@ ARGS_SPEC = {
         "subsurface_critical_length_n": {
             "type": "number",
             "required": "calc_n",
-            "name": "Subsurface Critical Length (Nitrogen)",
+            "name": "subsurface critical length (nitrogen)",
             "about": (
                 "The distance (traveled subsurface and downslope) after "
                 "which it is assumed that soil retains nutrient at its "
@@ -147,7 +147,7 @@ ARGS_SPEC = {
         "subsurface_critical_length_p": {
             "type": "number",
             "required": "calc_p",
-            "name": "Subsurface Critical Length (Phosphorous)",
+            "name": "subsurface critical length (phosphorous)",
             "about": (
                 "The distance (traveled subsurface and downslope) after "
                 "which it is assumed that soil retains nutrient at its "
@@ -162,7 +162,7 @@ ARGS_SPEC = {
         "subsurface_eff_n": {
             "type": "number",
             "required": "calc_n",
-            "name": "Subsurface Maximum Retention Efficiency (Nitrogen)",
+            "name": "subsurface maximum retention efficiency (nitrogen)",
             "about": (
                 "The maximum nutrient retention efficiency that can be "
                 "reached through subsurface flow, a floating point value "
@@ -172,7 +172,7 @@ ARGS_SPEC = {
         "subsurface_eff_p": {
             "type": "number",
             "required": "calc_p",
-            "name": "Subsurface Maximum Retention Efficiency (Phosphorous)",
+            "name": "subsurface maximum retention efficiency (phosphorous)",
             "about": (
                 "The maximum nutrient retention efficiency that can be "
                 "reached through subsurface flow, a floating point value "
