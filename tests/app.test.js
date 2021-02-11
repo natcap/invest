@@ -114,7 +114,7 @@ describe('Various ways to open and close InVEST models', () => {
       <App investExe="foo" />
     );
 
-    const openButton = await findByText('Open');
+    const openButton = await findByRole('button', { name: 'Open' });
     fireEvent.click(openButton);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
@@ -131,11 +131,11 @@ describe('Various ways to open and close InVEST models', () => {
     };
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
 
-    const { findByText, findByRole } = render(
+    const { findByRole } = render(
       <App investExe="foo" />
     );
 
-    const openButton = await findByText('Open');
+    const openButton = await findByRole('button', { name: 'Open' });
     fireEvent.click(openButton);
     const homeTab = await findByRole('tabpanel', { name: /Home/ });
     // expect we're on the same tab we started on instead of switching to Setup
@@ -147,7 +147,6 @@ describe('Various ways to open and close InVEST models', () => {
 
   test('Opening and closing multiple InVEST models', async () => {
     const {
-      findByText,
       findByTitle,
       findByRole,
       findAllByText,
@@ -180,7 +179,7 @@ describe('Various ways to open and close InVEST models', () => {
     };
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
-    const openButton = await findByText('Open');
+    const openButton = await findByRole('button', { name: 'Open' });
     fireEvent.click(openButton);
     const tabPanelB = await findByTitle(mockDatastack.model_human_name);
     const setupTabB = await within(tabPanelB).findByText('Setup');
