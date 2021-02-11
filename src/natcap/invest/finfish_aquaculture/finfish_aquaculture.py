@@ -11,7 +11,7 @@ from .. import validation
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "module_name": "Finfish Aquaculture",
+    "model_name": "Finfish Aquaculture",
     "module": __name__,
     "userguide_html": "marine_fish.html",
     "args": {
@@ -37,8 +37,11 @@ ARGS_SPEC = {
                 "tables). Additionally, the numbers underneath this "
                 "farm identifier name must be unique integers for all "
                 "the inputs."),
-            "type": "freestyle_string",
+            "type": "option_string",
             "required": True,
+            "validation_options": {
+                "options": []
+            }
         },
         "g_param_a": {
             "name": "α growth parameter",

@@ -38,6 +38,7 @@ ifeq ($(OS),Windows_NT)
 	.DEFAULT_GOAL := windows_installer
 	RM_DATA_DIR := $(RMDIR) $(DATA_DIR)
 	/ := '\'
+	OSNAME = 'windows'
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -56,6 +57,7 @@ else
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
 		.DEFAULT_GOAL := mac_dmg
+		OSNAME = 'mac'
 	else
 		.DEFAULT_GOAL := binaries
 	endif
@@ -110,6 +112,7 @@ TEST_DATAVALIDATOR := $(PYTHON) -m pytest -vs scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
+INVEST_BINARIES_DIR_ZIP := $(OSNAME)_invest_binaries.zip
 
 APIDOCS_BUILD_DIR := $(BUILD_DIR)/sphinx/apidocs
 APIDOCS_TARGET_DIR := $(DIST_DIR)/apidocs
@@ -393,6 +396,7 @@ signcode_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
+	-(cd $(INVEST_BINARIES_DIR) && $(ZIP) -r ../$(INVEST_BINARIES_DIR_ZIP) .)
 	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide

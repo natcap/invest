@@ -2403,6 +2403,14 @@ def _clip_vector_by_vector(
         base_layer_defn.GetName(), base_layer.GetSpatialRef(), base_geom_type)
     base_layer.Clip(clip_layer, target_layer)
 
+    empty_clip = False
+    # Check if the feature count is less than 1, indicating the two vectors
+    # did not intersect. This will raise a ValueError below. GetFeatureCount
+    # can return -1 if the count is not known or too expensive to compute.
+    if target_layer.GetFeatureCount() <= 0:
+        empty_clip = True
+
+    # Allow function to clean up resources
     target_layer = None
     target_vector = None
     clip_vector = None
@@ -2412,6 +2420,12 @@ def _clip_vector_by_vector(
 
     if base_sr_wkt != target_sr_wkt:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+    if empty_clip:
+        raise ValueError(
+            f"Clipping {base_vector_path} by {clip_vector_path} returned 0"
+            " features. If an AOI was provided this could mean the AOI and"
+            " Wind Data do not intersect spatially.")
 
     LOGGER.info('Finished _clip_vector_by_vector')
 
