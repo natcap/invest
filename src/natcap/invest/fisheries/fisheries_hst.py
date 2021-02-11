@@ -22,7 +22,7 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "sexsp": {
-            "name": "population classes are sex-specific",
+            "name": "sex-specific classes",
             "type": "option_string",
             "required": True,
             "validation_options": {

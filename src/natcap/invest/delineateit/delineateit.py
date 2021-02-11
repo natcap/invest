@@ -68,7 +68,7 @@ ARGS_SPEC = {
                 "Whether to snap point geometries to the nearest stream "
                 "pixel.  If ``True``, ``args['flow_threshold']`` and "
                 "``args['snap_distance']`` must also be defined."),
-            "name": "snap points to the nearest stream"
+            "name": "snap points to stream"
         },
         "flow_threshold": {
             "validation_options": {
@@ -96,7 +96,7 @@ ARGS_SPEC = {
                 "center of the nearest stream pixel.  Geometries that are "
                 "not points (such as Lines and Polygons) will not be "
                 "snapped.  MultiPoint geoemtries will also not be snapped."),
-            "name": "pixel distance to snap outlet points"
+            "name": "snap distance"
         },
         "skip_invalid_geometry": {
             "type": "boolean",
@@ -106,7 +106,7 @@ ARGS_SPEC = {
                 "in the outlet vector will not be included in the "
                 "delineation.  If ``False``, an invalid geometry "
                 "will cause DelineateIt to crash."),
-            "name": "crash on invalid geometries"
+            "name": "skip invalid geometries"
         }
     }
 }

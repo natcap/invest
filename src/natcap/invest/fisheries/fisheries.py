@@ -44,7 +44,7 @@ ARGS_SPEC = {
             "about": (
                 "The number of time steps the simulation shall execute "
                 "before completion. Must be a positive integer."),
-            "name": "number of time steps for model run"
+            "name": "number of time steps"
         },
         "population_type": {
             "validation_options": {
@@ -77,7 +77,7 @@ ARGS_SPEC = {
                 "Specifies whether or not the lifecycle classes provided in "
                 "the Population Parameters CSV file are distinguished by "
                 "sex."),
-            "name": "population classes are sex-specific"
+            "name": "sex-specific classes"
         },
         "harvest_units": {
             "validation_options": {
@@ -92,7 +92,7 @@ ARGS_SPEC = {
                 "Parameters CSV file must include a 'Weight' vector "
                 "alongside the survival matrix that contains the weight of "
                 "each lifecycle class and sex if model is sex-specific."),
-            "name": "harvest by individuals or weight"
+            "name": "harvest value type"
         },
         "do_batch": {
             "type": "boolean",
@@ -257,7 +257,7 @@ ARGS_SPEC = {
             "about": (
                 "Decimal fraction indicating the percentage of harvested "
                 "catch remaining after post-harvest processing is complete."),
-            "name": "fraction of harvest kept after processing"
+            "name": "fraction of harvest kept"
         },
         "unit_price": {
             "type": "number",

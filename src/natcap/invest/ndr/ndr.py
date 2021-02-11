@@ -132,7 +132,7 @@ ARGS_SPEC = {
         "subsurface_critical_length_n": {
             "type": "number",
             "required": "calc_n",
-            "name": "subsurface critical length (nitrogen)",
+            "name": "critical length (N)",
             "about": (
                 "The distance (traveled subsurface and downslope) after "
                 "which it is assumed that soil retains nutrient at its "
@@ -147,7 +147,7 @@ ARGS_SPEC = {
         "subsurface_critical_length_p": {
             "type": "number",
             "required": "calc_p",
-            "name": "subsurface critical length (phosphorous)",
+            "name": "critical length (P)",
             "about": (
                 "The distance (traveled subsurface and downslope) after "
                 "which it is assumed that soil retains nutrient at its "
@@ -162,7 +162,7 @@ ARGS_SPEC = {
         "subsurface_eff_n": {
             "type": "number",
             "required": "calc_n",
-            "name": "subsurface maximum retention efficiency (nitrogen)",
+            "name": "max retention efficiency (N)",
             "about": (
                 "The maximum nutrient retention efficiency that can be "
                 "reached through subsurface flow, a floating point value "
@@ -172,7 +172,7 @@ ARGS_SPEC = {
         "subsurface_eff_p": {
             "type": "number",
             "required": "calc_p",
-            "name": "subsurface maximum retention efficiency (phosphorous)",
+            "name": "max retention efficiency (P)",
             "about": (
                 "The maximum nutrient retention efficiency that can be "
                 "reached through subsurface flow, a floating point value "

@@ -101,7 +101,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file, with an integer LULC code "
                 "for each cell."),
-            "name": "land use/land cover"
+            "name": "landcover"
         },
         "soil_group_path": {
             "type": "raster",
@@ -113,7 +113,7 @@ ARGS_SPEC = {
                 "Map of SCS soil groups (A, B, C, or D) mapped to integer "
                 "values (1, 2, 3, or 4) used in combination of the LULC map "
                 "to compute the CN map."),
-            "name": "soil group"
+            "name": "soil groups"
         },
         "aoi_path": {
             "type": "vector",
@@ -125,7 +125,7 @@ ARGS_SPEC = {
                 "Path to a vector that indicates the area over which the "
                 "model should be run, as well as the area in which to "
                 "aggregate over when calculating the output Qb."),
-            "name": "AOI/watershed"
+            "name": "area of interest"
         },
         "biophysical_table_path": {
             "validation_options": {
@@ -187,7 +187,7 @@ ARGS_SPEC = {
             "about": (
                 "If True, indicates user will provide pre-defined local "
                 "recharge raster layer"),
-            "name": "user defined recharge layer"
+            "name": "user defined local recharge"
         },
         "l_path": {
             "type": "raster",

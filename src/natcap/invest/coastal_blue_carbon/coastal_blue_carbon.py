@@ -240,7 +240,7 @@ ARGS_SPEC = {
             ),
         },
         "do_economic_analysis": {
-            "name": "calculate net present value of sequestered carbon",
+            "name": "do valuation",
             "type": "boolean",
             "required": False,
             "about": (
@@ -263,7 +263,7 @@ ARGS_SPEC = {
             "about": "The price per Megatonne CO2e at the base year.",
         },
         "inflation_rate": {
-            "name": "interest rate (%)",
+            "name": "interest rate",
             "type": "number",
             "required": "do_economic_analysis and (not use_price_table)",
             "about": (
@@ -282,7 +282,7 @@ ARGS_SPEC = {
                 "year, if provided."),
         },
         "discount_rate": {
-            "name": "discount rate (%)",
+            "name": "discount rate",
             "type": "number",
             "required": "do_economic_analysis",
             "about": (
