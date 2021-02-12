@@ -107,7 +107,14 @@ test('Run a real invest model', async () => {
   await waitFor(() => {
     expect(browser.isConnected()).toBeTruthy();
   });
-  const page = (await browser.pages())[0];
+  const pages = (await browser.pages());
+  // find the mainWindow's index.html, not the splashScreen's splash.html
+  let page;
+  pages.forEach((p) => {
+    if (p.url().endsWith('index.html')) {
+      page = p;
+    }
+  });
   const doc = await getDocument(page);
 
   // Setting up Recreation model because it has very few data requirements
