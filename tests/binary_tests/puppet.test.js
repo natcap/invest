@@ -140,7 +140,7 @@ test('Run a real invest model', async () => {
     const prop = await logTab.getProperty('className');
     const vals = await prop.jsonValue();
     expect(vals.includes('active')).toBeTruthy();
-  }, 9000); // doubling default timeout: sometimes this expires unmet in GHA
+  }, 18000); // 4x default timeout: sometimes this expires unmet in GHA
 
   const cancelButton = await findByText(doc, 'Cancel Run');
   cancelButton.click();
