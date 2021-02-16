@@ -141,7 +141,7 @@ ARGS_SPEC = {
             "about": (
                 "The discount rate in the price of carbon as a floating "
                 "point percent."),
-            "name": "market discount rate (r)"
+            "name": "market discount rate"
         },
         "rate_change": {
             "type": "number",
@@ -149,7 +149,7 @@ ARGS_SPEC = {
             "about": (
                 "The floating point percent increase of the price of "
                 "carbon per year."),
-            "name": "annual price increase (c)"
+            "name": "carbon price change"
         }
     }
 }

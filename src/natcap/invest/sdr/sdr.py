@@ -90,7 +90,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file, with an integer LULC code "
                 "for each cell."),
-            "name": "land use/land cover"
+            "name": "landcover"
         },
         "watersheds_path": {
             "validation_options": {

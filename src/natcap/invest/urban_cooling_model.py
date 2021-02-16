@@ -62,8 +62,8 @@ ARGS_SPEC = {
             "required": True,
             "about": (
                 "A GDAL-supported raster file containing numeric values "
-                "representing the evapotranspiration (in mm) for the period "
-                "of interest."
+                "representing the reference evapotranspiration (in mm) for "
+                "the period of interest."
             )
         },
         "aoi_vector_path": {
@@ -111,7 +111,7 @@ ARGS_SPEC = {
             },
             "about": (
                 "Radius in meters of the moving average filter that accounts "
-                "for air mixing."
+                "for air temperature mixing."
             )
         },
         "t_ref": {

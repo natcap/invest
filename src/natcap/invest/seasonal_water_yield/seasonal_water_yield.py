@@ -122,9 +122,9 @@ ARGS_SPEC = {
                 "projected": True,
             },
             "about": (
-                "Path to a vector that indicates the area over which the "
-                "model should be run, as well as the area in which to "
-                "aggregate over when calculating the output Qb."),
+                "Path to a vector (typically a watershed) that indicates the "
+                "area over which the model should be run, as well as the area "
+                "in which to aggregate over when calculating the output Qb."),
             "name": "area of interest"
         },
         "biophysical_table_path": {
@@ -163,15 +163,15 @@ ARGS_SPEC = {
                 "Required if args['monthly_alpha'] is false.  Is the "
                 "proportion of upslope annual available local recharge that "
                 "is available in month m."),
-            "name": "alpha_m parameter"
+            "name": "α_m parameter"
         },
         "beta_i": {
             "type": "number",
             "required": True,
             "about": (
-                "Is the fraction of the upgradient subsidy that is "
+                "The fraction of the upgradient subsidy that is "
                 "available for downgradient evapotranspiration."),
-            "name": "beta_i parameter"
+            "name": "β_i parameter"
         },
         "gamma": {
             "type": "number",

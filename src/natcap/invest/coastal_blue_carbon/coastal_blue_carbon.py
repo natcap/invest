@@ -245,7 +245,8 @@ ARGS_SPEC = {
             "required": False,
             "about": (
                 "A boolean value indicating whether the model should run an "
-                "economic analysis."),
+                "economic analysis calculating the net present value of "
+                "sequestered carbon."),
         },
         "use_price_table": {
             "name": "use price table",
