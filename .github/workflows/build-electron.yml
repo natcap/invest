@@ -39,8 +39,6 @@ jobs:
       run: npm run build
 
     - name: Set up GCP
-      # Secrets not available in PR so don't use GCP.
-      if: github.event_name != 'pull_request'
       uses: google-github-actions/setup-gcloud@v0.2.0
       with:
           version: '281.0.0'
