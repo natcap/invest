@@ -206,10 +206,15 @@ Var StartMenuFolder
 !insertmacro MUI_PAGE_FINISH
 
 ; MUI Uninstaller settings---------------
-!insertmacro MUI_UNPAGE_WELCOME
-!insertmacro MUI_UNPAGE_CONFIRM
-!insertmacro MUI_UNPAGE_INSTFILES
-!insertmacro MUI_UNPAGE_FINISH
+;!insertmacro MUI_UNPAGE_WELCOME
+;!insertmacro MUI_UNPAGE_CONFIRM
+;!insertmacro MUI_UNPAGE_INSTFILES
+;!insertmacro MUI_UNPAGE_FINISH
+
+
+; remove next line if you're using signing after the uninstaller is extracted from the initially compiled setup
+!include UninstallPages.nsh
+
 
 ; Languages (first is default language) - must be inserted after all pages
 !insertmacro MUI_LANGUAGE "English"
@@ -413,9 +418,9 @@ Function DumpLog
         Exch $5
 FunctionEnd
 
-Function Un.onInit
-    !insertmacro CheckProgramRunning "invest"
-FunctionEnd
+;Function Un.onInit
+;    !insertmacro CheckProgramRunning "invest"
+;FunctionEnd
 
 ; Copied into the invest folder later in the NSIS script
 !define INVEST_BINARIES "$INSTDIR\invest-3-x64"
@@ -728,3 +733,5 @@ Function .onInit
   strcpy $LocalDataZipFile $0
 FunctionEnd
 
+; remove next line if you're using signing after the uninstaller is extracted from the initially compiled setup
+!include Uninstall.nsh
