@@ -44,11 +44,10 @@ jobs:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
       run: |
-        npx --no-install electron-builder build \  # build the binaries
-        --mac \                                    # can only build mac binaries on macOS
-        -c.extraMetadata.main=build/main.js \      # use the built version as the entrypoint
-        --publish never                            # make sure we don't publish to github releases
-
+        # use the built version as the entrypoint
+        # make sure we don't publish to github releases
+        npx --no-install electron-builder build --mac -c.extraMetadata.main=build/main.js --publish never
+                                   
     - name: Run electron-builder on Windows
       if: matrix.os == 'windows-latest'
       env:
