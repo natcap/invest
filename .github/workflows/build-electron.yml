@@ -47,7 +47,7 @@ jobs:
         # use the built version as the entrypoint
         # make sure we don't publish to github releases
         npx --no-install electron-builder build --mac -c.extraMetadata.main=build/main.js --publish never
-                                   
+
     - name: Run electron-builder on Windows
       if: matrix.os == 'windows-latest'
       env:
@@ -61,12 +61,53 @@ jobs:
 
     - name: Test electron app with puppeteer
       uses: GabrielBB/xvfb-action@v1
+      if: matrix.os != 'macos-latest'
       with:
         run: npm run test-electron-app
     
-    - name: Upload installer artifacts
+    - name: Upload installer artifacts to github
       uses: actions/upload-artifact@v2.2.1
       if: ${{ always() }}
       with:
         name: invest-workbench-${{ matrix.os }}
         path: dist/invest-workbench_*
+
+    # Nothing below here runs on pull requests because we use github secrets
+    # to authenticate for GCP and they are not accessible in pull request workflows.
+    - name: Set variables for GCS deploy target
+      shell: bash
+      if: github.event_name != 'pull_request'
+      # TODO: If this is a release, don't include the commit hash
+      run: |
+        echo "PKG_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
+        echo "GIT_REV=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        echo "BUCKET=$([ github.actor == 'natcap' ] \
+          && echo 'gs://releases.naturalcapitalproject.org/invest-workbench/' \
+          || echo 'gs://natcap-dev-build-artifacts/invest-workbench/${{ github.actor }}' \
+          )" >> $GITHUB_ENV
+
+    - name: Set up Python for gsutil
+      # gsutil requires a python, which is not included on Windows
+      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
+
+    - name: Set up GCP
+      if: github.event_name != 'pull_request'
+      uses: google-github-actions/setup-gcloud@master
+      with:
+          version: '281.0.0'
+          service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+    - name: Deploy artifacts to GCS - Windows
+      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
+      env:
+        CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
+      run: |
+        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
+
+    - name: Deploy artifacts to GCS - macOS
+      if: github.event_name != 'pull_request' && matrix.os == 'macos-latest'
+      run: |
+        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
