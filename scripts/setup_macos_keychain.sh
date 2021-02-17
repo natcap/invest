@@ -3,12 +3,16 @@
 # The environment variables referenced should be set by the calling github actions step
 
 security list-keychains
+echo 'list before'
 security create-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
+echo 'created keychain'
 security list-keychains -s $KEYCHAIN_NAME
+echo 'added keychain to search list'
 security list-keychains
-
-
 echo 'listed keychains'
+
+security show-keychain-info $KEYCHAIN_NAME
+echo 'showed keychain info'
 # unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
 security unlock-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
 echo 'unlocked keychain'
