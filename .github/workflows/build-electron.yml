@@ -18,6 +18,7 @@ jobs:
 
     steps:
     - name: Checkout repository
+      working-directory: ./
       uses: actions/checkout@v2
 
     - name: Install Node.js
