@@ -1,5 +1,5 @@
-const isDevMode = process.argv[2] === '--dev';
-if (isDevMode) {
+const ELECTRON_DEV_MODE = process.argv[2] === '--dev';
+if (ELECTRON_DEV_MODE) {
   // in dev mode we can have babel transpile modules on import
   require("@babel/register");
   // load the '.env' file from the project root
@@ -8,7 +8,12 @@ if (isDevMode) {
 }
 
 const {
-  app, BrowserWindow, ipcMain, screen, nativeTheme
+  app,
+  BrowserWindow,
+  ipcMain,
+  screen,
+  nativeTheme,
+  Menu,
 } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const {
   getFlaskIsReady, shutdownPythonProcess
@@ -17,26 +22,47 @@ const {
   findInvestBinaries, createPythonFlaskProcess
 } = require('./main_helpers');
 const { getLogger } = require('./logger');
+const { menuTemplate } = require('./menubar');
+const pkg = require('../package.json');
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
-const PORT = (process.env.PORT || '5000').trim();
+// This could be optionally configured already in '.env'
+if (!process.env.PORT) {
+  process.env.PORT = '56789';
+}
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
+let splashScreen;
+
 /** Create an Electron browser window and start the flask application. */
 const createWindow = async () => {
-  // The main process needs to know the location of the invest server binary.
-  // The renderer process needs the invest cli binary. We can find them
-  // together here and pass data to the renderer upon request.
-  const binaries = await findInvestBinaries(isDevMode);
-  const mainProcessVars = { investExe: binaries.invest };
+  splashScreen = new BrowserWindow({
+    width: 574, // dims set to match the image in splash.html
+    height: 500,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+  });
+  splashScreen.loadURL(`file://${__dirname}/static/splash.html`);
+
+  const [investExe, investVersion] = await findInvestBinaries(
+    ELECTRON_DEV_MODE
+  );
+  createPythonFlaskProcess(investExe);
+  logger.info(`Running invest-workbench version ${pkg.version}`);
+  const mainProcessVars = {
+    investExe: investExe,
+    investVersion: investVersion,
+    workbenchVersion: pkg.version,
+    userDataPath: app.getPath('userData'),
+  };
   ipcMain.on('variable-request', (event, arg) => {
     event.reply('variable-reply', mainProcessVars);
   });
 
-  createPythonFlaskProcess(binaries.server, isDevMode);
   // Wait for a response from the server before loading the app
   await getFlaskIsReady();
 
@@ -50,14 +76,30 @@ const createWindow = async () => {
     width: width,
     height: height,
     useContentSize: true,
+    show: true, // see comment in 'ready-to-show' listener
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
+      additionalArguments: [
+        ELECTRON_DEV_MODE ? '--dev' : 'packaged'
+      ],
     },
   });
-
-  // and load the index.html of the app.
+  const menubar = Menu.buildFromTemplate(
+    menuTemplate(mainWindow, ELECTRON_DEV_MODE)
+  );
+  Menu.setApplicationMenu(menubar);
   mainWindow.loadURL(`file://${__dirname}/index.html`);
+
+  mainWindow.once('ready-to-show', () => {
+    splashScreen.destroy();
+    // We should be able to hide mainWindow until it's ready,
+    // but there's a bug where a window initialized with { show: false }
+    // will load with invisible elements until it's touched/resized, etc.
+    // https://github.com/electron/electron/issues/27353
+    // So for now, we have mainWindow showing the whole time, w/ splash on top.
+    // If this bug is fixed, we'll need an explicit mainWindow.show() here.
+  });
 
   // Open the DevTools.
   // The timing of this is fussy due a chromium bug. It seems to only
@@ -65,11 +107,7 @@ const createWindow = async () => {
   // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
   // https://github.com/electron/electron/issues/23662
   mainWindow.webContents.on('did-frame-finish-load', async () => {
-    if (isDevMode) {
-      const {
-        default: installExtension, REACT_DEVELOPER_TOOLS
-      } = require('electron-devtools-installer');
-      await installExtension(REACT_DEVELOPER_TOOLS);
+    if (ELECTRON_DEV_MODE) {
       mainWindow.webContents.openDevTools();
     }
   });

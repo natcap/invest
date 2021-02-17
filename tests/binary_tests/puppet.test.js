@@ -6,8 +6,6 @@ import { spawn } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
-import { cleanupDir } from '../../src/utils';
-
 jest.setTimeout(120000); // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
 
@@ -15,9 +13,7 @@ const PORT = 9009;
 // to avoid need to install first on windows or extract on mac.
 let binaryPath;
 if (process.platform === 'darwin') {
-  console.log('darwin');
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
-  console.log(glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*'));
   [binaryPath] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
 } else if (process.platform === 'win32') {
   [binaryPath] = glob.sync('./dist/win-unpacked/InVEST*.exe');
@@ -61,44 +57,36 @@ function makeAOI() {
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
-  console.log('before spawn process');
   electronProcess = spawn(
     `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
     { shell: true }
   );
-  console.log('after spawn process');
   electronProcess.stderr.on('data', (data) => {
-    console.log('data:', `${data}`);
+    console.log(`${data}`);
   });
-  console.log('before setTimeout');
   // so we don't make the next fetch too early
   await new Promise((resolve) => setTimeout(resolve, 5000));
-  console.log('before fetch');
   const res = await fetch(`http://localhost:${PORT}/json/version`);
-  console.log('after fetch');
   const data = JSON.parse(await res.text());
-  console.log('res.text data:', data);
-  console.log('getting browser...');
   browser = await puppeteer.connect({
     browserWSEndpoint: data.webSocketDebuggerUrl, // this works
     // browserURL: `http://localhost:${PORT}`,    // this also works
     defaultViewport: { width: 1000, height: 800 },
   });
-  console.log(browser);
   makeAOI();
 });
 
 afterAll(async () => {
-  console.log('afterAll');
-  // try {
-  //   await browser.close();
-  // } catch (error) {
-  //   console.log(binaryPath);
-  //   console.error(error);
-  // }
-  console.log('cleaning up tmp dir');
-  cleanupDir(TMP_DIR);
-  console.log('electronProcess kill');
+  try {
+    await browser.close();
+  } catch (error) {
+    console.log(binaryPath);
+    console.error(error);
+  }
+  // being extra careful with recursive rm
+  if (TMP_DIR.startsWith('tests/data')) {
+    fs.rmdirSync(TMP_DIR, { recursive: true });
+  }
   // I thought this business would be necessary to kill the spawned shell
   // process running electron - since that's how we kill a similar spawned
   // subprocess in the app, but actually it is not.
@@ -115,50 +103,56 @@ afterAll(async () => {
 });
 
 test('Run a real invest model', async () => {
-  console.log('in test');
-  // const { findByText, findByLabelText, findByRole } = queries;
-  // await waitFor(() => {
-  //   expect(browser.isConnected()).toBeTruthy();
-  // });
-  // const page = (await browser.pages())[0];
-  // const doc = await getDocument(page);
+  const { findByText, findByLabelText, findByRole } = queries;
+  await waitFor(() => {
+    expect(browser.isConnected()).toBeTruthy();
+  });
+  const pages = (await browser.pages());
+  // find the mainWindow's index.html, not the splashScreen's splash.html
+  let page;
+  pages.forEach((p) => {
+    if (p.url().endsWith('index.html')) {
+      page = p;
+    }
+  });
+  const doc = await getDocument(page);
 
-  // // Setting up Recreation model because it has very few data requirements
-  // const investTable = await findByRole(doc, 'table');
-  // const button = await findByRole(investTable, 'button', { name: /Visitation/ });
-  // button.click();
-  // const workspace = await findByLabelText(doc, /Workspace/);
-  // await workspace.type(TMP_DIR, { delay: 10 });
-  // const aoi = await findByLabelText(doc, /Area of Interest/);
-  // await aoi.type(TMP_AOI_PATH, { delay: 10 });
-  // const startYear = await findByLabelText(doc, /Start Year/);
-  // await startYear.type('2008', { delay: 10 });
-  // const endYear = await findByLabelText(doc, /End Year/);
-  // await endYear.type('2012', { delay: 10 });
+  // Setting up Recreation model because it has very few data requirements
+  const investTable = await findByRole(doc, 'table');
+  const button = await findByRole(investTable, 'button', { name: /Visitation/ });
+  button.click();
+  const workspace = await findByLabelText(doc, /Workspace/);
+  await workspace.type(TMP_DIR, { delay: 10 });
+  const aoi = await findByLabelText(doc, /Area of Interest/);
+  await aoi.type(TMP_AOI_PATH, { delay: 10 });
+  const startYear = await findByLabelText(doc, /Start Year/);
+  await startYear.type('2008', { delay: 10 });
+  const endYear = await findByLabelText(doc, /End Year/);
+  await endYear.type('2012', { delay: 10 });
 
-  // const runButton = await findByText(doc, 'Run');
-  // // Button is disabled until validation completes
-  // await waitFor(async () => {
-  //   const isEnabled = await page.evaluate(
-  //     (btn) => !btn.disabled,
-  //     runButton
-  //   );
-  //   expect(isEnabled).toBeTruthy();
-  // });
+  const runButton = await findByText(doc, 'Run');
+  // Button is disabled until validation completes
+  await waitFor(async () => {
+    const isEnabled = await page.evaluate(
+      (btn) => !btn.disabled,
+      runButton
+    );
+    expect(isEnabled).toBeTruthy();
+  });
 
-  // runButton.click();
-  // const logTab = await findByText(doc, 'Log');
-  // // Log tab is not active until after the invest logfile is opened
-  // await waitFor(async () => {
-  //   const prop = await logTab.getProperty('className');
-  //   const vals = await prop.jsonValue();
-  //   expect(vals.includes('active')).toBeTruthy();
-  // });
+  runButton.click();
+  const logTab = await findByText(doc, 'Log');
+  // Log tab is not active until after the invest logfile is opened
+  await waitFor(async () => {
+    const prop = await logTab.getProperty('className');
+    const vals = await prop.jsonValue();
+    expect(vals.includes('active')).toBeTruthy();
+  }, 18000); // 4x default timeout: sometimes this expires unmet in GHA
 
-  // const cancelButton = await findByText(doc, 'Cancel Run');
-  // cancelButton.click();
-  // await waitFor(async () => {
-  //   expect(await findByText(doc, 'Run Canceled'));
-  //   expect(await findByText(doc, 'Open Workspace'));
-  // });
+  const cancelButton = await findByText(doc, 'Cancel Run');
+  cancelButton.click();
+  await waitFor(async () => {
+    expect(await findByText(doc, 'Run Canceled'));
+    expect(await findByText(doc, 'Open Workspace'));
+  });
 });

@@ -7,6 +7,8 @@ import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
+import { dragOverHandlerNone } from '../../utils.js';
+
 /** Render a dialog with a form for configuring global invest settings */
 export default class SettingsModal extends React.Component {
   constructor(props) {
@@ -73,15 +75,31 @@ export default class SettingsModal extends React.Component {
 
     const nWorkersIsValid = validateNWorkers(this.state.localSettings.nWorkers)
 
+    // define a custom button component to have a gear icon and no background
+    const CustomButton = React.forwardRef(({ children, onClick }, ref) => (
+      <a
+        href=""
+        ref={ref}
+        onClick={e => {
+          e.preventDefault();
+          onClick(e);
+        }}
+      >
+        <i className="material-icons mdc-button__icon settings-icon"
+          title="settings">
+          settings
+        </i>
+        {children}
+      </a>
+    ));
+
     return (
       <React.Fragment>
         <Button
-          className="mx-3"
-          variant="outline-dark"
+          as={CustomButton}
           onClick={this.handleShow}
-        >
-          Settings
-        </Button>
+          onDragOver={dragOverHandlerNone}
+        />
 
         <Modal show={this.state.show} onHide={this.handleClose}>
           <Form>

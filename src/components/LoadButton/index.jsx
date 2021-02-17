@@ -3,9 +3,12 @@ import { remote } from 'electron'; // eslint-disable-line import/no-extraneous-d
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
+import Tooltip from 'react-bootstrap/Tooltip';
 
 import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
+import { dragOverHandlerNone } from '../../utils';
 
 /**
  * Render a button that loads args from a datastack, parameterset, or logfile.
@@ -31,14 +34,22 @@ export default class LoadButton extends React.Component {
   }
 
   render() {
+    const tipText = 'Browse to a datastack (.json) or invest logfile (.txt)';
     return (
-      <Button
-        className="mx-3"
-        onClick={this.browseFile}
-        variant="outline-dark"
+      <OverlayTrigger
+        placement="left"
+        delay={{ show: 250, hide: 400 }}
+        overlay={<Tooltip>{tipText}</Tooltip>}
       >
-        Load Parameters
-      </Button>
+        <Button
+          className="mx-3"
+          onClick={this.browseFile}
+          variant="outline-dark"
+          onDragOver={dragOverHandlerNone}
+        >
+          Open
+        </Button>
+      </OverlayTrigger>
     );
   }
 }

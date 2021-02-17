@@ -20,6 +20,8 @@ import { getSpec, writeParametersToFile } from '../../server_requests';
 import { findMostRecentLogfile, cleanupDir } from '../../utils';
 import { fileRegistry } from '../../constants';
 import { getLogger } from '../../logger';
+import { dragOverHandlerNone } from '../../utils.js';
+
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -33,8 +35,6 @@ const LOGLEVELMAP = {
 
 /** Get an invest model's ARGS_SPEC when a model button is clicked.
  *
- * Also get the model's UI spec if it exists.
- *
  * @param {string} modelName - as in a model name appearing in `invest list`
  * @returns {object} destructures to:
  *   { modelSpec, argsSpec, uiSpec }
@@ -43,23 +43,16 @@ async function investGetSpec(modelName) {
   const spec = await getSpec(modelName);
   if (spec) {
     const { args, ...modelSpec } = spec;
-    // A model's UI Spec is optional and may not exist
-    let uiSpec = {};
-    try {
-      uiSpec = JSON.parse(fs.readFileSync(
-        path.join(fileRegistry.INVEST_UI_DATA, `${spec.module}.json`)
-      ));
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        logger.warn(err);
-        logger.warn(`No UI spec exists for ${spec.module}`);
-      } else {
-        logger.error(err.stack);
-      }
-    }
-    return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
-  }
-  logger.error(`no spec found for ${modelName}`);
+    const uiSpecs = require('../../ui_config');
+    const uiSpec = uiSpecs[modelSpec.model_name];
+    if (uiSpec) {
+      return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
+    } else {
+      logger.error(`no UI spec found for ${modelName}`);
+    } 
+  } else {
+    logger.error(`no args spec found for ${modelName}`);
+  }  
   return undefined;
 }
 
@@ -233,7 +226,12 @@ export default class InvestTab extends React.Component {
         procID: null,
       }, () => {
         saveJob(job);
-        cleanupDir(tempDir);
+        fs.unlink(datastackPath, (err) => {
+          if (err) { logger.error(err); }
+          fs.rmdir(tempDir, (e) => {
+            if (e) { logger.error(e); }
+          });
+        });
       });
     });
   }
@@ -293,10 +291,11 @@ export default class InvestTab extends React.Component {
     const sidebarSetupElementId = `sidebar-setup-${navID}`;
     const sidebarFooterElementId = `sidebar-footer-${navID}`;
 
+
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
         <Row>
-          <Col sm={3} className="invest-sidebar-col">
+          <Col sm={3} className="invest-sidebar-col" onDragOver={dragOverHandlerNone}>
             <Nav
               className="flex-column"
               id="vertical tabs"
@@ -328,14 +327,14 @@ export default class InvestTab extends React.Component {
                 </Nav.Link>
               </Nav.Item>
             </Nav>
-            <Row className="flex-column">
+            <div className="sidebar-row">
               <ResourcesLinks
                 moduleName={modelRunName}
                 docs={modelSpec.userguide_html}
               />
-            </Row>
-            <Row
-              className="flex-column sidebar-footer"
+            </div>
+            <div
+              className="sidebar-row sidebar-footer"
               id={sidebarFooterElementId}
             />
           </Col>

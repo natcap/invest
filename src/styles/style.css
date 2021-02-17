@@ -1,24 +1,23 @@
 body {
 	--invest-green: #148F68;
-	--navbar-height: 65px;
 	background-color: rgba(0,0,0,0);
 	margin: 0;
 	padding: 1rem;
+	overflow-y: hidden;
 }
 
 /*Top Navigation*/
 
 .navbar {
-	padding-bottom: 0;
-	height: var(--navbar-height);
+	padding-bottom: 0px;
 	border-bottom: 3px solid var(--invest-green);
 	background-color: #fff
 }
 
 .navbar-light .navbar-nav .nav-link {
-	background-color: transparent;
-  padding-right: 2rem;
-  padding-left: 2rem;
+  background-color: transparent;
+  padding-right: 1rem;
+  padding-left: 1rem;
   color: #999999;
 }
 
@@ -32,19 +31,25 @@ body {
 	font-weight: 550;
 }
 
-.navbar .navbar-brand {
+.navbar-brand .nav-link {
 	color: var(--invest-green);
 	font-weight: 600;
 	font-size: 2.0rem;
 	letter-spacing: 1px;
-	pointer-events: none;
 }
 
-.navbar .btn {
-	background-color: #6c757d;
-	color: #ffffff;
-	font-weight: 600;
-	font-size: 1.2rem;
+.navbar-nav .nav-item {
+	white-space: nowrap;
+}
+
+.settings-icon {
+	color: black;
+	font-size: 2rem;
+	vertical-align: middle;
+}
+
+.horizontal-scroll {
+	overflow-x: auto;
 }
 
 .close-tab.btn {
@@ -137,6 +142,8 @@ body {
 /* InVEST Model Tab */
 
 .invest-sidebar-col {
+	display: flex;
+	flex-direction: column;
 	padding-right: 0rem;
 }
 
@@ -159,25 +166,17 @@ body {
 	padding-left: 2rem;
 }
 
-.invest-sidebar-col .row {
-	padding:inherit;
-}
-
-.invest-sidebar-col .row a {
-	padding:inherit;
+.sidebar-row {
+	display: flex;
+	flex-direction: column;
 	font-size: 1.3rem;
+	padding: inherit;
 }
-
 
 .sidebar-footer {
-	position: absolute;
-	bottom: 0rem;
-	right: 0;
-	left: 0;
-	margin-right:2rem;
-	margin-left:2rem;
-	padding-left: inherit;
-	padding-right: inherit;
+    margin-top: auto;
+    padding-bottom: 2rem;
+    padding-right: 2rem;
 }
 
 .sidebar-footer .btn-primary {
@@ -205,6 +204,10 @@ body {
 }
 
 /* InVEST Argument Forms */
+.args-form.dragging {
+  opacity: 0.2;
+}
+
 .arg-group {
 	margin-top: 2.0rem;
 	margin-bottom: 2.0rem;
@@ -229,6 +232,10 @@ body {
 	direction: rtl;
 	text-align: left;
 	unicode-bidi: plaintext;
+}
+
+input.input-dragging {
+  border: 4px dashed #cccccc;
 }
 
 input[type=text]::placeholder {
@@ -258,24 +265,25 @@ input[type=text]::placeholder {
 /* InVEST Log Tab */
 #log-display {
 	overflow: auto;
-  white-space: pre-wrap;
+	white-space: pre-wrap;
 	height: 85vh;
-  background-color: #191919;
+	/*background-color: #191919;*/
 }
 
 #log-text {
 	font-family: monospace;
 	font-size:1.3rem;
-	color: #e5e5e5;
+	color: #000;
 }
 
 #log-text .invest-log-primary {
-	color: #fff;
-	font-size: 1.2rem;
+	color: #000;
+	font-weight: bold;
 }
 
 #log-text .invest-log-error {
-	color: #ffc13e;
+	color: #f13232;
+	font-weight: bold;
 }
 
 .invest-sidebar-col .alert {

@@ -9,29 +9,46 @@ workflows of an InVEST user.
 ## To develop and launch this Application
 
 * `npm install`  
-* clone natcap.invest and checkout a recent revision (e.g. `main`)  
-* setup a conda* environment with deps for `natcap.invest Flask PyInstaller`  
-* build invest binaries  
-	`python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec`  
-* `npm start`  
+* bind to an `invest` executeable (see package.json "invest" for a compatible version)
 
-(* invest-flask.spec script assumes a conda environment)
+In production, the invest exe comes from prebuilt binaries that are an artifact of the `invest` build process.  
 
-## To build this application
+For development, choose either:  
+  **A.** Duplicate the production setup by fetching prebuilt binaries `npm run fetch-invest`  
+  **B.** Use any other locally installed, compatible, invest CLI (e.g. from a local python environment). To configure this, see `.env-example`
 
-`npm run build`  -- calls babel to transpile ES6 and jsx code to commonjs
+* `npm start`
 
-`npm run dist`  -- packages build source into an electron application using electron-builder
+_Optional: using the react-devtools extension_  
+
+Before running `npm start`, in a second shell launch `react-devtools` (or `npx react-devtools` if you don't have a global install). Then run `npm start`.  
+The electron app should communicate with the
+standalone react-devtools window. There's an oustanding issue in electron
+preventing react-devtools from integrating with the electron browser's devtools window. https://github.com/electron/electron/issues/23662
+
+## To package this app for distribution  
+
+`npm run build`  - calls babel to transpile ES6 and jsx code to commonjs; moves other resources (CSS, JSON) to the build directory
+
+`npm run dist`  - packages build source into an electron application using electron-builder
 
 
-### To run linter or tests
+### To run various scripts and local programs
+See the "scripts" section of `package.json` and run them like:  
 `npm run lint`  
 `npm run test`  
 
-To run these or other command-line utils of locally installed packages outside the context of the `package.json scripts`, use `npx` (e.g. `npx eslint ...`) as a shortcut to the executeable. 
+To run other scripts or CLIs of locally installed packages, 
+prefix commands with `npx` (e.g. `npx eslint ...`). Otherwise, only
+globally installed packages are on the PATH. 
 
-### To run a single test file:
+#### E.g. run a single test file:
 `npx jest --coverage=false --verbose app.test.js`  
 
-To run snippets of code outside the electron runtime, but with the same ECMAscript features and babel configurations, use `node -r @babel/register script.js`.  
+To run javascript outside the electron runtime, but with the same ECMAscript features and babel configurations, use `node -r @babel/register script.js`.  
 
+## Client logfile locations:
+
+Windows: "C:\Users\dmf\AppData\Roaming\invest-workbench\"  
+Mac: "\~/Library/Application Support/invest-workbench/"  
+Linux: "\~/.config/invest-workbench/"  

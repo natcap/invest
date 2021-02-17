@@ -9,7 +9,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        os: [macos-latest]
+        os: [macos-latest, windows-latest]
         node-version: [12.x]
 
     steps:
@@ -20,94 +20,13 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    
-    - name: Set env var for invest version
-      shell: bash
-      run: echo "INVEST_VERSION=$(jq -r .invest.version package.json)" >> $GITHUB_ENV
-
-    - name: Clone natcap/invest
-      uses: actions/checkout@v2
-      with:
-        repository: natcap/invest
-        ref: refs/tags/${{env.INVEST_VERSION}}
-        path: ./invest
-
-    - name: Install libspatialindex for ubuntu
-      if: matrix.os == 'ubuntu-latest'
-      run:
-        sudo apt-get install libspatialindex-dev
-
-    - name: Set up conda for non-Windows
-      uses: conda-incubator/setup-miniconda@v2
-      if: matrix.os != 'windows-latest'
-      with:
-        activate-environment: invest-env
-        auto-update-conda: true
-        python-version: 3.7
-        channels: conda-forge
-
-    - name: Install python dependencies for non-Windows
-      if: matrix.os != 'windows-latest'
-      shell: bash -l {0}
-      working-directory: ./invest
-      run: |
-          conda upgrade -y pip setuptools
-          conda install toml requests
-          conda install gdal>=3.1.2
-          conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-          python ./scripts/convert-requirements-to-conda-yml.py \
-                requirements.txt \
-                requirements-dev.txt > requirements-all.yml
-          conda env update --file requirements-all.yml
-
-          # Libtiff from conda defaults channel gets around issue with missing libwebp
-          conda install --yes libtiff
-
-          # The dependencies not required by natcap.invest
-          conda install flask
-
-
-    - name: Set up Windows python
-      if: matrix.os == 'windows-latest'
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.7
-        architecture: x64
-
-    - name: Install python build dependencies for Windows
-      if: matrix.os == 'windows-latest'
-      working-directory: ./invest
-      shell: bash -l {0}
-      run: |
-          python -m pip install --upgrade pip nose setuptools toml twine ${{ matrix.numpy }}
-          pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-
-    - name: Install python runtime dependencies for Windows
-      if: matrix.os == 'windows-latest'
-      working-directory: ./invest
-      shell: bash -l {0}
-      env:
-        PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
-        PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
-        PIP_PREFER_BINARY: 1
-        SITE_PACKAGES: "C:/hostedtoolcache/windows/Python/3.7.9/x64/lib/site-packages"
-      run: |
-        python -m pip install -r requirements.txt -r requirements-dev.txt
-        pip install flask
-        cp ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos_c.dll ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos.dll
-    
-    - name: Install natcap.invest python package
-      shell: bash -l {0}
-      working-directory: ./invest
-      run: make install
-
-    - name: Freeze Python environment
-      shell: bash -l {0}
-      run: |
-        python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec
 
     - name: NPM Install
       run: npm install
+
+    - name: Fetch InVEST Binaries
+      shell: bash
+      run: npm run fetch-invest
 
     - name: Build & Release Electron application
       uses: samuelmeuli/action-electron-builder@v1
@@ -120,17 +39,16 @@ jobs:
         # release the app after building
         release: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
-    #   # Also run all tests on the build dir code?
-    # - name: Test flask app binaries
-    #   shell: bash -l {0}
-    #   run: npm run test-flask-app
+      # Also run all tests on the build dir code?
+    - name: Test flask app binaries
+      shell: bash -l {0}
+      run: npm run test-flask-app
 
     - name: Test electron app with puppeteer
-      shell: bash -l {0}
-      run: npm run test-electron-app
-      # uses: GabrielBB/xvfb-action@v1
-      # with:
-      #   run: npm run test-electron-app
+      uses: GabrielBB/xvfb-action@v1
+      if: matrix.os != 'macos-latest'
+      with:
+        run: npm run test-electron-app
     
     - name: Upload installer artifacts
       uses: actions/upload-artifact@v2-preview
@@ -138,3 +56,43 @@ jobs:
       with:
         name: invest-workbench-${{ matrix.os }}
         path: dist/invest-workbench_*
+
+    - name: Set variables for GCS deploy target
+      shell: bash
+      # TODO: If this is a release, don't include the commit hash
+      run: |
+        echo "PKG_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
+        echo "GIT_REV=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        echo "BUCKET=$([ github.actor == 'natcap' ] \
+          && echo 'gs://releases.naturalcapitalproject.org/invest-workbench/' \
+          || echo 'gs://natcap-dev-build-artifacts/invest-workbench/${{ github.actor }}' \
+          )" >> $GITHUB_ENV
+
+    - name: Set up Python for gsutil
+      # gsutil requires a python, which is not included on Windows
+      if: matrix.os == 'windows-latest'
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
+
+    - name: Set up GCP
+      # Secrets not available in PR so don't use GCP.
+      if: github.event_name != 'pull_request'
+      uses: google-github-actions/setup-gcloud@master
+      with:
+          version: '281.0.0'
+          service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+    - name: Deploy artifacts to GCS - Windows
+      # Secrets not available in PR so don't use GCP.
+      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
+      env:
+        CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
+      run: |
+        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
+
+    - name: Deploy artifacts to GCS - Not Windows
+      # Secrets not available in PR so don't use GCP.
+      if: github.event_name != 'pull_request' && matrix.os != 'windows-latest'
+      run: |
+        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"

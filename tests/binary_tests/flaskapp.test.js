@@ -4,16 +4,19 @@ import * as server_requests from '../../src/server_requests';
 import { findInvestBinaries, createPythonFlaskProcess } from '../../src/main_helpers';
 import { argsDictFromObject } from '../../src/utils';
 
-// If SERVER is defined in .env, this appends it to global process.env
 const dotenv = require('dotenv');
 dotenv.config();
+// This could be optionally configured already in '.env'
+if (!process.env.PORT) {
+  process.env.PORT = 56788;
+}
 
 jest.setTimeout(250000); // This test is slow in CI
 
 const isDevMode = true; // otherwise need to mock process.resourcesPath
 beforeAll(async () => {
-  const binaries = await findInvestBinaries(isDevMode);
-  createPythonFlaskProcess(binaries.server, isDevMode);
+  const [investExe, investVersion] = await findInvestBinaries(isDevMode);
+  createPythonFlaskProcess(investExe);
   // In the CI the flask app takes more than 10x as long to startup.
   // Especially so on macos.
   // So, allowing many retries, especially because the error
@@ -27,7 +30,7 @@ afterAll(async () => {
 });
 
 test('invest list items have expected properties', async () => {
-  const investList = await server_requests.getInvestList();
+  const investList = await server_requests.getInvestModelNames();
   Object.values(investList).forEach((item) => {
     expect(item.internal_name).not.toBeUndefined();
   });
@@ -118,4 +121,41 @@ test('write parameters to python script', async () => {
     break;
   }
   fs.unlinkSync(filepath);
+});
+
+test('validate the UI spec', async () => {
+  const models = await server_requests.getInvestModelNames();
+  const modelInternalNames = Object.keys(models).map(
+    key => models[key].internal_name);
+  const uiSpec = require('../../src/ui_config');
+  // get the args spec for each model
+  const argsSpecs = await Promise.all(modelInternalNames.map(
+    async model => await server_requests.getSpec(model)
+  ));
+
+  argsSpecs.forEach((argsSpec) => {
+    // make sure that we actually got an args spec
+    expect(argsSpec.model_name).toBeDefined();
+    let has_order_property = false;
+    // expect each arg in the UI spec to exist in the args spec
+    for (const property in uiSpec[argsSpec.model_name]) {
+      if (property === 'order') {
+        has_order_property = true;
+        // 'order' is a 2D array of arg names
+        const order_array = uiSpec[argsSpec.model_name].order.flat();
+        const order_set = new Set(order_array);
+        // expect there to be no duplicated args in the order
+        expect(order_array.length).toEqual(order_set.size);
+        order_array.forEach(arg => {
+            expect(argsSpec.args[arg]).toBeDefined();
+        });
+      } else {
+        // for other properties, each key is an arg
+        Object.keys(uiSpec[argsSpec.model_name][property]).forEach(arg => {
+          expect(argsSpec.args[arg]).toBeDefined();
+        });
+      }
+    }
+    expect(has_order_property).toBe(true);
+  });
 });

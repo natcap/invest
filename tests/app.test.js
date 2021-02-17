@@ -14,10 +14,9 @@ import '@testing-library/jest-dom';
 import InvestTab from '../src/components/InvestTab';
 import App from '../src/app';
 import {
-  getInvestList, getSpec, fetchValidation, fetchDatastackFromFile
+  getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
 } from '../src/server_requests';
 import InvestJob from '../src/InvestJob';
-import { cleanupDir } from '../src/utils';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 
 jest.mock('child_process');
@@ -27,8 +26,8 @@ const MOCK_MODEL_LIST_KEY = 'Carbon';
 const MOCK_MODEL_RUN_NAME = 'carbon';
 const MOCK_INVEST_LIST = {
   [MOCK_MODEL_LIST_KEY]: {
-    internal_name: MOCK_MODEL_RUN_NAME
-  }
+    internal_name: MOCK_MODEL_RUN_NAME,
+  },
 };
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 
@@ -39,7 +38,7 @@ afterAll(async () => {
 
 describe('Various ways to open and close InVEST models', () => {
   beforeAll(() => {
-    getInvestList.mockResolvedValue(MOCK_INVEST_LIST);
+    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
   });
@@ -65,7 +64,7 @@ describe('Various ways to open and close InVEST models', () => {
   test('Clicking a recent job renders SetupTab', async () => {
     const workspacePath = 'my_workspace';
     const argsValues = {
-      workspace_dir: workspacePath
+      workspace_dir: workspacePath,
     };
     const mockJob = new InvestJob({
       modelRunName: 'carbon',
@@ -96,9 +95,9 @@ describe('Various ways to open and close InVEST models', () => {
     );
   });
 
-  test('LoadParameters: Dialog callback renders SetupTab', async () => {
+  test('Open File: Dialog callback renders SetupTab', async () => {
     const mockDialogData = {
-      filePaths: ['foo.json']
+      filePaths: ['foo.json'],
     };
     const mockDatastack = {
       args: {
@@ -115,8 +114,8 @@ describe('Various ways to open and close InVEST models', () => {
       <App investExe="foo" />
     );
 
-    const loadButton = await findByText('Load Parameters');
-    fireEvent.click(loadButton);
+    const openButton = await findByRole('button', { name: 'Open' });
+    fireEvent.click(openButton);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
@@ -125,20 +124,20 @@ describe('Various ways to open and close InVEST models', () => {
     expect(input).toHaveValue(mockDatastack.args.carbon_pools_path);
   });
 
-  test('LoadParameters: Dialog callback is canceled', async () => {
+  test('Open File: Dialog callback is canceled', async () => {
     // Resembles callback data if the dialog was canceled
     const mockDialogData = {
-      filePaths: []
+      filePaths: [],
     };
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
 
-    const { findByText } = render(
+    const { findByRole } = render(
       <App investExe="foo" />
     );
 
-    const loadButton = await findByText('Load Parameters');
-    const homeTab = await findByText('Home');
-    fireEvent.click(loadButton);
+    const openButton = await findByRole('button', { name: 'Open' });
+    fireEvent.click(openButton);
+    const homeTab = await findByRole('tabpanel', { name: /Home/ });
     // expect we're on the same tab we started on instead of switching to Setup
     expect(homeTab.classList.contains('active')).toBeTruthy();
     // These are the calls that would have triggered if a file was selected
@@ -148,7 +147,6 @@ describe('Various ways to open and close InVEST models', () => {
 
   test('Opening and closing multiple InVEST models', async () => {
     const {
-      findByText,
       findByTitle,
       findByRole,
       findAllByText,
@@ -167,9 +165,9 @@ describe('Various ways to open and close InVEST models', () => {
     });
     expect(getSpec).toHaveBeenCalledTimes(1);
 
-    // Open another model (via Load button for convenience)
+    // Open another model (via Open button for convenience)
     const mockDialogData = {
-      filePaths: ['foo.json']
+      filePaths: ['foo.json'],
     };
     const mockDatastack = {
       module_name: 'natcap.invest.party',
@@ -177,12 +175,12 @@ describe('Various ways to open and close InVEST models', () => {
       model_human_name: 'Party Time',
       args: {
         carbon_pools_path: 'Carbon/carbon_pools_willamette.csv',
-      }
+      },
     };
     remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
-    const loadButton = await findByText('Load Parameters');
-    fireEvent.click(loadButton);
+    const openButton = await findByRole('button', { name: 'Open' });
+    fireEvent.click(openButton);
     const tabPanelB = await findByTitle(mockDatastack.model_human_name);
     const setupTabB = await within(tabPanelB).findByText('Setup');
     expect(setupTabB.classList.contains('active')).toBeTruthy();
@@ -202,14 +200,14 @@ describe('Various ways to open and close InVEST models', () => {
     // Close the other open model
     fireEvent.click(closeButtonArray[0]);
     expect(setupTabA).not.toBeInTheDocument();
-    const homeTab = await findByText('Home');
+    const homeTab = await findByRole('tabpanel', { name: /Home/ });
     expect(homeTab.classList.contains('active')).toBeTruthy();
   });
 });
 
 describe('Display recently executed InVEST jobs', () => {
   beforeEach(() => {
-    getInvestList.mockResolvedValue({});
+    getInvestModelNames.mockResolvedValue({});
   });
   afterEach(async () => {
     await InvestJob.clearStore();
@@ -220,7 +218,7 @@ describe('Display recently executed InVEST jobs', () => {
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Sequestration',
       argsValues: {
-        workspace_dir: 'work1'
+        workspace_dir: 'work1',
       },
       status: 'success',
       humanTime: '3/5/2020, 10:43:14 AM',
@@ -230,7 +228,7 @@ describe('Display recently executed InVEST jobs', () => {
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Sequestration',
       argsValues: {
-        workspace_dir: 'work2'
+        workspace_dir: 'work2',
       },
       status: 'success',
       humanTime: '3/5/2020, 10:43:14 AM',
@@ -261,14 +259,14 @@ describe('Display recently executed InVEST jobs', () => {
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Sequestration',
       argsValues: {
-        workspace_dir: 'work1'
+        workspace_dir: 'work1',
       },
       status: 'success',
       humanTime: '3/5/2020, 10:43:14 AM',
     });
     const recentJobs = await job1.save();
 
-    const { getByText, findByText } = render(<App investExe="foo" />);
+    const { getByText, findByText, getByTitle } = render(<App investExe="foo" />);
 
     await waitFor(() => {
       recentJobs.forEach((job) => {
@@ -276,7 +274,7 @@ describe('Display recently executed InVEST jobs', () => {
           .toBeTruthy();
       });
     });
-    fireEvent.click(getByText('Settings'));
+    fireEvent.click(getByTitle('settings'));
     fireEvent.click(getByText('Clear'));
     const node = await findByText(/No recent InVEST runs/);
     expect(node).toBeInTheDocument();
@@ -285,19 +283,19 @@ describe('Display recently executed InVEST jobs', () => {
 
 describe('InVEST global settings: dialog interactions', () => {
   beforeEach(() => {
-    getInvestList.mockResolvedValue({});
+    getInvestModelNames.mockResolvedValue({});
   });
   afterEach(() => {
     jest.resetAllMocks();
   });
   test('Set the python logging level to pass to the invest CLI', async () => {
     const DEFAULT = 'INFO';
-    const { getByText, getByLabelText } = render(
+    const { getByText, getByLabelText, getByTitle } = render(
       <App investExe="foo" />
     );
 
     // Check the default settings
-    fireEvent.click(getByText('Settings'));
+    fireEvent.click(getByTitle('settings'));
     await waitFor(() => {
       // waiting because the selected value depends on passed props
       expect(getByText(DEFAULT).selected).toBeTruthy();
@@ -324,11 +322,11 @@ describe('InVEST global settings: dialog interactions', () => {
     const badValue = 'a';
     const labelText = 'Taskgraph n_workers parameter';
 
-    const { getByText, getByLabelText } = render(
+    const { getByText, getByLabelText, getByTitle } = render(
       <App investExe="foo" />
     );
 
-    fireEvent.click(getByText('Settings'));
+    fireEvent.click(getByTitle('settings'));
     const input = getByLabelText(labelText, { exact: false });
 
     // Check the default settings
@@ -347,7 +345,7 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(input).toHaveValue(newValue);
     // The real test: still newValue after saving and re-opening
     fireEvent.click(getByText('Save Changes'));
-    fireEvent.click(getByText('Settings'));
+    fireEvent.click(getByTitle('settings'));
     await waitFor(() => { // the value to test is inherited through props
       expect(input).toHaveValue(newValue);
     });
@@ -369,14 +367,15 @@ describe('InVEST subprocess testing', () => {
       results_suffix: {
         name: 'Suffix',
         type: 'freestyle_string',
-      }
+      },
     },
-    model_name: 'Eco Model',
+    model_name: 'EcoModel',
     module: 'natcap.invest.dot',
   };
 
   const dummyTextToLog = JSON.stringify(spec.args);
   let fakeWorkspace;
+  let logfilePath;
   let mockInvestProc;
 
   beforeEach(() => {
@@ -393,29 +392,38 @@ describe('InVEST subprocess testing', () => {
     });
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    getInvestList.mockResolvedValue(
+    getInvestModelNames.mockResolvedValue(
       { Carbon: { internal_name: 'carbon' } }
     );
 
-    spawn.mockImplementation((exe, cmdArgs, options) => {
+    spawn.mockImplementation(() => {
       // To simulate an invest model run, write a logfile to the workspace
       // with an expected filename pattern.
       const timestamp = new Date().toLocaleTimeString(
         'en-US', { hour12: false }
       ).replace(/:/g, '_');
       const logfileName = `InVEST-natcap.invest.model-log-9999-99-99--${timestamp}.txt`;
-      const logfilePath = path.join(fakeWorkspace, logfileName);
+      logfilePath = path.join(fakeWorkspace, logfileName);
       // line-ending is critical; the log is read with `tail.on('line'...)`
       fs.writeFileSync(logfilePath, dummyTextToLog + os.EOL);
       return mockInvestProc;
     });
+
+    // mock out the whole UI config module
+    // brackets around spec.model_name turns it into a valid literal key
+    const mockUISpec = { [spec.model_name]: { order: [Object.keys(spec.args)] } };
+    jest.mock('../src/ui_config', () => mockUISpec);
   });
 
   afterEach(async () => {
     mockInvestProc = null;
-    cleanupDir(fakeWorkspace);
+    // being extra careful with recursive rm
+    if (fakeWorkspace.startsWith('tests/data')) {
+      fs.rmdirSync(fakeWorkspace, { recursive: true });
+    }
     await InvestJob.clearStore();
     jest.resetAllMocks();
+    jest.resetModules();
   });
 
   test('exit without error - expect log display', async () => {
@@ -424,7 +432,7 @@ describe('InVEST subprocess testing', () => {
       findByLabelText,
       findByRole,
       queryByText,
-      unmount
+      unmount,
     } = render(<App investExe="foo" />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
@@ -621,5 +629,99 @@ describe('InVEST subprocess testing', () => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     unmount();
     spy.mockRestore();
+  });
+});
+
+describe('Tab closing and switching', () => {
+  beforeAll(() => {
+    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
+    getSpec.mockResolvedValue(SAMPLE_SPEC);
+    fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+    // mock out the whole UI config module
+    // brackets around spec.model_name turns it into a valid literal key
+    const mockUISpec = { [SAMPLE_SPEC.model_name]: { order: [Object.keys(SAMPLE_SPEC.args)] } };
+    jest.mock('../src/ui_config', () => mockUISpec);
+  });
+
+  afterAll(async () => {
+    jest.resetAllMocks();
+    jest.resetModules();
+  });
+
+  test('Open three tabs and close them', async () => {
+    const {
+      findByRole,
+      findAllByRole,
+      queryAllByRole,
+    } = render(<App investExe="foo" />);
+
+    const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
+    const homeTab = await findByRole('tabpanel', { name: /Home/ });
+
+    // Open a model tab and expect that it's active
+    fireEvent.click(carbon);
+    let modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(1); // one carbon tab open
+    const tab1 = modelTabs[0];
+    const tab1EventKey = tab1.getAttribute('data-rb-event-key');
+    expect(tab1.classList.contains('active')).toBeTruthy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+
+    // Open a second model tab and expect that it's active
+    fireEvent.click(homeTab);
+    fireEvent.click(carbon);
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(2); // 2 carbon tabs open
+    const tab2 = modelTabs[1];
+    const tab2EventKey = tab2.getAttribute('data-rb-event-key');
+    expect(tab2.classList.contains('active')).toBeTruthy();
+    expect(tab1.classList.contains('active')).toBeFalsy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+    // make sure that we switched away from the first tab
+    expect(tab2EventKey).not.toEqual(tab1EventKey);
+
+    // Open a third model tab and expect that it's active
+    fireEvent.click(homeTab);
+    fireEvent.click(carbon);
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(3); // 3 carbon tabs open
+    const tab3 = modelTabs[2];
+    const tab3EventKey = tab3.getAttribute('data-rb-event-key');
+    expect(tab3.classList.contains('active')).toBeTruthy();
+    expect(tab2.classList.contains('active')).toBeFalsy();
+    expect(tab1.classList.contains('active')).toBeFalsy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+    // make sure that we switched away from the first model tabs
+    expect(tab3EventKey).not.toEqual(tab2EventKey);
+    expect(tab3EventKey).not.toEqual(tab1EventKey);
+
+    // Click the close button on the middle tab
+    const tab2CloseButton = await within(tab2).getByRole('button', { name: /x/ });
+    fireEvent.click(tab2CloseButton);
+    // Now there should only be 2 model tabs open
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(2);
+    // Should have switched to tab3, the next tab to the right
+    expect(tab3.classList.contains('active')).toBeTruthy();
+    expect(tab1.classList.contains('active')).toBeFalsy();
+
+    // Click the close button on the right tab
+    const tab3CloseButton = await within(tab3).getByRole('button', { name: /x/ });
+    fireEvent.click(tab3CloseButton);
+    // Now there should only be 1 model tab open
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(1);
+    // No model tabs to the right, so it should switch to the next tab to the left.
+    expect(tab1.classList.contains('active')).toBeTruthy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+
+    // Click the close button on the last tab
+    const tab1CloseButton = await within(tab1).getByRole('button', { name: /x/ });
+    fireEvent.click(tab1CloseButton);
+    // Now there should be no model tabs open.
+    modelTabs = await queryAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(0);
+    // No more model tabs, so it should switch back to the home tab.
+    expect(homeTab.classList.contains('active')).toBeTruthy();
   });
 });

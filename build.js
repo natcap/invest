@@ -61,7 +61,7 @@ function build() {
   // copy all other files to their same relative location in the build dir
   const files = glob.sync(SRC_DIR.concat(path.sep, '**', path.sep, '*'));
   files.forEach((file) => {
-    if (['.css', '.html', '.json'].includes(path.extname(file))) {
+    if (['.css', '.html', '.png'].includes(path.extname(file))) {
       const dest = file.replace(SRC_DIR, BUILD_DIR);
       fs.copySync(file, dest);
     }

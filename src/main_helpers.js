@@ -1,20 +1,20 @@
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const { app } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const { getLogger } = require('./logger');
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 /**
- * Find paths to local invest binaries under dev or production environments.
+ * Find paths to local invest executeable under dev or production environments.
  *
  * @param {boolean} isDevMode - a boolean designating dev mode or not.
- * @returns {Promise} Resolves object with filepaths to invest binaries
+ * @returns {Promise} Resolves array w/ invest binary path & version strings.
  */
 export function findInvestBinaries(isDevMode) {
   return new Promise(resolve => {
     // Binding to the invest server binary:
-    let serverExe;
     let investExe;
     const ext = (process.platform === 'win32') ? '.exe' : '';
 
@@ -25,59 +25,47 @@ export function findInvestBinaries(isDevMode) {
     if (fs.existsSync(investRegistryPath)) {
       const investRegistry = JSON.parse(fs.readFileSync(investRegistryPath));
       const activeVersion = investRegistry.active;
-      serverExe = investRegistry.registry[activeVersion].server;
       investExe = investRegistry.registry[activeVersion].invest;
 
     // B) check for dev mode and an environment variable from dotenv
     } else if (isDevMode) {
       // If no dotenv vars are set, default to where this project's
       // build process places the binaries.
-      serverExe = `${process.env.SERVER || 'build/invest/server'}${ext}`;
       investExe = `${process.env.INVEST || 'build/invest/invest'}${ext}`;
 
     // C) point to binaries included in this app's installation.
     } else {
       const binaryPath = path.join(process.resourcesPath, 'invest');
-      serverExe = path.join(binaryPath, `server${ext}`);
       investExe = path.join(binaryPath, `invest${ext}`);
     }
-    try {
-      fs.accessSync(serverExe, fs.constants.X_OK);
-      fs.accessSync(investExe, fs.constants.X_OK);
-    } catch (error) {
-      logger.error(error);
-      throw error;
-    }
-    logger.info(`Found invest binaries ${investExe} and ${serverExe}`);
-    resolve({ invest: investExe, server: serverExe });
+    let investVersion = execFileSync(investExe, ['--version']);
+    logger.info(`Found invest binaries ${investExe} for version ${investVersion}`);
+    resolve([investExe, `${investVersion}`.trim(os.EOL)]);
+  }).catch(error => {
+    logger.error(error.message);
+    logger.error('InVEST binaries are probably missing.');
   });
 }
 
 /**
  * Spawn a child process running the Python Flask app.
  *
- * @param  {string} serverExe - path to executeable that launches flask app.
- * @param {boolean} isDevMode - a boolean designating dev mode or not.
+ * @param  {string} investExe - path to executeable that launches flask app.
  * @returns {undefined}
  */
-export function createPythonFlaskProcess(serverExe, isDevMode) {
-  if (serverExe) {
-    let pythonServerProcess;
-    if (isDevMode && process.env.PYTHON && serverExe.endsWith('.py')) {
-      // A special devMode case for launching from the source code
-      // to facilitate debugging & development of src/server.py
-      pythonServerProcess = spawn(process.env.PYTHON, [serverExe]);
-    } else {
-      // The most reliable, cross-platform way to make sure spawn
-      // can find the exe is to pass only the command name while
-      // also putting it's location on the PATH:
-      pythonServerProcess = spawn(path.basename(serverExe), {
-        env: { PATH: path.dirname(serverExe) },
-      });
-    }
+export function createPythonFlaskProcess(investExe) {
+  if (investExe) {
+    const pythonServerProcess = spawn(
+      path.basename(investExe),
+      ['--debug', 'serve', '--port', process.env.PORT],
+      {
+        env: {
+          PATH: path.dirname(investExe),
+        },
+      }
+    );
 
     logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-    logger.debug(serverExe);
     pythonServerProcess.stdout.on('data', (data) => {
       logger.debug(`${data}`);
     });
@@ -87,7 +75,7 @@ export function createPythonFlaskProcess(serverExe, isDevMode) {
     pythonServerProcess.on('error', (err) => {
       logger.error(err.stack);
       logger.error(
-        `The flask app ${serverExe} crashed or failed to start
+        `The flask app ${investExe} crashed or failed to start
          so this application must be restarted`
       );
       throw err;
