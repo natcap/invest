@@ -29,19 +29,19 @@
     "artifactName": "invest-workbench_${os}_${arch}_${version}.${ext}",
     "mac": {
       "category": "public.app-category.business",
-      "icon": "build/icon.png",
+      "icon": "resources/invest-in-shadow-white.png",
       "target": "dmg"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "icon": "build/icon.png",
+      "icon": "resources/invest-in-shadow-white.png",
       "category": "Science"
     },
     "win": {
       "target": "nsis",
-      "icon": "build/icon.png"
+      "icon": "resources/invest-in-shadow-white.png"
     },
     "files": [
       "build/**/*",
@@ -98,6 +98,7 @@
     "@testing-library/dom": "^7.29.4",
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.3",
+    "@testing-library/user-event": "^12.7.0",
     "babel-eslint": "^10.1.0",
     "dotenv": "^8.2.0",
     "electron": "^11.2.1",
