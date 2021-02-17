@@ -67,7 +67,6 @@ jobs:
           && echo 'gs://releases.naturalcapitalproject.org/invest-workbench/' \
           || echo 'gs://natcap-dev-build-artifacts/invest-workbench/${{ github.repository_owner }}' \
           )" >> $GITHUB_ENV
-        echo "The current github environment: $GITHUB_ENV"
     - name: Set up Python for gsutil
       # gsutil requires a python, which is not included on Windows
       if: matrix.os == 'windows-latest'
