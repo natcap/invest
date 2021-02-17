@@ -49,7 +49,7 @@ jobs:
       shell: bash
       env:
         P12_FILE_PATH: ~/Downloads/stanford_cert.p12
-        KEYCHAIN_NAME: codesign_keychain
+        KEYCHAIN_NAME: codesign.keychain
         KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
         CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
 

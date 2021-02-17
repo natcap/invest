@@ -11,6 +11,8 @@ echo 'added keychain to search list'
 security list-keychains
 echo 'listed keychains'
 security show-keychain-info login.keychain
+security show-keychain-info codesign.keychain
+security show-keychain-info codesign.keychain-db
 security show-keychain-info $KEYCHAIN_NAME
 echo 'showed keychain info'
 # unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
