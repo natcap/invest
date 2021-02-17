@@ -37,52 +37,17 @@ jobs:
 
     - name: Run the build script
       run: npm run build
-
-    - name: Set up GCP
-      uses: google-github-actions/setup-gcloud@v0.2.0
-      with:
-          version: '281.0.0'
-          service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
-
-    - name: Code-signing setup for macOS
-      if: matrix.os == 'macos-latest'
-      shell: bash
-      env:
-        P12_FILE_PATH: ~/Downloads/stanford_cert.p12
-        KEYCHAIN_NAME: codesign.keychain
-        KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
-        CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
-
-      run: |
-        gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-2019-03-07.p12 $P12_FILE_PATH 
-
-        bash ./scripts/setup_macos_keychain.sh 
-
-        # these env variables tell electron-builder to do code signing
-        echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
-        echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
-        echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
-        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
-       
-
-    - name: Code-signing setup for Windows
-      if: matrix.os == 'windows-latest'
-      env:
-        P12_FILE: Stanford-natcap-code-signing-2019-03-07.p12
-      run: |
-        gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
-
-        # all these variables are used by electron-builder
-        echo "CSC_LINK=~/$P12_FILE" >> $GITHUB_ENV
-        echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
-        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
-
+     
     - name: Run electron-builder on macOS
       if: matrix.os == 'macos-latest'
       env:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
-      run: npx --no-install electron-builder build --mac -c.extraMetadata.main=build/main.js --publish never
+      run: |
+        npx --no-install electron-builder build \  # build the binaries
+        --mac \                                    # can only build mac binaries on macOS
+        -c.extraMetadata.main=build/main.js \      # use the built version as the entrypoint
+        --publish never                            # make sure we don't publish to github releases
 
     - name: Run electron-builder on Windows
       if: matrix.os == 'windows-latest'
