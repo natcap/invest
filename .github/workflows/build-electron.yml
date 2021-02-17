@@ -13,7 +13,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest]
         node-version: [12.x]
 
     steps:
@@ -37,22 +37,17 @@ jobs:
         ref: "refs/tags/${{ env.INVEST_VERSION }}"
         path: ./invest
 
-    - name: Install libspatialindex for ubuntu
-      if: matrix.os == 'ubuntu-latest'
-      run:
-        sudo apt-get install libspatialindex-dev
-
-    - name: Set up conda for non-Windows
+    - name: Set up conda for macOS
       uses: conda-incubator/setup-miniconda@v2
-      if: matrix.os != 'windows-latest'
+      if: matrix.os == 'macos-latest'
       with:
         activate-environment: invest-env
         auto-update-conda: true
         python-version: 3.7
         channels: conda-forge
 
-    - name: Install python dependencies for non-Windows
-      if: matrix.os != 'windows-latest'
+    - name: Install python dependencies for macOS
+      if: matrix.os == 'macos-latest'
       working-directory: ./invest
       run: |
           conda upgrade -y pip setuptools
@@ -69,7 +64,7 @@ jobs:
           # The dependencies not required by natcap.invest
           conda install flask
 
-    - name: Set up Windows python
+    - name: Set up python for Windows
       if: matrix.os == 'windows-latest'
       uses: actions/setup-python@v1
       with:
@@ -118,7 +113,6 @@ jobs:
           version: '281.0.0'
           service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-    # electron-builder code signing only supported on macos and windows
     - name: Code-signing setup for macOS
       if: matrix.os == 'macos-latest'
       shell: bash
@@ -159,18 +153,12 @@ jobs:
         DEBUG: electron-builder
       run: npx --no-install electron-builder build --mac -c.extraMetadata.main=build/main.js --publish never
 
-    - name: Run electron-builder on windows
+    - name: Run electron-builder on Windows
       if: matrix.os == 'windows-latest'
       env:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
       run: npx --no-install electron-builder build --windows -c.extraMetadata.main=build/main.js --publish never
-
-    - name: Run electron-builder on ubuntu
-      if: matrix.os == 'ubuntu-latest'
-      env:
-        GH_TOKEN: env.GITHUB_TOKEN
-      run: npx --no-install electron-builder build --linux -c.extraMetadata.main=build/main.js --publish never
 
       # Also run all tests on the build dir code?
     - name: Test flask app binaries
