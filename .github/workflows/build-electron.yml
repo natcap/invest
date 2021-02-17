@@ -29,7 +29,6 @@ jobs:
       run: npm install
 
     - name: Fetch InVEST Binaries
-      shell: bash
       run: npm run fetch-invest
 
     - name: NPM Install
@@ -75,7 +74,6 @@ jobs:
     # Nothing below here runs on pull requests because we use github secrets
     # to authenticate for GCP and they are not accessible in pull request workflows.
     - name: Set variables for GCS deploy target
-      shell: bash
       if: github.event_name != 'pull_request'
       # TODO: If this is a release, don't include the commit hash
       run: |
