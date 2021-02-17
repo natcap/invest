@@ -39,6 +39,15 @@ let splashScreen;
 
 /** Create an Electron browser window and start the flask application. */
 const createWindow = async () => {
+  splashScreen = new BrowserWindow({
+    width: 574, // dims set to match the image in splash.html
+    height: 500,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+  });
+  splashScreen.loadURL(`file://${__dirname}/static/splash.html`);
+
   const [investExe, investVersion] = await findInvestBinaries(
     ELECTRON_DEV_MODE
   );
@@ -80,15 +89,6 @@ const createWindow = async () => {
     menuTemplate(mainWindow, ELECTRON_DEV_MODE)
   );
   Menu.setApplicationMenu(menubar);
-
-  splashScreen = new BrowserWindow({
-    width: 574, // dims set to match the image in splash.html
-    height: 500,
-    transparent: true,
-    frame: false,
-    alwaysOnTop: true,
-  });
-  splashScreen.loadURL(`file://${__dirname}/static/splash.html`);
   mainWindow.loadURL(`file://${__dirname}/index.html`);
 
   mainWindow.once('ready-to-show', () => {
@@ -97,8 +97,8 @@ const createWindow = async () => {
     // but there's a bug where a window initialized with { show: false }
     // will load with invisible elements until it's touched/resized, etc.
     // https://github.com/electron/electron/issues/27353
-    // So for now, we have the splashScreen over a blank, white mainWindow.
-    // mainWindow.show();
+    // So for now, we have mainWindow showing the whole time, w/ splash on top.
+    // If this bug is fixed, we'll need an explicit mainWindow.show() here.
   });
 
   // Open the DevTools.
