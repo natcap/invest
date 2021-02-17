@@ -15,6 +15,3 @@ ShowUninstDetails show
 ;!insertmacro MUI_UNPAGE_COMPONENTS
 
 !insertmacro MUI_UNPAGE_INSTFILES
-
-;!insertmacro MUI_UNPAGE_INSTFILES
-;!insertmacro MUI_UNPAGE_FINISH

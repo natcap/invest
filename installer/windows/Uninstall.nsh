@@ -40,7 +40,7 @@ SectionEnd
 ;SectionEnd
 
 Section "-Uninstall" ; hidden section, must always be the last one!
-	Delete "$INSTDIR\${UNINSTALL_PATH}" ; we cannot use un.DeleteRetryAbort here - when using the _? parameter the uninstaller cannot delete itself and Delete fails, which is OK
+	Delete "$INSTDIR\${UNINSTALL_FILENAME}" ; we cannot use un.DeleteRetryAbort here - when using the _? parameter the uninstaller cannot delete itself and Delete fails, which is OK
 	; remove the directory only if it is empty - the user might have saved some files in it
 	RMDir "$INSTDIR"
 	
@@ -48,8 +48,8 @@ Section "-Uninstall" ; hidden section, must always be the last one!
 	!insertmacro MULTIUSER_RegistryRemoveInstallInfo ; Remove registry keys	
 
 	; If the uninstaller still exists, use cmd.exe on exit to remove it (along with $INSTDIR if it's empty)
-	${if} ${FileExists} "$INSTDIR\${UNINSTALL_PATH}"
-		Exec 'cmd.exe /c (del /f /q "$INSTDIR\${UNINSTALL_PATH}") && (rmdir "$INSTDIR")'
+	${if} ${FileExists} "$INSTDIR\${UNINSTALL_FILENAME}"
+		Exec 'cmd.exe /c (del /f /q "$INSTDIR\${UNINSTALL_FILENAME}") && (rmdir "$INSTDIR")'
 	${endif}
 SectionEnd
 
@@ -81,7 +81,7 @@ Function un.onInit
         ; one from the uninstaller).
         ${if} ${UAC_IsAdmin}
         ${andif} $RunningAsShellUser = 0
-            ${StdUtils.ExecShellAsUser} $0 "$INSTDIR\${UNINSTALL_PATH}" "open" "/shelluser $R0"
+            ${StdUtils.ExecShellAsUser} $0 "$INSTDIR\${UNINSTALL_FILENAME}" "open" "/shelluser $R0"
             Quit
         ${endif}
         !insertmacro CheckSingleInstance "Setup" "Global" "${SETUP_MUTEX}"

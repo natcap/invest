@@ -79,6 +79,7 @@
 !define MUI_COMPONENTSPAGE_NODESC
 !define PACKAGE_NAME "${SOFTWARE_NAME} ${PRODUCT_VERSION}"
 !define PRODUCT_NAME "${SOFTWARE_NAME}_${VERSION}_${ARCHITECTURE}"
+!define UNINSTALL_FILENAME "Uninstall_${VERSION}.exe"
 
 ; PROGEXE is needed in NsisMultiUser
 !define PROGEXE "invest-3-x64\invest.exe" ; main application filename
@@ -206,14 +207,18 @@ Var StartMenuFolder
 !insertmacro MUI_PAGE_FINISH
 
 ; MUI Uninstaller settings---------------
-;!insertmacro MUI_UNPAGE_WELCOME
-;!insertmacro MUI_UNPAGE_CONFIRM
-;!insertmacro MUI_UNPAGE_INSTFILES
-;!insertmacro MUI_UNPAGE_FINISH
+; Installer Attributes
+ShowUninstDetails show
 
+; Interface settings
+!define MUI_UNABORTWARNING ; Show a confirmation when cancelling the installation
 
-; remove next line if you're using signing after the uninstaller is extracted from the initially compiled setup
-!include UninstallPages.nsh
+; Pages
+!insertmacro MUI_UNPAGE_WELCOME
+!insertmacro MUI_UNPAGE_CONFIRM
+!define MULTIUSER_INSTALLMODE_CHANGE_MODE_FUNCTION un.PageInstallModeChangeMode
+!insertmacro MULTIUSER_UNPAGE_INSTALLMODE
+!insertmacro MUI_UNPAGE_INSTFILES
 
 
 ; Languages (first is default language) - must be inserted after all pages
