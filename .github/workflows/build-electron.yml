@@ -19,8 +19,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-      with: 
-        repository: natcap/invest-workbench
 
     - name: Install Node.js
       uses: actions/setup-node@v1
@@ -49,132 +47,132 @@ jobs:
         python-version: 3.7
         channels: conda-forge
 
-    - name: Install python dependencies for macOS
-      if: matrix.os == 'macos-latest'
-      working-directory: ./invest
-      run: |
-          conda upgrade -y pip setuptools
-          conda install toml requests
-          conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-          python ./scripts/convert-requirements-to-conda-yml.py \
-                requirements.txt \
-                requirements-dev.txt > requirements-all.yml
-          conda env update --file requirements-all.yml
+    # - name: Install python dependencies for macOS
+    #   if: matrix.os == 'macos-latest'
+    #   working-directory: ./invest
+    #   run: |
+    #       conda upgrade -y pip setuptools
+    #       conda install toml requests
+    #       conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+    #       python ./scripts/convert-requirements-to-conda-yml.py \
+    #             requirements.txt \
+    #             requirements-dev.txt > requirements-all.yml
+    #       conda env update --file requirements-all.yml
 
-          # Libtiff from conda defaults channel gets around issue with missing libwebp
-          conda install --yes libtiff
+    #       # Libtiff from conda defaults channel gets around issue with missing libwebp
+    #       conda install --yes libtiff
 
-          # The dependencies not required by natcap.invest
-          conda install flask
+    #       # The dependencies not required by natcap.invest
+    #       conda install flask
 
-    - name: Set up python for Windows
-      if: matrix.os == 'windows-latest'
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.7
-        architecture: x64
+    # - name: Set up python for Windows
+    #   if: matrix.os == 'windows-latest'
+    #   uses: actions/setup-python@v1
+    #   with:
+    #     python-version: 3.7
+    #     architecture: x64
 
-    - name: Install python build dependencies for Windows
-      if: matrix.os == 'windows-latest'
-      working-directory: ./invest
-      run: |
-          python -m pip install --upgrade pip nose setuptools toml twine ${{ matrix.numpy }}
-          pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+    # - name: Install python build dependencies for Windows
+    #   if: matrix.os == 'windows-latest'
+    #   working-directory: ./invest
+    #   run: |
+    #       python -m pip install --upgrade pip nose setuptools toml twine ${{ matrix.numpy }}
+    #       pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
-    - name: Install python runtime dependencies for Windows
-      if: matrix.os == 'windows-latest'
-      working-directory: ./invest
-      env:
-        PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
-        PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
-        PIP_PREFER_BINARY: 1
-        SITE_PACKAGES: "C:/hostedtoolcache/windows/Python/3.7.9/x64/lib/site-packages"
-      run: |
-        python -m pip install -r requirements.txt -r requirements-dev.txt
-        pip install flask
-        cp ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos_c.dll ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos.dll
+    # - name: Install python runtime dependencies for Windows
+    #   if: matrix.os == 'windows-latest'
+    #   working-directory: ./invest
+    #   env:
+    #     PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
+    #     PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
+    #     PIP_PREFER_BINARY: 1
+    #     SITE_PACKAGES: "C:/hostedtoolcache/windows/Python/3.7.9/x64/lib/site-packages"
+    #   run: |
+    #     python -m pip install -r requirements.txt -r requirements-dev.txt
+    #     pip install flask
+    #     cp ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos_c.dll ${{ env.SITE_PACKAGES }}/shapely/DLLs/geos.dll
     
-    - name: Install natcap.invest python package
-      working-directory: ./invest
-      run: make install
+    # - name: Install natcap.invest python package
+    #   working-directory: ./invest
+    #   run: make install
 
-    - name: Freeze Python environment
-      run: |
-        python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec
+    # - name: Freeze Python environment
+    #   run: |
+    #     python -m PyInstaller --workpath build/pyi-build --clean --distpath build ./invest-flask.spec
 
-    - name: NPM Install
-      run: npm install
+    # - name: NPM Install
+    #   run: npm install
 
-    - name: Run the build script
-      run: npm run build
+    # - name: Run the build script
+    #   run: npm run build
 
-    - name: Set up GCP
-      # Secrets not available in PR so don't use GCP.
-      if: github.event_name != 'pull_request'
-      uses: google-github-actions/setup-gcloud@v0.2.0
-      with:
-          version: '281.0.0'
-          service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+    # - name: Set up GCP
+    #   # Secrets not available in PR so don't use GCP.
+    #   if: github.event_name != 'pull_request'
+    #   uses: google-github-actions/setup-gcloud@v0.2.0
+    #   with:
+    #       version: '281.0.0'
+    #       service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-    - name: Code-signing setup for macOS
-      if: matrix.os == 'macos-latest'
-      shell: bash
-      env:
-        P12_FILE_PATH: ~/Downloads/stanford_cert.p12
-        KEYCHAIN_NAME: codesign_keychain
-        KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
-        CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
+    # - name: Code-signing setup for macOS
+    #   if: matrix.os == 'macos-latest'
+    #   shell: bash
+    #   env:
+    #     P12_FILE_PATH: ~/Downloads/stanford_cert.p12
+    #     KEYCHAIN_NAME: codesign_keychain
+    #     KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
+    #     CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
 
-      run: |
-        gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-2019-03-07.p12 $P12_FILE_PATH 
+    #   run: |
+    #     gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-2019-03-07.p12 $P12_FILE_PATH 
 
-        bash ./scripts/setup_macos_keychain.sh 
+    #     bash ./scripts/setup_macos_keychain.sh 
 
-        # these env variables tell electron-builder to do code signing
-        echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
-        echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
-        echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
-        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
+    #     # these env variables tell electron-builder to do code signing
+    #     echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
+    #     echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
+    #     echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
+    #     echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
        
 
-    - name: Code-signing setup for Windows
-      if: matrix.os == 'windows-latest'
-      env:
-        P12_FILE: Stanford-natcap-code-signing-2019-03-07.p12
-      run: |
-        gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
+    # - name: Code-signing setup for Windows
+    #   if: matrix.os == 'windows-latest'
+    #   env:
+    #     P12_FILE: Stanford-natcap-code-signing-2019-03-07.p12
+    #   run: |
+    #     gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
 
-        # all these variables are used by electron-builder
-        echo "CSC_LINK=~/$P12_FILE" >> $GITHUB_ENV
-        echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
-        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
+    #     # all these variables are used by electron-builder
+    #     echo "CSC_LINK=~/$P12_FILE" >> $GITHUB_ENV
+    #     echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
+    #     echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
 
-    - name: Run electron-builder on macOS
-      if: matrix.os == 'macos-latest'
-      env:
-        GH_TOKEN: env.GITHUB_TOKEN
-        DEBUG: electron-builder
-      run: npx --no-install electron-builder build --mac -c.extraMetadata.main=build/main.js --publish never
+    # - name: Run electron-builder on macOS
+    #   if: matrix.os == 'macos-latest'
+    #   env:
+    #     GH_TOKEN: env.GITHUB_TOKEN
+    #     DEBUG: electron-builder
+    #   run: npx --no-install electron-builder build --mac -c.extraMetadata.main=build/main.js --publish never
 
-    - name: Run electron-builder on Windows
-      if: matrix.os == 'windows-latest'
-      env:
-        GH_TOKEN: env.GITHUB_TOKEN
-        DEBUG: electron-builder
-      run: npx --no-install electron-builder build --windows -c.extraMetadata.main=build/main.js --publish never
+    # - name: Run electron-builder on Windows
+    #   if: matrix.os == 'windows-latest'
+    #   env:
+    #     GH_TOKEN: env.GITHUB_TOKEN
+    #     DEBUG: electron-builder
+    #   run: npx --no-install electron-builder build --windows -c.extraMetadata.main=build/main.js --publish never
 
-      # Also run all tests on the build dir code?
-    - name: Test flask app binaries
-      run: npm run test-flask-app
+    #   # Also run all tests on the build dir code?
+    # - name: Test flask app binaries
+    #   run: npm run test-flask-app
 
-    - name: Test electron app with puppeteer
-      uses: GabrielBB/xvfb-action@v1
-      with:
-        run: npm run test-electron-app
+    # - name: Test electron app with puppeteer
+    #   uses: GabrielBB/xvfb-action@v1
+    #   with:
+    #     run: npm run test-electron-app
     
-    - name: Upload installer artifacts
-      uses: actions/upload-artifact@v2.2.1
-      if: ${{ always() }}
-      with:
-        name: invest-workbench-${{ matrix.os }}
-        path: dist/invest-workbench_*
+    # - name: Upload installer artifacts
+    #   uses: actions/upload-artifact@v2.2.1
+    #   if: ${{ always() }}
+    #   with:
+    #     name: invest-workbench-${{ matrix.os }}
+    #     path: dist/invest-workbench_*
