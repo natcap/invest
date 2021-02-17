@@ -64,7 +64,7 @@ jobs:
         echo "PKG_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
         echo "GIT_REV=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         echo "BUCKET=$([ ${{ github.repository_owner }} == 'natcap' ] \
-          && echo 'gs://releases.naturalcapitalproject.org/invest-workbench/' \
+          && echo 'gs://releases.naturalcapitalproject.org/invest-workbench' \
           || echo 'gs://natcap-dev-build-artifacts/invest-workbench/${{ github.repository_owner }}' \
           )" >> $GITHUB_ENV
     - name: Set up Python for gsutil
