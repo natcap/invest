@@ -1,0 +1,14 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 3
+    },
+    "auditLog": "/Users/emily/invest-workbench/tests/data/.51a2a3414388d3b975c12395b5f5b9107906d6c3-audit.json",
+    "files": [
+        {
+            "date": 1613515662694,
+            "name": "/Users/emily/invest-workbench/tests/data/invest-workbench-log-2021-02-16.txt",
+            "hash": "6c195eb9b79f921e978cf3374bd8b7e6"
+        }
+    ]
+}

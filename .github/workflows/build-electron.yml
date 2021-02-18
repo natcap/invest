@@ -13,7 +13,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest]
         node-version: [12.x]
 
     steps:
@@ -43,7 +43,7 @@ jobs:
     - name: Test electron app with puppeteer
       uses: GabrielBB/xvfb-action@v1
       with:
-        run: npm run test-electron-app
+        run: jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js
     
     - name: Upload installer artifacts to github
       uses: actions/upload-artifact@v2.2.1
