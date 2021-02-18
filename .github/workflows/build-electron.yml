@@ -2,6 +2,10 @@ name: Build, Test Binaries, & Release
 
 on: [push, pull_request]
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   build-and-release:
     runs-on: ${{ matrix.os }}
@@ -25,30 +29,25 @@ jobs:
       run: npm install
 
     - name: Fetch InVEST Binaries
-      shell: bash
       run: npm run fetch-invest
 
-    - name: Build & Release Electron application
-      uses: samuelmeuli/action-electron-builder@v1
-      if: ${{ always() }}
-      with:
-        build_script_name: build
-        args: -c.extraMetadata.main=build/main.js
-        github_token: ${{ secrets.github_token }}
-        # If the commit is tagged with a version (e.g. "v1.0.0"),
-        # release the app after building
-        release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    - name: Run the build script
+      run: npm run build
+     
+    - name: Run electron-builder
+      env:
+        GH_TOKEN: env.GITHUB_TOKEN
+        DEBUG: electron-builder
+      run: npm run dist
 
     - name: Test electron app with puppeteer
       uses: GabrielBB/xvfb-action@v1
       with:
         run: npm run test-electron-app
     
-    - name: Upload installer artifacts
-      uses: actions/upload-artifact@v2-preview
+    - name: Upload installer artifacts to github
+      uses: actions/upload-artifact@v2.2.1
       if: ${{ always() }}
       with:
         name: invest-workbench-${{ matrix.os }}
         path: dist/invest-workbench_*
-
-    
