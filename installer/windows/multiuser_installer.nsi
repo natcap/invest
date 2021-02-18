@@ -699,21 +699,21 @@ Function .onInit
     ${endif}
 ;;;;;;;;;;;;;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; IfErrors skiphelp showhelp
-; showhelp:
-;     MessageBox MB_OK "InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs$\r$\n\
-;     $\r$\n\
-;     For more information about InVEST or the Natural Capital Project, visit our \
-;     website: https://naturalcapitalproject.stanford.edu/invest$\r$\n\
-;     $\r$\n\
-;     Command-Line Options:$\r$\n\
-;         /?$\t$\t=$\tDisplay this help and exit$\r$\n\
-;         /S$\t$\t=$\tSilently install InVEST.$\r$\n\
-;         /D=$\t$\t=$\tSet the installation directory.$\r$\n\
-;         /DATAZIP=$\t=$\tUse this sample data zipfile.$\r$\n\
-;         "
-;     abort
-; skiphelp:
+    IfErrors skiphelp showhelp
+    showhelp:
+         MessageBox MB_OK "InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs$\r$\n\
+         $\r$\n\
+         For more information about InVEST or the Natural Capital Project, visit our \
+         website: https://naturalcapitalproject.stanford.edu/invest$\r$\n\
+         $\r$\n\
+         Command-Line Options:$\r$\n\
+             /?$\t$\t=$\tDisplay this help and exit$\r$\n\
+             /S$\t$\t=$\tSilently install InVEST.$\r$\n\
+             /D=$\t$\t=$\tSet the installation directory.$\r$\n\
+             /DATAZIP=$\t=$\tUse this sample data zipfile.$\r$\n\
+             "
+         abort
+    skiphelp:
 
 ; !insertmacro FindProc $processFound "invest.exe"
 

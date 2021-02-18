@@ -90,15 +90,6 @@ Function un.PageInstallModeChangeMode
     !insertmacro MUI_STARTMENU_GETFOLDER "" $StartMenuFolder
 FunctionEnd
 
-;Function un.PageComponentsPre
-;FunctionEnd
-
-;Function un.PageComponentsShow
-    ; Show/hide the Back button
-;    GetDlgItem $0 $HWNDPARENT 3
-;    ShowWindow $0 $UninstallShowBackButton
-;FunctionEnd
-
 Function un.onUninstFailed
     MessageBox MB_ICONSTOP "${PRODUCT_NAME} ${VERSION} could not be fully uninstalled.$\r$\nPlease, restart Windows and run the uninstaller again." /SD IDOK
 FunctionEnd
