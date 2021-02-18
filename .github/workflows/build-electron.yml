@@ -31,28 +31,14 @@ jobs:
     - name: Fetch InVEST Binaries
       run: npm run fetch-invest
 
-    - name: NPM Install
-      run: npm install
-
     - name: Run the build script
       run: npm run build
      
-    - name: Run electron-builder on macOS
-      if: matrix.os == 'macos-latest'
+    - name: Run electron-builder
       env:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
-      run: |
-        # use the built version as the entrypoint
-        # make sure we don't publish to github releases
-        npx --no-install electron-builder build --mac -c.extraMetadata.main=build/main.js --publish never
-
-    - name: Run electron-builder on Windows
-      if: matrix.os == 'windows-latest'
-      env:
-        GH_TOKEN: env.GITHUB_TOKEN
-        DEBUG: electron-builder
-      run: npx --no-install electron-builder build --windows -c.extraMetadata.main=build/main.js --publish never
+      run: npm run dist
 
       # Also run all tests on the build dir code?
     - name: Test flask app binaries
