@@ -1,6 +1,6 @@
 'use strict';
 
-const { spawnSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs-extra');
 const path = require('path');
 const glob = require('glob');
@@ -13,6 +13,7 @@ if (process.argv[2] && process.argv[2] === 'clean') {
 } else {
   clean();
   build();
+  getGitRev();
 }
 
 /** Remove all the files created during build()
@@ -66,4 +67,14 @@ function build() {
       fs.copySync(file, dest);
     }
   });
+}
+
+/** Uniquely identify the changeset we're building & packaging.
+ *
+ * electron-builder will read this .env file and use the string in
+ * the artifactName.
+ */
+function getGitRev() {
+  const rev = execFileSync('git', ['rev-parse', '--short', 'HEAD']);
+  fs.writeFileSync('electron-builder.env', `GITREV=${rev}`);
 }
