@@ -2,6 +2,10 @@ name: Build, Test Binaries, & Release
 
 on: [push, pull_request]
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   build-and-release:
     runs-on: ${{ matrix.os }}
@@ -25,23 +29,19 @@ jobs:
       run: npm install
 
     - name: Fetch InVEST Binaries
-      shell: bash
       run: npm run fetch-invest
 
-    - name: Build & Release Electron application
-      uses: samuelmeuli/action-electron-builder@v1
-      if: ${{ always() }}
-      with:
-        build_script_name: build
-        args: -c.extraMetadata.main=build/main.js
-        github_token: ${{ secrets.github_token }}
-        # If the commit is tagged with a version (e.g. "v1.0.0"),
-        # release the app after building
-        release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    - name: Run the build script
+      run: npm run build
+     
+    - name: Run electron-builder
+      env:
+        GH_TOKEN: env.GITHUB_TOKEN
+        DEBUG: electron-builder
+      run: npm run dist
 
       # Also run all tests on the build dir code?
     - name: Test flask app binaries
-      shell: bash -l {0}
       run: npm run test-flask-app
 
     - name: Test electron app with puppeteer
@@ -50,15 +50,17 @@ jobs:
       with:
         run: npm run test-electron-app
     
-    - name: Upload installer artifacts
-      uses: actions/upload-artifact@v2-preview
+    - name: Upload installer artifacts to github
+      uses: actions/upload-artifact@v2.2.1
       if: ${{ always() }}
       with:
         name: invest-workbench-${{ matrix.os }}
         path: dist/invest-workbench_*
 
+    # Nothing below here runs on pull requests because we use github secrets
+    # to authenticate for GCP and they are not accessible in pull request workflows.
     - name: Set variables for GCS deploy target
-      shell: bash
+      if: github.event_name != 'pull_request'
       # TODO: If this is a release, don't include the commit hash
       run: |
         echo "PKG_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
@@ -69,13 +71,12 @@ jobs:
           )" >> $GITHUB_ENV
     - name: Set up Python for gsutil
       # gsutil requires a python, which is not included on Windows
-      if: matrix.os == 'windows-latest'
+      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
       uses: actions/setup-python@v2
       with:
         python-version: 3.7
 
     - name: Set up GCP
-      # Secrets not available in PR so don't use GCP.
       if: github.event_name != 'pull_request'
       uses: google-github-actions/setup-gcloud@master
       with:
@@ -83,15 +84,13 @@ jobs:
           service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
     - name: Deploy artifacts to GCS - Windows
-      # Secrets not available in PR so don't use GCP.
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
       env:
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
         gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
 
-    - name: Deploy artifacts to GCS - Not Windows
-      # Secrets not available in PR so don't use GCP.
-      if: github.event_name != 'pull_request' && matrix.os != 'windows-latest'
+    - name: Deploy artifacts to GCS - macOS
+      if: github.event_name != 'pull_request' && matrix.os == 'macos-latest'
       run: |
         gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
