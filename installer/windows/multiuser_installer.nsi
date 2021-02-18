@@ -517,6 +517,9 @@ Section "InVEST Tools" Section_InVEST_Tools
 ;    WriteRegDWORD HKCU "${REGISTRY_PATH}" "NoModify" 1
 ;    WriteRegDWORD HKCU "${REGISTRY_PATH}" "NoRepair" 1
 
+    ;WriteRegStr HKCU "${REGISTRY_PATH}" "DisplayIcon"          "${INVEST_ICON}"
+    ; full path to registry key storing uninstall information displayed in Windows installed programs list
+    ;!define MULTIUSER_INSTALLMODE_UNINSTALL_REGISTRY_KEY_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${MULTIUSER_INSTALLMODE_UNINSTALL_REGISTRY_KEY}"
 
     ; Actually install the information we want to disk.
     SetOutPath "$INSTDIR"
@@ -559,18 +562,18 @@ Section "MSVCRT 2008 Runtime (Recommended)" Sec_VCRedist2008
     ExecWait "vcredist_x86.exe /q"
 SectionEnd
 
-Section "uninstall"
-  ; current is the default and doesn't require admin-level privileges.
-  ;SetShellVarContext current
-  rmdir /r "$SMPROGRAMS\${PACKAGE_NAME}"
-
-  ; Delete the installation directory on disk
-  rmdir /r "$INSTDIR"
-
-  ; Delete the entire registry key for this version of RIOS.
-  ;DeleteRegKey HKCU "${REGISTRY_PATH}"
+;Section "uninstall"
+;  ; current is the default and doesn't require admin-level privileges.
+;  ;SetShellVarContext current
+;  rmdir /r "$SMPROGRAMS\${PACKAGE_NAME}"
 ;
-SectionEnd
+;  ; Delete the installation directory on disk
+;  rmdir /r "$INSTDIR"
+;
+;  ; Delete the entire registry key for this version of RIOS.
+;  ;DeleteRegKey HKCU "${REGISTRY_PATH}"
+;;
+;SectionEnd
 
 Var LocalDataZip
 Var INSTALLER_DIR
