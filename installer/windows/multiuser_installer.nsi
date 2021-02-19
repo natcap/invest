@@ -87,6 +87,7 @@
 ;;;;; NSIS MultiUser ;;;;;
 !define SETUP_MUTEX "${PRODUCT_PUBLISHER} ${SOFTWARE_NAME} Setup Mutex" ; do not change this between program versions!
 !define APP_MUTEX "${PRODUCT_PUBLISHER} ${SOFTWARE_NAME} App Mutex" ; do not change this between program versions!
+!define INVEST_MUTEX "${SOFTWARE_NAME} ${PRODUCT_VERSION} Mutex" ; do not change this between program versions!
 !define SETTINGS_REG_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 
 ; NsisMultiUser optional defines
@@ -665,33 +666,13 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
 SectionGroupEnd
 
 
-;!define FindProc_NOT_FOUND 1
-;!define FindProc_FOUND 0
-;!macro FindProc result processName
-;    ExecCmd::exec "%SystemRoot%\System32\tasklist /NH /FI $\"IMAGENAME eq ${processName}$\" | %SystemRoot%\System32\find /I $\"${processName}$\""
-;    Pop $0 ; The handle for the process
-;    ExecCmd::wait $0
-;    Pop ${result} ; The exit code
-;!macroend
-;
-;Var /GLOBAL processFound
-
-;var errorMSG
 Function .onInit
-;    IfErrors noError showError
-;    showError:
-;        MessageBox MB_OK "ERROR at start of onInit"
-;        pop $errorMSG
-;        MessageBox MB_OK $errorMSG
-;    noError:
-;        MessageBox MB_OK "NO ERROR at start of onInit"
-    ClearErrors
     ${GetOptions} $CMDLINE "/?" $0
 ;;;;;;;;;;; NSIS MultiUser ;;;;;;;;;;;;;;;;;
-    ${ifnot} ${UAC_IsInnerInstance}
-        !insertmacro CheckSingleInstance "Setup" "Global" "${SETUP_MUTEX}"
-        !insertmacro CheckSingleInstance "Application" "Local" "${APP_MUTEX}"
-    ${endif}
+    ;${ifnot} ${UAC_IsInnerInstance}
+    ;    !insertmacro CheckSingleInstance "Setup" "Global" "${SETUP_MUTEX}"
+    ;    !insertmacro CheckSingleInstance "Application" "Local" "${APP_MUTEX}"
+    ;${endif}
     !insertmacro MULTIUSER_INIT
 
     ${if} $IsInnerInstance = 0
@@ -715,7 +696,13 @@ Function .onInit
          abort
     skiphelp:
 
-; !insertmacro FindProc $processFound "invest.exe"
+    ; try checking if running
+    System::Call 'kernel32::OpenMutex(i 0x100000, b 0, t "${INVEST_MUTEX}") i .R0'
+    IntCmp $R0 0 notRunning
+        System::Call 'kernel32::CloseHandle(i $R0)'
+        MessageBox MB_OK|MB_ICONEXCLAMATION "MyApp is running. Please close it first" /SD IDOK
+        Abort
+    notRunning:
 
  ;System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
  ;Pop $R0
