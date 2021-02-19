@@ -14,7 +14,7 @@ if (process.argv[2] && process.argv[2] === 'clean') {
 } else {
   clean();
   build();
-  getGitRev();
+  makeVersionString();
 }
 
 /** Remove all the files created during build()
@@ -78,8 +78,8 @@ function build() {
  * electron-builder will read this .env file and use the string in
  * the artifactName.
  */
-function getGitRev() {
-  const rev = execFileSync('git', ['describe', '--tags']);
-  fs.writeFileSync(ELECTRON_BUILDER_ENV, `GITREV=${rev}`);
-  console.log(`built version ${rev}`);
+function makeVersionString() {
+  const version = execFileSync('git', ['describe', '--tags']);
+  fs.writeFileSync(ELECTRON_BUILDER_ENV, `VERSION=${version}`);
+  console.log(`built version ${version}`);
 }
