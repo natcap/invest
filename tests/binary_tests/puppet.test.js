@@ -98,8 +98,8 @@ afterAll(async () => {
   //     exec(`taskkill /pid ${electronProcess.pid} /t /f`)
   //   }
   // }
-  const wasKilled = electronProcess.kill();
-  console.log(`electron process was killed: ${wasKilled}`);
+  // const wasKilled = electronProcess.kill();
+  // console.log(`electron process was killed: ${wasKilled}`);
 });
 
 test('Run a real invest model', async () => {
