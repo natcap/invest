@@ -72,6 +72,10 @@ Unreleased Changes (3.9.1)
       requirement version to ``0.10.3``
     * Provide a better validation error message when an overview '.ovr' file
       is input instead of a valid raster.
+* Carbon
+    * Fixed a bug where, if rate change and discount rate were set to 0, the
+      valuation results were in $/year rather than $, too small by a factor of 
+      ``lulc_fut_year - lulc_cur_year``.
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
