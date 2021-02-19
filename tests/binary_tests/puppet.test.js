@@ -83,10 +83,11 @@ afterAll(async () => {
     console.log(binaryPath);
     console.error(error);
   }
+  console.log('should be done with tests');
   // being extra careful with recursive rm
-  if (TMP_DIR.startsWith('tests/data')) {
-    fs.rmdirSync(TMP_DIR, { recursive: true });
-  }
+  // if (TMP_DIR.startsWith('tests/data')) {
+  //   fs.rmdirSync(TMP_DIR, { recursive: true });
+  // }
   // I thought this business would be necessary to kill the spawned shell
   // process running electron - since that's how we kill a similar spawned
   // subprocess in the app, but actually it is not.
