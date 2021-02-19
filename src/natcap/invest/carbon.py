@@ -36,7 +36,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster representing the land-cover of the"
                 "current scenario."),
-            "name": "current landcover"
+            "name": "current " + utils.LULC_ARG_NAME
         },
         "calc_sequestration": {
             "type": "boolean",
@@ -59,7 +59,7 @@ ARGS_SPEC = {
                 "enabled, this should be the reference, or baseline, future "
                 "scenario against which to compare the REDD policy "
                 "scenario."),
-            "name": "future landcover"
+            "name": "future " + utils.LULC_ARG_NAME
         },
         "do_redd": {
             "type": "boolean",
@@ -81,7 +81,7 @@ ARGS_SPEC = {
                 "A GDAL-supported raster representing the land-cover of "
                 "the REDD policy future scenario.  This scenario will be "
                 "compared to the baseline future scenario."),
-            "name": "REDD policy)"
+            "name": "REDD " + utils.LULC_ARG_NAME
         },
         "carbon_pools_path": {
             "validation_options": {

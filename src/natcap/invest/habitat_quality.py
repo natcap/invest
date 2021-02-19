@@ -42,7 +42,7 @@ ARGS_SPEC = {
                 "The dataset should be in a projection where the units are "
                 "in meters and the projection used should be defined.  The "
                 "LULC codes must match the codes in the Sensitivity table."),
-            "name": "current" + utils.LULC_ARG_NAME
+            "name": "current " + utils.LULC_ARG_NAME
         },
         "lulc_fut_path": {
             "type": "raster",
@@ -61,7 +61,7 @@ ARGS_SPEC = {
                 "units are in meters and the projection used should be "
                 "defined. The LULC codes must match the codes in the "
                 "Sensitivity table."),
-            "name": "future" + utils.LULC_ARG_NAME
+            "name": "future " + utils.LULC_ARG_NAME
         },
         "lulc_bas_path": {
             "type": "raster",
@@ -85,7 +85,7 @@ ARGS_SPEC = {
                 "codes must match the codes in the Sensitivity table.  If "
                 "possible the baseline map should refer to a time when "
                 "intensive management of the landscape was relatively rare."),
-            "name": "baseline" + utils.LULC_ARG_NAME
+            "name": "baseline " + utils.LULC_ARG_NAME
         },
         "threats_table_path": {
             "validation_options": {
