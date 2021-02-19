@@ -20,9 +20,6 @@ Section "un.Program Files" SectionUninstallProgram
 
     ; Try to delete the EXE as the first step - if it's in use, don't remove anything else
     !insertmacro DeleteRetryAbort "$INSTDIR\${PROGEXE}"
-    !ifdef LICENSE_FILE
-        !insertmacro DeleteRetryAbort "$INSTDIR\${LICENSE_FILE}"
-    !endif
 
     ; Clean up "Program Group" - we check that we created Start menu folder, 
     ; if $StartMenuFolder is empty, the whole $SMPROGRAMS directory will be removed!
@@ -38,8 +35,6 @@ Section "-Uninstall" ; hidden section, must always be the last one!
     ; we cannot use un.DeleteRetryAbort here - when using the _? parameter
     ; the uninstaller cannot delete itself and Delete fails, which is OK
     Delete "$INSTDIR\${UNINSTALL_FILENAME}"
-    ; remove the directory only if it is empty - the user might have saved some files in it
-    ;RMDir "$INSTDIR"
     ; Wipe the install directory regardless of what's in there.
     rmdir /r "$INSTDIR"
 

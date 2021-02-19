@@ -669,10 +669,13 @@ SectionGroupEnd
 Function .onInit
     ${GetOptions} $CMDLINE "/?" $0
 ;;;;;;;;;;; NSIS MultiUser ;;;;;;;;;;;;;;;;;
-    ;${ifnot} ${UAC_IsInnerInstance}
-    ;    !insertmacro CheckSingleInstance "Setup" "Global" "${SETUP_MUTEX}"
-    ;    !insertmacro CheckSingleInstance "Application" "Local" "${APP_MUTEX}"
-    ;${endif}
+    ; this is really just checking if there is another instance of the 
+    ; installer running
+    ${ifnot} ${UAC_IsInnerInstance}
+        !insertmacro CheckSingleInstance "Setup" "Global" "${SETUP_MUTEX}"
+        !insertmacro CheckSingleInstance "Application" "Local" "${APP_MUTEX}"
+    ${endif}
+    
     !insertmacro MULTIUSER_INIT
 
     ${if} $IsInnerInstance = 0
@@ -695,21 +698,13 @@ Function .onInit
              "
          abort
     skiphelp:
-
-    ; try checking if running
-    System::Call 'kernel32::OpenMutex(i 0x100000, b 0, t "${INVEST_MUTEX}") i .R0'
-    IntCmp $R0 0 notRunning
-        System::Call 'kernel32::CloseHandle(i $R0)'
-        MessageBox MB_OK|MB_ICONEXCLAMATION "MyApp is running. Please close it first" /SD IDOK
-        Abort
-    notRunning:
-
+ 
  ;System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
  ;Pop $R0
 
- ;StrCmp $R0 0 +3
- ;  MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
- ;  Abort
+    ;StrCmp $R0 0 +3
+    ;    MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
+    ;    Abort
  
  
 
