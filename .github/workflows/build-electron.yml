@@ -61,10 +61,8 @@ jobs:
     # to authenticate for GCP and they are not accessible in pull request workflows.
     - name: Set variables for GCS deploy target
       if: github.event_name != 'pull_request'
-      # TODO: If this is a release, don't include the commit hash
       run: |
-        echo "PKG_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
-        echo "GIT_REV=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        echo "VERSION"=$(git describe --tags) >> $GITHUB_ENV
         echo "BUCKET=$([ ${{ github.repository_owner }} == 'natcap' ] \
           && echo 'gs://releases.naturalcapitalproject.org/invest-workbench' \
           || echo 'gs://natcap-dev-build-artifacts/invest-workbench/${{ github.repository_owner }}' \
@@ -88,9 +86,9 @@ jobs:
       env:
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
-        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
+        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.VERSION }}/"
 
     - name: Deploy artifacts to GCS - macOS
       if: github.event_name != 'pull_request' && matrix.os == 'macos-latest'
       run: |
-        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
+        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.VERSION }}/"
