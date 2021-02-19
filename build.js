@@ -7,6 +7,7 @@ const glob = require('glob');
 
 const SRC_DIR = 'src';
 const BUILD_DIR = 'build';
+const ELECTRON_BUILDER_ENV = 'electron-builder.env';
 
 if (process.argv[2] && process.argv[2] === 'clean') {
   clean();
@@ -39,6 +40,7 @@ function clean() {
       fs.unlinkSync(file);
     }
   });
+  fs.unlinkSync(ELECTRON_BUILDER_ENV);
 }
 
 /** Transpile and copy all src/ code to build folder. */
@@ -75,6 +77,7 @@ function build() {
  * the artifactName.
  */
 function getGitRev() {
-  const rev = execFileSync('git', ['rev-parse', '--short', 'HEAD']);
-  fs.writeFileSync('electron-builder.env', `GITREV=${rev}`);
+  const rev = execFileSync('git', ['describe', '--tags']);
+  fs.writeFileSync(ELECTRON_BUILDER_ENV, `GITREV=${rev}`);
+  console.log(`built version ${rev}`);
 }
