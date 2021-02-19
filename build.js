@@ -40,7 +40,9 @@ function clean() {
       fs.unlinkSync(file);
     }
   });
-  fs.unlinkSync(ELECTRON_BUILDER_ENV);
+  try {
+    fs.unlinkSync(ELECTRON_BUILDER_ENV);
+  } catch {}
 }
 
 /** Transpile and copy all src/ code to build folder. */
