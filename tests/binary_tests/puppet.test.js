@@ -57,17 +57,18 @@ function makeAOI() {
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
-  electronProcess = spawn(
-    `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
-    { shell: true }
-  );
-  electronProcess.stderr.on('data', (data) => {
-    console.log(`${data}`);
-  });
-  // so we don't make the next fetch too early
-  await new Promise((resolve) => setTimeout(resolve, 5000));
-  const res = await fetch(`http://localhost:${PORT}/json/version`);
-  const data = JSON.parse(await res.text());
+  console.log('beforeAll');
+  // electronProcess = spawn(
+  //   `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
+  //   { shell: true }
+  // );
+  // electronProcess.stderr.on('data', (data) => {
+  //   console.log(`${data}`);
+  // });
+  // // so we don't make the next fetch too early
+  // await new Promise((resolve) => setTimeout(resolve, 5000));
+  // const res = await fetch(`http://localhost:${PORT}/json/version`);
+  // const data = JSON.parse(await res.text());
   // browser = await puppeteer.connect({
   //   browserWSEndpoint: data.webSocketDebuggerUrl, // this works
   //   // browserURL: `http://localhost:${PORT}`,    // this also works
@@ -76,7 +77,8 @@ beforeAll(async () => {
   // makeAOI();
 });
 
-// afterAll(async () => {
+afterAll(async () => {
+  console.log('afterAll');
 //   try {
 //     await browser.close();
 //   } catch (error) {
@@ -101,11 +103,11 @@ beforeAll(async () => {
 //   // }
 //   // const wasKilled = electronProcess.kill();
 //   // console.log(`electron process was killed: ${wasKilled}`);
-// });
+});
 
 test('Run a real invest model', async () => {
   // const { findByText, findByLabelText, findByRole } = queries;
-  console.log('pass');
+  console.log('test');
   // await waitFor(() => {
   //   expect(browser.isConnected()).toBeTruthy();
   // });
