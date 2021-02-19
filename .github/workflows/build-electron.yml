@@ -19,6 +19,11 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # fetch complete history
+
+    - name: Fetch git tags
+      run: git fetch origin +refs/tags/*:refs/tags/*
 
     - name: Install Node.js
       uses: actions/setup-node@v1
