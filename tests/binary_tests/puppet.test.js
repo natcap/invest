@@ -68,12 +68,12 @@ beforeAll(async () => {
   await new Promise((resolve) => setTimeout(resolve, 5000));
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
-  browser = await puppeteer.connect({
-    browserWSEndpoint: data.webSocketDebuggerUrl, // this works
-    // browserURL: `http://localhost:${PORT}`,    // this also works
-    defaultViewport: { width: 1000, height: 800 },
-  });
-  makeAOI();
+  // browser = await puppeteer.connect({
+  //   browserWSEndpoint: data.webSocketDebuggerUrl, // this works
+  //   // browserURL: `http://localhost:${PORT}`,    // this also works
+  //   defaultViewport: { width: 1000, height: 800 },
+  // });
+  // makeAOI();
 });
 
 // afterAll(async () => {
