@@ -111,7 +111,6 @@ SetCompressor zlib
 ; Include after SetCompressor
 !include Utils.nsh
 
-
 ; MUI has some graphical files that I want to define, which must be defined
 ; here before the macros are declared.
 ;
@@ -199,7 +198,6 @@ Var StartMenuFolder
 !insertmacro MUI_PAGE_STARTMENU "" "$StartMenuFolder"
 ; the MUI_PAGE_STARTMENU macro undefines MUI_STARTMENUPAGE_DEFAULTFOLDER, but we need it
 !define MUI_STARTMENUPAGE_DEFAULTFOLDER "${PRODUCT_NAME}"
-
 ;;;;;;;;;;;;;;; ;;;;;;;;;;;;;;
 
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW PageInstFilesPre
@@ -424,13 +422,10 @@ Function DumpLog
         Exch $5
 FunctionEnd
 
-;Function Un.onInit
-;    !insertmacro CheckProgramRunning "invest"
-;FunctionEnd
-
 ; Copied into the invest folder later in the NSIS script
 !define INVEST_BINARIES "$INSTDIR\invest-3-x64"
 !define INVEST_ICON "${INVEST_BINARIES}\InVEST-2.ico"
+!define UNINSTALL_ICON "${INVEST_BINARIES}\InVEST-2.ico"
 !define SAMPLEDATADIR "$INSTDIR\sample_data"
 !macro StartMenuLink linkName modelName
     CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe" "run ${modelName}" "${INVEST_ICON}"
@@ -446,13 +441,11 @@ Section "InVEST Tools" Section_InVEST_Tools
     !define UNINSTALL_PATH "$INSTDIR\Uninstall_${VERSION}.exe"
     writeUninstaller "${UNINSTALL_PATH}"
 
-    ;;;;;;;;;;;;;; NSIS MultiUSER ;;;;;;;;;;;; 
+    ;;;;;;;;;;;;;; NSIS MultiUSER ;;;;;;;;;;;;
     !insertmacro MULTIUSER_RegistryAddInstallInfo ; add registry keys
     ;;;;;;;;;;;;;;;;;;;;;
 
-
     !insertmacro MUI_STARTMENU_WRITE_BEGIN ""
-
         ; Create start  menu shortcuts.
         ; These shortcut paths are set in the appropriate places based on the SetShellVarConext flag.
         ; This flag is automatically set based on the MULTIUSER installation mode selected by the user.
@@ -492,7 +485,7 @@ Section "InVEST Tools" Section_InVEST_Tools
         CreateDirectory "${FISHERIES}"
         !insertmacro StartMenuLink "${FISHERIES}\Fisheries" "fisheries"
         !insertmacro StartMenuLink "${FISHERIES}\Fisheries Habitat Scenario Tool" "fisheries_hst"
-        
+
         ;;;;;;;;;;;; NSIS MultiUser ;;;;;;;;;;;;;;;;;;;
         ${if} $MultiUser.InstallMode == "AllUsers"
             CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "${UNINSTALL_PATH}" "/allusers"
@@ -502,25 +495,6 @@ Section "InVEST Tools" Section_InVEST_Tools
         ;;;;;;;;;;;;;; ;;;;;;;;;;;;;;;;;;;;;
 
     !insertmacro MUI_STARTMENU_WRITE_END
-
-;    ; Write registry keys for convenient uninstallation via add/remove programs.
-;    ; Inspired by the example at
-;    ; nsis.sourceforge.net/A_simple_installer_with_start_menu_shortcut_and_uninstaller
-;    !define REGISTRY_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_PUBLISHER} ${PRODUCT_NAME} ${PRODUCT_VERSION}"
-;    WriteRegStr HKCU "${REGISTRY_PATH}" "DisplayName"          "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-;    WriteRegStr HKCU "${REGISTRY_PATH}" "UninstallString"      "${UNINSTALL_PATH}"
-;    WriteRegStr HKCU "${REGISTRY_PATH}" "QuietUninstallString" "${UNINSTALL_PATH} /S"
-;    WriteRegStr HKCU "${REGISTRY_PATH}" "InstallLocation"      "$INSTDIR"
-;    WriteRegStr HKCU "${REGISTRY_PATH}" "DisplayIcon"          "${INVEST_ICON}"
-;    WriteRegStr HKCU "${REGISTRY_PATH}" "Publisher"            "${PRODUCT_PUBLISHER}"
-;    WriteRegStr HKCU "${REGISTRY_PATH}" "URLInfoAbout"         "${PRODUCT_WEB_SITE}"
-;    WriteRegStr HKCU "${REGISTRY_PATH}" "DisplayVersion"       "${PRODUCT_VERSION}"
-;    WriteRegDWORD HKCU "${REGISTRY_PATH}" "NoModify" 1
-;    WriteRegDWORD HKCU "${REGISTRY_PATH}" "NoRepair" 1
-
-    ;WriteRegStr HKCU "${REGISTRY_PATH}" "DisplayIcon"          "${INVEST_ICON}"
-    ; full path to registry key storing uninstall information displayed in Windows installed programs list
-    ;!define MULTIUSER_INSTALLMODE_UNINSTALL_REGISTRY_KEY_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${MULTIUSER_INSTALLMODE_UNINSTALL_REGISTRY_KEY}"
 
     ; Actually install the information we want to disk.
     SetOutPath "$INSTDIR"
@@ -544,7 +518,7 @@ Section "InVEST Tools" Section_InVEST_Tools
 
     ; If the user has provided a custom data zipfile, unzip the data.
     ${If} $LocalDataZipFile != ""
-      nsisunz::UnzipToLog $LocalDataZipFile "${SAMPLEDATADIR}"
+        nsisunz::UnzipToLog $LocalDataZipFile "${SAMPLEDATADIR}"
     ${EndIf}
 
     ; Write the install log to a text file on disk.
@@ -563,19 +537,6 @@ Section "MSVCRT 2008 Runtime (Recommended)" Sec_VCRedist2008
     ExecWait "vcredist_x86.exe /q"
 SectionEnd
 
-;Section "uninstall"
-;  ; current is the default and doesn't require admin-level privileges.
-;  ;SetShellVarContext current
-;  rmdir /r "$SMPROGRAMS\${PACKAGE_NAME}"
-;
-;  ; Delete the installation directory on disk
-;  rmdir /r "$INSTDIR"
-;
-;  ; Delete the entire registry key for this version of RIOS.
-;  ;DeleteRegKey HKCU "${REGISTRY_PATH}"
-;;
-;SectionEnd
-
 Var LocalDataZip
 Var INSTALLER_DIR
 
@@ -587,49 +548,49 @@ Var INSTALLER_DIR
     Pop $R0 ;Get the status of the file downloaded
     StrCmp $R0 "OK" got_it failed
     got_it:
-       nsisunz::UnzipToLog ${LocalFilepath} "."
-       Delete ${LocalFilepath}
-       goto done
+        nsisunz::UnzipToLog ${LocalFilepath} "."
+        Delete ${LocalFilepath}
+        goto done
     failed:
-       MessageBox MB_OK "Download failed: $R0 ${RemoteFilepath}. This might have happened because your Internet connection timed out, or our download server is experiencing problems.  The installation will continue normally, but you'll be missing the ${RemoteFilepath} dataset in your installation.  You can manually download that later by visiting the 'Individual inVEST demo datasets' section of our download page at www.naturalcapitalproject.org."
+        MessageBox MB_OK "Download failed: $R0 ${RemoteFilepath}. This might have happened because your Internet connection timed out, or our download server is experiencing problems.  The installation will continue normally, but you'll be missing the ${RemoteFilepath} dataset in your installation.  You can manually download that later by visiting the 'Individual inVEST demo datasets' section of our download page at www.naturalcapitalproject.org."
     done:
 !macroend
 
 !macro downloadData Title Filename AdditionalSizeKb
-  ; AdditionalSizeKb is in kilobytes.  Easy way to find this out is to do
-  ; "$ du -BK -c <directory with model sample data>" and then use the total.
-  Section "${Title}"
-    AddSize "${AdditionalSizeKb}"
+    ; AdditionalSizeKb is in kilobytes.  Easy way to find this out is to do
+    ; "$ du -BK -c <directory with model sample data>" and then use the total.
+    Section "${Title}"
+        AddSize "${AdditionalSizeKb}"
 
-    ; Check to see if the user defined an 'advanced options' zipfile.
-    ; If yes, then we should skip all of this checking, since we only want to use
-    ; the data that was in that zip.
-    ${If} $LocalDataZipFile != ""
-        goto end_of_section
-    ${EndIf}
+        ; Check to see if the user defined an 'advanced options' zipfile.
+        ; If yes, then we should skip all of this checking, since we only want to use
+        ; the data that was in that zip.
+        ${If} $LocalDataZipFile != ""
+            goto end_of_section
+        ${EndIf}
 
-    ; Use a local zipfile if it exists in ./sample_data
-    ${GetExePath} $INSTALLER_DIR
-    StrCpy $LocalDataZip "$INSTALLER_DIR\sample_data\${Filename}"
+        ; Use a local zipfile if it exists in ./sample_data
+        ${GetExePath} $INSTALLER_DIR
+        StrCpy $LocalDataZip "$INSTALLER_DIR\sample_data\${Filename}"
 
-;    MessageBox MB_OK "zip: $LocalDataZip"
-    IfFileExists "$LocalDataZip" LocalFileExists DownloadFile
-    LocalFileExists:
-        nsisunz::UnzipToLog "$LocalDataZip" "${SAMPLEDATADIR}"
-;        MessageBox MB_OK "found it locally"
-       goto done
-    DownloadFile:
-        ;This is hard coded so that all the download data macros go to the same site
-        SetOutPath "${SAMPLEDATADIR}"
-        !insertmacro downloadFile "${DATA_LOCATION}/${Filename}" "${Filename}"
-      end_of_section:
-      SectionEnd
+        ; MessageBox MB_OK "zip: $LocalDataZip"
+        IfFileExists "$LocalDataZip" LocalFileExists DownloadFile
+        LocalFileExists:
+            nsisunz::UnzipToLog "$LocalDataZip" "${SAMPLEDATADIR}"
+            ; MessageBox MB_OK "found it locally"
+        goto done
+        DownloadFile:
+            ;This is hard coded so that all the download data macros go to the same site
+            SetOutPath "${SAMPLEDATADIR}"
+            !insertmacro downloadFile "${DATA_LOCATION}/${Filename}" "${Filename}"
+        end_of_section:
+    SectionEnd
 !macroend
 
 SectionGroup /e "InVEST Datasets" SEC_DATA
-  ;here all the numbers indicate the size of the downloads in kilobytes
-  ;they were calculated by hand by decompressing all the .zip files and recording
-  ;the size by hand.
+    ;here all the numbers indicate the size of the downloads in kilobytes
+    ;they were calculated by hand by decompressing all the .zip files and recording
+    ;the size by hand.
     !insertmacro downloadData "Annual Water Yield (optional)" "Annual_Water_Yield.zip" 20513
     !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 116
     !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 17748
@@ -668,20 +629,21 @@ SectionGroupEnd
 
 Function .onInit
     ${GetOptions} $CMDLINE "/?" $0
-;;;;;;;;;;; NSIS MultiUser ;;;;;;;;;;;;;;;;;
+
+    ;;;;;;;;;;; NSIS MultiUser ;;;;;;;;;;;;;;;;;
     ; this is really just checking if there is another instance of the 
     ; installer running
     ${ifnot} ${UAC_IsInnerInstance}
         !insertmacro CheckSingleInstance "Setup" "Global" "${SETUP_MUTEX}"
         !insertmacro CheckSingleInstance "Application" "Local" "${APP_MUTEX}"
     ${endif}
-    
+
     !insertmacro MULTIUSER_INIT
 
     ${if} $IsInnerInstance = 0
         !insertmacro MUI_LANGDLL_DISPLAY
     ${endif}
-;;;;;;;;;;;;;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;;;;;;;;;;;;;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     IfErrors skiphelp showhelp
     showhelp:
@@ -698,29 +660,27 @@ Function .onInit
              "
          abort
     skiphelp:
- 
- ;System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
- ;Pop $R0
 
-    ;StrCmp $R0 0 +3
-    ;    MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
-    ;    Abort
- 
- 
+        ;System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
+        ;Pop $R0
 
-  ${ifNot} ${AtMostWin7}
-    ; disable the section if we're not running on Windows 7 or earlier.
-    ; This section should not execute for Windows 8 or later.
-    SectionGetFlags ${Sec_VCRedist2008} $0
-    IntOp $0 $0 & ${SECTION_OFF}
-    SectionSetFlags ${Sec_VCRedist2008} $0
-    SectionSetText ${Sec_VCRedist2008} ""
-  ${endIf}
+        ;StrCmp $R0 0 +3
+        ;    MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
+        ;    Abort
 
-  ; If the user has defined the /DATAZIP flag, set the 'advanced' option
-  ; to the user's defined value.
-  ${GetOptions} $CMDLINE "/DATAZIP=" $0
-  strcpy $LocalDataZipFile $0
+        ${ifNot} ${AtMostWin7}
+            ; disable the section if we're not running on Windows 7 or earlier.
+            ; This section should not execute for Windows 8 or later.
+            SectionGetFlags ${Sec_VCRedist2008} $0
+            IntOp $0 $0 & ${SECTION_OFF}
+            SectionSetFlags ${Sec_VCRedist2008} $0
+            SectionSetText ${Sec_VCRedist2008} ""
+        ${endIf}
+
+        ; If the user has defined the /DATAZIP flag, set the 'advanced' option
+        ; to the user's defined value.
+        ${GetOptions} $CMDLINE "/DATAZIP=" $0
+        strcpy $LocalDataZipFile $0
 FunctionEnd
 
 ; remove next line if you're using signing after the uninstaller is extracted from the initially compiled setup
