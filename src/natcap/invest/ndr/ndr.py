@@ -41,7 +41,7 @@ ARGS_SPEC = {
                 "the elevation model (recommended when unusual streams are "
                 "observed.) See the Working with the DEM section of the "
                 "InVEST User's Guide for more information."),
-            "name": "digital elevation model"
+            "name": utils.DEM_ARG_NAME
         },
         "lulc_path": {
             "type": "raster",
@@ -53,7 +53,7 @@ ARGS_SPEC = {
                 "A GDAL-supported raster file containing integer values "
                 "representing the LULC code for each cell.  The LULC code "
                 "should be an integer."),
-            "name": "land use"
+            "name": utils.LULC_ARG_NAME
         },
         "runoff_proxy_path": {
             "type": "raster",

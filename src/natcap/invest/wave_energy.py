@@ -71,7 +71,7 @@ ARGS_SPEC = {
                 "for computing valuation and is recommended for biophysical "
                 "runs as well.  The AOI should be projected in linear units "
                 "of meters."),
-            "name": "area of interest"
+            "name": utils.AOI_ARG_NAME
         },
         "machine_perf_path": {
             "type": "csv",
@@ -101,7 +101,7 @@ ARGS_SPEC = {
                 "A GDAL-supported raster file containing a digital elevation "
                 "model dataset that has elevation values in meters.  Used to "
                 "get the cable distance for wave energy transmission."),
-            "name": "digital elevation model"
+            "name": utils.DEM_ARG_NAME
         },
         "valuation_container": {
             "type": "boolean",

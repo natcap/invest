@@ -36,7 +36,7 @@ ARGS_SPEC = {
                 "This is the landcover map that's used to map biophysical "
                 "properties about habitat and floral resources of landcover "
                 "types to a spatial layout."),
-            "name": "landcover map"
+            "name": utils.LULC_ARG_NAME
         },
         "guild_table_path": {
             "validation_options": {

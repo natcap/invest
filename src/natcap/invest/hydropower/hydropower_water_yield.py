@@ -41,7 +41,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file containing LULC code "
                 "(expressed as integers) for each cell."),
-            "name": "land use"
+            "name": utils.LULC_ARG_NAME
         },
         "depth_to_root_rest_layer_path": {
             "type": "raster",

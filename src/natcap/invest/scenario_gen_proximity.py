@@ -104,7 +104,7 @@ ARGS_SPEC = {
             "about": (
                 "This is a set of polygons that will be used to aggregate "
                 "carbon values at the end of the run if provided."),
-            "name": "area of interest"
+            "name": utils.AOI_ARG_NAME
         },
         "convert_farthest_from_edge": {
             "type": "boolean",

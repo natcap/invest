@@ -90,7 +90,7 @@ ARGS_SPEC = {
                 "the elevation model (recommended when unusual streams are "
                 "observed.) See the 'Working with the DEM' section of the "
                 "InVEST User's Guide for more information."),
-            "name": "digital elevation model"
+            "name": utils.DEM_ARG_NAME
         },
         "lulc_raster_path": {
             "type": "raster",
@@ -101,7 +101,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file, with an integer LULC code "
                 "for each cell."),
-            "name": "landcover"
+            "name": utils.LULC_ARG_NAME
         },
         "soil_group_path": {
             "type": "raster",
@@ -125,7 +125,7 @@ ARGS_SPEC = {
                 "Path to a vector (typically a watershed) that indicates the "
                 "area over which the model should be run, as well as the area "
                 "in which to aggregate over when calculating the output Qb."),
-            "name": "area of interest"
+            "name": utils.AOI_ARG_NAME
         },
         "biophysical_table_path": {
             "validation_options": {

@@ -57,7 +57,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported vector file representing the area of "
                 "interest where the model will run the analysis."),
-            "name": "area of interest"
+            "name": utils.AOI_ARG_NAME
         },
         "hostname": {
             "type": "freestyle_string",

@@ -43,7 +43,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file with an elevation value for "
                 "each cell."),
-            "name": "digital elevation model"
+            "name": utils.DEM_ARG_NAME
         },
         "detect_pour_points": {
             "type": "boolean",

@@ -57,7 +57,7 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "aoi_path": {
-            "name": "area of interest",
+            "name": utils.AOI_ARG_NAME,
             "type": "vector",
             "required": True,
             "about": (
@@ -81,7 +81,7 @@ ARGS_SPEC = {
                 "consistent with the project of the DEM input."),
         },
         "dem_path": {
-            "name": "digital elevation model",
+            "name": utils.DEM_ARG_NAME,
             "type": "raster",
             "required": True,
             "validation_options": {

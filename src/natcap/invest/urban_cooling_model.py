@@ -67,7 +67,7 @@ ARGS_SPEC = {
             )
         },
         "aoi_vector_path": {
-            "name": "area of interest",
+            "name": utils.AOI_ARG_NAME,
             "type": "vector",
             "required": True,
             "about": (

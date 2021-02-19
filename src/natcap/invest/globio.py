@@ -50,7 +50,7 @@ ARGS_SPEC = {
             "about": (
                 'used in "mode (a)" path to a base landcover map with'
                 ' integer codes'),
-            "name": "landcover"
+            "name": utils.LULC_ARG_NAME
         },
         "lulc_to_globio_table_path": {
             "validation_options": {
@@ -149,7 +149,7 @@ ARGS_SPEC = {
             "about": (
                 "This is a set of polygons that can be used to aggregate MSA "
                 "sum and mean to a polygon."),
-            "name": "area of interest",
+            "name": utils.AOI_ARG_NAME
         },
         "globio_lulc_path": {
             "validation_options": {

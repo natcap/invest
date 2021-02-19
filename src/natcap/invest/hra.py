@@ -150,7 +150,7 @@ ARGS_SPEC = {
             }
         },
         "aoi_vector_path": {
-            "name": "area of interest",
+            "name": utils.AOI_ARG_NAME,
             "about": (
                 "A GDAL-supported vector file containing feature containing "
                 "one or more planning regions. subregions. An optional field "

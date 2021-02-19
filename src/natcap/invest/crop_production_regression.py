@@ -40,7 +40,7 @@ ARGS_SPEC = {
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
                 "results in hectares."),
-            "name": "landcover"
+            "name": utils.LULC_ARG_NAME
         },
         "landcover_to_crop_table_path": {
             "validation_options": {

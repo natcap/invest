@@ -33,7 +33,7 @@ ARGS_SPEC = {
                 "which should have a 'NAME' attribute.  The 'NAME' "
                 "attribute can be numeric or alphabetic, but must be unique "
                 "within the given file."),
-            "name": "area of interest"
+            "name": utils.AOI_ARG_NAME
         },
         "total_timesteps": {
             "validation_options": {

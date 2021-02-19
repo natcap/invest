@@ -70,7 +70,7 @@ ARGS_SPEC = {
                 "AOI should also cover a portion of the land polygon to "
                 "calculate distances correctly.  An AOI is required for "
                 "valuation."),
-            "name": "area of interest"
+            "name": utils.AOI_ARG_NAME
         },
         "bathymetry_path": {
             "validation_options": {},

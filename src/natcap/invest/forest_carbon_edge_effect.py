@@ -90,7 +90,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file, with an integer LULC code for "
                 "each cell."),
-            "name": "landcover map"
+            "name": utils.LULC_ARG_NAME
         },
         "pools_to_calculate": {
             "validation_options": {

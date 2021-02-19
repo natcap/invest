@@ -49,7 +49,7 @@ ARGS_SPEC = {
                 "the elevation model (recommended when unusual streams are "
                 "observed.) See the 'Working with the DEM' section of the "
                 "InVEST User's Guide for more information."),
-            "name": "digital elevation model"
+            "name": utils.DEM_ARG_NAME
         },
         "erosivity_path": {
             "type": "raster",
@@ -90,7 +90,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file, with an integer LULC code "
                 "for each cell."),
-            "name": "landcover"
+            "name": utils.LULC_ARG_NAME
         },
         "watersheds_path": {
             "validation_options": {
