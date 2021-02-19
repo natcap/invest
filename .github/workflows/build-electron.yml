@@ -43,7 +43,7 @@ jobs:
     - name: Test electron app with puppeteer
       uses: GabrielBB/xvfb-action@v1
       with:
-        run: npx jest --verbose --runInBand --testMatch **/tests/binary_tests/puppet.test.js
+        run: npx jest --detectOpenHandles --verbose --runInBand --testMatch **/tests/binary_tests/puppet.test.js
     
     - name: Upload installer artifacts to github
       uses: actions/upload-artifact@v2.2.1
