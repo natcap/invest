@@ -58,13 +58,13 @@ function makeAOI() {
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
   console.log('beforeAll');
-  // electronProcess = spawn(
-  //   `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
-  //   { shell: true }
-  // );
-  // electronProcess.stderr.on('data', (data) => {
-  //   console.log(`${data}`);
-  // });
+  electronProcess = spawn(
+    `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
+    { shell: true }
+  );
+  electronProcess.stderr.on('data', (data) => {
+    console.log(`${data}`);
+  });
   // // so we don't make the next fetch too early
   // await new Promise((resolve) => setTimeout(resolve, 5000));
   // const res = await fetch(`http://localhost:${PORT}/json/version`);
