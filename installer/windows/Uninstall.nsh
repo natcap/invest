@@ -1,6 +1,8 @@
 !include un.Utils.nsh
 
 ; Variables
+Var SemiSilentMode ; installer started uninstaller in semi-silent mode using /SS parameter
+Var RunningFromInstaller ; installer started uninstaller using /uninstall parameter
 Var RunningAsShellUser ; uninstaller restarted itself under the user of the running shell
 
 Section "un.Program Files" SectionUninstallProgram
@@ -47,9 +49,39 @@ Section "-Uninstall" ; hidden section, must always be the last one!
     ${endif}
 SectionEnd
 
+; This function allows us to test to see if a process is currently running.
+; If the process name passed in is actually found, a message box is presented
+; and the uninstaller should quit.
+!macro CheckProgramRunning process_name
+    ${nsProcess::FindProcess} "${process_name}.exe" $R0
+    Pop $R0
+
+    StrCmp $R0 603 +3
+        MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST version is still running.  Please close all InVEST models and try again."
+        Abort
+!macroend
+
 ; Callbacks
 Function un.onInit
     ${GetParameters} $R0
+
+    !insertmacro CheckProgramRunning "invest"
+
+    ${GetOptions} $R0 "/uninstall" $R1
+    ${ifnot} ${errors}
+        StrCpy $RunningFromInstaller 1
+    ${else}
+        StrCpy $RunningFromInstaller 0
+    ${endif}
+
+    ${GetOptions} $R0 "/SS" $R1
+    ${ifnot} ${errors}
+        StrCpy $SemiSilentMode 1
+        StrCpy $RunningFromInstaller 1
+        SetAutoClose true ; auto close (if no errors) if we are called from the installer; if there are errors, will be automatically set to false
+    ${else}
+        StrCpy $SemiSilentMode 0
+    ${endif}
 
     ${GetOptions} $R0 "/shelluser" $R1
     ${ifnot} ${errors}
@@ -59,6 +91,7 @@ Function un.onInit
     ${endif}
 
     ${ifnot} ${UAC_IsInnerInstance}
+    ${andif} $RunningFromInstaller = 0
         ; Restarting the uninstaller using the user of the running shell, in order to overcome the Windows bugs that:
         ; - Elevates the uninstallers of single-user installations when called from 'Apps & features' of Windows 10
         ; causing them to fail when using a different account for elevation.
@@ -86,5 +119,9 @@ Function un.PageInstallModeChangeMode
 FunctionEnd
 
 Function un.onUninstFailed
-    MessageBox MB_ICONSTOP "${PRODUCT_NAME} ${VERSION} could not be fully uninstalled.$\r$\nPlease, restart Windows and run the uninstaller again." /SD IDOK
+    ${if} $SemiSilentMode = 0
+        MessageBox MB_ICONSTOP "${PRODUCT_NAME} ${VERSION} could not be fully uninstalled.$\r$\nPlease, restart Windows and run the uninstaller again." /SD IDOK
+    ${else}
+        MessageBox MB_ICONSTOP "${PRODUCT_NAME} could not be fully installed.$\r$\nPlease, restart Windows and run the setup program again." /SD IDOK
+    ${endif}
 FunctionEnd
