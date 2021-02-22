@@ -112,6 +112,8 @@ test('Run a real invest model', async () => {
     `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
     { shell: true }
   );
+  const wasKilled = electronProcess.kill();
+  console.log('was killed:', wasKilled);
   console.log('after test');
   // await waitFor(() => {
   //   expect(browser.isConnected()).toBeTruthy();
