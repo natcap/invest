@@ -19,6 +19,11 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # fetch complete history
+
+    - name: Fetch git tags
+      run: git fetch origin +refs/tags/*:refs/tags/*
 
     - name: Install Node.js
       uses: actions/setup-node@v1
@@ -47,12 +52,12 @@ jobs:
     - name: Test electron app with puppeteer
       uses: GabrielBB/xvfb-action@v1
       if: matrix.os != 'macos-latest'
+      continue-on-error: true
       with:
         run: npm run test-electron-app
     
     - name: Upload installer artifacts to github
       uses: actions/upload-artifact@v2.2.1
-      if: ${{ always() }}
       with:
         name: invest-workbench-${{ matrix.os }}
         path: dist/invest-workbench_*
@@ -61,10 +66,8 @@ jobs:
     # to authenticate for GCP and they are not accessible in pull request workflows.
     - name: Set variables for GCS deploy target
       if: github.event_name != 'pull_request'
-      # TODO: If this is a release, don't include the commit hash
       run: |
-        echo "PKG_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
-        echo "GIT_REV=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        echo "VERSION"=$(grep VERSION electron-builder.env | cut -d '=' -f2) >> $GITHUB_ENV
         echo "BUCKET=$([ ${{ github.repository_owner }} == 'natcap' ] \
           && echo 'gs://releases.naturalcapitalproject.org/invest-workbench' \
           || echo 'gs://natcap-dev-build-artifacts/invest-workbench/${{ github.repository_owner }}' \
@@ -88,9 +91,9 @@ jobs:
       env:
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
-        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
+        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.VERSION }}/"
 
     - name: Deploy artifacts to GCS - macOS
       if: github.event_name != 'pull_request' && matrix.os == 'macos-latest'
       run: |
-        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.PKG_VERSION }}_${{ env.GIT_REV }}/"
+        gsutil -m rsync dist/ "${{ env.BUCKET }}/${{ env.VERSION }}/"
