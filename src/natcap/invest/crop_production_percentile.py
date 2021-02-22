@@ -84,7 +84,7 @@ ARGS_SPEC = {
                 "tobacco, tomato, triticale, tropicalnes, tung, turnipfor, "
                 "vanilla, vegetablenes, vegfor, vetch, walnut, watermelon, "
                 "wheat, yam, and yautia."),
-            "name": "landcover to crop table"
+            "name": "LULC to crop table"
         },
         "aggregate_polygon_path": {
             "type": "vector",

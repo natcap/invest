@@ -56,7 +56,7 @@ ARGS_SPEC = {
             },
             "required": True,
             "about": "Path to a landcover raster",
-            "name": "landcover"
+            "name": utils.LULC_ARG_NAME
         },
         "soils_hydrological_group_raster_path": {
             "type": "raster",

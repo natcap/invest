@@ -38,7 +38,7 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "lulc_raster_path": {
-            "name": "landcover",
+            "name": utils.LULC_ARG_NAME,
             "type": "raster",
             "required": True,
             "validation_options": {

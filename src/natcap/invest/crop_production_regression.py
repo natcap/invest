@@ -53,7 +53,7 @@ ARGS_SPEC = {
                 "contained in the landcover/use raster.   The allowed crop "
                 "names are barley, maize, oilpalm, potato, rice, soybean, "
                 "sugarbeet, sugarcane, sunflower, and wheat."),
-            "name": "landcover to crop table"
+            "name": "LULC to crop table"
         },
         "fertilization_rate_table_path": {
             "validation_options": {

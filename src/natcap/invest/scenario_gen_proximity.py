@@ -36,13 +36,13 @@ ARGS_SPEC = {
             "type": "raster",
             "required": True,
             "about": "Path to the base landcover map",
-            "name": "base landcover"
+            "name": "base LULC"
         },
         "replacment_lucode": {
             "type": "number",
             "required": True,
             "about": "Code to replace when converting pixels",
-            "name": "replacement landcover code"
+            "name": "replacement LULC code"
         },
         "area_to_convert": {
             "validation_options": {
@@ -65,7 +65,7 @@ ARGS_SPEC = {
                 "A space separated string of landcover codes that are used "
                 "to determine the proximity when referring to 'towards' or "
                 "'away' from the base landcover codes"),
-            "name": "focal landcover codes"
+            "name": "focal LULC codes"
         },
         "convertible_landcover_codes": {
             "validation_options": {
@@ -79,7 +79,7 @@ ARGS_SPEC = {
                 "A space separated string of landcover codes that can be "
                 "converted in the generation phase found in "
                 "`args['base_lulc_path']`."),
-            "name": "convertible landcover codes"
+            "name": "convertible LULC codes"
         },
         "n_fragmentation_steps": {
             "validation_options": {

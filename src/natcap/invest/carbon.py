@@ -36,7 +36,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster representing the land-cover of the"
                 "current scenario."),
-            "name": "current " + utils.LULC_ARG_NAME
+            "name": "current LULC"
         },
         "calc_sequestration": {
             "type": "boolean",
@@ -59,7 +59,7 @@ ARGS_SPEC = {
                 "enabled, this should be the reference, or baseline, future "
                 "scenario against which to compare the REDD policy "
                 "scenario."),
-            "name": "future " + utils.LULC_ARG_NAME
+            "name": "future LULC"
         },
         "do_redd": {
             "type": "boolean",
@@ -81,7 +81,7 @@ ARGS_SPEC = {
                 "A GDAL-supported raster representing the land-cover of "
                 "the REDD policy future scenario.  This scenario will be "
                 "compared to the baseline future scenario."),
-            "name": "REDD " + utils.LULC_ARG_NAME
+            "name": "REDD LULC"
         },
         "carbon_pools_path": {
             "validation_options": {
@@ -105,7 +105,7 @@ ARGS_SPEC = {
             "type": "number",
             "required": "calc_sequestration",
             "about": "The calendar year of the current scenario.",
-            "name": "current landcover year"
+            "name": "current LULC year"
         },
         "lulc_fut_year": {
             "validation_options": {
@@ -114,7 +114,7 @@ ARGS_SPEC = {
             "type": "number",
             "required": "calc_sequestration",
             "about": "The calendar year of the future scenario.",
-            "name": "future landcover year"
+            "name": "future LULC year"
         },
         "do_valuation": {
             "type": "boolean",

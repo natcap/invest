@@ -39,7 +39,7 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": False,
             "about": 'if True then "mode (b)" else "mode (a)"',
-            "name": "use predefined landcover"
+            "name": "use predefined LULC"
         },
         "lulc_path": {
             "type": "raster",
@@ -64,7 +64,7 @@ ARGS_SPEC = {
                 "must contain the fields 'lucode', 'globio_lucode'.  "
                 "See the InVEST User's Guide for more information "
                 "about these fields."),
-            "name": "landcover to GLOBIO landcover table"
+            "name": "LULC to GLOBIO LULC table"
         },
         "infrastructure_dir": {
             "validation_options": {
@@ -158,7 +158,7 @@ ARGS_SPEC = {
             "type": "raster",
             "required": "predefined_globio",
             "about": 'used in "mode (b)" path to predefined globio raster.',
-            "name": "GLOBIO landcover"
+            "name": "GLOBIO LULC"
         }
     }
 }

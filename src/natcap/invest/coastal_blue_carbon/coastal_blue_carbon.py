@@ -168,7 +168,7 @@ ARGS_SPEC = {
                 "Landcover codes match those in the biophysical table and in "
                 "the landcover transitions table."
             ),
-            "name": "landcover snapshots table",
+            "name": "LULC snapshots table",
         },
         "analysis_year": {
             "type": "number",
@@ -213,7 +213,7 @@ ARGS_SPEC = {
             ),
         },
         "landcover_transitions_table": {
-            "name": "landcover transitions table",
+            "name": "LULC transitions table",
             "type": "csv",
             "validation_options": {
                 "required_fields": ['lulc-class'],
