@@ -19,6 +19,11 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # fetch complete history
+
+    - name: Fetch git tags
+      run: git fetch origin +refs/tags/*:refs/tags/*
 
     - name: Install Node.js
       uses: actions/setup-node@v1
@@ -47,7 +52,6 @@ jobs:
     
     - name: Upload installer artifacts to github
       uses: actions/upload-artifact@v2.2.1
-      if: ${{ always() }}
       with:
         name: invest-workbench-${{ matrix.os }}
         path: dist/invest-workbench_*

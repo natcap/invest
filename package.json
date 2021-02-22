@@ -25,7 +25,7 @@
     ],
     "appId": "NaturalCapitalProject.Invest.Workbench",
     "productName": "InVEST Workbench",
-    "artifactName": "invest-workbench_${os}_${arch}_${version}.${ext}",
+    "artifactName": "invest-workbench_${os}_${arch}_${env.VERSION}.${ext}",
     "mac": {
       "category": "public.app-category.business",
       "icon": "resources/invest-in-shadow-white.png",
