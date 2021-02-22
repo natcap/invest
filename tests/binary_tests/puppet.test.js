@@ -58,10 +58,10 @@ function makeAOI() {
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
   console.log('beforeAll');
-  electronProcess = spawn(
-    `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
-    { shell: true }
-  );
+  // electronProcess = spawn(
+  //   `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
+  //   { shell: true }
+  // );
   // electronProcess.stderr.on('data', (data) => {
   //   console.log(`${data}`);
   // });
@@ -108,6 +108,11 @@ afterAll(async () => {
 test('Run a real invest model', async () => {
   // const { findByText, findByLabelText, findByRole } = queries;
   console.log('test');
+  electronProcess = spawn(
+    `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
+    { shell: true }
+  );
+  console.log('after test');
   // await waitFor(() => {
   //   expect(browser.isConnected()).toBeTruthy();
   // });
