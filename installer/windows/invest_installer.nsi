@@ -62,15 +62,48 @@
 ;           <other zipfiles, as desired, downloaded from our website>
 !include nsProcess.nsh
 !include LogicLib.nsh
+!include UAC.nsh
+!include NsisMultiUser.nsh
+!include StdUtils.nsh
+
 ; HM NIS Edit Wizard helper defines
-!define PRODUCT_NAME "InVEST"
+!define SOFTWARE_NAME "InVEST"
 !define PRODUCT_VERSION "${VERSION} ${ARCHITECTURE}"
 !define PRODUCT_PUBLISHER "The Natural Capital Project"
+!define COMPANY_NAME "The Natural Capital Project"
 !define PRODUCT_WEB_SITE "https://naturalcapitalproject.stanford.edu"
+!define URL_INFO_ABOUT "https://naturalcapitalproject.stanford.edu"
 !define MUI_COMPONENTSPAGE_NODESC
-!define PACKAGE_NAME "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+!define PACKAGE_NAME "${SOFTWARE_NAME} ${PRODUCT_VERSION}"
+!define PRODUCT_NAME "${SOFTWARE_NAME}_${VERSION}_${ARCHITECTURE}"
+!define UNINSTALL_FILENAME "Uninstall_${VERSION}.exe"
 
+; PROGEXE is needed in NsisMultiUser
+!define PROGEXE "invest-3-x64\invest.exe" ; main application filename
+!define SETUP_MUTEX "${SOFTWARE_NAME} ${PRODUCT_VERSION} Setup Mutex"
+!define APP_MUTEX "${SOFTWARE_NAME} ${PRODUCT_VERSION} App Mutex"
+!define SETTINGS_REG_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
+
+; NsisMultiUser optional defines
+!define MULTIUSER_INSTALLMODE_ALLOW_BOTH_INSTALLATIONS 0
+!define MULTIUSER_INSTALLMODE_ALLOW_ELEVATION 1
+; required for silent-mode allusers-uninstall to work, when using the workaround for Windows elevation bug
+!define MULTIUSER_INSTALLMODE_ALLOW_ELEVATION_IF_SILENT 1
+!define MULTIUSER_INSTALLMODE_DEFAULT_ALLUSERS 1
+!if ${ARCHITECTURE} == "x64"
+    !define MULTIUSER_INSTALLMODE_64_BIT 1
+!endif
+!define MULTIUSER_INSTALLMODE_DISPLAYNAME "${SOFTWARE_NAME} ${PRODUCT_VERSION}"
+
+; Installer Attributes
+Name "${SOFTWARE_NAME} ${PRODUCT_VERSION}"
+OutFile ..\..\dist\InVEST_${FORKNAME}${VERSION}_${ARCHITECTURE}_Setup.exe
+ShowInstDetails show
+BrandingText "2021 ${PRODUCT_PUBLISHER}"
 SetCompressor zlib
+
+; Include after SetCompressor
+!include Utils.nsh
 
 ; MUI has some graphical files that I want to define, which must be defined
 ; here before the macros are declared.
@@ -111,36 +144,72 @@ SetCompressor zlib
 
 ; MUI Settings
 !define MUI_ABORTWARNING
+!define MUI_LANGDLL_ALLLANGUAGES ; Show all languages, despite user's codepage
 !define MUI_ICON "InVEST-2.ico"
+
+; Remember the installer language
+!define MUI_LANGDLL_REGISTRY_ROOT SHCTX
+!define MUI_LANGDLL_REGISTRY_KEY "${SETTINGS_REG_KEY}"
+!define MUI_LANGDLL_REGISTRY_VALUENAME "Language"
 
 ; Add an advanced options control for the welcome page.
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW AddAdvancedOptions
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE ValidateAdvZipFile
+
+!define MUI_PAGE_CUSTOMFUNCTION_PRE PageWelcomeLicensePre
 !insertmacro MUI_PAGE_WELCOME
+!define MUI_PAGE_CUSTOMFUNCTION_PRE PageWelcomeLicensePre
 !insertmacro MUI_PAGE_LICENSE "..\..\LICENSE.txt"
+
+Var StartMenuFolder
+!define MULTIUSER_INSTALLMODE_CHANGE_MODE_FUNCTION PageInstallModeChangeMode
+!insertmacro MULTIUSER_PAGE_INSTALLMODE
 
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipComponents
 !insertmacro MUI_PAGE_COMPONENTS
+
+!define MUI_PAGE_CUSTOMFUNCTION_PRE PageDirectoryPre
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW PageDirectoryShow
+
 !insertmacro MUI_PAGE_DIRECTORY
+
+!define MUI_STARTMENUPAGE_NODISABLE ; Do not display the checkbox to disable the creation of Start Menu shortcuts
+!define MUI_STARTMENUPAGE_DEFAULTFOLDER "${PRODUCT_NAME}"
+; writing to $StartMenuFolder happens in MUI_STARTMENU_WRITE_END, so it's safe to use SHCTX here
+!define MUI_STARTMENUPAGE_REGISTRY_ROOT SHCTX
+!define MUI_STARTMENUPAGE_REGISTRY_KEY "${SETTINGS_REG_KEY}"
+!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "StartMenuFolder"
+!define MUI_PAGE_CUSTOMFUNCTION_PRE PageStartMenuPre
+!insertmacro MUI_PAGE_STARTMENU "" "$StartMenuFolder"
+; the MUI_PAGE_STARTMENU macro undefines MUI_STARTMENUPAGE_DEFAULTFOLDER, but we need it
+!define MUI_STARTMENUPAGE_DEFAULTFOLDER "${PRODUCT_NAME}"
+
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW PageInstFilesPre
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
 ; MUI Uninstaller settings---------------
+; Installer Attributes
+ShowUninstDetails show
+
+; Interface settings
+!define MUI_UNABORTWARNING ; Show a confirmation when cancelling the installation
+
+; Pages
 !insertmacro MUI_UNPAGE_WELCOME
 !insertmacro MUI_UNPAGE_CONFIRM
+!define MULTIUSER_INSTALLMODE_CHANGE_MODE_FUNCTION un.PageInstallModeChangeMode
+!insertmacro MULTIUSER_UNPAGE_INSTALLMODE
 !insertmacro MUI_UNPAGE_INSTFILES
-!insertmacro MUI_UNPAGE_FINISH
 
-; Language files
+; Languages (first is default language) - must be inserted after all pages
 !insertmacro MUI_LANGUAGE "English"
+!insertmacro MULTIUSER_LANGUAGE_INIT
+
+; Reserve files
+!insertmacro MUI_RESERVEFILE_LANGDLL
 
 ; MUI end ------
-
-Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile ..\..\dist\InVEST_${FORKNAME}${VERSION}_${ARCHITECTURE}_Setup.exe
-InstallDir "C:\InVEST_${VERSION}_${ARCHITECTURE}"
-ShowInstDetails show
-RequestExecutionLevel user
 
 ; This function allows us to test to see if a process is currently running.
 ; If the process name passed in is actually found, a message box is presented
@@ -153,6 +222,55 @@ RequestExecutionLevel user
         MessageBox MB_OK|MB_ICONEXCLAMATION "InVEST is still running.  Please close all InVEST models and try again."
         Abort
 !macroend
+
+Function PageStartMenuPre
+    GetDlgItem $1 $HWNDPARENT 1
+    Call MultiUser.CheckPageElevationRequired
+    ${if} $0 = 2
+        SendMessage $1 ${BCM_SETSHIELD} 0 1 ; display SHIELD (Windows Vista and above)
+    ${endif}
+FunctionEnd
+
+Function PageInstallModeChangeMode
+    !insertmacro MUI_STARTMENU_GETFOLDER "" $StartMenuFolder
+
+    ${if} "$StartMenuFolder" == "${MUI_STARTMENUPAGE_DEFAULTFOLDER}"
+        !insertmacro MULTIUSER_GetCurrentUserString $0
+        StrCpy $StartMenuFolder "$StartMenuFolder$0"
+    ${endif}
+FunctionEnd
+
+Function PageWelcomeLicensePre
+    ${if} $InstallShowPagesBeforeComponents = 0
+        Abort ; don't display the Welcome and License pages
+    ${endif}
+FunctionEnd
+
+Function PageDirectoryPre
+    GetDlgItem $1 $HWNDPARENT 1
+    SendMessage $1 ${WM_SETTEXT} 0 "STR:$(^NextBtn)" ; this is not the last page before installing
+    Call MultiUser.CheckPageElevationRequired
+    ${if} $0 = 2
+        SendMessage $1 ${BCM_SETSHIELD} 0 1 ; display SHIELD (Windows Vista and above)
+    ${endif}
+FunctionEnd
+
+Function PageDirectoryShow
+    ${if} $CmdLineDir != ""
+        FindWindow $R1 "#32770" "" $HWNDPARENT
+
+        GetDlgItem $0 $R1 1019 ; Directory edit
+        SendMessage $0 ${EM_SETREADONLY} 1 0 ; read-only is better than disabled, as user can copy contents
+
+        GetDlgItem $0 $R1 1001 ; Browse button
+        EnableWindow $0 0
+    ${endif}
+FunctionEnd
+
+Function PageInstFilesPre
+    GetDlgItem $0 $HWNDPARENT 1
+    SendMessage $0 ${BCM_SETSHIELD} 0 0 ; hide SHIELD (Windows Vista and above)
+FunctionEnd
 
 var AdvCheckbox
 var AdvFileField
@@ -205,6 +323,8 @@ Function GetZipFile
 FunctionEnd
 
 Function SkipComponents
+    GetDlgItem $0 $HWNDPARENT 1
+    SendMessage $0 ${BCM_SETSHIELD} 0 0 ; hide Shield (Windows Vista and above)
     ${If} $LocalDataZipFile != ""
         Abort
     ${EndIf}
@@ -284,22 +404,18 @@ Function DumpLog
         Exch $5
 FunctionEnd
 
-Function Un.onInit
-    !insertmacro CheckProgramRunning "invest"
-FunctionEnd
-
 ; Copied into the invest folder later in the NSIS script
 !define INVEST_BINARIES "$INSTDIR\invest-3-x64"
 !define INVEST_ICON "${INVEST_BINARIES}\InVEST-2.ico"
+!define UNINSTALL_ICON "${INVEST_BINARIES}\InVEST-2.ico"
 !define SAMPLEDATADIR "$INSTDIR\sample_data"
 !macro StartMenuLink linkName modelName
     CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe" "run ${modelName}" "${INVEST_ICON}"
 !macroend
 
+; Sections
 Section "InVEST Tools" Section_InVEST_Tools
     AddSize 230793  ; This size is based on Windows build of InVEST 3.4.0
-    ; current is the default and doesn't require admin-level privileges.
-    SetShellVarContext current
     SectionIn RO ;require this section
 
     ; Write the uninstaller to disk
@@ -307,61 +423,55 @@ Section "InVEST Tools" Section_InVEST_Tools
     !define UNINSTALL_PATH "$INSTDIR\Uninstall_${VERSION}.exe"
     writeUninstaller "${UNINSTALL_PATH}"
 
-    ; Create start  menu shortcuts.
-    ; These shortcut paths are set in the appropriate places based on the SetShellVarConext flag.
-    ; This flag is automatically set based on the MULTIUSER installation mode selected by the user.
-    !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
-    CreateDirectory "${SMPATH}"
-    !insertmacro StartMenuLink "${SMPATH}\Crop Production (Percentile)" "crop_production_percentile"
-    !insertmacro StartMenuLink "${SMPATH}\Crop Production (Regression)" "crop_production_regression"
-    !insertmacro StartMenuLink "${SMPATH}\Scenic Quality" "scenic_quality"
-    !insertmacro StartMenuLink "${SMPATH}\Habitat Quality" "habitat_quality"
-    !insertmacro StartMenuLink "${SMPATH}\Carbon" "carbon"
-    !insertmacro StartMenuLink "${SMPATH}\Forest Carbon Edge Effect" "forest_carbon_edge_effect"
-    !insertmacro StartMenuLink "${SMPATH}\GLOBIO" "globio"
-    !insertmacro StartMenuLink "${SMPATH}\Pollination" "pollination"
-    !insertmacro StartMenuLink "${SMPATH}\Finfish Aquaculture" "finfish_aquaculture"
-    !insertmacro StartMenuLink "${SMPATH}\Wave Energy" "wave_energy"
-    !insertmacro StartMenuLink "${SMPATH}\Wind Energy" "wind_energy"
-    !insertmacro StartMenuLink "${SMPATH}\Coastal Vulnerability" "cv"
-    !insertmacro StartMenuLink "${SMPATH}\SDR: Sediment Delivery Ratio" "sdr"
-    !insertmacro StartMenuLink "${SMPATH}\NDR: Nutrient Delivery Ratio" "ndr"
-    !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Proximity Based" "sgp"
-    !insertmacro StartMenuLink "${SMPATH}\Water Yield" "hwy"
-    !insertmacro StartMenuLink "${SMPATH}\Seasonal Water Yield" "swy"
-    !insertmacro StartMenuLink "${SMPATH}\RouteDEM" "routedem"
-    !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
-    !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
-    !insertmacro StartMenuLink "${SMPATH}\Urban Flood Risk Mitigation" "ufrm"
-    !insertmacro StartMenuLink "${SMPATH}\Urban Cooling Model" "ucm"
-    !insertmacro StartMenuLink "${SMPATH}\Habitat Risk Assessment" "hra"
+    !insertmacro MULTIUSER_RegistryAddInstallInfo ; add registry keys
 
-    !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
-    CreateDirectory "${COASTALBLUECARBON}"
-    !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon (1) Preprocessor" "cbc_pre"
-    !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon (2)" "cbc"
+    !insertmacro MUI_STARTMENU_WRITE_BEGIN ""
+        ; Create start  menu shortcuts.
+        ; These shortcut paths are set in the appropriate places based on the SetShellVarConext flag.
+        ; This flag is automatically set based on the MULTIUSER installation mode selected by the user.
+        !define SMPATH "$SMPROGRAMS\$StartMenuFolder"
+        CreateDirectory "${SMPATH}"
+        !insertmacro StartMenuLink "${SMPATH}\Crop Production (Percentile)" "crop_production_percentile"
+        !insertmacro StartMenuLink "${SMPATH}\Crop Production (Regression)" "crop_production_regression"
+        !insertmacro StartMenuLink "${SMPATH}\Scenic Quality" "scenic_quality"
+        !insertmacro StartMenuLink "${SMPATH}\Habitat Quality" "habitat_quality"
+        !insertmacro StartMenuLink "${SMPATH}\Carbon" "carbon"
+        !insertmacro StartMenuLink "${SMPATH}\Forest Carbon Edge Effect" "forest_carbon_edge_effect"
+        !insertmacro StartMenuLink "${SMPATH}\GLOBIO" "globio"
+        !insertmacro StartMenuLink "${SMPATH}\Pollination" "pollination"
+        !insertmacro StartMenuLink "${SMPATH}\Finfish Aquaculture" "finfish_aquaculture"
+        !insertmacro StartMenuLink "${SMPATH}\Wave Energy" "wave_energy"
+        !insertmacro StartMenuLink "${SMPATH}\Wind Energy" "wind_energy"
+        !insertmacro StartMenuLink "${SMPATH}\Coastal Vulnerability" "cv"
+        !insertmacro StartMenuLink "${SMPATH}\SDR: Sediment Delivery Ratio" "sdr"
+        !insertmacro StartMenuLink "${SMPATH}\NDR: Nutrient Delivery Ratio" "ndr"
+        !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Proximity Based" "sgp"
+        !insertmacro StartMenuLink "${SMPATH}\Water Yield" "hwy"
+        !insertmacro StartMenuLink "${SMPATH}\Seasonal Water Yield" "swy"
+        !insertmacro StartMenuLink "${SMPATH}\RouteDEM" "routedem"
+        !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
+        !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
+        !insertmacro StartMenuLink "${SMPATH}\Urban Flood Risk Mitigation" "ufrm"
+        !insertmacro StartMenuLink "${SMPATH}\Urban Cooling Model" "ucm"
+        !insertmacro StartMenuLink "${SMPATH}\Habitat Risk Assessment" "hra"
 
-    !define FISHERIES "${SMPATH}\Fisheries"
-    CreateDirectory "${FISHERIES}"
-    !insertmacro StartMenuLink "${FISHERIES}\Fisheries" "fisheries"
-    !insertmacro StartMenuLink "${FISHERIES}\Fisheries Habitat Scenario Tool" "fisheries_hst"
+        !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
+        CreateDirectory "${COASTALBLUECARBON}"
+        !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon (1) Preprocessor" "cbc_pre"
+        !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon (2)" "cbc"
 
+        !define FISHERIES "${SMPATH}\Fisheries"
+        CreateDirectory "${FISHERIES}"
+        !insertmacro StartMenuLink "${FISHERIES}\Fisheries" "fisheries"
+        !insertmacro StartMenuLink "${FISHERIES}\Fisheries Habitat Scenario Tool" "fisheries_hst"
 
-    ; Write registry keys for convenient uninstallation via add/remove programs.
-    ; Inspired by the example at
-    ; nsis.sourceforge.net/A_simple_installer_with_start_menu_shortcut_and_uninstaller
-    !define REGISTRY_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_PUBLISHER} ${PRODUCT_NAME} ${PRODUCT_VERSION}"
-    WriteRegStr HKCU "${REGISTRY_PATH}" "DisplayName"          "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-    WriteRegStr HKCU "${REGISTRY_PATH}" "UninstallString"      "${UNINSTALL_PATH}"
-    WriteRegStr HKCU "${REGISTRY_PATH}" "QuietUninstallString" "${UNINSTALL_PATH} /S"
-    WriteRegStr HKCU "${REGISTRY_PATH}" "InstallLocation"      "$INSTDIR"
-    WriteRegStr HKCU "${REGISTRY_PATH}" "DisplayIcon"          "${INVEST_ICON}"
-    WriteRegStr HKCU "${REGISTRY_PATH}" "Publisher"            "${PRODUCT_PUBLISHER}"
-    WriteRegStr HKCU "${REGISTRY_PATH}" "URLInfoAbout"         "${PRODUCT_WEB_SITE}"
-    WriteRegStr HKCU "${REGISTRY_PATH}" "DisplayVersion"       "${PRODUCT_VERSION}"
-    WriteRegDWORD HKCU "${REGISTRY_PATH}" "NoModify" 1
-    WriteRegDWORD HKCU "${REGISTRY_PATH}" "NoRepair" 1
+        ${if} $MultiUser.InstallMode == "AllUsers"
+            CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "${UNINSTALL_PATH}" "/allusers"
+        ${else}
+            CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "${UNINSTALL_PATH}" "/currentuser"
+        ${endif}
 
+    !insertmacro MUI_STARTMENU_WRITE_END
 
     ; Actually install the information we want to disk.
     SetOutPath "$INSTDIR"
@@ -385,7 +495,7 @@ Section "InVEST Tools" Section_InVEST_Tools
 
     ; If the user has provided a custom data zipfile, unzip the data.
     ${If} $LocalDataZipFile != ""
-      nsisunz::UnzipToLog $LocalDataZipFile "${SAMPLEDATADIR}"
+        nsisunz::UnzipToLog $LocalDataZipFile "${SAMPLEDATADIR}"
     ${EndIf}
 
     ; Write the install log to a text file on disk.
@@ -404,18 +514,6 @@ Section "MSVCRT 2008 Runtime (Recommended)" Sec_VCRedist2008
     ExecWait "vcredist_x86.exe /q"
 SectionEnd
 
-Section "uninstall"
-  ; current is the default and doesn't require admin-level privileges.
-  SetShellVarContext current
-  rmdir /r "$SMPROGRAMS\${PACKAGE_NAME}"
-
-  ; Delete the installation directory on disk
-  rmdir /r "$INSTDIR"
-
-  ; Delete the entire registry key for this version of RIOS.
-  DeleteRegKey HKCU "${REGISTRY_PATH}"
-SectionEnd
-
 Var LocalDataZip
 Var INSTALLER_DIR
 
@@ -427,49 +525,49 @@ Var INSTALLER_DIR
     Pop $R0 ;Get the status of the file downloaded
     StrCmp $R0 "OK" got_it failed
     got_it:
-       nsisunz::UnzipToLog ${LocalFilepath} "."
-       Delete ${LocalFilepath}
-       goto done
+        nsisunz::UnzipToLog ${LocalFilepath} "."
+        Delete ${LocalFilepath}
+        goto done
     failed:
-       MessageBox MB_OK "Download failed: $R0 ${RemoteFilepath}. This might have happened because your Internet connection timed out, or our download server is experiencing problems.  The installation will continue normally, but you'll be missing the ${RemoteFilepath} dataset in your installation.  You can manually download that later by visiting the 'Individual inVEST demo datasets' section of our download page at www.naturalcapitalproject.org."
+        MessageBox MB_OK "Download failed: $R0 ${RemoteFilepath}. This might have happened because your Internet connection timed out, or our download server is experiencing problems.  The installation will continue normally, but you'll be missing the ${RemoteFilepath} dataset in your installation.  You can manually download that later by visiting the 'Individual inVEST demo datasets' section of our download page at www.naturalcapitalproject.org."
     done:
 !macroend
 
 !macro downloadData Title Filename AdditionalSizeKb
-  ; AdditionalSizeKb is in kilobytes.  Easy way to find this out is to do
-  ; "$ du -BK -c <directory with model sample data>" and then use the total.
-  Section "${Title}"
-    AddSize "${AdditionalSizeKb}"
+    ; AdditionalSizeKb is in kilobytes.  Easy way to find this out is to do
+    ; "$ du -BK -c <directory with model sample data>" and then use the total.
+    Section "${Title}"
+        AddSize "${AdditionalSizeKb}"
 
-    ; Check to see if the user defined an 'advanced options' zipfile.
-    ; If yes, then we should skip all of this checking, since we only want to use
-    ; the data that was in that zip.
-    ${If} $LocalDataZipFile != ""
-        goto end_of_section
-    ${EndIf}
+        ; Check to see if the user defined an 'advanced options' zipfile.
+        ; If yes, then we should skip all of this checking, since we only want to use
+        ; the data that was in that zip.
+        ${If} $LocalDataZipFile != ""
+            goto end_of_section
+        ${EndIf}
 
-    ; Use a local zipfile if it exists in ./sample_data
-    ${GetExePath} $INSTALLER_DIR
-    StrCpy $LocalDataZip "$INSTALLER_DIR\sample_data\${Filename}"
+        ; Use a local zipfile if it exists in ./sample_data
+        ${GetExePath} $INSTALLER_DIR
+        StrCpy $LocalDataZip "$INSTALLER_DIR\sample_data\${Filename}"
 
-;    MessageBox MB_OK "zip: $LocalDataZip"
-    IfFileExists "$LocalDataZip" LocalFileExists DownloadFile
-    LocalFileExists:
-        nsisunz::UnzipToLog "$LocalDataZip" "${SAMPLEDATADIR}"
-;        MessageBox MB_OK "found it locally"
-       goto done
-    DownloadFile:
-        ;This is hard coded so that all the download data macros go to the same site
-        SetOutPath "${SAMPLEDATADIR}"
-        !insertmacro downloadFile "${DATA_LOCATION}/${Filename}" "${Filename}"
-      end_of_section:
-      SectionEnd
+        ; MessageBox MB_OK "zip: $LocalDataZip"
+        IfFileExists "$LocalDataZip" LocalFileExists DownloadFile
+        LocalFileExists:
+            nsisunz::UnzipToLog "$LocalDataZip" "${SAMPLEDATADIR}"
+            ; MessageBox MB_OK "found it locally"
+        goto done
+        DownloadFile:
+            ;This is hard coded so that all the download data macros go to the same site
+            SetOutPath "${SAMPLEDATADIR}"
+            !insertmacro downloadFile "${DATA_LOCATION}/${Filename}" "${Filename}"
+        end_of_section:
+    SectionEnd
 !macroend
 
 SectionGroup /e "InVEST Datasets" SEC_DATA
-  ;here all the numbers indicate the size of the downloads in kilobytes
-  ;they were calculated by hand by decompressing all the .zip files and recording
-  ;the size by hand.
+    ;here all the numbers indicate the size of the downloads in kilobytes
+    ;they were calculated by hand by decompressing all the .zip files and recording
+    ;the size by hand.
     !insertmacro downloadData "Annual Water Yield (optional)" "Annual_Water_Yield.zip" 20513
     !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 116
     !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 17748
@@ -506,41 +604,51 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
 SectionGroupEnd
 
 Function .onInit
- ${GetOptions} $CMDLINE "/?" $0
- IfErrors skiphelp showhelp
- showhelp:
-     MessageBox MB_OK "InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs$\r$\n\
-     $\r$\n\
-     For more information about InVEST or the Natural Capital Project, visit our \
-     website: https://naturalcapitalproject.stanford.edu/invest$\r$\n\
-     $\r$\n\
-     Command-Line Options:$\r$\n\
-         /?$\t$\t=$\tDisplay this help and exit$\r$\n\
-         /S$\t$\t=$\tSilently install InVEST.$\r$\n\
-         /D=$\t$\t=$\tSet the installation directory.$\r$\n\
-         /DATAZIP=$\t=$\tUse this sample data zipfile.$\r$\n\
-         "
-     abort
- skiphelp:
+    ${GetOptions} $CMDLINE "/?" $0
 
- System::Call 'kernel32::CreateMutexA(i 0, i 0, t "InVEST ${VERSION}") i .r1 ?e'
- Pop $R0
+    ; this is really just checking if there is another instance of the
+    ; installer running
+    ${ifnot} ${UAC_IsInnerInstance}
+        !insertmacro CheckSingleInstance "Setup" "Global" "${SETUP_MUTEX}"
+        !insertmacro CheckSingleInstance "Application" "Local" "${APP_MUTEX}"
+    ${endif}
 
- StrCmp $R0 0 +3
-   MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST ${VERSION} installer is already running."
-   Abort
+    !insertmacro MULTIUSER_INIT
 
-  ${ifNot} ${AtMostWin7}
-    ; disable the section if we're not running on Windows 7 or earlier.
-    ; This section should not execute for Windows 8 or later.
-    SectionGetFlags ${Sec_VCRedist2008} $0
-    IntOp $0 $0 & ${SECTION_OFF}
-    SectionSetFlags ${Sec_VCRedist2008} $0
-    SectionSetText ${Sec_VCRedist2008} ""
-  ${endIf}
+    ${if} $IsInnerInstance = 0
+        !insertmacro MUI_LANGDLL_DISPLAY
+    ${endif}
 
-  ; If the user has defined the /DATAZIP flag, set the 'advanced' option
-  ; to the user's defined value.
-  ${GetOptions} $CMDLINE "/DATAZIP=" $0
-  strcpy $LocalDataZipFile $0
+    IfErrors skiphelp showhelp
+    showhelp:
+         MessageBox MB_OK "InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs$\r$\n\
+         $\r$\n\
+         For more information about InVEST or the Natural Capital Project, visit our \
+         website: https://naturalcapitalproject.stanford.edu/invest$\r$\n\
+         $\r$\n\
+         Command-Line Options:$\r$\n\
+             /?$\t$\t=$\tDisplay this help and exit$\r$\n\
+             /S$\t$\t=$\tSilently install InVEST.$\r$\n\
+             /D=$\t$\t=$\tSet the installation directory.$\r$\n\
+             /DATAZIP=$\t=$\tUse this sample data zipfile.$\r$\n\
+             "
+         abort
+    skiphelp:
+
+        ${ifNot} ${AtMostWin7}
+            ; disable the section if we're not running on Windows 7 or earlier.
+            ; This section should not execute for Windows 8 or later.
+            SectionGetFlags ${Sec_VCRedist2008} $0
+            IntOp $0 $0 & ${SECTION_OFF}
+            SectionSetFlags ${Sec_VCRedist2008} $0
+            SectionSetText ${Sec_VCRedist2008} ""
+        ${endIf}
+
+        ; If the user has defined the /DATAZIP flag, set the 'advanced' option
+        ; to the user's defined value.
+        ${GetOptions} $CMDLINE "/DATAZIP=" $0
+        strcpy $LocalDataZipFile $0
 FunctionEnd
+
+; remove next line if you're using signing after the uninstaller is extracted from the initially compiled setup
+!include Uninstall.nsh

@@ -49,18 +49,6 @@ Section "-Uninstall" ; hidden section, must always be the last one!
     ${endif}
 SectionEnd
 
-; This function allows us to test to see if a process is currently running.
-; If the process name passed in is actually found, a message box is presented
-; and the uninstaller should quit.
-!macro CheckProgramRunning process_name
-    ${nsProcess::FindProcess} "${process_name}.exe" $R0
-    Pop $R0
-
-    StrCmp $R0 603 +3
-        MessageBox MB_OK|MB_ICONEXCLAMATION "An InVEST version is still running.  Please close all InVEST models and try again."
-        Abort
-!macroend
-
 ; Callbacks
 Function un.onInit
     ${GetParameters} $R0
@@ -78,7 +66,9 @@ Function un.onInit
     ${ifnot} ${errors}
         StrCpy $SemiSilentMode 1
         StrCpy $RunningFromInstaller 1
-        SetAutoClose true ; auto close (if no errors) if we are called from the installer; if there are errors, will be automatically set to false
+        ; auto close (if no errors) if we are called from the installer; 
+        ; if there are errors, will be automatically set to false
+        SetAutoClose true
     ${else}
         StrCpy $SemiSilentMode 0
     ${endif}
