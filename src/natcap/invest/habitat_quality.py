@@ -171,7 +171,7 @@ ARGS_SPEC = {
                 "the sensitivity of a habitat to a threat."
                 "Please see the users guide for more detailed information on "
                 "proper column values and column names for each threat."),
-            "name": "landcover threat sensitivity"
+            "name": "LULC threat sensitivity"
         },
         "half_saturation_constant": {
             "validation_options": {
