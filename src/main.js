@@ -6,6 +6,7 @@ if (ELECTRON_DEV_MODE) {
   const dotenv = require('dotenv');
   dotenv.config();
 }
+console.log('in main');
 
 const {
   app,
@@ -31,6 +32,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 if (!process.env.PORT) {
   process.env.PORT = '56789';
 }
+console.log('port:', process.env.PORT);
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
