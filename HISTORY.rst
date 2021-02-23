@@ -50,6 +50,7 @@ workbench-alpha
     * Minor rephrasing of some ``ARGS_SPEC.args.arg.name`` values.
     * Dynamically populated dropdown inputs' arg specs now have a ``type`` of
       ``option_string`` and ``validation_options['options']`` is an empty list.
+    * Standardize formatting of ``ARGS_SPEC`` ``name`` values.
 
 Unreleased Changes (3.9.1)
 --------------------------

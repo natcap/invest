@@ -42,7 +42,7 @@ ARGS_SPEC = {
                 "The dataset should be in a projection where the units are "
                 "in meters and the projection used should be defined.  The "
                 "LULC codes must match the codes in the Sensitivity table."),
-            "name": "Current Land Cover"
+            "name": "current LULC"
         },
         "lulc_fut_path": {
             "type": "raster",
@@ -61,7 +61,7 @@ ARGS_SPEC = {
                 "units are in meters and the projection used should be "
                 "defined. The LULC codes must match the codes in the "
                 "Sensitivity table."),
-            "name": "Future Land Cover"
+            "name": "future LULC"
         },
         "lulc_bas_path": {
             "type": "raster",
@@ -85,7 +85,7 @@ ARGS_SPEC = {
                 "codes must match the codes in the Sensitivity table.  If "
                 "possible the baseline map should refer to a time when "
                 "intensive management of the landscape was relatively rare."),
-            "name": "Baseline Land Cover"
+            "name": "baseline LULC"
         },
         "threats_table_path": {
             "validation_options": {
@@ -128,7 +128,7 @@ ARGS_SPEC = {
                 "filepath is relative to the THREAT CSV input. Entries can "
                 "be left empty if looking at current scenario only."
                 ),
-            "name": "Threats Data"
+            "name": "threats data"
         },
         "access_vector_path": {
             "validation_options": {
@@ -145,7 +145,7 @@ ARGS_SPEC = {
                 "The ACCESS values should range from 0 - 1, where 1 "
                 "is fully accessible.  Any cells not covered by a polygon "
                 "will be set to 1."),
-            "name": "Accessibility to Threats (Vector) (Optional)"
+            "name": "accessibility to threats"
         },
         "sensitivity_table_path": {
             "validation_options": {
@@ -171,7 +171,7 @@ ARGS_SPEC = {
                 "the sensitivity of a habitat to a threat."
                 "Please see the users guide for more detailed information on "
                 "proper column values and column names for each threat."),
-            "name": "Sensitivity of Land Cover Types to Each Threat"
+            "name": "LULC threat sensitivity"
         },
         "half_saturation_constant": {
             "validation_options": {
@@ -189,7 +189,7 @@ ARGS_SPEC = {
                 "Note that the choice of k only determines the spread and "
                 "central tendency of habitat quality cores and does not "
                 "affect the rank."),
-            "name": "Half-Saturation Constant"
+            "name": "half-saturation constant"
         },
     }
 }

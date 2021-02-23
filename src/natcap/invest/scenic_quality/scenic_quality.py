@@ -57,7 +57,7 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "aoi_path": {
-            "name": "Area of Interest",
+            "name": utils.AOI_ARG_NAME,
             "type": "vector",
             "required": True,
             "about": (
@@ -68,7 +68,7 @@ ARGS_SPEC = {
                 "must intersect the Digital Elevation Model (DEM)."),
         },
         "structure_path": {
-            "name": "Features Impacting Scenic Quality",
+            "name": "features impacting scenic quality",
             "type": "vector",
             "required": True,
             "about": (
@@ -81,7 +81,7 @@ ARGS_SPEC = {
                 "consistent with the project of the DEM input."),
         },
         "dem_path": {
-            "name": "Digital Elevation Model",
+            "name": utils.DEM_ARG_NAME,
             "type": "raster",
             "required": True,
             "validation_options": {
@@ -96,7 +96,7 @@ ARGS_SPEC = {
                 "contributing to negative scenic quality are visible."),
         },
         "refraction": {
-            "name": "Refractivity Coefficient",
+            "name": "refractivity coefficient",
             "type": "number",
             "required": True,
             "validation_options": {
@@ -116,13 +116,13 @@ ARGS_SPEC = {
                 "coefficient to 0.13."),
         },
         "do_valuation": {
-            "name": "Valuation",
+            "name": "do valuation",
             "type": "boolean",
             "required": False,
             "about": "Enable or disable valuation."
         },
         "valuation_function": {
-            "name": "Valuation function",
+            "name": "valuation function",
             "type": "option_string",
             "required": "do_valuation",
             "validation_options": {
@@ -137,19 +137,19 @@ ARGS_SPEC = {
                 "viewpoint."),
         },
         "a_coef": {
-            "name": "'a' Coefficient",
+            "name": "coefficient a",
             "type": "number",
             "required": "do_valuation",
             "about": ("First coefficient used by the valuation function"),
         },
         "b_coef": {
-            "name": "'a' Coefficient",
+            "name": "coefficient b",
             "type": "number",
             "required": "do_valuation",
             "about": ("Second coefficient used by the valuation function"),
         },
         "max_valuation_radius": {
-            "name": "Maximum Valuation Radius",
+            "name": "maximum valuation radius",
             "type": "number",
             "required": False,
             "validation_options": {
