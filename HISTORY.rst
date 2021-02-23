@@ -54,12 +54,20 @@ Unreleased Changes (3.9.1)
       requirement version to ``0.10.3``
     * Allow Windows users to install for all users or current user. This allows
       non-admin users to install InVEST locally.
+    * Provide a better validation error message when an overview '.ovr' file
+      is input instead of a valid raster.
+* Carbon
+    * Fixed a bug where, if rate change and discount rate were set to 0, the
+      valuation results were in $/year rather than $, too small by a factor of 
+      ``lulc_fut_year - lulc_cur_year``.
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
 * SDR
     * Fixed a bug in validation that did not warn against different coordinate
       systems (all SDR inputs must share a common coordinate system).
+* Wind Energy
+    * Raising ValueError when AOI does not intersect Wind Data points.
 
 3.9.0 (2020-12-11)
 ------------------
