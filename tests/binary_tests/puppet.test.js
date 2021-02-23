@@ -59,17 +59,17 @@ function makeAOI() {
 beforeAll(async () => {
   console.log('beforeAll');
   electronProcess = spawn(
-    `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
+    `"${binaryPath}"`, [`--inspect=${PORT}`],
     { shell: true }
   );
   electronProcess.stderr.on('data', (data) => {
     console.log(`${data}`);
   });
+  electronProcess.stdout.on('data', (data) => {
+    console.log(`${data}`);
+  });
   // so we don't make the next fetch too early
-  console.log
-  await new Promise(resolve => setTimeout(resolve, 10000));
-  const result = await fetch (`http://localhost:${PORT}/ready`);
-  console.log('result:', result);
+  await new Promise(resolve => setTimeout(resolve, 5000));
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
   // browser = await puppeteer.connect({
