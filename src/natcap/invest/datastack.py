@@ -438,10 +438,10 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
 
             # Archives always store linux-style paths.  os.path.normpath
             # converts forward slashes to backslashes if we're on Windows.
-            data_path = os.path.normpath(os.path.join(dest_dir_path,
-                                                      args_param))
+            data_path = os.path.normpath(
+                os.path.join(dest_dir_path, args_param))
             if os.path.exists(data_path):
-                return os.path.normpath(data_path)
+                return data_path
         return args_param
 
     new_args = _rewrite_paths(arguments_dict)
@@ -472,19 +472,23 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, str):
-            possible_path = args_param.replace('\\', '/')
-            if os.path.exists(possible_path):
-                # Always save unix paths.
-                normalized_path = os.path.normpath(possible_path)
+            normalized_path = os.path.normpath(args_param)
+            if os.path.exists(normalized_path):
                 if relative:
                     # Handle special case where python assumes that '.'
                     # represents the CWD
                     if (normalized_path == '.' or
                             os.path.dirname(paramset_path) == normalized_path):
                         return '.'
-                    return os.path.relpath(normalized_path,
-                                           os.path.dirname(paramset_path))
-                return normalized_path
+                    temp_rel_path = os.path.relpath(
+                        normalized_path, os.path.dirname(paramset_path))
+                    # Always save unix paths.
+                    linux_style_path = temp_rel_path.replace('\\', '/')
+                else:
+                    # Always save unix paths.
+                    linux_style_path = normalized_path.replace('\\', '/')
+
+                return linux_style_path
         return args_param
     parameter_data = {
         'model_name': model_name,
