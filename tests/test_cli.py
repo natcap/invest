@@ -351,13 +351,13 @@ class CLIHeadlessTests(unittest.TestCase):
         from natcap.invest import cli
 
         model = 'carbon'
-        expected_filepath = os.path.join(
-            self.workspace_dir, f'{model}_execute.py')
+        expected_filepath = f'{model}_execute.py'
         with redirect_stdout() as stdout_stream:
             with self.assertRaises(SystemExit) as exit_cm:
                 cli.main(['export-py', model])
 
         self.assertTrue(os.path.exists(expected_filepath))
+        os.remove(expected_filepath)
         # the contents of the file are asserted in CLIUnitTests
 
         self.assertEqual(exit_cm.exception.code, 0)
@@ -373,7 +373,7 @@ class CLIUnitTests(unittest.TestCase):
         """Remove the temporary workspace after a test run."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_export_to_python_default(self):
+    def test_export_to_python_default_args(self):
         """Export a python script w/ default args for a model."""
         from natcap.invest import cli
 
