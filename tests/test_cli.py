@@ -427,5 +427,3 @@ class CLIUnitTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         self.assertEqual(module.args, expected_args)
-
-        self.assertEqual(module.args, expected_args)
