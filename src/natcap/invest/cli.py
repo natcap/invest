@@ -268,14 +268,13 @@ def export_to_python(target_filepath, model, args_dict=None):
     if args_dict is None:
         model_module = importlib.import_module(name=target_model)
         spec = model_module.ARGS_SPEC
-        cast_args = {key: '' for key in spec.args.keys()}
+        cast_args = {key: '' for key in spec['args'].keys()}
     else:
         cast_args = dict((str(key), value) for (key, value)
                          in args_dict.items())
 
     with codecs.open(target_filepath, 'w', encoding='utf-8') as py_file:
-        args = pprint.pformat(cast_args,
-                              indent=4)  # 4 spaces
+        args = pprint.pformat(cast_args, indent=4)  # 4 spaces
 
         # Tweak formatting from pprint:
         # * Bump parameter inline with starting { to next line
@@ -442,7 +441,7 @@ def main(user_args=None):
     validate_subparser.add_argument(
         '--json', action='store_true', help='Write output as a JSON object')
     validate_subparser.add_argument(
-        'datastack', help=('Run the model with this JSON datastack.'))
+        'datastack', help=('Path to a JSON datastack.'))
 
     getspec_subparser = subparsers.add_parser(
         'getspec', help=('Get the specification of a model.'))
@@ -452,6 +451,16 @@ def main(user_args=None):
         'model', action=SelectModelAction,  # Assert valid model name
         help=('The model for which the spec should be fetched.  Use "invest '
               'list" to list the available models.'))
+
+    export_py_subparser = subparsers.add_parser(
+        'export-py', help=('Save a python script that executes a model.'))
+    export_py_subparser.add_argument(
+        'model', action=SelectModelAction,  # Assert valid model name
+        help=('The model that the python script will execute.  Use "invest '
+              'list" to list the available models.'))
+    export_py_subparser.add_argument(
+        '-f', '--filepath', default=None,
+        help='Define a location for the saved .py file')
 
     args = parser.parse_args(user_args)
 
@@ -640,6 +649,13 @@ def main(user_args=None):
         if app_exitcode != 0:
             parser.exit(app_exitcode,
                         'App terminated with exit code %s\n' % app_exitcode)
+
+    if args.subcommand == 'export-py':
+        target_filepath = args.filepath
+        if not args.filepath:
+            target_filepath = f'{args.model}_execute.py'
+        export_to_python(target_filepath, args.model)
+        parser.exit()
 
 
 if __name__ == '__main__':
