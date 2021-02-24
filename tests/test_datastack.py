@@ -1,5 +1,6 @@
 """Testing Module for Datastack."""
 import os
+import sys
 import unittest
 import tempfile
 import shutil
@@ -480,6 +481,47 @@ class DatastacksTest(unittest.TestCase):
         self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
 
+    @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
+    def test_relative_parameter_set_windows(self):
+        """Datastack: test relative parameter set paths saved linux style."""
+        from natcap.invest import datastack, __version__
+
+        params = {
+            'foo': os.path.join(self.workspace, 'foo.txt'),
+            'bar': os.path.join(self.workspace, 'inter_dir', 'bar.txt'),
+            'doh': os.path.join(
+                self.workspace, 'inter_dir', 'inter_inter_dir', 'doh.txt'),
+            'data_dir': os.path.join(self.workspace, 'data_dir'),
+        }
+        modelname = 'natcap.invest.foo'
+        paramset_filename = os.path.join(self.workspace, 'paramset.json')
+
+        # make the sample data so filepaths are interpreted correctly
+        for base_name in ('foo', 'bar', 'doh'):
+            open(params[base_name], 'w').write('hello!')
+        os.makedirs(params['data_dir'])
+
+        # Write the parameter set
+        datastack.build_parameter_set(
+            params, modelname, paramset_filename, relative=True)
+
+        # Check that the written parameter set file contains relative paths
+        raw_args = json.load(open(paramset_filename))['args']
+        self.assertEqual(raw_args['foo'], 'foo.txt')
+        # Expecting linux style path separators for Windows
+        self.assertEqual(raw_args['bar'], '../bar.txt')
+        self.assertEqual(raw_args['doh'], '../../doh.txt')
+        self.assertEqual(raw_args['data_dir'], 'data_dir')
+
+        # Read back the parameter set and verify the returned paths are
+        # absolute
+        args, callable_name, invest_version = datastack.extract_parameter_set(
+            paramset_filename)
+
+        self.assertEqual(args, params)
+        self.assertEqual(invest_version, __version__)
+        self.assertEqual(callable_name, modelname)
+
     def test_extract_parameters_from_logfile(self):
         """Datastacks: Verify we can read args from a logfile."""
         from natcap.invest import datastack
@@ -542,7 +584,7 @@ class DatastacksTest(unittest.TestCase):
         self.assertEqual(stack_info, datastack.ParameterSet(
             params, 'sample_model', natcap.invest.__version__))
 
-    def test_get_datatack_info_parameter_set(self):
+    def test_get_datastack_info_parameter_set(self):
         """Datastack: test get datastack info parameter set."""
         import natcap.invest
         from natcap.invest import datastack
