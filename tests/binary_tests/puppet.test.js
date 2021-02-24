@@ -78,6 +78,7 @@ beforeAll(async () => {
     // browserURL: `http://localhost:${PORT}`,    // this also works
     defaultViewport: { width: 1000, height: 800 },
   });
+  await new Promise(resolve => setTimeout(resolve, 30000));
   // makeAOI();
 });
 
