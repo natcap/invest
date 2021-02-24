@@ -351,6 +351,8 @@ class CLIHeadlessTests(unittest.TestCase):
         from natcap.invest import cli
 
         model = 'carbon'
+        # cannot write this file to self.workspace because we're
+        # specifically testing the file is created in a default location.
         expected_filepath = f'{model}_execute.py'
         with redirect_stdout() as stdout_stream:
             with self.assertRaises(SystemExit) as exit_cm:
@@ -358,7 +360,6 @@ class CLIHeadlessTests(unittest.TestCase):
 
         self.assertTrue(os.path.exists(expected_filepath))
         os.remove(expected_filepath)
-        # the contents of the file are asserted in CLIUnitTests
 
         self.assertEqual(exit_cm.exception.code, 0)
 
@@ -395,6 +396,14 @@ class CLIUnitTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         self.assertEqual(module.args, expected_args)
+
+        data_in_file = False
+        with open(target_filepath, 'r') as file:
+            for line in file:
+                if expected_data in line:
+                    data_in_file = True
+                    break
+        self.assertTrue(data_in_file)
 
     def test_export_to_python_with_args(self):
         """Export a python script w/ args for a model."""
