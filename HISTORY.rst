@@ -52,6 +52,8 @@ Unreleased Changes (3.9.1)
     * Fixed an issue on Mac OS when certain models would loop indefinitely and
       never complete.  This was addressed by bumping the ``taskgraph``
       requirement version to ``0.10.3``
+    * Fixed a bug where saving a datastack parameter set with relative paths
+      would not convert Windows separators to linux style.
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
