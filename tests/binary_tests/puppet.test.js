@@ -74,7 +74,7 @@ beforeAll(async () => {
   const data = JSON.parse(await res.text());
   console.log('debugger version:', data);
   browser = await puppeteer.connect({
-    browserURL: `http://localhost:${PORT}`,    // this also works
+    browserWSEndpoint: data.webSocketDebuggerUrl, // this works
     defaultViewport: { width: 1000, height: 800 },
   });
   await new Promise(resolve => setTimeout(resolve, 30000));
