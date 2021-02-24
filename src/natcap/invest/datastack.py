@@ -472,8 +472,9 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, str):
-            normalized_path = os.path.normpath(args_param)
-            if os.path.exists(normalized_path):
+            # If args_param is empty string '' os.path.exists will be False
+            if os.path.exists(args_param):
+                normalized_path = os.path.normpath(args_param)
                 if relative:
                     # Handle special case where python assumes that '.'
                     # represents the CWD

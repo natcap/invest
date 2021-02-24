@@ -604,7 +604,9 @@ class DatastacksTest(unittest.TestCase):
         stack_type, stack_info = datastack.get_datastack_info(json_path)
         self.assertEqual(stack_type, 'json')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            params, 'sample_model', natcap.invest.__version__))
+            params, 'sample_model', natcap.invest.__version__),
+            f"stack_info: {stack_info} v. datastack.ParameterSet : "
+            f"{datastack.ParameterSet(params, 'sample_model', natcap.invest.__version__)}")
 
     def test_get_datastack_info_logfile_new_style(self):
         """Datastack: test get datastack info logfile new style."""
@@ -660,10 +662,10 @@ class DatastacksTest(unittest.TestCase):
         from natcap.invest import datastack
 
         args = {
-            'windows_path': os.path.join(self.workspace,
-                                         'dir1\\filepath1.txt'),
-            'linux_path': os.path.join(self.workspace,
-                                       'dir2/filepath2.txt'),
+            'windows_path': os.path.join(
+                self.workspace, 'dir1\\filepath1.txt'),
+            'linux_path': os.path.join(
+                self.workspace, 'dir2/filepath2.txt'),
         }
         for filepath in args.values():
             normalized_path = os.path.normpath(filepath.replace('\\', os.sep))
@@ -676,22 +678,24 @@ class DatastacksTest(unittest.TestCase):
                 open_file.write('the contents of this file do not matter.')
 
         paramset_path = os.path.join(self.workspace, 'paramset.invest.json')
-        datastack.build_parameter_set(args, 'sample_model', paramset_path,
-                                      relative=True)
+        # Windows paths should be saved with linux-style separators
+        datastack.build_parameter_set(
+            args, 'sample_model', paramset_path, relative=True)
 
         with open(paramset_path) as saved_parameters:
             args = json.loads(saved_parameters.read())['args']
+            # Expecting window_path to have linux style line seps
             expected_args = {
-                'windows_path': os.path.join('dir1', 'filepath1.txt'),
-                'linux_path': os.path.join('dir2', 'filepath2.txt'),
+                'windows_path': 'dir1/filepath1.txt',
+                'linux_path': 'dir2/filepath2.txt',
             }
             self.assertEqual(expected_args, args)
 
         expected_args = {
-            'windows_path': os.path.join(self.workspace, 'dir1',
-                                         'filepath1.txt'),
-            'linux_path': os.path.join(self.workspace, 'dir2',
-                                       'filepath2.txt'),
+            'windows_path': os.path.join(
+                self.workspace, 'dir1', 'filepath1.txt'),
+            'linux_path': os.path.join(
+                self.workspace, 'dir2', 'filepath2.txt'),
         }
 
         extracted_paramset = datastack.extract_parameter_set(paramset_path)
