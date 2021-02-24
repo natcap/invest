@@ -493,6 +493,8 @@ class DatastacksTest(unittest.TestCase):
                 self.workspace, 'inter_dir', 'inter_inter_dir', 'doh.txt'),
             'data_dir': os.path.join(self.workspace, 'data_dir'),
         }
+        os.makedirs(
+            os.path.join(self.workspace, 'inter_dir', 'inter_inter_dir'))
         modelname = 'natcap.invest.foo'
         paramset_filename = os.path.join(self.workspace, 'paramset.json')
 
@@ -509,8 +511,8 @@ class DatastacksTest(unittest.TestCase):
         raw_args = json.load(open(paramset_filename))['args']
         self.assertEqual(raw_args['foo'], 'foo.txt')
         # Expecting linux style path separators for Windows
-        self.assertEqual(raw_args['bar'], '../bar.txt')
-        self.assertEqual(raw_args['doh'], '../../doh.txt')
+        self.assertEqual(raw_args['bar'], 'inter_dir/bar.txt')
+        self.assertEqual(raw_args['doh'], 'inter_dir/inter_inter_dir/doh.txt')
         self.assertEqual(raw_args['data_dir'], 'data_dir')
 
         # Read back the parameter set and verify the returned paths are
