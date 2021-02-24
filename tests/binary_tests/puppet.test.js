@@ -73,11 +73,11 @@ beforeAll(async () => {
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
   console.log('debugger version:', data);
-  // browser = await puppeteer.connect({
-  //   browserWSEndpoint: data.webSocketDebuggerUrl, // this works
-  //   // browserURL: `http://localhost:${PORT}`,    // this also works
-  //   defaultViewport: { width: 1000, height: 800 },
-  // });
+  browser = await puppeteer.connect({
+    browserWSEndpoint: data.webSocketDebuggerUrl, // this works
+    // browserURL: `http://localhost:${PORT}`,    // this also works
+    defaultViewport: { width: 1000, height: 800 },
+  });
   // makeAOI();
 });
 
@@ -112,7 +112,7 @@ afterAll(async () => {
 test('Run a real invest model', async () => {
   // const { findByText, findByLabelText, findByRole } = queries;
   console.log('test');
-  // await waitFor(() => {
-  //   expect(browser.isConnected()).toBeTruthy();
-  // });
+  await waitFor(() => {
+    expect(browser.isConnected()).toBeTruthy();
+  });
 });
