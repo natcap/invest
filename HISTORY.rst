@@ -60,7 +60,6 @@ Unreleased Changes (3.9.1)
     * Fixed a bug where, if rate change and discount rate were set to 0, the
       valuation results were in $/year rather than $, too small by a factor of 
       ``lulc_fut_year - lulc_cur_year``.
->>>>>>> main
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
