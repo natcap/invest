@@ -59,7 +59,8 @@ function makeAOI() {
 beforeAll(async () => {
   console.log('beforeAll');
   electronProcess = spawn(
-    `"${binaryPath}"`, [`--inspect=${PORT}`],
+    // remote-debugging-port is a chromium arg
+    `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
     { shell: true }
   );
   electronProcess.stderr.on('data', (data) => {
@@ -72,13 +73,12 @@ beforeAll(async () => {
   await new Promise(resolve => setTimeout(resolve, 20000));
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
-  console.log('debugger version:', data);
+
   browser = await puppeteer.connect({
     browserWSEndpoint: data.webSocketDebuggerUrl, // this works
     defaultViewport: { width: 1000, height: 800 },
   });
-  await new Promise(resolve => setTimeout(resolve, 30000));
-  // makeAOI();
+  makeAOI();
 });
 
 afterAll(async () => {
@@ -110,9 +110,58 @@ afterAll(async () => {
 });
 
 test('Run a real invest model', async () => {
-  // const { findByText, findByLabelText, findByRole } = queries;
+  const { findByText, findByLabelText, findByRole } = queries;
   console.log('test');
   await waitFor(() => {
     expect(browser.isConnected()).toBeTruthy();
   });
+  const pages = (await browser.pages());
+  // find the mainWindow's index.html, not the splashScreen's splash.html
+  let page;
+  pages.forEach((p) => {
+    if (p.url().endsWith('index.html')) {
+      page = p;
+    }
+  });
+  const doc = await getDocument(page);
+
+  // Setting up Recreation model because it has very few data requirements
+  const investTable = await findByRole(doc, 'table');
+  const button = await findByRole(investTable, 'button', { name: /Visitation/ });
+  button.click();
+  const workspace = await findByLabelText(doc, /Workspace/);
+  await workspace.type(TMP_DIR, { delay: 10 });
+  const aoi = await findByLabelText(doc, /Area of Interest/);
+  await aoi.type(TMP_AOI_PATH, { delay: 10 });
+  const startYear = await findByLabelText(doc, /Start Year/);
+  await startYear.type('2008', { delay: 10 });
+  const endYear = await findByLabelText(doc, /End Year/);
+  await endYear.type('2012', { delay: 10 });
+
+  const runButton = await findByText(doc, 'Run');
+  // Button is disabled until validation completes
+  await waitFor(async () => {
+    const isEnabled = await page.evaluate(
+      (btn) => !btn.disabled,
+      runButton
+    );
+    expect(isEnabled).toBeTruthy();
+  });
+
+  runButton.click();
+  const logTab = await findByText(doc, 'Log');
+  // Log tab is not active until after the invest logfile is opened
+  await waitFor(async () => {
+    const prop = await logTab.getProperty('className');
+    const vals = await prop.jsonValue();
+    expect(vals.includes('active')).toBeTruthy();
+  }, 18000); // 4x default timeout: sometimes this expires unmet in GHA
+
+  const cancelButton = await findByText(doc, 'Cancel Run');
+  cancelButton.click();
+  await waitFor(async () => {
+    expect(await findByText(doc, 'Run Canceled'));
+    expect(await findByText(doc, 'Open Workspace'));
+  });
+  console.log('done with test');
 });
