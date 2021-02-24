@@ -7,6 +7,9 @@ import unittest
 import unittest.mock
 import contextlib
 import json
+import importlib
+import uuid
+
 
 try:
     from StringIO import StringIO
@@ -328,3 +331,92 @@ class CLIHeadlessTests(unittest.TestCase):
         # Validation returned successfully, so error code 0 even though there
         # are warnings.
         self.assertEqual(exit_cm.exception.code, 0)
+
+    def test_export_python(self):
+        """CLI: Export a python script for a given model."""
+        from natcap.invest import cli
+
+        target_filepath = os.path.join(self.workspace_dir, 'foo.py')
+        with redirect_stdout() as stdout_stream:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main(['export-py', 'carbon', '-f', target_filepath])
+
+        self.assertTrue(os.path.exists(target_filepath))
+        # the contents of the file are asserted in CLIUnitTests
+
+        self.assertEqual(exit_cm.exception.code, 0)
+
+    def test_export_python_default_filepath(self):
+        """CLI: Export a python script without passing a filepath."""
+        from natcap.invest import cli
+
+        model = 'carbon'
+        expected_filepath = os.path.join(
+            self.workspace_dir, f'{model}_execute.py')
+        with redirect_stdout() as stdout_stream:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main(['export-py', model])
+
+        self.assertTrue(os.path.exists(expected_filepath))
+        # the contents of the file are asserted in CLIUnitTests
+
+        self.assertEqual(exit_cm.exception.code, 0)
+
+
+class CLIUnitTests(unittest.TestCase):
+    """Unit Tests for CLI utilities."""
+    def setUp(self):
+        """Use a temporary workspace for all tests in this class."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test run."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_export_to_python_default(self):
+        """Export a python script w/ default args for a model."""
+        from natcap.invest import cli
+
+        filename = 'foo.py'
+        target_filepath = os.path.join(self.workspace_dir, filename)
+        target_model = 'carbon'
+        expected_data = 'natcap.invest.carbon.execute(args)'
+        cli.export_to_python(target_filepath, target_model)
+
+        self.assertTrue(os.path.exists(target_filepath))
+
+        target_model = cli._MODEL_UIS[target_model].pyname
+        model_module = importlib.import_module(name=target_model)
+        spec = model_module.ARGS_SPEC
+        expected_args = {key: '' for key in spec['args'].keys()}
+
+        module_name = str(uuid.uuid4()) + 'testscript'
+        spec = importlib.util.spec_from_file_location(module_name, target_filepath)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.assertEqual(module.args, expected_args)
+
+    def test_export_to_python_with_args(self):
+        """Export a python script w/ args for a model."""
+        from natcap.invest import cli
+
+        target_filepath = os.path.join(self.workspace_dir, 'foo.py')
+        target_model = 'carbon'
+        expected_args = {
+            'workspace_dir': 'myworkspace',
+            'lulc': 'myraster.tif',
+            'parameter': 0.5,
+        }
+        cli.export_to_python(
+            target_filepath,
+            target_model, expected_args)
+
+        self.assertTrue(os.path.exists(target_filepath))
+
+        module_name = str(uuid.uuid4()) + 'testscript'
+        spec = importlib.util.spec_from_file_location(module_name, target_filepath)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.assertEqual(module.args, expected_args)
+
+        self.assertEqual(module.args, expected_args)
