@@ -162,9 +162,9 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 
 test: $(GIT_TEST_DATA_REPO_PATH)
 	coverage run -m --omit='*/invest/ui/*' $(TESTRUNNER) tests
-	coverage report
-	coverage html
-	coverage xml
+	coverage report -i
+	coverage html -i
+	coverage xml -i
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	coverage run -m --include='*/invest/ui/*' $(TESTRUNNER) ui_tests
