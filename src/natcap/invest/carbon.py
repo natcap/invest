@@ -497,15 +497,21 @@ def _calculate_valuation_constant(
         a floating point number that can be used to multiply a delta carbon
         storage value by to calculate NPV.
     """
-    n_years = int(lulc_fut_year) - int(lulc_cur_year) - 1
+    n_years = lulc_fut_year - lulc_cur_year
     ratio = (
-        1.0 / ((1 + float(discount_rate) / 100.0) *
-               (1 + float(rate_change) / 100.0)))
-    valuation_constant = (
-        float(price_per_metric_ton_of_c) /
-        (float(lulc_fut_year) - float(lulc_cur_year)))
-    if ratio != 1.0:
-        valuation_constant *= (1.0 - ratio ** (n_years + 1)) / (1.0 - ratio)
+        1 / ((1 + discount_rate / 100) * 
+             (1 + rate_change / 100)))
+    valuation_constant = (price_per_metric_ton_of_c / n_years)
+    # note: the valuation formula in the user's guide uses sum notation.
+    # here it's been simplified to remove the sum using the general rule
+    # sum(r^k) from k=0 to N  ==  (r^(N+1) - 1) / (r - 1)
+    # where N = n_years-1 and r = ratio
+    if ratio == 1:
+        # if ratio == 1, we would divide by zero in the equation below
+        # so use the limit as ratio goes to 1, which is n_years
+        valuation_constant *= n_years
+    else:
+        valuation_constant *= (1 - ratio ** n_years) / (1 - ratio)
     return valuation_constant
 
 
