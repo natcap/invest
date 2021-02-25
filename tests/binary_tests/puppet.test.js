@@ -76,6 +76,7 @@ beforeAll(async () => {
   // connect to the debugging endpoint
   browser = await puppeteer.connect({
     browserWSEndpoint: data.webSocketDebuggerUrl, // this works
+    // browserURL: `http://localhost:${PORT}`,    // this also works
     defaultViewport: { width: 1000, height: 800 },
   });
   // set up test data
@@ -91,9 +92,9 @@ afterAll(async () => {
   }
 
   // being extra careful with recursive rm
-  // if (TMP_DIR.startsWith('tests/data')) {
-  //   fs.rmdirSync(TMP_DIR, { recursive: true });
-  // }
+  if (TMP_DIR.startsWith('tests/data')) {
+    fs.rmdirSync(TMP_DIR, { recursive: true });
+  }
   // I thought this business would be necessary to kill the spawned shell
   // process running electron - since that's how we kill a similar spawned
   // subprocess in the app, but actually it is not.
@@ -118,12 +119,10 @@ test('Run a real invest model', async () => {
   // find the mainWindow's index.html, not the splashScreen's splash.html
   let page;
   pages.forEach((p) => {
-    console.log('p:', p.url());
     if (p.url().endsWith('index.html')) {
       page = p;
     }
   });
-  console.log('page:', page)
   const doc = await getDocument(page);
 
   // Setting up Recreation model because it has very few data requirements
@@ -165,5 +164,4 @@ test('Run a real invest model', async () => {
     expect(await findByText(doc, 'Run Canceled'));
     expect(await findByText(doc, 'Open Workspace'));
   });
-  console.log('done with test');
 });
