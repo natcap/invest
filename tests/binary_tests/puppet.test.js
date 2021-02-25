@@ -86,12 +86,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   console.log('afterAll');
-//   try {
-//     await browser.close();
-//   } catch (error) {
-//     console.log(binaryPath);
-//     console.error(error);
-//   }
+  try {
+    await browser.close();
+  } catch (error) {
+    console.log(binaryPath);
+    console.error(error);
+  }
 //   console.log('should be done with tests');
 //   // being extra careful with recursive rm
 //   // if (TMP_DIR.startsWith('tests/data')) {
