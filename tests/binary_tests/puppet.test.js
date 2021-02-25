@@ -6,7 +6,7 @@ import { spawn } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
-jest.setTimeout(60000); // This test takes ~15 seconds, but longer in CI
+jest.setTimeout(120000); // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
 
 // For ease of automated testing, run the app from the 'unpacked' directory
@@ -57,8 +57,7 @@ function makeAOI() {
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
-  console.log('beforeAll');
-  // start the invest app
+  // start the invest app and forward stderr to console
   electronProcess = spawn(
     // remote-debugging-port is a chromium arg
     `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
@@ -67,9 +66,7 @@ beforeAll(async () => {
   electronProcess.stderr.on('data', (data) => {
     console.log(`${data}`);
   });
-  // electronProcess.stdout.on('data', (data) => {
-  //   console.log(`${data}`);
-  // });
+
   // get data about the remote debugging endpoint
   // so we don't make the next fetch too early
   await new Promise(resolve => setTimeout(resolve, 20000));
@@ -81,40 +78,39 @@ beforeAll(async () => {
     browserWSEndpoint: data.webSocketDebuggerUrl, // this works
     defaultViewport: { width: 1000, height: 800 },
   });
+  // set up test data
   makeAOI();
 });
 
 afterAll(async () => {
-  console.log('afterAll');
   try {
     await browser.close();
   } catch (error) {
     console.log(binaryPath);
     console.error(error);
   }
-//   console.log('should be done with tests');
-//   // being extra careful with recursive rm
-//   // if (TMP_DIR.startsWith('tests/data')) {
-//   //   fs.rmdirSync(TMP_DIR, { recursive: true });
-//   // }
-//   // I thought this business would be necessary to kill the spawned shell
-//   // process running electron - since that's how we kill a similar spawned
-//   // subprocess in the app, but actually it is not.
-//   // if (electronProcess.pid) {
-//   //   console.log(electronProcess.pid)
-//   //   if (process.platform !== 'win32') {
-//   //     process.kill(-electronProcess.pid, 'SIGTERM');
-//   //   } else {
-//   //     exec(`taskkill /pid ${electronProcess.pid} /t /f`)
-//   //   }
-//   // }
+
+  // being extra careful with recursive rm
+  // if (TMP_DIR.startsWith('tests/data')) {
+  //   fs.rmdirSync(TMP_DIR, { recursive: true });
+  // }
+  // I thought this business would be necessary to kill the spawned shell
+  // process running electron - since that's how we kill a similar spawned
+  // subprocess in the app, but actually it is not.
+  // if (electronProcess.pid) {
+  //   console.log(electronProcess.pid)
+  //   if (process.platform !== 'win32') {
+  //     process.kill(-electronProcess.pid, 'SIGTERM');
+  //   } else {
+  //     exec(`taskkill /pid ${electronProcess.pid} /t /f`)
+  //   }
+  // }
   const wasKilled = electronProcess.kill();
   console.log(`electron process was killed: ${wasKilled}`);
 });
 
 test('Run a real invest model', async () => {
   const { findByText, findByLabelText, findByRole } = queries;
-  console.log('test');
   await waitFor(() => {
     expect(browser.isConnected()).toBeTruthy();
   });
