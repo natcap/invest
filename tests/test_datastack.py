@@ -1,5 +1,6 @@
 """Testing Module for Datastack."""
 import os
+import sys
 import unittest
 import tempfile
 import shutil
@@ -480,6 +481,49 @@ class DatastacksTest(unittest.TestCase):
         self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
 
+    @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
+    def test_relative_parameter_set_windows(self):
+        """Datastack: test relative parameter set paths saved linux style."""
+        from natcap.invest import datastack, __version__
+
+        params = {
+            'foo': os.path.join(self.workspace, 'foo.txt'),
+            'bar': os.path.join(self.workspace, 'inter_dir', 'bar.txt'),
+            'doh': os.path.join(
+                self.workspace, 'inter_dir', 'inter_inter_dir', 'doh.txt'),
+            'data_dir': os.path.join(self.workspace, 'data_dir'),
+        }
+        os.makedirs(
+            os.path.join(self.workspace, 'inter_dir', 'inter_inter_dir'))
+        modelname = 'natcap.invest.foo'
+        paramset_filename = os.path.join(self.workspace, 'paramset.json')
+
+        # make the sample data so filepaths are interpreted correctly
+        for base_name in ('foo', 'bar', 'doh'):
+            open(params[base_name], 'w').write('hello!')
+        os.makedirs(params['data_dir'])
+
+        # Write the parameter set
+        datastack.build_parameter_set(
+            params, modelname, paramset_filename, relative=True)
+
+        # Check that the written parameter set file contains relative paths
+        raw_args = json.load(open(paramset_filename))['args']
+        self.assertEqual(raw_args['foo'], 'foo.txt')
+        # Expecting linux style path separators for Windows
+        self.assertEqual(raw_args['bar'], 'inter_dir/bar.txt')
+        self.assertEqual(raw_args['doh'], 'inter_dir/inter_inter_dir/doh.txt')
+        self.assertEqual(raw_args['data_dir'], 'data_dir')
+
+        # Read back the parameter set and verify the returned paths are
+        # absolute
+        args, callable_name, invest_version = datastack.extract_parameter_set(
+            paramset_filename)
+
+        self.assertEqual(args, params)
+        self.assertEqual(invest_version, __version__)
+        self.assertEqual(callable_name, modelname)
+
     def test_extract_parameters_from_logfile(self):
         """Datastacks: Verify we can read args from a logfile."""
         from natcap.invest import datastack
@@ -542,7 +586,7 @@ class DatastacksTest(unittest.TestCase):
         self.assertEqual(stack_info, datastack.ParameterSet(
             params, 'sample_model', natcap.invest.__version__))
 
-    def test_get_datatack_info_parameter_set(self):
+    def test_get_datastack_info_parameter_set(self):
         """Datastack: test get datastack info parameter set."""
         import natcap.invest
         from natcap.invest import datastack
@@ -560,7 +604,9 @@ class DatastacksTest(unittest.TestCase):
         stack_type, stack_info = datastack.get_datastack_info(json_path)
         self.assertEqual(stack_type, 'json')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            params, 'sample_model', natcap.invest.__version__))
+            params, 'sample_model', natcap.invest.__version__),
+            f"stack_info: {stack_info} v. datastack.ParameterSet : "
+            f"{datastack.ParameterSet(params, 'sample_model', natcap.invest.__version__)}")
 
     def test_get_datastack_info_logfile_new_style(self):
         """Datastack: test get datastack info logfile new style."""
@@ -611,15 +657,16 @@ class DatastacksTest(unittest.TestCase):
         self.assertEqual(stack_info, datastack.ParameterSet(
             expected_args, datastack.UNKNOWN, datastack.UNKNOWN))
 
-    def test_mixed_path_separators_in_paramset(self):
+    @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
+    def test_mixed_path_separators_in_paramset_windows(self):
         """Datastacks: parameter sets must handle windows and linux paths."""
         from natcap.invest import datastack
 
         args = {
-            'windows_path': os.path.join(self.workspace,
-                                         'dir1\\filepath1.txt'),
-            'linux_path': os.path.join(self.workspace,
-                                       'dir2/filepath2.txt'),
+            'windows_path': os.path.join(
+                self.workspace, 'dir1\\filepath1.txt'),
+            'linux_path': os.path.join(
+                self.workspace, 'dir2/filepath2.txt'),
         }
         for filepath in args.values():
             normalized_path = os.path.normpath(filepath.replace('\\', os.sep))
@@ -632,22 +679,66 @@ class DatastacksTest(unittest.TestCase):
                 open_file.write('the contents of this file do not matter.')
 
         paramset_path = os.path.join(self.workspace, 'paramset.invest.json')
-        datastack.build_parameter_set(args, 'sample_model', paramset_path,
-                                      relative=True)
+        # Windows paths should be saved with linux-style separators
+        datastack.build_parameter_set(
+            args, 'sample_model', paramset_path, relative=True)
 
         with open(paramset_path) as saved_parameters:
             args = json.loads(saved_parameters.read())['args']
+            # Expecting window_path to have linux style line seps
             expected_args = {
-                'windows_path': os.path.join('dir1', 'filepath1.txt'),
-                'linux_path': os.path.join('dir2', 'filepath2.txt'),
+                'windows_path': 'dir1/filepath1.txt',
+                'linux_path': 'dir2/filepath2.txt',
             }
             self.assertEqual(expected_args, args)
 
         expected_args = {
-            'windows_path': os.path.join(self.workspace, 'dir1',
-                                         'filepath1.txt'),
-            'linux_path': os.path.join(self.workspace, 'dir2',
-                                       'filepath2.txt'),
+            'windows_path': os.path.join(
+                self.workspace, 'dir1', 'filepath1.txt'),
+            'linux_path': os.path.join(
+                self.workspace, 'dir2', 'filepath2.txt'),
+        }
+
+        extracted_paramset = datastack.extract_parameter_set(paramset_path)
+        self.assertEqual(extracted_paramset.args, expected_args)
+
+    @unittest.skipUnless(sys.platform.startswith("darwin"), "requires macOS")
+    def test_mixed_path_separators_in_paramset_mac(self):
+        """Datastacks: parameter sets must handle mac and linux paths."""
+        from natcap.invest import datastack
+
+        args = {
+            'mac_path': os.path.join(
+                self.workspace, 'dir1/filepath1.txt'),
+            'linux_path': os.path.join(
+                self.workspace, 'dir2/filepath2.txt'),
+        }
+        for filepath in args.values():
+            try:
+                os.makedirs(os.path.dirname(filepath))
+            except OSError:
+                pass
+
+            with open(filepath, 'w') as open_file:
+                open_file.write('the contents of this file do not matter.')
+
+        paramset_path = os.path.join(self.workspace, 'paramset.invest.json')
+        datastack.build_parameter_set(
+            args, 'sample_model', paramset_path, relative=True)
+
+        with open(paramset_path) as saved_parameters:
+            args = json.loads(saved_parameters.read())['args']
+            expected_args = {
+                'mac_path': 'dir1/filepath1.txt',
+                'linux_path': 'dir2/filepath2.txt',
+            }
+            self.assertEqual(expected_args, args)
+
+        expected_args = {
+            'mac_path': os.path.join(
+                self.workspace, 'dir1', 'filepath1.txt'),
+            'linux_path': os.path.join(
+                self.workspace, 'dir2', 'filepath2.txt'),
         }
 
         extracted_paramset = datastack.extract_parameter_set(paramset_path)
