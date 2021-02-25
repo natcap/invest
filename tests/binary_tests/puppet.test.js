@@ -122,16 +122,17 @@ test('Run a real invest model', async () => {
   // find the mainWindow's index.html, not the splashScreen's splash.html
   let page;
   pages.forEach((p) => {
+    console.log('p:', p.url());
     if (p.url().endsWith('index.html')) {
       page = p;
     }
   });
+  console.log('page:', page)
   const doc = await getDocument(page);
 
   // Setting up Recreation model because it has very few data requirements
   const investTable = await findByRole(doc, 'table');
   const button = await findByRole(investTable, 'button', { name: /Visitation/ });
-  console.log('visitation button:', button);
   button.click();
 
   const workspace = await findByLabelText(doc, /Workspace/);

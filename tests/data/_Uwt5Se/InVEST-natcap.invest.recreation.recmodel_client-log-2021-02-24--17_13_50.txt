@@ -1,0 +1,16 @@
+2021-02-24 17:13:50,135 (natcap.invest.utils) utils.prepare_workspace(128) INFO Writing log messages to /Users/emily/invest-workbench/tests/data/_Uwt5Se/InVEST-natcap.invest.recreation.recmodel_client-log-2021-02-24--17_13_50.txt
+2021-02-24 17:13:50,136 (__main__) cli.main(521) Level 100 Starting model with parameters: 
+Arguments for InVEST natcap.invest.recreation.recmodel_client 3.9.0.post285+gf68dd440:
+aoi_path                      tests/data/_Uwt5Se/aoi.geojson
+cell_size                     
+compute_regression            False
+end_year                      2012
+grid_aoi                      False
+grid_type                     square
+n_workers                     -1
+predictor_table_path          
+results_suffix                
+scenario_predictor_table_path 
+start_year                    2008
+workspace_dir                 /Users/emily/invest-workbench/tests/data/_Uwt5Se
+

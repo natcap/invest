@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","name":"aoi","features":[{"type":"Feature","properties":{"id":1},"geometry":{"type":"Polygon","coordinates":[[[-123,45],[-123,45.2],[-122.8,45.2],[-122.8,45],[-123,45]]]}}]}
