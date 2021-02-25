@@ -1,18 +1,20 @@
 'use strict';
 
-const { spawnSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs-extra');
 const path = require('path');
 const glob = require('glob');
 
 const SRC_DIR = 'src';
 const BUILD_DIR = 'build';
+const ELECTRON_BUILDER_ENV = 'electron-builder.env';
 
 if (process.argv[2] && process.argv[2] === 'clean') {
   clean();
 } else {
   clean();
   build();
+  makeVersionString();
 }
 
 /** Remove all the files created during build()
@@ -38,6 +40,9 @@ function clean() {
       fs.unlinkSync(file);
     }
   });
+  try {
+    fs.unlinkSync(ELECTRON_BUILDER_ENV);
+  } catch {}
 }
 
 /** Transpile and copy all src/ code to build folder. */
@@ -61,9 +66,20 @@ function build() {
   // copy all other files to their same relative location in the build dir
   const files = glob.sync(SRC_DIR.concat(path.sep, '**', path.sep, '*'));
   files.forEach((file) => {
-    if (['.css', '.html', '.json'].includes(path.extname(file))) {
+    if (['.css', '.html', '.png'].includes(path.extname(file))) {
       const dest = file.replace(SRC_DIR, BUILD_DIR);
       fs.copySync(file, dest);
     }
   });
+}
+
+/** Uniquely identify the changeset we're building & packaging.
+ *
+ * electron-builder will read this .env file and use the string in
+ * the artifactName.
+ */
+function makeVersionString() {
+  const version = execFileSync('git', ['describe', '--tags']);
+  fs.writeFileSync(ELECTRON_BUILDER_ENV, `VERSION=${version}`);
+  console.log(`built version ${version}`);
 }

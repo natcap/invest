@@ -13,7 +13,7 @@ import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
 import LoadButton from './components/LoadButton';
 import SettingsModal from './components/SettingsModal';
-import { getInvestList } from './server_requests';
+import { getInvestModelNames } from './server_requests';
 import { getLogger } from './logger';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils.js';
@@ -43,7 +43,7 @@ export default class App extends React.Component {
 
   /** Initialize the list of available invest models and recent invest jobs. */
   async componentDidMount() {
-    const investList = await getInvestList();
+    const investList = await getInvestModelNames();
     const recentJobs = await InvestJob.getJobStore();
     // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?
@@ -104,13 +104,14 @@ export default class App extends React.Component {
     // Switch to the next tab if there is one, or the previous, or home.
     let switchTo = 'home';
     if (openJobs[index]) {
-      switchTo = openJobs[index].navID;
+      switchTo = openJobs[index].metadata.navID;
     } else if (openJobs[index - 1]) {
-      switchTo = openJobs[index - 1].navID;
+      switchTo = openJobs[index - 1].metadata.navID;
     }
+    this.switchTabs(switchTo);
     this.setState({
       openJobs: openJobs
-    }, () => this.switchTabs(switchTo));
+    });
   }
 
   /** Save data describing an invest job to a persistent JSON file.
@@ -147,17 +148,18 @@ export default class App extends React.Component {
       investNavItems.push(
         <Nav.Item key={job.metadata.navID}>
           <Nav.Link eventKey={job.metadata.navID}>
-            <React.Fragment>
-              {job.metadata.modelHumanName}
-              <Button
-                className="close-tab"
-                variant="outline-dark"
-                onClick={() => this.closeInvestModel(job.metadata.navID)}
-                onDragOver={dragOverHandlerNone}
-              >
-                x
-              </Button>
-            </React.Fragment>
+            {job.metadata.modelHumanName}
+            <Button
+              className="close-tab"
+              variant="outline-dark"
+              onClick={(event) => {
+                event.stopPropagation();
+                this.closeInvestModel(job.metadata.navID);
+              }}
+              onDragOver={dragOverHandlerNone}
+            >
+              x
+            </Button>
           </Nav.Link>
         </Nav.Item>
       );
@@ -176,24 +178,27 @@ export default class App extends React.Component {
         </TabPane>
       );
     });
+
     return (
       <TabContainer activeKey={activeTab}>
-        <Navbar expand="lg" onDragOver={dragOverHandlerNone}>
+        <Navbar onDragOver={dragOverHandlerNone}>
+          <Navbar.Brand onDragOver={dragOverHandlerNone}>
+            <Nav.Link 
+              onSelect={this.switchTabs} 
+              eventKey="home"
+              onDragOver={dragOverHandlerNone}>
+              InVEST
+            </Nav.Link>
+          </Navbar.Brand>
           <Nav
             variant="pills"
-            className="mr-auto"
+            className="mr-auto horizontal-scroll"
             activeKey={activeTab}
             onSelect={this.switchTabs}
             onDragOver={dragOverHandlerNone}
           >
-            <Nav.Item>
-              <Nav.Link eventKey="home" onDragOver={dragOverHandlerNone}>
-                Home
-              </Nav.Link>
-            </Nav.Item>
             {investNavItems}
           </Nav>
-          <Navbar.Brand onDragOver={dragOverHandlerNone}>InVEST</Navbar.Brand>
           <LoadButton
             openInvestModel={this.openInvestModel}
             batchUpdateArgs={this.batchUpdateArgs}
@@ -205,6 +210,7 @@ export default class App extends React.Component {
             clearStorage={this.clearRecentJobs}
           />
         </Navbar>
+
         <TabContent id="top-tab-content">
           <TabPane eventKey="home" title="Home">
             <HomeTab

@@ -14,8 +14,7 @@
     "postinstall": "electron-builder install-app-deps",
     "fetch-invest": "node ./scripts/fetch_invest_binaries.js && unzip ./build/binaries.zip -d build/invest/",
     "build": "node ./build.js",
-    "dist": "electron-builder -c.extraMetadata.main=build/main.js",
-    "pack": "electron-builder --dir -c.extraMetadata.main=build/main.js"
+    "dist": "electron-builder build -c.extraMetadata.main=build/main.js --publish never"
   },
   "build": {
     "extraResources": [
@@ -26,22 +25,22 @@
     ],
     "appId": "NaturalCapitalProject.Invest.Workbench",
     "productName": "InVEST Workbench",
-    "artifactName": "invest-workbench_${os}_${arch}_${version}.${ext}",
+    "artifactName": "invest-workbench_${os}_${arch}_${env.VERSION}.${ext}",
     "mac": {
       "category": "public.app-category.business",
-      "icon": "build/icon.png",
+      "icon": "resources/invest-in-shadow-white.png",
       "target": "dmg"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "icon": "build/icon.png",
+      "icon": "resources/invest-in-shadow-white.png",
       "category": "Science"
     },
     "win": {
       "target": "nsis",
-      "icon": "build/icon.png"
+      "icon": "resources/invest-in-shadow-white.png"
     },
     "files": [
       "build/**/*",
@@ -59,8 +58,8 @@
   "invest": {
     "hostname": "https://storage.googleapis.com",
     "bucket": "releases.naturalcapitalproject.org",
-    "fork": "natcap",
-    "version": "3.9.0.post147+gcc5a7cfe",
+    "fork": "invest",
+    "version": "3.9.0.post235+g296690d7",
     "target": {
       "macos": "mac_invest_binaries.zip",
       "windows": "windows_invest_binaries.zip"
@@ -83,6 +82,7 @@
     "levenary": "^1.1.1",
     "line-column": "^1.0.2",
     "localforage": "^1.9.0",
+    "material-design-icons": "^3.0.1",
     "node-fetch": "^2.6.1",
     "number-is-nan": "^2.0.0",
     "prop-types": "^15.7.2",
@@ -107,6 +107,7 @@
     "@testing-library/dom": "^7.29.4",
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.3",
+    "@testing-library/user-event": "^12.7.0",
     "babel-eslint": "^10.1.0",
     "dotenv": "^8.2.0",
     "electron": "^11.2.1",
