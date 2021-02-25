@@ -33,6 +33,7 @@ ARGS_SPEC = {
                 "projection_units": "meters",
             },
             "type": "raster",
+            "bands": {1: {"type": "code"}},
             "required": True,
             "about": (
                 "A raster file, representing integer land use/land code "
@@ -47,6 +48,17 @@ ARGS_SPEC = {
                 "required_fields": ["lucode", "crop_name"],
             },
             "type": "csv",
+            "columns": {
+                "crop_name": {
+                    "type": "option_string",
+                    "options": [
+                        "barley", "maize", "oilpalm", "potato", "rice", 
+                        "soybean", "sugarbeet", "sugarcane", "sunflower",
+                        "wheat"
+                    ]
+                },
+                "lucode": {"type": "code"}
+            }
             "required": True,
             "about": (
                 "A CSV table mapping canonical crop names to land use codes "
@@ -56,13 +68,13 @@ ARGS_SPEC = {
             "name": "Landcover to Crop Table"
         },
         "fertilization_rate_table_path": {
-            "validation_options": {
-                "required_fields": [
-                    "crop_name", "nitrogen_rate", "phosphorous_rate",
-                    "potassium_rate"
-                ],
-            },
             "type": "csv",
+            "columns": {
+                "crop_name": {"type": "freestyle_string"},
+                "nitrogen_rate": {"type": "number", "units": "kilograms/hectare"},
+                "phosphorus_rate": {"type": "number", "units": "kilograms/hectare"},
+                "potassium_rate": {"type": "number", "units": "kilograms/hectare"}
+            },
             "required": True,
             "about": (
                 "A table that maps fertilization rates to crops in the "
@@ -73,6 +85,7 @@ ARGS_SPEC = {
         },
         "aggregate_polygon_path": {
             "type": "vector",
+            "fields": {},
             "required": False,
             "about": (
                 "A polygon vector containing features with which to "
@@ -85,6 +98,48 @@ ARGS_SPEC = {
                 "exists": True,
             },
             "type": "directory",
+            "contents": {
+                "climate_regression_yield_tables": {
+                    "type": "directory",
+                    "contents": {
+                        "[CROP]_regression_yield_table.csv": {
+                            "type": "csv",
+                            "columns": {
+                                'climate_bin':
+                                'yield_ceiling', 
+                                'b_nut', 
+                                'b_k2o', 
+                                'c_n', 
+                                'c_p2o5',
+                                'c_k2o', 
+                                'yield_ceiling_rf'
+                            }
+                        },
+                    }
+                },
+                "crop_nutrient.csv": {
+                    "type": "csv",
+                    "columns": {
+                        'Protein', 
+                        'Lipid', 
+                        'Energy', 
+                        'Ca', 
+                        'Fe', 
+                        'Mg', 
+                        'Ph', 
+                        'K', 
+                        'Na', 
+                        'Zn',
+                        'Cu', 
+                        'Fl', 
+                        'Mn', 
+                        'Se', 'VitA', 'betaC', 'alphaC', 'VitE', 'Crypto',
+                        'Lycopene', 'Lutein', 'betaT', 'gammaT', 'deltaT', 'VitC', 'Thiamin',
+                        'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
+                        'VitK'
+                    }
+                }
+            },
             "required": True,
             "about": (
                 "A path to the InVEST Crop Production Data directory. These "

@@ -29,6 +29,9 @@ ARGS_SPEC = {
         "n_workers": validation.N_WORKERS_SPEC,
         "lulc_cur_path": {
             "type": "raster",
+            "bands": {
+                1: {"type": "number", "units": "unitless"}
+            },
             "required": True,
             "validation_options": {
                 "projected": True,
@@ -49,6 +52,9 @@ ARGS_SPEC = {
         },
         "lulc_fut_path": {
             "type": "raster",
+            "bands": {
+                1: {"type": "number", "units": "unitless"}
+            },
             "required": "calc_sequestration",
             "validation_options": {
                 "projected": True,
@@ -73,6 +79,9 @@ ARGS_SPEC = {
         },
         "lulc_redd_path": {
             "type": "raster",
+            "bands": {
+                1: {"type": "number", "units": "unitless"}
+            },
             "required": "do_redd",
             "validation_options": {
                 "projected": True,
@@ -84,11 +93,14 @@ ARGS_SPEC = {
             "name": "REDD Policy)"
         },
         "carbon_pools_path": {
-            "validation_options": {
-                "required_fields": ["LUCODE", "C_above", "C_below", "C_soil",
-                                    "C_dead"],
-            },
             "type": "csv",
+            "columns": {
+                "LUCODE": {"type": "number", "units": "unitless"},
+                "C_above": {"type": "number", "units": "megagrams/hectare"},
+                "C_below": {"type": "number", "units": "megagrams/hectare"},
+                "C_soil": {"type": "number", "units": "megagrams/hectare"},
+                "C_dead": {"type": "number", "units": "megagrams/hectare"}
+            }
             "required": True,
             "about": (
                 "A table that maps the land-cover IDs to carbon pools.  "
@@ -103,6 +115,7 @@ ARGS_SPEC = {
                 "expression": "int(value)"
             },
             "type": "number",
+            "units": "year",
             "required": "calc_sequestration",
             "about": "The calendar year of the current scenario.",
             "name": "Current Landcover Calendar Year"
@@ -112,6 +125,7 @@ ARGS_SPEC = {
                 "expression": "int(value)"
             },
             "type": "number",
+            "units": "year",
             "required": "calc_sequestration",
             "about": "The calendar year of the future scenario.",
             "name": "Future Landcover Calendar Year"
@@ -129,6 +143,7 @@ ARGS_SPEC = {
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
+            "units": "currency",
             "required": "do_valuation",
             "about": (
                 "Is the present value of carbon per metric ton. Used if "
@@ -136,13 +151,13 @@ ARGS_SPEC = {
             "name": "Price/Metric ton of carbon"
         },
         "discount_rate": {
-            "type": "number",
+            "type": "ratio",
             "required": "do_valuation",
             "about": "The discount rate as a floating point percent.",
             "name": "Market Discount in Price of Carbon (%)"
         },
         "rate_change": {
-            "type": "number",
+            "type": "ratio",
             "required": "do_valuation",
             "about": (
                 "The floating point percent increase of the price of "

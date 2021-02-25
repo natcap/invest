@@ -33,6 +33,7 @@ WORKSPACE_SPEC = {
         "will be written.  If this folder does not exist, it will be "
         "created."),
     "type": "directory",
+    "contents": {},
     "required": True,
     "validation_options": {
         "exists": False,
@@ -64,6 +65,7 @@ N_WORKERS_SPEC = {
         "place asynchronously. Any other positive integer will cause that "
         "many processes to be spawned to execute tasks."),
     "type": "number",
+    "units": None,
     "required": False,
     "validation_options": {
         "expression": "value >= -1"
