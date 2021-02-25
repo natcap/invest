@@ -166,16 +166,14 @@ test('App re-launch will exit and focus on first instance', async () => {
     expect(browser.isConnected()).toBeTruthy();
   });
 
-  // this should return quickly.  The test timeout is there in case the new i
+  // Open another instance of the Workbench application.
+  // This should return quickly.  The test timeout is there in case the new i
   // process hangs for some reason.
   const otherElectronProcess = spawnSync(
     `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
     { shell: true }
   );
 
+  // When another instance is already open, we expect an exit code of 1.
   expect(otherElectronProcess.status).toBe(1);
-  expect(browser.hidden()).toBeFalsy();
 });
-
-// Test that when window 1 is minimized and application is launched again,
-// window 1 is restored and focused opon.
