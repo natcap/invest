@@ -364,6 +364,28 @@ def calculate_avoided_pollutant_load(lulc_path, retention_volume_path,
         return load_array
 
 
+def calculate_retention_value(retention_volume_path, replacement_cost, output_path):
+    """Calculate retention value from retention volume and replacement cost.
+    Args:
+        retention_volume_path (str): path to retention volume raster (m^3/pixel)
+        replacement_cost (float): value in currency units/m^3
+        output_path (str): path to write out valuation results raster
+
+    Returns:
+        None
+    """
+
+    def retention_value_op(retention_volume_array):
+        value_array = numpy.full(retention_volume_array.shape, value_nodata)
+        nodata_mask = (retention_volume_array != retention_volume_nodata)
+
+        # retention (m^3) * replacement cost ($/m^3) = retention value ($)
+        value_array[nodata_mask] = retention_volume_array[nodata_mask] * replacement_cost
+
+
+def aggregate_results(retention_ratio, retention_volume, infiltration_ratio,
+    infiltration_volume, avoided_pollutant_loads, retention_value, output_path):
+
 
 
 
