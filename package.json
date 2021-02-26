@@ -69,22 +69,12 @@
   "author": "dmf",
   "license": "MIT",
   "dependencies": {
-    "@babel/helper-builder-react-jsx": "^7.12.13",
-    "@babel/helper-builder-react-jsx-experimental": "^7.12.11",
-    "@babel/helper-regex": "^7.10.5",
-    "@babel/plugin-transform-react-jsx-self": "^7.12.13",
-    "@babel/plugin-transform-react-jsx-source": "^7.12.13",
-    "async-limiter": "^2.0.0",
-    "code-point-at": "^1.1.0",
     "cross-env": "^5.2.1",
     "esm": "^3.2.25",
     "glob": "^7.1.6",
-    "levenary": "^1.1.1",
-    "line-column": "^1.0.2",
     "localforage": "^1.9.0",
     "material-design-icons": "^3.0.1",
     "node-fetch": "^2.6.1",
-    "number-is-nan": "^2.0.0",
     "prop-types": "^15.7.2",
     "react": "^17.0.1",
     "react-bootstrap": "^1.4.3",
@@ -126,8 +116,7 @@
     "jest-environment-jsdom-sixteen": "^1.0.3",
     "pptr-testing-library": "^0.6.4",
     "puppeteer-core": "^5.5.0",
-    "react-devtools": "^4.10.1",
-    "react-test-renderer": "^17.0.1"
+    "react-devtools": "^4.10.1"
   },
   "browserslist": {
     "production": [
