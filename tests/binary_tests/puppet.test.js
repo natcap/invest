@@ -165,7 +165,7 @@ test('Run a real invest model', async () => {
 // We have the binary path, so now let's launch a new subprocess with the same binary
 // The test is that the subprocess exits within a certain reasonable timeout.
 // Also verify that window 1 has focus.
-test.only('App re-launch will exit and focus on first instance', async () => {
+test('App re-launch will exit and focus on first instance', async () => {
   await waitFor(() => {
     expect(browser.isConnected()).toBeTruthy();
   });
