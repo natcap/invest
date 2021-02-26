@@ -161,17 +161,11 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --include='*/invest/src/natcap/invest*' --omit='*/invest/ui/*' $(TESTRUNNER) tests
-	coverage report
-	coverage html
-	coverage xml
-
+	$(TESTRUNNER) tests
+	
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --include='*/invest/ui/*' $(TESTRUNNER) ui_tests
-	coverage report
-	coverage html
-	coverage xml
-
+	$(TESTRUNNER) ui_tests
+	
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
 	$(DATAVALIDATOR)
