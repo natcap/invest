@@ -21,6 +21,10 @@ if (process.platform === 'darwin') {
   binaryPath = './dist/linux-unpacked/invest-workbench';
 }
 
+if (!fs.existsSync(binaryPath)) {
+  throw new Error(`Binary file not found: ${binaryPath}`);
+}
+
 console.log(binaryPath);
 fs.accessSync(binaryPath, fs.constants.X_OK);
 const TMP_DIR = fs.mkdtempSync('tests/data/_');
@@ -161,10 +165,31 @@ test('Run a real invest model', async () => {
 // We have the binary path, so now let's launch a new subprocess with the same binary
 // The test is that the subprocess exits within a certain reasonable timeout.
 // Also verify that window 1 has focus.
-test('App re-launch will exit and focus on first instance', async () => {
+test.only('App re-launch will exit and focus on first instance', async () => {
   await waitFor(() => {
     expect(browser.isConnected()).toBeTruthy();
   });
+
+  // Minimize this instance
+  const pages = (await browser.pages());
+  // find the mainWindow's index.html, not the splashScreen's splash.html
+  let page;
+  pages.forEach((p) => {
+    if (p.url().endsWith('index.html')) {
+      page = p;
+    }
+  });
+  expect(page).toBeDefined();
+
+  // Create raw protocol session.
+  // https://github.com/puppeteer/puppeteer/issues/4513#issuecomment-500195352
+  const session = await page.target().createCDPSession();
+  const { windowId } = await session.send('Browser.getWindowForTarget');
+  await session.send('Browser.setWindowBounds',
+    { windowId, bounds: { windowState: 'minimized' } });
+
+  let response = await session.send('Browser.WindowState');
+  expect(response.minimized).toBeTruthy();
 
   // Open another instance of the Workbench application.
   // This should return quickly.  The test timeout is there in case the new i
@@ -176,4 +201,8 @@ test('App re-launch will exit and focus on first instance', async () => {
 
   // When another instance is already open, we expect an exit code of 1.
   expect(otherElectronProcess.status).toBe(1);
+
+  // Assert this instance is not minimized.
+  response = await session.send('Browser.WindowState');
+  expect(response.minimized).toBeFalsy();
 });
