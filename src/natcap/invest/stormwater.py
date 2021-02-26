@@ -156,7 +156,7 @@ def execute(args):
     # LULC, soil groups, biophysical table, and precipitation
 
     retention_ratio_task = task_graph.add_task(
-        func=calculate_stormwater_retention_ratio,
+        func=calculate_stormwater_ratio,
         args=(
             FILES['lulc_aligned_path'],
             FILES['soil_group_aligned_path'],
@@ -178,11 +178,10 @@ def execute(args):
     )
 
     retention_volume_task = task_graph.add_task(
-        func=calculate_stormwater_retention_volume,
+        func=calculate_stormwater_volume,
         args=(
-            FILES['lulc_aligned_path'],
-            FILES['soil_group_aligned_path'],
-            args['biophysical_table'],
+            final_retention_ratio_path,
+            args['precipitation_path'],
             FILES['retention_volume_path']),
         target_path_list=[FILES['retention_volume_path']],
         task_name='calculate stormwater retention volume'
@@ -193,38 +192,49 @@ def execute(args):
     # LULC, soil groups, biophysical table, and precipitation
 
     infiltration_ratio_task = task_graph.add_task(
-        func=calculate_stormwater_infiltration_ratio,
+        func=calculate_stormwater_ratio,
         args=(
             FILES['lulc_aligned_path'],
             FILES['soil_group_aligned_path'],
             infiltration_ratio_dict,
-            FILES['infiltration_path']),
-        target_path_list=[FILES['infiltration_path']],
-        task_name='calculate stormwater infiltration'
+            FILES['infiltration_ratio_path']),
+        target_path_list=[FILES['infiltration_ratio_path']],
+        task_name='calculate stormwater infiltration ratio'
     )
 
     infiltration_volume_task = task_graph.add_task(
         func=calculate_stormwater_retention_volume,
         args=(
-            FILES['lulc_aligned_path'],
-            FILES['soil_group_aligned_path'],
-            args['biophysical_table'],
-            FILES['retention_volume_path']),
-        target_path_list=[FILES['retention_volume_path']],
+            FILES['infiltration_ratio_path']
+            args['precipitation_path'],
+            FILES['infiltration_volume_path']),
+        target_path_list=[FILES['infiltration_volume_path']],
         task_name='calculate stormwater retention volume'
     )
 
     # Calculate avoided pollutant load from retention volume and biophysical table
 
-    avoided_pollutant_load_task = task_graph.add_task(
-        func=calculate_avoided_pollutant_load,
-        args=(
-            FILES['retention_path'],
-            args['biophysical_table'],
-            FILES['avoided_pollutants']),
-        target_path_list=[FILES['avoided_pollutants']],
-        task_name='calculate avoided pollutant load'
-    )
+    # get all EMC columns from an arbitrary row in the dictionary
+    # strip the first four characters off 'EMC_pollutant' to get pollutant name
+    emc_columns = [key for key in biophysical_table.keys()[0] 
+        if key.startswith('EMC_')]
+    pollutants = [key[4:] key in  emc_columns]
+
+    for pollutant in pollutants:
+        avoided_pollutant_load_path = f'avoided_pollutant_load_{pollutant}.tif'
+        lulc_emc_lookup = {
+            lucode: row[f'EMC_{pollutant}'] for lucode, row in biophysical_dict.entries()
+        }
+
+        avoided_pollutant_load_task = task_graph.add_task(
+            func=calculate_avoided_pollutant_load,
+            args=(
+                FILES['retention_path'],
+                lulc_emc_lookup,
+                avoided_pollutant_load_path),
+            target_path_list=[avoided_pollutant_load_path],
+            task_name=f'calculate avoided pollutant {pollutant} load'
+        )
 
 
     # (Optional) Valuation
@@ -251,6 +261,7 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
         ratio_lookup, output_path):
     """Make stormwater retention or infiltration ratio map from LULC and
        soil group data.
+
     Args:
         lulc_path (str): path to a LULC raster whose LULC codes exist in the
             biophysical table
@@ -270,9 +281,7 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
     def ratio_op(lulc_array, soil_group_array):
 
         # initialize an array of the output nodata value
-        ratio_array = numpy.full(ratio_nodata)
-        nodata_mask = (lulc_array != lulc_nodata & 
-                       soil_group_array != soil_group_nodata)
+        ratio_array = numpy.full(lulc_array.shape, ratio_nodata)
 
         for lucode in ratio_lookup:
             lucode_mask = (lulc_array == lucode)
@@ -285,7 +294,75 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
         return ratio_array
 
 
-def calculate_stormwater_volume()
+def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
+    """Make stormwater retention or infiltration volume map from ratio and 
+       precipitation.
+
+    Args:
+        ratio_path (str): path to a raster of stormwater ratios
+        precipitation_path (str): path to a raster of precipitation amounts
+        output_path (str): path to write out the volume results (raster)
+
+    Returns:
+        None
+    """
+
+
+    def volume_op(ratio_array, precipitation_array):
+
+        volume_array = numpy.full(ratio_array.shape, volume_nodata)
+        nodata_mask = (
+            ratio_array != ratio_nodata & 
+            precipitation_array != precipitation_nodata)
+
+        # precipitation (mm/yr) * pixel area (m^2) * 
+        # 0.001 (m/mm) * ratio = volume (m^3/yr)
+        volume_array[nodata_mask] = (
+            precipitation_array[nodata_mask] *
+            ratio_array[nodata_mask] *
+            pixel_area * 0.001)
+
+        return volume_array
+
+
+def calculate_avoided_pollutant_load(lulc_path, retention_volume_path, 
+        lulc_emc_lookup, output_path):
+    """Make avoided pollutant load map from retention volumes and LULC event 
+       mean concentration data.
+
+    Args:
+        lulc_path (str): path to a LULC raster whose LULC codes exist in the
+            EMC lookup dictionary
+        retention_volume_path: (str) path to a raster of stormwater retention
+            volumes in m^3
+        lulc_emc_lookup (dict): a lookup dictionary where keys are LULC codes 
+            and values are event mean concentration (EMC) values in mg/L for 
+            the pollutant in that LULC area.
+        output_path (str): path to write out the results (raster)
+
+    Returns:
+        None
+    """
+
+    def pollutant_load_op(lulc_array, retention_volume_array):
+
+        load_array = numpy.full(lulc_array.shape, load_nodata)
+
+        nodata_mask = (
+            lulc_array != lulc_nodata &
+            retention_volume_array != retention_volume_nodata)
+
+        for lucode in lulc_emc_lookup:
+            lucode_mask = (lulc_array == lucode)
+
+            # EMC for pollutant (mg/L) * 1000 (L/m^3) * retention (m^3)
+            # = pollutant load (mg)
+            load_array[lucode_mask & nodata_mask] = (
+                lulc_emc_lookup[lucode] * 1000 * 
+                retention_volume_array[lucode_mask & nodata_mask])
+
+        return load_array
+
 
 
 
