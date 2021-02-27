@@ -67,10 +67,23 @@ ARGS_SPEC = {
             "about": "biophysical table",
             "name": "biophysical table"
         },
+        "adjust_retention_ratios": {
+            "type": "boolean",
+            "required": True,
+            "about": "Whether to adjust retention ratios using road centerlines",
+            "name": "adjust retention ratios"
+        },
+        "retention_radius": {
+            "type": "number",
+            "units": "meters",
+            "required": "adjust_retention_ratios",
+            "about": "Radius around each pixel to adjust retention ratios",
+            "name": "retention radius"
+        },
         "road_centerlines_path": {
             "type": "vector",
             "fields": {},
-            "required": False,
+            "required": "adjust_retention_ratios",
             "about": "Map of road centerlines",
             "name": "road centerlines"
         },
@@ -167,15 +180,19 @@ def execute(args):
     )
 
     # (Optional) adjust stormwater retention ratio using roads
-    adjust_retention_ratio_task = task_graph.add_task(
-        func=adjust_stormwater_retention_ratio,
-        args=(
-            FILES['retention_ratio_path'],
-            args['road_centerlines_path'],
-            FILES['adjusted_retention_ratio_path']),
-        target_path_list=[FILES['adjusted_retention_ratio_path']],
-        task_name='adjust stormwater retention ratio'
-    )
+    if args['adjust_retention_ratios']:
+        adjust_retention_ratio_task = task_graph.add_task(
+            func=adjust_stormwater_retention_ratio,
+            args=(
+                FILES['retention_ratio_path'],
+                args['road_centerlines_path'],
+                FILES['adjusted_retention_ratio_path']),
+            target_path_list=[FILES['adjusted_retention_ratio_path']],
+            task_name='adjust stormwater retention ratio'
+        )
+        final_retention_ratio_path = FILES['adjusted_retention_ratio_path']
+    else:
+        final_retention_ratio_path = FILES['retention_ratio_path']
 
     retention_volume_task = task_graph.add_task(
         func=calculate_stormwater_volume,
@@ -383,8 +400,82 @@ def calculate_retention_value(retention_volume_path, replacement_cost, output_pa
         value_array[nodata_mask] = retention_volume_array[nodata_mask] * replacement_cost
 
 
-def aggregate_results(retention_ratio, retention_volume, infiltration_ratio,
-    infiltration_volume, avoided_pollutant_loads, retention_value, output_path):
+def aggregate_results(aoi_path, retention_ratio, retention_volume, 
+        infiltration_ratio, infiltration_volume, avoided_pollutant_loads, 
+        retention_value, output_path):
+    """Aggregate outputs into regions of interest.
+
+    Args:
+        aoi_path (str): path to vector of polygon(s) to aggregate over
+        retention_ratio (str): path to stormwater retention ratio raster
+        retention_volume (str): path to stormwater retention volume raster
+        infiltration_ratio (str): path to stormwater infiltration ratio raster
+        infiltration_volume (str): path to stormwater infiltration volume raster
+        avoided_pollutant_loads (list[str]): list of paths to avoided pollutant
+            load rasters
+        retention_value (str): path to retention value raster
+        output_path (str): path to write out aggregated vector data
+
+    Returns:
+        None
+    """
+
+    # Copy the AOI polygons into the output vector
+    aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    driver.CreateCopy(output_path, aoi_vector)
+    gdal.Dataset.__swig_destroy__(original_aoi_vector)
+    original_aoi_vector = None
+
+    aggregate_vector = gdal.OpenEx(output_path, 1)
+    aggregate_layer = aggregate_vector.GetLayer()
+
+    aggregations = [
+        (retention_ratio, 'RR_mean', 'mean'),
+        (retention_volume, 'RV_sum', 'sum'),
+        (infiltration_ratio, 'IR_mean', 'mean'),
+        (infiltration_volume, 'IV_sum', 'sum'),
+        (retention_value, 'val_sum', 'sum')
+    ] + [
+        (avoided_pollutant_load, f'')
+    ]
+
+
+    for raster_path, aggregate_field_id, op_type in [
+            (l_path, 'qb', 'mean'), (vri_path, 'vri_sum', 'sum')]:
+
+        # aggregate carbon stocks by the new ID field
+        aggregate_stats = pygeoprocessing.zonal_statistics(
+            (raster_path, 1), aggregate_vector_path)
+
+        aggregate_field = ogr.FieldDefn(aggregate_field_id, ogr.OFTReal)
+        aggregate_field.SetWidth(24)
+        aggregate_field.SetPrecision(11)
+        aggregate_layer.CreateField(aggregate_field)
+
+        aggregate_layer.ResetReading()
+        for poly_index, poly_feat in enumerate(aggregate_layer):
+            if op_type == 'mean':
+                pixel_count = aggregate_stats[poly_index]['count']
+                if pixel_count != 0:
+                    value = (aggregate_stats[poly_index]['sum'] / pixel_count)
+                else:
+                    LOGGER.warning(
+                        "no coverage for polygon %s", ', '.join(
+                            [str(poly_feat.GetField(_)) for _ in range(
+                                poly_feat.GetFieldCount())]))
+                    value = 0.0
+            elif op_type == 'sum':
+                value = aggregate_stats[poly_index]['sum']
+            poly_feat.SetField(aggregate_field_id, float(value))
+            aggregate_layer.SetFeature(poly_feat)
+
+    aggregate_layer.SyncToDisk()
+    aggregate_layer = None
+    gdal.Dataset.__swig_destroy__(aggregate_vector)
+    aggregate_vector = None
+
+    
 
 
 
