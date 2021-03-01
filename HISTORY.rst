@@ -54,6 +54,8 @@ Unreleased Changes (3.9.1)
       requirement version to ``0.10.3``
     * Allow Windows users to install for all users or current user. This allows
       non-admin users to install InVEST locally.
+    * Fixed a bug where saving a datastack parameter set with relative paths
+      would not convert Windows separators to linux style.
     * Provide a better validation error message when an overview '.ovr' file
       is input instead of a valid raster.
 * Carbon
