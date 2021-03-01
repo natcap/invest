@@ -9,6 +9,8 @@ from . import utils
 
 LOGGER = logging.getLogger(__name__)
 
+# a constant nodata value to use for intermediates and outputs
+NODATA = -1
 
 ARGS_SPEC = {
     "model_name": "Stormwater Retention",
@@ -27,7 +29,7 @@ ARGS_SPEC = {
                 "of the area"),
             "name": "land use/land cover"
         },
-        "soil_groups_path": {
+        "soil_group_path": {
             "type": "raster",
             "bands": {
                 1: {
@@ -87,7 +89,7 @@ ARGS_SPEC = {
             "about": "Map of road centerlines",
             "name": "road centerlines"
         },
-        "watersheds_path": {
+        "aggregate_areas_path": {
             "type": "vector",
             "fields": {},
             "required": False,
@@ -145,14 +147,15 @@ def execute(args):
     biophysical_dict = utils.build_lookup_from_csv(
         args['biophysical_table'], 'lucode')
 
-    # Make ratio lookup dictionaries mapping each LULC code to
-    # a ratio for each soil group
+    # Make ratio lookup dictionaries mapping each LULC code to a ratio for 
+    # each soil group. Biophysical table has runoff coefficents so subtract 
+    # from 1 to get retention coefficient.
     retention_ratio_dict = {
         lucode: {
-            'A': row['RC_A'],
-            'B': row['RC_B'],
-            'C': row['RC_C'],
-            'D': row['RC_D'],
+            'A': 1 - row['RC_A'],
+            'B': 1 - row['RC_B'],
+            'C': 1 - row['RC_C'],
+            'D': 1 - row['RC_D'],
         } for lucode, row in biophysical_dict
     }
     infiltration_ratio_dict = {
@@ -229,19 +232,23 @@ def execute(args):
         task_name='calculate stormwater retention volume'
     )
 
-    # Calculate avoided pollutant load from retention volume and biophysical table
 
     # get all EMC columns from an arbitrary row in the dictionary
     # strip the first four characters off 'EMC_pollutant' to get pollutant name
     emc_columns = [key for key in biophysical_table.keys()[0] 
         if key.startswith('EMC_')]
     pollutants = [key[4:] key in  emc_columns]
+    print('pollutants:', pollutants)
 
+    # Calculate avoided pollutant load for each pollutant from retention volume
+    # and biophysical table EMC value
     for pollutant in pollutants:
-        avoided_pollutant_load_path = f'avoided_pollutant_load_{pollutant}.tif'
+        
+        # make a dictionary mapping each LULC code to the pollutant EMC value
         lulc_emc_lookup = {
             lucode: row[f'EMC_{pollutant}'] for lucode, row in biophysical_dict.entries()
         }
+        avoided_pollutant_load_path = f'avoided_pollutant_load_{pollutant}.tif'
 
         avoided_pollutant_load_task = task_graph.add_task(
             func=calculate_avoided_pollutant_load,
@@ -254,24 +261,28 @@ def execute(args):
         )
 
 
-    # (Optional) Valuation
+    # (Optional) Do valuation if a replacement cost is defined
+    # you could theoretically have a cost of 0 which should be allowed
+    if (args['replacement_cost'] not in [None, '']):
+        valuation_task = task_graph.add_task(
+            func=calculate_retention_value,
+            args=(
+                FILES['retention_path'],
+                args['replacement_cost'],
+                FILES['retention_value_path']),
+            target_path_list=[FILES['retention_value_path']],
+            task_name='calculate stormwater retention value'
+        )
 
-    valuation_task = task_graph.add_task(
-        func=calculate_retention_value,
-        args=(
-            FILES['retention_path'],
-            args['replacement_cost'],
-            FILES['retention_value_path']),
-        target_path_list=[FILES['retention_value_path']],
-        task_name='calculate stormwater retention value'
-    )
+    # (Optional) Aggregate to watersheds if an aggregate vector is defined
+    if (args['aggregate_areas_path']):
+        aggregation_task = task_graph.add_task(
+            func=aggregate_values,
+            args=(
+                ))
 
-
-    # (Optional) Aggregate to watersheds
-    aggregation_task = task_graph.add_task(
-        func=aggregate_values,
-        args=(
-            ))
+    task_graph.close()
+    task_graph.join()
 
 
 def calculate_stormwater_ratio(lulc_path, soil_group_path, 
@@ -293,12 +304,13 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
     Returns:
         None
     """
-    ratio_nodata = -1
 
     def ratio_op(lulc_array, soil_group_array):
+        """Make an array of stormwater retention or infiltration ratios from 
+        arrays of LULC codes and hydrologic soil groups"""
 
         # initialize an array of the output nodata value
-        ratio_array = numpy.full(lulc_array.shape, ratio_nodata)
+        ratio_array = numpy.full(lulc_array.shape, NODATA)
 
         for lucode in ratio_lookup:
             lucode_mask = (lulc_array == lucode)
@@ -309,6 +321,12 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
                 ratio_array[(lucode_mask & soil_group_mask)] = ratio_lookup[lucode][soil_group]
 
         return ratio_array
+
+    # Apply ratio_op to each block of the LULC and soil group rasters
+    # Write result to output_path as float32 with nodata=NODATA
+    pygeoprocessing.raster_calculator(
+        [(lulc_path, 1), (soil_group_path, 1)],
+        ratio_op, output_path, gdal.GDT_Float32, NODATA)
 
 
 def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
@@ -323,11 +341,18 @@ def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
     Returns:
         None
     """
-
+    ratio_raster_info = pygeoprocessing.get_raster_info(ratio_path)
+    ratio_nodata = ratio_raster_info['nodata'][0]
+    pixel_area = abs(ratio_raster_info['pixel_size'][0] * 
+        ratio_raster_info['pixel_size'][0])
+    precipitation_nodata = pygeoprocessing.get_raster_info(
+        precipitation_path)['nodata'][0]
 
     def volume_op(ratio_array, precipitation_array):
+        """Calculate array of volumes (retention or infiltration) from arrays 
+        of precipitation values and stormwater ratios"""
 
-        volume_array = numpy.full(ratio_array.shape, volume_nodata)
+        volume_array = numpy.full(ratio_array.shape, NODATA)
         nodata_mask = (
             ratio_array != ratio_nodata & 
             precipitation_array != precipitation_nodata)
@@ -340,6 +365,13 @@ def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
             pixel_area * 0.001)
 
         return volume_array
+
+    # Apply volume_op to each block in the ratio and precipitation rasters
+    # Write result to output_path as float32 with nodata=NODATA
+    pygeoprocessing.raster_calculator(
+        [(ratio_path, 1), (precipitation_path, 1)],
+        volume_op, output_path, gdal.GDT_Float32, NODATA)
+
 
 
 def calculate_avoided_pollutant_load(lulc_path, retention_volume_path, 
@@ -361,7 +393,9 @@ def calculate_avoided_pollutant_load(lulc_path, retention_volume_path,
         None
     """
 
-    def pollutant_load_op(lulc_array, retention_volume_array):
+    def avoided_pollutant_load_op(lulc_array, retention_volume_array):
+        """Calculate array of avoided pollutant load values from arrays of 
+        LULC codes and stormwater retention volumes."""
 
         load_array = numpy.full(lulc_array.shape, load_nodata)
 
@@ -380,6 +414,12 @@ def calculate_avoided_pollutant_load(lulc_path, retention_volume_path,
 
         return load_array
 
+    # Apply avoided_pollutant_load_op to each block of the LULC and retention 
+    # volume rasters. Write result to output_path as float32 with nodata=NODATA
+    pygeoprocessing.raster_calculator(
+        [(lulc_path, 1), (retention_volume_path, 1)],
+        avoided_pollutant_load_op, output_path, gdal.GDT_Float32, NODATA)
+
 
 def calculate_retention_value(retention_volume_path, replacement_cost, output_path):
     """Calculate retention value from retention volume and replacement cost.
@@ -393,11 +433,21 @@ def calculate_retention_value(retention_volume_path, replacement_cost, output_pa
     """
 
     def retention_value_op(retention_volume_array):
+        """Multiply array of retention volumes by the retention replacement 
+        cost to get an array of retention values."""
         value_array = numpy.full(retention_volume_array.shape, value_nodata)
         nodata_mask = (retention_volume_array != retention_volume_nodata)
 
         # retention (m^3) * replacement cost ($/m^3) = retention value ($)
-        value_array[nodata_mask] = retention_volume_array[nodata_mask] * replacement_cost
+        value_array[nodata_mask] = (
+            retention_volume_array[nodata_mask] * replacement_cost)
+
+    # Apply retention_value_op to each block of the retention volume rasters
+    # Write result to output_path as float32 with nodata=NODATA
+    pygeoprocessing.raster_calculator(
+        [(retention_volume_path, 1)],
+        retention_value_op, output_path, gdal.GDT_Float32, NODATA)
+
 
 
 def aggregate_results(aoi_path, retention_ratio, retention_volume, 
@@ -441,19 +491,19 @@ def aggregate_results(aoi_path, retention_ratio, retention_volume,
     ]
 
 
-    for raster_path, aggregate_field_id, op_type in [
-            (l_path, 'qb', 'mean'), (vri_path, 'vri_sum', 'sum')]:
+    for raster_path, aggregate_field_id, op_type in aggregations:
 
-        # aggregate carbon stocks by the new ID field
+        # aggregate the raster by the vector region(s)
         aggregate_stats = pygeoprocessing.zonal_statistics(
             (raster_path, 1), aggregate_vector_path)
 
+        # set up the field to hold the aggregate data
         aggregate_field = ogr.FieldDefn(aggregate_field_id, ogr.OFTReal)
         aggregate_field.SetWidth(24)
         aggregate_field.SetPrecision(11)
         aggregate_layer.CreateField(aggregate_field)
-
         aggregate_layer.ResetReading()
+
         for poly_index, poly_feat in enumerate(aggregate_layer):
             if op_type == 'mean':
                 pixel_count = aggregate_stats[poly_index]['count']
@@ -470,6 +520,7 @@ def aggregate_results(aoi_path, retention_ratio, retention_volume,
             poly_feat.SetField(aggregate_field_id, float(value))
             aggregate_layer.SetFeature(poly_feat)
 
+    # save the aggregate vector layer and clean up references
     aggregate_layer.SyncToDisk()
     aggregate_layer = None
     gdal.Dataset.__swig_destroy__(aggregate_vector)
