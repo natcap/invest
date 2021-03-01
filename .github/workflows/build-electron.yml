@@ -38,12 +38,6 @@ jobs:
 
     - name: Run the build script
       run: npm run build
-     
-    - name: Run electron-builder
-      env:
-        GH_TOKEN: env.GITHUB_TOKEN
-        DEBUG: electron-builder
-      run: npm run dist
 
     - name: Set up Python for gsutil
       # gsutil requires a python, which is not included on Windows
@@ -95,19 +89,11 @@ jobs:
         echo "CSC_KEY_PASSWORD=${{ secrets.STANFORD_CERT_KEY_PASS }}" >> $GITHUB_ENV
         echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
 
-    - name: Run electron-builder on macOS
-      if: matrix.os == 'macos-latest'
+    - name: Run electron-builder
       env:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
-      run: npx --no-install electron-builder build --mac -c.extraMetadata.main=build/main.js --publish never
-
-    - name: Run electron-builder on windows
-      if: matrix.os == 'windows-latest'
-      env:
-        GH_TOKEN: env.GITHUB_TOKEN
-        DEBUG: electron-builder
-      run: npx --no-install electron-builder build --windows -c.extraMetadata.main=build/main.js --publish never
+      run: npm run dist
 
       # Also run all tests on the build dir code?
     - name: Test flask app binaries
