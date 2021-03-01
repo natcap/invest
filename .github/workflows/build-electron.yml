@@ -50,14 +50,12 @@ jobs:
       run: npm run test-flask-app
 
     - name: Test electron app with puppeteer
-      uses: GabrielBB/xvfb-action@v1
       if: matrix.os != 'macos-latest'
-      continue-on-error: true
-      with:
-        run: npm run test-electron-app
+      run: npm run test-electron-app
 
     - name: Upload installer artifacts to github
       uses: actions/upload-artifact@v2.2.1
+      if: ${{ always() }}
       with:
         name: invest-workbench-${{ matrix.os }}
         path: dist/invest-workbench_*
