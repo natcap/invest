@@ -604,8 +604,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
 SectionGroupEnd
 
 Function .onInit
-    ${GetOptions} $CMDLINE "/?" $0
-
     ; this is really just checking if there is another instance of the
     ; installer running
     ${ifnot} ${UAC_IsInnerInstance}
@@ -619,8 +617,9 @@ Function .onInit
         !insertmacro MUI_LANGDLL_DISPLAY
     ${endif}
 
-    IfErrors skiphelp showhelp
-    showhelp:
+    ${GetOptions} $CMDLINE "/?" $0
+
+    ${If} "$0" == "/?"
          MessageBox MB_OK "InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs$\r$\n\
          $\r$\n\
          For more information about InVEST or the Natural Capital Project, visit our \
@@ -633,8 +632,7 @@ Function .onInit
              /DATAZIP=$\t=$\tUse this sample data zipfile.$\r$\n\
              "
          abort
-    skiphelp:
-
+    ${Else}
         ${ifNot} ${AtMostWin7}
             ; disable the section if we're not running on Windows 7 or earlier.
             ; This section should not execute for Windows 8 or later.
@@ -648,6 +646,7 @@ Function .onInit
         ; to the user's defined value.
         ${GetOptions} $CMDLINE "/DATAZIP=" $0
         strcpy $LocalDataZipFile $0
+    ${EndIf}
 FunctionEnd
 
 ; remove next line if you're using signing after the uninstaller is extracted from the initially compiled setup
