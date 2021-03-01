@@ -80,7 +80,9 @@ def make_pools_csv(pools_csv_path):
     with open(pools_csv_path, 'w') as open_table:
         open_table.write('C_above,C_below,C_soil,C_dead,lucode,LULC_Name\n')
         open_table.write('15,10,60,1,1,"lulc code 1"\n')
+        # total change from 1 -> 2: -58 metric tons per hectare
         open_table.write('5,3,20,0,2,"lulc code 2"\n')
+        # total change from 1 -> 3: -78 metric tons per hectare
         open_table.write('2,1,5,0,3,"lulc code 3"\n')
 
 
@@ -161,11 +163,14 @@ class CarbonTests(unittest.TestCase):
         carbon.execute(args)
 
         # Add assertions for npv for future and REDD scenarios.
-        # The npv was calculated based on _calculate_npv in carbon.py.
+        # carbon change from cur to fut: 
+        # -58 Mg/ha * .0001 ha/pixel * 43 $/Mg = -0.2494 $/pixel
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.0178143)
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.2494)
+        # carbon change from cur to redd: 
+        # -78 Mg/ha * .0001 ha/pixel * 43 $/Mg = -0.3354 $/pixel
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.0239571)
+            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.3354)
 
     def test_carbon_future(self):
         """Carbon: regression testing future scenario."""
