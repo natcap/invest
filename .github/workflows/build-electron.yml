@@ -64,7 +64,7 @@ jobs:
         CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
 
       run: |
-        gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-2024-01-26.p12 $P12_FILE_PATH 
+        gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-cert-expires-2024-01-26.p12 $P12_FILE_PATH 
 
         bash ./scripts/setup_macos_keychain.sh 
 
@@ -78,7 +78,7 @@ jobs:
     - name: Code-signing setup for Windows
       if: matrix.os == 'windows-latest'
       env:
-        P12_FILE: Stanford-natcap-code-signing-2024-01-26.p12
+        P12_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
         gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
