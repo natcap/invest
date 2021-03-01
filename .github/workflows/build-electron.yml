@@ -54,32 +54,31 @@ jobs:
           version: '281.0.0'
           service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-    # electron-builder code signing only supported on macos and windows
-    # - name: Code-signing setup for macOS
-    #   if: matrix.os == 'macos-latest'
-    #   shell: bash
-    #   env:
-    #     P12_FILE_PATH: ~/Downloads/stanford_cert.p12
-    #     KEYCHAIN_NAME: codesign_keychain
-    #     KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
-    #     CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
+    - name: Code-signing setup for macOS
+      if: matrix.os == 'macos-latest'
+      shell: bash
+      env:
+        P12_FILE_PATH: ~/Downloads/stanford_cert.p12
+        KEYCHAIN_NAME: codesign_keychain
+        KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
+        CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
 
-    #   run: |
-    #     gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-2019-03-07.p12 $P12_FILE_PATH 
+      run: |
+        gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-2024-01-26.p12 $P12_FILE_PATH 
 
-    #     bash ./scripts/setup_macos_keychain.sh 
+        bash ./scripts/setup_macos_keychain.sh 
 
-    #     # these env variables tell electron-builder to do code signing
-    #     echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
-    #     echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
-    #     echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
-    #     echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
+        # these env variables tell electron-builder to do code signing
+        echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
+        echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
+        echo "CSC_KEY_PASSWORD=${{ secrets.STANFORD_CERT_KEY_PASS }}" >> $GITHUB_ENV
+        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
        
 
     - name: Code-signing setup for Windows
       if: matrix.os == 'windows-latest'
       env:
-        P12_FILE: Stanford-natcap-code-signing-2019-03-07.p12
+        P12_FILE: Stanford-natcap-code-signing-2024-01-26.p12
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
         gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
