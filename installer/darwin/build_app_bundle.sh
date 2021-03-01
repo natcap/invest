@@ -51,6 +51,9 @@ echo '#' >> $new_command_file
 echo '# the QT_MAC_WANTS_LAYER definition is supposed to have been set by the' >> $new_command_file
 echo "# runtime hook, but doesn't seem to be working.  Setting it here allows the" >> $new_command_file
 echo "# binary to run on OSX Big Sur." >> $new_command_file
-echo 'QT_MAC_WANTS_LAYER=1 `dirname $0`/invest_dist/invest launch' >> $new_command_file
+echo "#" >> $new_command_file
+echo "# Taken from https://stackoverflow.com/a/246128/299084" >> $new_command_file
+echo 'DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"' >> $new_command_file
+echo 'QT_MAC_WANTS_LAYER=1 "$DIR/invest_dist/invest" launch' >> $new_command_file
 chmod a+x $new_command_file
 

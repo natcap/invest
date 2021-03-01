@@ -6,13 +6,13 @@ GIT_SAMPLE_DATA_REPO_REV    := b7a51f189315e08484b5ba997a5c1de88ab7f06d
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 6fd5fa39cd9d81080caa7581f9acca7b9fadb7c8
+GIT_TEST_DATA_REPO_REV      := 69ea5fc56906c029bc745e5531b7a4d4e4c13237
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
 GIT_UG_REPO_REV              := bbfa26dc0c9158d13d209c1bc61448a9166708da
 
-ENV = env
+ENV = "./env"
 ifeq ($(OS),Windows_NT)
 	# Double $$ indicates windows environment variable
 	NULL := $$null
@@ -164,17 +164,11 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --omit='*/invest/ui/*' $(TESTRUNNER) tests
-	coverage report
-	coverage html
-	coverage xml
-
+	$(TESTRUNNER) tests
+	
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --include='*/invest/ui/*' $(TESTRUNNER) ui_tests
-	coverage report
-	coverage html
-	coverage xml
-
+	$(TESTRUNNER) ui_tests
+	
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
 	$(DATAVALIDATOR)
@@ -224,13 +218,14 @@ fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PAT
 
 # Python conda environment management
 env:
-		$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
-		$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
-		$(CONDA) env update -p $(ENV) --file requirements-all.yml
-		@echo "----------------------------"
-		@echo "To finish the conda env install:"
-		@echo ">> conda activate ./$(ENV)"
-		@echo ">> make install"
+	@echo "NOTE: requires 'requests' be installed in base Python"
+	$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+	$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
+	$(CONDA) env update -p $(ENV) --file requirements-all.yml
+	@echo "----------------------------"
+	@echo "To activate the new conda environment and install natcap.invest:"
+	@echo ">> conda activate $(ENV)"
+	@echo ">> make install"
 
 
 # compatible with pip>=7.0.0
@@ -353,9 +348,9 @@ $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARG
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
-CERT_FILE := StanfordUniversity.crt
-KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
-P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
+CERT_FILE := codesigning-2021.crt
+KEY_FILE := Stanford-natcap-code-signing-cert-expires-2024-01-26.key.pem
+P12_FILE := Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
 KEYCHAIN_NAME := codesign_keychain
 codesign_mac:
 	# download the p12 certificate file from google cloud
@@ -373,7 +368,7 @@ codesign_mac:
 	# this is essential to avoid the UI password prompt
 	security set-key-partition-list -S apple-tool:,apple: -s -k '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
-	codesign --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
+	codesign --timestamp --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
 	# relock the keychain (not sure if this is important?)
 	security lock-keychain '$(KEYCHAIN_NAME)'
 
@@ -390,6 +385,7 @@ signcode:
 signcode_windows:
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
+	powershell.exe "& '$(SIGNTOOL)' timestamp -t http://timestamp.sectigo.com '$(BIN_TO_SIGN)'"
 	-$(RM) $(BUILD_DIR)/$(P12_FILE)
 	@echo "Installer was signed with signtool"
 
