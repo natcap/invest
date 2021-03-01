@@ -1,5 +1,6 @@
 """Stormwater Retention"""
 import logging
+import math
 import numpy
 import pygeoprocessing
 import taskgraph
@@ -16,6 +17,11 @@ ARGS_SPEC = {
     "model_name": "Stormwater Retention",
     "module": __name__,
     "userguide_html": "stormwater.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["lulc_path", "soil_group_path", "precipitation_path",
+            "road_centerlines_path", "aggregate_areas_path"],
+        "different_projections_ok": True
+    },
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
@@ -225,7 +231,7 @@ def execute(args):
     infiltration_volume_task = task_graph.add_task(
         func=calculate_stormwater_retention_volume,
         args=(
-            FILES['infiltration_ratio_path']
+            FILES['infiltration_ratio_path'],
             args['precipitation_path'],
             FILES['infiltration_volume_path']),
         target_path_list=[FILES['infiltration_volume_path']],
@@ -237,19 +243,17 @@ def execute(args):
     # strip the first four characters off 'EMC_pollutant' to get pollutant name
     emc_columns = [key for key in biophysical_table.keys()[0] 
         if key.startswith('EMC_')]
-    pollutants = [key[4:] key in  emc_columns]
+    pollutants = [key[4:] for key in  emc_columns]
     print('pollutants:', pollutants)
 
     # Calculate avoided pollutant load for each pollutant from retention volume
     # and biophysical table EMC value
     for pollutant in pollutants:
-        
+        avoided_pollutant_load_path = f'avoided_pollutant_load_{pollutant}.tif'
         # make a dictionary mapping each LULC code to the pollutant EMC value
         lulc_emc_lookup = {
             lucode: row[f'EMC_{pollutant}'] for lucode, row in biophysical_dict.entries()
         }
-        avoided_pollutant_load_path = f'avoided_pollutant_load_{pollutant}.tif'
-
         avoided_pollutant_load_task = task_graph.add_task(
             func=calculate_avoided_pollutant_load,
             args=(
@@ -328,6 +332,21 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
         [(lulc_path, 1), (soil_group_path, 1)],
         ratio_op, output_path, gdal.GDT_Float32, NODATA)
 
+def adjust_stormwater_retention_ratios(retention_ratio_path, radius, lulc_path, road_centerlines_path):
+    """Adjust retention ratios according to surrounding LULC and roads.
+
+    Args:
+        retention_ratio_path (str): path to raster of retention ratio values
+        lulc_path (str): path to a LULC raster whose LULC codes exist in the
+            biophysical table
+        road_centerlines_path (str): path to line vector showing road centerlines
+
+    Returns:
+        None
+    """
+    pixel_size = 
+    margin = math.ceil()
+
 
 def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
     """Make stormwater retention or infiltration volume map from ratio and 
@@ -344,7 +363,7 @@ def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
     ratio_raster_info = pygeoprocessing.get_raster_info(ratio_path)
     ratio_nodata = ratio_raster_info['nodata'][0]
     pixel_area = abs(ratio_raster_info['pixel_size'][0] * 
-        ratio_raster_info['pixel_size'][0])
+        ratio_raster_info['pixel_size'][1])
     precipitation_nodata = pygeoprocessing.get_raster_info(
         precipitation_path)['nodata'][0]
 
@@ -527,7 +546,25 @@ def aggregate_results(aoi_path, retention_ratio, retention_volume,
     aggregate_vector = None
 
     
+@validation.invest_validator
+def validate(args):
+    """Validate args to ensure they conform to `execute`'s contract.
 
+    Args:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
+    return validation.validate(args, ARGS_SPEC['args'],
+                               ARGS_SPEC['args_with_spatial_overlap'])
 
 

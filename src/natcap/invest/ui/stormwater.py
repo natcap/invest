@@ -1,14 +1,15 @@
 from natcap.invest.ui import model, inputs
-import natcap.invest.carbon
+import natcap.invest.stormwater
 
 
 class Stormwater(model.InVESTModel):
     def __init__(self):
-        model.InVESTModel.__init__(self,
-                                   label='InVEST Stormwater Model',
-                                   target=natcap.invest.stormwater.execute,
-                                   validator=natcap.invest.stormwater.validate,
-                                   localdoc='stormwater.html')
+        model.InVESTModel.__init__(
+            self,
+            label='InVEST Stormwater Model',
+            target=natcap.invest.stormwater.execute,
+            validator=natcap.invest.stormwater.validate,
+            localdoc='stormwater.html')
 
         self.lulc_path = inputs.File(
             args_key='lulc_path',
@@ -34,9 +35,9 @@ class Stormwater(model.InVESTModel):
         self.biophysical_table = inputs.File(
             args_key='biophysical_table',
             helptext=(
-                "A CSV file with runoff coefficient (RC), infiltration"
+                "A CSV file with runoff coefficient (RC), infiltration "
                 "coefficient (IR), and pollutant event mean concentration "
-                "(EMC) for each LULC code."),
+                "(EMC) data for each LULC code."),
             label='Biophysical Table',
             validator=self.validator)
         self.add_input(self.biophysical_table)
@@ -44,8 +45,7 @@ class Stormwater(model.InVESTModel):
             args_key='adjust_retention_ratios',
             helptext=(
                 'If checked, adjust retention ratios using road centerlines.'),
-            label='Adjust Retention Ratios',
-            validator=self.validator)
+            label='Adjust Retention Ratios')
         self.add_input(self.adjust_retention_ratios)
         self.retention_radius = inputs.Text(
             args_key='retention_radius',
