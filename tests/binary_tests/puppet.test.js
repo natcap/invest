@@ -170,27 +170,6 @@ test('App re-launch will exit and focus on first instance', async () => {
     expect(browser.isConnected()).toBeTruthy();
   });
 
-  // Minimize this instance
-  const pages = (await browser.pages());
-  // find the mainWindow's index.html, not the splashScreen's splash.html
-  let page;
-  pages.forEach((p) => {
-    if (p.url().endsWith('index.html')) {
-      page = p;
-    }
-  });
-  expect(page).toBeDefined();
-
-  // Create raw protocol session.
-  // https://github.com/puppeteer/puppeteer/issues/4513#issuecomment-500195352
-  const session = await page.target().createCDPSession();
-  const { windowId } = await session.send('Browser.getWindowForTarget');
-  await session.send('Browser.setWindowBounds',
-    { windowId, bounds: { windowState: 'minimized' } });
-
-  let response = await session.send('Browser.WindowState');
-  expect(response.minimized).toBeTruthy();
-
   // Open another instance of the Workbench application.
   // This should return quickly.  The test timeout is there in case the new i
   // process hangs for some reason.
@@ -201,8 +180,4 @@ test('App re-launch will exit and focus on first instance', async () => {
 
   // When another instance is already open, we expect an exit code of 1.
   expect(otherElectronProcess.status).toBe(1);
-
-  // Assert this instance is not minimized.
-  response = await session.send('Browser.WindowState');
-  expect(response.minimized).toBeFalsy();
 });
