@@ -45,6 +45,13 @@ jobs:
         DEBUG: electron-builder
       run: npm run dist
 
+    - name: Set up Python for gsutil
+      # gsutil requires a python, which is not included on Windows
+      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
+
     - name: Set up GCP
       # Secrets not available in PR so don't use GCP.
       if: github.event_name != 'pull_request'
@@ -54,37 +61,38 @@ jobs:
           service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
     # electron-builder code signing only supported on macos and windows
-    - name: Code-signing setup for macOS
-      if: matrix.os == 'macos-latest'
-      shell: bash
-      env:
-        P12_FILE_PATH: ~/Downloads/stanford_cert.p12
-        KEYCHAIN_NAME: codesign_keychain
-        KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
-        CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
+    # - name: Code-signing setup for macOS
+    #   if: matrix.os == 'macos-latest'
+    #   shell: bash
+    #   env:
+    #     P12_FILE_PATH: ~/Downloads/stanford_cert.p12
+    #     KEYCHAIN_NAME: codesign_keychain
+    #     KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
+    #     CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
 
-      run: |
-        gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-2019-03-07.p12 $P12_FILE_PATH 
+    #   run: |
+    #     gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-2019-03-07.p12 $P12_FILE_PATH 
 
-        bash ./scripts/setup_macos_keychain.sh 
+    #     bash ./scripts/setup_macos_keychain.sh 
 
-        # these env variables tell electron-builder to do code signing
-        echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
-        echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
-        echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
-        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
+    #     # these env variables tell electron-builder to do code signing
+    #     echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
+    #     echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
+    #     echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
+    #     echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
        
 
     - name: Code-signing setup for Windows
       if: matrix.os == 'windows-latest'
       env:
         P12_FILE: Stanford-natcap-code-signing-2019-03-07.p12
+        CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
         gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
 
         # all these variables are used by electron-builder
         echo "CSC_LINK=~/$P12_FILE" >> $GITHUB_ENV
-        echo "CSC_KEY_PASSWORD=${{ secrets.CERT_KEY_PASS }}" >> $GITHUB_ENV
+        echo "CSC_KEY_PASSWORD=${{ secrets.STANFORD_CERT_KEY_PASS }}" >> $GITHUB_ENV
         echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
 
     - name: Run electron-builder on macOS
@@ -100,12 +108,6 @@ jobs:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
       run: npx --no-install electron-builder build --windows -c.extraMetadata.main=build/main.js --publish never
-
-    - name: Run electron-builder on ubuntu
-      if: matrix.os == 'ubuntu-latest'
-      env:
-        GH_TOKEN: env.GITHUB_TOKEN
-      run: npx --no-install electron-builder build --linux -c.extraMetadata.main=build/main.js --publish never
 
       # Also run all tests on the build dir code?
     - name: Test flask app binaries
@@ -134,19 +136,6 @@ jobs:
           && echo 'gs://releases.naturalcapitalproject.org/invest-workbench' \
           || echo 'gs://natcap-dev-build-artifacts/invest-workbench/${{ github.repository_owner }}' \
           )" >> $GITHUB_ENV
-    - name: Set up Python for gsutil
-      # gsutil requires a python, which is not included on Windows
-      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.7
-
-    - name: Set up GCP
-      if: github.event_name != 'pull_request'
-      uses: google-github-actions/setup-gcloud@master
-      with:
-          version: '281.0.0'
-          service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
     - name: Deploy artifacts to GCS - Windows
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
