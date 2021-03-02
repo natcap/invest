@@ -7,7 +7,7 @@ import os
 
 import shapely.wkt
 import shapely.wkb
-from shapely.geometry import Point, box
+from shapely.geometry import Point, MultiPoint, box
 import numpy
 from osgeo import osr
 from osgeo import ogr
@@ -156,12 +156,16 @@ class DelineateItTests(unittest.TestCase):
             Point(3, -5),
             Point(7, -9),
             Point(13, -5),
+            MultiPoint([(13, -5)]),
             box(-2, -2, -1, -1),  # Off the edge
         ]
         fields = {'foo': ogr.OFTInteger, 'bar': ogr.OFTString}
         attributes = [
-            {'foo': 0, 'bar': 0.1}, {'foo': 1, 'bar': 1.1},
-            {'foo': 2, 'bar': 2.1}, {'foo': 3, 'bar': 3.1},
+            {'foo': 0, 'bar': 0.1},
+            {'foo': 1, 'bar': 1.1},
+            {'foo': 2, 'bar': 2.1},
+            {'foo': 3, 'bar': 3.1},
+            {'foo': 3, 'bar': 3.1},  # intentional duplicate fields
             {'foo': 4, 'bar': 4.1}]
         pygeoprocessing.shapely_geometry_to_vector(
             source_features, source_points_path, wkt, 'GeoJSON',
@@ -188,12 +192,13 @@ class DelineateItTests(unittest.TestCase):
         snapped_points_layer = snapped_points_vector.GetLayer()
 
         # snapped layer will include 3 valid points and one polygon.
-        self.assertEqual(4, snapped_points_layer.GetFeatureCount())
+        self.assertEqual(5, snapped_points_layer.GetFeatureCount())
 
         expected_geometries_and_fields = [
             (Point(5, -5), {'foo': 1, 'bar': '1.1'}),
             (Point(5, -9), {'foo': 2, 'bar': '2.1'}),
             (Point(13, -11), {'foo': 3, 'bar': '3.1'}),
+            (Point(13, -11), {'foo': 3, 'bar': '3.1'}),  # Multipoint now point
         ]
         for feature, (expected_geom, expected_fields) in zip(
                 snapped_points_layer, expected_geometries_and_fields):
@@ -352,7 +357,7 @@ class DelineateItTests(unittest.TestCase):
 
     def test_detect_pour_points(self):
         from natcap.invest.delineateit import delineateit
- 
+
         # create a flow direction raster from the sample DEM
         flow_dir_path = os.path.join(REGRESSION_DATA, 'input/flow_dir_gura.tif')
         output_path = os.path.join(self.workspace_dir, 'point_vector.gpkg')
@@ -397,8 +402,8 @@ class DelineateItTests(unittest.TestCase):
         expected_pour_points = {(6.25, 5.25)}
 
         output = delineateit_core.calculate_pour_point_array(
-            flow_dir_array, 
-            edges, 
+            flow_dir_array,
+            edges,
             nodata=a,
             offset=(0, 0),
             origin=(5, 3),
@@ -444,13 +449,13 @@ class DelineateItTests(unittest.TestCase):
             win_xsizes = [4, 4, 2]
             for xoff, win_xsize in zip(xoffs, win_xsizes):
                 yield {
-                    'xoff': xoff, 
+                    'xoff': xoff,
                     'yoff': 0,
                     'win_xsize': win_xsize,
                     'win_ysize': 5}
 
         with mock.patch(
-            'natcap.invest.delineateit.delineateit.pygeoprocessing.iterblocks', 
+            'natcap.invest.delineateit.delineateit.pygeoprocessing.iterblocks',
             mock_iterblocks):
             pour_points = delineateit._find_raster_pour_points((raster_path, 1))
             self.assertEqual(pour_points, expected_pour_points)
