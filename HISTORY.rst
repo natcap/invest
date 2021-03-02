@@ -58,9 +58,16 @@ Unreleased Changes (3.9.1)
       would not convert Windows separators to linux style.
     * Provide a better validation error message when an overview '.ovr' file
       is input instead of a valid raster.
+    * Removed internal references to ``TaskGraph``
+      ``copy_duplicate_artifact`` calls in anticipation from that feature
+      being removed from ``TaskGraph``. User facing changes include
+      slightly faster initial runtimes for the Coastal Vulnerability,
+      Coastal Blue Carbon, SDR, DelineateIt, and Seasonal Water Yield models.
+      These models will no longer attempt to copy intermediate artifacts that
+      could have been computed by previous runs.
 * Carbon
     * Fixed a bug where, if rate change and discount rate were set to 0, the
-      valuation results were in $/year rather than $, too small by a factor of 
+      valuation results were in $/year rather than $, too small by a factor of
       ``lulc_fut_year - lulc_cur_year``.
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
