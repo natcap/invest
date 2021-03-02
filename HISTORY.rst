@@ -71,6 +71,8 @@ Unreleased Changes (3.9.1)
     * Fixed an issue on Mac OS when certain models would loop indefinitely and
       never complete.  This was addressed by bumping the ``taskgraph``
       requirement version to ``0.10.3``
+    * Allow Windows users to install for all users or current user. This allows
+      non-admin users to install InVEST locally.
     * Fixed a bug where saving a datastack parameter set with relative paths
       would not convert Windows separators to linux style.
     * Provide a better validation error message when an overview '.ovr' file
