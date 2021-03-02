@@ -773,11 +773,18 @@ def _assert_vectors_equal(
             actual_geom_wkt = actual_geom.ExportToWkt()
             expected_geom_shapely = loads(expected_geom_wkt)
             actual_geom_shapely = loads(actual_geom_wkt)
-            if not expected_geom_shapely.almost_equals(actual_geom_shapely):
-                raise AssertionError(
-                    "Vector geometry assertion fail. \n"
-                    f"Expected geometry: {expected_geom_wkt}. \n"
-                    f"Actual geometry: {actual_geom_wkt}. ")
+            # Try comparing geoms exactly equal allowing for different
+            # geometry ordering
+            geoms_equal = expected_geom_shapely.equals(actual_geom_shapely)
+            if not geoms_equal:
+                # Try almost_equal allowing for precision differences
+                geoms_almost_eq = expected_geom_shapely.almost_equals(
+                    actual_geom_shapely)
+                if not geoms_almost_qual:
+                    raise AssertionError(
+                        "Vector geometry assertion fail. \n"
+                        f"Expected geometry: {expected_geom_wkt}. \n"
+                        f"Actual geometry: {actual_geom_wkt}. ")
 
             expected_feature = None
             actual_feature = None
