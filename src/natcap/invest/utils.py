@@ -780,7 +780,7 @@ def _assert_vectors_equal(
                 # Try almost_equal allowing for precision differences
                 geoms_almost_eq = expected_geom_shapely.almost_equals(
                     actual_geom_shapely)
-                if not geoms_almost_qual:
+                if not geoms_almost_eq:
                     raise AssertionError(
                         "Vector geometry assertion fail. \n"
                         f"Expected geometry: {expected_geom_wkt}. \n"
