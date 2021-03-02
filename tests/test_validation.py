@@ -347,6 +347,30 @@ class RasterValidation(unittest.TestCase):
         error_msg = validation.check_raster(filepath)
         self.assertTrue('could not be opened as a GDAL raster' in error_msg)
 
+    def test_invalid_ovr_raster(self):
+        """Validation: test when a .tif.ovr file is input as a raster."""
+        from natcap.invest import validation
+
+        # Use EPSG:32731  # WGS84 / UTM zone 31s
+        driver = gdal.GetDriverByName('GTiff')
+        filepath = os.path.join(self.workspace_dir, 'raster.tif')
+        raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
+        meters_srs = osr.SpatialReference()
+        meters_srs.ImportFromEPSG(32731)
+        raster.SetProjection(meters_srs.ExportToWkt())
+        raster = None
+        # I could only create overviews when opening the file, not on creation.
+        # Build overviews taken from:
+        # https://gis.stackexchange.com/questions/270498/compress-gtiff-external-overviews-with-gdal-api
+        raster = gdal.OpenEx(filepath)
+        gdal.SetConfigOption("COMPRESS_OVERVIEW", "DEFLATE")
+        raster.BuildOverviews("AVERAGE", [2, 4, 8, 16, 32, 64, 128, 256])
+        raster = None
+
+        filepath_ovr = os.path.join(self.workspace_dir, 'raster.tif.ovr')
+        error_msg = validation.check_raster(filepath_ovr)
+        self.assertTrue('File found to be an overview' in error_msg)
+
     def test_raster_not_projected(self):
         """Validation: test when a raster is not linearly projected."""
         from natcap.invest import validation
