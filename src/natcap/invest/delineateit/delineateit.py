@@ -566,8 +566,9 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         # as it is now in the new vector.
         if ((geom_name not in ('POINT', 'MULTIPOINT')) or
                 (geom_name == 'MULTIPOINT' and geom_count > 1)):
-            LOGGER.debug(f"Feature {point_feature.GetFID()} is of type "
-                         "{geom_name} and cannot be snapped to a stream.")
+            LOGGER.debug(
+                f"FID {point_feature.GetFID()} ({geom_name}, n={geom_count}) "
+                "only primitive points can be snapped to a stream.")
             new_feature = ogr.Feature(snapped_layer.GetLayerDefn())
             new_feature.SetGeometry(source_geometry)
             for field_name, field_value in point_feature.items().items():
@@ -583,9 +584,9 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         y_index = (point.y - geotransform[3]) // geotransform[5]
         if (x_index < 0 or x_index > n_cols or
                 y_index < 0 or y_index > n_rows):
-            LOGGER.warning('Encountered a point that was outside the bounds of '
-                        'the stream raster.  FID:%s at %s',
-                        point_feature.GetFID(), point)
+            LOGGER.warning(
+                'Encountered a point that was outside the bounds of the '
+                f'stream raster.  FID:{point_feature.GetFID()} at {point}')
             continue
 
         x_center = x_index
