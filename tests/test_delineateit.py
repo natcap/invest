@@ -346,6 +346,7 @@ class DelineateItTests(unittest.TestCase):
         self.assertTrue(numpy.isclose(points[1][1], expected_points[1][1]))
 
     def test_calculate_pour_point_array(self):
+        """DelineateIt: Extract pour points."""
         from natcap.invest.delineateit import delineateit, delineateit_core
 
         a = 100  # nodata value

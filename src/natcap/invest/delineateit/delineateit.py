@@ -687,9 +687,6 @@ def _find_raster_pour_points(flow_dir_raster_path_band):
     raster_info = pygeoprocessing.get_raster_info(flow_dir_raster_path)
     # Open the flow direction raster band
     raster = gdal.OpenEx(flow_dir_raster_path, gdal.OF_RASTER)
-    if raster is None:
-        raise ValueError(
-            "Raster at %s could not be opened." % flow_dir_raster_path)
     band = raster.GetRasterBand(band_index)
     width, height = raster_info['raster_size']
 
