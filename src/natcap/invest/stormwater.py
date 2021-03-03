@@ -2,6 +2,8 @@
 import logging
 import math
 import numpy
+import os
+from osgeo import gdal
 import pygeoprocessing
 import taskgraph
 
@@ -60,6 +62,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
+                "is_connected": {"type": "boolean"},
                 "EMC_P": {"type": "number", "units": "mg/L"},
                 "EMC_N": {"type": "number", "units": "mg/L"},
                 "RC_A": {"type": "ratio"},
@@ -88,6 +91,13 @@ ARGS_SPEC = {
             "about": "Radius around each pixel to adjust retention ratios",
             "name": "retention radius"
         },
+        "dem_path": {
+            "type": "raster",
+            "bands": {1: {"type": "number", "units": "meters"}},
+            "required": "adjust_retention_ratios",
+            "about": "Digital elevation model of the area",
+            "name": "digital elevation model" 
+        },
         "road_centerlines_path": {
             "type": "vector",
             "fields": {},
@@ -113,65 +123,75 @@ ARGS_SPEC = {
 }
 
 
-FILES = {
-    'lulc_aligned_path': 'intermediate/lulc_aligned.tif',
-    'soil_group_aligned_path': 'intermediate/soil_group_aligned.tif',
-    'precipitation_aligned_path': 'intermediate/precipitation_aligned.tif',
-    'retention_ratio_path': 'retention_ratio.tif',
-    'retention_volume_path': 'retention_volume.tif',
-    'infiltration_ratio_path': 'infiltration_ratio.tif',
-    'infiltration_volume_path': 'infiltration_volume.tif'
-}
+
 
 
 def execute(args):
 
-    align_inputs = [args['lulc_path'], args['soil_groups_path'], args['precipitation_path']]
+    # set up files and directories
+    suffix = utils.make_suffix_string(args, 'results_suffix')
+    output_dir = args['workspace_dir']
+    intermediate_dir = os.path.join(output_dir, 'intermediate')
+    cache_dir = os.path.join(output_dir, 'cache_dir')
+    utils.make_directories([args['workspace_dir'], intermediate_dir, cache_dir])
+
+    FILES = {
+        'lulc_aligned_path': os.path.join(intermediate_dir, f'lulc_aligned{suffix}.tif'),
+        'soil_group_aligned_path': os.path.join(intermediate_dir, f'soil_group_aligned{suffix}.tif'),
+        'precipitation_aligned_path': os.path.join(intermediate_dir, f'precipitation_aligned{suffix}.tif'),
+        'retention_ratio_path': os.path.join(output_dir, f'retention_ratio{suffix}.tif'),
+        'retention_volume_path': os.path.join(output_dir, f'retention_volume{suffix}.tif'),
+        'infiltration_ratio_path': os.path.join(output_dir, f'infiltration_ratio{suffix}.tif'),
+        'infiltration_volume_path': os.path.join(output_dir, f'infiltration_volume{suffix}.tif')
+    }
+    
+    align_inputs = [args['lulc_path'], args['soil_group_path'], args['precipitation_path']]
     align_outputs = [
         FILES['lulc_aligned_path'],
         FILES['soil_group_aligned_path'], 
         FILES['precipitation_aligned_path']]
 
-    task_graph = taskgraph.TaskGraph(args['workspace_dir'], args['n_workers'])
+    pixel_size = pygeoprocessing.get_raster_info(args['lulc_path'])['pixel_size']
+
+    task_graph = taskgraph.TaskGraph(args['workspace_dir'], int(args.get('n_workers', -1)))
 
 
 
     # Align all three input rasters to the same projection
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(
-            align_inputs, align_outputs, interpolate_list,
+        args=(align_inputs, align_outputs, ['near' for _ in align_inputs],
             pixel_size, 'intersection'),
-        kwargs={
-            'base_vector_path_list': (args['aoi_path'],),
-            'raster_align_index': align_index},
-        target_path_list=output_align_list,
-        task_name='align rasters')
+        kwargs={'raster_align_index': 0},
+        target_path_list=align_outputs,
+        task_name='align input rasters')
 
 
     # Build a lookup dictionary mapping each LULC code to its row
     biophysical_dict = utils.build_lookup_from_csv(
         args['biophysical_table'], 'lucode')
+    print(biophysical_dict)
 
     # Make ratio lookup dictionaries mapping each LULC code to a ratio for 
     # each soil group. Biophysical table has runoff coefficents so subtract 
     # from 1 to get retention coefficient.
     retention_ratio_dict = {
         lucode: {
-            'A': 1 - row['RC_A'],
-            'B': 1 - row['RC_B'],
-            'C': 1 - row['RC_C'],
-            'D': 1 - row['RC_D'],
-        } for lucode, row in biophysical_dict
+            'A': 1 - row['rc_a'],
+            'B': 1 - row['rc_b'],
+            'C': 1 - row['rc_c'],
+            'D': 1 - row['rc_d'],
+        } for lucode, row in biophysical_dict.items()
     }
     infiltration_ratio_dict = {
         lucode: {
-            'A': row['IR_A'],
-            'B': row['IR_B'],
-            'C': row['IR_C'],
-            'D': row['IR_D'],
-        } for lucode, row in biophysical_dict
+            'A': row['ir_a'],
+            'B': row['ir_b'],
+            'C': row['ir_c'],
+            'D': row['ir_d'],
+        } for lucode, row in biophysical_dict.items()
     }
+    print(retention_ratio_dict, infiltration_ratio_dict)
 
 
     # Calculate stormwater retention ratio and volume from
@@ -185,20 +205,52 @@ def execute(args):
             retention_ratio_dict,
             FILES['retention_ratio_path']),
         target_path_list=[FILES['retention_ratio_path']],
+        dependent_task_list=[align_task],
         task_name='calculate stormwater retention ratio'
     )
 
     # (Optional) adjust stormwater retention ratio using roads
     if args['adjust_retention_ratios']:
-        adjust_retention_ratio_task = task_graph.add_task(
-            func=adjust_stormwater_retention_ratio,
-            args=(
-                FILES['retention_ratio_path'],
-                args['road_centerlines_path'],
-                FILES['adjusted_retention_ratio_path']),
-            target_path_list=[FILES['adjusted_retention_ratio_path']],
-            task_name='adjust stormwater retention ratio'
-        )
+
+        # is_connected_lookup = {lucode: row['is_connected'] for lucode, row in biophysical_dict.items()}
+        # connected_lulc_task = task_graph.add_task(
+        #     func=calculate_connected_lulc_raster,
+        #     args=(args['lulc_path'], is_connected_lookup, FILES['connected_lulc_path']),
+        #     target_path_list=[FILES['connected_lulc_path']],
+        #     task_name='calculate binary connected lulc raster'
+        # )
+
+        # # calculate D8 flow direction from DEM
+        # flow_dir_task = task_graph.add_task(
+        #     func=pygeoprocessing.routing.flow_dir_d8,
+        #     args=(
+        #         (args['dem_path'], 1), 
+        #         FILES['flow_dir_d8_path']),
+        #     target_path_list=[FILES['flow_dir_d8_path']],
+        #     task_name='calculate D8 flow direction'
+        # )
+
+        # connection_distance_task = task_graph.add_task(
+        #     func=pygeoprocessing.routing.distance_to_channel_d8,
+        #     args=(
+        #         (FILES['flow_dir_d8_path'], 1),
+        #         (FILES['connected_lulc_path'], 1),
+        #         FILES['connection_distance_path']),
+        #     target_path_list=[FILES['connection_distance_path']],
+        #     task_name='calculate connection distance raster'
+        # )
+
+
+
+        # adjust_retention_ratio_task = task_graph.add_task(
+        #     func=adjust_stormwater_retention_ratio,
+        #     args=(
+        #         FILES['retention_ratio_path'],
+        #         args['road_centerlines_path'],
+        #         FILES['adjusted_retention_ratio_path']),
+        #     target_path_list=[FILES['adjusted_retention_ratio_path']],
+        #     task_name='adjust stormwater retention ratio'
+        # )
         final_retention_ratio_path = FILES['adjusted_retention_ratio_path']
     else:
         final_retention_ratio_path = FILES['retention_ratio_path']
@@ -210,6 +262,7 @@ def execute(args):
             args['precipitation_path'],
             FILES['retention_volume_path']),
         target_path_list=[FILES['retention_volume_path']],
+        dependent_task_list=[align_task, retention_ratio_task],
         task_name='calculate stormwater retention volume'
     )
 
@@ -225,6 +278,7 @@ def execute(args):
             infiltration_ratio_dict,
             FILES['infiltration_ratio_path']),
         target_path_list=[FILES['infiltration_ratio_path']],
+        dependent_task_list=[align_task],
         task_name='calculate stormwater infiltration ratio'
     )
 
@@ -235,6 +289,7 @@ def execute(args):
             args['precipitation_path'],
             FILES['infiltration_volume_path']),
         target_path_list=[FILES['infiltration_volume_path']],
+        dependent_task_list=[align_task, infiltration_ratio_task],
         task_name='calculate stormwater retention volume'
     )
 
@@ -257,10 +312,11 @@ def execute(args):
         avoided_pollutant_load_task = task_graph.add_task(
             func=calculate_avoided_pollutant_load,
             args=(
-                FILES['retention_path'],
+                FILES['retention_volume_path'],
                 lulc_emc_lookup,
                 avoided_pollutant_load_path),
             target_path_list=[avoided_pollutant_load_path],
+            dependent_task_list=[retention_volume_task],
             task_name=f'calculate avoided pollutant {pollutant} load'
         )
 
@@ -271,19 +327,17 @@ def execute(args):
         valuation_task = task_graph.add_task(
             func=calculate_retention_value,
             args=(
-                FILES['retention_path'],
+                FILES['retention_volume_path'],
                 args['replacement_cost'],
                 FILES['retention_value_path']),
             target_path_list=[FILES['retention_value_path']],
+            dependent_task_list=[retention_volume_task],
             task_name='calculate stormwater retention value'
         )
 
     # (Optional) Aggregate to watersheds if an aggregate vector is defined
     if (args['aggregate_areas_path']):
-        aggregation_task = task_graph.add_task(
-            func=aggregate_values,
-            args=(
-                ))
+        pass
 
     task_graph.close()
     task_graph.join()
@@ -308,22 +362,27 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
     Returns:
         None
     """
-
+    print('calculate stormwater ratio')
     def ratio_op(lulc_array, soil_group_array):
         """Make an array of stormwater retention or infiltration ratios from 
         arrays of LULC codes and hydrologic soil groups"""
 
         # initialize an array of the output nodata value
-        ratio_array = numpy.full(lulc_array.shape, NODATA)
+        ratio_array = numpy.full(lulc_array.shape, NODATA, dtype=float)
+        soil_group_map = {1: 'A', 2: 'B', 3: 'C', 4: 'D'}
 
         for lucode in ratio_lookup:
+            print(lucode)
             lucode_mask = (lulc_array == lucode)
 
-            for soil_group in ['A', 'B', 'C', 'D']:
+            for soil_group in [1, 2, 3, 4]:
                 soil_group_mask = (soil_group_array == soil_group)
+                print(numpy.any(lucode_mask & soil_group_mask))
+                print(ratio_lookup[lucode][soil_group_map[soil_group]])
+                ratio_array[lucode_mask & soil_group_mask] = ratio_lookup[lucode][soil_group_map[soil_group]]
+                print(ratio_array)
 
-                ratio_array[(lucode_mask & soil_group_mask)] = ratio_lookup[lucode][soil_group]
-
+        print(ratio_array, numpy.max(ratio_array))
         return ratio_array
 
     # Apply ratio_op to each block of the LULC and soil group rasters
@@ -331,6 +390,20 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
     pygeoprocessing.raster_calculator(
         [(lulc_path, 1), (soil_group_path, 1)],
         ratio_op, output_path, gdal.GDT_Float32, NODATA)
+
+
+def calculate_connected_lulc(lulc_path, is_connected_lookup, output_path):
+    """Make a binary raster where 1=connected, 0=not
+    """
+    def connected_op(lulc_array):
+        is_connected_array = numpy.full(lulc_array.shape, NODATA)
+        for lucode in is_connected_lookup:
+            lucode_mask = (lulc_array == lucode)
+            is_connected_array[lucode_mask] = lulc_connected_lookup[lucode]
+        return is_connected_array
+    pygeoprocessing.raster_calculator(
+        [(lulc_path, 1)], connected_op, output_path, gdal.GDT_Float32, NODATA)
+
 
 def adjust_stormwater_retention_ratios(retention_ratio_path, radius, lulc_path, road_centerlines_path):
     """Adjust retention ratios according to surrounding LULC and roads.
@@ -344,8 +417,14 @@ def adjust_stormwater_retention_ratios(retention_ratio_path, radius, lulc_path, 
     Returns:
         None
     """
-    pixel_size = 
-    margin = math.ceil()
+    lulc_connected_lookup
+    
+    def adjust_op(lulc_array):
+
+        
+
+        pygeoprocessing.distance_to_channel_d8()
+
 
 
 def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
