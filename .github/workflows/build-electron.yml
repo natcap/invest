@@ -87,10 +87,11 @@ jobs:
         echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
 
     - name: Run electron-builder
+      if: matrix.os == 'macos-latest'
       env:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
-      run: npm run dist
+      run: security find-identity -vp codesigning && npm run dist
 
       # Also run all tests on the build dir code?
     - name: Test flask app binaries
