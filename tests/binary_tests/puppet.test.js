@@ -69,14 +69,14 @@ beforeAll(async () => {
 
   // get data about the remote debugging endpoint
   // so we don't make the next fetch too early
-  await new Promise(resolve => setTimeout(resolve, 20000));
-  const res = await fetch(`http://localhost:${PORT}/json/version`);
-  const data = JSON.parse(await res.text());
+  // await new Promise(resolve => setTimeout(resolve, 20000));
+  // const res = await fetch(`http://localhost:${PORT}/json/version`);
+  // const data = JSON.parse(await res.text());
 
   // connect to the debugging endpoint
   browser = await puppeteer.connect({
-    browserWSEndpoint: data.webSocketDebuggerUrl, // this works
-    // browserURL: `http://localhost:${PORT}`,    // this also works
+    // browserWSEndpoint: data.webSocketDebuggerUrl, // this works
+    browserURL: `http://localhost:${PORT}`,    // this also works
     defaultViewport: { width: 1000, height: 800 },
   });
   // set up test data
