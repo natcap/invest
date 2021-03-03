@@ -170,7 +170,6 @@ def execute(args):
     # Build a lookup dictionary mapping each LULC code to its row
     biophysical_dict = utils.build_lookup_from_csv(
         args['biophysical_table'], 'lucode')
-    print(biophysical_dict)
 
     # Make ratio lookup dictionaries mapping each LULC code to a ratio for 
     # each soil group. Biophysical table has runoff coefficents so subtract 
@@ -191,7 +190,6 @@ def execute(args):
             'D': row['ir_d'],
         } for lucode, row in biophysical_dict.items()
     }
-    print(retention_ratio_dict, infiltration_ratio_dict)
 
 
     # Calculate stormwater retention ratio and volume from
@@ -259,7 +257,7 @@ def execute(args):
         func=calculate_stormwater_volume,
         args=(
             final_retention_ratio_path,
-            args['precipitation_path'],
+            FILES['precipitation_aligned_path'],
             FILES['retention_volume_path']),
         target_path_list=[FILES['retention_volume_path']],
         dependent_task_list=[align_task, retention_ratio_task],
@@ -283,10 +281,10 @@ def execute(args):
     )
 
     infiltration_volume_task = task_graph.add_task(
-        func=calculate_stormwater_retention_volume,
+        func=calculate_stormwater_volume,
         args=(
             FILES['infiltration_ratio_path'],
-            args['precipitation_path'],
+            FILES['precipitation_aligned_path'],
             FILES['infiltration_volume_path']),
         target_path_list=[FILES['infiltration_volume_path']],
         dependent_task_list=[align_task, infiltration_ratio_task],
@@ -296,8 +294,8 @@ def execute(args):
 
     # get all EMC columns from an arbitrary row in the dictionary
     # strip the first four characters off 'EMC_pollutant' to get pollutant name
-    emc_columns = [key for key in biophysical_table.keys()[0] 
-        if key.startswith('EMC_')]
+    emc_columns = [key for key in next(iter(biophysical_dict.values()))
+        if key.startswith('emc_')]
     pollutants = [key[4:] for key in  emc_columns]
     print('pollutants:', pollutants)
 
@@ -307,11 +305,12 @@ def execute(args):
         avoided_pollutant_load_path = f'avoided_pollutant_load_{pollutant}.tif'
         # make a dictionary mapping each LULC code to the pollutant EMC value
         lulc_emc_lookup = {
-            lucode: row[f'EMC_{pollutant}'] for lucode, row in biophysical_dict.entries()
+            lucode: row[f'emc_{pollutant}'] for lucode, row in biophysical_dict.items()
         }
         avoided_pollutant_load_task = task_graph.add_task(
             func=calculate_avoided_pollutant_load,
             args=(
+                FILES['lulc_aligned_path'],
                 FILES['retention_volume_path'],
                 lulc_emc_lookup,
                 avoided_pollutant_load_path),
@@ -362,7 +361,6 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
     Returns:
         None
     """
-    print('calculate stormwater ratio')
     def ratio_op(lulc_array, soil_group_array):
         """Make an array of stormwater retention or infiltration ratios from 
         arrays of LULC codes and hydrologic soil groups"""
@@ -372,17 +370,12 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
         soil_group_map = {1: 'A', 2: 'B', 3: 'C', 4: 'D'}
 
         for lucode in ratio_lookup:
-            print(lucode)
             lucode_mask = (lulc_array == lucode)
 
             for soil_group in [1, 2, 3, 4]:
                 soil_group_mask = (soil_group_array == soil_group)
-                print(numpy.any(lucode_mask & soil_group_mask))
-                print(ratio_lookup[lucode][soil_group_map[soil_group]])
                 ratio_array[lucode_mask & soil_group_mask] = ratio_lookup[lucode][soil_group_map[soil_group]]
-                print(ratio_array)
 
-        print(ratio_array, numpy.max(ratio_array))
         return ratio_array
 
     # Apply ratio_op to each block of the LULC and soil group rasters
@@ -441,6 +434,7 @@ def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
     """
     ratio_raster_info = pygeoprocessing.get_raster_info(ratio_path)
     ratio_nodata = ratio_raster_info['nodata'][0]
+    print('ratio nodata:', ratio_nodata)
     pixel_area = abs(ratio_raster_info['pixel_size'][0] * 
         ratio_raster_info['pixel_size'][1])
     precipitation_nodata = pygeoprocessing.get_raster_info(
@@ -450,10 +444,11 @@ def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
         """Calculate array of volumes (retention or infiltration) from arrays 
         of precipitation values and stormwater ratios"""
 
-        volume_array = numpy.full(ratio_array.shape, NODATA)
+        print(ratio_array.dtype, precipitation_array.dtype)
+        volume_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
         nodata_mask = (
-            ratio_array != ratio_nodata & 
-            precipitation_array != precipitation_nodata)
+            (ratio_array != ratio_nodata) & 
+            (precipitation_array != precipitation_nodata))
 
         # precipitation (mm/yr) * pixel area (m^2) * 
         # 0.001 (m/mm) * ratio = volume (m^3/yr)
@@ -490,16 +485,18 @@ def calculate_avoided_pollutant_load(lulc_path, retention_volume_path,
     Returns:
         None
     """
+    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+
 
     def avoided_pollutant_load_op(lulc_array, retention_volume_array):
         """Calculate array of avoided pollutant load values from arrays of 
         LULC codes and stormwater retention volumes."""
 
-        load_array = numpy.full(lulc_array.shape, load_nodata)
+        load_array = numpy.full(lulc_array.shape, NODATA)
 
         nodata_mask = (
-            lulc_array != lulc_nodata &
-            retention_volume_array != retention_volume_nodata)
+            (lulc_array != lulc_nodata) &
+            (retention_volume_array != NODATA))
 
         for lucode in lulc_emc_lookup:
             lucode_mask = (lulc_array == lucode)
@@ -533,7 +530,7 @@ def calculate_retention_value(retention_volume_path, replacement_cost, output_pa
     def retention_value_op(retention_volume_array):
         """Multiply array of retention volumes by the retention replacement 
         cost to get an array of retention values."""
-        value_array = numpy.full(retention_volume_array.shape, value_nodata)
+        value_array = numpy.full(retention_volume_array.shape, NODATA)
         nodata_mask = (retention_volume_array != retention_volume_nodata)
 
         # retention (m^3) * replacement cost ($/m^3) = retention value ($)
