@@ -564,7 +564,7 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
 
         # If the geometry is not a primitive point, just create the new feature
         # as it is now in the new vector.
-        if ((geom_name != 'POINT') or
+        if ((geom_name not in ('POINT', 'MULTIPOINT')) or
                 (geom_name == 'MULTIPOINT' and geom_count > 1)):
             LOGGER.debug(f"Feature {point_feature.GetFID()} is of type "
                          "{geom_name} and cannot be snapped to a stream.")
