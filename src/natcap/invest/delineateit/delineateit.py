@@ -318,33 +318,6 @@ def execute(args):
     graph.join()
 
 
-def _vector_may_contain_points(vector_path, layer_id=0):
-    """Test if a vector layer may contain points.
-
-    This function is intended to be used by the InVEST UI only.
-
-    Args:
-        vector_path (string): The path to a vector on disk.
-        layer_id=0 (int or string): The ID or name of the layer to check.
-
-    Returns:
-        A ``bool`` indicating whether a vector contains points.  ``False`` if
-        the vector cannot be opened at all or if the layer is invalid.
-
-    """
-    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-    if vector is None:
-        return False
-
-    layer = vector.GetLayer(layer_id)
-    if layer is None:
-        return False
-
-    if layer.GetGeomType() in (ogr.wkbPoint, ogr.wkbUnknown):
-        return True
-    return False
-
-
 def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     """Identify stream pixels based on a user-defined threshold.
 
