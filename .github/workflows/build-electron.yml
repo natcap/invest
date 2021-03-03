@@ -38,7 +38,7 @@ jobs:
 
     - name: Run the build script
       run: npm run build
-     
+
     - name: Run electron-builder
       env:
         GH_TOKEN: env.GITHUB_TOKEN
@@ -51,9 +51,10 @@ jobs:
 
     - name: Test electron app with puppeteer
       run: npm run test-electron-app
-    
+   
     - name: Upload installer artifacts to github
       uses: actions/upload-artifact@v2.2.1
+      if: ${{ always() }}
       with:
         name: invest-workbench-${{ matrix.os }}
         path: dist/invest-workbench_*
