@@ -69,6 +69,44 @@ class DelineateItTests(unittest.TestCase):
             self.assertAlmostEqual(expected_area, areas_by_id[id_key],
                                    delta=1e-4)
 
+    def test_delineateit_willamette_detect_pour_points(self):
+        """DelineateIt: regression testing full run with pour point detection."""
+        from natcap.invest.delineateit import delineateit
+
+        args = {
+            'dem_path': os.path.join(REGRESSION_DATA, 'input', 'dem.tif'),
+            'outlet_vector_path': os.path.join(
+                REGRESSION_DATA, 'input', 'outlets.shp'),
+            'workspace_dir': self.workspace_dir,
+            'detect_pour_points': True,
+            'results_suffix': 'w',
+            'n_workers': None,  # Trigger error and default to -1
+        }
+        delineateit.execute(args)
+
+        vector = gdal.OpenEx(os.path.join(args['workspace_dir'],
+                                          'watersheds_w.gpkg'), gdal.OF_VECTOR)
+        layer = vector.GetLayer('watersheds_w')  # includes suffix
+        self.assertEqual(layer.GetFeatureCount(), 102)
+
+        # Assert that every valid pixel is covered by a watershed.
+        n_pixels = 0
+        raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
+        pixel_x, pixel_y = raster_info['pixel_size']
+        pixel_area = abs(pixel_x * pixel_y)
+        nodata = raster_info['nodata'][0]
+        for _, block in pygeoprocessing.iterblocks((args['dem_path'], 1)):
+            n_pixels += len(block[~numpy.isclose(block, nodata)])
+
+        valid_pixel_area = n_pixels * pixel_area
+
+        total_area = 0
+        for feature in layer:
+            geom = feature.GetGeometryRef()
+            total_area += geom.Area()
+
+        self.assertAlmostEqual(valid_pixel_area, total_area, 4)
+
     def test_delineateit_validate(self):
         """DelineateIt: test validation function."""
         from natcap.invest.delineateit import delineateit
