@@ -92,7 +92,8 @@ jobs:
         DEBUG: electron-builder
       run: |
         npm run dist
-        echo "CSC_IDENTITY_ID"=$(security find-identity -vp) >> $GITHUB_ENV
+        echo "done with electron-builder"
+        echo "CSC_IDENTITY_ID"=$(security find-identity -vp codesigning) >> $GITHUB_ENV
         /usr/bin/codesign --force -s ${{ env.CSC_IDENTITY_ID }} dist/invest-workbench_*
 
       # Also run all tests on the build dir code?
