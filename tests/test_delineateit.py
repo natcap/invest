@@ -356,6 +356,7 @@ class DelineateItTests(unittest.TestCase):
         target_vector = None
 
     def test_detect_pour_points(self):
+        """DelineateIt: low-level test for pour point detection."""
         from natcap.invest.delineateit import delineateit
 
         # create a flow direction raster from the sample DEM
@@ -415,6 +416,7 @@ class DelineateItTests(unittest.TestCase):
             expected_pour_points))
 
     def test_find_pour_points_by_block(self):
+        """DelineateIt: test pour point detection against block edges."""
         from natcap.invest.delineateit import delineateit
 
         a = 100  # nodata value
