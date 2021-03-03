@@ -627,8 +627,6 @@ def _execute(args):
                     target_path_list=[
                         file_registry['n_events_path_list'][month_id]],
                     dependent_task_list=[align_task],
-                    hash_algorithm='md5',
-                    copy_duplicate_artifact=True,
                     task_name=(
                         'n_events as a constant raster month %d' % month_id))
                 reclassify_n_events_task_list.append(n_events_task)
@@ -670,8 +668,6 @@ def _execute(args):
                 dependent_task_list=[
                     align_task, reclassify_n_events_task_list[month_index],
                     si_task, stream_threshold_task],
-                hash_algorithm='md5',
-                copy_duplicate_artifact=True,
                 task_name='calculate quick flow for month %d' % (
                     month_index+1))
             quick_flow_task_list.append(monthly_quick_flow_task)
@@ -701,8 +697,6 @@ def _execute(args):
                     gdal.GDT_Float32, kc_nodata, reclass_error_details),
                 target_path_list=[file_registry['kc_path_list'][month_index]],
                 dependent_task_list=[align_task],
-                hash_algorithm='md5',
-                copy_duplicate_artifact=True,
                 task_name='classify kc month %d' % month_index)
             kc_task_list.append(kc_task)
 

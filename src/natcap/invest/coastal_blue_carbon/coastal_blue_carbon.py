@@ -399,8 +399,6 @@ def execute(args):
               [path for (year, path) in sorted(aligned_lulc_paths.items())],
               ['near']*len(aligned_lulc_paths),
               target_pixel_size, 'intersection'),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=aligned_lulc_paths.values(),
         task_name='Align input landcover rasters.')
 
