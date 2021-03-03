@@ -302,7 +302,9 @@ def execute(args):
     # Calculate avoided pollutant load for each pollutant from retention volume
     # and biophysical table EMC value
     for pollutant in pollutants:
-        avoided_pollutant_load_path = f'avoided_pollutant_load_{pollutant}.tif'
+        # one output raster for each pollutant
+        avoided_pollutant_load_path = os.path.join(
+            output_dir, f'avoided_pollutant_load_{pollutant}{suffix}.tif')
         # make a dictionary mapping each LULC code to the pollutant EMC value
         lulc_emc_lookup = {
             lucode: row[f'emc_{pollutant}'] for lucode, row in biophysical_dict.items()
