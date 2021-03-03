@@ -122,8 +122,6 @@ def execute(args):
               (min_pixel_size, -min_pixel_size),
               'intersection'),
         kwargs={'target_projection_wkt': baseline_srs_wkt},
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=aligned_snapshot_paths,
         task_name='Align input landcover rasters')
 
