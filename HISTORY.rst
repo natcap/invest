@@ -72,6 +72,9 @@ Unreleased Changes (3.9.1)
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
+* Seasonal Water Yield
+    * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata 
+      values and could show negative numbers.
 * SDR
     * Fixed a bug in validation that did not warn against different coordinate
       systems (all SDR inputs must share a common coordinate system).
