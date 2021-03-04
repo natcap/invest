@@ -542,7 +542,7 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         # OGR's wkbMultiPoint, wkbMultiPointM, wkbMultiPointZM and
         # wkbMultiPoint25D all use the MULTIPOINT geometry name.
         if ((geom_name not in ('POINT', 'MULTIPOINT')) or
-                (geom_name == 'MULTIPOINT' and geom_count > 1)):
+                (geom_name == 'MULTIPOINT' and geom_count != 1)):
             LOGGER.debug(
                 f"FID {point_feature.GetFID()} ({geom_name}, n={geom_count}) "
                 "only primitive points can be snapped to a stream.")
