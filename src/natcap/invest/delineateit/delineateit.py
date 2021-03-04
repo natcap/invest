@@ -535,9 +535,9 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         # wkbMultiPoint25D all use the MULTIPOINT geometry name.
         if ((geom_name not in ('POINT', 'MULTIPOINT')) or
                 (geom_name == 'MULTIPOINT' and geom_count > 1)):
-            LOGGER.debug(
+            LOGGER.warning(
                 f"FID {point_feature.GetFID()} ({geom_name}, n={geom_count}) "
-                "only primitive points can be snapped to a stream.")
+                "Geometry cannot be snapped.")
             new_feature = ogr.Feature(snapped_layer.GetLayerDefn())
             new_feature.SetGeometry(source_geometry)
             for field_name, field_value in point_feature.items().items():
