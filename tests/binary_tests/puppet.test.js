@@ -113,9 +113,9 @@ test('Run a real invest model', async () => {
   });
   // find the mainWindow's index.html, not the splashScreen's splash.html
   const target = await browser.waitForTarget(
-    target => target.url().endsWith('index.html')
+    (target) => target.url().endsWith('index.html')
   );
-  const page = await target.page()
+  const page = await target.page();
   const doc = await getDocument(page);
 
   // Setting up Recreation model because it has very few data requirements
@@ -147,8 +147,9 @@ test('Run a real invest model', async () => {
   await waitFor(async () => {
     const prop = await logTab.getProperty('className');
     const vals = await prop.jsonValue();
+    console.log(`VALS ${JSON.stringify(vals)}`);
     expect(vals.includes('active')).toBeTruthy();
-  }, 72000); // 16x default timeout: sometimes this expires unmet in GHA
+  });
 
   const cancelButton = await findByText(doc, 'Cancel Run');
   cancelButton.click();
@@ -156,7 +157,7 @@ test('Run a real invest model', async () => {
     expect(await findByText(doc, 'Run Canceled'));
     expect(await findByText(doc, 'Open Workspace'));
   });
-});
+}, 50000); // 10x default timeout: sometimes expires in GHA
 
 // Test for duplicate application launch.
 // We have the binary path, so now let's launch a new subprocess with the same binary
