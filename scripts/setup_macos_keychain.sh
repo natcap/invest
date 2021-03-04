@@ -21,8 +21,5 @@ security import $P12_FILE_PATH -k $KEYCHAIN_NAME -P $CERT_KEY_PASS -T /usr/bin/c
 echo 'imported cert'
 # this is essential to avoid the UI password prompt
 security set-key-partition-list -S apple-tool:,apple: -s -k $KEYCHAIN_PASS $KEYCHAIN_NAME
-echo 'set-key-partition done'
+
 security find-certificate -c 'Stanford University'
-echo 'found certificate'
-security find-identity -vp codesigning
-echo 'found identity'

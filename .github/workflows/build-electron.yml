@@ -13,7 +13,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        os: [macos-latest]
+        os: [macos-latest, windows-latest]
         node-version: [12.x]
 
     steps:
@@ -90,11 +90,7 @@ jobs:
       env:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
-      run: |
-        npm run dist
-        echo "done with electron-builder"
-        echo "CSC_IDENTITY_ID"=$(security find-identity -vp codesigning) >> $GITHUB_ENV
-        /usr/bin/codesign --force -s ${{ env.CSC_IDENTITY_ID }} dist/invest-workbench_*
+      run: npm run dist
 
       # Also run all tests on the build dir code?
     - name: Test flask app binaries
