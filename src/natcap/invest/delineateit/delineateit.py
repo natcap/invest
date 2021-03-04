@@ -536,13 +536,19 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         geom_name = source_geometry.GetGeometryName()
         geom_count = source_geometry.GetGeometryCount()
 
+        if source_geometry.IsEmpty():
+            LOGGER.warning(
+                f"FID {point_feature.GetFID()} is missing a defined geometry. "
+                "Skipping.")
+            continue
+
         # If the geometry is not a primitive point, just create the new feature
         # as it is now in the new vector. MULTIPOINT geometries with a single
         # component point count as primitive points.
         # OGR's wkbMultiPoint, wkbMultiPointM, wkbMultiPointZM and
         # wkbMultiPoint25D all use the MULTIPOINT geometry name.
         if ((geom_name not in ('POINT', 'MULTIPOINT')) or
-                (geom_name == 'MULTIPOINT' and geom_count != 1)):
+                (geom_name == 'MULTIPOINT' and geom_count > 1)):
             LOGGER.debug(
                 f"FID {point_feature.GetFID()} ({geom_name}, n={geom_count}) "
                 "only primitive points can be snapped to a stream.")

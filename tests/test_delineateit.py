@@ -288,7 +288,13 @@ class DelineateItTests(unittest.TestCase):
             component_point.AddPoint(3, -5)
             new_geom.AddGeometry(component_point)
             new_feature.SetGeometry(new_geom)
-            print(new_geom.ExportToWkt())
+            points_layer.CreateFeature(new_feature)
+
+        # Verify point snapping will run if we give it empty multipoints.
+        for point_type in (ogr.wkbPoint, ogr.wkbMultiPoint):
+            new_feature = ogr.Feature(points_layer.GetLayerDefn())
+            new_geom = ogr.Geometry(point_type)
+            new_feature.SetGeometry(new_geom)
             points_layer.CreateFeature(new_feature)
 
         points_layer.CommitTransaction()
