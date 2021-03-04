@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 69ea5fc56906c029bc745e5531b7a4d4e4c13237
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := bbfa26dc0c9158d13d209c1bc61448a9166708da
+GIT_UG_REPO_REV              := 69993168d50422593a39ea5b47cc87e8b94122a1
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -162,10 +162,10 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 
 test: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) tests
-	
+
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) ui_tests
-	
+
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
 	$(DATAVALIDATOR)
