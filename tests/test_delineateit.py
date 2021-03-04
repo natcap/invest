@@ -199,12 +199,12 @@ class DelineateItTests(unittest.TestCase):
         ]
         fields = {'foo': ogr.OFTInteger, 'bar': ogr.OFTString}
         attributes = [
-            {'foo': 0, 'bar': 0.1},
-            {'foo': 1, 'bar': 1.1},
-            {'foo': 2, 'bar': 2.1},
-            {'foo': 3, 'bar': 3.1},
-            {'foo': 3, 'bar': 3.1},  # intentional duplicate fields
-            {'foo': 4, 'bar': 4.1}]
+            {'foo': 0, 'bar': '0.1'},
+            {'foo': 1, 'bar': '1.1'},
+            {'foo': 2, 'bar': '2.1'},
+            {'foo': 3, 'bar': '3.1'},
+            {'foo': 3, 'bar': '3.1'},  # intentional duplicate fields
+            {'foo': 4, 'bar': '4.1'}]
         pygeoprocessing.shapely_geometry_to_vector(
             source_features, source_points_path, wkt, 'GeoJSON',
             fields=fields, attribute_list=attributes,
@@ -229,7 +229,7 @@ class DelineateItTests(unittest.TestCase):
                                             gdal.OF_VECTOR)
         snapped_points_layer = snapped_points_vector.GetLayer()
 
-        # snapped layer will include 3 valid points and one polygon.
+        # snapped layer will include 4 valid points and 1 polygon.
         self.assertEqual(5, snapped_points_layer.GetFeatureCount())
 
         expected_geometries_and_fields = [
@@ -237,6 +237,7 @@ class DelineateItTests(unittest.TestCase):
             (Point(5, -9), {'foo': 2, 'bar': '2.1'}),
             (Point(13, -11), {'foo': 3, 'bar': '3.1'}),
             (Point(13, -11), {'foo': 3, 'bar': '3.1'}),  # Multipoint now point
+            (box(-2, -2, -1, -1), {'foo': 4, 'bar': '4.1'}),  # unchanged
         ]
         for feature, (expected_geom, expected_fields) in zip(
                 snapped_points_layer, expected_geometries_and_fields):
