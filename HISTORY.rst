@@ -6,7 +6,7 @@
   - Coastal Blue Carbon
   - Coastal Vulnerability
   - Crop Production
-  - Delineateit
+  - DelineateIt
   - Finfish
   - Fisheries
   - Forest Carbon Edge Effects
@@ -69,6 +69,15 @@ Unreleased Changes (3.9.1)
     * Fixed a bug where, if rate change and discount rate were set to 0, the
       valuation results were in $/year rather than $, too small by a factor of
       ``lulc_fut_year - lulc_cur_year``.
+* DelineateIt:
+    * The DelineateIt UI has been updated so that the point-snapping options
+      will always be interactive.
+    * DelineateIt's point-snapping routine has been updated to snap
+      ``MULTIPOINT`` geometries with 1 component point as well as primitive
+      ``POINT`` geometries.  All other geometric types will not be snapped.
+      When a geometry cannot be snapped, a log message is now recorded with the
+      feature ID, the geometry type and the number of component geometries.
+      Features with empty geometries are now also skipped.
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.

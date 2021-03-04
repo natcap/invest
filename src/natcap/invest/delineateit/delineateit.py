@@ -304,33 +304,6 @@ def execute(args):
     graph.join()
 
 
-def _vector_may_contain_points(vector_path, layer_id=0):
-    """Test if a vector layer may contain points.
-
-    This function is intended to be used by the InVEST UI only.
-
-    Args:
-        vector_path (string): The path to a vector on disk.
-        layer_id=0 (int or string): The ID or name of the layer to check.
-
-    Returns:
-        A ``bool`` indicating whether a vector contains points.  ``False`` if
-        the vector cannot be opened at all or if the layer is invalid.
-
-    """
-    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-    if vector is None:
-        return False
-
-    layer = vector.GetLayer(layer_id)
-    if layer is None:
-        return False
-
-    if layer.GetGeomType() in (ogr.wkbPoint, ogr.wkbUnknown):
-        return True
-    return False
-
-
 def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     """Identify stream pixels based on a user-defined threshold.
 
@@ -455,13 +428,14 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
                 continue
 
         if shapely_geom.is_empty:
-            LOGGER.warning('Feature %s has no geometry. Skipping', feature.GetFID())
+            LOGGER.warning(
+                'Feature %s has no geometry. Skipping', feature.GetFID())
             continue
 
         shapely_bbox = shapely.geometry.box(*shapely_geom.bounds)
         if not dem_bbox.intersects(shapely_bbox):
             LOGGER.warning('Feature %s does not intersect the DEM. Skipping.',
-                         feature.GetFID())
+                           feature.GetFID())
             continue
 
         simplified_geometry = shapely_geom.simplify(nyquist_limit)
@@ -545,10 +519,25 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             last_time = time.time()
 
         source_geometry = point_feature.GetGeometryRef()
+        geom_name = source_geometry.GetGeometryName()
+        geom_count = source_geometry.GetGeometryCount()
+
+        if source_geometry.IsEmpty():
+            LOGGER.warning(
+                f"FID {point_feature.GetFID()} is missing a defined geometry. "
+                "Skipping.")
+            continue
 
         # If the geometry is not a primitive point, just create the new feature
-        # as it is now in the new vector.
-        if source_geometry.GetGeometryName() != 'POINT':
+        # as it is now in the new vector. MULTIPOINT geometries with a single
+        # component point count as primitive points.
+        # OGR's wkbMultiPoint, wkbMultiPointM, wkbMultiPointZM and
+        # wkbMultiPoint25D all use the MULTIPOINT geometry name.
+        if ((geom_name not in ('POINT', 'MULTIPOINT')) or
+                (geom_name == 'MULTIPOINT' and geom_count > 1)):
+            LOGGER.warning(
+                f"FID {point_feature.GetFID()} ({geom_name}, n={geom_count}) "
+                "Geometry cannot be snapped.")
             new_feature = ogr.Feature(snapped_layer.GetLayerDefn())
             new_feature.SetGeometry(source_geometry)
             for field_name, field_value in point_feature.items().items():
@@ -557,13 +546,17 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             continue
 
         point = shapely.wkb.loads(source_geometry.ExportToWkb())
+        if geom_name == 'MULTIPOINT':
+            # We already checked (above) that there's only one component point
+            point = point.geoms[0]
+
         x_index = (point.x - geotransform[0]) // geotransform[1]
         y_index = (point.y - geotransform[3]) // geotransform[5]
         if (x_index < 0 or x_index > n_cols or
                 y_index < 0 or y_index > n_rows):
-            LOGGER.warning('Encountered a point that was outside the bounds of '
-                        'the stream raster.  FID:%s at %s',
-                        point_feature.GetFID(), point)
+            LOGGER.warning(
+                'Encountered a point that was outside the bounds of the '
+                f'stream raster.  FID:{point_feature.GetFID()} at {point}')
             continue
 
         x_center = x_index
@@ -691,16 +684,13 @@ def _find_raster_pour_points(flow_dir_raster_path_band):
     raster_info = pygeoprocessing.get_raster_info(flow_dir_raster_path)
     # Open the flow direction raster band
     raster = gdal.OpenEx(flow_dir_raster_path, gdal.OF_RASTER)
-    if raster is None:
-        raise ValueError(
-            "Raster at %s could not be opened." % flow_dir_raster_path)
     band = raster.GetRasterBand(band_index)
     width, height = raster_info['raster_size']
 
     pour_points = set()
     # Read in flow direction data and find pour points one block at a time
-    for offsets in pygeoprocessing.iterblocks((flow_dir_raster_path, band_index),
-                                               offset_only=True):
+    for offsets in pygeoprocessing.iterblocks(
+            (flow_dir_raster_path, band_index), offset_only=True):
         # Expand each block by a one-pixel-wide margin, if possible.
         # This way the blocks will overlap so the watershed
         # calculation will be continuous.
