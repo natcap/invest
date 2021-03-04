@@ -70,6 +70,7 @@ Unreleased Changes (3.9.1)
       ``POINT`` geometries.  All other geometric types will not be snapped.
       When a geometry cannot be snapped, a log message is now recorded with the
       feature ID, the geometry type and the number of component geometries.
+      Features with empty geometries are now also skipped.
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
