@@ -142,7 +142,8 @@ def execute(args):
         'retention_ratio_path': os.path.join(output_dir, f'retention_ratio{suffix}.tif'),
         'retention_volume_path': os.path.join(output_dir, f'retention_volume{suffix}.tif'),
         'infiltration_ratio_path': os.path.join(output_dir, f'infiltration_ratio{suffix}.tif'),
-        'infiltration_volume_path': os.path.join(output_dir, f'infiltration_volume{suffix}.tif')
+        'infiltration_volume_path': os.path.join(output_dir, f'infiltration_volume{suffix}.tif'),
+        'retention_value_path': os.path.join(output_dir, f'retention_value{suffix}.tif')
     }
     
     align_inputs = [args['lulc_path'], args['soil_group_path'], args['precipitation_path']]
@@ -436,7 +437,6 @@ def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
     """
     ratio_raster_info = pygeoprocessing.get_raster_info(ratio_path)
     ratio_nodata = ratio_raster_info['nodata'][0]
-    print('ratio nodata:', ratio_nodata)
     pixel_area = abs(ratio_raster_info['pixel_size'][0] * 
         ratio_raster_info['pixel_size'][1])
     precipitation_nodata = pygeoprocessing.get_raster_info(
@@ -446,7 +446,6 @@ def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
         """Calculate array of volumes (retention or infiltration) from arrays 
         of precipitation values and stormwater ratios"""
 
-        print(ratio_array.dtype, precipitation_array.dtype)
         volume_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
         nodata_mask = (
             (ratio_array != ratio_nodata) & 
@@ -458,7 +457,6 @@ def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
             precipitation_array[nodata_mask] *
             ratio_array[nodata_mask] *
             pixel_area * 0.001)
-
         return volume_array
 
     # Apply volume_op to each block in the ratio and precipitation rasters
@@ -494,7 +492,7 @@ def calculate_avoided_pollutant_load(lulc_path, retention_volume_path,
         """Calculate array of avoided pollutant load values from arrays of 
         LULC codes and stormwater retention volumes."""
 
-        load_array = numpy.full(lulc_array.shape, NODATA)
+        load_array = numpy.full(lulc_array.shape, NODATA, dtype=float)
 
         nodata_mask = (
             (lulc_array != lulc_nodata) &
@@ -502,13 +500,14 @@ def calculate_avoided_pollutant_load(lulc_path, retention_volume_path,
 
         for lucode in lulc_emc_lookup:
             lucode_mask = (lulc_array == lucode)
-
-            # EMC for pollutant (mg/L) * 1000 (L/m^3) * retention (m^3)
-            # = pollutant load (mg)
+            print(lucode, lulc_emc_lookup[lucode], retention_volume_array[lucode_mask & nodata_mask])
+            print(lulc_emc_lookup[lucode] * 0.001 * retention_volume_array[lucode_mask & nodata_mask])
+            # EMC for pollutant (mg/L) * 1000 (L/m^3) * 0.000001 (kg/mg) * 
+            # retention (m^3/yr) = pollutant load (kg/yr)
             load_array[lucode_mask & nodata_mask] = (
-                lulc_emc_lookup[lucode] * 1000 * 
+                lulc_emc_lookup[lucode] * 0.001 * 
                 retention_volume_array[lucode_mask & nodata_mask])
-
+            print(load_array[nodata_mask])
         return load_array
 
     # Apply avoided_pollutant_load_op to each block of the LULC and retention 
@@ -532,12 +531,13 @@ def calculate_retention_value(retention_volume_path, replacement_cost, output_pa
     def retention_value_op(retention_volume_array):
         """Multiply array of retention volumes by the retention replacement 
         cost to get an array of retention values."""
-        value_array = numpy.full(retention_volume_array.shape, NODATA)
-        nodata_mask = (retention_volume_array != retention_volume_nodata)
+        value_array = numpy.full(retention_volume_array.shape, NODATA, dtype=float)
+        nodata_mask = (retention_volume_array != NODATA)
 
-        # retention (m^3) * replacement cost ($/m^3) = retention value ($)
+        # retention (m^3/yr) * replacement cost ($/m^3) = retention value ($/yr)
         value_array[nodata_mask] = (
             retention_volume_array[nodata_mask] * replacement_cost)
+        return value_array
 
     # Apply retention_value_op to each block of the retention volume rasters
     # Write result to output_path as float32 with nodata=NODATA
@@ -644,5 +644,22 @@ def validate(args):
     """
     return validation.validate(args, ARGS_SPEC['args'],
                                ARGS_SPEC['args_with_spatial_overlap'])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
