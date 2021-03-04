@@ -207,9 +207,7 @@ def execute(args):
               file_registry['filled_dem']),
         kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['filled_dem']],
-        task_name='fill_pits',
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True)
+        task_name='fill_pits')
 
     flow_dir_task = graph.add_task(
         pygeoprocessing.routing.flow_dir_d8,
@@ -218,9 +216,7 @@ def execute(args):
         kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['flow_dir_d8']],
         dependent_task_list=[fill_pits_task],
-        task_name='flow_direction',
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True)
+        task_name='flow_direction')
 
     if 'detect_pour_points' in args and args['detect_pour_points']:
         # Detect pour points automatically and use them instead of
@@ -231,9 +227,7 @@ def execute(args):
                   file_registry['pour_points']),
             dependent_task_list=[flow_dir_task],
             target_path_list=[file_registry['pour_points']],
-            task_name='detect_pour_points',
-            hash_algorithm='md5',
-            copy_duplicate_artifact=True)
+            task_name='detect_pour_points')
         outlet_vector_path = file_registry['pour_points']
         geometry_task = pour_points_task
     else:
@@ -245,9 +239,7 @@ def execute(args):
                   args.get('skip_invalid_geometry', True)),
             dependent_task_list=[fill_pits_task],
             target_path_list=[file_registry['preprocessed_geometries']],
-            task_name='check_geometries',
-            hash_algorithm='md5',
-            copy_duplicate_artifact=True)
+            task_name='check_geometries')
         outlet_vector_path = file_registry['preprocessed_geometries']
         geometry_task = check_geometries_task
 
@@ -281,9 +273,7 @@ def execute(args):
                   out_nodata),
             target_path_list=[file_registry['streams']],
             dependent_task_list=[flow_accumulation_task],
-            task_name='threshold_streams',
-            hash_algorithm='md5',
-            copy_duplicate_artifact=True)
+            task_name='threshold_streams')
 
         snapped_outflow_points_task = graph.add_task(
             snap_points_to_nearest_stream,
@@ -293,9 +283,7 @@ def execute(args):
                   file_registry['snapped_outlets']),
             target_path_list=[file_registry['snapped_outlets']],
             dependent_task_list=[streams_task, geometry_task],
-            task_name='snapped_outflow_points',
-            hash_algorithm='md5',
-            copy_duplicate_artifact=True)
+            task_name='snapped_outflow_points')
         delineation_dependent_tasks.append(snapped_outflow_points_task)
         outlet_vector_path = file_registry['snapped_outlets']
 
@@ -310,9 +298,7 @@ def execute(args):
                         os.path.basename(file_registry['watersheds']))[0]},
         target_path_list=[file_registry['watersheds']],
         dependent_task_list=delineation_dependent_tasks,
-        task_name='delineate_watersheds_single_worker',
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True)
+        task_name='delineate_watersheds_single_worker')
 
     graph.close()
     graph.join()
@@ -702,8 +688,8 @@ def _find_raster_pour_points(flow_dir_raster_path_band):
 
     pour_points = set()
     # Read in flow direction data and find pour points one block at a time
-    for offsets in pygeoprocessing.iterblocks((flow_dir_raster_path, band_index),
-                                              offset_only=True):
+    for offsets in pygeoprocessing.iterblocks(
+            (flow_dir_raster_path, band_index), offset_only=True):
         # Expand each block by a one-pixel-wide margin, if possible.
         # This way the blocks will overlap so the watershed
         # calculation will be continuous.

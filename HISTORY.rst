@@ -58,6 +58,13 @@ Unreleased Changes (3.9.1)
       would not convert Windows separators to linux style.
     * Provide a better validation error message when an overview '.ovr' file
       is input instead of a valid raster.
+    * Removed internal references to ``TaskGraph``
+      ``copy_duplicate_artifact`` calls in anticipation from that feature
+      being removed from ``TaskGraph``. User facing changes include
+      slightly faster initial runtimes for the Coastal Vulnerability,
+      Coastal Blue Carbon, SDR, DelineateIt, and Seasonal Water Yield models.
+      These models will no longer attempt to copy intermediate artifacts that
+      could have been computed by previous runs.
 * Carbon
     * Fixed a bug where, if rate change and discount rate were set to 0, the
       valuation results were in $/year rather than $, too small by a factor of
@@ -74,6 +81,9 @@ Unreleased Changes (3.9.1)
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
+* Seasonal Water Yield
+    * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata 
+      values and could show negative numbers.
 * SDR
     * Fixed a bug in validation that did not warn against different coordinate
       systems (all SDR inputs must share a common coordinate system).
