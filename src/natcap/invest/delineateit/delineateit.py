@@ -547,7 +547,8 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
 
         point = shapely.wkb.loads(source_geometry.ExportToWkb())
         if geom_name == 'MULTIPOINT':
-            point = point.geoms[0]  # take the first geometry of the multipoint
+            # We already checked (above) that there's only one component point
+            point = point.geoms[0]
 
         x_index = (point.x - geotransform[0]) // geotransform[1]
         y_index = (point.y - geotransform[3]) // geotransform[5]
