@@ -442,13 +442,14 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
                 continue
 
         if shapely_geom.is_empty:
-            LOGGER.warning('Feature %s has no geometry. Skipping', feature.GetFID())
+            LOGGER.warning(
+                'Feature %s has no geometry. Skipping', feature.GetFID())
             continue
 
         shapely_bbox = shapely.geometry.box(*shapely_geom.bounds)
         if not dem_bbox.intersects(shapely_bbox):
             LOGGER.warning('Feature %s does not intersect the DEM. Skipping.',
-                         feature.GetFID())
+                           feature.GetFID())
             continue
 
         simplified_geometry = shapely_geom.simplify(nyquist_limit)
@@ -536,7 +537,10 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         geom_count = source_geometry.GetGeometryCount()
 
         # If the geometry is not a primitive point, just create the new feature
-        # as it is now in the new vector.
+        # as it is now in the new vector. MULTIPOINT geometries with a single
+        # component point count as primitive points.
+        # OGR's wkbMultiPoint, wkbMultiPointM, wkbMultiPointZM and
+        # wkbMultiPoint25D all use the MULTIPOINT geometry name.
         if ((geom_name not in ('POINT', 'MULTIPOINT')) or
                 (geom_name == 'MULTIPOINT' and geom_count > 1)):
             LOGGER.debug(
@@ -693,7 +697,7 @@ def _find_raster_pour_points(flow_dir_raster_path_band):
     pour_points = set()
     # Read in flow direction data and find pour points one block at a time
     for offsets in pygeoprocessing.iterblocks((flow_dir_raster_path, band_index),
-                                               offset_only=True):
+                                              offset_only=True):
         # Expand each block by a one-pixel-wide margin, if possible.
         # This way the blocks will overlap so the watershed
         # calculation will be continuous.
