@@ -287,6 +287,12 @@ describe('InVEST global settings: dialog interactions', () => {
   });
   afterEach(() => {
     jest.resetAllMocks();
+
+    const globalSettingsPath = 'tests/data/global-settings.json';
+    if (fs.existsSync(globalSettingsPath)) {
+      // Clean up the global-settings files
+      fs.rmSync(globalSettingsPath);
+    }
   });
   test('Set the python logging level to pass to the invest CLI', async () => {
     const DEFAULT = 'INFO';
@@ -354,6 +360,116 @@ describe('InVEST global settings: dialog interactions', () => {
     fireEvent.change(input, { target: { value: badValue } });
     expect(input.classList.contains('is-invalid')).toBeTruthy();
     expect(getByText('Save Changes')).toBeDisabled();
+  });
+
+  test('Save global settings', async () => {
+    const nWorkers = '2';
+    const loggingLevel = 'DEBUG';
+    const nWorkersLabelText = 'Taskgraph n_workers parameter';
+    const loggingLabelText = 'Logging threshold';
+    const globalSettingsPath = 'tests/data/global-settings.json';
+
+    const { getByText, getByLabelText, getByTitle } = render(
+      <App investExe="foo" />
+    );
+
+    fireEvent.click(getByTitle('settings'));
+    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
+    const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+
+    // Test that the default values when no global-settings file exists are
+    // loaded. I've found this helps allow componentDidMount processes to
+    // finish
+    await waitFor(() => {
+      expect(nWorkersInput).toHaveValue("-1");
+      expect(loggingInput).toHaveValue("INFO");
+    });
+
+    // Change the value
+    fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
+    fireEvent.change(loggingInput, { target: { value: loggingLevel } });
+    await waitFor(() => { // the value to test is inherited through props
+      expect(nWorkersInput).toHaveValue(nWorkers);
+      expect(loggingInput).toHaveValue(loggingLevel);
+    });
+    // The real test: values saved to global-settings
+    fireEvent.click(getByText('Save Changes'));
+    // Load global-settings json file and check values
+    let fileExists = false;
+    await waitFor(() => { // the value to test is inherited through props
+      fileExists = fs.existsSync(globalSettingsPath);
+      expect(fileExists).toBeTruthy();
+    });
+    const globalSettingsJson = JSON.parse(fs.readFileSync(globalSettingsPath));
+    expect(globalSettingsJson.nWorkers === '2').toBeTruthy();
+    expect(globalSettingsJson.loggingLevel === 'DEBUG').toBeTruthy();
+  });
+
+  test('Load global settings', async () => {
+    const globalSettings = {
+      nWorkers: '2',
+      loggingLevel: 'DEBUG'
+    }
+    const nWorkersLabelText = 'Taskgraph n_workers parameter';
+    const loggingLabelText = 'Logging threshold';
+    const globalSettingsPath = 'tests/data/global-settings.json';
+    const globalSettingsData = JSON.stringify(globalSettings, null, 2);
+    fs.writeFileSync(globalSettingsPath, globalSettingsData);
+
+    const { getByText, getByLabelText, getByTitle } = render(
+      <App investExe="foo" />
+    );
+
+    fireEvent.click(getByTitle('settings'));
+    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
+    const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+
+    // Test that the global-settings were loaded in from the file.
+    await waitFor(() => {
+      expect(nWorkersInput).toHaveValue(globalSettings.nWorkers);
+      expect(loggingInput).toHaveValue(globalSettings.loggingLevel);
+    });
+  });
+
+  test('Reset settings', async () => {
+    const defaultSettings = {
+      nWorkers: '-1',
+      loggingLevel: 'INFO',
+    }
+    const nWorkers = '2';
+    const loggingLevel = 'DEBUG';
+    const nWorkersLabelText = 'Taskgraph n_workers parameter';
+    const loggingLabelText = 'Logging threshold';
+
+    const { getByText, getByLabelText, getByTitle } = render(
+      <App investExe="foo" />
+    );
+
+    fireEvent.click(getByTitle('settings'));
+    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
+    const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+
+    // Check the default settings
+    await waitFor(() => {
+      // waiting because the text value depends on passed props
+      expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
+      expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
+    });
+
+    // Change the value and reset defaults -- expect default value
+    fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
+    fireEvent.change(loggingInput, { target: { value: loggingLevel } });
+    await waitFor(() => {
+      // waiting because the text value depends on passed props
+      expect(nWorkersInput).toHaveValue(nWorkers);
+      expect(loggingInput).toHaveValue(loggingLevel);
+    });
+    fireEvent.click(getByText('Reset Defaults'));
+    await waitFor(() => {
+      expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
+      expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
+    });
+
   });
 });
 

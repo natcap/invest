@@ -2,6 +2,9 @@ import crypto from 'crypto';
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import fs from 'fs';
+import path from 'path';
+
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
@@ -18,6 +21,9 @@ import { getLogger } from './logger';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils.js';
 
+const remote = require('electron').remote;
+const electronApp = remote.app;
+
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 /** This component manages any application state that should persist
@@ -26,14 +32,20 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 export default class App extends React.Component {
   constructor(props) {
     super(props);
+    const globalSettingsFile = "global-settings.json";
+    const globalSettingsPath = path.join(
+      electronApp.getPath('userData'), globalSettingsFile);
+
     this.state = {
       activeTab: 'home',
       openJobs: [],
       investList: {},
       recentJobs: [],
       investSettings: {},
+      globalSettingsPath: globalSettingsPath
     };
     this.saveSettings = this.saveSettings.bind(this);
+    this.defaultSettings = this.defaultSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
     this.closeInvestModel = this.closeInvestModel.bind(this);
@@ -47,13 +59,22 @@ export default class App extends React.Component {
     const recentJobs = await InvestJob.getJobStore();
     // TODO: also load and set investSettings from a cached state, instead
     // of always re-setting to these hardcoded values on first launch?
+    let nWorkers = '-1';
+    let loggingLevel = 'INFO';
+
+    if (fs.existsSync(this.state.globalSettingsPath)) {
+      const globalSettingsJson = JSON.parse(
+        fs.readFileSync(this.state.globalSettingsPath));
+      nWorkers = globalSettingsJson.nWorkers.toString();
+      loggingLevel = globalSettingsJson.loggingLevel;
+    }
 
     this.setState({
       investList: investList,
       recentJobs: recentJobs,
       investSettings: {
-        nWorkers: '-1',
-        loggingLevel: 'INFO',
+        nWorkers: nWorkers,
+        loggingLevel: loggingLevel,
       },
     });
   }
@@ -71,6 +92,22 @@ export default class App extends React.Component {
   saveSettings(settings) {
     this.setState({
       investSettings: settings,
+    });
+
+    // Using ``settings`` instead of ``this.state.investSettings`` because
+    // setState can be asynchronous.
+    const globalSettingsData = JSON.stringify(settings, null, 2);
+    fs.writeFileSync(this.state.globalSettingsPath, globalSettingsData);
+  }
+
+  /** Reset global settings to defaults. */
+  defaultSettings() {
+    const defaultSettings = {
+      nWorkers: '-1',
+      loggingLevel: 'INFO',
+    }
+    this.setState({
+      investSettings: defaultSettings,
     });
   }
 
@@ -206,6 +243,7 @@ export default class App extends React.Component {
           <SettingsModal
             className="mx-3"
             saveSettings={this.saveSettings}
+            defaultSettings={this.defaultSettings}
             investSettings={investSettings}
             clearStorage={this.clearRecentJobs}
           />

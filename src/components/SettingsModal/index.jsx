@@ -25,10 +25,11 @@ export default class SettingsModal extends React.Component {
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleDefault = this.handleDefault.bind(this);
   }
 
   componentDidUpdate(prevProps) {
-    /** Any time the parent's state of investSettings changes, 
+    /** Any time the parent's state of investSettings changes,
     * this component should reflect that.
     */
     if (this.props.investSettings !== prevProps.investSettings) {
@@ -57,9 +58,15 @@ export default class SettingsModal extends React.Component {
     this.setState({show: false});
   }
 
+  /** Handle a click on the "Reset Defaults" button, which updates the parent's state */
+  handleDefault(event) {
+    event.preventDefault();
+    this.props.defaultSettings();
+  }
+
   handleChange(event) {
-    /** Handle changes to inputs by reflecting them back immediately 
-    * via localSettings object. But do not update the values stored 
+    /** Handle changes to inputs by reflecting them back immediately
+    * via localSettings object. But do not update the values stored
     * in the parent's state.
     */
     let newSettings = Object.assign({}, this.state.localSettings);
@@ -167,6 +174,13 @@ export default class SettingsModal extends React.Component {
               >
                 Save Changes
               </Button>
+              <Button
+                variant="secondary"
+                onClick={this.handleDefault}
+                type="reset"
+              >
+                Reset Defaults
+              </Button>
             </Modal.Footer>
           </Form>
         </Modal>
@@ -177,6 +191,7 @@ export default class SettingsModal extends React.Component {
 
 SettingsModal.propTypes = {
   saveSettings: PropTypes.func,
+  defaultSettings: PropTypes.func,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
