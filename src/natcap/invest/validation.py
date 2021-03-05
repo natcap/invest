@@ -438,7 +438,9 @@ def check_option_string(value, options):
         otherwise.
 
     """
-    if value not in options:
+    # if options is an empty list, that means it's dynamically populated
+    # so no need to validate
+    if options and value not in options:
         return "Value must be one of: %s" % sorted(options)
 
 

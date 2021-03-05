@@ -11,14 +11,14 @@ from .. import validation
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "module_name": "Finfish Aquaculture",
+    "model_name": "Finfish Aquaculture",
     "module": __name__,
     "userguide_html": "marine_fish.html",
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "ff_farm_loc": {
-            "name": "Finfish Farm Location",
+            "name": "finfish farm location",
             "about": (
                 "A GDAL-supported vector file containing polygon or "
                 "point geometries, with a latitude and longitude value and a "
@@ -28,7 +28,7 @@ ARGS_SPEC = {
             "required": True,
         },
         "farm_ID": {
-            "name": "Farm Identifier Name",
+            "name": "farm identifier name",
             "about": (
                 "The name of a column heading used to identify each "
                 "farm and link the spatial information from the "
@@ -37,13 +37,16 @@ ARGS_SPEC = {
                 "tables). Additionally, the numbers underneath this "
                 "farm identifier name must be unique integers for all "
                 "the inputs."),
-            "type": "freestyle_string",
+            "type": "option_string",
             "required": True,
+            "validation_options": {
+                "options": []
+            }
         },
         "g_param_a": {
-            "name": "Fish Growth Parameter (a)",
+            "name": "α growth parameter",
             "about": (
-                "Default a = (0.038 g/day). If the user chooses to "
+                "Default α = (0.038 g/day). If the user chooses to "
                 "adjust these parameters, we recommend using them in "
                 "the simple growth model to determine if the time "
                 "taken for a fish to reach a target harvest weight "
@@ -52,9 +55,9 @@ ARGS_SPEC = {
             "required": True,
         },
         "g_param_b": {
-            "name": "Fish Growth Parameter (b)",
+            "name": "β growth parameter",
             "about": (
-                "Default b = (0.6667 g/day). If the user chooses to "
+                "Default β = (0.6667 g/day). If the user chooses to "
                 "adjust these parameters, we recommend using them in "
                 "the simple growth model to determine if the time "
                 "taken for a fish to reach a target harvest weight "
@@ -63,9 +66,9 @@ ARGS_SPEC = {
             "required": True,
         },
         "g_param_tau": {
-            "name": "Fish Growth Parameter (tau)",
+            "name": "τ growth parameter",
             "about": (
-                "Default tau = (0.08 C^-1).  Specifies how sensitive "
+                "Default τ = (0.08 C^-1).  Specifies how sensitive "
                 "finfish growth is to temperature.  If the user "
                 "chooses to adjust these parameters, we recommend "
                 "using them in the simple growth model to determine if "
@@ -76,31 +79,31 @@ ARGS_SPEC = {
             "required": True,
         },
         "use_uncertainty": {
-            "name": "Enable uncertainty analysis",
+            "name": "do uncertainty analysis",
             "about": "Enable uncertainty analysis.",
             "type": "boolean",
             "required": True,
         },
         "g_param_a_sd": {
-            "name": "Standard Deviation for Parameter (a)",
+            "name": "α standard deviation",
             "about": (
-                "Standard deviation for fish growth parameter a. "
+                "Standard deviation for fish growth parameter α. "
                 "This indicates the level of uncertainty in the "
-                "estimate for parameter a."),
+                "estimate for parameter α."),
             "type": "number",
             "required": "use_uncertainty",
         },
         "g_param_b_sd": {
-            "name": "Standard Deviation for Parameter (b)",
+            "name": "β standard deviation",
             "about": (
-                "Standard deviation for fish growth parameter b. "
+                "Standard deviation for fish growth parameter β. "
                 "This indicates the level of uncertainty in the "
-                "estimate for parameter b."),
+                "estimate for parameter β."),
             "type": "number",
             "required": "use_uncertainty",
         },
         "num_monte_carlo_runs": {
-            "name": "Number of Monte Carlo Simulation Runs",
+            "name": "number of Monte Carlo runs",
             "about": (
                 "Number of runs of the model to perform as part of a "
                 "Monte Carlo simulation.  A larger number will tend to "
@@ -110,7 +113,7 @@ ARGS_SPEC = {
             "required": "use_uncertainty",
         },
         "water_temp_tbl": {
-            "name": "Table of Daily Water Temperature at Farm",
+            "name": "daily water temperature",
             "type": "csv",
             "required": True,
             "about": (
@@ -129,7 +132,7 @@ ARGS_SPEC = {
                 "the netpens."),
         },
         "farm_op_tbl": {
-            "name": "Farm Operations Table",
+            "name": "farm operations table",
             "type": "csv",
             "required": True,
             "about": (
@@ -148,7 +151,7 @@ ARGS_SPEC = {
                 "Columbia are also included in the sample data table."),
         },
         "outplant_buffer": {
-            "name": "Outplant Date Buffer",
+            "name": "outplant date buffer",
             "type": "number",
             "required": True,
             "about": (
@@ -157,21 +160,22 @@ ARGS_SPEC = {
                 "here."),
         },
         "do_valuation": {
-            "name": "Run valuation model",
+            "name": "do valuation",
             "about": "Run valuation model",
             "type": "boolean",
             "required": True,
         },
         "p_per_kg": {
-            "name": "Market Price per Kilogram of Processed Fish",
+            "name": "processed fish price",
             "about": (
-                "Default value comes from Urner-Berry monthly fresh "
-                "sheet reports on price of farmed Atlantic salmon."),
+                "Market price per kilogram of processed fish. Default "
+                "value comes from Urner-Berry monthly fresh sheet "
+                "reports on price of farmed Atlantic salmon."),
             "type": "number",
             "required": "do_valuation",
         },
         "frac_p": {
-            "name": "Fraction of Price that Accounts to Costs",
+            "name": "cost fraction",
             "about": (
                 "Fraction of market price that accounts for costs "
                 "rather than profit.  Default value is 0.3 (30%)."),
@@ -182,7 +186,7 @@ ARGS_SPEC = {
             }
         },
         "discount": {
-            "name": "Daily Market Discount Rate",
+            "name": "daily market discount rate",
             "about": (
                 "We use a 7% annual discount rate, adjusted to a "
                 "daily rate of 0.000192 for 0.0192% (7%/365 days)."),

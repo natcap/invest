@@ -36,7 +36,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster representing the land-cover of the"
                 "current scenario."),
-            "name": "Current Land Use/Land Cover"
+            "name": "current LULC"
         },
         "calc_sequestration": {
             "type": "boolean",
@@ -45,7 +45,7 @@ ARGS_SPEC = {
                 "Check to enable sequestration analysis. This requires "
                 "inputs of Land Use/Land Cover maps for both current and "
                 "future scenarios."),
-            "name": "Calculate Sequestration"
+            "name": "calculate sequestration"
         },
         "lulc_fut_path": {
             "type": "raster",
@@ -59,7 +59,7 @@ ARGS_SPEC = {
                 "enabled, this should be the reference, or baseline, future "
                 "scenario against which to compare the REDD policy "
                 "scenario."),
-            "name": "Future Landcover"
+            "name": "future LULC"
         },
         "do_redd": {
             "type": "boolean",
@@ -69,7 +69,7 @@ ARGS_SPEC = {
                 "three Land Use/Land Cover maps: one for the current "
                 "scenario, one for the future baseline scenario, and one for "
                 "the future REDD policy scenario."),
-            "name": "REDD Scenario Analysis"
+            "name": "REDD scenario analysis"
         },
         "lulc_redd_path": {
             "type": "raster",
@@ -81,7 +81,7 @@ ARGS_SPEC = {
                 "A GDAL-supported raster representing the land-cover of "
                 "the REDD policy future scenario.  This scenario will be "
                 "compared to the baseline future scenario."),
-            "name": "REDD Policy)"
+            "name": "REDD LULC"
         },
         "carbon_pools_path": {
             "validation_options": {
@@ -96,7 +96,7 @@ ARGS_SPEC = {
                 "'C_Below', 'C_Soil', 'C_Dead' as described in the User's "
                 "Guide.  The values in LULC must at least include the LULC "
                 "IDs in the land cover maps."),
-            "name": "Carbon Pools"
+            "name": "carbon pools"
         },
         "lulc_cur_year": {
             "validation_options": {
@@ -105,7 +105,7 @@ ARGS_SPEC = {
             "type": "number",
             "required": "calc_sequestration",
             "about": "The calendar year of the current scenario.",
-            "name": "Current Landcover Calendar Year"
+            "name": "current LULC year"
         },
         "lulc_fut_year": {
             "validation_options": {
@@ -114,7 +114,7 @@ ARGS_SPEC = {
             "type": "number",
             "required": "calc_sequestration",
             "about": "The calendar year of the future scenario.",
-            "name": "Future Landcover Calendar Year"
+            "name": "future LULC year"
         },
         "do_valuation": {
             "type": "boolean",
@@ -125,7 +125,7 @@ ARGS_SPEC = {
                 "with a future scenario is done and/or a REDD scenario "
                 "calculate NPV for either and report in final HTML "
                 "document."),
-            "name": "Run Valuation Model"
+            "name": "do valuation"
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
@@ -138,8 +138,10 @@ ARGS_SPEC = {
         "discount_rate": {
             "type": "number",
             "required": "do_valuation",
-            "about": "The discount rate as a floating point percent.",
-            "name": "Market Discount in Price of Carbon (%)"
+            "about": (
+                "The discount rate in the price of carbon as a floating "
+                "point percent."),
+            "name": "market discount rate"
         },
         "rate_change": {
             "type": "number",
@@ -147,7 +149,7 @@ ARGS_SPEC = {
             "about": (
                 "The floating point percent increase of the price of "
                 "carbon per year."),
-            "name": "Annual Rate of Change in Price of Carbon (%)"
+            "name": "carbon price change"
         }
     }
 }

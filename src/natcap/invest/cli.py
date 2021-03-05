@@ -349,7 +349,7 @@ class SelectModelAction(argparse.Action):
 
 
 def main(user_args=None):
-    """CLI entry point for launching InVEST runs.
+    """CLI entry point for launching InVEST runs and other useful utilities.
 
     This command-line interface supports two methods of launching InVEST models
     from the command-line:
@@ -451,6 +451,12 @@ def main(user_args=None):
         'model', action=SelectModelAction,  # Assert valid model name
         help=('The model for which the spec should be fetched.  Use "invest '
               'list" to list the available models.'))
+
+    serve_subparser = subparsers.add_parser(
+        'serve', help=('Start the flask app on the localhost.'))
+    serve_subparser.add_argument(
+        '--port', type=int, default=56789,
+        help='Port number for the Flask server')
 
     export_py_subparser = subparsers.add_parser(
         'export-py', help=('Save a python script that executes a model.'))
@@ -648,6 +654,11 @@ def main(user_args=None):
         if app_exitcode != 0:
             parser.exit(app_exitcode,
                         'App terminated with exit code %s\n' % app_exitcode)
+
+    if args.subcommand == 'serve':
+        import natcap.invest.ui_server
+        natcap.invest.ui_server.app.run(port=args.port)
+        parser.exit(0)
 
     if args.subcommand == 'export-py':
         target_filepath = args.filepath

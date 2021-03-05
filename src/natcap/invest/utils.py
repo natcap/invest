@@ -43,6 +43,10 @@ GDAL_ERROR_LEVELS = {
 # leaves Projected CRS alone
 DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
+# standard values for common ARGS_SPEC name attributes
+LULC_ARG_NAME = 'land use/land cover'
+DEM_ARG_NAME = 'digital elevation model'
+AOI_ARG_NAME = 'area of interest'
 
 @contextlib.contextmanager
 def capture_gdal_logging():
