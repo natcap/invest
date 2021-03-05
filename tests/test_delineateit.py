@@ -7,7 +7,7 @@ import os
 
 import shapely.wkt
 import shapely.wkb
-from shapely.geometry import Point, box
+from shapely.geometry import Point, MultiPoint, box
 import numpy
 from osgeo import osr
 from osgeo import ogr
@@ -69,6 +69,44 @@ class DelineateItTests(unittest.TestCase):
             self.assertAlmostEqual(expected_area, areas_by_id[id_key],
                                    delta=1e-4)
 
+    def test_delineateit_willamette_detect_pour_points(self):
+        """DelineateIt: regression testing full run with pour point detection."""
+        from natcap.invest.delineateit import delineateit
+
+        args = {
+            'dem_path': os.path.join(REGRESSION_DATA, 'input', 'dem.tif'),
+            'outlet_vector_path': os.path.join(
+                REGRESSION_DATA, 'input', 'outlets.shp'),
+            'workspace_dir': self.workspace_dir,
+            'detect_pour_points': True,
+            'results_suffix': 'w',
+            'n_workers': None,  # Trigger error and default to -1
+        }
+        delineateit.execute(args)
+
+        vector = gdal.OpenEx(os.path.join(args['workspace_dir'],
+                                          'watersheds_w.gpkg'), gdal.OF_VECTOR)
+        layer = vector.GetLayer('watersheds_w')  # includes suffix
+        self.assertEqual(layer.GetFeatureCount(), 102)
+
+        # Assert that every valid pixel is covered by a watershed.
+        n_pixels = 0
+        raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
+        pixel_x, pixel_y = raster_info['pixel_size']
+        pixel_area = abs(pixel_x * pixel_y)
+        nodata = raster_info['nodata'][0]
+        for _, block in pygeoprocessing.iterblocks((args['dem_path'], 1)):
+            n_pixels += len(block[~numpy.isclose(block, nodata)])
+
+        valid_pixel_area = n_pixels * pixel_area
+
+        total_area = 0
+        for feature in layer:
+            geom = feature.GetGeometryRef()
+            total_area += geom.Area()
+
+        self.assertAlmostEqual(valid_pixel_area, total_area, 4)
+
     def test_delineateit_validate(self):
         """DelineateIt: test validation function."""
         from natcap.invest.delineateit import delineateit
@@ -125,7 +163,7 @@ class DelineateItTests(unittest.TestCase):
              (['outlet_vector_path'], (
                  'File could not be opened as a GDAL vector')),
              (['snap_distance'], (
-                "Value 'fooooo' could not be interpreted as a number"))])
+                 "Value 'fooooo' could not be interpreted as a number"))])
 
     def test_point_snapping(self):
         """DelineateIt: test point snapping."""
@@ -156,13 +194,17 @@ class DelineateItTests(unittest.TestCase):
             Point(3, -5),
             Point(7, -9),
             Point(13, -5),
+            MultiPoint([(13, -5)]),
             box(-2, -2, -1, -1),  # Off the edge
         ]
         fields = {'foo': ogr.OFTInteger, 'bar': ogr.OFTString}
         attributes = [
-            {'foo': 0, 'bar': 0.1}, {'foo': 1, 'bar': 1.1},
-            {'foo': 2, 'bar': 2.1}, {'foo': 3, 'bar': 3.1},
-            {'foo': 4, 'bar': 4.1}]
+            {'foo': 0, 'bar': '0.1'},
+            {'foo': 1, 'bar': '1.1'},
+            {'foo': 2, 'bar': '2.1'},
+            {'foo': 3, 'bar': '3.1'},
+            {'foo': 3, 'bar': '3.1'},  # intentional duplicate fields
+            {'foo': 4, 'bar': '4.1'}]
         pygeoprocessing.shapely_geometry_to_vector(
             source_features, source_points_path, wkt, 'GeoJSON',
             fields=fields, attribute_list=attributes,
@@ -187,13 +229,15 @@ class DelineateItTests(unittest.TestCase):
                                             gdal.OF_VECTOR)
         snapped_points_layer = snapped_points_vector.GetLayer()
 
-        # snapped layer will include 3 valid points and one polygon.
-        self.assertEqual(4, snapped_points_layer.GetFeatureCount())
+        # snapped layer will include 4 valid points and 1 polygon.
+        self.assertEqual(5, snapped_points_layer.GetFeatureCount())
 
         expected_geometries_and_fields = [
             (Point(5, -5), {'foo': 1, 'bar': '1.1'}),
             (Point(5, -9), {'foo': 2, 'bar': '2.1'}),
             (Point(13, -11), {'foo': 3, 'bar': '3.1'}),
+            (Point(13, -11), {'foo': 3, 'bar': '3.1'}),  # Multipoint now point
+            (box(-2, -2, -1, -1), {'foo': 4, 'bar': '4.1'}),  # unchanged
         ]
         for feature, (expected_geom, expected_fields) in zip(
                 snapped_points_layer, expected_geometries_and_fields):
@@ -203,43 +247,82 @@ class DelineateItTests(unittest.TestCase):
             self.assertTrue(shapely_feature.equals(expected_geom))
             self.assertEqual(expected_fields, feature.items())
 
-    def test_vector_may_contain_points(self):
-        """DelineateIt: Check whether a layer contains points."""
+    def test_point_snapping_multipoint(self):
+        """DelineateIt: test multi-point snapping."""
         from natcap.invest.delineateit import delineateit
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
+        wkt = srs.ExportToWkt()
 
-        # Verify invalid filepath returns False.
-        invalid_filepath = os.path.join(self.workspace_dir, 'nope.foo')
-        self.assertFalse(
-            delineateit._vector_may_contain_points(invalid_filepath))
+        # need stream layer, points
+        stream_matrix = numpy.array(
+            [[0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 1, 1, 1, 1],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0]], dtype=numpy.int8)
+        stream_raster_path = os.path.join(self.workspace_dir, 'streams.tif')
+        # byte datatype
+        pygeoprocessing.numpy_array_to_raster(
+            stream_matrix, 255, (2, -2), (2, -2), wkt, stream_raster_path)
 
-        # Verify invalid layer ID returns False
+        source_points_path = os.path.join(self.workspace_dir,
+                                          'source_features.gpkg')
         gpkg_driver = gdal.GetDriverByName('GPKG')
-        new_vector_path = os.path.join(self.workspace_dir, 'vector.gpkg')
-        new_vector = gpkg_driver.Create(
-            new_vector_path, 0, 0, 0, gdal.GDT_Unknown)
-        point_layer = new_vector.CreateLayer(
-            'point_layer', srs, ogr.wkbPoint)
-        polygon_layer = new_vector.CreateLayer(
-            'polygon_layer', srs, ogr.wkbPolygon)
-        unknown_layer = new_vector.CreateLayer(
-            'unknown_type_layer', srs, ogr.wkbUnknown)
+        points_vector = gpkg_driver.Create(
+            source_points_path, 0, 0, 0, gdal.GDT_Unknown)
+        layer_name = os.path.splitext(os.path.basename(source_points_path))[0]
+        points_layer = points_vector.CreateLayer(layer_name,
+                                                 points_vector.GetSpatialRef(),
+                                                 ogr.wkbUnknown)
+        # Create a bunch of points for the various OGR multipoint types and
+        # make sure that they are all snapped to exactly the same place.
+        points_layer.StartTransaction()
+        for multipoint_type in (ogr.wkbMultiPoint, ogr.wkbMultiPointM,
+                                ogr.wkbMultiPointZM, ogr.wkbMultiPoint25D):
+            new_feature = ogr.Feature(points_layer.GetLayerDefn())
+            new_geom = ogr.Geometry(multipoint_type)
+            component_point = ogr.Geometry(ogr.wkbPoint)
+            component_point.AddPoint(3, -5)
+            new_geom.AddGeometry(component_point)
+            new_feature.SetGeometry(new_geom)
+            points_layer.CreateFeature(new_feature)
 
-        unknown_layer = None
-        polygon_layer = None
-        point_layer = None
-        new_vector = None
+        # Verify point snapping will run if we give it empty multipoints.
+        for point_type in (ogr.wkbPoint, ogr.wkbMultiPoint):
+            new_feature = ogr.Feature(points_layer.GetLayerDefn())
+            new_geom = ogr.Geometry(point_type)
+            new_feature.SetGeometry(new_geom)
+            points_layer.CreateFeature(new_feature)
 
-        self.assertTrue(delineateit._vector_may_contain_points(
-                        new_vector_path, 'point_layer'))
-        self.assertFalse(delineateit._vector_may_contain_points(
-                         new_vector_path, 'polygon_layer'))
-        self.assertTrue(delineateit._vector_may_contain_points(
-                        new_vector_path, 'unknown_type_layer'))
-        self.assertFalse(delineateit._vector_may_contain_points(
-                         new_vector_path, 'NOT A LAYER'))
+        points_layer.CommitTransaction()
+
+        snapped_points_path = os.path.join(self.workspace_dir,
+                                           'snapped_points.gpkg')
+        snap_distance = 10  # large enough to get multiple streams per point.
+        delineateit.snap_points_to_nearest_stream(
+            source_points_path, (stream_raster_path, 1),
+            snap_distance, snapped_points_path)
+
+        try:
+            snapped_points_vector = gdal.OpenEx(snapped_points_path,
+                                                gdal.OF_VECTOR)
+            snapped_points_layer = snapped_points_vector.GetLayer()
+
+            # All 4 multipoints should have been snapped to the same place and
+            # should all be Point geometries.
+            self.assertEqual(4, snapped_points_layer.GetFeatureCount())
+            expected_feature = shapely.geometry.Point(5, -5)
+            for feature in snapped_points_layer:
+                shapely_feature = shapely.wkb.loads(
+                    feature.GetGeometryRef().ExportToWkb())
+                self.assertTrue(shapely_feature.equals(expected_feature))
+        finally:
+            snapped_points_layer = None
+            snapped_points_vector = None
 
     def test_check_geometries(self):
         """DelineateIt: Check that we can reasonably repair geometries."""
@@ -351,10 +434,12 @@ class DelineateItTests(unittest.TestCase):
         target_vector = None
 
     def test_detect_pour_points(self):
+        """DelineateIt: low-level test for pour point detection."""
         from natcap.invest.delineateit import delineateit
- 
+
         # create a flow direction raster from the sample DEM
-        flow_dir_path = os.path.join(REGRESSION_DATA, 'input/flow_dir_gura.tif')
+        flow_dir_path = os.path.join(
+            REGRESSION_DATA, 'input/flow_dir_gura.tif')
         output_path = os.path.join(self.workspace_dir, 'point_vector.gpkg')
 
         delineateit.detect_pour_points((flow_dir_path, 1), output_path)
@@ -379,6 +464,7 @@ class DelineateItTests(unittest.TestCase):
         self.assertTrue(numpy.isclose(points[1][1], expected_points[1][1]))
 
     def test_calculate_pour_point_array(self):
+        """DelineateIt: Extract pour points."""
         from natcap.invest.delineateit import delineateit, delineateit_core
 
         a = 100  # nodata value
@@ -392,13 +478,14 @@ class DelineateItTests(unittest.TestCase):
             [a, 2, 3, 4]
         ], dtype=numpy.intc)
 
-        edges = numpy.array([1, 1, 0, 0], dtype=numpy.intc)  # top, left, bottom, right
+        # top, left, bottom, right
+        edges = numpy.array([1, 1, 0, 0], dtype=numpy.intc)
 
         expected_pour_points = {(6.25, 5.25)}
 
         output = delineateit_core.calculate_pour_point_array(
-            flow_dir_array, 
-            edges, 
+            flow_dir_array,
+            edges,
             nodata=a,
             offset=(0, 0),
             origin=(5, 3),
@@ -409,6 +496,7 @@ class DelineateItTests(unittest.TestCase):
             expected_pour_points))
 
     def test_find_pour_points_by_block(self):
+        """DelineateIt: test pour point detection against block edges."""
         from natcap.invest.delineateit import delineateit
 
         a = 100  # nodata value
@@ -444,13 +532,14 @@ class DelineateItTests(unittest.TestCase):
             win_xsizes = [4, 4, 2]
             for xoff, win_xsize in zip(xoffs, win_xsizes):
                 yield {
-                    'xoff': xoff, 
+                    'xoff': xoff,
                     'yoff': 0,
                     'win_xsize': win_xsize,
                     'win_ysize': 5}
 
         with mock.patch(
-            'natcap.invest.delineateit.delineateit.pygeoprocessing.iterblocks', 
-            mock_iterblocks):
-            pour_points = delineateit._find_raster_pour_points((raster_path, 1))
+            'natcap.invest.delineateit.delineateit.pygeoprocessing.iterblocks',
+                mock_iterblocks):
+            pour_points = delineateit._find_raster_pour_points(
+                (raster_path, 1))
             self.assertEqual(pour_points, expected_pour_points)

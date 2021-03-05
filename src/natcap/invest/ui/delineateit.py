@@ -41,8 +41,6 @@ class Delineateit(model.InVESTModel):
             label='Outlet Features (Vector)',
             validator=self.validator)
         self.add_input(self.outlet_vector_path)
-        self.outlet_vector_path.value_changed.connect(
-            self._enable_point_snapping_container)
         self.skip_invalid_geometry = inputs.Checkbox(
             args_key='skip_invalid_geometry',
             helptext=(
@@ -58,7 +56,6 @@ class Delineateit(model.InVESTModel):
             label='Snap points to the nearest stream',
             expandable=True,
             expanded=False,
-            interactive=False,
             args_key='snap_points')
         self.add_input(self.snap_points_container)
         self.flow_threshold = inputs.Text(
@@ -89,15 +86,6 @@ class Delineateit(model.InVESTModel):
         """Change interactivity of other inputs given boolean signal value"""
         self.outlet_vector_path.set_interactive(not value)
         self.skip_invalid_geometry.set_interactive(not value)
-        self.snap_points_container.set_interactive(value)
-
-    def _enable_point_snapping_container(self, input_valid):
-        outlet_vector_path = self.outlet_vector_path.value()
-        if delineateit._vector_may_contain_points(outlet_vector_path):
-            self.snap_points_container.set_interactive(True)
-        else:
-            self.snap_points_container.set_interactive(False)
-            self.snap_points_container.expanded = False
 
     def assemble_args(self):
         args = {
@@ -117,6 +105,5 @@ class Delineateit(model.InVESTModel):
         # To avoid this, only include it if it's going to be used.
         if self.detect_pour_points.value() == False:
             args[self.outlet_vector_path.args_key] = self.outlet_vector_path.value()
-
 
         return args

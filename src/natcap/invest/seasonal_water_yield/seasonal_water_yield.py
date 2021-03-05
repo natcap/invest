@@ -916,6 +916,10 @@ def _calculate_monthly_quick_flow(
             valid_mask &= ~numpy.isclose(p_im, p_nodata)
         if n_events_nodata is not None:
             valid_mask &= ~numpy.isclose(n_events, n_events_nodata)
+        # stream_nodata is the only input that carry over nodata values from
+        # the aligned DEM.
+        if stream_nodata is not None:
+            valid_mask &= ~numpy.isclose(stream_array, stream_nodata)
 
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
