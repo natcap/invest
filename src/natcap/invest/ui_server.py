@@ -5,7 +5,7 @@ from datetime import datetime
 import importlib
 import json
 import logging
-from osgeo import gdal, ogr
+from osgeo import gdal
 import pprint
 import textwrap
 
@@ -13,7 +13,6 @@ from flask import Flask
 from flask import request
 import natcap.invest.cli
 import natcap.invest.datastack
-from natcap.invest.delineateit import delineateit
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
@@ -53,7 +52,7 @@ def shutdown():
 @app.route('/models', methods=['GET'])
 def get_invest_models():
     """Gets a list of available InVEST models.
-    
+
     Returns:
         A JSON string
     """
@@ -111,7 +110,7 @@ def get_vector_colnames():
 
     Body (JSON string):
         vector_path (string): path to a vector file
-        
+
     Returns:
         a JSON string.
     """
@@ -119,56 +118,21 @@ def get_vector_colnames():
     LOGGER.debug(payload)
     vector_path = payload['vector_path']
     # a lot of times the path will be empty so don't even try to open it
-    if vector_path:  
+    if vector_path:
         try:
             vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
             colnames = [defn.GetName() for defn in vector.GetLayer().schema]
             LOGGER.debug(colnames)
             return json.dumps(colnames)
         except Exception as e:
-            LOGGER.exception(f'Could not read column names from {vector_path}. '
-                         f'ERROR: {e}')
-    else:
-        LOGGER.error(f'Empty vector path.')
-    # 422 Unprocessable Entity: the server understands the content type
-    # of the request entity, and the syntax of the request entity is 
-    # correct, but it was unable to process the contained instructions. 
-    return json.dumps([]), 422
-    
-
-@app.route('/vector_may_have_points', methods=['POST'])
-def get_vector_may_have_points():
-    """Return boolean indicating if a vector may contain points.
-    This is used by the DelineateIt UI to determine if the 'snap points' 
-    option should be enabled.
-
-    Body (JSON string):
-        vector_path (string): path to a vector file
-
-    Returns:
-        a boolean.
-    """
-    payload = request.get_json()
-    LOGGER.debug(payload)
-    vector_path = payload['vector_path']
-    # a lot of times the path will be empty so don't even try to open it
-    if vector_path:
-        may_have_points = False
-        try:
-            vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-            layer = vector.GetLayer(0)
-            if layer.GetGeomType() in (ogr.wkbPoint, ogr.wkbUnknown):
-                may_have_points = True
-            LOGGER.debug({'may_have_points': may_have_points})
-            return json.dumps({'may_have_points': may_have_points})
-        except Exception as e:
             LOGGER.exception(
-                f'Could not tell if vector {vector_path} may contain points. '
-                f'ERROR: {e}')
+                f'Could not read column names from {vector_path}. ERROR: {e}')
     else:
-        LOGGER.error(f'Empty vector path.')
-    # 422 Unprocessable Entity
-    return json.dumps({'may_have_points': False}), 422
+        LOGGER.error('Empty vector path.')
+    # 422 Unprocessable Entity: the server understands the content type
+    # of the request entity, and the syntax of the request entity is
+    # correct, but it was unable to process the contained instructions.
+    return json.dumps([]), 422
 
 
 @app.route('/post_datastack_file', methods=['POST'])
