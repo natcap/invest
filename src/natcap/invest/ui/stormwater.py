@@ -77,6 +77,8 @@ class Stormwater(model.InVESTModel):
         # retention_radius is active when adjust_retention_ratios is checked
         self.adjust_retention_ratios.sufficiency_changed.connect(
             self.retention_radius.set_interactive)
+        self.adjust_retention_ratios.sufficiency_changed.connect(
+            self.road_centerlines_path.set_interactive)
     
 
     def assemble_args(self):

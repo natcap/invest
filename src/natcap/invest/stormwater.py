@@ -3,7 +3,7 @@ import logging
 import math
 import numpy
 import os
-from osgeo import gdal
+from osgeo import gdal, ogr
 import pygeoprocessing
 import taskgraph
 
@@ -143,7 +143,8 @@ def execute(args):
         'retention_volume_path': os.path.join(output_dir, f'retention_volume{suffix}.tif'),
         'infiltration_ratio_path': os.path.join(output_dir, f'infiltration_ratio{suffix}.tif'),
         'infiltration_volume_path': os.path.join(output_dir, f'infiltration_volume{suffix}.tif'),
-        'retention_value_path': os.path.join(output_dir, f'retention_value{suffix}.tif')
+        'retention_value_path': os.path.join(output_dir, f'retention_value{suffix}.tif'),
+        'aggregate_data_path': os.path.join(output_dir, f'aggregate{suffix}.gpkg')
     }
     
     align_inputs = [args['lulc_path'], args['soil_group_path'], args['precipitation_path']]
@@ -299,6 +300,9 @@ def execute(args):
         if key.startswith('emc_')]
     pollutants = [key[4:] for key in  emc_columns]
     print('pollutants:', pollutants)
+    avoided_load_paths = []
+
+    aggregation_dependencies = [retention_volume_task, infiltration_volume_task]
 
     # Calculate avoided pollutant load for each pollutant from retention volume
     # and biophysical table EMC value
@@ -306,11 +310,12 @@ def execute(args):
         # one output raster for each pollutant
         avoided_pollutant_load_path = os.path.join(
             output_dir, f'avoided_pollutant_load_{pollutant}{suffix}.tif')
+        avoided_load_paths.append(avoided_pollutant_load_path)
         # make a dictionary mapping each LULC code to the pollutant EMC value
         lulc_emc_lookup = {
             lucode: row[f'emc_{pollutant}'] for lucode, row in biophysical_dict.items()
         }
-        avoided_pollutant_load_task = task_graph.add_task(
+        avoided_load_task = task_graph.add_task(
             func=calculate_avoided_pollutant_load,
             args=(
                 FILES['lulc_aligned_path'],
@@ -321,11 +326,14 @@ def execute(args):
             dependent_task_list=[retention_volume_task],
             task_name=f'calculate avoided pollutant {pollutant} load'
         )
+        aggregation_dependencies.append(avoided_load_task)
 
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed
+    print('replacement cost:', ':' + args['replacement_cost'] + ':', type(args['replacement_cost']), args['replacement_cost'] == '', args['replacement_cost'] in [''])
     if (args['replacement_cost'] not in [None, '']):
+
         valuation_task = task_graph.add_task(
             func=calculate_retention_value,
             args=(
@@ -336,10 +344,28 @@ def execute(args):
             dependent_task_list=[retention_volume_task],
             task_name='calculate stormwater retention value'
         )
+        aggregation_dependencies.append(valuation_task)
+        valuation_path = FILES['retention_value_path']
+    else:
+        valuation_path = None
 
     # (Optional) Aggregate to watersheds if an aggregate vector is defined
     if (args['aggregate_areas_path']):
-        pass
+        aggregation_task = task_graph.add_task(
+            func=aggregate_results,
+            args=(
+                args['aggregate_areas_path'],
+                FILES['retention_ratio_path'],
+                FILES['retention_volume_path'],
+                FILES['infiltration_ratio_path'],
+                FILES['infiltration_volume_path'],
+                avoided_load_paths,
+                valuation_path,
+                FILES['aggregate_data_path']),
+            target_path_list=[FILES['aggregate_data_path']],
+            dependent_task_list=aggregation_dependencies,
+            task_name='aggregate data over polygons'
+        )
 
     task_graph.close()
     task_graph.join()
@@ -527,7 +553,7 @@ def calculate_retention_value(retention_volume_path, replacement_cost, output_pa
     Returns:
         None
     """
-
+    print('value output path:', output_path)
     def retention_value_op(retention_volume_array):
         """Multiply array of retention volumes by the retention replacement 
         cost to get an array of retention values."""
@@ -547,8 +573,8 @@ def calculate_retention_value(retention_volume_path, replacement_cost, output_pa
 
 
 
-def aggregate_results(aoi_path, retention_ratio, retention_volume, 
-        infiltration_ratio, infiltration_volume, avoided_pollutant_loads, 
+def aggregate_results(aoi_path, r_ratio_path, r_volume_path, 
+        i_ratio_path, i_volume_path, avoided_pollutant_loads, 
         retention_value, output_path):
     """Aggregate outputs into regions of interest.
 
@@ -567,55 +593,66 @@ def aggregate_results(aoi_path, retention_ratio, retention_volume,
         None
     """
 
-    # Copy the AOI polygons into the output vector
-    aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName('ESRI Shapefile')
-    driver.CreateCopy(output_path, aoi_vector)
-    gdal.Dataset.__swig_destroy__(original_aoi_vector)
-    original_aoi_vector = None
+    if os.path.exists(output_path):
+        LOGGER.warning(
+            '%s exists, deleting and writing new output',
+            output_path)
+        os.remove(output_path)
 
+    original_aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
+
+    # copy AOI vector to the output path and convert to GPKG if needed
+    print(aoi_path, output_path)
+    result = gdal.VectorTranslate(output_path, aoi_path)
+    print(result)
+    
     aggregate_vector = gdal.OpenEx(output_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
 
     aggregations = [
-        (retention_ratio, 'RR_mean', 'mean'),
-        (retention_volume, 'RV_sum', 'sum'),
-        (infiltration_ratio, 'IR_mean', 'mean'),
-        (infiltration_volume, 'IV_sum', 'sum'),
-        (retention_value, 'val_sum', 'sum')
-    ] + [
-        (avoided_pollutant_load, f'')
+        (r_ratio_path, 'RR_mean', 'mean'),     # average retention ratio
+        (r_volume_path, 'RV_sum', 'sum'),      # total retention volume
+        (i_ratio_path, 'IR_mean', 'mean'),     # average infiltration ratio
+        (i_volume_path, 'IV_sum', 'sum'),      # total infiltration volume
     ]
+    if (retention_value):                      # total retention value
+        aggregations.append((retention_value, 'val_sum', 'sum'))
+    for avoided_load_path in avoided_pollutant_loads:
+        pollutant = avoided_load_path.split('_')[-1]
+        field = f'avoided_{pollutant}'
+        aggregations.append((avoided_load_path, field, 'sum'))
 
-
-    for raster_path, aggregate_field_id, op_type in aggregations:
+    for raster_path, field_id, op in aggregations:
 
         # aggregate the raster by the vector region(s)
         aggregate_stats = pygeoprocessing.zonal_statistics(
-            (raster_path, 1), aggregate_vector_path)
+            (raster_path, 1), output_path)
+        print(aggregate_stats)
 
         # set up the field to hold the aggregate data
-        aggregate_field = ogr.FieldDefn(aggregate_field_id, ogr.OFTReal)
+        aggregate_field = ogr.FieldDefn(field_id, ogr.OFTReal)
         aggregate_field.SetWidth(24)
         aggregate_field.SetPrecision(11)
         aggregate_layer.CreateField(aggregate_field)
         aggregate_layer.ResetReading()
 
-        for poly_index, poly_feat in enumerate(aggregate_layer):
-            if op_type == 'mean':
-                pixel_count = aggregate_stats[poly_index]['count']
+        # save the aggregate data to the field for each feature
+        for polygon in aggregate_layer:
+            feature_id = polygon.GetFID()
+            if op == 'mean':
+                pixel_count = aggregate_stats[feature_id]['count']
                 if pixel_count != 0:
-                    value = (aggregate_stats[poly_index]['sum'] / pixel_count)
+                    value = (aggregate_stats[feature_id]['sum'] / pixel_count)
                 else:
                     LOGGER.warning(
                         "no coverage for polygon %s", ', '.join(
-                            [str(poly_feat.GetField(_)) for _ in range(
-                                poly_feat.GetFieldCount())]))
+                            [str(polygon.GetField(_)) for _ in range(
+                                polygon.GetFieldCount())]))
                     value = 0.0
-            elif op_type == 'sum':
-                value = aggregate_stats[poly_index]['sum']
-            poly_feat.SetField(aggregate_field_id, float(value))
-            aggregate_layer.SetFeature(poly_feat)
+            elif op == 'sum':
+                value = aggregate_stats[feature_id]['sum']
+            polygon.SetField(field_id, float(value))
+            aggregate_layer.SetFeature(polygon)
 
     # save the aggregate vector layer and clean up references
     aggregate_layer.SyncToDisk()
