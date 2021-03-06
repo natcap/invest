@@ -542,7 +542,7 @@ describe('InVEST subprocess testing', () => {
     jest.resetModules();
   });
 
-  test('exit without error - doggy expect log display', async () => {
+  test('exit without error - expect log display', async () => {
     const {
       findByText,
       findByLabelText,
@@ -595,7 +595,7 @@ describe('InVEST subprocess testing', () => {
     unmount();
   });
 
-  test('exit with error - doggy expect log display', async () => {
+  test('exit with error - expect log display', async () => {
     const {
       findByText,
       findByLabelText,
