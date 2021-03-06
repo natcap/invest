@@ -286,7 +286,7 @@ describe('InVEST global settings: dialog interactions', () => {
     getInvestModelNames.mockResolvedValue({});
   });
   afterEach(() => {
-    jest.resetAllMocks();
+    //jest.resetAllMocks();
 
     const globalSettingsPath = 'tests/data/global-settings.json';
     if (fs.existsSync(globalSettingsPath)) {
@@ -534,15 +534,15 @@ describe('InVEST subprocess testing', () => {
   afterEach(async () => {
     mockInvestProc = null;
     // being extra careful with recursive rm
-    if (fakeWorkspace.startsWith('tests/data')) {
+    if (fakeWorkspace.startsWith(path.join('tests', 'data'))) {
       fs.rmdirSync(fakeWorkspace, { recursive: true });
     }
     await InvestJob.clearStore();
-    jest.resetAllMocks();
+    //jest.resetAllMocks();
     jest.resetModules();
   });
 
-  test('exit without error - expect log display', async () => {
+  test('exit without error - doggy expect log display', async () => {
     const {
       findByText,
       findByLabelText,
@@ -595,7 +595,7 @@ describe('InVEST subprocess testing', () => {
     unmount();
   });
 
-  test('exit with error - expect log display', async () => {
+  test('exit with error - doggy expect log display', async () => {
     const {
       findByText,
       findByLabelText,
