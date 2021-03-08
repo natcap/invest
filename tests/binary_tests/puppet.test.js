@@ -30,13 +30,10 @@ if (process.platform === 'darwin') {
 } else {
   BINARY_PATH = './dist/linux-unpacked/invest-workbench';
 }
-
 if (!fs.existsSync(BINARY_PATH)) {
   throw new Error(`Binary file not found: ${BINARY_PATH}`);
 }
-if (!fs.accessSync(BINARY_PATH, fs.constants.X_OK)) {
-  throw new Error(`Binary file not executeable: ${BINARY_PATH}`);
-}
+fs.accessSync(BINARY_PATH, fs.constants.X_OK);
 
 function makeAOI() {
   /* eslint-disable */
