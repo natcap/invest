@@ -58,7 +58,7 @@ jobs:
       if: matrix.os != 'macos-latest'
       with:
         name: 'puppeteer_log.txt'
-        path: '~/AppData/Roaming/invest-workbench-log*'
+        path: '~/AppData/Roaming/invest-workbench/invest-workbench-log*'
 
     - name: Upload installer artifacts to github
       uses: actions/upload-artifact@v2.2.1
