@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import glob from 'glob';
 import fetch from 'node-fetch';
 import { spawn, spawnSync } from 'child_process';
@@ -8,6 +9,11 @@ import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
 jest.setTimeout(120000); // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
+// append to this filename and the image will be uploaded to github artifacts
+// E.g. page.screenshot({ path: `${SCREENSHOT_PREFIX}screenshot.png` })
+const SCREENSHOT_PREFIX = path.join(
+  os.homedir(), 'AppData/Roaming/invest-workbench/invest-workbench-'
+);
 
 // For ease of automated testing, run the app from the 'unpacked' directory
 // to avoid need to install first on windows or extract on mac.
@@ -62,7 +68,8 @@ function makeAOI() {
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
   electronProcess = spawn(
-    `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
+    `"${binaryPath}"`,
+    [`--remote-debugging-port=${PORT}`],
     { shell: true }
   );
   electronProcess.stderr.on('data', (data) => {
@@ -75,7 +82,7 @@ beforeAll(async () => {
   browser = await puppeteer.connect({
     browserWSEndpoint: data.webSocketDebuggerUrl, // this works
     // browserURL: `http://localhost:${PORT}`,    // this also works
-    defaultViewport: { width: 1000, height: 800 },
+    defaultViewport: null
   });
   makeAOI();
 });
@@ -123,31 +130,25 @@ test('Run a real invest model', async () => {
   const button = await findByRole(investTable, 'button', { name: /Visitation/ });
   button.click();
   const runButton = await findByRole(doc, 'button', { name: 'Run' });
-  const preEnabled = await page.evaluate(
-    (btn) => !btn.disabled,
-    runButton
-  );
-  console.log(`run button is enabled: ${preEnabled}`);
+  const typeDelay = 10;
   const workspace = await findByLabelText(doc, /Workspace/);
-  await workspace.type(TMP_DIR, { delay: 10 });
+  await workspace.type(TMP_DIR, { delay: typeDelay });
   const aoi = await findByLabelText(doc, /Area of Interest/);
-  await aoi.type(TMP_AOI_PATH, { delay: 10 });
+  await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
   const startYear = await findByLabelText(doc, /Start Year/);
-  await startYear.type('2008', { delay: 10 });
+  await startYear.type('2008', { delay: typeDelay });
   const endYear = await findByLabelText(doc, /End Year/);
-  await endYear.type('2012', { delay: 10 });
-
+  await endYear.type('2012', { delay: typeDelay });
 
   // Button is disabled until validation completes
-  let isEnabled;
   await waitFor(async () => {
-    isEnabled = await page.evaluate(
+    const isEnabled = await page.evaluate(
       (btn) => !btn.disabled,
       runButton
     );
     expect(isEnabled).toBe(true);
   });
-  console.log(`RUN IS ENABLED: ${isEnabled}`);
+  page.screenshot({ path: `${SCREENSHOT_PREFIX}before-run-click.png` });
   await runButton.click();
   const logTab = await findByText(doc, 'Log');
   // Log tab is not active until after the invest logfile is opened
