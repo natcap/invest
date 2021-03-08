@@ -55,7 +55,7 @@ jobs:
 
     - name: Upload app logging from puppeteer to github
       uses: actions/upload-artifact@v2.2.1
-      if: matrix.os != 'macos-latest'
+      if: matrix.os != 'macos-latest' && always()
       with:
         name: 'puppeteer_log.txt'
         path: '~/AppData/Roaming/invest-workbench/invest-workbench-log*'
