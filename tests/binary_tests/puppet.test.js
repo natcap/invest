@@ -122,6 +122,12 @@ test('Run a real invest model', async () => {
   const investTable = await findByRole(doc, 'table');
   const button = await findByRole(investTable, 'button', { name: /Visitation/ });
   button.click();
+  const runButton = await findByRole(doc, 'button', { name: 'Run' });
+  const preEnabled = await page.evaluate(
+    (btn) => !btn.disabled,
+    runButton
+  );
+  console.log(`run button is enabled: ${preEnabled}`);
   const workspace = await findByLabelText(doc, /Workspace/);
   await workspace.type(TMP_DIR, { delay: 10 });
   const aoi = await findByLabelText(doc, /Area of Interest/);
@@ -131,18 +137,17 @@ test('Run a real invest model', async () => {
   const endYear = await findByLabelText(doc, /End Year/);
   await endYear.type('2012', { delay: 10 });
 
-  const runButton = await findByText(doc, 'Run');
 
   // Button is disabled until validation completes
+  let isEnabled;
   await waitFor(async () => {
-    console.log(`RUN IS DISABLED: ${runButton.disabled}`);
-    const isEnabled = await page.evaluate(
+    isEnabled = await page.evaluate(
       (btn) => !btn.disabled,
       runButton
     );
     expect(isEnabled).toBe(true);
   });
-
+  console.log(`RUN IS ENABLED: ${isEnabled}`);
   await runButton.click();
   const logTab = await findByText(doc, 'Log');
   // Log tab is not active until after the invest logfile is opened
