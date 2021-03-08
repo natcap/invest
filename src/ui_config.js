@@ -1,4 +1,4 @@
-import { getVectorColumnNames, getVectorMayHavePoints } from './server_requests';
+import { getVectorColumnNames } from './server_requests';
 
 
 // Some input fields are rendered differently conditional upon the state of other input fields.
@@ -7,7 +7,7 @@ import { getVectorColumnNames, getVectorMayHavePoints } from './server_requests'
 // Format:
 // const uiSpec = {
 //     order: [['arg']]
-//     modelName: {  
+//     modelName: {
 //        category: {
 //            arg: f
 //         }
@@ -19,7 +19,7 @@ import { getVectorColumnNames, getVectorMayHavePoints } from './server_requests'
 // - `modelName` equals `ARGS_SPEC.model_name`
 // - `category` is a category that the SetupTab component looks for
 //    (currently `enabledFunctions` or `dropdownFunctions`)
-// - `f` is a function that accepts `SetupTab.state` as its one argument 
+// - `f` is a function that accepts `SetupTab.state` as its one argument
 //     - in the `enabledFunctions` section, `f` returns a boolean where true = enabled, false = disabled
 //     - in the `dropdownFunctions` section, `f` returns a list of dropdown options.
 //       Note: Most dropdown inputs will have a static list of options defined in the ARGS_SPEC.
@@ -52,7 +52,7 @@ const uiSpec = {
             lulc_cur_year: isSufficient.bind(null, 'calc_sequestration'),
             lulc_fut_year: isSufficient.bind(null, 'calc_sequestration'),
             lulc_fut_path: isSufficient.bind(null, 'calc_sequestration'),
-            
+
             do_redd: isSufficient.bind(null, 'calc_sequestration'),
             lulc_redd_path: isSufficient.bind(null, 'do_redd'),
 
@@ -70,9 +70,9 @@ const uiSpec = {
         ],
         enabledFunctions: {
             use_price_table: isSufficient.bind(null, 'do_economic_analysis'),
-            price: (state => isSufficient('do_economic_analysis', state) && 
+            price: (state => isSufficient('do_economic_analysis', state) &&
                 isNotSufficient('use_price_table', state)),
-            inflation_rate: (state => isSufficient('do_economic_analysis', state) && 
+            inflation_rate: (state => isSufficient('do_economic_analysis', state) &&
                 isNotSufficient('use_price_table', state)),
             price_table_path: isSufficient.bind(null, 'use_price_table'),
             discount_rate: isSufficient.bind(null, 'do_economic_analysis'),
@@ -125,10 +125,6 @@ const uiSpec = {
         enabledFunctions: {
             outlet_vector_path: isNotSufficient.bind(null, 'detect_pour_points'),
             skip_invalid_geometry: isNotSufficient.bind(null, 'detect_pour_points'),
-            snap_points: (async (state) => {
-                const mayHavePoints = await getVectorMayHavePoints(state.argsValues['outlet_vector_path'].value);
-                return (isSufficient('outlet_vector_path', state) && mayHavePoints) || isSufficient('detect_pour_points', state);
-            }),
             flow_threshold: isSufficient.bind(null, 'snap_points'),
             snap_distance: isSufficient.bind(null, 'snap_points')
         }
@@ -168,15 +164,15 @@ const uiSpec = {
         ],
         enabledFunctions: {
             population_csv_path: isNotSufficient.bind(null, 'do_batch'),
-            population_csv_dir: isSufficient.bind(null, 'do_batch'), 
-            spawn_units: (state => isSufficient('recruitment_type', state) && 
+            population_csv_dir: isSufficient.bind(null, 'do_batch'),
+            spawn_units: (state => isSufficient('recruitment_type', state) &&
                 ['Beverton-Holt', 'Ricker'].includes(state.argsValues['recruitment_type'].value)),
-            alpha: (state => isSufficient('recruitment_type', state) && 
+            alpha: (state => isSufficient('recruitment_type', state) &&
                 ['Beverton-Holt', 'Ricker'].includes(state.argsValues['recruitment_type'].value)),
-            beta: (state => isSufficient('recruitment_type', state) && 
+            beta: (state => isSufficient('recruitment_type', state) &&
                 ['Beverton-Holt', 'Ricker'].includes(state.argsValues['recruitment_type'].value)),
-            total_recur_recruits: (state => isSufficient('recruitment_type', state) && 
-                state.argsValues['recruitment_type'].value === 'Fixed'), 
+            total_recur_recruits: (state => isSufficient('recruitment_type', state) &&
+                state.argsValues['recruitment_type'].value === 'Fixed'),
             migration_dir: isSufficient.bind(null, 'migr_cont'),
             frac_post_process: isSufficient.bind(null, 'val_cont'),
             unit_price: isSufficient.bind(null, 'val_cont'),
@@ -406,7 +402,7 @@ const uiSpec = {
             wind_price: (state => { return isSufficient('valuation_container', state) &&
                 isNotSufficient('price_table', state)}),
             rate_change: (state => {return isSufficient('valuation_container', state) &&
-                isNotSufficient('price_table', state)})                
+                isNotSufficient('price_table', state)})
         }
     }
 }
