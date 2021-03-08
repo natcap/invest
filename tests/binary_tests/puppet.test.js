@@ -155,7 +155,6 @@ test('Run a real invest model', async () => {
   await waitFor(async () => {
     const prop = await logTab.getProperty('className');
     const vals = await prop.jsonValue();
-    // console.log(`VALS ${JSON.stringify(vals)}`);
     expect(vals.includes('active')).toBeTruthy();
   });
 

@@ -127,7 +127,6 @@ export default class InvestTab extends React.Component {
    *   as a javascript object
    */
   async investExecute(argsValues) {
-    logger.debug('from investExecute');
     const {
       job,
       investExe,
@@ -155,7 +154,6 @@ export default class InvestTab extends React.Component {
       fileRegistry.TEMP_DIR, 'data-'
     ));
     const datastackPath = path.join(tempDir, 'datastack.json');
-    logger.debug('before writing parameters to file');
     await this.argsToJsonFile(datastackPath, args);
 
     const cmdArgs = [
