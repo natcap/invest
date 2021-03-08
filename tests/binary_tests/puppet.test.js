@@ -132,13 +132,15 @@ test('Run a real invest model', async () => {
   await endYear.type('2012', { delay: 10 });
 
   const runButton = await findByText(doc, 'Run');
+  
   // Button is disabled until validation completes
   await waitFor(async () => {
+    console.log(`RUN IS DISABLED: ${runButton.disabled}`);
     const isEnabled = await page.evaluate(
       (btn) => !btn.disabled,
       runButton
     );
-    expect(isEnabled).toBeTruthy();
+    expect(isEnabled).toBe(true);
   });
 
   runButton.click();
@@ -147,7 +149,7 @@ test('Run a real invest model', async () => {
   await waitFor(async () => {
     const prop = await logTab.getProperty('className');
     const vals = await prop.jsonValue();
-    console.log(`VALS ${JSON.stringify(vals)}`);
+    // console.log(`VALS ${JSON.stringify(vals)}`);
     expect(vals.includes('active')).toBeTruthy();
   });
 

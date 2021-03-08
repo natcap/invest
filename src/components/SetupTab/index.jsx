@@ -12,8 +12,8 @@ import {
 } from './SetupButtons';
 import { fetchValidation, saveToPython } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
-
-
+import { getLogger } from '../../logger';
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
 /** Setup the objects that store InVEST argument values in SetupTab state.
  *
  * One object will store input form values and track if the input has been
@@ -311,6 +311,8 @@ export default class SetupTab extends React.Component {
         isRunning,
         uiSpec
       } = this.props;
+      logger.debug(`ARGS VALID: ${argsValid}`);
+      logger.debug(`IS RUNNING: ${isRunning}`);
 
       const buttonText = (
         isRunning
