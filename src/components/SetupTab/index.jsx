@@ -192,6 +192,7 @@ export default class SetupTab extends React.Component {
   }
 
   wrapInvestExecute() {
+    logger.debug('from run button click handler');
     const argsValues = this.insertNWorkers(this.state.argsValues);
     this.props.investExecute(argsDictFromObject(argsValues));
   }

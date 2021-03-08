@@ -132,7 +132,7 @@ test('Run a real invest model', async () => {
   await endYear.type('2012', { delay: 10 });
 
   const runButton = await findByText(doc, 'Run');
-  
+
   // Button is disabled until validation completes
   await waitFor(async () => {
     console.log(`RUN IS DISABLED: ${runButton.disabled}`);
@@ -143,7 +143,7 @@ test('Run a real invest model', async () => {
     expect(isEnabled).toBe(true);
   });
 
-  runButton.click();
+  await runButton.click();
   const logTab = await findByText(doc, 'Log');
   // Log tab is not active until after the invest logfile is opened
   await waitFor(async () => {
@@ -154,7 +154,7 @@ test('Run a real invest model', async () => {
   });
 
   const cancelButton = await findByText(doc, 'Cancel Run');
-  cancelButton.click();
+  await cancelButton.click();
   await waitFor(async () => {
     expect(await findByText(doc, 'Run Canceled'));
     expect(await findByText(doc, 'Open Workspace'));
