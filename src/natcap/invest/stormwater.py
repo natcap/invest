@@ -212,13 +212,13 @@ def execute(args):
     # (Optional) adjust stormwater retention ratio using roads
     if args['adjust_retention_ratios']:
 
-        # is_connected_lookup = {lucode: row['is_connected'] for lucode, row in biophysical_dict.items()}
-        # connected_lulc_task = task_graph.add_task(
-        #     func=calculate_connected_lulc_raster,
-        #     args=(args['lulc_path'], is_connected_lookup, FILES['connected_lulc_path']),
-        #     target_path_list=[FILES['connected_lulc_path']],
-        #     task_name='calculate binary connected lulc raster'
-        # )
+        is_connected_lookup = {lucode: row['is_connected'] for lucode, row in biophysical_dict.items()}
+        connected_lulc_task = task_graph.add_task(
+            func=calculate_connected_lulc_raster,
+            args=(args['lulc_path'], is_connected_lookup, FILES['connected_lulc_path']),
+            target_path_list=[FILES['connected_lulc_path']],
+            task_name='calculate binary connected lulc raster'
+        )
 
         # # calculate D8 flow direction from DEM
         # flow_dir_task = task_graph.add_task(
@@ -427,25 +427,177 @@ def calculate_connected_lulc(lulc_path, is_connected_lookup, output_path):
         [(lulc_path, 1)], connected_op, output_path, gdal.GDT_Float32, NODATA)
 
 
-def adjust_stormwater_retention_ratios(retention_ratio_path, radius, lulc_path, road_centerlines_path):
+def road_centerlines(centerlines_path):
+
+
+    vector = gdal.OpenEx(centerlines_path)
+    layer = aggregate_vector.GetLayer()
+    for geometry in layer:
+        ref = geometry.GetGeometryRef()
+        assert ref.GetGeometryName() == 'LINESTRING'
+        points = ref.GetPoints()  # a list of (x, y) points
+        x1, y1 = points[0]
+        for point in points[1:]:
+            x2, y2 = point
+            line_op(x1, y1, x2, y2)
+            x1, y1 = x2, y2
+
+
+    def line_op(x_coords, y_coords, x1, y1, x2, y2):
+
+        output_array = numpy.full(x_coords.shape, NODATA)
+        distance_array = numpy.full(x_coords.shape, NODATA)
+
+        # solve for the line connecting the point (x1, y1) to (x2, y2)
+        slope = (y2 - y1) / (x2 - x1)
+        intercept = y1 - slope * x1
+
+        perpendicular_slope = -1 / slope
+
+
+        for (a, b) in array:
+            perpendicular_intercept = b - perpendicular_slope * a
+
+            x_intersection = (perpendicular_intercept - intercept) / (slope - perpendicular_slope)
+
+            # if there is a perpendicular line from the point to the segment, 
+            # then the shortest distance is from the point to the intersection.
+            if x_intersection >= min(x1, x2) and x_intersection <= max(x1, x2):
+                # y = mx + b
+                y_intersection = slope * x_intersection + intercept
+                distance = numpy.hypot(x_intersection, y_intersection)
+
+            # if there isn't a perpendicular line from the point to the segment,
+            # then the shortest distance to the segment is the minimum of
+            # the distances from the point to each segment endpoint.
+            else:
+                distance = min(
+                    numpy.hypot((a - x1), (b - y1)), 
+                    numpy.hypot((a - x2), (b - x2))
+                )
+            if distance <= radius:
+                output_array[a, b] = 1
+
+        # distance from a point to a line segment (https://math.stackexchange.com/questions/2248617/shortest-distance-between-a-point-and-a-line-segment)
+        # given a point (a, b) and a line segment from (x1, y1) to (x2, y2):
+        # draw a line that passes through (a, b) and is perpendicular to the 
+        # line segment (negative inverse slope).
+        # (a) if it intersects the line segment at a point (c, d), then the 
+        #     distance is the distance from (a, b) to (c, d).
+        # (b) if it doesn't intersect the line segment, then the distance is
+        #     the lesser of the two distances: (a, b) -> (x1, y1) or
+        #     (a, b) to (x2, y2) (this is finding the nearest endpoint)
+        perpendicular_intercepts = y_coords - perpendicular_slope * x_coords
+
+        x_intersections = (perpendicular_intercepts - intercept) / (slope - perpendicular_slope)
+
+        # determine which points satisfy case (a) above
+        within_range = (x_intersections >= min(x1, x2) & x_intersection <= max(x1, x2))
+        # calculate their distance as the distance from (a, b) 
+        # to the intersection point
+        distance_array[within_range] = numpy.hypot(
+            x_intersections - a, 
+            (slope * x_intersections) + intercept - b
+        )
+
+        # for the points in case (b) above, find the minimum endpoint distance
+        distance_to_endpoint_1 = numpy.hypot((x_coords - x1), (y_coords - y1))
+        distance_to_endpoint_2 = numpy.hypot((x_coords - x2), (y_coords - y2))
+
+        distance_array[~within_range] = numpy.min(distance_to_endpoint_1, distance_to_endpoint_2)
+
+        # return a boolean array showing which points are within the radius
+        return (distance_array <= radius)
+
+
+        
+
+
+
+
+def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path, road_centerlines_path):
     """Adjust retention ratios according to surrounding LULC and roads.
 
     Args:
         retention_ratio_path (str): path to raster of retention ratio values
-        lulc_path (str): path to a LULC raster whose LULC codes exist in the
-            biophysical table
+        connected_path (str): path to a binary raster where 1 is directly
+            connected impervious LULC type, 0 is not
         road_centerlines_path (str): path to line vector showing road centerlines
 
     Returns:
         None
     """
-    lulc_connected_lookup
     
-    def adjust_op(lulc_array):
+    radius = 30
+
+    radius = 2
+    # the search kernel is just large enough to contain all pixels that
+    # *could* be within the radius of the center pixel
+    search_kernel_shape = tuple([radius*2+1]*2)
+    centerpoint = tuple([radius+1]*2)
+
+    # arrays of the column index and row index of each pixel
+    col_indices, row_indices = numpy.indices(search_kernel_shape)
+    # adjust them so that (0, 0) is the center pixel
+    col_index -= radius
+    row_index -= radius
+
+    # This could be expanded to flesh out the proportion of a pixel in the 
+    # mask if needed, but for this convolution demo, not needed.
+
+    # hypotenuse_i = sqrt(col_index_i**2 + row_index_i**2) for each pixel i
+    hypotenuse = numpy.hypot(col_index, row_index)
+
+    # boolean kernel where 1=pixel centerpoint is within the radius of the 
+    # center pixel's centerpoint
+    search_kernel = numpy.array(hypotenuse < radius, dtype=numpy.uint8)
+
+
+    def adjust_op(impervious_array, retention_ratio_array):
+        # total # of pixels within the search kernel that are impervious LULC
+        convolved = scipy.signal.convolve(impervious_array, search_kernel)
+
+        # boolean array where 1 = pixel is within radius of impervious LULC
+        is_near_impervious = (convolved > 0)
+
+        # array where each value is the number of valid values within the
+        # search kernel. 
+        # - for every kernel that doesn't extend past the edge of the original 
+        #   array, this is search_kernel.size
+        # - for kernels that extend past the edge, this is the number of elements
+        #   that are within the original array
+        n_values_array = scipy.ndimage.convolve(
+            numpy.ones(retention_ratio_array.shape), 
+            search_kernel, 
+            mode='constant', 
+            cval=0)
+
+        # array where each pixel is averaged with its neighboring pixels within
+        # the search radius. 
+        averaged_ratio_array = (
+            scipy.ndimage.convolve(
+                retention_ratio_array, 
+                search_kernel,
+                mode='constant',
+                cval=0
+            ) / n_values_array)
+
+        # adjustment factor:
+        # - 0 if any of the nearby pixels are impervious/connected;
+        # - average of nearby pixels, otherwise
+        adjustment_factor_array = averaged_ratio_array * ~is_near_impervious
+
+        # equation 2-4
+        adjusted_ratio_array = (retention_ratio_array + 
+            (1 - retention_ratio_array) * adjustment_factor_array)
+
+        return adjusted_ratio_array
+
+
 
         
 
-        pygeoprocessing.distance_to_channel_d8()
+        
 
 
 
@@ -622,7 +774,11 @@ def aggregate_results(aoi_path, r_ratio_path, r_volume_path,
         field = f'avoided_{pollutant}'
         aggregations.append((avoided_load_path, field, 'sum'))
 
+    print('vector info:', pygeoprocessing.get_vector_info(output_path)['bounding_box'])
+
     for raster_path, field_id, op in aggregations:
+
+        print('raster info:', pygeoprocessing.get_raster_info(raster_path)['bounding_box'])
 
         # aggregate the raster by the vector region(s)
         aggregate_stats = pygeoprocessing.zonal_statistics(
