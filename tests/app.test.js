@@ -284,9 +284,11 @@ describe('Display recently executed InVEST jobs', () => {
 describe('InVEST global settings: dialog interactions', () => {
   beforeEach(() => {
     getInvestModelNames.mockResolvedValue({});
+    jest.mock('electron');
+    remote.app.getPath.mockImplementation(() => path.resolve('tests/data'))
   });
   afterEach(() => {
-    //jest.resetAllMocks();
+    jest.resetAllMocks();
 
     const globalSettingsPath = 'tests/data/global-settings.json';
     if (fs.existsSync(globalSettingsPath)) {
@@ -495,6 +497,9 @@ describe('InVEST subprocess testing', () => {
   let mockInvestProc;
 
   beforeEach(() => {
+    jest.mock('electron');
+    remote.app.getPath.mockImplementation(() => path.resolve('tests/data'))
+    
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
@@ -538,7 +543,7 @@ describe('InVEST subprocess testing', () => {
       fs.rmdirSync(fakeWorkspace, { recursive: true });
     }
     await InvestJob.clearStore();
-    //jest.resetAllMocks();
+    jest.resetAllMocks();
     jest.resetModules();
   });
 
@@ -757,6 +762,8 @@ describe('Tab closing and switching', () => {
     // brackets around spec.model_name turns it into a valid literal key
     const mockUISpec = { [SAMPLE_SPEC.model_name]: { order: [Object.keys(SAMPLE_SPEC.args)] } };
     jest.mock('../src/ui_config', () => mockUISpec);
+    jest.mock('electron');
+    remote.app.getPath.mockImplementation(() => path.resolve('tests/data'))
   });
 
   afterAll(async () => {
