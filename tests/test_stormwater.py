@@ -165,4 +165,61 @@ class StormwaterTests(unittest.TestCase):
                     f'values: {avoided_load}, {expected_avoided_load}')
 
 
+    def test_make_coordinate_arrays(self):
+        from natcap.invest import stormwater
+
+        # set up an array (values don't matter) and save as raster
+        array = numpy.zeros((512, 512), dtype=numpy.int8)
+        pixel_size = (10, -10)
+        origin = (15100, 7000)
+        raster_path = os.path.join(self.workspace_dir, 'coord_array.tif')
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3857)
+        projection_wkt = srs.ExportToWkt()
+        pygeoprocessing.numpy_array_to_raster(
+            array, -1, pixel_size, origin, projection_wkt, raster_path)
+        
+        # make x- and y- coordinate arrays from the raster
+        coord_arrays = list(stormwater.make_coordinate_arrays(raster_path))
+        # tile the blocks back together into one array
+        # assuming that iterblocks will make 4 256x256 blocks
+        x_coords = numpy.block([
+            [coord_arrays[0][0], coord_arrays[1][0]],
+            [coord_arrays[2][0], coord_arrays[3][0]]])
+        y_coords = numpy.block([
+            [coord_arrays[0][1], coord_arrays[1][1]],
+            [coord_arrays[2][1], coord_arrays[3][1]]])
+
+        # coords should start at the raster origin plus 1/2 a pixel
+        x_expected = origin[0] + pixel_size[0] / 2
+        y_expected = origin[1] + pixel_size[1] / 2
+        first_x_coords_row = x_coords[0]
+        first_y_coords_col = y_coords[:,0]
+
+        # x coords should increment by one pixel width
+        for x_value in first_x_coords_row:
+            self.assertEqual(x_value, x_expected)
+            x_expected += pixel_size[0]
+        # each row of x_coords should be identical
+        for row in x_coords:
+            self.assertTrue(numpy.array_equal(row, first_x_coords_row))
+
+        # y coords should increment by one pixel height
+        for y_value in first_y_coords_col:
+            self.assertEqual(y_value, y_expected)
+            y_expected += pixel_size[1]
+        # each column of y_coords should be identical
+        for col in y_coords.T:
+            self.assertTrue(numpy.array_equal(col, first_y_coords_col))
+
+
+
+
+
+
+
+
+
+
+
 

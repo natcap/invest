@@ -299,13 +299,12 @@ def execute(args):
     emc_columns = [key for key in next(iter(biophysical_dict.values()))
         if key.startswith('emc_')]
     pollutants = [key[4:] for key in  emc_columns]
-    print('pollutants:', pollutants)
-    avoided_load_paths = []
-
-    aggregation_dependencies = [retention_volume_task, infiltration_volume_task]
+    LOGGER.info(f'Pollutants found in biophysical table: {pollutants}')
 
     # Calculate avoided pollutant load for each pollutant from retention volume
     # and biophysical table EMC value
+    avoided_load_paths = []
+    aggregation_dependencies = [retention_volume_task, infiltration_volume_task]
     for pollutant in pollutants:
         # one output raster for each pollutant
         avoided_pollutant_load_path = os.path.join(
@@ -331,7 +330,7 @@ def execute(args):
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed
-    print('replacement cost:', ':' + args['replacement_cost'] + ':', type(args['replacement_cost']), args['replacement_cost'] == '', args['replacement_cost'] in [''])
+    print('replacement cost:', ':' + str(args['replacement_cost']) + ':', type(args['replacement_cost']), args['replacement_cost'] == '', args['replacement_cost'] in [''])
     if (args['replacement_cost'] not in [None, '']):
 
         valuation_task = task_graph.add_task(
@@ -482,7 +481,7 @@ def road_centerlines(centerlines_path):
         slope = (y2 - y1) / (x2 - x1)
         intercept = y1 - slope * x1
 
-        # the line perpendicular the line segment and passing thru each point
+        # the line perpendicular to the line segment and passing thru each point
         perpendicular_slope = -1 / slope  # slope is the same for each line
         # a different intercept for each (x, y) pair
         perpendicular_intercepts = y_coords - perpendicular_slope * x_coords
@@ -523,26 +522,26 @@ def make_coordinate_arrays(raster_path):
             a pair of 2D arrays. The first is x coords, the second is y coords.
     """
     raster_info = pygeoprocessing.get_raster_info(raster_path)
-    pixel_x_size, pixel_y_size = raster_info['pixel_size']
+    pixel_size_x, pixel_size_y = raster_info['pixel_size']
     x_origin = raster_info['geotransform'][0]
     y_origin = raster_info['geotransform'][3]
 
     for data, array in pygeoprocessing.iterblocks((raster_path, 1)):
-        x_coords, y_coords = numpy.indices(array.shape)
+        y_coords, x_coords = numpy.indices(array.shape)
 
         x_coords = (
             (x_coords * pixel_size_x) +  # convert to pixel size in meters
             (pixel_size_x / 2) +  # center the point on the pixel
-            data['xoff'] +   # the offset of this block relative to the raster
+            (data['xoff'] * pixel_size_x) +   # the offset of this block relative to the raster
             x_origin)  # the raster's offset relative to the coordinate system
 
         y_coords = (
             (y_coords * pixel_size_y) + 
             (pixel_size_y / 2) +
-            data['yoff'] +
+            (data['yoff'] * pixel_size_y) +
             y_origin)
 
-        yield (x_coords, y_coords)
+        yield x_coords, y_coords
 
 
 
@@ -710,14 +709,11 @@ def calculate_avoided_pollutant_load(lulc_path, retention_volume_path,
 
         for lucode in lulc_emc_lookup:
             lucode_mask = (lulc_array == lucode)
-            print(lucode, lulc_emc_lookup[lucode], retention_volume_array[lucode_mask & nodata_mask])
-            print(lulc_emc_lookup[lucode] * 0.001 * retention_volume_array[lucode_mask & nodata_mask])
             # EMC for pollutant (mg/L) * 1000 (L/m^3) * 0.000001 (kg/mg) * 
             # retention (m^3/yr) = pollutant load (kg/yr)
             load_array[lucode_mask & nodata_mask] = (
                 lulc_emc_lookup[lucode] * 0.001 * 
                 retention_volume_array[lucode_mask & nodata_mask])
-            print(load_array[nodata_mask])
         return load_array
 
     # Apply avoided_pollutant_load_op to each block of the LULC and retention 
@@ -737,7 +733,6 @@ def calculate_retention_value(retention_volume_path, replacement_cost, output_pa
     Returns:
         None
     """
-    print('value output path:', output_path)
     def retention_value_op(retention_volume_array):
         """Multiply array of retention volumes by the retention replacement 
         cost to get an array of retention values."""
@@ -786,9 +781,7 @@ def aggregate_results(aoi_path, r_ratio_path, r_volume_path,
     original_aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
 
     # copy AOI vector to the output path and convert to GPKG if needed
-    print(aoi_path, output_path)
     result = gdal.VectorTranslate(output_path, aoi_path)
-    print(result)
     
     aggregate_vector = gdal.OpenEx(output_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
@@ -806,16 +799,11 @@ def aggregate_results(aoi_path, r_ratio_path, r_volume_path,
         field = f'avoided_{pollutant}'
         aggregations.append((avoided_load_path, field, 'sum'))
 
-    print('vector info:', pygeoprocessing.get_vector_info(output_path)['bounding_box'])
 
     for raster_path, field_id, op in aggregations:
-
-        print('raster info:', pygeoprocessing.get_raster_info(raster_path)['bounding_box'])
-
         # aggregate the raster by the vector region(s)
         aggregate_stats = pygeoprocessing.zonal_statistics(
             (raster_path, 1), output_path)
-        print(aggregate_stats)
 
         # set up the field to hold the aggregate data
         aggregate_field = ogr.FieldDefn(field_id, ogr.OFTReal)
