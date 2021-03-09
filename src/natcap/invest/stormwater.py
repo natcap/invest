@@ -510,7 +510,41 @@ def road_centerlines(centerlines_path):
         return (distance_array <= radius)
 
 
-        
+def make_coordinate_arrays(raster_path):
+    """Make coordinate arrays where each element is the coordinate of the
+    centerpoint of a pixel in the raster coordinate system.
+
+    Args:
+        raster_path (string): raster to generate coordinates for
+
+    Yields:
+        list[tuple(numpy.ndarray, numpy.ndarray)]: For each memory block,
+            a pair of 2D arrays. The first is x coords, the second is y coords.
+    """
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
+    pixel_x_size, pixel_y_size = raster_info['pixel_size']
+    x_origin = raster_info['geotransform'][0]
+    y_origin = raster_info['geotransform'][3]
+
+    for data, array in pygeoprocessing.iterblocks((raster_path, 1)):
+        x_coords, y_coords = numpy.indices(array.shape)
+
+        x_coords = (
+            (x_coords * pixel_size_x) +  # convert to pixel size in meters
+            (pixel_size_x / 2) +  # center the point on the pixel
+            data['xoff'] +   # the offset of this block relative to the raster
+            x_origin)  # the raster's offset relative to the coordinate system
+
+        y_coords = (
+            (y_coords * pixel_size_y) + 
+            (pixel_size_y / 2) +
+            data['yoff'] +
+            y_origin)
+
+        yield (x_coords, y_coords)
+
+
+
 
 
 
