@@ -178,6 +178,8 @@ class StormwaterTests(unittest.TestCase):
         projection_wkt = srs.ExportToWkt()
         pygeoprocessing.numpy_array_to_raster(
             array, -1, pixel_size, origin, projection_wkt, raster_path)
+
+
         
         # make x- and y- coordinate arrays from the raster
         coord_arrays = list(stormwater.make_coordinate_arrays(raster_path))

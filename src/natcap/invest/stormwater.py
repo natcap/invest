@@ -413,8 +413,19 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
         ratio_op, output_path, gdal.GDT_Float32, NODATA)
 
 
-def calculate_connected_lulc(lulc_path, is_connected_lookup, output_path):
-    """Make a binary raster where 1=connected, 0=not
+def calculate_connected_lulc(lulc_path, is_connected, output_path):
+    """Convert LULC raster to a binary raster where 1 is directly connected
+    impervious LULC type and 0 is not.
+
+    Args:
+        lulc_path (str): path to a LULC raster
+        is_connected (dict): dictionary mapping each LULC code in the LULC 
+            raster to a boolean value, where True means the LULC type is a 
+            directly-connected impervious surface
+        output_path (str): path to write out the binary raster
+
+    Returns:
+        None
     """
     def connected_op(lulc_array):
         is_connected_array = numpy.full(lulc_array.shape, NODATA)
@@ -422,27 +433,30 @@ def calculate_connected_lulc(lulc_path, is_connected_lookup, output_path):
             lucode_mask = (lulc_array == lucode)
             is_connected_array[lucode_mask] = lulc_connected_lookup[lucode]
         return is_connected_array
+
     pygeoprocessing.raster_calculator(
         [(lulc_path, 1)], connected_op, output_path, gdal.GDT_Float32, NODATA)
 
 
-def road_centerlines(centerlines_path):
+def distance_to_road_centerlines(raster_path, centerlines_path):
+    """Calculate the distance from each pixel centerpoint to the nearest 
+    road centerline.
 
+    Args:
+        centerlines_path (str): path to a linestring vector of road centerlines
+        raster_path (str): path to a raster to calculate distances for. Note the
+            pixel values aren't used; only the raster dimensions, origin, and 
+            pixel size are relevant for this operation.
+        output_path (str): path to write out the distance raster. This is a
+            raster of the same dimensions, pixel size, and coordinate system 
+            as ``raster_path``, where each pixel value is the distance from 
+            that pixel's centerpoint to the nearest road centerline. Distances 
+            are in the same unit as the raster coordinate system.
 
-    vector = gdal.OpenEx(centerlines_path)
-    layer = aggregate_vector.GetLayer()
-    for geometry in layer:
-        ref = geometry.GetGeometryRef()
-        assert ref.GetGeometryName() == 'LINESTRING'
-        points = ref.GetPoints()  # a list of (x, y) points
-        x1, y1 = points[0]
-        for point in points[1:]:
-            x2, y2 = point
-            line_op(x1, y1, x2, y2)
-            x1, y1 = x2, y2
-
-
-    def line_op(x_coords, y_coords, x1, y1, x2, y2):
+    Returns:
+        None
+    """
+    def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
         """Find the minimum distance from each array point to a line segment.
 
         Args:
@@ -505,27 +519,73 @@ def road_centerlines(centerlines_path):
         distance_to_endpoint_2 = numpy.hypot((x_coords - x2), (y_coords - y2))
         distance_array[~within_bounds] = numpy.min(
             distance_to_endpoint_1, distance_to_endpoint_2)
-
-        # return a boolean array showing which points are within the radius
-        return (distance_array <= radius)
+        return distance_array
 
 
-def make_coordinate_arrays(raster_path):
+    # open the vector and iterate over the linestrings
+    vector = gdal.OpenEx(centerlines_path)
+    layer = aggregate_vector.GetLayer()
+
+    # iterate over each pair of memory-block-sized coordinate arrays
+    for x_coords, y_coords in make_coordinate_arrays(raster_path):
+        # iterate over each linestring feature
+        for geometry in layer:
+            ref = geometry.GetGeometryRef()
+            assert ref.GetGeometryName() == 'LINESTRING'
+
+            # it's easiest to work with one line segment at a time
+            # iterate over each pair of points (each segment) in the linestring
+            points = ref.GetPoints()  # a list of (x, y) points
+
+            x1, y1 = points[0]
+            x2, y2 = points[1]
+            # calculate distance from each pixel to the line segment
+            min_distance = line_distance_op(x1, y1, x2, y2)
+            
+            for point in points[2:]:
+                # move to the next pair of points
+                x1, y1 = x2, y2
+                x2, y2 = point
+                segment_distance = line_distance_op(x1, y1, x2, y2)
+                min_distance_array = numpy.min(min_distance, segment_distance)
+
+
+
+                
+
+
+def make_coordinate_arrays(raster_path, x_output_path, y_output_path):
     """Make coordinate arrays where each element is the coordinate of the
     centerpoint of a pixel in the raster coordinate system.
 
     Args:
-        raster_path (string): raster to generate coordinates for
+        raster_path (str): raster to generate coordinates for
+        x_output_path (str): raster path to write out x coordinates
+        y_output_path (str): raster path to write out y coordinates
 
-    Yields:
-        list[tuple(numpy.ndarray, numpy.ndarray)]: For each memory block,
-            a pair of 2D arrays. The first is x coords, the second is y coords.
+    Returns:
+        None
     """
     raster_info = pygeoprocessing.get_raster_info(raster_path)
     pixel_size_x, pixel_size_y = raster_info['pixel_size']
+    n_cols, n_rows = raster_info['raster_size']
     x_origin = raster_info['geotransform'][0]
     y_origin = raster_info['geotransform'][3]
 
+    # create the output rasters
+    raster_driver = gdal.GetDriverByName('GTIFF')
+    x_raster = raster_driver.Create(
+        x_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
+        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS)
+    y_raster = raster_driver.Create(
+        x_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
+        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS)
+
+    x_band, y_band = x_raster.GetRasterBand(1), y_raster.GetRasterBand(1)
+    
+
+    # can't use raster_calculator here because we need the block offset info
+    # calculate coords for each block and write them to the output rasters
     for data, array in pygeoprocessing.iterblocks((raster_path, 1)):
         y_coords, x_coords = numpy.indices(array.shape)
 
@@ -534,14 +594,14 @@ def make_coordinate_arrays(raster_path):
             (pixel_size_x / 2) +  # center the point on the pixel
             (data['xoff'] * pixel_size_x) +   # the offset of this block relative to the raster
             x_origin)  # the raster's offset relative to the coordinate system
-
         y_coords = (
             (y_coords * pixel_size_y) + 
             (pixel_size_y / 2) +
             (data['yoff'] * pixel_size_y) +
             y_origin)
 
-        yield x_coords, y_coords
+        x_band.WriteArray(x_coords, xoff=data['xoff'], yoff=data['yoff'])
+        y_band.WriteArray(y_coords, xoff=data['xoff'], yoff=data['yoff'])
 
 
 
