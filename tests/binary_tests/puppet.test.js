@@ -147,8 +147,8 @@ test('Run a real invest model', async () => {
   const cancelButton = await findByText(doc, 'Cancel Run');
   await cancelButton.click();
   await waitFor(async () => {
-    expect(await findByText(doc, 'Run Canceled')).toBeInTheDocument();
-    expect(await findByText(doc, 'Open Workspace')).toBeInTheDocument();
+    expect(await findByText(doc, 'Run Canceled'));
+    expect(await findByText(doc, 'Open Workspace'));
   });
 }, 50000); // 10x default timeout: sometimes expires in GHA
 
