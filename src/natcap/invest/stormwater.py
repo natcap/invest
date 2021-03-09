@@ -444,39 +444,29 @@ def road_centerlines(centerlines_path):
 
 
     def line_op(x_coords, y_coords, x1, y1, x2, y2):
+        """Find the minimum distance from each array point to a line segment.
+
+        Args:
+            x_coords (numpy.ndarray): a 2D array where each element is the
+                x-coordinate of a point in the same coordinate system as the
+                line endpoints
+            y_coords (numpy.ndarray): a 2D array where each element is the
+                y-coordinate of a point in the same coordinate system as the
+                line endpoints
+            x1 (float): the x coord of the first endpoint of the line segment
+            y1 (float): the y coord of the first endpoint of the line segment
+            x2 (float): the x coord of the second endpoint of the line segment
+            y2 (float): the y coord of the second endpoint of the line segment
+
+        Returns:
+            numpy.ndarray with the same shape as x_coords and y_coords. The
+            value of an element at [a, b] is the minimum distance from the
+            point (x_coords[a, b], y_coords[a, b]) to the line segment from 
+            (x1, y1) to (x2, y2). 
+        """
 
         output_array = numpy.full(x_coords.shape, NODATA)
         distance_array = numpy.full(x_coords.shape, NODATA)
-
-        # solve for the line connecting the point (x1, y1) to (x2, y2)
-        slope = (y2 - y1) / (x2 - x1)
-        intercept = y1 - slope * x1
-
-        perpendicular_slope = -1 / slope
-
-
-        for (a, b) in array:
-            perpendicular_intercept = b - perpendicular_slope * a
-
-            x_intersection = (perpendicular_intercept - intercept) / (slope - perpendicular_slope)
-
-            # if there is a perpendicular line from the point to the segment, 
-            # then the shortest distance is from the point to the intersection.
-            if x_intersection >= min(x1, x2) and x_intersection <= max(x1, x2):
-                # y = mx + b
-                y_intersection = slope * x_intersection + intercept
-                distance = numpy.hypot(x_intersection, y_intersection)
-
-            # if there isn't a perpendicular line from the point to the segment,
-            # then the shortest distance to the segment is the minimum of
-            # the distances from the point to each segment endpoint.
-            else:
-                distance = min(
-                    numpy.hypot((a - x1), (b - y1)), 
-                    numpy.hypot((a - x2), (b - x2))
-                )
-            if distance <= radius:
-                output_array[a, b] = 1
 
         # distance from a point to a line segment (https://math.stackexchange.com/questions/2248617/shortest-distance-between-a-point-and-a-line-segment)
         # given a point (a, b) and a line segment from (x1, y1) to (x2, y2):
@@ -487,15 +477,26 @@ def road_centerlines(centerlines_path):
         # (b) if it doesn't intersect the line segment, then the distance is
         #     the lesser of the two distances: (a, b) -> (x1, y1) or
         #     (a, b) to (x2, y2) (this is finding the nearest endpoint)
+
+        # solve for the line segment connecting the point (x1, y1) to (x2, y2)
+        slope = (y2 - y1) / (x2 - x1)
+        intercept = y1 - slope * x1
+
+        # the line perpendicular the line segment and passing thru each point
+        perpendicular_slope = -1 / slope  # slope is the same for each line
+        # a different intercept for each (x, y) pair
         perpendicular_intercepts = y_coords - perpendicular_slope * x_coords
 
+        # for each (x, y) pair, the x-coordinate of the intersection of 
+        # the point's perpendicular line and the original line (assuming an infinite line)
         x_intersections = (perpendicular_intercepts - intercept) / (slope - perpendicular_slope)
 
-        # determine which points satisfy case (a) above
-        within_range = (x_intersections >= min(x1, x2) & x_intersection <= max(x1, x2))
+        # determine which points satisfy case (a) above: 
+        # their intersection is within the bounds of the line segment
+        within_bounds = (x_intersections >= min(x1, x2) & x_intersection <= max(x1, x2))
         # calculate their distance as the distance from (a, b) 
         # to the intersection point
-        distance_array[within_range] = numpy.hypot(
+        distance_array[within_bounds] = numpy.hypot(
             x_intersections - a, 
             (slope * x_intersections) + intercept - b
         )
@@ -503,8 +504,8 @@ def road_centerlines(centerlines_path):
         # for the points in case (b) above, find the minimum endpoint distance
         distance_to_endpoint_1 = numpy.hypot((x_coords - x1), (y_coords - y1))
         distance_to_endpoint_2 = numpy.hypot((x_coords - x2), (y_coords - y2))
-
-        distance_array[~within_range] = numpy.min(distance_to_endpoint_1, distance_to_endpoint_2)
+        distance_array[~within_bounds] = numpy.min(
+            distance_to_endpoint_1, distance_to_endpoint_2)
 
         # return a boolean array showing which points are within the radius
         return (distance_array <= radius)
@@ -542,9 +543,6 @@ def make_coordinate_arrays(raster_path):
             y_origin)
 
         yield (x_coords, y_coords)
-
-
-
 
 
 
