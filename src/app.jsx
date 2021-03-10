@@ -91,8 +91,8 @@ export default class App extends React.Component {
     const globalDefaultSettings = getDefaultSettings();
 
     try {
-      for (const setting in globalDefaultSettings.keys()) {
-        const value = investSettingsStore.getItem(setting);
+      for (const [setting, _val] of Object.entries(globalDefaultSettings)) {
+        const value = await investSettingsStore.getItem(setting);
         if (!value) {
           throw new Error('Value not defined or null, use defaults.');
         }
