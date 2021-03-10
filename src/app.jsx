@@ -23,31 +23,41 @@ import { dragOverHandlerNone } from './utils';
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const investSettingsStore = localforage.createInstance({
-  name: "InvestSettings"
+  name: 'InvestSettings',
 });
 
-/** Getter function for global default settings. */
+/** Getter function for global default settings.
+ *
+ * @returns {object} to destructure into two args:
+ *     {String} nWorkers - TaskGraph number of workers
+ *     {String} loggginLevel - InVEST model logging level
+ */
 function  getDefaultSettings() {
   const defaultSettings = {
     nWorkers: '-1',
     loggingLevel: 'INFO',
-  }
+  };
   return defaultSettings;
 }
 
+/** Helper function for testing purposes
+ *
+ * @returns {object} localforage store for invest settings
+ */
 function getSettingsStore() {
-  let postSettings = { ...investSettingsStore};
+  const postSettings = { ...investSettingsStore };
   return postSettings;
 }
 
+/** Helper function for testing purposes */
 function clearSettingsStore() {
   investSettingsStore.clear();
 }
 
 export const testables = {
-  getSettingsStore:getSettingsStore,
-  clearSettingsStore:clearSettingsStore
-}
+  getSettingsStore: getSettingsStore,
+  clearSettingsStore: clearSettingsStore,
+};
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -81,10 +91,10 @@ export default class App extends React.Component {
     const globalDefaultSettings = getDefaultSettings();
 
     try {
-      for (const setting in globalDefaultSettings) {
-        let value = await investSettingsStore.getItem(setting);
+      for (const [setting] of Object.entries(globalDefaultSettings)) {
+        const value = investSettingsStore.getItem(setting);
         if (!value) {
-          throw 'Value not defined or null, use defaults.';
+          throw new Error('Value not defined or null, use defaults.');
         }
         investSettings[setting] = value;
       }
@@ -110,7 +120,6 @@ export default class App extends React.Component {
     );
   }
 
-
   saveSettings(settings) {
     this.setState({
       investSettings: settings,
@@ -119,11 +128,11 @@ export default class App extends React.Component {
     // Using ``settings`` instead of ``this.state.investSettings`` because
     // setState can be asynchronous.
     try {
-      for (const setting in settings) {
+      for (const [setting] of Object.entries(settings)) {
         investSettingsStore.setItem(setting, settings[setting]);
       }
     } catch (err) {
-      console.error(`Error saving settings: ${err}`);
+      logger.error(`Error saving settings: ${err}`);
     }
   }
 
@@ -171,7 +180,7 @@ export default class App extends React.Component {
     }
     this.switchTabs(switchTo);
     this.setState({
-      openJobs: openJobs
+      openJobs: openJobs,
     });
   }
 
@@ -244,10 +253,11 @@ export default class App extends React.Component {
       <TabContainer activeKey={activeTab}>
         <Navbar onDragOver={dragOverHandlerNone}>
           <Navbar.Brand onDragOver={dragOverHandlerNone}>
-            <Nav.Link 
-              onSelect={this.switchTabs} 
+            <Nav.Link
+              onSelect={this.switchTabs}
               eventKey="home"
-              onDragOver={dragOverHandlerNone}>
+              onDragOver={dragOverHandlerNone}
+            >
               InVEST
             </Nav.Link>
           </Navbar.Brand>
