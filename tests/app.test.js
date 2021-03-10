@@ -391,7 +391,7 @@ describe('InVEST global settings: dialog interactions', () => {
     fireEvent.click(getByText('Save Changes'));
     // Check values in the investSettingsStore
     const investSettingsStore = testables.getSettingsStore();
-    expect(investSettingsStore.store['nWorkers']).toBe('2');
+    expect(investSettingsStore.store.nWorkers).toBe('2');
     expect(investSettingsStore.store.loggingLevel).toBe('DEBUG');
   });
 

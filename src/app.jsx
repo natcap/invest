@@ -91,7 +91,7 @@ export default class App extends React.Component {
     const globalDefaultSettings = getDefaultSettings();
 
     try {
-      for (const [setting] of Object.entries(globalDefaultSettings)) {
+      for (const setting in globalDefaultSettings.keys()) {
         const value = investSettingsStore.getItem(setting);
         if (!value) {
           throw new Error('Value not defined or null, use defaults.');
@@ -128,8 +128,8 @@ export default class App extends React.Component {
     // Using ``settings`` instead of ``this.state.investSettings`` because
     // setState can be asynchronous.
     try {
-      for (const [setting] of Object.entries(settings)) {
-        investSettingsStore.setItem(setting, settings[setting]);
+      for (const [setting, value] of Object.entries(settings)) {
+        investSettingsStore.setItem(setting, value);
       }
     } catch (err) {
       logger.error(`Error saving settings: ${err}`);
