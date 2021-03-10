@@ -623,6 +623,69 @@ def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
 
 
 
+def adjust_op(retention_ratio_array, impervious_array, distance_array, 
+        search_kernel, radius):
+    """Apply the retention ratio adjustment algorithm to an array. This is
+    meant to be used with raster_calculator.
+
+    Args:
+        retention_ratio_array (numpy.ndarray): 2D array of stormwater
+            retention ratios
+        impervious_array (numpy.ndarray): 2D binary array of the same shape as
+            ``retention_ratio_array``. 1 = directly connected impervious LULC.
+        distance_array (numpy.ndarray): 2D array of the same shape as
+            ``retention_ratio_array``. Each pixel value is the distance from 
+            that pixel's centerpoint to the nearest road centerline.
+        search_kernel (numpy.ndarray): 2D binary array. Pixels labeled 1 are
+            included in the adjustment operation, pixels labeled 0 are not.
+        radius (float): Distance around each pixel centerpoint to consider.
+
+    Returns:
+        2D numpy array of adjusted retention ratios. Has the same shape as 
+        ``retention_ratio_array``.
+    """
+    # total # of pixels within the search kernel that are impervious LULC
+    # kernels extending beyond the array edge are padded with zeros
+    convolved = scipy.signal.convolve(impervious_array, search_kernel, 
+        mode='same')  # output has same shape as input array
+    # boolean array where 1 = pixel is within radius of impervious LULC
+    is_near_impervious_lulc = (convolved > 0)
+    is_near_road = (distance_array <= radius)
+    is_connected = is_near_impervious_lulc | is_near_road
+
+    # array where each value is the number of valid values within the
+    # search kernel. 
+    # - for every kernel that doesn't extend past the edge of the original 
+    #   array, this is search_kernel.size
+    # - for kernels that extend past the edge, this is the number of 
+    #   elements that are within the original array
+    n_values_array = scipy.ndimage.convolve(
+        numpy.ones(retention_ratio_array.shape), 
+        search_kernel, 
+        mode='constant', 
+        cval=0)
+
+    # array where each pixel is averaged with its neighboring pixels within
+    # the search radius. 
+    averaged_ratio_array = (
+        scipy.ndimage.convolve(
+            retention_ratio_array, 
+            search_kernel,
+            mode='constant',
+            cval=0
+        ) / n_values_array)
+
+    # adjustment factor:
+    # - 0 if any of the nearby pixels are impervious/connected;
+    # - average of nearby pixels, otherwise
+    adjustment_factor_array = averaged_ratio_array * ~is_connected
+
+    # equation 2-4
+    adjusted_ratio_array = (retention_ratio_array + 
+        (1 - retention_ratio_array) * adjustment_factor_array)
+
+    return adjusted_ratio_array
+
 
 def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path, 
         centerline_distance_path, radius, output_path):
@@ -665,56 +728,12 @@ def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path,
     # center pixel's centerpoint
     search_kernel = numpy.array(hypotenuse < radius, dtype=numpy.uint8)
 
-
-    def adjust_op(retention_ratio_array, impervious_array, distance_array):
-        # total # of pixels within the search kernel that are impervious LULC
-        # kernels extending beyond the array edge are padded with zeros
-        convolved = scipy.signal.convolve(impervious_array, search_kernel, 
-            mode='same')  # output has same shape as input array
-        print(impervious_array.shape, convolved.shape)
-        # boolean array where 1 = pixel is within radius of impervious LULC
-        is_near_impervious_lulc = (convolved > 0)
-        is_near_road = (distance_array <= radius)
-        print(is_near_impervious_lulc.shape, distance_array.shape, is_near_road.shape)
-        is_connected = is_near_impervious_lulc | is_near_road
-
-        # array where each value is the number of valid values within the
-        # search kernel. 
-        # - for every kernel that doesn't extend past the edge of the original 
-        #   array, this is search_kernel.size
-        # - for kernels that extend past the edge, this is the number of 
-        #   elements that are within the original array
-        n_values_array = scipy.ndimage.convolve(
-            numpy.ones(retention_ratio_array.shape), 
-            search_kernel, 
-            mode='constant', 
-            cval=0)
-
-        # array where each pixel is averaged with its neighboring pixels within
-        # the search radius. 
-        averaged_ratio_array = (
-            scipy.ndimage.convolve(
-                retention_ratio_array, 
-                search_kernel,
-                mode='constant',
-                cval=0
-            ) / n_values_array)
-
-        # adjustment factor:
-        # - 0 if any of the nearby pixels are impervious/connected;
-        # - average of nearby pixels, otherwise
-        adjustment_factor_array = averaged_ratio_array * ~is_connected
-
-        # equation 2-4
-        adjusted_ratio_array = (retention_ratio_array + 
-            (1 - retention_ratio_array) * adjustment_factor_array)
-
-        return adjusted_ratio_array
-
     pygeoprocessing.raster_calculator(
         [(retention_ratio_path, 1), 
          (connected_path, 1), 
-         (centerline_distance_path, 1)
+         (centerline_distance_path, 1),
+         search_kernel,
+         radius
         ], adjust_op, output_path, gdal.GDT_Float32, NODATA)
 
 

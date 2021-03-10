@@ -165,32 +165,29 @@ class StormwaterTests(unittest.TestCase):
                     f'values: {avoided_load}, {expected_avoided_load}')
 
 
-    def test_make_coordinate_arrays(self):
+    def test_make_coordinate_rasters(self):
         from natcap.invest import stormwater
 
         # set up an array (values don't matter) and save as raster
         array = numpy.zeros((512, 512), dtype=numpy.int8)
         pixel_size = (10, -10)
         origin = (15100, 7000)
-        raster_path = os.path.join(self.workspace_dir, 'coord_array.tif')
+        raster_path = os.path.join(self.workspace_dir, 'input_array.tif')
+        # set up an arbitrary spatial reference
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3857)
         projection_wkt = srs.ExportToWkt()
         pygeoprocessing.numpy_array_to_raster(
             array, -1, pixel_size, origin, projection_wkt, raster_path)
 
-
+        x_coord_path = os.path.join(self.workspace_dir, 'x_coords.tif')
+        y_coord_path = os.path.join(self.workspace_dir, 'y_coords.tif')
         
-        # make x- and y- coordinate arrays from the raster
-        coord_arrays = list(stormwater.make_coordinate_arrays(raster_path))
-        # tile the blocks back together into one array
-        # assuming that iterblocks will make 4 256x256 blocks
-        x_coords = numpy.block([
-            [coord_arrays[0][0], coord_arrays[1][0]],
-            [coord_arrays[2][0], coord_arrays[3][0]]])
-        y_coords = numpy.block([
-            [coord_arrays[0][1], coord_arrays[1][1]],
-            [coord_arrays[2][1], coord_arrays[3][1]]])
+        # make x- and y- coordinate rasters from the input raster and open them
+        stormwater.make_coordinate_rasters(raster_path, 
+            x_coord_path, y_coord_path)
+        x_coords = pygeoprocessing.raster_to_numpy_array(x_coord_path)
+        y_coords = pygeoprocessing.raster_to_numpy_array(y_coord_path)
 
         # coords should start at the raster origin plus 1/2 a pixel
         x_expected = origin[0] + pixel_size[0] / 2
@@ -214,6 +211,60 @@ class StormwaterTests(unittest.TestCase):
         for col in y_coords.T:
             self.assertTrue(numpy.array_equal(col, first_y_coords_col))
 
+
+
+    def test_adjust_op(self):
+        from natcap.invest import stormwater
+
+        retention_ratio_array = numpy.array([
+            [0.6, 0.4, 0.4, 0.2, 0.2],
+            [0.6, 0.4, 0.4, 0.2, 0.2],
+            [0.6, 0.4, 0.4, 0.2, 0.2],
+            [0.6, 0.4, 0.4, 0.2, 0.2],
+            [0.6, 0.4, 0.4, 0.2, 0.2]
+        ])
+        impervious_array = numpy.array([
+            [1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1]
+        ])
+        distance_array = numpy.array([
+            [10, 10, 10, 10, 10],
+            [20, 20, 20, 20, 20],
+            [30, 30, 30, 30, 30],
+            [40, 40, 40, 40, 40],
+            [50, 50, 50, 50, 50]
+        ])
+        search_kernel = numpy.array([
+            [1, 1, 1],
+            [1, 1, 1],
+            [1, 1, 1]
+        ])
+        radius = 20
+
+        # The average of the pixels within the search kernel for each pixel in 
+        # retention_ratio_array. 
+        avg_ratios = numpy.array([
+            [0.5, 14/3, 10/3, 8/3, 0.2],
+            [0.5, 14/3, 10/3, 8/3, 0.2],
+            [0.5, 14/3, 10/3, 8/3, 0.2],
+            [0.5, 14/3, 10/3, 8/3, 0.2],
+            [0.5, 14/3, 10/3, 8/3, 0.2]
+        ])
+        is_not_connected = ~(impervious_array | (distance_array <= radius))
+
+        # C_ij is 0 if pixel (i, j) is not connected; 
+        # average of surrounding pixels otherwises
+        adjustment_factors = avg_ratios * is_not_connected
+        # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
+        expected_adjusted = (retention_ratio_array + 
+            (1 - retention_ratio_array) * adjustment_factors)
+        actual_adjusted = stormwater.adjust_op(retention_ratio_array, 
+            impervious_array, distance_array, search_kernel, radius)
+        self.assertTrue(numpy.allclose(expected_adjusted, actual_adjusted), 
+            f'Expected:\n{expected_adjusted}\nActual:\n{actual_adjusted}')
 
 
 
