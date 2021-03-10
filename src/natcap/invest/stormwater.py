@@ -5,6 +5,8 @@ import numpy
 import os
 from osgeo import gdal, ogr
 import pygeoprocessing
+import scipy.ndimage
+import scipy.signal
 import taskgraph
 
 from . import validation
@@ -145,6 +147,8 @@ def execute(args):
         'infiltration_volume_path': os.path.join(output_dir, f'infiltration_volume{suffix}.tif'),
         'retention_value_path': os.path.join(output_dir, f'retention_value{suffix}.tif'),
         'aggregate_data_path': os.path.join(output_dir, f'aggregate{suffix}.gpkg'),
+        'connected_lulc_path': os.path.join(intermediate_dir, f'is_connected_lulc{suffix}.tif'),
+        'adjusted_retention_ratio_path': os.path.join(intermediate_dir, f'adjusted_retention_ratio{suffix}.tif'),
         'x_coords_path': os.path.join(intermediate_dir, f'x_coords{suffix}.tif'),
         'y_coords_path': os.path.join(intermediate_dir, f'y_coords{suffix}.tif'),
         'road_distance_path': os.path.join(intermediate_dir, f'road_distance{suffix}.tif')
@@ -216,11 +220,12 @@ def execute(args):
     if args['adjust_retention_ratios']:
         is_connected_lookup = {lucode: row['is_connected'] for lucode, row in biophysical_dict.items()}
         connected_lulc_task = task_graph.add_task(
-            func=calculate_connected_lulc_raster,
-            args=(args['lulc_path'], is_connected_lookup, 
+            func=calculate_connected_lulc,
+            args=(FILES['lulc_aligned_path'], is_connected_lookup, 
                 FILES['connected_lulc_path']),
             target_path_list=[FILES['connected_lulc_path']],
-            task_name='calculate binary connected lulc raster'
+            task_name='calculate binary connected lulc raster',
+            dependent_task_list=[align_task]
         )
 
         coordinate_rasters_task = task_graph.add_task(
@@ -228,29 +233,37 @@ def execute(args):
             args=(FILES['retention_ratio_path'], 
                 FILES['x_coords_path'], FILES['y_coords_path']),
             target_path_list=[FILES['x_coords_path'], FILES['y_coords_path']],
-            task_name='make coordinate rasters'
+            task_name='make coordinate rasters',
+            dependent_task_list=[retention_ratio_task]
         )
 
         distance_task = task_graph.add_task(
             func=distance_to_road_centerlines,
-            args=(FILES['retention_ratio_path'], 
+            args=(FILES['x_coords_path'], FILES['y_coords_path'],
                 args['road_centerlines_path'], FILES['road_distance_path']),
             target_path_list=[FILES['road_distance_path']],
-            task_name='calculate pixel distance to roads'
+            task_name='calculate pixel distance to roads',
+            dependent_task_list=[coordinate_rasters_task]
         )
 
         adjust_retention_ratio_task = task_graph.add_task(
-            func=adjust_stormwater_retention_ratio,
+            func=adjust_stormwater_retention_ratios,
             args=(
                 FILES['retention_ratio_path'],
-                args['road_centerlines_path'],
+                FILES['connected_lulc_path'],
+                FILES['road_distance_path'],
+                args['retention_radius'],
                 FILES['adjusted_retention_ratio_path']),
             target_path_list=[FILES['adjusted_retention_ratio_path']],
-            task_name='adjust stormwater retention ratio'
+            task_name='adjust stormwater retention ratio',
+            dependent_task_list=[
+                retention_ratio_task, connected_lulc_task, distance_task]
         )
         final_retention_ratio_path = FILES['adjusted_retention_ratio_path']
+        final_retention_ratio_task = adjust_retention_ratio_task
     else:
         final_retention_ratio_path = FILES['retention_ratio_path']
+        final_retention_ratio_task = retention_ratio_task
 
     retention_volume_task = task_graph.add_task(
         func=calculate_stormwater_volume,
@@ -259,7 +272,7 @@ def execute(args):
             FILES['precipitation_aligned_path'],
             FILES['retention_volume_path']),
         target_path_list=[FILES['retention_volume_path']],
-        dependent_task_list=[align_task, retention_ratio_task],
+        dependent_task_list=[align_task, final_retention_ratio_task],
         task_name='calculate stormwater retention volume'
     )
 
@@ -426,24 +439,26 @@ def calculate_connected_lulc(lulc_path, is_connected, output_path):
     """
     def connected_op(lulc_array):
         is_connected_array = numpy.full(lulc_array.shape, NODATA)
-        for lucode in is_connected_lookup:
+        for lucode in is_connected:
             lucode_mask = (lulc_array == lucode)
-            is_connected_array[lucode_mask] = lulc_connected_lookup[lucode]
+            is_connected_array[lucode_mask] = is_connected[lucode]
         return is_connected_array
 
     pygeoprocessing.raster_calculator(
         [(lulc_path, 1)], connected_op, output_path, gdal.GDT_Float32, NODATA)
 
 
-def distance_to_road_centerlines(raster_path, centerlines_path, output_path):
+def distance_to_road_centerlines(x_coords_path, y_coords_path, 
+        centerlines_path, output_path):
     """Calculate the distance from each pixel centerpoint to the nearest 
     road centerline.
 
     Args:
+        x_coords_path (str): path to a raster where each pixel value is the x 
+            coordinate of that pixel in the raster coordinate system
+        y_coords_path (str): path to a raster where each pixel value is the y
+            coordinate of that pixel in the raster coordinate system
         centerlines_path (str): path to a linestring vector of road centerlines
-        raster_path (str): path to a raster to calculate distances for. Note the
-            pixel values aren't used; only the raster dimensions, origin, and 
-            pixel size are relevant for this operation.
         output_path (str): path to write out the distance raster. This is a
             raster of the same dimensions, pixel size, and coordinate system 
             as ``raster_path``, where each pixel value is the distance from 
@@ -503,29 +518,31 @@ def distance_to_road_centerlines(raster_path, centerlines_path, output_path):
 
         # determine which points satisfy case (a) above: 
         # their intersection is within the bounds of the line segment
-        within_bounds = (x_intersections >= min(x1, x2) & x_intersection <= max(x1, x2))
-        # calculate their distance as the distance from (a, b) 
+        within_bounds = (
+            (x_intersections >= min(x1, x2)) & 
+            (x_intersections <= max(x1, x2)))
+        # calculate their distance as the distance from each (x, y) point 
         # to the intersection point
         distance_array[within_bounds] = numpy.hypot(
-            x_intersections - a, 
-            (slope * x_intersections) + intercept - b
+            x_intersections[within_bounds] - x_coords[within_bounds], 
+            (slope * x_intersections[within_bounds]) + intercept - y_coords[within_bounds]
         )
-
+        print(within_bounds, within_bounds.dtype)
         # for the points in case (b) above, find the minimum endpoint distance
         distance_to_endpoint_1 = numpy.hypot((x_coords - x1), (y_coords - y1))
         distance_to_endpoint_2 = numpy.hypot((x_coords - x2), (y_coords - y2))
-        distance_array[~within_bounds] = numpy.min(
-            distance_to_endpoint_1, distance_to_endpoint_2)
+        distance_array[~within_bounds] = numpy.minimum(
+            distance_to_endpoint_1, distance_to_endpoint_2)[~within_bounds]
         return distance_array
 
 
     # open the vector and iterate over the linestrings
     vector = gdal.OpenEx(centerlines_path)
-    layer = aggregate_vector.GetLayer()
+    layer = vector.GetLayer()
 
-    # iterate over each pair of memory-block-sized coordinate arrays
-    for x_coords, y_coords in make_coordinate_arrays(raster_path):
+    def linestring_geometry_op(x_coords, y_coords):
         # iterate over each linestring feature
+        min_distance = None
         for geometry in layer:
             ref = geometry.GetGeometryRef()
             assert ref.GetGeometryName() == 'LINESTRING'
@@ -537,14 +554,22 @@ def distance_to_road_centerlines(raster_path, centerlines_path, output_path):
             x1, y1 = points[0]
             x2, y2 = points[1]
             # calculate distance from each pixel to the line segment
-            min_distance = line_distance_op(x1, y1, x2, y2)
+            if min_distance is None:
+                min_distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
             
             for point in points[2:]:
                 # move to the next pair of points
                 x1, y1 = x2, y2
                 x2, y2 = point
-                segment_distance = line_distance_op(x1, y1, x2, y2)
-                min_distance_array = numpy.min(min_distance, segment_distance)
+                segment_distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
+                min_distance = numpy.min(min_distance, segment_distance)
+        return min_distance
+
+
+    pygeoprocessing.raster_calculator(
+        [(x_coords_path, 1), (y_coords_path, 1)], 
+        linestring_geometry_op, output_path, gdal.GDT_Float32, NODATA)
+
 
 
 
@@ -627,14 +652,14 @@ def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path,
     # arrays of the column index and row index of each pixel
     col_indices, row_indices = numpy.indices(search_kernel_shape)
     # adjust them so that (0, 0) is the center pixel
-    col_index -= radius
-    row_index -= radius
+    col_indices -= radius
+    row_indices -= radius
 
     # This could be expanded to flesh out the proportion of a pixel in the 
     # mask if needed, but for this convolution demo, not needed.
 
-    # hypotenuse_i = sqrt(col_index_i**2 + row_index_i**2) for each pixel i
-    hypotenuse = numpy.hypot(col_index, row_index)
+    # hypotenuse_i = sqrt(col_indices_i**2 + row_indices_i**2) for each pixel i
+    hypotenuse = numpy.hypot(col_indices, row_indices)
 
     # boolean kernel where 1=pixel centerpoint is within the radius of the 
     # center pixel's centerpoint
@@ -643,11 +668,14 @@ def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path,
 
     def adjust_op(retention_ratio_array, impervious_array, distance_array):
         # total # of pixels within the search kernel that are impervious LULC
-        convolved = scipy.signal.convolve(impervious_array, search_kernel)
-
+        # kernels extending beyond the array edge are padded with zeros
+        convolved = scipy.signal.convolve(impervious_array, search_kernel, 
+            mode='same')  # output has same shape as input array
+        print(impervious_array.shape, convolved.shape)
         # boolean array where 1 = pixel is within radius of impervious LULC
         is_near_impervious_lulc = (convolved > 0)
         is_near_road = (distance_array <= radius)
+        print(is_near_impervious_lulc.shape, distance_array.shape, is_near_road.shape)
         is_connected = is_near_impervious_lulc | is_near_road
 
         # array where each value is the number of valid values within the
@@ -687,7 +715,7 @@ def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path,
         [(retention_ratio_path, 1), 
          (connected_path, 1), 
          (centerline_distance_path, 1)
-        ], connected_op, output_path, gdal.GDT_Float32, NODATA)
+        ], adjust_op, output_path, gdal.GDT_Float32, NODATA)
 
 
 def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
