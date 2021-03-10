@@ -224,40 +224,60 @@ class StormwaterTests(unittest.TestCase):
             [0.6, 0.4, 0.4, 0.2, 0.2]
         ])
         impervious_array = numpy.array([
-            [1, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0],
-            [0, 0, 1, 0, 0],
-            [0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 1]
+            [True, False, False, False, False],
+            [False, True, False, False, False],
+            [False, False, True, False, False],
+            [False, False, False, True, False],
+            [False, False, False, False, True]
         ])
         distance_array = numpy.array([
-            [10, 10, 10, 10, 10],
+            [20, 20, 20, 20, 10],
             [20, 20, 20, 20, 20],
             [30, 30, 30, 30, 30],
             [40, 40, 40, 40, 40],
             [50, 50, 50, 50, 50]
         ])
         search_kernel = numpy.array([
+            [0, 1, 0],
             [1, 1, 1],
-            [1, 1, 1],
-            [1, 1, 1]
+            [0, 1, 0]
         ])
-        radius = 20
+        # the diagonal band comes from applying the search kernel to
+        # each pixel along the diagonal where impervious_array == True
+        # the top right value is 1 because that's the only value in 
+        # distance_array that's <= the radius
+        is_connected = numpy.array([
+            [True, True, False, False, True],
+            [True, True, True, False, False],
+            [False, True, True, True, False],
+            [False, False, True, True, True],
+            [False, False, False, True, True]
+        ])
+        radius = 10
 
         # The average of the pixels within the search kernel for each pixel in 
         # retention_ratio_array. 
-        avg_ratios = numpy.array([
-            [0.5, 14/3, 10/3, 8/3, 0.2],
-            [0.5, 14/3, 10/3, 8/3, 0.2],
-            [0.5, 14/3, 10/3, 8/3, 0.2],
-            [0.5, 14/3, 10/3, 8/3, 0.2],
-            [0.5, 14/3, 10/3, 8/3, 0.2]
+        # sum of values in the search kernel / # of values in the search kernel
+        sum_kernel_values = avg_ratios = numpy.array([
+            [1.6, 1.8, 1.4, 1.0, 0.6],
+            [2.2, 2.2, 1.8, 1.2, 0.8],
+            [2.2, 2.2, 1.8, 1.2, 0.8],
+            [2.2, 2.2, 1.8, 1.2, 0.8],
+            [1.6, 1.8, 1.4, 1.2, 0.6]
         ])
-        is_not_connected = ~(impervious_array | (distance_array <= radius))
-
+        n_kernel_values = avg_ratios = numpy.array([
+            [3, 4, 4, 4, 3],
+            [4, 5, 5, 5, 4],
+            [4, 5, 5, 5, 4],
+            [4, 5, 5, 5, 4],
+            [3, 4, 4, 4, 3]
+        ])
+        avg_ratios = sum_kernel_values / n_kernel_values
+        
         # C_ij is 0 if pixel (i, j) is not connected; 
         # average of surrounding pixels otherwises
-        adjustment_factors = avg_ratios * is_not_connected
+        adjustment_factors = avg_ratios * ~is_connected
+        print(adjustment_factors)
         # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
         expected_adjusted = (retention_ratio_array + 
             (1 - retention_ratio_array) * adjustment_factors)

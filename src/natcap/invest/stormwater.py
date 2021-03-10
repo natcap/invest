@@ -652,6 +652,9 @@ def adjust_op(retention_ratio_array, impervious_array, distance_array,
     is_near_impervious_lulc = (convolved > 0)
     is_near_road = (distance_array <= radius)
     is_connected = is_near_impervious_lulc | is_near_road
+    print(is_near_impervious_lulc)
+    print(is_near_road)
+    print(is_connected)
 
     # array where each value is the number of valid values within the
     # search kernel. 
@@ -664,6 +667,7 @@ def adjust_op(retention_ratio_array, impervious_array, distance_array,
         search_kernel, 
         mode='constant', 
         cval=0)
+    print(n_values_array)
 
     # array where each pixel is averaged with its neighboring pixels within
     # the search radius. 
@@ -674,16 +678,19 @@ def adjust_op(retention_ratio_array, impervious_array, distance_array,
             mode='constant',
             cval=0
         ) / n_values_array)
-
+    print(averaged_ratio_array)
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
     # - average of nearby pixels, otherwise
     adjustment_factor_array = averaged_ratio_array * ~is_connected
+    print(~is_connected)
+    print(adjustment_factor_array)
 
     # equation 2-4
     adjusted_ratio_array = (retention_ratio_array + 
         (1 - retention_ratio_array) * adjustment_factor_array)
 
+    print(adjusted_ratio_array)
     return adjusted_ratio_array
 
 
@@ -705,8 +712,6 @@ def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path,
     Returns:
         None
     """
-    
-    radius = 2
     # the search kernel is just large enough to contain all pixels that
     # *could* be within the radius of the center pixel
     search_kernel_shape = tuple([radius*2+1]*2)
