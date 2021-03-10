@@ -61,7 +61,7 @@ export default class SettingsModal extends React.Component {
   /** Handle a click on the "Reset Defaults" button, which updates the parent's state */
   handleDefault(event) {
     event.preventDefault();
-    this.props.defaultSettings();
+    this.props.setDefaultSettings();
   }
 
   handleChange(event) {
@@ -191,7 +191,7 @@ export default class SettingsModal extends React.Component {
 
 SettingsModal.propTypes = {
   saveSettings: PropTypes.func,
-  defaultSettings: PropTypes.func,
+  setDefaultSettings: PropTypes.func,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
