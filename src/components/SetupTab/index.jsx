@@ -13,7 +13,6 @@ import {
 import { fetchValidation, saveToPython } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 
-
 /** Setup the objects that store InVEST argument values in SetupTab state.
  *
  * One object will store input form values and track if the input has been
