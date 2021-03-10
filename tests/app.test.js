@@ -13,6 +13,7 @@ import '@testing-library/jest-dom';
 
 import InvestTab from '../src/components/InvestTab';
 import App from '../src/app';
+import { testables } from '../src/app';
 import {
   getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
 } from '../src/server_requests';
@@ -284,17 +285,10 @@ describe('Display recently executed InVEST jobs', () => {
 describe('InVEST global settings: dialog interactions', () => {
   beforeEach(() => {
     getInvestModelNames.mockResolvedValue({});
-    jest.mock('electron');
-    remote.app.getPath.mockImplementation(() => path.resolve('tests/data'))
   });
   afterEach(() => {
+    testables.clearSettingsStore();
     jest.resetAllMocks();
-
-    const globalSettingsPath = 'tests/data/global-settings.json';
-    if (fs.existsSync(globalSettingsPath)) {
-      // Clean up the global-settings files
-      fs.rmSync(globalSettingsPath);
-    }
   });
   test('Set the python logging level to pass to the invest CLI', async () => {
     const DEFAULT = 'INFO';
@@ -369,7 +363,6 @@ describe('InVEST global settings: dialog interactions', () => {
     const loggingLevel = 'DEBUG';
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
     const loggingLabelText = 'Logging threshold';
-    const globalSettingsPath = 'tests/data/global-settings.json';
 
     const { getByText, getByLabelText, getByTitle } = render(
       <App investExe="foo" />
@@ -396,27 +389,19 @@ describe('InVEST global settings: dialog interactions', () => {
     });
     // The real test: values saved to global-settings
     fireEvent.click(getByText('Save Changes'));
-    // Load global-settings json file and check values
-    let fileExists = false;
-    await waitFor(() => { // the value to test is inherited through props
-      fileExists = fs.existsSync(globalSettingsPath);
-      expect(fileExists).toBeTruthy();
-    });
-    const globalSettingsJson = JSON.parse(fs.readFileSync(globalSettingsPath));
-    expect(globalSettingsJson.nWorkers === '2').toBeTruthy();
-    expect(globalSettingsJson.loggingLevel === 'DEBUG').toBeTruthy();
+    // Check values in the investSettingsStore
+    const investSettingsStore = testables.getSettingsStore();
+    expect(investSettingsStore.store['nWorkers']).toBe('2');
+    expect(investSettingsStore.store.loggingLevel).toBe('DEBUG');
   });
 
   test('Load global settings', async () => {
-    const globalSettings = {
-      nWorkers: '2',
-      loggingLevel: 'DEBUG'
+    const expectedSettings = {
+      nWorkers: '-1',
+      loggingLevel: 'INFO'
     }
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
     const loggingLabelText = 'Logging threshold';
-    const globalSettingsPath = 'tests/data/global-settings.json';
-    const globalSettingsData = JSON.stringify(globalSettings, null, 2);
-    fs.writeFileSync(globalSettingsPath, globalSettingsData);
 
     const { getByText, getByLabelText, getByTitle } = render(
       <App investExe="foo" />
@@ -426,10 +411,10 @@ describe('InVEST global settings: dialog interactions', () => {
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
-    // Test that the global-settings were loaded in from the file.
+    // Test that the global-settings were loaded in from store.
     await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(globalSettings.nWorkers);
-      expect(loggingInput).toHaveValue(globalSettings.loggingLevel);
+      expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
+      expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
     });
   });
 
@@ -497,9 +482,6 @@ describe('InVEST subprocess testing', () => {
   let mockInvestProc;
 
   beforeEach(() => {
-    jest.mock('electron');
-    remote.app.getPath.mockImplementation(() => path.resolve('tests/data'))
-    
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
@@ -762,8 +744,6 @@ describe('Tab closing and switching', () => {
     // brackets around spec.model_name turns it into a valid literal key
     const mockUISpec = { [SAMPLE_SPEC.model_name]: { order: [Object.keys(SAMPLE_SPEC.args)] } };
     jest.mock('../src/ui_config', () => mockUISpec);
-    jest.mock('electron');
-    remote.app.getPath.mockImplementation(() => path.resolve('tests/data'))
   });
 
   afterAll(async () => {
