@@ -406,26 +406,6 @@ def ratio_op(lulc_array, soil_group_array, ratio_lookup, sorted_lucodes):
     output_ratio_array = ratio_lookup[lulc_index, soil_group_index]
     return output_ratio_array
 
-    # import numpy
-    # from natcap.invest import stormwater
-    # lulc = numpy.array([
-    #     [11, 11, 11, 22],
-    #     [11, 11, 22, 22],
-    #     [11, 32, 32, 32]])
-    # soil_groups = numpy.array([
-    #     [1, 1, 1, 1],
-    #     [2, 2, 2, 2],
-    #     [3, 3, 4, 4]
-    # ])
-
-    # sorted_lucodes = [11, 22, 32]
-    # ratio_lookup = numpy.array([
-    #     [0.1, 0.1, 0.1, 0.1],
-    #     [0.2, 0.2, 0.2, 0.2],
-    #     [0.3, 0.3, 0.3, 0.3]])
-    # stormwater.ratio_op(lulc, soil_groups, ratio_lookup, sorted_lucodes)
-
-
 
 def calculate_stormwater_ratio(lulc_path, soil_group_path, 
         ratio_lookup, output_path):
@@ -446,13 +426,9 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
     Returns:
         None
     """
-
-    ratio_lookup = {
-        1: {'A': 0.1, 'B': 0.1, 'C': 0.1, 'D': 0.1},
-        2: {'A': 0.2, 'B': 0.2, 'C': 0.2, 'D': 0.2},
-        3: {'A': 0.3, 'B': 0.3, 'C': 0.3, 'D': 0.3}
-    }
-
+    # convert the nested dictionary in to a 2D array where rows are LULC codes 
+    # in sorted order and columns correspond to soil groups in order
+    # this facilitates efficiently looking up the ratio values with numpy
     sorted_lucodes = sorted(list(ratio_lookup.keys()))
     lulc_soil_group_array = numpy.array([
         [ratio_lookup[lucode][soil_group] 
@@ -466,29 +442,122 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
         ratio_op, output_path, gdal.GDT_Float32, NODATA)
 
 
-def calculate_connected_lulc(lulc_path, is_connected, output_path):
+def calculate_connected_lulc(lulc_path, impervious_lookup, output_path):
     """Convert LULC raster to a binary raster where 1 is directly connected
     impervious LULC type and 0 is not.
 
     Args:
         lulc_path (str): path to a LULC raster
-        is_connected (dict): dictionary mapping each LULC code in the LULC 
-            raster to a boolean value, where True means the LULC type is a 
-            directly-connected impervious surface
+        impervious_lookup (dict): dictionary mapping each LULC code in the 
+            LULC raster to a boolean value, where True means the LULC type 
+            is a directly-connected impervious surface
         output_path (str): path to write out the binary raster
 
     Returns:
         None
     """
+    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+    # make a list of the LULC codes in order and a list of the corresponding
+    # binary impervious values
+    sorted_lucodes = sorted(list(impervious_lookup.keys()))
+    impervious_lookup_array = numpy.array(
+        [impervious_lookup[lucode] for lucode in sorted_lucodes])
+
     def connected_op(lulc_array):
         is_connected_array = numpy.full(lulc_array.shape, NODATA)
-        for lucode in is_connected:
-            lucode_mask = (lulc_array == lucode)
-            is_connected_array[lucode_mask] = is_connected[lucode]
+        valid_mask = (lulc_array != lulc_nodata)
+        lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
+        is_connected_array[valid_mask] = (
+            impervious_lookup_array[lulc_index][valid_mask])
         return is_connected_array
 
     pygeoprocessing.raster_calculator(
         [(lulc_path, 1)], connected_op, output_path, gdal.GDT_Float32, NODATA)
+
+
+def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
+    """Find the minimum distance from each array point to a line segment.
+
+    Args:
+        x_coords (numpy.ndarray): a 2D array where each element is the
+            x-coordinate of a point in the same coordinate system as the
+            line endpoints
+        y_coords (numpy.ndarray): a 2D array where each element is the
+            y-coordinate of a point in the same coordinate system as the
+            line endpoints
+        x1 (float): the x coord of the first endpoint of the line segment
+        y1 (float): the y coord of the first endpoint of the line segment
+        x2 (float): the x coord of the second endpoint of the line segment
+            ((x2, y2) can't be identical to (x1, y1))
+        y2 (float): the y coord of the second endpoint of the line segment
+            ((x2, y2) can't be identical to (x1, y1))
+
+    Returns:
+        numpy.ndarray with the same shape as x_coords and y_coords. The
+        value of an element at [a, b] is the minimum distance from the
+        point (x_coords[a, b], y_coords[a, b]) to the line segment from 
+        (x1, y1) to (x2, y2). 
+    """
+    distance_array = numpy.full(x_coords.shape, NODATA, dtype=float)
+
+    # distance from a point to a line segment (https://math.stackexchange.com/questions/2248617/shortest-distance-between-a-point-and-a-line-segment)
+    # given a point (a, b) and a line segment from (x1, y1) to (x2, y2):
+    # draw a line that passes through (a, b) and is perpendicular to the 
+    # line segment (negative inverse slope).
+    # (a) if it intersects the line segment at a point (c, d), then the 
+    #     distance is the distance from (a, b) to (c, d).
+    # (b) if it doesn't intersect the line segment, then the distance is
+    #     the lesser of the two distances: (a, b) to (x1, y1) or
+    #     (a, b) to (x2, y2) (this is finding the nearest endpoint)
+
+    # solve for the line segment connecting the point (x1, y1) to (x2, y2)
+    # the calling function ensures that (x1, y1) and (x2, y2) are not identical
+    if x2 == x1:  # a vertical line, slope is undefined
+        x_intersections = numpy.full(x_coords.shape, x1)
+        y_intersections = y_coords
+    elif y2 == y1:  # a horizontal line, slope is 0
+        x_intersections = x_coords
+        y_intersections = numpy.full(y_coords.shape, y1)
+    else:
+        slope = (y2 - y1) / (x2 - x1)
+        intercept = y1 - slope * x1
+
+        # the line perpendicular to the line segment and passing thru each point
+        perpendicular_slope = -1 / slope  # slope is the same for each line
+        # a different intercept for each (x, y) pair
+        perpendicular_intercepts = y_coords - perpendicular_slope * x_coords
+
+        # for each (x, y) pair, the x-coordinate of the intersection of 
+        # the point's perpendicular line and the original line (assuming an infinite line)
+        x_intersections = (perpendicular_intercepts - intercept) / (slope - perpendicular_slope)
+        # y = mx + b
+        y_intersections = (slope * x_intersections) + intercept
+
+    # determine which points satisfy case (a) above: 
+    # their intersection is within the bounds of the line segment
+    print(min(x1, x2), max(x1, x2), x_intersections)
+    within_bounds = (
+        (x_intersections >= min(x1, x2)) & 
+        (x_intersections <= max(x1, x2)) &
+        (y_intersections >= min(y1, y2)) & 
+        (y_intersections <= max(y1, y2)))
+    # calculate their distance as the distance from each (x, y) point 
+    # to the intersection point
+    distance_array[within_bounds] = numpy.hypot(
+        x_intersections[within_bounds] - x_coords[within_bounds], 
+        y_intersections[within_bounds] - y_coords[within_bounds]
+    )
+    print(within_bounds, within_bounds.dtype)
+    print(distance_array)
+    # for the points in case (b) above, find the minimum endpoint distance
+    distance_to_endpoint_1 = numpy.hypot((x_coords - x1), (y_coords - y1))
+    print(distance_to_endpoint_1)
+    distance_to_endpoint_2 = numpy.hypot((x_coords - x2), (y_coords - y2))
+    print(distance_to_endpoint_2)
+    distance_array[~within_bounds] = numpy.minimum(
+        distance_to_endpoint_1, distance_to_endpoint_2)[~within_bounds]
+    print(distance_array)
+    return distance_array
 
 
 def distance_to_road_centerlines(x_coords_path, y_coords_path, 
@@ -511,102 +580,21 @@ def distance_to_road_centerlines(x_coords_path, y_coords_path,
     Returns:
         None
     """
-    def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
-        """Find the minimum distance from each array point to a line segment.
-
-        Args:
-            x_coords (numpy.ndarray): a 2D array where each element is the
-                x-coordinate of a point in the same coordinate system as the
-                line endpoints
-            y_coords (numpy.ndarray): a 2D array where each element is the
-                y-coordinate of a point in the same coordinate system as the
-                line endpoints
-            x1 (float): the x coord of the first endpoint of the line segment
-            y1 (float): the y coord of the first endpoint of the line segment
-            x2 (float): the x coord of the second endpoint of the line segment
-            y2 (float): the y coord of the second endpoint of the line segment
-
-        Returns:
-            numpy.ndarray with the same shape as x_coords and y_coords. The
-            value of an element at [a, b] is the minimum distance from the
-            point (x_coords[a, b], y_coords[a, b]) to the line segment from 
-            (x1, y1) to (x2, y2). 
-        """
-
-        output_array = numpy.full(x_coords.shape, NODATA)
-        distance_array = numpy.full(x_coords.shape, NODATA)
-
-        # distance from a point to a line segment (https://math.stackexchange.com/questions/2248617/shortest-distance-between-a-point-and-a-line-segment)
-        # given a point (a, b) and a line segment from (x1, y1) to (x2, y2):
-        # draw a line that passes through (a, b) and is perpendicular to the 
-        # line segment (negative inverse slope).
-        # (a) if it intersects the line segment at a point (c, d), then the 
-        #     distance is the distance from (a, b) to (c, d).
-        # (b) if it doesn't intersect the line segment, then the distance is
-        #     the lesser of the two distances: (a, b) -> (x1, y1) or
-        #     (a, b) to (x2, y2) (this is finding the nearest endpoint)
-
-        # solve for the line segment connecting the point (x1, y1) to (x2, y2)
-        slope = (y2 - y1) / (x2 - x1)
-        intercept = y1 - slope * x1
-
-        # the line perpendicular to the line segment and passing thru each point
-        perpendicular_slope = -1 / slope  # slope is the same for each line
-        # a different intercept for each (x, y) pair
-        perpendicular_intercepts = y_coords - perpendicular_slope * x_coords
-
-        # for each (x, y) pair, the x-coordinate of the intersection of 
-        # the point's perpendicular line and the original line (assuming an infinite line)
-        x_intersections = (perpendicular_intercepts - intercept) / (slope - perpendicular_slope)
-
-        # determine which points satisfy case (a) above: 
-        # their intersection is within the bounds of the line segment
-        within_bounds = (
-            (x_intersections >= min(x1, x2)) & 
-            (x_intersections <= max(x1, x2)))
-        # calculate their distance as the distance from each (x, y) point 
-        # to the intersection point
-        distance_array[within_bounds] = numpy.hypot(
-            x_intersections[within_bounds] - x_coords[within_bounds], 
-            (slope * x_intersections[within_bounds]) + intercept - y_coords[within_bounds]
-        )
-        print(within_bounds, within_bounds.dtype)
-        # for the points in case (b) above, find the minimum endpoint distance
-        distance_to_endpoint_1 = numpy.hypot((x_coords - x1), (y_coords - y1))
-        distance_to_endpoint_2 = numpy.hypot((x_coords - x2), (y_coords - y2))
-        distance_array[~within_bounds] = numpy.minimum(
-            distance_to_endpoint_1, distance_to_endpoint_2)[~within_bounds]
-        return distance_array
-
-
-    # open the vector and iterate over the linestrings
-    vector = gdal.OpenEx(centerlines_path)
-    layer = vector.GetLayer()
+    
 
     def linestring_geometry_op(x_coords, y_coords):
-        # iterate over each linestring feature
-        min_distance = None
-        for geometry in layer:
-            ref = geometry.GetGeometryRef()
-            assert ref.GetGeometryName() == 'LINESTRING'
 
-            # it's easiest to work with one line segment at a time
-            # iterate over each pair of points (each segment) in the linestring
-            points = ref.GetPoints()  # a list of (x, y) points
+        segment_generator = iter_linestring_segments(centerlines_path)
+        (x1, y1), (x2, y2) = next(segment_generator)
+        min_distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
 
-            x1, y1 = points[0]
-            x2, y2 = points[1]
-            # calculate distance from each pixel to the line segment
-            if min_distance is None:
-                min_distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
-            
-            for point in points[2:]:
-                # move to the next pair of points
-                x1, y1 = x2, y2
-                x2, y2 = point
-                segment_distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
-                min_distance = numpy.min(min_distance, segment_distance)
+        for (x1, y1), (x2, y2) in segment_generator:
+            if x2 == x1 and y2 == y1:
+                continue  # ignore lines with length 0
+            distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
+            min_distance = numpy.min(min_distance, distance)
         return min_distance
+
 
 
     pygeoprocessing.raster_calculator(
@@ -615,6 +603,32 @@ def distance_to_road_centerlines(x_coords_path, y_coords_path,
 
 
 
+def iter_linestring_segments(vector_path):
+    """Yield (start, end) coordinate pairs for each segment of a linestring.
+
+    Args:
+        vector_path (str): path to a linestring vector to iterate over
+
+    Yields:
+        ((x1, y1), (x2, y2)) tuples representing the start and end point of a
+        linestring segment. (x1, y1) of the nth yielded tuple equals (x2, y2)
+        of the (n-1)th yielded tuple.
+    """
+    vector = gdal.OpenEx(vector_path)
+    layer = vector.GetLayer()
+    for geometry in layer:
+        ref = geometry.GetGeometryRef()
+        assert ref.GetGeometryName() == 'LINESTRING'
+
+        points = ref.GetPoints()  # a list of (x, y) points
+        # iterate over each pair of points (each segment) in the linestring
+        x1, y1 = points[0]
+        x2, y2 = points[1]
+        for point in points[2:]:
+            yield (x1, y1), (x2, y2)
+            # move to the next pair of points
+            x1, y1 = x2, y2
+            x2, y2 = point
 
 
 def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
@@ -825,7 +839,7 @@ def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
 
 
 def calculate_avoided_pollutant_load(lulc_path, retention_volume_path, 
-        lulc_emc_lookup, output_path):
+        emc_lookup, output_path):
     """Make avoided pollutant load map from retention volumes and LULC event 
        mean concentration data.
 
@@ -834,7 +848,7 @@ def calculate_avoided_pollutant_load(lulc_path, retention_volume_path,
             EMC lookup dictionary
         retention_volume_path: (str) path to a raster of stormwater retention
             volumes in m^3
-        lulc_emc_lookup (dict): a lookup dictionary where keys are LULC codes 
+        emc_lookup (dict): a lookup dictionary where keys are LULC codes 
             and values are event mean concentration (EMC) values in mg/L for 
             the pollutant in that LULC area.
         output_path (str): path to write out the results (raster)
@@ -843,25 +857,23 @@ def calculate_avoided_pollutant_load(lulc_path, retention_volume_path,
         None
     """
     lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
-
+    sorted_lucodes = sorted(list(emc_lookup.keys()))
+    ordered_emc_array = numpy.array(
+        [emc_lookup[lucode] for lucode in sorted_lucodes])
 
     def avoided_pollutant_load_op(lulc_array, retention_volume_array):
         """Calculate array of avoided pollutant load values from arrays of 
         LULC codes and stormwater retention volumes."""
-
         load_array = numpy.full(lulc_array.shape, NODATA, dtype=float)
-
-        nodata_mask = (
+        valid_mask = (
             (lulc_array != lulc_nodata) &
             (retention_volume_array != NODATA))
 
-        for lucode in lulc_emc_lookup:
-            lucode_mask = (lulc_array == lucode)
-            # EMC for pollutant (mg/L) * 1000 (L/m^3) * 0.000001 (kg/mg) * 
-            # retention (m^3/yr) = pollutant load (kg/yr)
-            load_array[lucode_mask & nodata_mask] = (
-                lulc_emc_lookup[lucode] * 0.001 * 
-                retention_volume_array[lucode_mask & nodata_mask])
+        lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
+        # EMC for pollutant (mg/L) * 1000 (L/m^3) * 0.000001 (kg/mg) * 
+        # retention (m^3/yr) = pollutant load (kg/yr)
+        load_array[valid_mask] = (ordered_emc_array[lulc_index][valid_mask] * 
+            0.001 * retention_volume_array[valid_mask])
         return load_array
 
     # Apply avoided_pollutant_load_op to each block of the LULC and retention 
