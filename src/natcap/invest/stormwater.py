@@ -202,8 +202,7 @@ def execute(args):
 
 
     # Calculate stormwater retention ratio and volume from
-    # LULC, soil groups, biophysical table, and precipitation
-
+    # LULC, soil groups, biophysical data, and precipitation
     retention_ratio_task = task_graph.add_task(
         func=calculate_stormwater_ratio,
         args=(
@@ -279,7 +278,6 @@ def execute(args):
 
     # (Optional) Calculate stormwater infiltration ratio and volume from
     # LULC, soil groups, biophysical table, and precipitation
-
     infiltration_ratio_task = task_graph.add_task(
         func=calculate_stormwater_ratio,
         args=(
@@ -291,7 +289,6 @@ def execute(args):
         dependent_task_list=[align_task],
         task_name='calculate stormwater infiltration ratio'
     )
-
     infiltration_volume_task = task_graph.add_task(
         func=calculate_stormwater_volume,
         args=(
@@ -302,7 +299,6 @@ def execute(args):
         dependent_task_list=[align_task, infiltration_ratio_task],
         task_name='calculate stormwater retention volume'
     )
-
 
     # get all EMC columns from an arbitrary row in the dictionary
     # strip the first four characters off 'EMC_pollutant' to get pollutant name
@@ -380,6 +376,57 @@ def execute(args):
     task_graph.join()
 
 
+def ratio_op(lulc_array, soil_group_array, ratio_lookup, sorted_lucodes):
+    """Make an array of stormwater retention or infiltration ratios from 
+    arrays of LULC codes and hydrologic soil groups.
+
+    Args:
+        lulc_array (numpy.ndarray): 2D array of LULC codes
+        soil_group_array (numpy.ndarray): 2D array with the same shape as
+            ``lulc_array``. Values in {1, 2, 3, 4} corresponding to soil 
+            groups A, B, C, and D.
+        ratio_lookup (numpy.ndarray): 2D array where rows correspond to 
+            sorted LULC codes and columns correspond to soil groups
+            A, B, C, D in order. Shape: (number of lulc codes, 4)
+        sorted_lucodes (list[int]): List of LULC codes sorted from smallest 
+            to largest. These correspond to the rows of ``ratio_lookup``.
+
+    Returns:
+        2D numpy array with the same shape as ``lulc_array`` and 
+        ``soil_group_array``. Each value is the corresponding ratio for that
+        LULC code x soil group pair.
+    """
+    sorted_soil_groups = [1, 2, 3, 4]
+    # the index of each soil group in the sorted soil groups array
+    soil_group_index = numpy.digitize(soil_group_array, sorted_soil_groups, 
+        right=True)
+    # the index of each lucode in the sorted lucodes array
+    lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
+    
+    output_ratio_array = ratio_lookup[lulc_index, soil_group_index]
+    return output_ratio_array
+
+    # import numpy
+    # from natcap.invest import stormwater
+    # lulc = numpy.array([
+    #     [11, 11, 11, 22],
+    #     [11, 11, 22, 22],
+    #     [11, 32, 32, 32]])
+    # soil_groups = numpy.array([
+    #     [1, 1, 1, 1],
+    #     [2, 2, 2, 2],
+    #     [3, 3, 4, 4]
+    # ])
+
+    # sorted_lucodes = [11, 22, 32]
+    # ratio_lookup = numpy.array([
+    #     [0.1, 0.1, 0.1, 0.1],
+    #     [0.2, 0.2, 0.2, 0.2],
+    #     [0.3, 0.3, 0.3, 0.3]])
+    # stormwater.ratio_op(lulc, soil_groups, ratio_lookup, sorted_lucodes)
+
+
+
 def calculate_stormwater_ratio(lulc_path, soil_group_path, 
         ratio_lookup, output_path):
     """Make stormwater retention or infiltration ratio map from LULC and
@@ -399,22 +446,18 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
     Returns:
         None
     """
-    def ratio_op(lulc_array, soil_group_array):
-        """Make an array of stormwater retention or infiltration ratios from 
-        arrays of LULC codes and hydrologic soil groups"""
 
-        # initialize an array of the output nodata value
-        ratio_array = numpy.full(lulc_array.shape, NODATA, dtype=float)
-        soil_group_map = {1: 'A', 2: 'B', 3: 'C', 4: 'D'}
+    ratio_lookup = {
+        1: {'A': 0.1, 'B': 0.1, 'C': 0.1, 'D': 0.1},
+        2: {'A': 0.2, 'B': 0.2, 'C': 0.2, 'D': 0.2},
+        3: {'A': 0.3, 'B': 0.3, 'C': 0.3, 'D': 0.3}
+    }
 
-        for lucode in ratio_lookup:
-            lucode_mask = (lulc_array == lucode)
-
-            for soil_group in [1, 2, 3, 4]:
-                soil_group_mask = (soil_group_array == soil_group)
-                ratio_array[lucode_mask & soil_group_mask] = ratio_lookup[lucode][soil_group_map[soil_group]]
-
-        return ratio_array
+    sorted_lucodes = sorted(list(ratio_lookup.keys()))
+    lulc_soil_group_array = numpy.array([
+        [ratio_lookup[lucode][soil_group] 
+            for soil_group in ['A', 'B', 'C', 'D']
+        ] for lucode in sorted_lucodes])
 
     # Apply ratio_op to each block of the LULC and soil group rasters
     # Write result to output_path as float32 with nodata=NODATA
@@ -652,9 +695,6 @@ def adjust_op(retention_ratio_array, impervious_array, distance_array,
     is_near_impervious_lulc = (convolved > 0)
     is_near_road = (distance_array <= radius)
     is_connected = is_near_impervious_lulc | is_near_road
-    print(is_near_impervious_lulc)
-    print(is_near_road)
-    print(is_connected)
 
     # array where each value is the number of valid values within the
     # search kernel. 
@@ -667,7 +707,6 @@ def adjust_op(retention_ratio_array, impervious_array, distance_array,
         search_kernel, 
         mode='constant', 
         cval=0)
-    print(n_values_array)
 
     # array where each pixel is averaged with its neighboring pixels within
     # the search radius. 
@@ -678,7 +717,6 @@ def adjust_op(retention_ratio_array, impervious_array, distance_array,
             mode='constant',
             cval=0
         ) / n_values_array)
-    print(averaged_ratio_array)
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
     # - average of nearby pixels, otherwise
@@ -967,22 +1005,3 @@ def validate(args):
     """
     return validation.validate(args, ARGS_SPEC['args'],
                                ARGS_SPEC['args_with_spatial_overlap'])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
