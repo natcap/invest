@@ -1,7 +1,8 @@
 import path from 'path';
-import { remote } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import { ipcRenderer } from 'electron';
 
-const USER_DATA = remote.app.getPath('userData');
+//const USER_DATA = remote.app.getPath('userData');
+const USER_DATA = await ipcRenderer.invoke('user-data');
 
 export const fileRegistry = {
   //  for storing state snapshot files

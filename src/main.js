@@ -14,6 +14,7 @@ const {
   screen,
   nativeTheme,
   Menu,
+  dialog,
 } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const {
   getFlaskIsReady, shutdownPythonProcess
@@ -61,6 +62,15 @@ const createWindow = async () => {
   };
   ipcMain.on('variable-request', (event, arg) => {
     event.reply('variable-reply', mainProcessVars);
+  });
+
+  ipcMain.handle('show-open-dialog', async (event, arg) => {
+    const result = await dialog.showOpenDialog(arg);
+    return result;
+  });
+  ipcMain.handle('show-save-dialog', async (event, arg) => {
+    const result = await dialog.showSaveDialog(arg);
+    return result;
   });
 
   // Wait for a response from the server before loading the app

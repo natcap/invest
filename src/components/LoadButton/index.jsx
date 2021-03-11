@@ -1,5 +1,5 @@
 import React from 'react';
-import { remote } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import { ipcRenderer } from 'electron';
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
@@ -21,7 +21,7 @@ export default class LoadButton extends React.Component {
   }
 
   async browseFile(event) {
-    const data = await remote.dialog.showOpenDialog();
+    const data = await ipcRenderer.invoke('show-open-dialog');
     if (data.filePaths.length) {
       const datastack = await fetchDatastackFromFile(data.filePaths[0]);
       const job = new InvestJob({
