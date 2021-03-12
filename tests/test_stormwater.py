@@ -359,7 +359,27 @@ class StormwaterTests(unittest.TestCase):
             f'Expected:\n{expected_distances}\nActual:\n{distances}')
 
 
+    def test_iter_linestring_segments(self):
+        from natcap.invest import stormwater
 
+        coords = [(100, 1), (105, 2), (-7, 0)]
+        linestring_path = os.path.join(self.workspace_dir, 'linestring.shp')
+
+        expected_pairs = [
+            (coords[0], coords[1]),
+            (coords[1], coords[2])
+        ]
+
+        driver = gdal.GetDriverByName('GPKG')
+        linestring_vector = driver.Create(linestring_path, 0, 0, 0, 
+            gdal.GDT_Unknown)
+        layer = linestring_vector.CreateLayer(
+            'linestring', points_layer.GetSpatialRef(), ogr.OGRwkbGeometryType.wkbLineString)
+        snapped_layer.CreateFields(points_layer.schema)
+        snapped_layer_defn = snapped_layer.GetLayerDefn()
+
+        snapped_layer.StartTransaction()
+        stormwater
 
 
 
