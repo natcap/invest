@@ -158,7 +158,7 @@ export default class SettingsModal extends React.Component {
                 <Col sm="3">
                   <Button
                     variant="secondary"
-                    onClick={this.props.clearStorage}
+                    onClick={this.props.clearJobsStorage}
                   >
                     Clear
                   </Button>

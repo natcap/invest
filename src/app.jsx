@@ -278,7 +278,7 @@ export default class App extends React.Component {
             saveSettings={this.saveSettings}
             setDefaultSettings={this.setDefaultSettings}
             investSettings={investSettings}
-            clearStorage={this.clearRecentJobs}
+            clearJobsStorage={this.clearRecentJobs}
           />
         </Navbar>
 
