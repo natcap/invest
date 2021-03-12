@@ -498,61 +498,31 @@ def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
         point (x_coords[a, b], y_coords[a, b]) to the line segment from 
         (x1, y1) to (x2, y2). 
     """
-    distance_array = numpy.full(x_coords.shape, NODATA, dtype=float)
+    # Using the algorithm from https://math.stackexchange.com/a/330329:
+    # Parameterize the line segment by parameter t, which represents how far
+    # along the line segment we are from endpoint 1 to endpoint 2.
+    # x(t) = x1 + t(x2 - x1)
+    # y(t) = y1 + t(y2 - y1)
+    # (x(t), y(t)) is on the segment when t ∈ [0, 1]
 
-    # distance from a point to a line segment (https://math.stackexchange.com/questions/2248617/shortest-distance-between-a-point-and-a-line-segment)
-    # given a point (a, b) and a line segment from (x1, y1) to (x2, y2):
-    # draw a line that passes through (a, b) and is perpendicular to the 
-    # line segment (negative inverse slope).
-    # (a) if it intersects the line segment at a point (c, d), then the 
-    #     distance is the distance from (a, b) to (c, d).
-    # (b) if it doesn't intersect the line segment, then the distance is
-    #     the lesser of the two distances: (a, b) to (x1, y1) or
-    #     (a, b) to (x2, y2) (this is finding the nearest endpoint)
+    # the notation ⟨𝑝−𝑠1,𝑠2−𝑠1⟩ in the SE post means the dot product:
+    # (𝑝-𝑠1)·(𝑠2−𝑠1) = (x-x1)*(x2-x1) + (y-y1)*(y2-y1)
+    # the notation ‖𝑠2−𝑠1‖ means the pythagorean distance
 
-    # solve for the line segment connecting the point (x1, y1) to (x2, y2)
-    # the calling function ensures that (x1, y1) and (x2, y2) are not identical
-    if x2 == x1:  # a vertical line, slope is undefined
-        x_intersections = numpy.full(x_coords.shape, x1)
-        y_intersections = y_coords
-    elif y2 == y1:  # a horizontal line, slope is 0
-        x_intersections = x_coords
-        y_intersections = numpy.full(y_coords.shape, y1)
-    else:
-        slope = (y2 - y1) / (x2 - x1)
-        intercept = y1 - slope * x1
-
-        # the line perpendicular to the line segment and passing thru each point
-        perpendicular_slope = -1 / slope  # slope is the same for each line
-        # a different intercept for each (x, y) pair
-        perpendicular_intercepts = y_coords - perpendicular_slope * x_coords
-
-        # for each (x, y) pair, the x-coordinate of the intersection of 
-        # the point's perpendicular line and the original line (assuming an infinite line)
-        x_intersections = (perpendicular_intercepts - intercept) / (slope - perpendicular_slope)
-        # y = mx + b
-        y_intersections = (slope * x_intersections) + intercept
-
-    # determine which points satisfy case (a) above: 
-    # their intersection is within the bounds of the line segment
-    within_bounds = (
-        (x_intersections >= min(x1, x2)) & 
-        (x_intersections <= max(x1, x2)) &
-        (y_intersections >= min(y1, y2)) & 
-        (y_intersections <= max(y1, y2)))
-    # calculate their distance as the distance from each (x, y) point 
-    # to the intersection point
-    distance_array[within_bounds] = numpy.hypot(
-        x_intersections[within_bounds] - x_coords[within_bounds], 
-        y_intersections[within_bounds] - y_coords[within_bounds]
-    )
-    # for the points in case (b) above, find the minimum endpoint distance
-    distance_to_endpoint_1 = numpy.hypot((x_coords - x1), (y_coords - y1))
-    distance_to_endpoint_2 = numpy.hypot((x_coords - x2), (y_coords - y2))
-    distance_array[~within_bounds] = numpy.minimum(
-        distance_to_endpoint_1, distance_to_endpoint_2)[~within_bounds]
-    return distance_array
-
+    # solve for the optimal value of t, such that the distance from
+    # (x_coord, y_coord) to (x(t), y(t)) is minimized
+    t_optimal = (
+        ((x_coords - x1)(x2 - x1) + (y_coords - y1)(y2 - y1)) / 
+        ((x2 - x1)**2 + (y2 - y1)**2))
+    # constrain t to the bounds of the line segment
+    t_in_bounds = numpy.maximum(numpy.minimum(t_optimal, 0), 1)
+    # solve for x(t) and y(t)
+    nearest_x_coords = x1 + t_in_bounds * (x2 - x1)
+    nearest_y_coords = y1 + t_in_bounds * (y2 - y1)
+    # find the distance from each (x_coord, y_coord) to (x(t), y(t))
+    distances = numpy.hypot(nearest_x_coords - x_coords, 
+        nearest_y_coords - y_coords)
+    
 
 def distance_to_road_centerlines(x_coords_path, y_coords_path, 
         centerlines_path, output_path):
