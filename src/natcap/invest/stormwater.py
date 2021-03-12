@@ -336,7 +336,6 @@ def execute(args):
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed
-    print('replacement cost:', ':' + str(args['replacement_cost']) + ':', type(args['replacement_cost']), args['replacement_cost'] == '', args['replacement_cost'] in [''])
     if (args['replacement_cost'] not in [None, '']):
 
         valuation_task = task_graph.add_task(
@@ -438,8 +437,9 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
     # Apply ratio_op to each block of the LULC and soil group rasters
     # Write result to output_path as float32 with nodata=NODATA
     pygeoprocessing.raster_calculator(
-        [(lulc_path, 1), (soil_group_path, 1)],
-        ratio_op, output_path, gdal.GDT_Float32, NODATA)
+        [(lulc_path, 1), (soil_group_path, 1), (lulc_soil_group_array, 'raw'), 
+        (sorted_lucodes, 'raw')], ratio_op, output_path, gdal.GDT_Float32, 
+        NODATA)
 
 
 def calculate_connected_lulc(lulc_path, impervious_lookup, output_path):
@@ -535,7 +535,6 @@ def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
 
     # determine which points satisfy case (a) above: 
     # their intersection is within the bounds of the line segment
-    print(min(x1, x2), max(x1, x2), x_intersections)
     within_bounds = (
         (x_intersections >= min(x1, x2)) & 
         (x_intersections <= max(x1, x2)) &
@@ -547,16 +546,11 @@ def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
         x_intersections[within_bounds] - x_coords[within_bounds], 
         y_intersections[within_bounds] - y_coords[within_bounds]
     )
-    print(within_bounds, within_bounds.dtype)
-    print(distance_array)
     # for the points in case (b) above, find the minimum endpoint distance
     distance_to_endpoint_1 = numpy.hypot((x_coords - x1), (y_coords - y1))
-    print(distance_to_endpoint_1)
     distance_to_endpoint_2 = numpy.hypot((x_coords - x2), (y_coords - y2))
-    print(distance_to_endpoint_2)
     distance_array[~within_bounds] = numpy.minimum(
         distance_to_endpoint_1, distance_to_endpoint_2)[~within_bounds]
-    print(distance_array)
     return distance_array
 
 
@@ -580,10 +574,7 @@ def distance_to_road_centerlines(x_coords_path, y_coords_path,
     Returns:
         None
     """
-    
-
     def linestring_geometry_op(x_coords, y_coords):
-
         segment_generator = iter_linestring_segments(centerlines_path)
         (x1, y1), (x2, y2) = next(segment_generator)
         min_distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
@@ -595,12 +586,9 @@ def distance_to_road_centerlines(x_coords_path, y_coords_path,
             min_distance = numpy.min(min_distance, distance)
         return min_distance
 
-
-
     pygeoprocessing.raster_calculator(
         [(x_coords_path, 1), (y_coords_path, 1)], 
         linestring_geometry_op, output_path, gdal.GDT_Float32, NODATA)
-
 
 
 def iter_linestring_segments(vector_path):
@@ -677,7 +665,6 @@ def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
         x_band.WriteArray(x_coords, xoff=data['xoff'], yoff=data['yoff'])
         y_band.WriteArray(y_coords, xoff=data['xoff'], yoff=data['yoff'])
     x_band, y_band, x_raster, y_raster = None, None, None, None
-
 
 
 def adjust_op(retention_ratio_array, impervious_array, distance_array, 
