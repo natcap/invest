@@ -512,16 +512,19 @@ def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
     # solve for the optimal value of t, such that the distance from
     # (x_coord, y_coord) to (x(t), y(t)) is minimized
     t_optimal = (
-        ((x_coords - x1)(x2 - x1) + (y_coords - y1)(y2 - y1)) / 
+        ((x_coords - x1) * (x2 - x1) + (y_coords - y1) * (y2 - y1)) / 
         ((x2 - x1)**2 + (y2 - y1)**2))
     # constrain t to the bounds of the line segment
-    t_in_bounds = numpy.maximum(numpy.minimum(t_optimal, 0), 1)
+    t_in_bounds = numpy.minimum(numpy.maximum(t_optimal, 0), 1)
     # solve for x(t) and y(t)
     nearest_x_coords = x1 + t_in_bounds * (x2 - x1)
     nearest_y_coords = y1 + t_in_bounds * (y2 - y1)
+    print(nearest_x_coords)
+    print(nearest_y_coords)
     # find the distance from each (x_coord, y_coord) to (x(t), y(t))
     distances = numpy.hypot(nearest_x_coords - x_coords, 
         nearest_y_coords - y_coords)
+    return distances
     
 
 def distance_to_road_centerlines(x_coords_path, y_coords_path, 
