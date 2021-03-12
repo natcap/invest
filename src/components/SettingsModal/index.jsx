@@ -52,7 +52,10 @@ export default class SettingsModal extends React.Component {
   }
 
   handleSubmit(event) {
-    /** Handle a click on the "Save" button, which updates the parent's state */
+    /** Handle a click on the "Save" button.
+      *
+      * Updates the parent's state and persistent store.
+    */
     event.preventDefault();
     this.props.saveSettings(this.state.localSettings);
     this.setState({show: false});
