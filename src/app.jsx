@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import React from 'react';
 import PropTypes from 'prop-types';
-
 import localforage from 'localforage';
 
 import TabPane from 'react-bootstrap/TabPane';
@@ -30,7 +29,7 @@ const investSettingsStore = localforage.createInstance({
  *
  * @returns {object} to destructure into two args:
  *     {String} nWorkers - TaskGraph number of workers
- *     {String} loggginLevel - InVEST model logging level
+ *     {String} logggingLevel - InVEST model logging level
  */
 function  getDefaultSettings() {
   const defaultSettings = {
