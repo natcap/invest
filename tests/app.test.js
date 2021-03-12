@@ -317,16 +317,11 @@ describe('InVEST global settings: dialog interactions', () => {
     fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
     fireEvent.change(loggingInput, { target: { value: loggingLevel } });
     fireEvent.click(getByText('Cancel'));
-    // fireEvent.click(getByText('Settings'));  // why is this unecessary?
+    fireEvent.click(getByText('settings'));
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue("-1");
       expect(loggingInput).toHaveValue("INFO");
     });
-
-    // Change n_workers to bad value -- expect invalid signal
-    fireEvent.change(nWorkersInput, { target: { value: badValue} });
-    expect(input.classList.contains('is-invalid')).toBeTruthy();
-    expect(getByText('Save Changes')).toBeDisabled();
 
     // Change the value for real and save
     fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
@@ -337,10 +332,20 @@ describe('InVEST global settings: dialog interactions', () => {
     });
     // The real test: values saved to global-settings
     fireEvent.click(getByText('Save Changes'));
+    fireEvent.click(getByTitle('settings'));
+    await waitFor(() => { // the value to test is inherited through props
+      expect(nWorkersInput).toHaveValue(nWorkers);
+      expect(loggingInput).toHaveValue(loggingLevel);
+    });
     // Check values in the investSettingsStore
     const investSettingsStore = testables.getSettingsStore();
     expect(investSettingsStore.store.nWorkers).toBe('2');
     expect(investSettingsStore.store.loggingLevel).toBe('DEBUG');
+
+    // Change n_workers to bad value -- expect invalid signal
+    fireEvent.change(nWorkersInput, { target: { value: badValue} });
+    expect(nWorkersInput.classList.contains('is-invalid')).toBeTruthy();
+    expect(getByText('Save Changes')).toBeDisabled();
   });
 
   test('Load global settings', async () => {
@@ -385,8 +390,10 @@ describe('InVEST global settings: dialog interactions', () => {
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
     // Check the default settings
-    expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
-    expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
+    await waitFor(() => {
+      expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
+      expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
+    });
 
     // Change the value and reset defaults -- expect default value
     fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
