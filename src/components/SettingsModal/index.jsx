@@ -119,7 +119,7 @@ export default class SettingsModal extends React.Component {
             <Modal.Body>
               <Form.Group as={Row}>
                 <Form.Label column sm="8" htmlFor="logging-select">Logging threshold</Form.Label>
-                <Col sm="3">
+                <Col sm="4">
                   <Form.Control
                     id="logging-select"
                     as="select"
@@ -138,7 +138,7 @@ export default class SettingsModal extends React.Component {
                   <br />
                   (must be an integer &gt;= -1)
                 </Form.Label>
-                <Col sm="3">
+                <Col sm="4">
                   <Form.Control
                     id="nworkers-text"
                     name="nWorkers"
@@ -151,14 +151,31 @@ export default class SettingsModal extends React.Component {
               </Form.Group>
               <Form.Group as={Row}>
                 <Form.Label column sm="8">
+                  Reset to Defaults
+                </Form.Label>
+                <Col sm="4">
+                  <Button
+                    variant="secondary"
+                    onClick={this.handleDefault}
+                    type="reset"
+                    className="float-right"
+                  >
+                    Reset
+                  </Button>
+                </Col>
+              </Form.Group>
+              <hr />
+              <Form.Group as={Row}>
+                <Form.Label column sm="8">
                   Clear Recent Jobs Shortcuts
                   <br />
                   (no invest workspaces will be deleted)
                 </Form.Label>
-                <Col sm="3">
+                <Col sm="4">
                   <Button
                     variant="secondary"
                     onClick={this.props.clearJobsStorage}
+                    className="float-right"
                   >
                     Clear
                   </Button>
@@ -176,13 +193,6 @@ export default class SettingsModal extends React.Component {
                 disabled={!nWorkersIsValid}
               >
                 Save Changes
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={this.handleDefault}
-                type="reset"
-              >
-                Reset Defaults
               </Button>
             </Modal.Footer>
           </Form>
