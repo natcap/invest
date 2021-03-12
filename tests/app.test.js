@@ -290,79 +290,12 @@ describe('InVEST global settings: dialog interactions', () => {
     testables.clearSettingsStore();
     jest.resetAllMocks();
   });
-  test('Set the python logging level to pass to the invest CLI', async () => {
-    const DEFAULT = 'INFO';
-    const { getByText, getByLabelText, getByTitle } = render(
-      <App investExe="foo" />
-    );
-
-    // Check the default settings
-    fireEvent.click(getByTitle('settings'));
-    await waitFor(() => {
-      // waiting because the selected value depends on passed props
-      expect(getByText(DEFAULT).selected).toBeTruthy();
-    });
-
-    // Change the select input and cancel -- expect default selected
-    fireEvent.change(getByLabelText('Logging threshold'),
-      { target: { value: 'DEBUG' } });
-    fireEvent.click(getByText('Cancel'));
-    // fireEvent.click(getByText('Settings'));  // why is this unecessary?
-    expect(getByText(DEFAULT).selected).toBeTruthy();
-
-    // Change the select input and save -- expect new value selected
-    fireEvent.change(getByLabelText('Logging threshold'),
-      { target: { value: 'DEBUG' } });
-    fireEvent.click(getByText('Save Changes'));
-    // fireEvent.click(getByText('Settings'));  // why is this unecessary?
-    expect(getByText('DEBUG').selected).toBeTruthy();
-  });
-
-  test('Set the invest n_workers parameter', async () => {
-    const defaultValue = '-1';
-    const newValue = '2';
-    const badValue = 'a';
-    const labelText = 'Taskgraph n_workers parameter';
-
-    const { getByText, getByLabelText, getByTitle } = render(
-      <App investExe="foo" />
-    );
-
-    fireEvent.click(getByTitle('settings'));
-    const input = getByLabelText(labelText, { exact: false });
-
-    // Check the default settings
-    await waitFor(() => {
-      // waiting because the text value depends on passed props
-      expect(input).toHaveValue(defaultValue);
-    });
-
-    // Change the value and cancel -- expect default value
-    fireEvent.change(input, { target: { value: newValue } });
-    fireEvent.click(getByText('Cancel'));
-    expect(input).toHaveValue(defaultValue);
-
-    // Change the value and save -- expect new value selected
-    fireEvent.change(input, { target: { value: newValue } });
-    expect(input).toHaveValue(newValue);
-    // The real test: still newValue after saving and re-opening
-    fireEvent.click(getByText('Save Changes'));
-    fireEvent.click(getByTitle('settings'));
-    await waitFor(() => { // the value to test is inherited through props
-      expect(input).toHaveValue(newValue);
-    });
-
-    // Change to bad value -- expect invalid signal
-    fireEvent.change(input, { target: { value: badValue } });
-    expect(input.classList.contains('is-invalid')).toBeTruthy();
-    expect(getByText('Save Changes')).toBeDisabled();
-  });
-
-  test('Save global settings', async () => {
+  test('Global settings for cancel, save, and invalid nWorkers', async () => {
     const nWorkers = '2';
     const loggingLevel = 'DEBUG';
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
     const loggingLabelText = 'Logging threshold';
+    const badValue = 'a';
 
     const { getByText, getByLabelText, getByTitle } = render(
       <App investExe="foo" />
@@ -380,7 +313,22 @@ describe('InVEST global settings: dialog interactions', () => {
       expect(loggingInput).toHaveValue("INFO");
     });
 
-    // Change the value
+    // Change the select input and cancel -- expect default selected
+    fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
+    fireEvent.change(loggingInput, { target: { value: loggingLevel } });
+    fireEvent.click(getByText('Cancel'));
+    // fireEvent.click(getByText('Settings'));  // why is this unecessary?
+    await waitFor(() => {
+      expect(nWorkersInput).toHaveValue("-1");
+      expect(loggingInput).toHaveValue("INFO");
+    });
+
+    // Change n_workers to bad value -- expect invalid signal
+    fireEvent.change(nWorkersInput, { target: { value: badValue} });
+    expect(input.classList.contains('is-invalid')).toBeTruthy();
+    expect(getByText('Save Changes')).toBeDisabled();
+
+    // Change the value for real and save
     fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
     fireEvent.change(loggingInput, { target: { value: loggingLevel } });
     await waitFor(() => { // the value to test is inherited through props
@@ -437,26 +385,20 @@ describe('InVEST global settings: dialog interactions', () => {
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
     // Check the default settings
-    await waitFor(() => {
-      // waiting because the text value depends on passed props
-      expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
-      expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
-    });
+    expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
+    expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
 
     // Change the value and reset defaults -- expect default value
     fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
     fireEvent.change(loggingInput, { target: { value: loggingLevel } });
-    await waitFor(() => {
-      // waiting because the text value depends on passed props
-      expect(nWorkersInput).toHaveValue(nWorkers);
-      expect(loggingInput).toHaveValue(loggingLevel);
-    });
+    expect(nWorkersInput).toHaveValue(nWorkers);
+    expect(loggingInput).toHaveValue(loggingLevel);
+
     fireEvent.click(getByText('Reset Defaults'));
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
     });
-
   });
 });
 
