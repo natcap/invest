@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import React from 'react';
 import PropTypes from 'prop-types';
-import localforage from 'localforage';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -18,45 +17,10 @@ import { getInvestModelNames } from './server_requests';
 import { getLogger } from './logger';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
+import { settingsStorage } from './components/SettingsModal/SettingsStorage';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
-const investSettingsStore = localforage.createInstance({
-  name: 'InvestSettings',
-});
-
-/** Getter function for global default settings.
- *
- * @returns {object} to destructure into two args:
- *     {String} nWorkers - TaskGraph number of workers
- *     {String} logggingLevel - InVEST model logging level
- */
-function  getDefaultSettings() {
-  const defaultSettings = {
-    nWorkers: '-1',
-    loggingLevel: 'INFO',
-  };
-  return defaultSettings;
-}
-
-/** Helper function for testing purposes
- *
- * @returns {object} localforage store for invest settings
- */
-function getSettingsStore() {
-  const postSettings = { ...investSettingsStore };
-  return postSettings;
-}
-
-/** Helper function for testing purposes */
-function clearSettingsStore() {
-  investSettingsStore.clear();
-}
-
-export const testables = {
-  getSettingsStore: getSettingsStore,
-  clearSettingsStore: clearSettingsStore,
-};
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -87,11 +51,11 @@ export default class App extends React.Component {
     const recentJobs = await InvestJob.getJobStore();
     // Placeholder for instantiating global settings.
     let investSettings = {};
-    const globalDefaultSettings = getDefaultSettings();
+    const globalDefaultSettings = settingsStorage.getDefaultSettings();
 
     try {
       for (const [setting, _val] of Object.entries(globalDefaultSettings)) {
-        const value = await investSettingsStore.getItem(setting);
+        const value = await settingsStorage.getSettingsValue(setting);
         if (!value) {
           throw new Error('Value not defined or null, use defaults.');
         }
@@ -124,20 +88,12 @@ export default class App extends React.Component {
       investSettings: settings,
     });
 
-    // Using ``settings`` instead of ``this.state.investSettings`` because
-    // setState can be asynchronous.
-    try {
-      for (const [setting, value] of Object.entries(settings)) {
-        investSettingsStore.setItem(setting, value);
-      }
-    } catch (err) {
-      logger.error(`Error saving settings: ${err}`);
-    }
+    settingsStorage.saveSettings(settings);
   }
 
   /** Reset global settings to defaults. */
   setDefaultSettings() {
-    const defaultSettings = getDefaultSettings();
+    const defaultSettings = settingsStorage.getDefaultSettings();
     this.setState({
       investSettings: defaultSettings,
     });
