@@ -102,6 +102,13 @@ jobs:
       if: matrix.os != 'macos-latest'
       run: npm run test-electron-app
 
+    - name: Upload app logging from puppeteer to github
+      uses: actions/upload-artifact@v2.2.1
+      if: matrix.os != 'macos-latest' && always()
+      with:
+        name: 'puppeteer_log.zip'
+        path: '~/AppData/Roaming/invest-workbench/invest-workbench*'
+
     - name: Upload installer artifacts to github
       uses: actions/upload-artifact@v2.2.1
       if: ${{ always() }}

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import glob from 'glob';
 import fetch from 'node-fetch';
 import { spawn, spawnSync } from 'child_process';
@@ -8,29 +9,31 @@ import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
 jest.setTimeout(120000); // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
+const TMP_DIR = fs.mkdtempSync('tests/data/_');
+const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
+let ELECTRON_PROCESS;
+let BROWSER;
+// append to this filename and the image will be uploaded to github artifacts
+// E.g. page.screenshot({ path: `${SCREENSHOT_PREFIX}screenshot.png` })
+const SCREENSHOT_PREFIX = path.join(
+  os.homedir(), 'AppData/Roaming/invest-workbench/invest-workbench-'
+);
 
 // For ease of automated testing, run the app from the 'unpacked' directory
 // to avoid need to install first on windows or extract on mac.
-let binaryPath;
+let BINARY_PATH;
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
-  [binaryPath] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
+  [BINARY_PATH] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
 } else if (process.platform === 'win32') {
-  [binaryPath] = glob.sync('./dist/win-unpacked/InVEST*.exe');
+  [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');
 } else {
-  binaryPath = './dist/linux-unpacked/invest-workbench';
+  BINARY_PATH = './dist/linux-unpacked/invest-workbench';
 }
-
-if (!fs.existsSync(binaryPath)) {
-  throw new Error(`Binary file not found: ${binaryPath}`);
+if (!fs.existsSync(BINARY_PATH)) {
+  throw new Error(`Binary file not found: ${BINARY_PATH}`);
 }
-
-console.log(binaryPath);
-fs.accessSync(binaryPath, fs.constants.X_OK);
-const TMP_DIR = fs.mkdtempSync('tests/data/_');
-const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
-let electronProcess;
-let browser;
+fs.accessSync(BINARY_PATH, fs.constants.X_OK);
 
 function makeAOI() {
   /* eslint-disable */
@@ -61,105 +64,93 @@ function makeAOI() {
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
-  electronProcess = spawn(
-    `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
+  ELECTRON_PROCESS = spawn(
+    `"${BINARY_PATH}"`,
+    [`--remote-debugging-port=${PORT}`],
     { shell: true }
   );
-  electronProcess.stderr.on('data', (data) => {
+  ELECTRON_PROCESS.stderr.on('data', (data) => {
     console.log(`${data}`);
   });
   // so we don't make the next fetch too early
   await new Promise((resolve) => setTimeout(resolve, 5000));
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
-  browser = await puppeteer.connect({
+  BROWSER = await puppeteer.connect({
     browserWSEndpoint: data.webSocketDebuggerUrl, // this works
     // browserURL: `http://localhost:${PORT}`,    // this also works
-    defaultViewport: { width: 1000, height: 800 },
+    defaultViewport: null
   });
   makeAOI();
 });
 
 afterAll(async () => {
   try {
-    await browser.close();
+    await BROWSER.close();
   } catch (error) {
-    console.log(binaryPath);
+    console.log(BINARY_PATH);
     console.error(error);
   }
   // being extra careful with recursive rm
   if (TMP_DIR.startsWith('tests/data')) {
     fs.rmdirSync(TMP_DIR, { recursive: true });
   }
-  // I thought this business would be necessary to kill the spawned shell
-  // process running electron - since that's how we kill a similar spawned
-  // subprocess in the app, but actually it is not.
-  // if (electronProcess.pid) {
-  //   console.log(electronProcess.pid)
-  //   if (process.platform !== 'win32') {
-  //     process.kill(-electronProcess.pid, 'SIGTERM');
-  //   } else {
-  //     exec(`taskkill /pid ${electronProcess.pid} /t /f`)
-  //   }
-  // }
-  const wasKilled = electronProcess.kill();
+  const wasKilled = ELECTRON_PROCESS.kill();
   console.log(`electron process was killed: ${wasKilled}`);
 });
 
 test('Run a real invest model', async () => {
   const { findByText, findByLabelText, findByRole } = queries;
   await waitFor(() => {
-    expect(browser.isConnected()).toBeTruthy();
+    expect(BROWSER.isConnected()).toBeTruthy();
   });
-  const pages = (await browser.pages());
   // find the mainWindow's index.html, not the splashScreen's splash.html
-  let page;
-  pages.forEach((p) => {
-    if (p.url().endsWith('index.html')) {
-      page = p;
-    }
-  });
+  const target = await BROWSER.waitForTarget(
+    (target) => target.url().endsWith('index.html')
+  );
+  const page = await target.page();
   const doc = await getDocument(page);
 
   // Setting up Recreation model because it has very few data requirements
   const investTable = await findByRole(doc, 'table');
   const button = await findByRole(investTable, 'button', { name: /Visitation/ });
   button.click();
+  const runButton = await findByRole(doc, 'button', { name: 'Run' });
+  const typeDelay = 10;
   const workspace = await findByLabelText(doc, /Workspace/);
-  await workspace.type(TMP_DIR, { delay: 10 });
+  await workspace.type(TMP_DIR, { delay: typeDelay });
   const aoi = await findByLabelText(doc, /Area of Interest/);
-  await aoi.type(TMP_AOI_PATH, { delay: 10 });
+  await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
   const startYear = await findByLabelText(doc, /Start Year/);
-  await startYear.type('2008', { delay: 10 });
+  await startYear.type('2008', { delay: typeDelay });
   const endYear = await findByLabelText(doc, /End Year/);
-  await endYear.type('2012', { delay: 10 });
+  await endYear.type('2012', { delay: typeDelay });
 
-  const runButton = await findByText(doc, 'Run');
   // Button is disabled until validation completes
   await waitFor(async () => {
     const isEnabled = await page.evaluate(
       (btn) => !btn.disabled,
       runButton
     );
-    expect(isEnabled).toBeTruthy();
+    expect(isEnabled).toBe(true);
   });
-
-  runButton.click();
+  page.screenshot({ path: `${SCREENSHOT_PREFIX}before-run-click.png` });
+  await runButton.click();
   const logTab = await findByText(doc, 'Log');
   // Log tab is not active until after the invest logfile is opened
   await waitFor(async () => {
     const prop = await logTab.getProperty('className');
     const vals = await prop.jsonValue();
     expect(vals.includes('active')).toBeTruthy();
-  }, 18000); // 4x default timeout: sometimes this expires unmet in GHA
+  });
 
   const cancelButton = await findByText(doc, 'Cancel Run');
-  cancelButton.click();
+  await cancelButton.click();
   await waitFor(async () => {
     expect(await findByText(doc, 'Run Canceled'));
     expect(await findByText(doc, 'Open Workspace'));
   });
-});
+}, 50000); // 10x default timeout: sometimes expires in GHA
 
 // Test for duplicate application launch.
 // We have the binary path, so now let's launch a new subprocess with the same binary
@@ -167,14 +158,14 @@ test('Run a real invest model', async () => {
 // Also verify that window 1 has focus.
 test('App re-launch will exit and focus on first instance', async () => {
   await waitFor(() => {
-    expect(browser.isConnected()).toBeTruthy();
+    expect(BROWSER.isConnected()).toBeTruthy();
   });
 
   // Open another instance of the Workbench application.
   // This should return quickly.  The test timeout is there in case the new i
   // process hangs for some reason.
   const otherElectronProcess = spawnSync(
-    `"${binaryPath}"`, [`--remote-debugging-port=${PORT}`],
+    `"${BINARY_PATH}"`, [`--remote-debugging-port=${PORT}`],
     { shell: true }
   );
 
