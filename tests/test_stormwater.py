@@ -360,32 +360,22 @@ class StormwaterTests(unittest.TestCase):
 
 
     def test_iter_linestring_segments(self):
-        import os
-        from osgeo import gdal, ogr, osr
         from natcap.invest import stormwater
-
-        coords = [(100, 1), (105, 2), (-7, 0)]
+        # Create a linestring vector
         path = os.path.join(self.workspace_dir, 'linestring.gpkg')
         spatial_reference = osr.SpatialReference()
         spatial_reference.ImportFromEPSG(3857)
-
-        expected_pairs = [
-            (coords[0], coords[1]),
-            (coords[1], coords[2])
-        ]
-
         driver = gdal.GetDriverByName('GPKG')
         linestring_vector = driver.Create(path, 0, 0, 0, gdal.GDT_Unknown)
         layer = linestring_vector.CreateLayer('linestring', 
             spatial_reference, ogr.wkbLineString)
         layer_defn = layer.GetLayerDefn()
-
         layer.StartTransaction()
-
         linestring = ogr.Geometry(ogr.wkbLineString)
+        # Create a linestring from the list of coords and save it to the vector
+        coords = [(100, 1), (105.5, 2), (-7, 0)]
         for coord in coords:
             linestring.AddPoint(*coord)
-
         feature = ogr.Feature(layer_defn)
         feature.SetGeometry(linestring)
         layer.CreateFeature(feature)
@@ -393,6 +383,8 @@ class StormwaterTests(unittest.TestCase):
         layer = None
         linestring_vector = None
 
+        # Expect the coordinate pairs are yielded in order
+        expected_pairs = [(coords[0], coords[1]), (coords[1], coords[2])]
         output_pairs = list(stormwater.iter_linestring_segments(path))
         self.assertEqual(expected_pairs, output_pairs)
 

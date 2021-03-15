@@ -32,50 +32,49 @@ ARGS_SPEC = {
         "n_workers": validation.N_WORKERS_SPEC,
         "lulc_path": {
             "type": "raster",
-            "bands": {1: {"type": "code"}},
+            # "bands": {1: {"type": "code"}},
             "required": True,
             "about": (
-                "A GDAL-supported raster representing land use/land cover "
-                "of the area"),
+                "A map of land use/land cover classes in the area of interest"),
             "name": "land use/land cover"
         },
         "soil_group_path": {
             "type": "raster",
-            "bands": {
-                1: {
-                    "type": "option_string",
-                    "options": ["1", "2", "3", "4"]
-                }
-            },
+            # "bands": {
+            #     1: {
+            #         "type": "option_string",
+            #         "options": ["1", "2", "3", "4"]
+            #     }
+            # },
             "required": True,
             "about": (
-                "Raster map of hydrologic soil groups, where 1, 2, 3, and 4 "
-                "correspond to groups A, B, C, and D respectively"),
+                "Map of hydrologic soil groups, where pixel values 1, 2, 3, "
+                "and 4 correspond to groups A, B, C, and D respectively"),
             "name": "soil groups"
         },
         "precipitation_path": {
             "type": "raster",
-            "bands": {1: {"type": "number", "units": "millimeters"}},
+            # "bands": {1: {"type": "number", "units": "millimeters"}},
             "required": True,
-            "about": ("Precipitation raster"),
+            "about": ("Map of total annual precipitation"),
             "name": "precipitation"
         },
         "biophysical_table": {
             "type": "csv",
-            "columns": {
-                "lucode": {"type": "code"},
-                "is_connected": {"type": "boolean"},
-                "EMC_P": {"type": "number", "units": "mg/L"},
-                "EMC_N": {"type": "number", "units": "mg/L"},
-                "RC_A": {"type": "ratio"},
-                "RC_B": {"type": "ratio"},
-                "RC_C": {"type": "ratio"},
-                "RC_D": {"type": "ratio"},
-                "IR_A": {"type": "ratio"},
-                "IR_B": {"type": "ratio"},
-                "IR_C": {"type": "ratio"},
-                "IR_D": {"type": "ratio"}
-            },
+            # "columns": {
+            #     "lucode": {"type": "code"},
+            #     "is_connected": {"type": "boolean"},
+            #     "EMC_P": {"type": "number", "units": "mg/L"},
+            #     "EMC_N": {"type": "number", "units": "mg/L"},
+            #     "RC_A": {"type": "ratio"},
+            #     "RC_B": {"type": "ratio"},
+            #     "RC_C": {"type": "ratio"},
+            #     "RC_D": {"type": "ratio"},
+            #     "IR_A": {"type": "ratio"},
+            #     "IR_B": {"type": "ratio"},
+            #     "IR_C": {"type": "ratio"},
+            #     "IR_D": {"type": "ratio"}
+            # },
             "required": True,
             "about": "biophysical table",
             "name": "biophysical table"
@@ -83,49 +82,58 @@ ARGS_SPEC = {
         "adjust_retention_ratios": {
             "type": "boolean",
             "required": True,
-            "about": "Whether to adjust retention ratios using road centerlines",
+            "about": (
+                "If true, adjust retention ratios. The adjustment algorithm "
+                "accounts for drainage effects of nearby impervious surfaces "
+                "which are directly connected to artifical urban drainage "
+                "channels (typically roads, parking lots, etc.) Connected "
+                "impervious surfaces are indicated by the is_connected column"
+                "in the biophysical table and/or the road centerlines vector."),
             "name": "adjust retention ratios"
         },
         "retention_radius": {
             "type": "number",
-            "units": "meters",
+            # "units": "meters",
             "required": "adjust_retention_ratios",
-            "about": "Radius around each pixel to adjust retention ratios",
+            "about": (
+                "Radius around each pixel to adjust retention ratios. For the "
+                "adjustment algorithm, a pixel is 'near' a connected "
+                "impervious surface if its centerpoint is within this radius "
+                "of connected-impervious LULC and/or a road centerline."),
             "name": "retention radius"
         },
         "dem_path": {
             "type": "raster",
-            "bands": {1: {"type": "number", "units": "meters"}},
+            # "bands": {1: {"type": "number", "units": "meters"}},
             "required": "adjust_retention_ratios",
             "about": "Digital elevation model of the area",
             "name": "digital elevation model" 
         },
         "road_centerlines_path": {
             "type": "vector",
-            "fields": {},
+            # "fields": {},
+            # "geometry": {'LINESTRING'},
             "required": "adjust_retention_ratios",
             "about": "Map of road centerlines",
             "name": "road centerlines"
         },
         "aggregate_areas_path": {
             "type": "vector",
-            "fields": {},
+            # "fields": {},
+            # "geometry": {'POLYGON'},
             "required": False,
             "about": "Aggregation areas",
             "name": "watersheds"
         },
         "replacement_cost": {
             "type": "number",
-            "units": "currency",
+            # "units": "currency/m^3",
             "required": False,
             "about": "Replacement cost of stormwater retention devices",
             "name": "replacement cost"
         }
     }
 }
-
-
-
 
 
 def execute(args):
