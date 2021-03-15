@@ -442,318 +442,6 @@ def calculate_stormwater_ratio(lulc_path, soil_group_path,
         NODATA)
 
 
-def calculate_connected_lulc(lulc_path, impervious_lookup, output_path):
-    """Convert LULC raster to a binary raster where 1 is directly connected
-    impervious LULC type and 0 is not.
-
-    Args:
-        lulc_path (str): path to a LULC raster
-        impervious_lookup (dict): dictionary mapping each LULC code in the 
-            LULC raster to a boolean value, where True means the LULC type 
-            is a directly-connected impervious surface
-        output_path (str): path to write out the binary raster
-
-    Returns:
-        None
-    """
-    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
-    # make a list of the LULC codes in order and a list of the corresponding
-    # binary impervious values
-    sorted_lucodes = sorted(list(impervious_lookup.keys()))
-    impervious_lookup_array = numpy.array(
-        [impervious_lookup[lucode] for lucode in sorted_lucodes])
-
-    def connected_op(lulc_array):
-        is_connected_array = numpy.full(lulc_array.shape, NODATA)
-        valid_mask = (lulc_array != lulc_nodata)
-        lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
-        is_connected_array[valid_mask] = (
-            impervious_lookup_array[lulc_index][valid_mask])
-        return is_connected_array
-
-    pygeoprocessing.raster_calculator(
-        [(lulc_path, 1)], connected_op, output_path, gdal.GDT_Float32, NODATA)
-
-
-def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
-    """Find the minimum distance from each array point to a line segment.
-
-    Args:
-        x_coords (numpy.ndarray): a 2D array where each element is the
-            x-coordinate of a point in the same coordinate system as the
-            line endpoints
-        y_coords (numpy.ndarray): a 2D array where each element is the
-            y-coordinate of a point in the same coordinate system as the
-            line endpoints
-        x1 (float): the x coord of the first endpoint of the line segment
-        y1 (float): the y coord of the first endpoint of the line segment
-        x2 (float): the x coord of the second endpoint of the line segment
-            ((x2, y2) can't be identical to (x1, y1))
-        y2 (float): the y coord of the second endpoint of the line segment
-            ((x2, y2) can't be identical to (x1, y1))
-
-    Returns:
-        numpy.ndarray with the same shape as x_coords and y_coords. The
-        value of an element at [a, b] is the minimum distance from the
-        point (x_coords[a, b], y_coords[a, b]) to the line segment from 
-        (x1, y1) to (x2, y2). 
-    """
-    # Using the algorithm from https://math.stackexchange.com/a/330329:
-    # Parameterize the line segment by parameter t, which represents how far
-    # along the line segment we are from endpoint 1 to endpoint 2.
-    # x(t) = x1 + t(x2 - x1)
-    # y(t) = y1 + t(y2 - y1)
-    # (x(t), y(t)) is on the segment when t ∈ [0, 1]
-
-    # the notation ⟨𝑝−𝑠1,𝑠2−𝑠1⟩ in the SE post means the dot product:
-    # (𝑝-𝑠1)·(𝑠2−𝑠1) = (x-x1)*(x2-x1) + (y-y1)*(y2-y1)
-    # the notation ‖𝑠2−𝑠1‖ means the pythagorean distance
-
-    # solve for the optimal value of t, such that the distance from
-    # (x_coord, y_coord) to (x(t), y(t)) is minimized
-    t_optimal = (
-        ((x_coords - x1) * (x2 - x1) + (y_coords - y1) * (y2 - y1)) / 
-        ((x2 - x1)**2 + (y2 - y1)**2))
-    # constrain t to the bounds of the line segment
-    t_in_bounds = numpy.minimum(numpy.maximum(t_optimal, 0), 1)
-    # solve for x(t) and y(t)
-    nearest_x_coords = x1 + t_in_bounds * (x2 - x1)
-    nearest_y_coords = y1 + t_in_bounds * (y2 - y1)
-    print(nearest_x_coords)
-    print(nearest_y_coords)
-    # find the distance from each (x_coord, y_coord) to (x(t), y(t))
-    distances = numpy.hypot(nearest_x_coords - x_coords, 
-        nearest_y_coords - y_coords)
-    return distances
-    
-
-def distance_to_road_centerlines(x_coords_path, y_coords_path, 
-        centerlines_path, output_path):
-    """Calculate the distance from each pixel centerpoint to the nearest 
-    road centerline.
-
-    Args:
-        x_coords_path (str): path to a raster where each pixel value is the x 
-            coordinate of that pixel in the raster coordinate system
-        y_coords_path (str): path to a raster where each pixel value is the y
-            coordinate of that pixel in the raster coordinate system
-        centerlines_path (str): path to a linestring vector of road centerlines
-        output_path (str): path to write out the distance raster. This is a
-            raster of the same dimensions, pixel size, and coordinate system 
-            as ``raster_path``, where each pixel value is the distance from 
-            that pixel's centerpoint to the nearest road centerline. Distances 
-            are in the same unit as the raster coordinate system.
-
-    Returns:
-        None
-    """
-    def linestring_geometry_op(x_coords, y_coords):
-        segment_generator = iter_linestring_segments(centerlines_path)
-        (x1, y1), (x2, y2) = next(segment_generator)
-        min_distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
-
-        for (x1, y1), (x2, y2) in segment_generator:
-            if x2 == x1 and y2 == y1:
-                continue  # ignore lines with length 0
-            distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
-            min_distance = numpy.min(min_distance, distance)
-        return min_distance
-
-    pygeoprocessing.raster_calculator(
-        [(x_coords_path, 1), (y_coords_path, 1)], 
-        linestring_geometry_op, output_path, gdal.GDT_Float32, NODATA)
-
-
-def iter_linestring_segments(vector_path):
-    """Yield (start, end) coordinate pairs for each segment of a linestring.
-
-    Args:
-        vector_path (str): path to a linestring vector to iterate over
-
-    Yields:
-        ((x1, y1), (x2, y2)) tuples representing the start and end point of a
-        linestring segment. (x1, y1) of the nth yielded tuple equals (x2, y2)
-        of the (n-1)th yielded tuple.
-    """
-    vector = gdal.OpenEx(vector_path)
-    layer = vector.GetLayer()
-    for geometry in layer:
-        ref = geometry.GetGeometryRef()
-        assert ref.GetGeometryName() == 'LINESTRING'
-
-        points = ref.GetPoints()  # a list of (x, y) points
-        # iterate over each pair of points (each segment) in the linestring
-        x1, y1 = points[0]
-        x2, y2 = points[1]
-        for point in points[2:]:
-            yield (x1, y1), (x2, y2)
-            # move to the next pair of points
-            x1, y1 = x2, y2
-            x2, y2 = point
-
-
-def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
-    """Make coordinate rasters where each pixel value is the x/y coordinate
-    of that pixel's centerpoint in the raster coordinate system.
-
-    Args:
-        raster_path (str): raster to generate coordinates for
-        x_output_path (str): raster path to write out x coordinates
-        y_output_path (str): raster path to write out y coordinates
-
-    Returns:
-        None
-    """
-    raster_info = pygeoprocessing.get_raster_info(raster_path)
-    pixel_size_x, pixel_size_y = raster_info['pixel_size']
-    n_cols, n_rows = raster_info['raster_size']
-    x_origin = raster_info['geotransform'][0]
-    y_origin = raster_info['geotransform'][3]
-
-    # create the output rasters
-    raster_driver = gdal.GetDriverByName('GTIFF')
-    x_raster = raster_driver.Create(
-        x_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
-        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
-    y_raster = raster_driver.Create(
-        y_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
-        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
-    x_band, y_band = x_raster.GetRasterBand(1), y_raster.GetRasterBand(1)
-
-    # can't use raster_calculator here because we need the block offset info
-    # calculate coords for each block and write them to the output rasters
-    for data, array in pygeoprocessing.iterblocks((raster_path, 1)):
-        y_coords, x_coords = numpy.indices(array.shape)
-        x_coords = (
-            (x_coords * pixel_size_x) +  # convert to pixel size in meters
-            (pixel_size_x / 2) +  # center the point on the pixel
-            (data['xoff'] * pixel_size_x) +   # the offset of this block relative to the raster
-            x_origin)  # the raster's offset relative to the coordinate system
-        y_coords = (
-            (y_coords * pixel_size_y) + 
-            (pixel_size_y / 2) +
-            (data['yoff'] * pixel_size_y) +
-            y_origin)
-
-        x_band.WriteArray(x_coords, xoff=data['xoff'], yoff=data['yoff'])
-        y_band.WriteArray(y_coords, xoff=data['xoff'], yoff=data['yoff'])
-    x_band, y_band, x_raster, y_raster = None, None, None, None
-
-
-def adjust_op(retention_ratio_array, impervious_array, distance_array, 
-        search_kernel, radius):
-    """Apply the retention ratio adjustment algorithm to an array. This is
-    meant to be used with raster_calculator.
-
-    Args:
-        retention_ratio_array (numpy.ndarray): 2D array of stormwater
-            retention ratios
-        impervious_array (numpy.ndarray): 2D binary array of the same shape as
-            ``retention_ratio_array``. 1 = directly connected impervious LULC.
-        distance_array (numpy.ndarray): 2D array of the same shape as
-            ``retention_ratio_array``. Each pixel value is the distance from 
-            that pixel's centerpoint to the nearest road centerline.
-        search_kernel (numpy.ndarray): 2D binary array. Pixels labeled 1 are
-            included in the adjustment operation, pixels labeled 0 are not.
-        radius (float): Distance around each pixel centerpoint to consider.
-
-    Returns:
-        2D numpy array of adjusted retention ratios. Has the same shape as 
-        ``retention_ratio_array``.
-    """
-    # total # of pixels within the search kernel that are impervious LULC
-    # kernels extending beyond the array edge are padded with zeros
-    convolved = scipy.signal.convolve(impervious_array, search_kernel, 
-        mode='same')  # output has same shape as input array
-    # boolean array where 1 = pixel is within radius of impervious LULC
-    is_near_impervious_lulc = (convolved > 0)
-    is_near_road = (distance_array <= radius)
-    is_connected = is_near_impervious_lulc | is_near_road
-
-    # array where each value is the number of valid values within the
-    # search kernel. 
-    # - for every kernel that doesn't extend past the edge of the original 
-    #   array, this is search_kernel.size
-    # - for kernels that extend past the edge, this is the number of 
-    #   elements that are within the original array
-    n_values_array = scipy.ndimage.convolve(
-        numpy.ones(retention_ratio_array.shape), 
-        search_kernel, 
-        mode='constant', 
-        cval=0)
-
-    # array where each pixel is averaged with its neighboring pixels within
-    # the search radius. 
-    averaged_ratio_array = (
-        scipy.ndimage.convolve(
-            retention_ratio_array, 
-            search_kernel,
-            mode='constant',
-            cval=0
-        ) / n_values_array)
-    # adjustment factor:
-    # - 0 if any of the nearby pixels are impervious/connected;
-    # - average of nearby pixels, otherwise
-    adjustment_factor_array = averaged_ratio_array * ~is_connected
-    print(~is_connected)
-    print(adjustment_factor_array)
-
-    # equation 2-4
-    adjusted_ratio_array = (retention_ratio_array + 
-        (1 - retention_ratio_array) * adjustment_factor_array)
-
-    print(adjusted_ratio_array)
-    return adjusted_ratio_array
-
-
-def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path, 
-        centerline_distance_path, radius, output_path):
-    """Adjust retention ratios according to surrounding LULC and roads.
-
-    Args:
-        retention_ratio_path (str): path to raster of retention ratio values
-        connected_path (str): path to a binary raster where 1 is directly
-            connected impervious LULC type, 0 is not
-        centerline_distance_path (str): path to a raster where each pixel 
-            value is the distance from that pixel's centerpoint to the nearest 
-            road centerline
-        radius (float): max distance (in raster coordinate system units) to
-            consider a pixel is "near" impervious LULC and/or road centerlines
-        output_path (str): path to write the adjusted retention ratio raster
-
-    Returns:
-        None
-    """
-    # the search kernel is just large enough to contain all pixels that
-    # *could* be within the radius of the center pixel
-    search_kernel_shape = tuple([radius*2+1]*2)
-    centerpoint = tuple([radius+1]*2)
-
-    # arrays of the column index and row index of each pixel
-    col_indices, row_indices = numpy.indices(search_kernel_shape)
-    # adjust them so that (0, 0) is the center pixel
-    col_indices -= radius
-    row_indices -= radius
-
-    # This could be expanded to flesh out the proportion of a pixel in the 
-    # mask if needed, but for this convolution demo, not needed.
-
-    # hypotenuse_i = sqrt(col_indices_i**2 + row_indices_i**2) for each pixel i
-    hypotenuse = numpy.hypot(col_indices, row_indices)
-
-    # boolean kernel where 1=pixel centerpoint is within the radius of the 
-    # center pixel's centerpoint
-    search_kernel = numpy.array(hypotenuse < radius, dtype=numpy.uint8)
-
-    pygeoprocessing.raster_calculator(
-        [(retention_ratio_path, 1), 
-         (connected_path, 1), 
-         (centerline_distance_path, 1),
-         search_kernel,
-         radius
-        ], adjust_op, output_path, gdal.GDT_Float32, NODATA)
-
-
 def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
     """Make stormwater retention or infiltration volume map from ratio and 
        precipitation.
@@ -795,7 +483,6 @@ def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
     pygeoprocessing.raster_calculator(
         [(ratio_path, 1), (precipitation_path, 1)],
         volume_op, output_path, gdal.GDT_Float32, NODATA)
-
 
 
 def calculate_avoided_pollutant_load(lulc_path, retention_volume_path, 
@@ -956,6 +643,310 @@ def aggregate_results(aoi_path, r_ratio_path, r_volume_path,
     gdal.Dataset.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
 
+
+def calculate_connected_lulc(lulc_path, impervious_lookup, output_path):
+    """Convert LULC raster to a binary raster where 1 is directly connected
+    impervious LULC type and 0 is not.
+
+    Args:
+        lulc_path (str): path to a LULC raster
+        impervious_lookup (dict): dictionary mapping each LULC code in the 
+            LULC raster to a boolean value, where True means the LULC type 
+            is a directly-connected impervious surface
+        output_path (str): path to write out the binary raster
+
+    Returns:
+        None
+    """
+    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+    # make a list of the LULC codes in order and a list of the corresponding
+    # binary impervious values
+    sorted_lucodes = sorted(list(impervious_lookup.keys()))
+    impervious_lookup_array = numpy.array(
+        [impervious_lookup[lucode] for lucode in sorted_lucodes])
+
+    def connected_op(lulc_array):
+        is_connected_array = numpy.full(lulc_array.shape, NODATA)
+        valid_mask = (lulc_array != lulc_nodata)
+        lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
+        is_connected_array[valid_mask] = (
+            impervious_lookup_array[lulc_index][valid_mask])
+        return is_connected_array
+
+    pygeoprocessing.raster_calculator(
+        [(lulc_path, 1)], connected_op, output_path, gdal.GDT_Float32, NODATA)
+
+
+def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
+    """Find the minimum distance from each array point to a line segment.
+
+    Args:
+        x_coords (numpy.ndarray): a 2D array where each element is the
+            x-coordinate of a point in the same coordinate system as the
+            line endpoints
+        y_coords (numpy.ndarray): a 2D array where each element is the
+            y-coordinate of a point in the same coordinate system as the
+            line endpoints
+        x1 (float): the x coord of the first endpoint of the line segment
+        y1 (float): the y coord of the first endpoint of the line segment
+        x2 (float): the x coord of the second endpoint of the line segment
+            ((x2, y2) can't be identical to (x1, y1))
+        y2 (float): the y coord of the second endpoint of the line segment
+            ((x2, y2) can't be identical to (x1, y1))
+
+    Returns:
+        numpy.ndarray with the same shape as x_coords and y_coords. The
+        value of an element at [a, b] is the minimum distance from the
+        point (x_coords[a, b], y_coords[a, b]) to the line segment from 
+        (x1, y1) to (x2, y2). 
+    """
+    # Using the algorithm from https://math.stackexchange.com/a/330329:
+    # Parameterize the line segment by parameter t, which represents how far
+    # along the line segment we are from endpoint 1 to endpoint 2.
+    # x(t) = x1 + t(x2 - x1)
+    # y(t) = y1 + t(y2 - y1)
+    # (x(t), y(t)) is on the segment when t ∈ [0, 1]
+
+    # the notation ⟨𝑝−𝑠1,𝑠2−𝑠1⟩ in the SE post means the dot product:
+    # (𝑝-𝑠1)·(𝑠2−𝑠1) = (x-x1)*(x2-x1) + (y-y1)*(y2-y1)
+    # the notation ‖𝑠2−𝑠1‖ means the pythagorean distance
+
+    # solve for the optimal value of t, such that the distance from
+    # (x_coord, y_coord) to (x(t), y(t)) is minimized
+    t_optimal = (
+        ((x_coords - x1) * (x2 - x1) + (y_coords - y1) * (y2 - y1)) / 
+        ((x2 - x1)**2 + (y2 - y1)**2))
+    # constrain t to the bounds of the line segment
+    t_in_bounds = numpy.minimum(numpy.maximum(t_optimal, 0), 1)
+    # solve for x(t) and y(t)
+    nearest_x_coords = x1 + t_in_bounds * (x2 - x1)
+    nearest_y_coords = y1 + t_in_bounds * (y2 - y1)
+    # find the distance from each (x_coord, y_coord) to (x(t), y(t))
+    distances = numpy.hypot(nearest_x_coords - x_coords, 
+        nearest_y_coords - y_coords)
+    return distances
+
+
+def adjust_op(retention_ratio_array, impervious_array, distance_array, 
+        search_kernel, radius):
+    """Apply the retention ratio adjustment algorithm to an array. This is
+    meant to be used with raster_calculator.
+
+    Args:
+        retention_ratio_array (numpy.ndarray): 2D array of stormwater
+            retention ratios
+        impervious_array (numpy.ndarray): 2D binary array of the same shape as
+            ``retention_ratio_array``. 1 = directly connected impervious LULC.
+        distance_array (numpy.ndarray): 2D array of the same shape as
+            ``retention_ratio_array``. Each pixel value is the distance from 
+            that pixel's centerpoint to the nearest road centerline.
+        search_kernel (numpy.ndarray): 2D binary array. Pixels labeled 1 are
+            included in the adjustment operation, pixels labeled 0 are not.
+        radius (float): Distance around each pixel centerpoint to consider.
+
+    Returns:
+        2D numpy array of adjusted retention ratios. Has the same shape as 
+        ``retention_ratio_array``.
+    """
+    # total # of pixels within the search kernel that are impervious LULC
+    # kernels extending beyond the array edge are padded with zeros
+    convolved = scipy.signal.convolve(impervious_array, search_kernel, 
+        mode='same')  # output has same shape as input array
+    # boolean array where 1 = pixel is within radius of impervious LULC
+    is_near_impervious_lulc = (convolved > 0)
+    is_near_road = (distance_array <= radius)
+    is_connected = is_near_impervious_lulc | is_near_road
+
+    # array where each value is the number of valid values within the
+    # search kernel. 
+    # - for every kernel that doesn't extend past the edge of the original 
+    #   array, this is search_kernel.size
+    # - for kernels that extend past the edge, this is the number of 
+    #   elements that are within the original array
+    n_values_array = scipy.ndimage.convolve(
+        numpy.ones(retention_ratio_array.shape), 
+        search_kernel, 
+        mode='constant', 
+        cval=0)
+
+    # array where each pixel is averaged with its neighboring pixels within
+    # the search radius. 
+    averaged_ratio_array = (
+        scipy.ndimage.convolve(
+            retention_ratio_array, 
+            search_kernel,
+            mode='constant',
+            cval=0
+        ) / n_values_array)
+    # adjustment factor:
+    # - 0 if any of the nearby pixels are impervious/connected;
+    # - average of nearby pixels, otherwise
+    adjustment_factor_array = averaged_ratio_array * ~is_connected
+
+    # equation 2-4
+    adjusted_ratio_array = (retention_ratio_array + 
+        (1 - retention_ratio_array) * adjustment_factor_array)
+
+    return adjusted_ratio_array
+
+
+def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path, 
+        centerline_distance_path, radius, output_path):
+    """Adjust retention ratios according to surrounding LULC and roads.
+
+    Args:
+        retention_ratio_path (str): path to raster of retention ratio values
+        connected_path (str): path to a binary raster where 1 is directly
+            connected impervious LULC type, 0 is not
+        centerline_distance_path (str): path to a raster where each pixel 
+            value is the distance from that pixel's centerpoint to the nearest 
+            road centerline
+        radius (float): max distance (in raster coordinate system units) to
+            consider a pixel is "near" impervious LULC and/or road centerlines
+        output_path (str): path to write the adjusted retention ratio raster
+
+    Returns:
+        None
+    """
+    # the search kernel is just large enough to contain all pixels that
+    # *could* be within the radius of the center pixel
+    search_kernel_shape = tuple([radius*2+1]*2)
+    centerpoint = tuple([radius+1]*2)
+
+    # arrays of the column index and row index of each pixel
+    col_indices, row_indices = numpy.indices(search_kernel_shape)
+    # adjust them so that (0, 0) is the center pixel
+    col_indices -= radius
+    row_indices -= radius
+
+    # This could be expanded to flesh out the proportion of a pixel in the 
+    # mask if needed, but for this convolution demo, not needed.
+
+    # hypotenuse_i = sqrt(col_indices_i**2 + row_indices_i**2) for each pixel i
+    hypotenuse = numpy.hypot(col_indices, row_indices)
+
+    # boolean kernel where 1=pixel centerpoint is within the radius of the 
+    # center pixel's centerpoint
+    search_kernel = numpy.array(hypotenuse < radius, dtype=numpy.uint8)
+
+    pygeoprocessing.raster_calculator(
+        [(retention_ratio_path, 1), 
+         (connected_path, 1), 
+         (centerline_distance_path, 1),
+         search_kernel,
+         radius
+        ], adjust_op, output_path, gdal.GDT_Float32, NODATA)
+
+
+def distance_to_road_centerlines(x_coords_path, y_coords_path, 
+        centerlines_path, output_path):
+    """Calculate the distance from each pixel centerpoint to the nearest 
+    road centerline.
+
+    Args:
+        x_coords_path (str): path to a raster where each pixel value is the x 
+            coordinate of that pixel in the raster coordinate system
+        y_coords_path (str): path to a raster where each pixel value is the y
+            coordinate of that pixel in the raster coordinate system
+        centerlines_path (str): path to a linestring vector of road centerlines
+        output_path (str): path to write out the distance raster. This is a
+            raster of the same dimensions, pixel size, and coordinate system 
+            as ``raster_path``, where each pixel value is the distance from 
+            that pixel's centerpoint to the nearest road centerline. Distances 
+            are in the same unit as the raster coordinate system.
+
+    Returns:
+        None
+    """
+    def linestring_geometry_op(x_coords, y_coords):
+        segment_generator = iter_linestring_segments(centerlines_path)
+        (x1, y1), (x2, y2) = next(segment_generator)
+        min_distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
+
+        for (x1, y1), (x2, y2) in segment_generator:
+            if x2 == x1 and y2 == y1:
+                continue  # ignore lines with length 0
+            distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
+            min_distance = numpy.min(min_distance, distance)
+        return min_distance
+
+    pygeoprocessing.raster_calculator(
+        [(x_coords_path, 1), (y_coords_path, 1)], 
+        linestring_geometry_op, output_path, gdal.GDT_Float32, NODATA)
+
+
+def iter_linestring_segments(vector_path):
+    """Yield (start, end) coordinate pairs for each segment of a linestring.
+
+    Args:
+        vector_path (str): path to a linestring vector to iterate over
+
+    Yields:
+        ((x1, y1), (x2, y2)) tuples representing the start and end point of a
+        linestring segment. (x1, y1) of the nth yielded tuple equals (x2, y2)
+        of the (n-1)th yielded tuple.
+    """
+    vector = gdal.OpenEx(vector_path)
+    layer = vector.GetLayer()
+    for geometry in layer:
+        ref = geometry.GetGeometryRef()
+        assert ref.GetGeometryName() == 'LINESTRING'
+
+        points = ref.GetPoints()  # a list of (x, y) points
+        # iterate over each pair of points (each segment) in the linestring
+        for i in range(len(points) - 1):
+            x1, y1, *_ = points[i]
+            x2, y2, *_ = points[i + 1]
+            yield (x1, y1), (x2, y2)
+
+
+def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
+    """Make coordinate rasters where each pixel value is the x/y coordinate
+    of that pixel's centerpoint in the raster coordinate system.
+
+    Args:
+        raster_path (str): raster to generate coordinates for
+        x_output_path (str): raster path to write out x coordinates
+        y_output_path (str): raster path to write out y coordinates
+
+    Returns:
+        None
+    """
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
+    pixel_size_x, pixel_size_y = raster_info['pixel_size']
+    n_cols, n_rows = raster_info['raster_size']
+    x_origin = raster_info['geotransform'][0]
+    y_origin = raster_info['geotransform'][3]
+
+    # create the output rasters
+    raster_driver = gdal.GetDriverByName('GTIFF')
+    x_raster = raster_driver.Create(
+        x_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
+        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+    y_raster = raster_driver.Create(
+        y_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
+        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+    x_band, y_band = x_raster.GetRasterBand(1), y_raster.GetRasterBand(1)
+
+    # can't use raster_calculator here because we need the block offset info
+    # calculate coords for each block and write them to the output rasters
+    for data, array in pygeoprocessing.iterblocks((raster_path, 1)):
+        y_coords, x_coords = numpy.indices(array.shape)
+        x_coords = (
+            (x_coords * pixel_size_x) +  # convert to pixel size in meters
+            (pixel_size_x / 2) +  # center the point on the pixel
+            (data['xoff'] * pixel_size_x) +   # the offset of this block relative to the raster
+            x_origin)  # the raster's offset relative to the coordinate system
+        y_coords = (
+            (y_coords * pixel_size_y) + 
+            (pixel_size_y / 2) +
+            (data['yoff'] * pixel_size_y) +
+            y_origin)
+
+        x_band.WriteArray(x_coords, xoff=data['xoff'], yoff=data['yoff'])
+        y_band.WriteArray(y_coords, xoff=data['xoff'], yoff=data['yoff'])
+    x_band, y_band, x_raster, y_raster = None, None, None, None
+
     
 @validation.invest_validator
 def validate(args):
@@ -964,10 +955,6 @@ def validate(args):
     Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
-        limit_to (str): (optional) if not None indicates that validation
-            should only occur on the args[limit_to] value. The intent that
-            individual key validation could be significantly less expensive
-            than validating the entire `args` dictionary.
 
     Returns:
         list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')

@@ -360,10 +360,14 @@ class StormwaterTests(unittest.TestCase):
 
 
     def test_iter_linestring_segments(self):
+        import os
+        from osgeo import gdal, ogr, osr
         from natcap.invest import stormwater
 
         coords = [(100, 1), (105, 2), (-7, 0)]
-        linestring_path = os.path.join(self.workspace_dir, 'linestring.shp')
+        path = os.path.join(self.workspace_dir, 'linestring.gpkg')
+        spatial_reference = osr.SpatialReference()
+        spatial_reference.ImportFromEPSG(3857)
 
         expected_pairs = [
             (coords[0], coords[1]),
@@ -371,17 +375,26 @@ class StormwaterTests(unittest.TestCase):
         ]
 
         driver = gdal.GetDriverByName('GPKG')
-        linestring_vector = driver.Create(linestring_path, 0, 0, 0, 
-            gdal.GDT_Unknown)
-        layer = linestring_vector.CreateLayer(
-            'linestring', points_layer.GetSpatialRef(), ogr.OGRwkbGeometryType.wkbLineString)
-        snapped_layer.CreateFields(points_layer.schema)
-        snapped_layer_defn = snapped_layer.GetLayerDefn()
+        linestring_vector = driver.Create(path, 0, 0, 0, gdal.GDT_Unknown)
+        layer = linestring_vector.CreateLayer('linestring', 
+            spatial_reference, ogr.wkbLineString)
+        layer_defn = layer.GetLayerDefn()
 
-        snapped_layer.StartTransaction()
-        stormwater
+        layer.StartTransaction()
 
+        linestring = ogr.Geometry(ogr.wkbLineString)
+        for coord in coords:
+            linestring.AddPoint(*coord)
 
+        feature = ogr.Feature(layer_defn)
+        feature.SetGeometry(linestring)
+        layer.CreateFeature(feature)
+        layer.CommitTransaction()
+        layer = None
+        linestring_vector = None
+
+        output_pairs = list(stormwater.iter_linestring_segments(path))
+        self.assertEqual(expected_pairs, output_pairs)
 
 
 
