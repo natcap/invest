@@ -199,8 +199,6 @@ def execute(args):
 
     task_graph = taskgraph.TaskGraph(args['workspace_dir'], int(args.get('n_workers', -1)))
 
-
-
     # Align all three input rasters to the same projection
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
@@ -209,7 +207,6 @@ def execute(args):
         kwargs={'raster_align_index': 0},
         target_path_list=align_outputs,
         task_name='align input rasters')
-
 
     # Build a lookup dictionary mapping each LULC code to its row
     biophysical_dict = utils.build_lookup_from_csv(
@@ -234,7 +231,6 @@ def execute(args):
             'D': row['ir_d'],
         } for lucode, row in biophysical_dict.items()
     }
-
 
     # Calculate stormwater retention ratio and volume from
     # LULC, soil groups, biophysical data, and precipitation
@@ -286,7 +282,7 @@ def execute(args):
                 FILES['retention_ratio_path'],
                 FILES['connected_lulc_path'],
                 FILES['road_distance_path'],
-                args['retention_radius'],
+                float(args['retention_radius']),
                 FILES['adjusted_retention_ratio_path']),
             target_path_list=[FILES['adjusted_retention_ratio_path']],
             task_name='adjust stormwater retention ratio',
@@ -299,6 +295,7 @@ def execute(args):
         final_retention_ratio_path = FILES['retention_ratio_path']
         final_retention_ratio_task = retention_ratio_task
 
+    # Calculate stormwater retention volume from ratios and precipitation
     retention_volume_task = task_graph.add_task(
         func=calculate_stormwater_volume,
         args=(
@@ -309,7 +306,6 @@ def execute(args):
         dependent_task_list=[align_task, final_retention_ratio_task],
         task_name='calculate stormwater retention volume'
     )
-
 
     # (Optional) Calculate stormwater infiltration ratio and volume from
     # LULC, soil groups, biophysical table, and precipitation
@@ -367,7 +363,6 @@ def execute(args):
             task_name=f'calculate avoided pollutant {pollutant} load'
         )
         aggregation_dependencies.append(avoided_load_task)
-
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed
@@ -762,6 +757,95 @@ def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
     return distances
 
 
+def n_values(retention_ratio_path, radius, output_path):
+
+    raster_info = pygeoprocessing.get_raster_info(retention_ratio_path)
+    pixel_size = abs(raster_info['pixel_size'][0])
+    raster_width, raster_height = raster_info['raster_size']
+    pixel_radius = math.ceil(radius / pixel_size)
+    # the search kernel is just large enough to contain all pixels that
+    # *could* be within the radius of the center pixel
+    search_kernel_shape = tuple([pixel_radius*2+1]*2)
+
+    # arrays of the column index and row index of each pixel
+    col_indices, row_indices = numpy.indices(search_kernel_shape)
+    # adjust them so that (0, 0) is the center pixel
+    col_indices -= radius
+    row_indices -= radius
+
+    # This could be expanded to flesh out the proportion of a pixel in the 
+    # mask if needed, but for this convolution demo, not needed.
+
+    # hypotenuse_i = sqrt(col_indices_i**2 + row_indices_i**2) for each pixel i
+    hypotenuse = numpy.hypot(col_indices, row_indices)
+
+    # boolean kernel where 1=pixel centerpoint is within the radius of the 
+    # center pixel's centerpoint
+    search_kernel = numpy.array(hypotenuse < radius, dtype=numpy.uint8)
+
+    def n_values_op(retention_ratio_array, xoff, yoff):
+        valid_pixels = numpy.zeros(retention_ratio_array.shape)
+        # set all valid pixels to 1 so we can count them
+        valid_pixels[retention_ratio_array != NODATA] = 1
+        # this adds up all the pixels in the search kernel
+        # nodata pixels and pixels outside the 
+        n_values_array = scipy.ndimage.convolve(
+            valid_pixels, 
+            search_kernel, 
+            mode='constant', 
+            cval=0)
+
+        if xoff == 0:
+
+    band = raster.GetRasterBand(retention_ratio_path)
+
+    raster_driver = gdal.GetDriverByName('GTIFF')
+    out_raster = raster_driver.Create(
+        output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
+        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+    out_band = out_raster.GetRasterBand(1)
+
+    for block in pygeoprocessing.iterblocks(retention_ratio_path, 
+            offset_only=True):
+        # overlap blocks by the pixel radius so that all have complete data
+        if block['xoff'] > 0:
+            block['xoff'] -= pixel_radius
+        if block['yoff'] > 0:
+            block['yoff'] -= pixel_radius
+        if block['xoff'] + block['width'] < raster_width:
+            block['width'] += pixel_radius
+        if block['yoff'] + block['height'] < raster_height:
+            block['height'] += pixel_radius
+
+        array = band.ReadAsArray(xoff=block['xoff'], yoff=block['yoff'], 
+            xsize=block['width'], ysize=block['height'])
+        pad_top, pad_left, pad_bottom, pad_right = 0, 0, 0, 0
+        if block['xoff'] == 0:
+            pad_left = pixel_radius
+        if block['yoff'] == 0:
+           pad_top = pixel_radius
+        if block['xoff'] + block['width'] == raster_width:
+            pad_right = pixel_radius
+        if block['yoff'] + block['height'] < raster_height:
+            pad_bottom = pixel_radius
+        array = numpy.pad(array, 
+            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
+            mode='constant', constant_values=0)
+
+        array[array == NODATA] = 0
+
+        # this adds up all the pixels in the search kernel
+        # nodata pixels and pixels outside the raster count as 0
+        n_values_array = scipy.signal.convolve(
+            array, 
+            search_kernel, 
+            mode='valid')
+
+        out_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
+        
+    out_band, out_raster = None, None
+
+
 def adjust_op(retention_ratio_array, impervious_array, distance_array, 
         search_kernel, radius):
     """Apply the retention ratio adjustment algorithm to an array. This is
@@ -843,26 +927,7 @@ def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path,
     Returns:
         None
     """
-    # the search kernel is just large enough to contain all pixels that
-    # *could* be within the radius of the center pixel
-    search_kernel_shape = tuple([radius*2+1]*2)
-    centerpoint = tuple([radius+1]*2)
-
-    # arrays of the column index and row index of each pixel
-    col_indices, row_indices = numpy.indices(search_kernel_shape)
-    # adjust them so that (0, 0) is the center pixel
-    col_indices -= radius
-    row_indices -= radius
-
-    # This could be expanded to flesh out the proportion of a pixel in the 
-    # mask if needed, but for this convolution demo, not needed.
-
-    # hypotenuse_i = sqrt(col_indices_i**2 + row_indices_i**2) for each pixel i
-    hypotenuse = numpy.hypot(col_indices, row_indices)
-
-    # boolean kernel where 1=pixel centerpoint is within the radius of the 
-    # center pixel's centerpoint
-    search_kernel = numpy.array(hypotenuse < radius, dtype=numpy.uint8)
+    
 
     pygeoprocessing.raster_calculator(
         [(retention_ratio_path, 1), 
@@ -902,7 +967,7 @@ def distance_to_road_centerlines(x_coords_path, y_coords_path,
             if x2 == x1 and y2 == y1:
                 continue  # ignore lines with length 0
             distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
-            min_distance = numpy.min(min_distance, distance)
+            min_distance = numpy.minimum(min_distance, distance)
         return min_distance
 
     pygeoprocessing.raster_calculator(
@@ -923,16 +988,23 @@ def iter_linestring_segments(vector_path):
     """
     vector = gdal.OpenEx(vector_path)
     layer = vector.GetLayer()
-    for geometry in layer:
-        ref = geometry.GetGeometryRef()
-        assert ref.GetGeometryName() == 'LINESTRING'
+    for feature in layer:
+        ref = feature.GetGeometryRef()
+        assert ref.GetGeometryName() in ['LINESTRING', 'MULTILINESTRING']
 
-        points = ref.GetPoints()  # a list of (x, y) points
-        # iterate over each pair of points (each segment) in the linestring
-        for i in range(len(points) - 1):
-            x1, y1, *_ = points[i]
-            x2, y2, *_ = points[i + 1]
-            yield (x1, y1), (x2, y2)
+        n_geometries = ref.GetGeometryCount()
+        if ref.GetGeometryCount() > 0:  # a multi type
+            geometries = [ref.GetGeometryRef(i) for i in range(n_geometries)]
+        else:  # not a multi type
+            geometries = [ref]
+
+        for geometry in geometries:
+            points = geometry.GetPoints()  # a list of (x, y) points
+            # iterate over each pair of points (each segment) in the linestring
+            for i in range(len(points) - 1):
+                x1, y1, *_ = points[i]
+                x2, y2, *_ = points[i + 1]
+                yield (x1, y1), (x2, y2)
 
 
 def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
