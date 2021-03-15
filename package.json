@@ -1,6 +1,5 @@
 {
   "name": "invest-workbench",
-  "productName": "invest-workbench",
   "version": "0.1.0-alpha",
   "description": "Models that map and value the goods and services from nature that sustain and fulfill human life",
   "main": "src/main.js",
@@ -14,38 +13,7 @@
     "postinstall": "electron-builder install-app-deps",
     "fetch-invest": "node ./scripts/fetch_invest_binaries.js && unzip ./build/binaries.zip -d build/invest/",
     "build": "node ./build.js",
-    "dist": "electron-builder build -c.extraMetadata.main=build/main.js --publish never"
-  },
-  "build": {
-    "extraResources": [
-      {
-        "from": "build/invest",
-        "to": "invest"
-      }
-    ],
-    "appId": "NaturalCapitalProject.Invest.Workbench",
-    "productName": "InVEST Workbench",
-    "artifactName": "invest-workbench_${os}_${arch}_${env.VERSION}.${ext}",
-    "mac": {
-      "category": "public.app-category.business",
-      "icon": "resources/invest-in-shadow-white.png",
-      "target": "dmg"
-    },
-    "linux": {
-      "target": [
-        "AppImage"
-      ],
-      "icon": "resources/invest-in-shadow-white.png",
-      "category": "Science"
-    },
-    "win": {
-      "target": "nsis",
-      "icon": "resources/invest-in-shadow-white.png"
-    },
-    "files": [
-      "build/**/*",
-      "node_modules/**/*"
-    ]
+    "dist": "electron-builder build --publish never --config electron-builder-config.js"
   },
   "jest": {
     "verbose": true,
