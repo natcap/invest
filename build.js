@@ -1,6 +1,6 @@
 'use strict';
 
-const { execFileSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const fs = require('fs-extra');
 const path = require('path');
 const glob = require('glob');
@@ -14,7 +14,6 @@ if (process.argv[2] && process.argv[2] === 'clean') {
 } else {
   clean();
   build();
-  makeVersionString();
 }
 
 /** Remove all the files created during build()
