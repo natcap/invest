@@ -13,7 +13,6 @@ const APP_ID = `NaturalCapitalProject.Invest.Workbench.${pkg.invest.version}`;
 // Uniquely identify the changeset we're building & packaging.
 const workbenchVersion = execFileSync('git', ['describe', '--tags'])
   .toString().trim();
-console.log(workbenchVersion);
 
 // productName controls the install dirname & app name
 // We might want to remove the workbench version from this name
