@@ -102,13 +102,6 @@ ARGS_SPEC = {
                 "of connected-impervious LULC and/or a road centerline."),
             "name": "retention radius"
         },
-        "dem_path": {
-            "type": "raster",
-            # "bands": {1: {"type": "number", "units": "meters"}},
-            "required": "adjust_retention_ratios",
-            "about": "Digital elevation model of the area",
-            "name": "digital elevation model" 
-        },
         "road_centerlines_path": {
             "type": "vector",
             # "fields": {},
@@ -122,7 +115,14 @@ ARGS_SPEC = {
             # "fields": {},
             # "geometry": {'POLYGON'},
             "required": False,
-            "about": "Aggregation areas",
+            "about": (
+                "Areas over which to aggregate results (typically watersheds "
+                "or sewersheds). The aggregated data are: average retention "
+                "ratio and total retention volume; average infiltration ratio "
+                "and total infiltration volume if infiltration data was "
+                "provided; total retention value if replacement cost was "
+                "provided; and total avoided pollutant load for each "
+                "pollutant provided."),
             "name": "watersheds"
         },
         "replacement_cost": {
@@ -137,6 +137,33 @@ ARGS_SPEC = {
 
 
 def execute(args):
+    """Execute the stormwater model.
+    
+    Args:
+        args['lulc_path'] (str): path to LULC raster
+        args['soil_group_path'] (str): path to soil group raster, where pixel 
+            values 1, 2, 3, 4 correspond to groups A, B, C, D
+        args['precipitation_path'] (str): path to raster of total annual 
+            precipitation in millimeters
+        args['biophysical_table'] (str): path to biophysical table with columns
+            'lucode', 'EMC_x' (event mean concentration mg/L) for each 
+            pollutant x, 'RC_y' (retention coefficient) and 'IR_y' 
+            (infiltration coefficient) for each soil group y, and 
+            'is_connected' if args['adjust_retention_ratios'] is True
+        args['adjust_retention_ratios'] (bool): If True, apply retention ratio 
+            adjustment algorithm.
+        args['retention_radius'] (float): If args['adjust_retention_ratios'] 
+            is True, use this radius in the adjustment algorithm.
+        args['road_centerliens_path'] (str): Path to linestring vector of road 
+            centerlines. Only used if args['adjust_retention_ratios'] is True.
+        args['aggregate_areas_path'] (str): Optional path to polygon vector of
+            areas to aggregate results over.
+        args['replacement_cost'] (float): Cost to replace stormwater retention 
+            devices in units currency per cubic meter
+
+    Returns:
+        None
+    """
 
     # set up files and directories
     suffix = utils.make_suffix_string(args, 'results_suffix')
