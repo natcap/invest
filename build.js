@@ -72,14 +72,3 @@ function build() {
     }
   });
 }
-
-/** Uniquely identify the changeset we're building & packaging.
- *
- * electron-builder will read this .env file and use the string in
- * the artifactName.
- */
-function makeVersionString() {
-  const version = execFileSync('git', ['describe', '--tags']);
-  fs.writeFileSync(ELECTRON_BUILDER_ENV, `VERSION=${version}`);
-  console.log(`built version ${version}`);
-}

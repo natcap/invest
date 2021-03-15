@@ -1,3 +1,4 @@
+const { execFileSync } = require('child_process');
 const pkg = require('./package');
 
 const OS = process.platform;
@@ -9,10 +10,14 @@ const EXT = OS === 'win32' ? 'exe' : 'dmg';
 // It deliberately only varies by invest version (not workbench version)
 const APP_ID = `NaturalCapitalProject.Invest.Workbench.${pkg.invest.version}`;
 
+// Uniquely identify the changeset we're building & packaging.
+const workbenchVersion = execFileSync('git', ['describe', '--tags']);
+console.log(`building version ${workbenchVersion}`);
+
 // productName controls the install dirname & app name
 // We might want to remove the workbench version from this name
-const PRODUCT_NAME = `InVEST ${pkg.invest.version} Workbench ${pkg.version}`;
-const ARTIFACT_NAME = `invest_${pkg.invest.version}_workbench_${pkg.version}_${OS}_${ARCH}.${EXT}`;
+const PRODUCT_NAME = `InVEST ${pkg.invest.version} Workbench ${workbenchVersion}`;
+const ARTIFACT_NAME = `invest_${pkg.invest.version}_workbench_${workbenchVersion}_${OS}_${ARCH}.${EXT}`;
 
 const config = {
   extraMetadata: {
