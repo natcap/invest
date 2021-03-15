@@ -32,7 +32,8 @@ function getSettingsStore() {
 }
 
 async function getSettingsValue(key) {
-  return await investSettingsStore.getItem(key);
+  const value = await investSettingsStore.getItem(key);
+  return value;
 }
 
 /** Helper function for testing purposes */
@@ -55,4 +56,6 @@ export const settingsStorage = {
     getDefaultSettings: getDefaultSettings,
     saveSettings: saveSettings,
     getSettingsValue: getSettingsValue,
+    clearSettingsStore: clearSettingsStore,
+    getSettingsStore: getSettingsStore,
 }

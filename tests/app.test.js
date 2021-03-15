@@ -13,12 +13,12 @@ import '@testing-library/jest-dom';
 
 import InvestTab from '../src/components/InvestTab';
 import App from '../src/app';
-import { testables } from '../src/app';
 import {
   getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
 } from '../src/server_requests';
 import InvestJob from '../src/InvestJob';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
+import { settingsStorage } from '../src/components/SettingsModal/SettingsStorage';
 
 jest.mock('child_process');
 jest.mock('../src/server_requests');
@@ -287,7 +287,7 @@ describe('InVEST global settings: dialog interactions', () => {
     getInvestModelNames.mockResolvedValue({});
   });
   afterEach(() => {
-    testables.clearSettingsStore();
+    settingsStorage.clearSettingsStore();
     jest.resetAllMocks();
   });
   test('Global settings for cancel, save, and invalid nWorkers', async () => {
@@ -316,6 +316,10 @@ describe('InVEST global settings: dialog interactions', () => {
     // Change the select input and cancel -- expect default selected
     fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
     fireEvent.change(loggingInput, { target: { value: loggingLevel } });
+    await waitFor(() => { // the value to test is inherited through props
+      expect(nWorkersInput).toHaveValue(nWorkers);
+      expect(loggingInput).toHaveValue(loggingLevel);
+    });
     fireEvent.click(getByText('Cancel'));
     fireEvent.click(getByText('settings'));
     await waitFor(() => {
@@ -326,10 +330,6 @@ describe('InVEST global settings: dialog interactions', () => {
     // Change the value for real and save
     fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
     fireEvent.change(loggingInput, { target: { value: loggingLevel } });
-    await waitFor(() => { // the value to test is inherited through props
-      expect(nWorkersInput).toHaveValue(nWorkers);
-      expect(loggingInput).toHaveValue(loggingLevel);
-    });
     // The real test: values saved to global-settings
     fireEvent.click(getByText('Save Changes'));
     fireEvent.click(getByTitle('settings'));
@@ -337,10 +337,11 @@ describe('InVEST global settings: dialog interactions', () => {
       expect(nWorkersInput).toHaveValue(nWorkers);
       expect(loggingInput).toHaveValue(loggingLevel);
     });
-    // Check values in the investSettingsStore
-    const investSettingsStore = testables.getSettingsStore();
-    expect(investSettingsStore.store.nWorkers).toBe('2');
-    expect(investSettingsStore.store.loggingLevel).toBe('DEBUG');
+    // Check values in the settings store were saved
+    const store_nWorkers = await settingsStorage.getSettingsValue('nWorkers');
+    const store_loggingLevel = await settingsStorage.getSettingsValue('loggingLevel');
+    expect(store_nWorkers).toBe('2');
+    expect(store_loggingLevel).toBe('DEBUG');
 
     // Change n_workers to bad value -- expect invalid signal
     fireEvent.change(nWorkersInput, { target: { value: badValue} });
@@ -348,13 +349,17 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(getByText('Save Changes')).toBeDisabled();
   });
 
-  test('Load global settings', async () => {
+  test('Load global settings from storage', async () => {
     const expectedSettings = {
-      nWorkers: '-1',
-      loggingLevel: 'INFO'
+      nWorkers: '3',
+      loggingLevel: 'ERROR'
     }
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
     const loggingLabelText = 'Logging threshold';
+
+    await waitFor(() => {
+      settingsStorage.saveSettings(expectedSettings);
+    });
 
     const { getByText, getByLabelText, getByTitle } = render(
       <App investExe="foo" />
@@ -376,7 +381,7 @@ describe('InVEST global settings: dialog interactions', () => {
       nWorkers: '-1',
       loggingLevel: 'INFO',
     }
-    const nWorkers = '2';
+    const nWorkers = '3';
     const loggingLevel = 'DEBUG';
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
     const loggingLabelText = 'Logging threshold';
@@ -386,8 +391,8 @@ describe('InVEST global settings: dialog interactions', () => {
     );
 
     fireEvent.click(getByTitle('settings'));
-    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-    const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+    let nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
+    let loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
     // Check the default settings
     await waitFor(() => {
@@ -401,7 +406,7 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(nWorkersInput).toHaveValue(nWorkers);
     expect(loggingInput).toHaveValue(loggingLevel);
 
-    fireEvent.click(getByText('Reset Defaults'));
+    fireEvent.click(getByText('Reset'));
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
