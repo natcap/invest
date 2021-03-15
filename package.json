@@ -13,7 +13,7 @@
     "postinstall": "electron-builder install-app-deps",
     "fetch-invest": "node ./scripts/fetch_invest_binaries.js && unzip ./build/binaries.zip -d build/invest/",
     "build": "node ./build.js",
-    "dist": "electron-builder build --publish never --config electron-builder-config.js"
+    "dist": "cross-env DEBUG=electron-builder electron-builder build --publish never --config electron-builder-config.js"
   },
   "jest": {
     "verbose": true,
@@ -34,7 +34,7 @@
     }
   },
   "keywords": [],
-  "author": "dmf",
+  "author": "Natural Capital Project",
   "license": "MIT",
   "dependencies": {
     "cross-env": "^5.2.1",
