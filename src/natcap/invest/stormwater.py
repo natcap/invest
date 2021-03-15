@@ -757,21 +757,33 @@ def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
     return distances
 
 
-def n_values(retention_ratio_path, radius, output_path):
+def calculate_n_values(raster_path, radius, output_path):
+    """Calculate the number of valid pixels within a radius of each pixel.
+    This is useful for averaging the value within a radius. A valid pixel is 
+    within the bounds of the raster and not nodata.
 
-    raster_info = pygeoprocessing.get_raster_info(retention_ratio_path)
+    Args:
+        raster_path (str): path to raster to count valid pixels in
+        radius (float): radius in raster coordinate system units to consider
+        output_path (str): path to write out results
+
+    Returns:
+        None
+    """
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
     pixel_size = abs(raster_info['pixel_size'][0])
     raster_width, raster_height = raster_info['raster_size']
-    pixel_radius = math.ceil(radius / pixel_size)
     # the search kernel is just large enough to contain all pixels that
     # *could* be within the radius of the center pixel
+    pixel_radius = math.ceil(radius / pixel_size)
     search_kernel_shape = tuple([pixel_radius*2+1]*2)
-
+    print(pixel_radius)
     # arrays of the column index and row index of each pixel
     col_indices, row_indices = numpy.indices(search_kernel_shape)
     # adjust them so that (0, 0) is the center pixel
-    col_indices -= radius
-    row_indices -= radius
+    col_indices -= pixel_radius
+    row_indices -= pixel_radius
+    print(col_indices, row_indices)
 
     # This could be expanded to flesh out the proportion of a pixel in the 
     # mask if needed, but for this convolution demo, not needed.
@@ -783,63 +795,62 @@ def n_values(retention_ratio_path, radius, output_path):
     # center pixel's centerpoint
     search_kernel = numpy.array(hypotenuse < radius, dtype=numpy.uint8)
 
-    def n_values_op(retention_ratio_array, xoff, yoff):
-        valid_pixels = numpy.zeros(retention_ratio_array.shape)
-        # set all valid pixels to 1 so we can count them
-        valid_pixels[retention_ratio_array != NODATA] = 1
-        # this adds up all the pixels in the search kernel
-        # nodata pixels and pixels outside the 
-        n_values_array = scipy.ndimage.convolve(
-            valid_pixels, 
-            search_kernel, 
-            mode='constant', 
-            cval=0)
-
-        if xoff == 0:
-
-    band = raster.GetRasterBand(retention_ratio_path)
+    raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
+    band = raster.GetRasterBand(1)
 
     raster_driver = gdal.GetDriverByName('GTIFF')
     out_raster = raster_driver.Create(
-        output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
+        output_path, raster_width, raster_height, 1, gdal.GDT_Float32,
         options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
     out_band = out_raster.GetRasterBand(1)
 
-    for block in pygeoprocessing.iterblocks(retention_ratio_path, 
-            offset_only=True):
+    print(hypotenuse)
+    print(radius)
+    print(search_kernel)
+    for block in pygeoprocessing.iterblocks((raster_path, 1), offset_only=True):
         # overlap blocks by the pixel radius so that all have complete data
         if block['xoff'] > 0:
-            block['xoff'] -= pixel_radius
-        if block['yoff'] > 0:
-            block['yoff'] -= pixel_radius
-        if block['xoff'] + block['width'] < raster_width:
-            block['width'] += pixel_radius
-        if block['yoff'] + block['height'] < raster_height:
-            block['height'] += pixel_radius
-
-        array = band.ReadAsArray(xoff=block['xoff'], yoff=block['yoff'], 
-            xsize=block['width'], ysize=block['height'])
-        pad_top, pad_left, pad_bottom, pad_right = 0, 0, 0, 0
-        if block['xoff'] == 0:
+            xoff = block['xoff'] - pixel_radius
+            pad_left = 0
+        else:
+            xoff = block['xoff']
             pad_left = pixel_radius
-        if block['yoff'] == 0:
-           pad_top = pixel_radius
-        if block['xoff'] + block['width'] == raster_width:
-            pad_right = pixel_radius
-        if block['yoff'] + block['height'] < raster_height:
-            pad_bottom = pixel_radius
-        array = numpy.pad(array, 
-            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
-            mode='constant', constant_values=0)
 
-        array[array == NODATA] = 0
+        if block['yoff'] > 0:
+            yoff = block['yoff'] - pixel_radius
+            pad_top = 0
+        else:
+            yoff = block['yoff']
+            pad_top = pixel_radius
+
+        if block['xoff'] + block['win_xsize'] < raster_width:
+            block['win_xsize'] += pixel_radius
+            pad_right = 0
+        else:
+            pad_right = pixel_radius
+
+        if block['yoff'] + block['win_ysize'] < raster_height:
+            block['win_ysize'] += pixel_radius
+            pad_bottom = 0
+        else:
+            pad_bottom = pixel_radius
+
+        array = band.ReadAsArray(xoff, yoff, block['win_xsize'], 
+            block['win_ysize'])
+        valid_pixels = (array != NODATA).astype(int)
+        # print(valid_pixels)
+        valid_pixels = numpy.pad(valid_pixels, 
+            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
+            mode='constant', constant_values=False)
+        # print(valid_pixels)
 
         # this adds up all the pixels in the search kernel
         # nodata pixels and pixels outside the raster count as 0
         n_values_array = scipy.signal.convolve(
-            array, 
+            valid_pixels, 
             search_kernel, 
             mode='valid')
+        # print(n_values_array)
 
         out_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
         
