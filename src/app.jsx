@@ -17,7 +17,9 @@ import { getInvestModelNames } from './server_requests';
 import { getLogger } from './logger';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
-import { settingsStorage } from './components/SettingsModal/SettingsStorage';
+import {
+  getDefaultSettings, saveSettingsStore, getSettingsValue
+} from './components/SettingsModal/SettingsStorage';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -51,11 +53,11 @@ export default class App extends React.Component {
     const recentJobs = await InvestJob.getJobStore();
     // Placeholder for instantiating global settings.
     let investSettings = {};
-    const globalDefaultSettings = settingsStorage.getDefaultSettings();
+    const globalDefaultSettings = getDefaultSettings();
 
     try {
       for (const [setting, _val] of Object.entries(globalDefaultSettings)) {
-        const value = await settingsStorage.getSettingsValue(setting);
+        const value = await getSettingsValue(setting);
         if (!value) {
           throw new Error('Value not defined or null, use defaults.');
         }
@@ -88,12 +90,12 @@ export default class App extends React.Component {
       investSettings: settings,
     });
 
-    settingsStorage.saveSettings(settings);
+    saveSettingsStore(settings);
   }
 
   /** Reset global settings to defaults. */
   setDefaultSettings() {
-    const defaultSettings = settingsStorage.getDefaultSettings();
+    const defaultSettings = getDefaultSettings();
     this.setState({
       investSettings: defaultSettings,
     });

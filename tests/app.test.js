@@ -18,7 +18,9 @@ import {
 } from '../src/server_requests';
 import InvestJob from '../src/InvestJob';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
-import { settingsStorage } from '../src/components/SettingsModal/SettingsStorage';
+import {
+  clearSettingsStore, getSettingsValue, saveSettingsStore
+} from '../src/components/SettingsModal/SettingsStorage';
 
 jest.mock('child_process');
 jest.mock('../src/server_requests');
@@ -287,7 +289,7 @@ describe('InVEST global settings: dialog interactions', () => {
     getInvestModelNames.mockResolvedValue({});
   });
   afterEach(() => {
-    settingsStorage.clearSettingsStore();
+    clearSettingsStore();
     jest.resetAllMocks();
   });
   test('Global settings for cancel, save, and invalid nWorkers', async () => {
@@ -338,8 +340,8 @@ describe('InVEST global settings: dialog interactions', () => {
       expect(loggingInput).toHaveValue(loggingLevel);
     });
     // Check values in the settings store were saved
-    const store_nWorkers = await settingsStorage.getSettingsValue('nWorkers');
-    const store_loggingLevel = await settingsStorage.getSettingsValue('loggingLevel');
+    const store_nWorkers = await getSettingsValue('nWorkers');
+    const store_loggingLevel = await getSettingsValue('loggingLevel');
     expect(store_nWorkers).toBe('2');
     expect(store_loggingLevel).toBe('DEBUG');
 
@@ -349,7 +351,7 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(getByText('Save Changes')).toBeDisabled();
   });
 
-  test('Load global settings from storage', async () => {
+  test('xyz Load global settings from storage', async () => {
     const expectedSettings = {
       nWorkers: '3',
       loggingLevel: 'ERROR'
@@ -357,9 +359,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
     const loggingLabelText = 'Logging threshold';
 
-    await waitFor(() => {
-      settingsStorage.saveSettings(expectedSettings);
-    });
+    await saveSettingsStore(expectedSettings);
 
     const { getByText, getByLabelText, getByTitle } = render(
       <App investExe="foo" />

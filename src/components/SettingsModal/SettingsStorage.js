@@ -14,7 +14,7 @@ const investSettingsStore = localforage.createInstance({
  *     {String} nWorkers - TaskGraph number of workers
  *     {String} logggingLevel - InVEST model logging level
  */
-function getDefaultSettings() {
+export function getDefaultSettings() {
   const defaultSettings = {
     nWorkers: '-1',
     loggingLevel: 'INFO',
@@ -22,27 +22,29 @@ function getDefaultSettings() {
   return defaultSettings;
 }
 
-/** Helper function for testing purposes
+/** Getter function for settings store value.
  *
- * @returns {object} localforage store for invest settings
+ * @param {object} obj.argsValues - an invest "args dict" with initial values
+ * @param {string} key - setting key to get value
+ *
+ * @returns {string} - value of the setting key.
  */
-function getSettingsStore() {
-  const postSettings = { ...investSettingsStore };
-  return postSettings;
-}
-
-async function getSettingsValue(key) {
+export async function getSettingsValue(key) {
   const value = await investSettingsStore.getItem(key);
   return value;
 }
 
-/** Helper function for testing purposes */
-async function clearSettingsStore() {
+/** Clear the settings store. */
+export async function clearSettingsStore() {
   await investSettingsStore.clear();
 }
 
-/** Helper function to save key, value to the store */
-async function saveSettings(settingsObj) {
+/** Setter function for saving store values.
+ *
+ * @param {object} settingsObj - object with one or more key:value pairs
+ *
+ */
+export async function saveSettingsStore(settingsObj) {
   try {
     for (const [setting, value] of Object.entries(settingsObj)) {
       await investSettingsStore.setItem(setting, value);
@@ -50,12 +52,4 @@ async function saveSettings(settingsObj) {
   } catch (err) {
     logger.error(`Error saving settings: ${err}`);
   }
-}
-
-export const settingsStorage = {
-    getDefaultSettings: getDefaultSettings,
-    saveSettings: saveSettings,
-    getSettingsValue: getSettingsValue,
-    clearSettingsStore: clearSettingsStore,
-    getSettingsStore: getSettingsStore,
 }
