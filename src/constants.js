@@ -1,8 +1,12 @@
 import path from 'path';
 import { ipcRenderer } from 'electron';
 
-//const USER_DATA = remote.app.getPath('userData');
-const USER_DATA = await ipcRenderer.invoke('user-data');
+let USER_DATA = '';
+
+ipcRenderer.on('variable-reply', (event, arg) => {
+  USER_DATA = arg.userDataPath;
+})
+ipcRenderer.send('variable-request', 'ping');
 
 export const fileRegistry = {
   //  for storing state snapshot files

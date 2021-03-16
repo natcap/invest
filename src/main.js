@@ -14,6 +14,7 @@ const {
   screen,
   nativeTheme,
   Menu,
+  MenuItem,
   dialog,
 } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const {
@@ -72,6 +73,15 @@ const createWindow = async () => {
     const result = await dialog.showSaveDialog(arg);
     return result;
   });
+  ipcMain.handle('is-dev-mode', async (event, arg) => {
+    const result = ELECTRON_DEV_MODE;
+    return result;
+  });
+  ipcMain.handle('user-data', async (event, arg) => {
+    const result = await mainProcessVars.userDataPath;
+    console.log(`main user-data : ${result}`);
+    return result;
+  });
 
   // Wait for a response from the server before loading the app
   await getFlaskIsReady();
@@ -100,7 +110,7 @@ const createWindow = async () => {
   );
   Menu.setApplicationMenu(menubar);
   mainWindow.loadURL(`file://${__dirname}/index.html`);
-
+  
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();
     // We should be able to hide mainWindow until it's ready,
@@ -121,7 +131,7 @@ const createWindow = async () => {
       mainWindow.webContents.openDevTools();
     }
   });
-
+  
   // Emitted when the window is closed.
   mainWindow.on('closed', async () => {
     // Dereference the window object, usually you would store windows

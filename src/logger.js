@@ -1,14 +1,20 @@
 const path = require('path');
 const winston = require('winston');
 require('winston-daily-rotate-file');
-const { app, remote } = require('electron');
+const { app, ipcRenderer } = require('electron');
 
-let userDataPath;
+let userDataPath = '';
 let isDevMode;
-if (remote) {
-  // When this module is imported from render process, access via remote
-  userDataPath = remote.app.getPath('userData');
-  isDevMode = remote.process.argv[2] === '--dev';
+if (ipcRenderer) {
+  // When this module is imported from render process, access via ipcRenderer
+  ipcRenderer.on('variable-reply', (event, arg) => {
+    userDataPath = arg.userDataPath;
+  })
+  ipcRenderer.send('variable-request', 'ping');
+
+  ipcRenderer.invoke('is-dev-mode').then((result) => {
+    isDevMode = result;
+  });
 } else {
   // But we also import it from the main process
   userDataPath = app.getPath('userData');
