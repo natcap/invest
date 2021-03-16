@@ -161,7 +161,7 @@ export default class SettingsModal extends React.Component {
                   <Button
                     variant="secondary"
                     onClick={this.handleDefault}
-                    type="reset"
+                    type="button"
                     className="float-right"
                   >
                     Reset
