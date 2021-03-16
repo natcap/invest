@@ -775,7 +775,7 @@ def calculate_n_values(raster_path, radius, output_path):
     raster_width, raster_height = raster_info['raster_size']
     # the search kernel is just large enough to contain all pixels that
     # *could* be within the radius of the center pixel
-    pixel_radius = math.ceil(radius / pixel_size)
+    pixel_radius = math.floor(radius / pixel_size)
     search_kernel_shape = tuple([pixel_radius*2+1]*2)
     print(pixel_radius)
     # arrays of the column index and row index of each pixel
@@ -920,6 +920,21 @@ def adjust_op(retention_ratio_array, impervious_array, distance_array,
     return adjusted_ratio_array
 
 
+def n_values_op(array, search_kernel):
+     # array where each value is the number of valid values within the
+    # search kernel. 
+    # - for every kernel that doesn't extend past the edge of the original 
+    #   array, this is search_kernel.size
+    # - for kernels that extend past the edge, this is the number of 
+    #   elements that are within the original array
+    n_values_array = scipy.signal.convolve(
+        array, 
+        search_kernel, 
+        mode='valid')
+    return n_values_array
+
+
+
 def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path, 
         centerline_distance_path, radius, output_path):
     """Adjust retention ratios according to surrounding LULC and roads.
@@ -938,15 +953,101 @@ def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path,
     Returns:
         None
     """
-    
+    raster_info = pygeoprocessing.get_raster_info(retention_ratio_path)
+    pixel_size = abs(raster_info['pixel_size'][0])
+    raster_width, raster_height = raster_info['raster_size']
+    # the search kernel is just large enough to contain all pixels that
+    # *could* be within the radius of the center pixel
+    pixel_radius = math.floor(radius / pixel_size)
+    search_kernel_shape = tuple([pixel_radius*2+1]*2)
+    print(pixel_radius)
+    # arrays of the column index and row index of each pixel
+    col_indices, row_indices = numpy.indices(search_kernel_shape)
+    # adjust them so that (0, 0) is the center pixel
+    col_indices -= pixel_radius
+    row_indices -= pixel_radius
+    print(col_indices, row_indices)
 
-    pygeoprocessing.raster_calculator(
-        [(retention_ratio_path, 1), 
-         (connected_path, 1), 
-         (centerline_distance_path, 1),
-         search_kernel,
-         radius
-        ], adjust_op, output_path, gdal.GDT_Float32, NODATA)
+    # This could be expanded to flesh out the proportion of a pixel in the 
+    # mask if needed, but for this convolution demo, not needed.
+
+    # hypotenuse_i = sqrt(col_indices_i**2 + row_indices_i**2) for each pixel i
+    hypotenuse = numpy.hypot(col_indices, row_indices)
+
+    # boolean kernel where 1=pixel centerpoint is within the radius of the 
+    # center pixel's centerpoint
+    search_kernel = numpy.array(hypotenuse < radius, dtype=numpy.uint8)
+    print(search_kernel)
+
+    raster = gdal.OpenEx(retention_ratio_path, gdal.OF_RASTER)
+    band = raster.GetRasterBand(1)
+
+    raster_driver = gdal.GetDriverByName('GTIFF')
+    out_raster = raster_driver.Create(
+        output_path, raster_width, raster_height, 1, gdal.GDT_Float32,
+        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+    out_band = out_raster.GetRasterBand(1)
+
+    
+    for block in pygeoprocessing.iterblocks((retention_ratio_path, 1), offset_only=True):
+        # overlap blocks by the pixel radius so that all have complete data
+        print(f"Adjusting block from ({block['xoff']}, {block['yoff']}) to ({block['xoff'] + block['win_xsize']}, {block['yoff'] + block['win_ysize']})")
+        print(block['win_ysize'], block['win_xsize'])
+
+        xoff, yoff = block['xoff'], block['yoff']
+        xsize, ysize = block['win_xsize'], block['win_ysize']
+
+        if block['xoff'] > 0:
+            xoff -= pixel_radius
+            xsize += pixel_radius
+            pad_left = 0
+        else:
+            pad_left = pixel_radius
+
+        if block['yoff'] > 0:
+            yoff -= pixel_radius
+            ysize += pixel_radius
+            pad_top = 0
+        else:
+            pad_top = pixel_radius
+
+        if block['xoff'] + block['win_xsize'] < raster_width:
+            xsize += pixel_radius
+            pad_right = 0
+        else:
+            pad_right = pixel_radius
+
+        if block['yoff'] + block['win_ysize'] < raster_height:
+            ysize += pixel_radius
+            pad_bottom = 0
+        else:
+            pad_bottom = pixel_radius
+
+        LOGGER.debug((
+            f"Adjusting retention ratios for block from ({block['xoff']}, {block['yoff']}) to "
+            f"({block['xoff'] + block['win_xsize']}, {block['yoff'] + block['win_ysize']})"))
+
+        array = band.ReadAsArray(xoff, yoff, xsize, ysize)
+        valid_pixels = (array != NODATA).astype(int)
+        valid_pixels = numpy.pad(valid_pixels, 
+            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
+            mode='constant', constant_values=False)
+
+        n_values_array = n_values_op(valid_pixels, search_kernel)
+        print(array.shape, valid_pixels.shape, n_values_array.shape)
+        print(n_values_array)
+        print('Writing to', block['xoff'], block['yoff'])
+
+        out_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
+
+
+    # pygeoprocessing.raster_calculator(
+    #     [(retention_ratio_path, 1), 
+    #      (connected_path, 1), 
+    #      (centerline_distance_path, 1),
+    #      search_kernel,
+    #      radius
+    #     ], adjust_op, output_path, gdal.GDT_Float32, NODATA)
 
 
 def distance_to_road_centerlines(x_coords_path, y_coords_path, 
