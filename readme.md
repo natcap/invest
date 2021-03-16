@@ -30,7 +30,7 @@ preventing react-devtools from integrating with the electron browser's devtools 
 
 `npm run build`  - calls babel to transpile ES6 and jsx code to commonjs; moves other resources (CSS, JSON) to the build directory
 
-`npm run dist`  - packages build source into an electron application using electron-builder
+`npm run dist`  - packages build source into an electron application using electron-builder. Configure the build in `electron-builder-config.js`.  
 
 
 ### To run various scripts and local programs
