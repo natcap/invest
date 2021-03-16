@@ -707,6 +707,15 @@ def calculate_connected_lulc(lulc_path, impervious_lookup, output_path):
         [(lulc_path, 1)], connected_op, output_path, gdal.GDT_Float32, NODATA)
 
 
+def connected_lulc_within_radius(connected_path, radius):
+    # total # of pixels within the search kernel that are impervious LULC
+    # kernels extending beyond the array edge are padded with zeros
+    convolved = scipy.signal.convolve(impervious_array, search_kernel, 
+    mode='same')  # output has same shape as input array
+
+
+
+
 def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
     """Find the minimum distance from each array point to a line segment.
 
@@ -757,18 +766,18 @@ def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
     return distances
 
 
-def calculate_n_values(raster_path, radius, output_path):
-    """Calculate the number of valid pixels within a radius of each pixel.
-    This is useful for averaging the value within a radius. A valid pixel is 
-    within the bounds of the raster and not nodata.
+def make_search_kernel(raster_path, radius):
+    """Make a search kernel for a raster that marks pixels within a radius
 
     Args:
-        raster_path (str): path to raster to count valid pixels in
-        radius (float): radius in raster coordinate system units to consider
-        output_path (str): path to write out results
+        raster_path (str): path to a raster to make kernel for
+        radius (float): distance in raster coordinate system units to search
 
     Returns:
-        None
+        2D boolean numpy.ndarray. '1' pixels are within ``radius`` of the 
+        center pixel, measured centerpoint-to-centerpoint. '0' pixels are
+        outside the radius. The array dimensions are as small as possible 
+        while still including the entire radius.
     """
     raster_info = pygeoprocessing.get_raster_info(raster_path)
     pixel_size = abs(raster_info['pixel_size'][0])
@@ -794,77 +803,18 @@ def calculate_n_values(raster_path, radius, output_path):
     # boolean kernel where 1=pixel centerpoint is within the radius of the 
     # center pixel's centerpoint
     search_kernel = numpy.array(hypotenuse < radius, dtype=numpy.uint8)
-
-    raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
-    band = raster.GetRasterBand(1)
-
-    raster_driver = gdal.GetDriverByName('GTIFF')
-    out_raster = raster_driver.Create(
-        output_path, raster_width, raster_height, 1, gdal.GDT_Float32,
-        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
-    out_band = out_raster.GetRasterBand(1)
-
-    print(hypotenuse)
-    print(radius)
-    print(search_kernel)
-    for block in pygeoprocessing.iterblocks((raster_path, 1), offset_only=True):
-        # overlap blocks by the pixel radius so that all have complete data
-        if block['xoff'] > 0:
-            xoff = block['xoff'] - pixel_radius
-            pad_left = 0
-        else:
-            xoff = block['xoff']
-            pad_left = pixel_radius
-
-        if block['yoff'] > 0:
-            yoff = block['yoff'] - pixel_radius
-            pad_top = 0
-        else:
-            yoff = block['yoff']
-            pad_top = pixel_radius
-
-        if block['xoff'] + block['win_xsize'] < raster_width:
-            block['win_xsize'] += pixel_radius
-            pad_right = 0
-        else:
-            pad_right = pixel_radius
-
-        if block['yoff'] + block['win_ysize'] < raster_height:
-            block['win_ysize'] += pixel_radius
-            pad_bottom = 0
-        else:
-            pad_bottom = pixel_radius
-
-        array = band.ReadAsArray(xoff, yoff, block['win_xsize'], 
-            block['win_ysize'])
-        valid_pixels = (array != NODATA).astype(int)
-        # print(valid_pixels)
-        valid_pixels = numpy.pad(valid_pixels, 
-            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
-            mode='constant', constant_values=False)
-        # print(valid_pixels)
-
-        # this adds up all the pixels in the search kernel
-        # nodata pixels and pixels outside the raster count as 0
-        n_values_array = scipy.signal.convolve(
-            valid_pixels, 
-            search_kernel, 
-            mode='valid')
-        # print(n_values_array)
-
-        out_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
-        
-    out_band, out_raster = None, None
+    return search_kernel
 
 
-def adjust_op(retention_ratio_array, impervious_array, distance_array, 
-        search_kernel, radius):
+
+
+def adjust_op(ratio_array, avg_ratio_array, connected_array, search_kernel):
     """Apply the retention ratio adjustment algorithm to an array. This is
     meant to be used with raster_calculator.
 
     Args:
-        retention_ratio_array (numpy.ndarray): 2D array of stormwater
-            retention ratios
+        ratio_array (numpy.ndarray): 2D array of stormwater retention ratios
+        avg_ratio_array (numpy.ndarray): 2D array of averaged ratios
         impervious_array (numpy.ndarray): 2D binary array of the same shape as
             ``retention_ratio_array``. 1 = directly connected impervious LULC.
         distance_array (numpy.ndarray): 2D array of the same shape as
@@ -887,27 +837,7 @@ def adjust_op(retention_ratio_array, impervious_array, distance_array,
     is_near_road = (distance_array <= radius)
     is_connected = is_near_impervious_lulc | is_near_road
 
-    # array where each value is the number of valid values within the
-    # search kernel. 
-    # - for every kernel that doesn't extend past the edge of the original 
-    #   array, this is search_kernel.size
-    # - for kernels that extend past the edge, this is the number of 
-    #   elements that are within the original array
-    n_values_array = scipy.ndimage.convolve(
-        numpy.ones(retention_ratio_array.shape), 
-        search_kernel, 
-        mode='constant', 
-        cval=0)
 
-    # array where each pixel is averaged with its neighboring pixels within
-    # the search radius. 
-    averaged_ratio_array = (
-        scipy.ndimage.convolve(
-            retention_ratio_array, 
-            search_kernel,
-            mode='constant',
-            cval=0
-        ) / n_values_array)
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
     # - average of nearby pixels, otherwise
@@ -920,18 +850,14 @@ def adjust_op(retention_ratio_array, impervious_array, distance_array,
     return adjusted_ratio_array
 
 
-def n_values_op(array, search_kernel):
-     # array where each value is the number of valid values within the
-    # search kernel. 
-    # - for every kernel that doesn't extend past the edge of the original 
-    #   array, this is search_kernel.size
-    # - for kernels that extend past the edge, this is the number of 
-    #   elements that are within the original array
-    n_values_array = scipy.signal.convolve(
-        array, 
-        search_kernel, 
-        mode='valid')
-    return n_values_array
+
+def adjust_retention_ratios(ratio_path, avg_ratio_path, connected_path, distance_path):
+
+    pygeoprocessing.raster_calculator(
+
+        )
+
+
 
 
 def raster_average(raster_path, radius, n_values_path, 
@@ -965,28 +891,11 @@ def raster_average(raster_path, radius, n_values_path,
     raster_info = pygeoprocessing.get_raster_info(retention_ratio_path)
     pixel_size = abs(raster_info['pixel_size'][0])
     raster_width, raster_height = raster_info['raster_size']
-    # the search kernel is just large enough to contain all pixels that
-    # *could* be within the radius of the center pixel
     pixel_radius = math.floor(radius / pixel_size)
-    search_kernel_shape = tuple([pixel_radius*2+1]*2)
-    print(pixel_radius)
-    # arrays of the column index and row index of each pixel
-    col_indices, row_indices = numpy.indices(search_kernel_shape)
-    # adjust them so that (0, 0) is the center pixel
-    col_indices -= pixel_radius
-    row_indices -= pixel_radius
-    print(col_indices, row_indices)
-
-    # This could be expanded to flesh out the proportion of a pixel in the 
-    # mask if needed, but for this convolution demo, not needed.
-
-    # hypotenuse_i = sqrt(col_indices_i**2 + row_indices_i**2) for each pixel i
-    hypotenuse = numpy.hypot(col_indices, row_indices)
 
     # boolean kernel where 1=pixel centerpoint is within the radius of the 
     # center pixel's centerpoint
-    search_kernel = numpy.array(hypotenuse < radius, dtype=numpy.uint8)
-    print(search_kernel)
+    search_kernel = make_search_kernel(raster_path, radius)
 
     raster = gdal.OpenEx(retention_ratio_path, gdal.OF_RASTER)
     band = raster.GetRasterBand(1)
@@ -1006,7 +915,7 @@ def raster_average(raster_path, radius, n_values_path,
     average_band = average_raster.GetRasterBand(1)
 
     
-    for block in pygeoprocessing.iterblocks((retention_ratio_path, 1), offset_only=True):
+    for block in pygeoprocessing.iterblocks((raster_path, 1), offset_only=True):
         # overlap blocks by the pixel radius so that all have complete data
         xoff, yoff = block['xoff'], block['yoff']
         xsize, ysize = block['win_xsize'], block['win_ysize']
@@ -1051,6 +960,13 @@ def raster_average(raster_path, radius, n_values_path,
             pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
             mode='constant', constant_values=0)
 
+         # array where each value is the number of valid values within the
+        # search kernel. 
+        # - for every kernel that doesn't extend past the edge of the original 
+        #   array, this is search_kernel.size - number of nodata pixels in kernel
+        # - for kernels that extend past the edge, this is the number of 
+        #   elements that are within the original array minus the number of 
+        #   those that are nodata
         n_values_array = scipy.signal.convolve(
             padded_valid_pixels, 
             search_kernel, 
@@ -1063,6 +979,7 @@ def raster_average(raster_path, radius, n_values_path,
         n_values_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
         sum_band.WriteArray(sum_array, xoff=block['xoff'], yoff=block['yoff'])
 
+    # Calculate the pixel-wise average from the n_values and sum rasters
     def avg_op(n_values_array, sum_array):
         average_array = numpy.full(n_values_array.shape, NODATA)
         valid_mask = (n_values_array != NODATA) & (sum_array != NODATA)
