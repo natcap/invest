@@ -119,8 +119,7 @@ jobs:
     - name: Set variables for GCS deploy target
       if: github.event_name != 'pull_request'
       run: |
-        ls dist/
-        echo "VERSION"=$(grep artifactName dist/builder-effective-config.yaml | cut -d '_' -f4) >> $GITHUB_ENV
+        echo "VERSION"=$(cat .workbench_version_string.env) >> $GITHUB_ENV
         echo "BUCKET=$([ ${{ github.repository_owner }} == 'natcap' ] \
           && echo 'gs://releases.naturalcapitalproject.org/invest-workbench' \
           || echo 'gs://natcap-dev-build-artifacts/invest-workbench/${{ github.repository_owner }}' \

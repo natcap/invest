@@ -1,3 +1,4 @@
+const fs = require('fs');
 const { execFileSync } = require('child_process');
 const pkg = require('./package');
 
@@ -13,6 +14,8 @@ const APP_ID = `NaturalCapitalProject.Invest.Workbench.${pkg.invest.version}`;
 // Uniquely identify the changeset we're building & packaging.
 const workbenchVersion = execFileSync('git', ['describe', '--tags'])
   .toString().trim();
+// Need to pass this data to the GHA deploy step
+fs.writeFileSync('.workbench_version_string.env', workbenchVersion);
 
 // productName controls the install dirname & app name
 // We might want to remove the workbench version from this name
