@@ -340,10 +340,10 @@ describe('InVEST global settings: dialog interactions', () => {
       expect(loggingInput).toHaveValue(loggingLevel);
     });
     // Check values in the settings store were saved
-    const store_nWorkers = await getSettingsValue('nWorkers');
-    const store_loggingLevel = await getSettingsValue('loggingLevel');
-    expect(store_nWorkers).toBe('2');
-    expect(store_loggingLevel).toBe('DEBUG');
+    const nWorkersStore = await getSettingsValue('nWorkers');
+    const loggingLevelStore = await getSettingsValue('loggingLevel');
+    expect(nWorkersStore).toBe(nWorkers);
+    expect(loggingLevelStore).toBe(loggingLevel);
 
     // Change n_workers to bad value -- expect invalid signal
     fireEvent.change(nWorkersInput, { target: { value: badValue} });
