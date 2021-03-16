@@ -16,9 +16,13 @@ import SettingsModal from './components/SettingsModal';
 import { getInvestModelNames } from './server_requests';
 import { getLogger } from './logger';
 import InvestJob from './InvestJob';
-import { dragOverHandlerNone } from './utils.js';
+import { dragOverHandlerNone } from './utils';
+import {
+  getDefaultSettings, saveSettingsStore, getSettingsValue
+} from './components/SettingsModal/SettingsStorage';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
+
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -26,6 +30,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 export default class App extends React.Component {
   constructor(props) {
     super(props);
+
     this.state = {
       activeTab: 'home',
       openJobs: [],
@@ -45,16 +50,27 @@ export default class App extends React.Component {
   async componentDidMount() {
     const investList = await getInvestModelNames();
     const recentJobs = await InvestJob.getJobStore();
-    // TODO: also load and set investSettings from a cached state, instead
-    // of always re-setting to these hardcoded values on first launch?
+    // Placeholder for instantiating global settings.
+    let investSettings = {};
+    const globalDefaultSettings = getDefaultSettings();
+
+    try {
+      for (const settingKey of Object.keys(globalDefaultSettings)) {
+        const value = await getSettingsValue(settingKey);
+        if (!value) {
+          throw new Error('Value not defined or null, use defaults.');
+        }
+        investSettings[settingKey] = value;
+      }
+    } catch (err) {
+      // This code runs if there were any errors.
+      investSettings = globalDefaultSettings;
+    }
 
     this.setState({
       investList: investList,
       recentJobs: recentJobs,
-      investSettings: {
-        nWorkers: '-1',
-        loggingLevel: 'INFO',
-      },
+      investSettings: investSettings,
     });
   }
 
@@ -72,6 +88,8 @@ export default class App extends React.Component {
     this.setState({
       investSettings: settings,
     });
+
+    saveSettingsStore(settings);
   }
 
   /** Push data for a new InvestTab component to an array.
@@ -110,7 +128,7 @@ export default class App extends React.Component {
     }
     this.switchTabs(switchTo);
     this.setState({
-      openJobs: openJobs
+      openJobs: openJobs,
     });
   }
 
@@ -183,10 +201,11 @@ export default class App extends React.Component {
       <TabContainer activeKey={activeTab}>
         <Navbar onDragOver={dragOverHandlerNone}>
           <Navbar.Brand onDragOver={dragOverHandlerNone}>
-            <Nav.Link 
-              onSelect={this.switchTabs} 
+            <Nav.Link
+              onSelect={this.switchTabs}
               eventKey="home"
-              onDragOver={dragOverHandlerNone}>
+              onDragOver={dragOverHandlerNone}
+            >
               InVEST
             </Nav.Link>
           </Navbar.Brand>
@@ -207,7 +226,7 @@ export default class App extends React.Component {
             className="mx-3"
             saveSettings={this.saveSettings}
             investSettings={investSettings}
-            clearStorage={this.clearRecentJobs}
+            clearJobsStorage={this.clearRecentJobs}
           />
         </Navbar>
 

@@ -8,6 +8,7 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
 import { dragOverHandlerNone } from '../../utils.js';
+import { getDefaultSettings } from './SettingsStorage';
 
 /** Render a dialog with a form for configuring global invest settings */
 export default class SettingsModal extends React.Component {
@@ -25,10 +26,11 @@ export default class SettingsModal extends React.Component {
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleDefault = this.handleDefault.bind(this);
   }
 
   componentDidUpdate(prevProps) {
-    /** Any time the parent's state of investSettings changes, 
+    /** Any time the parent's state of investSettings changes,
     * this component should reflect that.
     */
     if (this.props.investSettings !== prevProps.investSettings) {
@@ -51,15 +53,27 @@ export default class SettingsModal extends React.Component {
   }
 
   handleSubmit(event) {
-    /** Handle a click on the "Save" button, which updates the parent's state */
+    /** Handle a click on the "Save" button.
+      *
+      * Updates the parent's state and persistent store.
+    */
     event.preventDefault();
     this.props.saveSettings(this.state.localSettings);
     this.setState({show: false});
   }
 
+  /** Handle a click on the "Reset" button, which updates local state */
+  handleDefault(event) {
+    event.preventDefault();
+    let resetSettings = getDefaultSettings();
+    this.setState({
+      localSettings: resetSettings
+    });
+  }
+
   handleChange(event) {
-    /** Handle changes to inputs by reflecting them back immediately 
-    * via localSettings object. But do not update the values stored 
+    /** Handle changes to inputs by reflecting them back immediately
+    * via localSettings object. But do not update the values stored
     * in the parent's state.
     */
     let newSettings = Object.assign({}, this.state.localSettings);
@@ -109,7 +123,7 @@ export default class SettingsModal extends React.Component {
             <Modal.Body>
               <Form.Group as={Row}>
                 <Form.Label column sm="8" htmlFor="logging-select">Logging threshold</Form.Label>
-                <Col sm="3">
+                <Col sm="4">
                   <Form.Control
                     id="logging-select"
                     as="select"
@@ -128,7 +142,7 @@ export default class SettingsModal extends React.Component {
                   <br />
                   (must be an integer &gt;= -1)
                 </Form.Label>
-                <Col sm="3">
+                <Col sm="4">
                   <Form.Control
                     id="nworkers-text"
                     name="nWorkers"
@@ -141,14 +155,31 @@ export default class SettingsModal extends React.Component {
               </Form.Group>
               <Form.Group as={Row}>
                 <Form.Label column sm="8">
+                  Reset to Defaults
+                </Form.Label>
+                <Col sm="4">
+                  <Button
+                    variant="secondary"
+                    onClick={this.handleDefault}
+                    type="button"
+                    className="float-right"
+                  >
+                    Reset
+                  </Button>
+                </Col>
+              </Form.Group>
+              <hr />
+              <Form.Group as={Row}>
+                <Form.Label column sm="8">
                   Clear Recent Jobs Shortcuts
                   <br />
                   (no invest workspaces will be deleted)
                 </Form.Label>
-                <Col sm="3">
+                <Col sm="4">
                   <Button
                     variant="secondary"
-                    onClick={this.props.clearStorage}
+                    onClick={this.props.clearJobsStorage}
+                    className="float-right"
                   >
                     Clear
                   </Button>

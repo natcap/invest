@@ -1,3 +1,27 @@
+class Store {
+  constructor(name) {
+    this.store = {
+      name: name,
+    };
+  }
+
+  getItem(key) {
+    return new Promise((resolve) => resolve(this.store[key]));
+  }
+  setItem(key, val) {
+    this.store[key] = val;
+  }
+  removeItem(key) {
+    delete this.store[key];
+  }
+  clear() {
+    const tmpName = this.store.name;
+    this.store = {
+      name: tmpName
+    };
+  }
+}
+
 const localforage = {
   store: {},
   getItem: function (key) {
@@ -11,6 +35,9 @@ const localforage = {
   },
   clear: function () {
     localforage.store = {};
+  },
+  createInstance: function (driver) {
+    return new Store(driver.name);
   },
 };
 

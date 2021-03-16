@@ -7,6 +7,9 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const HASH_ARRAY_KEY = 'workspaceHashes';
 const MAX_CACHED_JOBS = 30;
+const investJobStore = localforage.createInstance({
+  name: "InvestJobs"
+});
 
 /**
  * Create an object to hold properties associated with an Invest Job.
@@ -19,26 +22,26 @@ export default class InvestJob {
 
   /* If none exists, init an empty array for the sorted workspace hashes */
   static async initDB() {
-    const keys = await localforage.getItem(HASH_ARRAY_KEY);
+    const keys = await investJobStore.getItem(HASH_ARRAY_KEY);
     if (!keys) {
-      localforage.setItem(HASH_ARRAY_KEY, []);
+      investJobStore.setItem(HASH_ARRAY_KEY, []);
     }
   }
 
   /* Return an array of job metadata objects, ordered by most recently saved */
   static async getJobStore() {
     let jobArray = [];
-    const sortedKeys = await localforage.getItem(HASH_ARRAY_KEY);
+    const sortedKeys = await investJobStore.getItem(HASH_ARRAY_KEY);
     if (sortedKeys) {
       jobArray = await Promise.all(sortedKeys.map(
-        (key) => localforage.getItem(key)
+        (key) => investJobStore.getItem(key)
       ));
     }
     return jobArray;
   }
 
   static async clearStore() {
-    await localforage.clear();
+    await investJobStore.clear();
     return InvestJob.getJobStore();
   }
 
@@ -96,10 +99,10 @@ export default class InvestJob {
       this.setWorkspaceHash();
     }
     this.metadata.humanTime = new Date().toLocaleString();
-    let sortedKeys = await localforage.getItem(HASH_ARRAY_KEY);
+    let sortedKeys = await investJobStore.getItem(HASH_ARRAY_KEY);
     if (!sortedKeys) {
       await InvestJob.initDB();
-      sortedKeys = await localforage.getItem(HASH_ARRAY_KEY);
+      sortedKeys = await investJobStore.getItem(HASH_ARRAY_KEY);
     }
     // If this key already exists, make sure not to duplicate it,
     // and make sure to move it to the front
@@ -111,10 +114,10 @@ export default class InvestJob {
     if (sortedKeys.length > MAX_CACHED_JOBS) {
       // only 1 key is ever added at a time, so only 1 item to remove
       const lastKey = sortedKeys.pop();
-      localforage.removeItem(lastKey);
+      investJobStore.removeItem(lastKey);
     }
-    await localforage.setItem(HASH_ARRAY_KEY, sortedKeys);
-    await localforage.setItem(
+    await investJobStore.setItem(HASH_ARRAY_KEY, sortedKeys);
+    await investJobStore.setItem(
       this.metadata.workspaceHash, this.metadata
     );
     return InvestJob.getJobStore();
