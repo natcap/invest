@@ -8,6 +8,7 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
 import { dragOverHandlerNone } from '../../utils.js';
+import { getDefaultSettings } from './SettingsStorage';
 
 /** Render a dialog with a form for configuring global invest settings */
 export default class SettingsModal extends React.Component {
@@ -61,10 +62,13 @@ export default class SettingsModal extends React.Component {
     this.setState({show: false});
   }
 
-  /** Handle a click on the "Reset Defaults" button, which updates the parent's state */
+  /** Handle a click on the "Reset" button, which updates local state */
   handleDefault(event) {
     event.preventDefault();
-    this.props.setDefaultSettings();
+    let resetSettings = getDefaultSettings();
+    this.setState({
+      localSettings: resetSettings
+    });
   }
 
   handleChange(event) {
@@ -204,7 +208,6 @@ export default class SettingsModal extends React.Component {
 
 SettingsModal.propTypes = {
   saveSettings: PropTypes.func,
-  setDefaultSettings: PropTypes.func,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,

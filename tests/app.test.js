@@ -351,7 +351,11 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(getByText('Save Changes')).toBeDisabled();
   });
 
-  test('xyz Load global settings from storage', async () => {
+  test('Load global settings from storage and test Reset', async () => {
+    const defaultSettings = {
+      nWorkers: '-1',
+      loggingLevel: 'INFO',
+    }
     const expectedSettings = {
       nWorkers: '3',
       loggingLevel: 'ERROR'
@@ -374,42 +378,20 @@ describe('InVEST global settings: dialog interactions', () => {
       expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
       expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
     });
-  });
 
-  test('Reset settings', async () => {
-    const defaultSettings = {
-      nWorkers: '-1',
-      loggingLevel: 'INFO',
-    }
-    const nWorkers = '3';
-    const loggingLevel = 'DEBUG';
-    const nWorkersLabelText = 'Taskgraph n_workers parameter';
-    const loggingLabelText = 'Logging threshold';
-
-    const { getByText, getByLabelText, getByTitle } = render(
-      <App investExe="foo" />
-    );
-
-    fireEvent.click(getByTitle('settings'));
-    let nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-    let loggingInput = getByLabelText(loggingLabelText, { exact: false });
-
-    // Check the default settings
+    // Test Reset sets values to default
+    fireEvent.click(getByText('Reset'));
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
     });
 
-    // Change the value and reset defaults -- expect default value
-    fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
-    fireEvent.change(loggingInput, { target: { value: loggingLevel } });
-    expect(nWorkersInput).toHaveValue(nWorkers);
-    expect(loggingInput).toHaveValue(loggingLevel);
-
-    fireEvent.click(getByText('Reset'));
+    // Expect reset values to not have been saved when cancelling
+    fireEvent.click(getByText('Cancel'));
+    fireEvent.click(getByText('settings'));
     await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
-      expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
+      expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
+      expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
     });
   });
 });

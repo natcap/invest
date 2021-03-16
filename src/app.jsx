@@ -39,7 +39,6 @@ export default class App extends React.Component {
       investSettings: {},
     };
     this.saveSettings = this.saveSettings.bind(this);
-    this.setDefaultSettings = this.setDefaultSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
     this.closeInvestModel = this.closeInvestModel.bind(this);
@@ -91,14 +90,6 @@ export default class App extends React.Component {
     });
 
     saveSettingsStore(settings);
-  }
-
-  /** Reset global settings to defaults. */
-  setDefaultSettings() {
-    const defaultSettings = getDefaultSettings();
-    this.setState({
-      investSettings: defaultSettings,
-    });
   }
 
   /** Push data for a new InvestTab component to an array.
@@ -234,7 +225,6 @@ export default class App extends React.Component {
           <SettingsModal
             className="mx-3"
             saveSettings={this.saveSettings}
-            setDefaultSettings={this.setDefaultSettings}
             investSettings={investSettings}
             clearJobsStorage={this.clearRecentJobs}
           />
