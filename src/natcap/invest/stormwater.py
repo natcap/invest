@@ -934,21 +934,30 @@ def n_values_op(array, search_kernel):
     return n_values_array
 
 
+def raster_average(raster_path, radius, n_values_path, 
+        sum_path, average_path):
+    """Average pixel values within a radius.
 
-def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path, 
-        centerline_distance_path, radius, output_path):
-    """Adjust retention ratios according to surrounding LULC and roads.
+    For each pixel in a raster, its "neighborhood" includes itself and the 
+    valid pixels whose centerpoints are within ``radius`` of its centerpoint. 
+    Add up the neighborhood pixel values and divide by how many there are.
+    
+    This accounts for edge pixels and nodata pixels. For instance, if the 
+    radius covers a 3x3 pixel area centered on each pixel, most pixels will 
+    have 9 valid pixels in their neighborhood, edge pixels will have 6, and
+    corner pixels will have 4. Nodata pixels in the neighborhood don't count 
+    towards the total.
 
     Args:
-        retention_ratio_path (str): path to raster of retention ratio values
-        connected_path (str): path to a binary raster where 1 is directly
-            connected impervious LULC type, 0 is not
-        centerline_distance_path (str): path to a raster where each pixel 
-            value is the distance from that pixel's centerpoint to the nearest 
-            road centerline
+        raster_path (str): path to the raster to average
         radius (float): max distance (in raster coordinate system units) to
             consider a pixel is "near" impervious LULC and/or road centerlines
-        output_path (str): path to write the adjusted retention ratio raster
+        n_values_path (str): path to write out the number of valid pixels in 
+            each pixel's neighborhood (this is the denominator in the average)
+        sum_path (str): path to write out the sum of valid pixel values in 
+            each pixel's neighborhood (this is the numerator in the average)
+        average_path (str): path to write out the average of the valid pixel 
+            values in each pixel's neighborhood (``n_values_path / sum_path``)
 
     Returns:
         None
@@ -983,17 +992,22 @@ def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path,
     band = raster.GetRasterBand(1)
 
     raster_driver = gdal.GetDriverByName('GTIFF')
-    out_raster = raster_driver.Create(
-        output_path, raster_width, raster_height, 1, gdal.GDT_Float32,
+    n_values_raster = raster_driver.Create(
+        n_values_path, raster_width, raster_height, 1, gdal.GDT_Float32,
         options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
-    out_band = out_raster.GetRasterBand(1)
+    n_values_band = n_values_raster.GetRasterBand(1)
+    sum_raster = raster_driver.Create(
+        sum_path, raster_width, raster_height, 1, gdal.GDT_Float32,
+        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+    sum_band = sum_raster.GetRasterBand(1)
+    average_raster = raster_driver.Create(
+        average_path, raster_width, raster_height, 1, gdal.GDT_Float32,
+        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+    average_band = average_raster.GetRasterBand(1)
 
     
     for block in pygeoprocessing.iterblocks((retention_ratio_path, 1), offset_only=True):
         # overlap blocks by the pixel radius so that all have complete data
-        print(f"Adjusting block from ({block['xoff']}, {block['yoff']}) to ({block['xoff'] + block['win_xsize']}, {block['yoff'] + block['win_ysize']})")
-        print(block['win_ysize'], block['win_xsize'])
-
         xoff, yoff = block['xoff'], block['yoff']
         xsize, ysize = block['win_xsize'], block['win_ysize']
 
@@ -1027,27 +1041,37 @@ def adjust_stormwater_retention_ratios(retention_ratio_path, connected_path,
             f"Adjusting retention ratios for block from ({block['xoff']}, {block['yoff']}) to "
             f"({block['xoff'] + block['win_xsize']}, {block['yoff'] + block['win_ysize']})"))
 
-        array = band.ReadAsArray(xoff, yoff, xsize, ysize)
-        valid_pixels = (array != NODATA).astype(int)
-        valid_pixels = numpy.pad(valid_pixels, 
+        ratio_array = band.ReadAsArray(xoff, yoff, xsize, ysize)
+        valid_pixels = (ratio_array != NODATA).astype(int)
+        padded_valid_pixels = numpy.pad(valid_pixels, 
             pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
             mode='constant', constant_values=False)
 
-        n_values_array = n_values_op(valid_pixels, search_kernel)
-        print(array.shape, valid_pixels.shape, n_values_array.shape)
-        print(n_values_array)
-        print('Writing to', block['xoff'], block['yoff'])
+        padded_ratio_array = numpy.pad(ratio_array, 
+            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
+            mode='constant', constant_values=0)
 
-        out_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
+        n_values_array = scipy.signal.convolve(
+            padded_valid_pixels, 
+            search_kernel, 
+            mode='valid')
+        sum_array = scipy.signal.convolve(
+            padded_array, 
+            search_kernel, 
+            mode='valid')
 
+        n_values_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
+        sum_band.WriteArray(sum_array, xoff=block['xoff'], yoff=block['yoff'])
 
-    # pygeoprocessing.raster_calculator(
-    #     [(retention_ratio_path, 1), 
-    #      (connected_path, 1), 
-    #      (centerline_distance_path, 1),
-    #      search_kernel,
-    #      radius
-    #     ], adjust_op, output_path, gdal.GDT_Float32, NODATA)
+    def avg_op(n_values_array, sum_array):
+        average_array = numpy.full(n_values_array.shape, NODATA)
+        valid_mask = (n_values_array != NODATA) & (sum_array != NODATA)
+        average_array[valid_mask] = (
+            sum_array[valid_mask] / n_values_array[valid_mask])
+        return average_array
+
+    pygeoprocessing.raster_calculator([(n_values_path, 1), (sum_path, 1)], 
+        avg_op, average_path, gdal.GDT_Float32, NODATA)
 
 
 def distance_to_road_centerlines(x_coords_path, y_coords_path, 
