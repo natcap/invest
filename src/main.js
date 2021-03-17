@@ -65,6 +65,18 @@ const createWindow = async () => {
     event.reply('variable-reply', mainProcessVars);
   });
 
+  ipcMain.on('show-context-menu', (event, rightClickPos) => {
+    const template = [
+      {
+        label: 'Inspect Element',
+        click: () => { 
+          BrowserWindow.fromWebContents(event.sender).inspectElement(rightClickPos.x, rightClickPos.y) }
+      },
+    ]
+    const menu = Menu.buildFromTemplate(template);
+    menu.popup( BrowserWindow.fromWebContents(event.sender));
+  })
+
   ipcMain.handle('show-open-dialog', async (event, arg) => {
     const result = await dialog.showOpenDialog(arg);
     return result;
