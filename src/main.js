@@ -61,22 +61,21 @@ const createWindow = async () => {
     workbenchVersion: pkg.version,
     userDataPath: app.getPath('userData'),
   };
-  ipcMain.on('variable-request', (event, arg) => {
+  ipcMain.on('variable-request', (event) => {
     event.reply('variable-reply', mainProcessVars);
   });
-
   ipcMain.on('show-context-menu', (event, rightClickPos) => {
     const template = [
       {
         label: 'Inspect Element',
-        click: () => { 
-          BrowserWindow.fromWebContents(event.sender).inspectElement(rightClickPos.x, rightClickPos.y) }
+        click: () => {
+          BrowserWindow.fromWebContents(event.sender).inspectElement(rightClickPos.x, rightClickPos.y)
+        }
       },
     ]
     const menu = Menu.buildFromTemplate(template);
     menu.popup( BrowserWindow.fromWebContents(event.sender));
   })
-
   ipcMain.handle('show-open-dialog', async (event, arg) => {
     const result = await dialog.showOpenDialog(arg);
     return result;
@@ -85,13 +84,12 @@ const createWindow = async () => {
     const result = await dialog.showSaveDialog(arg);
     return result;
   });
-  ipcMain.handle('is-dev-mode', async (event, arg) => {
+  ipcMain.handle('is-dev-mode', async (event) => {
     const result = ELECTRON_DEV_MODE;
     return result;
   });
-  ipcMain.handle('user-data', async (event, arg) => {
+  ipcMain.handle('user-data', async (event) => {
     const result = await mainProcessVars.userDataPath;
-    console.log(`main user-data : ${result}`);
     return result;
   });
 

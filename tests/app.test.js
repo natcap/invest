@@ -5,7 +5,7 @@ import os from 'os';
 import { spawn } from 'child_process';
 import Stream from 'stream';
 import React from 'react';
-import { remote } from 'electron';
+import { ipcRenderer } from 'electron';
 import {
   fireEvent, render, waitFor, within
 } from '@testing-library/react';
@@ -107,7 +107,7 @@ describe('Various ways to open and close InVEST models', () => {
       model_run_name: 'carbon',
       model_human_name: 'Carbon',
     };
-    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const { findByText, findByLabelText, findByRole } = render(
@@ -129,7 +129,7 @@ describe('Various ways to open and close InVEST models', () => {
     const mockDialogData = {
       filePaths: [],
     };
-    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     const { findByRole } = render(
       <App investExe="foo" />
@@ -177,7 +177,7 @@ describe('Various ways to open and close InVEST models', () => {
         carbon_pools_path: 'Carbon/carbon_pools_willamette.csv',
       },
     };
-    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
     const openButton = await findByRole('button', { name: 'Open' });
     fireEvent.click(openButton);
