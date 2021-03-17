@@ -186,7 +186,12 @@ def execute(args):
         'adjusted_retention_ratio_path': os.path.join(intermediate_dir, f'adjusted_retention_ratio{suffix}.tif'),
         'x_coords_path': os.path.join(intermediate_dir, f'x_coords{suffix}.tif'),
         'y_coords_path': os.path.join(intermediate_dir, f'y_coords{suffix}.tif'),
-        'road_distance_path': os.path.join(intermediate_dir, f'road_distance{suffix}.tif')
+        'road_distance_path': os.path.join(intermediate_dir, f'road_distance{suffix}.tif'),
+        'near_connected_lulc_path': os.path.join(intermediate_dir, f'near_connected_lulc{suffix}.tif'),
+        'near_road_path': os.path.join(intermediate_dir, f'near_road{suffix}.tif'),
+        'ratio_n_values_path': os.path.join(intermediate_dir, f'ratio_n_values{suffix}.tif'),
+        'ratio_sum_path': os.path.join(intermediate_dir, f'ratio_sum{suffix}.tif'),
+        'ratio_average_path': os.path.join(intermediate_dir, f'ratio_average{suffix}.tif'),
     }
     
     align_inputs = [args['lulc_path'], args['soil_group_path'], args['precipitation_path']]
@@ -195,7 +200,10 @@ def execute(args):
         FILES['soil_group_aligned_path'], 
         FILES['precipitation_aligned_path']]
 
-    pixel_size = pygeoprocessing.get_raster_info(args['lulc_path'])['pixel_size']
+    radius = float(args['retention_radius'])  # in raster coord system units
+    pixel_size = pygeoprocessing.get_raster_info(
+        args['lulc_path'])['pixel_size']
+    pixel_radius = radius / pixel_size  # in number of pixels
 
     task_graph = taskgraph.TaskGraph(args['workspace_dir'], int(args.get('n_workers', -1)))
 
@@ -248,7 +256,11 @@ def execute(args):
 
     # (Optional) adjust stormwater retention ratio using roads
     if args['adjust_retention_ratios']:
-        is_connected_lookup = {lucode: row['is_connected'] for lucode, row in biophysical_dict.items()}
+
+        is_connected_lookup = {lucode: row['is_connected'] 
+            for lucode, row in biophysical_dict.items()}
+        # Make a boolean raster indicating which pixels are directly
+        # connected impervious LULC type
         connected_lulc_task = task_graph.add_task(
             func=calculate_connected_lulc,
             args=(FILES['lulc_aligned_path'], is_connected_lookup, 
@@ -257,7 +269,17 @@ def execute(args):
             task_name='calculate binary connected lulc raster',
             dependent_task_list=[align_task]
         )
+        # Make a boolean raster indicating which pixels are within the
+        # given radius of a directly-connected impervious LULC type
+        near_connected_lulc_task = task_graph.add_task(
+            func=is_near,
+            args=(FILES['connected_lulc_path'], pixel_radius,
+                FILES['near_connected_lulc_path']),
+            target_path_list=[FILES['near_connected_lulc_path']],
+            task_name='find pixels within radius of connected LULC',
+            dependent_task_list=[connected_lulc_task])
 
+        # Make a raster of the distance from each pixel to the nearest road centerline
         coordinate_rasters_task = task_graph.add_task(
             func=make_coordinate_rasters,
             args=(FILES['retention_ratio_path'], 
@@ -266,7 +288,6 @@ def execute(args):
             task_name='make coordinate rasters',
             dependent_task_list=[retention_ratio_task]
         )
-
         distance_task = task_graph.add_task(
             func=distance_to_road_centerlines,
             args=(FILES['x_coords_path'], FILES['y_coords_path'],
@@ -275,20 +296,52 @@ def execute(args):
             task_name='calculate pixel distance to roads',
             dependent_task_list=[coordinate_rasters_task]
         )
+        # Make a boolean raster showing which pixels are within the given
+        # radius of a road centerline
+        near_road_task = task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=(
+                [(FILES['road_distance_path'], 1)],
+                lambda array: array <= radius,
+                FILES['near_road_path'],
+                gdal.GDT_Float32, 
+                NODATA),
+            target_path_list=[FILES['near_road_path']],
+            task_name='find pixels within radius of road centerlines',
+            dependent_task_list=[distance_task])
 
-        adjust_retention_ratio_task = task_graph.add_task(
-            func=adjust_stormwater_retention_ratios,
+        # Average the retention ratio values within the search kernel
+        average_ratios_task = task_graph.add_task(
+            func=raster_average,
             args=(
                 FILES['retention_ratio_path'],
-                FILES['connected_lulc_path'],
-                FILES['road_distance_path'],
-                float(args['retention_radius']),
-                FILES['adjusted_retention_ratio_path']),
+                pixel_radius
+                FILES['ratio_n_values_path'],
+                FILES['ratio_sum_path'],
+                FILES['ratio_average_path']),
+            target_path_list=[FILES['ratio_average_path']],
+            task_name='average retention ratios within radius',
+            dependent_task_list=[retention_ratio_task])
+
+        # Using the averaged retention ratio raster and boolean 
+        # "within radius" rasters, adjust the retention ratios
+        adjust_retention_ratio_task = task_graph.add_task(
+            func= pygeoprocessing.raster_calculator,
+            args=([
+                    (FILES['retention_ratio_path'], 1), 
+                    (FILES['ratio_average_path'], 1),
+                    (FILES['near_connected_lulc_path'], 1),
+                    (FILES['near_road_path'], 1)
+                ],
+                adjust_op, 
+                FILES['adjusted_retention_ratio_path'],
+                gdal.GDT_Float32, 
+                NODATA),
             target_path_list=[FILES['adjusted_retention_ratio_path']],
             task_name='adjust stormwater retention ratio',
-            dependent_task_list=[
-                retention_ratio_task, connected_lulc_task, distance_task]
-        )
+            dependent_task_list=[retention_ratio_task, average_ratios_task, 
+                near_connected_lulc_task, near_road_task])
+
         final_retention_ratio_path = FILES['adjusted_retention_ratio_path']
         final_retention_ratio_task = adjust_retention_ratio_task
     else:
@@ -367,7 +420,6 @@ def execute(args):
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed
     if (args['replacement_cost'] not in [None, '']):
-
         valuation_task = task_graph.add_task(
             func=calculate_retention_value,
             args=(
@@ -707,24 +759,38 @@ def calculate_connected_lulc(lulc_path, impervious_lookup, output_path):
         [(lulc_path, 1)], connected_op, output_path, gdal.GDT_Float32, NODATA)
 
 
-def is_near_connected_lulc(connected_path, radius, output_path):
-    search_kernel = make_search_kernel(connected_path, radius)
-    pixel_radius = (search_kernel.shape[0] - 1) / 2
-    # total # of pixels within the search kernel that are impervious LULC
-    # kernels extending beyond the array edge are padded with zeros
+def is_near(input_path, pixel_radius, output_path):
+    """Take a boolean raster and create a new boolean raster where a pixel is
+    assigned '1' iff it's within a radius of a '1' pixel in the original raster
 
-    in_raster = gdal.OpenEx(connected_path, gdal.OF_RASTER)
+    Args:
+        input_path (str): path to a boolean raster
+        pixel_radius (float): distance in pixels within which a pixel is "near"
+            to another pixel
+        output_path (str): path to write out the result raster. This is a 
+            boolean raster where 1 means this pixel's centerpoint is within
+            ``radius`` of the centerpoint of a '1' pixel in the input raster.
+
+    Returns:
+        None
+    """
+    # open the input raster and create the output raster
+    in_raster = gdal.OpenEx(input_path, gdal.OF_RASTER)
     in_band = in_raster.GetRasterBand(1)
+    raster_width, raster_height = pygeoprocessing.get_raster_info(
+        input_path)['raster_size']
     raster_driver = gdal.GetDriverByName('GTIFF')
     out_raster = raster_driver.Create(
         output_path, raster_width, raster_height, 1, gdal.GDT_Float32,
         options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
     out_band = out_raster.GetRasterBand(1)
 
-    for block in overlap_iterblocks(connected_path, pixel_radius):
-        
+    # make a search kernel to convolve with the input raster
+    search_kernel = make_search_kernel(input_path, pixel_radius)
+    print(search_kernel)
 
-        in_array = band.ReadAsArray(block['xoff'], block['yoff'], 
+    for block in overlap_iterblocks(input_path, pixel_radius):
+        in_array = in_band.ReadAsArray(block['xoff'], block['yoff'], 
             block['xsize'], block['ysize'])
         padded_array = numpy.pad(in_array, 
             pad_width=((block['top_padding'], block['bottom_padding']), 
@@ -735,17 +801,15 @@ def is_near_connected_lulc(connected_path, radius, output_path):
             search_kernel, 
             mode='valid')
         valid_mask = padded_array[pixel_radius:-pixel_radius, pixel_radius:-pixel_radius] != NODATA
-        convolved[nodata_mask] = NODATA
         is_near = numpy.full(convolved.shape, NODATA)
         is_near[valid_mask] = convolved[valid_mask] > 0
 
-        out_band.WriteArray(is_near, xoff=block['xoff'] + pixel_radius, 
-            yoff=block['yoff'] + pixel_radius)
+        print('writing to', block['xoff'] + (pixel_radius - block['left_padding']), block['yoff'] + (pixel_radius - block['top_padding']))
+        out_band.WriteArray(is_near, 
+            xoff=block['xoff'] + (pixel_radius - block['left_padding']), 
+            yoff=block['yoff'] + (pixel_radius - block['top_padding']))
 
         
-
-
-
 
 def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
     """Find the minimum distance from each array point to a line segment.
@@ -861,7 +925,7 @@ def overlap_iterblocks(raster_path, n_pixels):
         if yend < raster_height:
             ysize += bottom_overlap
 
-        yield {
+        print({
             'xoff': xoff,
             'yoff': yoff,
             'xsize': xsize,
@@ -870,16 +934,26 @@ def overlap_iterblocks(raster_path, n_pixels):
             'left_padding': left_padding,
             'bottom_padding': bottom_padding,
             'right_padding': right_padding
+        })
+
+        yield {
+            'xoff': int(xoff),
+            'yoff': int(yoff),
+            'xsize': int(xsize),
+            'ysize': int(ysize),
+            'top_padding': int(top_padding),
+            'left_padding': int(left_padding),
+            'bottom_padding': int(bottom_padding),
+            'right_padding': int(right_padding)
         }
 
-   
 
-def make_search_kernel(raster_path, radius):
+def make_search_kernel(raster_path, pixel_radius):
     """Make a search kernel for a raster that marks pixels within a radius
 
     Args:
         raster_path (str): path to a raster to make kernel for
-        radius (float): distance in raster coordinate system units to search
+        pixel_radius (float): distance in pixels to search
 
     Returns:
         2D boolean numpy.ndarray. '1' pixels are within ``radius`` of the 
@@ -888,13 +962,11 @@ def make_search_kernel(raster_path, radius):
         while still including the entire radius.
     """
     raster_info = pygeoprocessing.get_raster_info(raster_path)
-    pixel_size = abs(raster_info['pixel_size'][0])
     raster_width, raster_height = raster_info['raster_size']
     # the search kernel is just large enough to contain all pixels that
     # *could* be within the radius of the center pixel
-    pixel_radius = math.floor(radius / pixel_size)
-    search_kernel_shape = tuple([pixel_radius*2+1]*2)
-    print(pixel_radius)
+
+    search_kernel_shape = tuple([math.floor(pixel_radius)*2+1]*2)
     # arrays of the column index and row index of each pixel
     col_indices, row_indices = numpy.indices(search_kernel_shape)
     # adjust them so that (0, 0) is the center pixel
@@ -907,69 +979,64 @@ def make_search_kernel(raster_path, radius):
 
     # hypotenuse_i = sqrt(col_indices_i**2 + row_indices_i**2) for each pixel i
     hypotenuse = numpy.hypot(col_indices, row_indices)
+    print(hypotenuse)
 
     # boolean kernel where 1=pixel centerpoint is within the radius of the 
     # center pixel's centerpoint
-    search_kernel = numpy.array(hypotenuse < radius, dtype=numpy.uint8)
+    search_kernel = numpy.array(hypotenuse < radius / pixel_size, dtype=numpy.uint8)
     return search_kernel
 
 
-
-
-def adjust_op(ratio_array, avg_ratio_array, connected_array, search_kernel):
-    """Apply the retention ratio adjustment algorithm to an array. This is
-    meant to be used with raster_calculator.
+def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array, 
+        near_road_array):
+    """Apply the retention ratio adjustment algorithm to an array of ratios. 
+    This is meant to be used with raster_calculator.
 
     Args:
         ratio_array (numpy.ndarray): 2D array of stormwater retention ratios
         avg_ratio_array (numpy.ndarray): 2D array of averaged ratios
-        impervious_array (numpy.ndarray): 2D binary array of the same shape as
-            ``retention_ratio_array``. 1 = directly connected impervious LULC.
-        distance_array (numpy.ndarray): 2D array of the same shape as
-            ``retention_ratio_array``. Each pixel value is the distance from 
-            that pixel's centerpoint to the nearest road centerline.
-        search_kernel (numpy.ndarray): 2D binary array. Pixels labeled 1 are
-            included in the adjustment operation, pixels labeled 0 are not.
-        radius (float): Distance around each pixel centerpoint to consider.
-
+        near_connected_lulc_array (numpy.ndarray): 2D boolean array where 1 
+            means this pixel is near a directly-connected LULC area
+        near_road_array (numpy.ndarray): 2D boolean array where 1 
+            means this pixel is near a road centerline
+        
     Returns:
         2D numpy array of adjusted retention ratios. Has the same shape as 
         ``retention_ratio_array``.
     """
-    # total # of pixels within the search kernel that are impervious LULC
-    # kernels extending beyond the array edge are padded with zeros
-    convolved = scipy.signal.convolve(impervious_array, search_kernel, 
-        mode='same')  # output has same shape as input array
-    # boolean array where 1 = pixel is within radius of impervious LULC
-    is_near_impervious_lulc = (convolved > 0)
-    is_near_road = (distance_array <= radius)
+    adjusted_ratio_array = numpy.full(ratio_array.shape, NODATA)
+    adjustment_factor_array = numpy.full(ratio_array.shape, NODATA)
+    valid_mask = (
+        (ratio_array != NODATA) &
+        (avg_ratio_array != NODATA) &
+        (near_connected_lulc_array != NODATA) &
+        (near_road_array != NODATA))
+
     is_connected = is_near_impervious_lulc | is_near_road
-
-
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
     # - average of nearby pixels, otherwise
-    adjustment_factor_array = averaged_ratio_array * ~is_connected
+    adjustment_factor_array[valid_mask] = (averaged_ratio_array[valid_mask] * 
+        ~(near_connected_lulc_array[valid_mask] | near_road_array[valid_mask]))
 
-    # equation 2-4
-    adjusted_ratio_array = (retention_ratio_array + 
-        (1 - retention_ratio_array) * adjustment_factor_array)
-
+    # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
+    adjusted_ratio_array[valid_mask] = (ratio_array[valid_mask] + 
+        (1 - ratio_array[valid_mask]) * adjustment_factor_array[valid_mask])
     return adjusted_ratio_array
 
 
-
-def adjust_retention_ratios(ratio_path, avg_ratio_path, connected_path, distance_path):
+def adjust_retention_ratios(ratio_path, avg_ratio_path, 
+        near_connected_lulc_path, near_road_path, output_path):
 
     pygeoprocessing.raster_calculator(
-
-        )
-
-
+        [(ratio_path, 1), (avg_ratio_path, 1), (near_connected_lulc_path, 1), 
+        (near_road_path, 1)], adjust_op, output_path, gdal.GDT_Float32, NODATA)
 
 
-def raster_average(raster_path, radius, n_values_path, 
-        sum_path, average_path):
+
+
+def raster_average(raster_path, pixel_radius, n_values_path, sum_path, 
+        average_path):
     """Average pixel values within a radius.
 
     For each pixel in a raster, its "neighborhood" includes itself and the 
@@ -978,14 +1045,14 @@ def raster_average(raster_path, radius, n_values_path,
     
     This accounts for edge pixels and nodata pixels. For instance, if the 
     radius covers a 3x3 pixel area centered on each pixel, most pixels will 
-    have 9 valid pixels in their neighborhood, edge pixels will have 6, and
-    corner pixels will have 4. Nodata pixels in the neighborhood don't count 
-    towards the total.
+    have 9 valid pixels in their neighborhood, most edge pixels will have 6, 
+    and most corner pixels will have 4. Nodata pixels in the neighborhood 
+    don't count towards the total.
 
     Args:
         raster_path (str): path to the raster to average
-        radius (float): max distance (in raster coordinate system units) to
-            consider a pixel is "near" impervious LULC and/or road centerlines
+        pixel_radius (float): max distance in pixels to consider a pixel is 
+            "near" impervious LULC and/or road centerlines
         n_values_path (str): path to write out the number of valid pixels in 
             each pixel's neighborhood (this is the denominator in the average)
         sum_path (str): path to write out the sum of valid pixel values in 
@@ -996,16 +1063,14 @@ def raster_average(raster_path, radius, n_values_path,
     Returns:
         None
     """
-    raster = gdal.OpenEx(retention_ratio_path, gdal.OF_RASTER)
+    raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
     band = raster.GetRasterBand(1)
-    raster_info = pygeoprocessing.get_raster_info(retention_ratio_path)
-    pixel_size = abs(raster_info['pixel_size'][0])
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
     raster_width, raster_height = raster_info['raster_size']
-    pixel_radius = math.floor(radius / pixel_size)
 
     # boolean kernel where 1=pixel centerpoint is within the radius of the 
     # center pixel's centerpoint
-    search_kernel = make_search_kernel(raster_path, radius)
+    search_kernel = make_search_kernel(raster_path, pixel_radius)
 
     # create and open the three output rasters
     raster_driver = gdal.GetDriverByName('GTIFF')
