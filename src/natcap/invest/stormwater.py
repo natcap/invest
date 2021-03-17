@@ -734,8 +734,10 @@ def is_near_connected_lulc(connected_path, radius, output_path):
             padded_array, 
             search_kernel, 
             mode='valid')
-        valid_mask = padded_array
-        is_near = convolved > 0
+        valid_mask = padded_array[pixel_radius:-pixel_radius, pixel_radius:-pixel_radius] != NODATA
+        convolved[nodata_mask] = NODATA
+        is_near = numpy.full(convolved.shape, NODATA)
+        is_near[valid_mask] = convolved[valid_mask] > 0
 
         out_band.WriteArray(is_near, xoff=block['xoff'] + pixel_radius, 
             yoff=block['yoff'] + pixel_radius)
@@ -827,12 +829,21 @@ def overlap_iterblocks(raster_path, n_pixels):
     for block in pygeoprocessing.iterblocks((raster_path, 1), offset_only=True):
         xoff, yoff = block['xoff'], block['yoff']
         xsize, ysize = block['win_xsize'], block['win_ysize']
+        # end coordinates (exclusive)
+        xend = block['xoff'] + block['win_xsize']
+        yend = block['yoff'] + block['win_ysize']
 
+        # the amount of the padding on each side that can be filled with 
+        # raster data (if n_pixels is greater than the distance to the edge,
+        # it hangs over)
         left_overlap = min(n_pixels, xoff)
         top_overlap = min(n_pixels, yoff)
-        right_overlap = min(n_pixels, raster_width - x_end)
-        bottom_overlap = min(n_pixels, raster_height - y_end)
+        right_overlap = min(n_pixels, raster_width - xend)
+        bottom_overlap = min(n_pixels, raster_height - yend)
 
+        # the amount of padding that couldn't be filled with raster data
+        # (hanging over the edge). the calling function can decide how to
+        # fill this space, typically with zeros.
         left_padding = n_pixels - left_overlap
         top_padding = n_pixels - top_overlap
         right_padding = n_pixels - right_overlap
@@ -845,11 +856,9 @@ def overlap_iterblocks(raster_path, n_pixels):
             yoff -= top_overlap
             ysize += top_overlap
 
-        x_end = block['xoff'] + block['win_xsize']
-        y_end = block['yoff'] + block['win_ysize']
-        if x_end < raster_width:
+        if xend < raster_width:
             xsize += right_overlap
-        if y_end < raster_height:
+        if yend < raster_height:
             ysize += bottom_overlap
 
         yield {
