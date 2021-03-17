@@ -707,11 +707,41 @@ def calculate_connected_lulc(lulc_path, impervious_lookup, output_path):
         [(lulc_path, 1)], connected_op, output_path, gdal.GDT_Float32, NODATA)
 
 
-def connected_lulc_within_radius(connected_path, radius):
+def is_near_connected_lulc(connected_path, radius, output_path):
+    search_kernel = make_search_kernel(connected_path, radius)
+    pixel_radius = (search_kernel.shape[0] - 1) / 2
     # total # of pixels within the search kernel that are impervious LULC
     # kernels extending beyond the array edge are padded with zeros
-    convolved = scipy.signal.convolve(impervious_array, search_kernel, 
-    mode='same')  # output has same shape as input array
+
+    in_raster = gdal.OpenEx(connected_path, gdal.OF_RASTER)
+    in_band = in_raster.GetRasterBand(1)
+    raster_driver = gdal.GetDriverByName('GTIFF')
+    out_raster = raster_driver.Create(
+        output_path, raster_width, raster_height, 1, gdal.GDT_Float32,
+        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+    out_band = out_raster.GetRasterBand(1)
+
+    for block in overlap_iterblocks(connected_path, pixel_radius):
+        pad_top = pixel_radius if block['top_edge'] else 0
+        pad_left = pixel_radius if block['left_edge'] else 0
+        pad_bottom = pixel_radius if block['bottom_edge'] else 0
+        pad_right = pixel_radius if block['right_edge'] else 0
+
+        in_array = band.ReadAsArray(block['xoff'], block['yoff'], 
+            block['xsize'], block['ysize'])
+        padded_array = numpy.pad(in_array, 
+            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
+            mode='constant', constant_values=0)
+        convolved = scipy.signal.convolve(
+            padded_array, 
+            search_kernel, 
+            mode='valid')
+        is_near = convolved > 0
+        
+        out_band.WriteArray(is_near, xoff=block['xoff'] + pixel_radius, 
+            yoff=block['yoff'] + pixel_radius)
+
+        
 
 
 
@@ -765,6 +795,55 @@ def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
         nearest_y_coords - y_coords)
     return distances
 
+
+def overlap_iterblocks(raster_path, n_pixels):
+    """Iterblocks, but overlap them.
+
+    Args:
+        raster_path (str): path to raster to iterate over
+        n_pixels (int): Number of pixels by which to overlap the blocks
+
+    Yields:
+        2D numpy.ndarrays
+    """
+    raster_width, raster_height = pygeoprocessing.get_raster_info(
+        raster_path)['raster_size']
+    for block in pygeoprocessing.iterblocks((raster_path, 1), offset_only=True):
+        xoff, yoff = block['xoff'], block['yoff']
+        xsize, ysize = block['win_xsize'], block['win_ysize']
+
+        if xoff > 0:
+            padding = min(n_pixels, xoff)
+            xoff -= padding
+            xsize += padding
+
+        if yoff > 0:
+            padding = min(n_pixels, yoff)
+            yoff -= padding
+            ysize += padding
+
+        x_end = block['xoff'] + block['win_xsize']
+        y_end = block['yoff'] + block['win_ysize']
+        if x_end < raster_width:
+            padding = min(n_pixels, raster_width - x_end)
+            xsize += padding
+
+        if y_end < raster_height:
+            padding = min(n_pixels, raster_height - y_end)
+            ysize += padding
+
+        yield {
+            'xoff': xoff,
+            'yoff': yoff,
+            'xsize': xsize,
+            'ysize': ysize,
+            'top_edge': yoff == 0,
+            'left_edge': xoff == 0,
+            'bottom_edge': yoff + ysize == raster_height,
+            'right_edge': xoff + xsize == raster_width
+        }
+
+   
 
 def make_search_kernel(raster_path, radius):
     """Make a search kernel for a raster that marks pixels within a radius
@@ -888,6 +967,8 @@ def raster_average(raster_path, radius, n_values_path,
     Returns:
         None
     """
+    raster = gdal.OpenEx(retention_ratio_path, gdal.OF_RASTER)
+    band = raster.GetRasterBand(1)
     raster_info = pygeoprocessing.get_raster_info(retention_ratio_path)
     pixel_size = abs(raster_info['pixel_size'][0])
     raster_width, raster_height = raster_info['raster_size']
@@ -897,9 +978,7 @@ def raster_average(raster_path, radius, n_values_path,
     # center pixel's centerpoint
     search_kernel = make_search_kernel(raster_path, radius)
 
-    raster = gdal.OpenEx(retention_ratio_path, gdal.OF_RASTER)
-    band = raster.GetRasterBand(1)
-
+    # create and open the three output rasters
     raster_driver = gdal.GetDriverByName('GTIFF')
     n_values_raster = raster_driver.Create(
         n_values_path, raster_width, raster_height, 1, gdal.GDT_Float32,
@@ -914,53 +993,30 @@ def raster_average(raster_path, radius, n_values_path,
         options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
     average_band = average_raster.GetRasterBand(1)
 
-    
-    for block in pygeoprocessing.iterblocks((raster_path, 1), offset_only=True):
-        # overlap blocks by the pixel radius so that all have complete data
-        xoff, yoff = block['xoff'], block['yoff']
-        xsize, ysize = block['win_xsize'], block['win_ysize']
+    # calculate the sum and n_values of the neighborhood of each pixel
+    for block in overlap_iterblocks(raster_path, pixel_radius):
+        pad_top = pixel_radius if block['top_edge'] else 0
+        pad_left = pixel_radius if block['left_edge'] else 0
+        pad_bottom = pixel_radius if block['bottom_edge'] else 0
+        pad_right = pixel_radius if block['right_edge'] else 0
 
-        if block['xoff'] > 0:
-            xoff -= pixel_radius
-            xsize += pixel_radius
-            pad_left = 0
-        else:
-            pad_left = pixel_radius
+        ratio_array = band.ReadAsArray(block['xoff'], block['yoff'], 
+            block['xsize'], block['ysize'])
+        padded_ratio_array = numpy.pad(ratio_array, 
+            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
+            mode='constant', constant_values=0)
+        # add up the valid pixel values in the neighborhood of each pixel
+        sum_array = scipy.signal.convolve(
+            padded_ratio_array, 
+            search_kernel, 
+            mode='valid')
 
-        if block['yoff'] > 0:
-            yoff -= pixel_radius
-            ysize += pixel_radius
-            pad_top = 0
-        else:
-            pad_top = pixel_radius
-
-        if block['xoff'] + block['win_xsize'] < raster_width:
-            xsize += pixel_radius
-            pad_right = 0
-        else:
-            pad_right = pixel_radius
-
-        if block['yoff'] + block['win_ysize'] < raster_height:
-            ysize += pixel_radius
-            pad_bottom = 0
-        else:
-            pad_bottom = pixel_radius
-
-        LOGGER.debug((
-            f"Adjusting retention ratios for block from ({block['xoff']}, {block['yoff']}) to "
-            f"({block['xoff'] + block['win_xsize']}, {block['yoff'] + block['win_ysize']})"))
-
-        ratio_array = band.ReadAsArray(xoff, yoff, xsize, ysize)
+        # have to pad the array after 
         valid_pixels = (ratio_array != NODATA).astype(int)
         padded_valid_pixels = numpy.pad(valid_pixels, 
             pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
             mode='constant', constant_values=False)
-
-        padded_ratio_array = numpy.pad(ratio_array, 
-            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
-            mode='constant', constant_values=0)
-
-         # array where each value is the number of valid values within the
+        # array where each value is the number of valid values within the
         # search kernel. 
         # - for every kernel that doesn't extend past the edge of the original 
         #   array, this is search_kernel.size - number of nodata pixels in kernel
@@ -971,11 +1027,7 @@ def raster_average(raster_path, radius, n_values_path,
             padded_valid_pixels, 
             search_kernel, 
             mode='valid')
-        sum_array = scipy.signal.convolve(
-            padded_array, 
-            search_kernel, 
-            mode='valid')
-
+        
         n_values_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
         sum_band.WriteArray(sum_array, xoff=block['xoff'], yoff=block['yoff'])
 
