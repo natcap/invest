@@ -722,22 +722,21 @@ def is_near_connected_lulc(connected_path, radius, output_path):
     out_band = out_raster.GetRasterBand(1)
 
     for block in overlap_iterblocks(connected_path, pixel_radius):
-        pad_top = pixel_radius if block['top_edge'] else 0
-        pad_left = pixel_radius if block['left_edge'] else 0
-        pad_bottom = pixel_radius if block['bottom_edge'] else 0
-        pad_right = pixel_radius if block['right_edge'] else 0
+        
 
         in_array = band.ReadAsArray(block['xoff'], block['yoff'], 
             block['xsize'], block['ysize'])
         padded_array = numpy.pad(in_array, 
-            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
+            pad_width=((block['top_padding'], block['bottom_padding']), 
+                (block['left_padding'], block['right_padding'])), 
             mode='constant', constant_values=0)
         convolved = scipy.signal.convolve(
             padded_array, 
             search_kernel, 
             mode='valid')
+        valid_mask = padded_array
         is_near = convolved > 0
-        
+
         out_band.WriteArray(is_near, xoff=block['xoff'] + pixel_radius, 
             yoff=block['yoff'] + pixel_radius)
 
@@ -797,14 +796,31 @@ def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
 
 
 def overlap_iterblocks(raster_path, n_pixels):
-    """Iterblocks, but overlap them.
+    """Yield block dimensions and padding such that the raster blocks overlap 
+    by ``n_pixels`` as much as possible. Where a block can't be extended by 
+    ``n_pixels`` in any direction, it's extended as far as possible, and the
+    rest is indicated by a ``padding`` value for that side. Thus, a block from
+    (xoff, yoff) to (xoff + xsize, yoff + ysize) that's then padded with 
+    top_padding, left_padding, bottom_padding, and right_padding, will always
+    have an extra n_pixels of data on each side.
 
     Args:
         raster_path (str): path to raster to iterate over
         n_pixels (int): Number of pixels by which to overlap the blocks
 
     Yields:
-        2D numpy.ndarrays
+        dictionary with block dimensions and padding.
+        'xoff' (int): x offset in pixels of the block's top-left corner 
+            relative to the raster
+        'yoff' (int): y offset in pixels of the block's top-left corner 
+            relative to the raster
+        'xsize' (int): width of the block in pixels
+        'ysize' (int): height of the block in pixels
+        'top_padding' (int): number in the range [0, n_pixels] indicating how 
+            many more rows of padding to add to the top of the block. E.g. a
+            block on the top edge of the raster would have `top_padding = n_pixels`.
+            A block that's `k` rows down from the top would have 
+            `min(0, n_pixels - k)`.
     """
     raster_width, raster_height = pygeoprocessing.get_raster_info(
         raster_path)['raster_size']
@@ -812,35 +828,39 @@ def overlap_iterblocks(raster_path, n_pixels):
         xoff, yoff = block['xoff'], block['yoff']
         xsize, ysize = block['win_xsize'], block['win_ysize']
 
-        if xoff > 0:
-            padding = min(n_pixels, xoff)
-            xoff -= padding
-            xsize += padding
+        left_overlap = min(n_pixels, xoff)
+        top_overlap = min(n_pixels, yoff)
+        right_overlap = min(n_pixels, raster_width - x_end)
+        bottom_overlap = min(n_pixels, raster_height - y_end)
 
+        left_padding = n_pixels - left_overlap
+        top_padding = n_pixels - top_overlap
+        right_padding = n_pixels - right_overlap
+        bottom_padding = n_pixels - bottom_overlap
+
+        if xoff > 0:
+            xoff -= left_overlap
+            xsize += left_overlap
         if yoff > 0:
-            padding = min(n_pixels, yoff)
-            yoff -= padding
-            ysize += padding
+            yoff -= top_overlap
+            ysize += top_overlap
 
         x_end = block['xoff'] + block['win_xsize']
         y_end = block['yoff'] + block['win_ysize']
         if x_end < raster_width:
-            padding = min(n_pixels, raster_width - x_end)
-            xsize += padding
-
+            xsize += right_overlap
         if y_end < raster_height:
-            padding = min(n_pixels, raster_height - y_end)
-            ysize += padding
+            ysize += bottom_overlap
 
         yield {
             'xoff': xoff,
             'yoff': yoff,
             'xsize': xsize,
             'ysize': ysize,
-            'top_edge': yoff == 0,
-            'left_edge': xoff == 0,
-            'bottom_edge': yoff + ysize == raster_height,
-            'right_edge': xoff + xsize == raster_width
+            'top_padding': top_padding,
+            'left_padding': left_padding,
+            'bottom_padding': bottom_padding,
+            'right_padding': right_padding
         }
 
    
@@ -995,15 +1015,12 @@ def raster_average(raster_path, radius, n_values_path,
 
     # calculate the sum and n_values of the neighborhood of each pixel
     for block in overlap_iterblocks(raster_path, pixel_radius):
-        pad_top = pixel_radius if block['top_edge'] else 0
-        pad_left = pixel_radius if block['left_edge'] else 0
-        pad_bottom = pixel_radius if block['bottom_edge'] else 0
-        pad_right = pixel_radius if block['right_edge'] else 0
 
         ratio_array = band.ReadAsArray(block['xoff'], block['yoff'], 
             block['xsize'], block['ysize'])
         padded_ratio_array = numpy.pad(ratio_array, 
-            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
+            pad_width=((block['top_padding'], block['bottom_padding']), 
+                (block['left_padding'], block['right_padding'])), 
             mode='constant', constant_values=0)
         # add up the valid pixel values in the neighborhood of each pixel
         sum_array = scipy.signal.convolve(
@@ -1014,7 +1031,8 @@ def raster_average(raster_path, radius, n_values_path,
         # have to pad the array after 
         valid_pixels = (ratio_array != NODATA).astype(int)
         padded_valid_pixels = numpy.pad(valid_pixels, 
-            pad_width=((pad_top, pad_bottom), (pad_left, pad_right)), 
+            pad_width=((block['top_padding'], block['bottom_padding']), 
+                (block['left_padding'], block['right_padding'])), 
             mode='constant', constant_values=False)
         # array where each value is the number of valid values within the
         # search kernel. 
