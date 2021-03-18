@@ -205,7 +205,7 @@ def execute(args):
         int(args.get('n_workers', -1)))
     pixel_size = pygeoprocessing.get_raster_info(
         args['lulc_path'])['pixel_size']
-    pixel_area = pixel_size[0] * pixel_size[1]
+    pixel_area = abs(pixel_size[0] * pixel_size[1])
 
 
     precipitation_nodata = pygeoprocessing.get_raster_info(
@@ -235,16 +235,16 @@ def execute(args):
 
     # Biophysical table has runoff coefficents so subtract 
     # from 1 to get retention coefficient.
-    retention_ratio_array = [
+    retention_ratio_array = numpy.array([
         [1 - biophysical_dict[lucode][f'rc_{soil_group}'] 
             for soil_group in ['a', 'b', 'c', 'd']
         ] for lucode in sorted_lucodes
-    ]
-    infiltration_ratio_array = [
+    ])
+    infiltration_ratio_array = numpy.array([
         [biophysical_dict[lucode][f'ir_{soil_group}'] 
             for soil_group in ['a', 'b', 'c', 'd']
         ] for lucode in sorted_lucodes
-    ]
+    ])
 
     # Calculate stormwater retention ratio and volume from
     # LULC, soil groups, biophysical data, and precipitation
@@ -461,7 +461,7 @@ def execute(args):
         avoided_load_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
-                    (FILES['lulc_aligned_path']),
+                    (FILES['lulc_aligned_path'], 1),
                     (lulc_nodata, 'raw'),
                     (FILES['retention_volume_path'], 1),
                     (sorted_lucodes, 'raw'),
@@ -549,7 +549,6 @@ def ratio_op(lulc_array, soil_group_array, ratio_lookup, sorted_lucodes):
         right=True)
     # the index of each lucode in the sorted lucodes array
     lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
-    
     output_ratio_array = ratio_lookup[lulc_index, soil_group_index]
     return output_ratio_array
 
@@ -577,10 +576,14 @@ def volume_op(ratio_array, ratio_nodata, precip_array, precip_nodata, pixel_area
 
     # precipitation (mm/yr) * pixel area (m^2) * 
     # 0.001 (m/mm) * ratio = volume (m^3/yr)
+    print(precip_array)
+    print(ratio_array)
+    print(pixel_area)
     volume_array[valid_mask] = (
         precip_array[valid_mask] *
         ratio_array[valid_mask] *
         pixel_area * 0.001)
+    print(volume_array)
     return volume_array
 
 
@@ -663,20 +666,22 @@ def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array,
         2D numpy array of adjusted retention ratios. Has the same shape as 
         ``retention_ratio_array``.
     """
-    adjusted_ratio_array = numpy.full(ratio_array.shape, NODATA)
-    adjustment_factor_array = numpy.full(ratio_array.shape, NODATA)
+    adjusted_ratio_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
+    adjustment_factor_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
     valid_mask = (
         (ratio_array != NODATA) &
         (avg_ratio_array != NODATA) &
         (near_connected_lulc_array != NODATA) &
         (near_road_array != NODATA))
 
-    is_connected = is_near_impervious_lulc | is_near_road
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
     # - average of nearby pixels, otherwise
-    adjustment_factor_array[valid_mask] = (averaged_ratio_array[valid_mask] * 
-        ~(near_connected_lulc_array[valid_mask] | near_road_array[valid_mask]))
+    is_connected = (
+        near_connected_lulc_array[valid_mask] | 
+        near_road_array[valid_mask])
+    adjustment_factor_array[valid_mask] = (avg_ratio_array[valid_mask] * 
+        (1 - is_connected))
 
     # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
     adjusted_ratio_array[valid_mask] = (ratio_array[valid_mask] + 
