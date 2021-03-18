@@ -203,7 +203,7 @@ def execute(args):
     radius = float(args['retention_radius'])  # in raster coord system units
     pixel_size = pygeoprocessing.get_raster_info(
         args['lulc_path'])['pixel_size']
-    pixel_radius = radius / pixel_size  # in number of pixels
+    pixel_radius = radius / pixel_size[0]  # in number of pixels
 
     task_graph = taskgraph.TaskGraph(args['workspace_dir'], int(args.get('n_workers', -1)))
 
@@ -296,13 +296,15 @@ def execute(args):
             task_name='calculate pixel distance to roads',
             dependent_task_list=[coordinate_rasters_task]
         )
+
+
         # Make a boolean raster showing which pixels are within the given
         # radius of a road centerline
         near_road_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
-                [(FILES['road_distance_path'], 1)],
-                lambda array: array <= radius,
+                [(FILES['road_distance_path'], 1), (radius, 'raw')],
+                threshold_array,
                 FILES['near_road_path'],
                 gdal.GDT_Float32, 
                 NODATA),
@@ -315,7 +317,7 @@ def execute(args):
             func=raster_average,
             args=(
                 FILES['retention_ratio_path'],
-                pixel_radius
+                pixel_radius,
                 FILES['ratio_n_values_path'],
                 FILES['ratio_sum_path'],
                 FILES['ratio_average_path']),
@@ -456,6 +458,8 @@ def execute(args):
     task_graph.close()
     task_graph.join()
 
+def threshold_array(array, value):
+    return array <= value
 
 def ratio_op(lulc_array, soil_group_array, ratio_lookup, sorted_lucodes):
     """Make an array of stormwater retention or infiltration ratios from 
@@ -787,6 +791,7 @@ def is_near(input_path, pixel_radius, output_path):
 
     # make a search kernel to convolve with the input raster
     search_kernel = make_search_kernel(input_path, pixel_radius)
+    margin = math.floor(pixel_radius)
     print(search_kernel)
 
     for block in overlap_iterblocks(input_path, pixel_radius):
@@ -800,14 +805,14 @@ def is_near(input_path, pixel_radius, output_path):
             padded_array, 
             search_kernel, 
             mode='valid')
-        valid_mask = padded_array[pixel_radius:-pixel_radius, pixel_radius:-pixel_radius] != NODATA
+        valid_mask = padded_array[margin:-margin, margin:-margin] != NODATA
         is_near = numpy.full(convolved.shape, NODATA)
         is_near[valid_mask] = convolved[valid_mask] > 0
 
-        print('writing to', block['xoff'] + (pixel_radius - block['left_padding']), block['yoff'] + (pixel_radius - block['top_padding']))
+        print('writing to', block['xoff'] + (margin - block['left_padding']), block['yoff'] + (margin - block['top_padding']))
         out_band.WriteArray(is_near, 
-            xoff=block['xoff'] + (pixel_radius - block['left_padding']), 
-            yoff=block['yoff'] + (pixel_radius - block['top_padding']))
+            xoff=block['xoff'] + (margin - block['left_padding']), 
+            yoff=block['yoff'] + (margin - block['top_padding']))
 
         
 
@@ -963,15 +968,16 @@ def make_search_kernel(raster_path, pixel_radius):
     """
     raster_info = pygeoprocessing.get_raster_info(raster_path)
     raster_width, raster_height = raster_info['raster_size']
+    pixel_margin = math.floor(pixel_radius)
     # the search kernel is just large enough to contain all pixels that
     # *could* be within the radius of the center pixel
 
-    search_kernel_shape = tuple([math.floor(pixel_radius)*2+1]*2)
+    search_kernel_shape = tuple([pixel_margin*2+1]*2)
     # arrays of the column index and row index of each pixel
     col_indices, row_indices = numpy.indices(search_kernel_shape)
     # adjust them so that (0, 0) is the center pixel
-    col_indices -= pixel_radius
-    row_indices -= pixel_radius
+    col_indices -= pixel_margin
+    row_indices -= pixel_margin
     print(col_indices, row_indices)
 
     # This could be expanded to flesh out the proportion of a pixel in the 
@@ -983,7 +989,7 @@ def make_search_kernel(raster_path, pixel_radius):
 
     # boolean kernel where 1=pixel centerpoint is within the radius of the 
     # center pixel's centerpoint
-    search_kernel = numpy.array(hypotenuse < radius / pixel_size, dtype=numpy.uint8)
+    search_kernel = numpy.array(hypotenuse < pixel_radius, dtype=numpy.uint8)
     return search_kernel
 
 
