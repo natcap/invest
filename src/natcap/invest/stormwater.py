@@ -289,7 +289,8 @@ def execute(args):
             task_name='calculate binary connected lulc raster',
             dependent_task_list=[align_task]
         )
-    
+        task_graph.join()
+
         # Make a boolean raster indicating which pixels are within the
         # given radius of a directly-connected impervious LULC type
         connected_lulc_search_kernel = make_search_kernel(
@@ -342,11 +343,9 @@ def execute(args):
             task_name='find pixels within radius of road centerlines',
             dependent_task_list=[distance_task])
 
-        # boolean kernel where 1=pixel centerpoint is within the radius of the 
-        # center pixel's centerpoint
-        ratio_search_kernel = make_search_kernel(
-            FILES['retention_ratio_path'], radius)
         # Average the retention ratio values around each pixel
+        ratio_search_kernel = make_search_kernel(FILES['retention_ratio_path'],
+            radius)
         average_ratios_task = task_graph.add_task(
             func=raster_average,
             args=(
