@@ -277,13 +277,13 @@ def execute(args):
         connected_lulc_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
-                    (lulc_path, 1),
+                    (FILES['lulc_aligned_path'], 1),
                     (lulc_nodata, 'raw'),
                     (sorted_lucodes, 'raw'),
                     (impervious_lookup_array, 'raw')], 
                 connected_op, 
                 FILES['connected_lulc_path'], 
-                gdal.GDT_Float32, 
+                gdal.GDT_Int16, 
                 NODATA),
             target_path_list=[FILES['connected_lulc_path']],
             task_name='calculate binary connected lulc raster',
@@ -336,7 +336,7 @@ def execute(args):
                 [(FILES['road_distance_path'], 1), (radius, 'raw')],
                 threshold_array,
                 FILES['near_road_path'],
-                gdal.GDT_Float32, 
+                gdal.GDT_Int16, 
                 NODATA),
             target_path_list=[FILES['near_road_path']],
             task_name='find pixels within radius of road centerlines',
@@ -520,8 +520,11 @@ def execute(args):
     task_graph.close()
     task_graph.join()
 
-def threshold_array(array, value):
-    return array <= value
+def threshold_array(array, threshold):
+    out = numpy.full(array.shape, NODATA, dtype=numpy.int8)
+    valid_mask = array != NODATA
+    out[valid_mask] = array[valid_mask] <= threshold
+    return out
 
 def ratio_op(lulc_array, soil_group_array, ratio_lookup, sorted_lucodes):
     """Make an array of stormwater retention or infiltration ratios from 
@@ -576,14 +579,10 @@ def volume_op(ratio_array, ratio_nodata, precip_array, precip_nodata, pixel_area
 
     # precipitation (mm/yr) * pixel area (m^2) * 
     # 0.001 (m/mm) * ratio = volume (m^3/yr)
-    print(precip_array)
-    print(ratio_array)
-    print(pixel_area)
     volume_array[valid_mask] = (
         precip_array[valid_mask] *
         ratio_array[valid_mask] *
         pixel_area * 0.001)
-    print(volume_array)
     return volume_array
 
 
@@ -677,6 +676,7 @@ def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array,
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
     # - average of nearby pixels, otherwise
+    print(near_connected_lulc_array.dtype, near_road_array.dtype)
     is_connected = (
         near_connected_lulc_array[valid_mask] | 
         near_road_array[valid_mask])
@@ -797,7 +797,7 @@ def is_near(input_path, search_kernel, output_path):
         input_path)['raster_size']
     raster_driver = gdal.GetDriverByName('GTIFF')
     out_raster = raster_driver.Create(
-        output_path, raster_width, raster_height, 1, gdal.GDT_Float32,
+        output_path, raster_width, raster_height, 1, gdal.GDT_Int16,
         options=RASTER_OPTIONS)
     out_band = out_raster.GetRasterBand(1)
 
@@ -816,7 +816,7 @@ def is_near(input_path, search_kernel, output_path):
             search_kernel, 
             mode='valid')
         valid_mask = padded_array[overlap:-overlap, overlap:-overlap] != NODATA
-        is_near = numpy.full(convolved.shape, NODATA)
+        is_near = numpy.full(convolved.shape, NODATA, dtype=numpy.int8)
         is_near[valid_mask] = convolved[valid_mask] > 0
 
         out_band.WriteArray(is_near, 
@@ -1127,7 +1127,7 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
     # create and open the three output rasters
     raster_driver = gdal.GetDriverByName('GTIFF')
     n_values_raster = raster_driver.Create(
-        n_values_path, raster_width, raster_height, 1, gdal.GDT_Float32,
+        n_values_path, raster_width, raster_height, 1, gdal.GDT_Int16,
         options=RASTER_OPTIONS)
     n_values_band = n_values_raster.GetRasterBand(1)
     sum_raster = raster_driver.Create(
@@ -1179,7 +1179,11 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
     # Calculate the pixel-wise average from the n_values and sum rasters
     def avg_op(n_values_array, sum_array):
         average_array = numpy.full(n_values_array.shape, NODATA)
-        valid_mask = (n_values_array != NODATA) & (sum_array != NODATA)
+        valid_mask = (
+            (n_values_array != NODATA) & 
+            (n_values_array != 0) &
+            (sum_array != NODATA))
+        average_array[n_values_array == 0] = 0
         average_array[valid_mask] = (
             sum_array[valid_mask] / n_values_array[valid_mask])
         return average_array
