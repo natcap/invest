@@ -13,6 +13,7 @@ import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
 import LoadButton from './components/LoadButton';
 import SettingsModal from './components/SettingsModal';
+import DataDownloadModal from './components/DataDownloadModal';
 import { getInvestModelNames } from './server_requests';
 import { getLogger } from './logger';
 import InvestJob from './InvestJob';
@@ -22,7 +23,6 @@ import {
 } from './components/SettingsModal/SettingsStorage';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -37,6 +37,7 @@ export default class App extends React.Component {
       investList: {},
       recentJobs: [],
       investSettings: {},
+      didAskForSampleData: false,
     };
     this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
@@ -44,6 +45,7 @@ export default class App extends React.Component {
     this.closeInvestModel = this.closeInvestModel.bind(this);
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
+    this.storeDownloadDir = this.storeDownloadDir.bind(this);
   }
 
   /** Initialize the list of available invest models and recent invest jobs. */
@@ -71,6 +73,7 @@ export default class App extends React.Component {
       investList: investList,
       recentJobs: recentJobs,
       investSettings: investSettings,
+      didAskForSampleData: !!investSettings.sampleDataDir,
     });
   }
 
@@ -90,6 +93,16 @@ export default class App extends React.Component {
     });
 
     saveSettingsStore(settings);
+  }
+
+  storeDownloadDir(dir) {
+    console.log(dir);
+    const { investSettings } = this.state;
+    investSettings.sampleDataDir = dir;
+    this.setState({
+      didAskForSampleData: true,
+    });
+    this.saveSettings(investSettings);
   }
 
   /** Push data for a new InvestTab component to an array.
@@ -158,6 +171,7 @@ export default class App extends React.Component {
       recentJobs,
       openJobs,
       activeTab,
+      didAskForSampleData,
     } = this.state;
 
     const investNavItems = [];
@@ -196,51 +210,57 @@ export default class App extends React.Component {
         </TabPane>
       );
     });
-
+    console.log(didAskForSampleData);
     return (
-      <TabContainer activeKey={activeTab}>
-        <Navbar onDragOver={dragOverHandlerNone}>
-          <Navbar.Brand onDragOver={dragOverHandlerNone}>
-            <Nav.Link
+      <React.Fragment>
+        <DataDownloadModal
+          show={!didAskForSampleData}
+          storeDownloadDir={this.storeDownloadDir}
+        />
+        <TabContainer activeKey={activeTab}>
+          <Navbar onDragOver={dragOverHandlerNone}>
+            <Navbar.Brand onDragOver={dragOverHandlerNone}>
+              <Nav.Link
+                onSelect={this.switchTabs}
+                eventKey="home"
+                onDragOver={dragOverHandlerNone}
+              >
+                InVEST
+              </Nav.Link>
+            </Navbar.Brand>
+            <Nav
+              variant="pills"
+              className="mr-auto horizontal-scroll"
+              activeKey={activeTab}
               onSelect={this.switchTabs}
-              eventKey="home"
               onDragOver={dragOverHandlerNone}
             >
-              InVEST
-            </Nav.Link>
-          </Navbar.Brand>
-          <Nav
-            variant="pills"
-            className="mr-auto horizontal-scroll"
-            activeKey={activeTab}
-            onSelect={this.switchTabs}
-            onDragOver={dragOverHandlerNone}
-          >
-            {investNavItems}
-          </Nav>
-          <LoadButton
-            openInvestModel={this.openInvestModel}
-            batchUpdateArgs={this.batchUpdateArgs}
-          />
-          <SettingsModal
-            className="mx-3"
-            saveSettings={this.saveSettings}
-            investSettings={investSettings}
-            clearJobsStorage={this.clearRecentJobs}
-          />
-        </Navbar>
-
-        <TabContent id="top-tab-content">
-          <TabPane eventKey="home" title="Home">
-            <HomeTab
-              investList={investList}
+              {investNavItems}
+            </Nav>
+            <LoadButton
               openInvestModel={this.openInvestModel}
-              recentJobs={recentJobs}
+              batchUpdateArgs={this.batchUpdateArgs}
             />
-          </TabPane>
-          {investTabPanes}
-        </TabContent>
-      </TabContainer>
+            <SettingsModal
+              className="mx-3"
+              saveSettings={this.saveSettings}
+              investSettings={investSettings}
+              clearJobsStorage={this.clearRecentJobs}
+            />
+          </Navbar>
+
+          <TabContent id="top-tab-content">
+            <TabPane eventKey="home" title="Home">
+              <HomeTab
+                investList={investList}
+                openInvestModel={this.openInvestModel}
+                recentJobs={recentJobs}
+              />
+            </TabPane>
+            {investTabPanes}
+          </TabContent>
+        </TabContainer>
+      </React.Fragment>
     );
   }
 }

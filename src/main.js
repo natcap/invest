@@ -7,6 +7,8 @@ if (ELECTRON_DEV_MODE) {
   dotenv.config();
 }
 
+const path = require('path');
+
 const {
   app,
   BrowserWindow,
@@ -15,6 +17,7 @@ const {
   nativeTheme,
   Menu,
 } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
+
 const {
   getFlaskIsReady, shutdownPythonProcess
 } = require('./server_requests');
@@ -31,6 +34,15 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 if (!process.env.PORT) {
   process.env.PORT = '56789';
 }
+
+// forknames are only in the path on the dev-builds bucket
+const fork = pkg.invest.bucket === 'releases.naturalcapitalproject.org'
+  ? '' : pkg.invest.fork;
+const repo = 'invest';
+const prefix = path.join(
+  pkg.invest.bucket, repo, fork, pkg.invest.version, 'data'
+);
+const sampleDataURL = new URL(prefix, pkg.invest.hostname).href;
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -57,6 +69,7 @@ const createWindow = async () => {
     investExe: investExe,
     investVersion: investVersion,
     workbenchVersion: pkg.version,
+    sampleDataURL: sampleDataURL,
     userDataPath: app.getPath('userData'),
   };
   ipcMain.on('variable-request', (event, arg) => {

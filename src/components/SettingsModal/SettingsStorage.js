@@ -10,14 +10,16 @@ const investSettingsStore = localforage.createInstance({
 
 /** Getter function for global default settings.
  *
- * @returns {object} to destructure into two args:
+ * @returns {object} to destructure into:
  *     {String} nWorkers - TaskGraph number of workers
- *     {String} logggingLevel - InVEST model logging level
+ *     {String} loggingLevel - InVEST model logging level
+ *     {String} sampleDataDir - default location for sample datastack downloads
  */
 export function getDefaultSettings() {
   const defaultSettings = {
     nWorkers: '-1',
     loggingLevel: 'INFO',
+    sampleDataDir: '',
   };
   return defaultSettings;
 }

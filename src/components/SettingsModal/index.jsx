@@ -18,7 +18,8 @@ export default class SettingsModal extends React.Component {
       show: false,
       localSettings: {
         nWorkers: '',
-        loggingLevel: ''
+        loggingLevel: '',
+        sampleDataDir: null,
       }
     };
 
@@ -26,16 +27,18 @@ export default class SettingsModal extends React.Component {
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
-    this.handleDefault = this.handleDefault.bind(this);
+    this.handleReset = this.handleReset.bind(this);
   }
 
   componentDidUpdate(prevProps) {
     /** Any time the parent's state of investSettings changes,
     * this component should reflect that.
     */
-    if (this.props.investSettings !== prevProps.investSettings) {
-      const globalSettings = Object.assign({}, this.props.investSettings)
-      this.setState({localSettings: globalSettings})
+    const { investSettings } = this.props;
+    console.log(investSettings);
+    console.log(prevProps.investSettings);
+    if (JSON.stringify(investSettings) !== JSON.stringify(prevProps.investSettings)) {
+      this.setState({ localSettings: investSettings });
     }
   }
 
@@ -63,7 +66,7 @@ export default class SettingsModal extends React.Component {
   }
 
   /** Handle a click on the "Reset" button, which updates local state */
-  handleDefault(event) {
+  handleReset(event) {
     event.preventDefault();
     let resetSettings = getDefaultSettings();
     this.setState({
@@ -160,12 +163,28 @@ export default class SettingsModal extends React.Component {
                 <Col sm="4">
                   <Button
                     variant="secondary"
-                    onClick={this.handleDefault}
+                    onClick={this.handleReset}
                     type="button"
                     className="float-right"
                   >
                     Reset
                   </Button>
+                </Col>
+              </Form.Group>
+              <hr />
+              <Form.Group as={Row}>
+                <Form.Label column sm="8" htmlFor="sampledata-dir">
+                  Sample Data Directory
+                </Form.Label>
+                <Col sm="4">
+                  <Form.Control
+                    id="sampledata-dir"
+                    name="sampleDataDir"
+                    type="text"
+                    value={this.state.localSettings.sampleDataDir || ''}
+                    onChange={this.handleChange}
+                    // isInvalid={!nWorkersIsValid}
+                  />
                 </Col>
               </Form.Group>
               <hr />
