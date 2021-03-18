@@ -203,13 +203,23 @@ def execute(args):
 
     task_graph = taskgraph.TaskGraph(args['workspace_dir'], 
         int(args.get('n_workers', -1)))
-    lulc_pixel_size = pygeoprocessing.get_raster_info(
+    pixel_size = pygeoprocessing.get_raster_info(
         args['lulc_path'])['pixel_size']
+    pixel_area = pixel_size[0] * pixel_size[1]
+
+
+    precipitation_nodata = pygeoprocessing.get_raster_info(
+        args['precipitation_path'])['nodata'][0]
+    lulc_nodata = pygeoprocessing.get_raster_info(
+        args['lulc_path'])['nodata'][0]
+    soil_group_nodata = pygeoprocessing.get_raster_info(
+        args['soil_group_path'])['nodata'][0]
+
     # Align all three input rasters to the same projection
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(align_inputs, align_outputs, ['near' for _ in align_inputs],
-            lulc_pixel_size, 'intersection'),
+            pixel_size, 'intersection'),
         kwargs={'raster_align_index': 0},
         target_path_list=align_outputs,
         task_name='align input rasters')
@@ -217,39 +227,24 @@ def execute(args):
     # Build a lookup dictionary mapping each LULC code to its row
     biophysical_dict = utils.build_lookup_from_csv(
         args['biophysical_table'], 'lucode')
-
-    # Make ratio lookup dictionaries mapping each LULC code to a ratio for 
-    # each soil group. Biophysical table has runoff coefficents so subtract 
-    # from 1 to get retention coefficient.
-    retention_ratio_dict = {
-        lucode: {
-            'A': 1 - row['rc_a'],
-            'B': 1 - row['rc_b'],
-            'C': 1 - row['rc_c'],
-            'D': 1 - row['rc_d'],
-        } for lucode, row in biophysical_dict.items()
-    }
-    infiltration_ratio_dict = {
-        lucode: {
-            'A': row['ir_a'],
-            'B': row['ir_b'],
-            'C': row['ir_c'],
-            'D': row['ir_d'],
-        } for lucode, row in biophysical_dict.items()
-    }
     sorted_lucodes = sorted(list(biophysical_dict.keys()))
 
     # convert the nested dictionary in to a 2D array where rows are LULC codes 
     # in sorted order and columns correspond to soil groups in order
     # this facilitates efficiently looking up the ratio values with numpy
-    retention_ratio_array = numpy.array([
-        [retention_ratio_dict[lucode][soil_group] 
-            for soil_group in ['A', 'B', 'C', 'D']
-        ] for lucode in sorted_lucodes])
-    infiltration_ratio_array = numpy.array([
-        [infiltration_ratio_dict[lucode][soil_group] 
-            for soil_group in ['A', 'B', 'C', 'D']
-        ] for lucode in sorted_lucodes])
+
+    # Biophysical table has runoff coefficents so subtract 
+    # from 1 to get retention coefficient.
+    retention_ratio_array = [
+        [1 - biophysical_dict[lucode][f'rc_{soil_group}'] 
+            for soil_group in ['a', 'b', 'c', 'd']
+        ] for lucode in sorted_lucodes
+    ]
+    infiltration_ratio_array = [
+        [biophysical_dict[lucode][f'ir_{soil_group}'] 
+            for soil_group in ['a', 'b', 'c', 'd']
+        ] for lucode in sorted_lucodes
+    ]
 
     # Calculate stormwater retention ratio and volume from
     # LULC, soil groups, biophysical data, and precipitation
@@ -273,13 +268,10 @@ def execute(args):
     if args['adjust_retention_ratios']:
         radius = float(args['retention_radius'])  # in raster coord system units
         # boolean mapping for each LULC code whether it's connected
-        is_connected_lookup = {lucode: row['is_connected'] 
-            for lucode, row in biophysical_dict.items()}
+        impervious_lookup_array = numpy.array([
+            biophysical_dict[lucode]['is_connected'] 
+                for lucode in sorted_lucodes])
 
-        lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
-
-        impervious_lookup_array = numpy.array(
-            [impervious_lookup[lucode] for lucode in sorted_lucodes])
         # Make a boolean raster indicating which pixels are directly
         # connected impervious LULC type
         connected_lulc_task = task_graph.add_task(
@@ -392,21 +384,16 @@ def execute(args):
         final_retention_ratio_path = FILES['retention_ratio_path']
         final_retention_ratio_task = retention_ratio_task
 
-    ratio_raster_info = pygeoprocessing.get_raster_info(ratio_path)
-    ratio_nodata = NODATA
-    pixel_area = abs(ratio_raster_info['pixel_size'][0] * 
-        ratio_raster_info['pixel_size'][1])
-    precipitation_nodata = pygeoprocessing.get_raster_info(
-        precipitation_path)['nodata'][0]
-
     # Calculate stormwater retention volume from ratios and precipitation
     retention_volume_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
             [
                 (final_retention_ratio_path, 1), 
-                (FILES['precipitation_aligned_path'], 1)
-            ],
+                (NODATA, 'raw'),
+                (FILES['precipitation_aligned_path'], 1),
+                (precipitation_nodata, 'raw'),
+                (pixel_area, 'raw')],
             volume_op, 
             FILES['retention_volume_path'], 
             gdal.GDT_Float32, 
@@ -435,11 +422,12 @@ def execute(args):
     )
     infiltration_volume_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=(
-            [
+        args=([
                 (FILES['infiltration_ratio_path'], 1), 
-                (FILES['precipitation_aligned_path'], 1)
-            ],
+                (NODATA, 'raw'),
+                (FILES['precipitation_aligned_path'], 1),
+                (precipitation_nodata, 'raw'),
+                (pixel_area, 'raw')],
             volume_op, 
             FILES['infiltration_volume_path'], 
             gdal.GDT_Float32, 
@@ -455,8 +443,6 @@ def execute(args):
         if key.startswith('emc_')]
     pollutants = [key[4:] for key in  emc_columns]
     LOGGER.info(f'Pollutants found in biophysical table: {pollutants}')
-
-    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
     
     # Calculate avoided pollutant load for each pollutant from retention volume
     # and biophysical table EMC value
@@ -467,12 +453,10 @@ def execute(args):
         avoided_pollutant_load_path = os.path.join(
             output_dir, f'avoided_pollutant_load_{pollutant}{suffix}.tif')
         avoided_load_paths.append(avoided_pollutant_load_path)
-        # make a dictionary mapping each LULC code to the pollutant EMC value
-        lulc_emc_lookup = {
-            lucode: row[f'emc_{pollutant}'] for lucode, row in biophysical_dict.items()
-        }
+        # make an array mapping each LULC code to the pollutant EMC value
         emc_array = numpy.array(
-        [emc_lookup[lucode] for lucode in sorted_lucodes])
+            [biophysical_dict[lucode][f'emc_{pollutant}']
+                for lucode in sorted_lucodes])
 
         avoided_load_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
@@ -1014,7 +998,7 @@ def nearest_linestring_op(x_coords, y_coords, linestring_path):
     for (x1, y1), (x2, y2) in segment_generator:
         if x2 == x1 and y2 == y1:
             continue  # ignore lines with length 0
-        distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
+        distance = line_distance(x_coords, y_coords, x1, y1, x2, y2)
         min_distance = numpy.minimum(min_distance, distance)
     return min_distance
 
