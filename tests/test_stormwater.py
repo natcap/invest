@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from osgeo import gdal, osr
+from osgeo import gdal, ogr, osr
 
 
 def random_ratios(k, precision=2):
@@ -389,121 +389,201 @@ class StormwaterTests(unittest.TestCase):
     #     output_pairs = list(stormwater.iter_linestring_segments(path))
     #     self.assertEqual(expected_pairs, output_pairs)
 
-
-
-
-
       
-    def test_overlap_iterblocks(self):
-        from natcap.invest import stormwater
+    # def test_overlap_iterblocks(self):
+    #     from natcap.invest import stormwater
 
-        array = numpy.array([
-            [1, 1, 1, 1, 1, 2],
-            [1, 1, 1, 1, 1, 2],
-            [1, 1, 1, 1, 1, 2],
-            [1, 1, 1, 1, 1, 2],
-            [1, 1, 1, 1, 1, 2],
-            [3, 3, 3, 3, 3, 4]
-        ], dtype=numpy.int8)
+    #     array = numpy.array([
+    #         [1, 1, 1, 1, 1, 2],
+    #         [1, 1, 1, 1, 1, 2],
+    #         [1, 1, 1, 1, 1, 2],
+    #         [1, 1, 1, 1, 1, 2],
+    #         [1, 1, 1, 1, 1, 2],
+    #         [3, 3, 3, 3, 3, 4]
+    #     ], dtype=numpy.int8)
 
-        def mock_iterblocks(*args, **kwargs):
-            for yoff, ysize in [(0, 6)]:
-                for xoff, xsize in [(0, 6)]:
-                    yield {
-                        'xoff': xoff, 
-                        'yoff': yoff,
-                        'win_xsize': xsize,
-                        'win_ysize': ysize
-                    }
-        raster_path = os.path.join(self.workspace_dir, 'iterblocks_array.tif')
-        # set up an arbitrary spatial reference
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3857)
-        projection_wkt = srs.ExportToWkt()
-        pygeoprocessing.numpy_array_to_raster(
-            array, -1, (10, -10), (0, 0), projection_wkt, raster_path)
-
-        with mock.patch(
-            'natcap.invest.stormwater.pygeoprocessing.iterblocks', 
-            mock_iterblocks):
-            blocks = list(stormwater.overlap_iterblocks(raster_path, 2))
-            self.assertEqual(blocks, [{
-                'xoff': 0,
-                'yoff': 0,
-                'xsize': 6,
-                'ysize': 6,
-                'top_padding': 2,
-                'left_padding': 2,
-                'bottom_padding': 2,
-                'right_padding': 2
-            }])
-
-        def mock_iterblocks(*args, **kwargs):
-            for yoff, ysize in [(0, 5), (5, 1)]:
-                for xoff, xsize in [(0, 5), (5, 1)]:
-                    yield {
-                        'xoff': xoff, 
-                        'yoff': yoff,
-                        'win_xsize': xsize,
-                        'win_ysize': ysize}
-
-        with mock.patch(
-            'natcap.invest.stormwater.pygeoprocessing.iterblocks', 
-            mock_iterblocks):
-            blocks = list(stormwater.overlap_iterblocks(raster_path, 2))
-
-            self.assertEqual(blocks, [{
-                'xoff': 0,
-                'yoff': 0,
-                'xsize': 6,
-                'ysize': 6,
-                'top_padding': 2,
-                'left_padding': 2,
-                'bottom_padding': 1,
-                'right_padding': 1
-            },
-            {
-                'xoff': 3,
-                'yoff': 0,
-                'xsize': 3,
-                'ysize': 6,
-                'top_padding': 2,
-                'left_padding': 0,
-                'bottom_padding': 1,
-                'right_padding': 2
-            },
-            {
-                'xoff': 0,
-                'yoff': 3,
-                'xsize': 6,
-                'ysize': 3,
-                'top_padding': 0,
-                'left_padding': 2,
-                'bottom_padding': 2,
-                'right_padding': 1
-            },
-            {
-                'xoff': 3,
-                'yoff': 3,
-                'xsize': 3,
-                'ysize': 3,
-                'top_padding': 0,
-                'left_padding': 0,
-                'bottom_padding': 2,
-                'right_padding': 2
-            }])
-
-
-    # def test_is_near_connected_lulc(self):
-    #     is_connected_array = [
-    #         [0, 0, 1, 1, 0, 0],
-    #         [1, 0, 0, 0, 0, 0],
-    #         []
-    #     ]
+    #     def mock_iterblocks(*args, **kwargs):
+    #         for yoff, ysize in [(0, 6)]:
+    #             for xoff, xsize in [(0, 6)]:
+    #                 yield {
+    #                     'xoff': xoff, 
+    #                     'yoff': yoff,
+    #                     'win_xsize': xsize,
+    #                     'win_ysize': ysize
+    #                 }
+    #     raster_path = os.path.join(self.workspace_dir, 'iterblocks_array.tif')
+    #     # set up an arbitrary spatial reference
+    #     srs = osr.SpatialReference()
+    #     srs.ImportFromEPSG(3857)
+    #     projection_wkt = srs.ExportToWkt()
+    #     pygeoprocessing.numpy_array_to_raster(
+    #         array, -1, (10, -10), (0, 0), projection_wkt, raster_path)
 
     #     with mock.patch(
     #         'natcap.invest.stormwater.pygeoprocessing.iterblocks', 
     #         mock_iterblocks):
+    #         blocks = list(stormwater.overlap_iterblocks(raster_path, 2))
+    #         self.assertEqual(blocks, [{
+    #             'xoff': 0,
+    #             'yoff': 0,
+    #             'xsize': 6,
+    #             'ysize': 6,
+    #             'top_padding': 2,
+    #             'left_padding': 2,
+    #             'bottom_padding': 2,
+    #             'right_padding': 2
+    #         }])
+
+    #     def mock_iterblocks(*args, **kwargs):
+    #         for yoff, ysize in [(0, 5), (5, 1)]:
+    #             for xoff, xsize in [(0, 5), (5, 1)]:
+    #                 yield {
+    #                     'xoff': xoff, 
+    #                     'yoff': yoff,
+    #                     'win_xsize': xsize,
+    #                     'win_ysize': ysize}
+
+    #     with mock.patch(
+    #         'natcap.invest.stormwater.pygeoprocessing.iterblocks', 
+    #         mock_iterblocks):
+    #         blocks = list(stormwater.overlap_iterblocks(raster_path, 2))
+
+    #         self.assertEqual(blocks, [{
+    #             'xoff': 0,
+    #             'yoff': 0,
+    #             'xsize': 6,
+    #             'ysize': 6,
+    #             'top_padding': 2,
+    #             'left_padding': 2,
+    #             'bottom_padding': 1,
+    #             'right_padding': 1
+    #         },
+    #         {
+    #             'xoff': 3,
+    #             'yoff': 0,
+    #             'xsize': 3,
+    #             'ysize': 6,
+    #             'top_padding': 2,
+    #             'left_padding': 0,
+    #             'bottom_padding': 1,
+    #             'right_padding': 2
+    #         },
+    #         {
+    #             'xoff': 0,
+    #             'yoff': 3,
+    #             'xsize': 6,
+    #             'ysize': 3,
+    #             'top_padding': 0,
+    #             'left_padding': 2,
+    #             'bottom_padding': 2,
+    #             'right_padding': 1
+    #         },
+    #         {
+    #             'xoff': 3,
+    #             'yoff': 3,
+    #             'xsize': 3,
+    #             'ysize': 3,
+    #             'top_padding': 0,
+    #             'left_padding': 0,
+    #             'bottom_padding': 2,
+    #             'right_padding': 2
+    #         }])
+
+
+    # def test_is_near_connected_lulc(self):
+    #     from natcap.invest import stormwater
+    #     is_connected_array = numpy.array([
+    #         [0, 0, 1, 0, 0, 0],
+    #         [1, 0, 1, 0, 0, 0],
+    #         [0, 0, 0, 0, 0, 1]
+    #     ], dtype=numpy.int8)
+    #     # with pixel size of 10, this will make a kernel like this:
+    #     # 0 1 0
+    #     # 1 1 1
+    #     # 0 1 0
+    #     radius = 14
+    #     # convolution sum array:
+    #     # 1, 1, 2, 1, 0, 0
+    #     # 1, 1, 2, 1, 0, 1
+    #     # 1, 0, 1, 0, 1, 1
+    #     # expected is_near array: sum > 0
+    #     expected = numpy.array([
+    #         [1, 1, 1, 1, 0, 0],
+    #         [1, 1, 1, 1, 0, 1],
+    #         [1, 0, 1, 0, 1, 1]
+    #     ])
+
+    #     connected_path = os.path.join(self.workspace_dir, 'connected.tif')
+    #     out_path = os.path.join(self.workspace_dir, 'near_connected.tif')
+
+    #     # set up an arbitrary spatial reference
+    #     srs = osr.SpatialReference()
+    #     srs.ImportFromEPSG(3857)
+    #     projection_wkt = srs.ExportToWkt()
+    #     pygeoprocessing.numpy_array_to_raster(
+    #         is_connected_array, -1, (10, -10), (0, 0), projection_wkt, connected_path)
+
+
+    #     def mock_iterblocks(*args, **kwargs):
+    #         for yoff, ysize in [(0, 3)]:
+    #             for xoff, xsize in [(0, 3), (3, 3)]:
+    #                 yield {
+    #                     'xoff': xoff, 
+    #                     'yoff': yoff,
+    #                     'win_xsize': xsize,
+    #                     'win_ysize': ysize}
+
+    #     with mock.patch(
+    #         'natcap.invest.stormwater.pygeoprocessing.iterblocks', 
+    #         mock_iterblocks):
+    #         stormwater.is_near(connected_path, radius, out_path)
+    #         actual = pygeoprocessing.raster_to_numpy_array(out_path)
+    #         print(actual)
+    #         self.assertTrue(numpy.array_equal(expected, actual))
+
+
+
+
+    def test_make_search_kernel(self):
+        from natcap.invest import stormwater
+
+        array = numpy.zeros((10, 10))
+        path = os.path.join(self.workspace_dir, 'make_search_kernel.tif')
+        # set up an arbitrary spatial reference
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3857)
+        projection_wkt = srs.ExportToWkt()
+        pygeoprocessing.numpy_array_to_raster(array, -1, (10, -10), 
+            (0, 0), projection_wkt, path)
+
+        expected_5 = numpy.array([[1]])
+        actual_5 = stormwater.make_search_kernel(path, 5)
+        print(actual_5)
+        self.assertTrue(numpy.array_equal(expected_5, actual_5))
+
+        expected_9 = numpy.array([[1]])
+        actual_9 = stormwater.make_search_kernel(path, 9)
+        print(actual_9)
+        self.assertTrue(numpy.array_equal(expected_9, actual_9))
+
+        expected_10 = numpy.array([
+            [0, 1, 0],
+            [1, 1, 1],
+            [0, 1, 0]])
+        actual_10 = stormwater.make_search_kernel(path, 10)
+        print(actual_10)
+        self.assertTrue(numpy.array_equal(expected_10, actual_10))
+
+        expected_15 = numpy.array([
+            [1, 1, 1],
+            [1, 1, 1],
+            [1, 1, 1]])
+        actual_15 = stormwater.make_search_kernel(path, 15)
+        print(actual_15)
+        self.assertTrue(numpy.array_equal(expected_15, actual_15))
+
+
+
 
 
 
