@@ -16,6 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 # a constant nodata value to use for intermediates and outputs
 NODATA = -1
+RASTER_OPTIONS = pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1]
 
 ARGS_SPEC = {
     "model_name": "Stormwater Retention",
@@ -200,15 +201,15 @@ def execute(args):
         FILES['soil_group_aligned_path'], 
         FILES['precipitation_aligned_path']]
 
-    radius = float(args['retention_radius'])  # in raster coord system units
-
-    task_graph = taskgraph.TaskGraph(args['workspace_dir'], int(args.get('n_workers', -1)))
-
+    task_graph = taskgraph.TaskGraph(args['workspace_dir'], 
+        int(args.get('n_workers', -1)))
+    lulc_pixel_size = pygeoprocessing.get_raster_info(
+        args['lulc_path'])['pixel_size']
     # Align all three input rasters to the same projection
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(align_inputs, align_outputs, ['near' for _ in align_inputs],
-            pixel_size, 'intersection'),
+            lulc_pixel_size, 'intersection'),
         kwargs={'raster_align_index': 0},
         target_path_list=align_outputs,
         task_name='align input rasters')
@@ -236,16 +237,33 @@ def execute(args):
             'D': row['ir_d'],
         } for lucode, row in biophysical_dict.items()
     }
+    sorted_lucodes = sorted(list(biophysical_dict.keys()))
+
+    # convert the nested dictionary in to a 2D array where rows are LULC codes 
+    # in sorted order and columns correspond to soil groups in order
+    # this facilitates efficiently looking up the ratio values with numpy
+    retention_ratio_array = numpy.array([
+        [retention_ratio_dict[lucode][soil_group] 
+            for soil_group in ['A', 'B', 'C', 'D']
+        ] for lucode in sorted_lucodes])
+    infiltration_ratio_array = numpy.array([
+        [infiltration_ratio_dict[lucode][soil_group] 
+            for soil_group in ['A', 'B', 'C', 'D']
+        ] for lucode in sorted_lucodes])
 
     # Calculate stormwater retention ratio and volume from
     # LULC, soil groups, biophysical data, and precipitation
     retention_ratio_task = task_graph.add_task(
-        func=calculate_stormwater_ratio,
-        args=(
-            FILES['lulc_aligned_path'],
-            FILES['soil_group_aligned_path'],
-            retention_ratio_dict,
-            FILES['retention_ratio_path']),
+        func=pygeoprocessing.raster_calculator,
+        args=([
+                (FILES['lulc_aligned_path'], 1), 
+                (FILES['soil_group_aligned_path'], 1), 
+                (retention_ratio_array, 'raw'), 
+                (sorted_lucodes, 'raw')], 
+            ratio_op, 
+            FILES['retention_ratio_path'], 
+            gdal.GDT_Float32, 
+            NODATA),
         target_path_list=[FILES['retention_ratio_path']],
         dependent_task_list=[align_task],
         task_name='calculate stormwater retention ratio'
@@ -253,15 +271,28 @@ def execute(args):
 
     # (Optional) adjust stormwater retention ratio using roads
     if args['adjust_retention_ratios']:
+        radius = float(args['retention_radius'])  # in raster coord system units
         # boolean mapping for each LULC code whether it's connected
         is_connected_lookup = {lucode: row['is_connected'] 
             for lucode, row in biophysical_dict.items()}
+
+        lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+
+        impervious_lookup_array = numpy.array(
+            [impervious_lookup[lucode] for lucode in sorted_lucodes])
         # Make a boolean raster indicating which pixels are directly
         # connected impervious LULC type
         connected_lulc_task = task_graph.add_task(
-            func=calculate_connected_lulc,
-            args=(FILES['lulc_aligned_path'], is_connected_lookup, 
-                FILES['connected_lulc_path']),
+            func=pygeoprocessing.raster_calculator,
+            args=([
+                    (lulc_path, 1),
+                    (lulc_nodata, 'raw'),
+                    (sorted_lucodes, 'raw'),
+                    (impervious_lookup_array, 'raw')], 
+                connected_op, 
+                FILES['connected_lulc_path'], 
+                gdal.GDT_Float32, 
+                NODATA),
             target_path_list=[FILES['connected_lulc_path']],
             task_name='calculate binary connected lulc raster',
             dependent_task_list=[align_task]
@@ -290,9 +321,16 @@ def execute(args):
             dependent_task_list=[retention_ratio_task]
         )
         distance_task = task_graph.add_task(
-            func=distance_to_road_centerlines,
-            args=(FILES['x_coords_path'], FILES['y_coords_path'],
-                args['road_centerlines_path'], FILES['road_distance_path']),
+            func=pygeoprocessing.raster_calculator,
+            args=([
+                    (FILES['x_coords_path'], 1), 
+                    (FILES['y_coords_path'], 1), 
+                    (args['road_centerlines_path'], 'raw')
+                ],
+                nearest_linestring_op, 
+                FILES['road_distance_path'], 
+                gdal.GDT_Float32, 
+                NODATA),
             target_path_list=[FILES['road_distance_path']],
             task_name='calculate pixel distance to roads',
             dependent_task_list=[coordinate_rasters_task]
@@ -354,13 +392,25 @@ def execute(args):
         final_retention_ratio_path = FILES['retention_ratio_path']
         final_retention_ratio_task = retention_ratio_task
 
+    ratio_raster_info = pygeoprocessing.get_raster_info(ratio_path)
+    ratio_nodata = NODATA
+    pixel_area = abs(ratio_raster_info['pixel_size'][0] * 
+        ratio_raster_info['pixel_size'][1])
+    precipitation_nodata = pygeoprocessing.get_raster_info(
+        precipitation_path)['nodata'][0]
+
     # Calculate stormwater retention volume from ratios and precipitation
     retention_volume_task = task_graph.add_task(
-        func=calculate_stormwater_volume,
+        func=pygeoprocessing.raster_calculator,
         args=(
-            final_retention_ratio_path,
-            FILES['precipitation_aligned_path'],
-            FILES['retention_volume_path']),
+            [
+                (final_retention_ratio_path, 1), 
+                (FILES['precipitation_aligned_path'], 1)
+            ],
+            volume_op, 
+            FILES['retention_volume_path'], 
+            gdal.GDT_Float32, 
+            NODATA),
         target_path_list=[FILES['retention_volume_path']],
         dependent_task_list=[align_task, final_retention_ratio_task],
         task_name='calculate stormwater retention volume'
@@ -369,22 +419,31 @@ def execute(args):
     # (Optional) Calculate stormwater infiltration ratio and volume from
     # LULC, soil groups, biophysical table, and precipitation
     infiltration_ratio_task = task_graph.add_task(
-        func=calculate_stormwater_ratio,
-        args=(
-            FILES['lulc_aligned_path'],
-            FILES['soil_group_aligned_path'],
-            infiltration_ratio_dict,
-            FILES['infiltration_ratio_path']),
+        func=pygeoprocessing.raster_calculator,
+        args=([
+                (FILES['lulc_aligned_path'], 1), 
+                (FILES['soil_group_aligned_path'], 1), 
+                (infiltration_ratio_array, 'raw'), 
+                (sorted_lucodes, 'raw')], 
+            ratio_op, 
+            FILES['infiltration_ratio_path'], 
+            gdal.GDT_Float32, 
+            NODATA),
         target_path_list=[FILES['infiltration_ratio_path']],
         dependent_task_list=[align_task],
         task_name='calculate stormwater infiltration ratio'
     )
     infiltration_volume_task = task_graph.add_task(
-        func=calculate_stormwater_volume,
+        func=pygeoprocessing.raster_calculator,
         args=(
-            FILES['infiltration_ratio_path'],
-            FILES['precipitation_aligned_path'],
-            FILES['infiltration_volume_path']),
+            [
+                (FILES['infiltration_ratio_path'], 1), 
+                (FILES['precipitation_aligned_path'], 1)
+            ],
+            volume_op, 
+            FILES['infiltration_volume_path'], 
+            gdal.GDT_Float32, 
+            NODATA),
         target_path_list=[FILES['infiltration_volume_path']],
         dependent_task_list=[align_task, infiltration_ratio_task],
         task_name='calculate stormwater retention volume'
@@ -397,6 +456,8 @@ def execute(args):
     pollutants = [key[4:] for key in  emc_columns]
     LOGGER.info(f'Pollutants found in biophysical table: {pollutants}')
 
+    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+    
     # Calculate avoided pollutant load for each pollutant from retention volume
     # and biophysical table EMC value
     avoided_load_paths = []
@@ -410,13 +471,21 @@ def execute(args):
         lulc_emc_lookup = {
             lucode: row[f'emc_{pollutant}'] for lucode, row in biophysical_dict.items()
         }
+        emc_array = numpy.array(
+        [emc_lookup[lucode] for lucode in sorted_lucodes])
+
         avoided_load_task = task_graph.add_task(
-            func=calculate_avoided_pollutant_load,
-            args=(
-                FILES['lulc_aligned_path'],
-                FILES['retention_volume_path'],
-                lulc_emc_lookup,
-                avoided_pollutant_load_path),
+            func=pygeoprocessing.raster_calculator,
+            args=([
+                    (FILES['lulc_aligned_path']),
+                    (lulc_nodata, 'raw'),
+                    (FILES['retention_volume_path'], 1),
+                    (sorted_lucodes, 'raw'),
+                    (emc_array, 'raw')],
+                avoided_pollutant_load_op,
+                avoided_pollutant_load_path,
+                gdal.GDT_Float32,
+                NODATA),
             target_path_list=[avoided_pollutant_load_path],
             dependent_task_list=[retention_volume_task],
             task_name=f'calculate avoided pollutant {pollutant} load'
@@ -427,11 +496,16 @@ def execute(args):
     # you could theoretically have a cost of 0 which should be allowed
     if (args['replacement_cost'] not in [None, '']):
         valuation_task = task_graph.add_task(
-            func=calculate_retention_value,
+            func=pygeoprocessing.raster_calculator,
             args=(
-                FILES['retention_volume_path'],
-                args['replacement_cost'],
-                FILES['retention_value_path']),
+                [
+                    (FILES['retention_volume_path'], 1), 
+                    (args['replacement_cost'], 'raw')
+                ],
+                retention_value_op, 
+                FILES['retention_value_path'], 
+                gdal.GDT_Float32, 
+                NODATA),
             target_path_list=[FILES['retention_value_path']],
             dependent_task_list=[retention_volume_task],
             task_name='calculate stormwater retention value'
@@ -496,157 +570,134 @@ def ratio_op(lulc_array, soil_group_array, ratio_lookup, sorted_lucodes):
     return output_ratio_array
 
 
-def calculate_stormwater_ratio(lulc_path, soil_group_path, 
-        ratio_lookup, output_path):
-    """Make stormwater retention or infiltration ratio map from LULC and
-       soil group data.
+def volume_op(ratio_array, ratio_nodata, precip_array, precip_nodata, pixel_area):
+    """Calculate array of volumes (retention or infiltration) from arrays 
+    of precipitation values and stormwater ratios. This is meant to be used
+    with raster_calculator.
 
     Args:
-        lulc_path (str): path to a LULC raster whose LULC codes exist in the
-            biophysical table
-        soil_group_path (str): path to a soil group raster with pixel values
-            1, 2, 3, and 4 corresponding to hydrologic soil groups A, B, C, and D
-        ratio_lookup (dict): a lookup dictionary of ratios for each pair of 
-            LULC code and soil group. Each LULC code is mapped to a dictionary
-            with keys 'A', 'B', 'C', and 'D', which map to the ratio for that
-            LULC code x soil group pair.
-        output_path: path to write out the retention ratio raster to
-
+        ratio_array (numpy.ndarray): 2D array of stormwater ratios
+        ratio_nodata (float): nodata value for the ratio array
+        precip_array (numpy.ndarray): 2D array of precipitation amounts 
+            in millimeters/year
+        precip_nodata (float): nodata value for the precipitation array
+        pixel_area (float): area of each pixel in m^2
+    
     Returns:
-        None
+        2D numpy.ndarray of precipitation volumes in m^3/year
     """
-    # convert the nested dictionary in to a 2D array where rows are LULC codes 
-    # in sorted order and columns correspond to soil groups in order
-    # this facilitates efficiently looking up the ratio values with numpy
-    sorted_lucodes = sorted(list(ratio_lookup.keys()))
-    lulc_soil_group_array = numpy.array([
-        [ratio_lookup[lucode][soil_group] 
-            for soil_group in ['A', 'B', 'C', 'D']
-        ] for lucode in sorted_lucodes])
+    volume_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
+    valid_mask = (
+        (ratio_array != ratio_nodata) & 
+        (precip_array != precip_nodata))
 
-    # Apply ratio_op to each block of the LULC and soil group rasters
-    # Write result to output_path as float32 with nodata=NODATA
-    pygeoprocessing.raster_calculator(
-        [(lulc_path, 1), (soil_group_path, 1), (lulc_soil_group_array, 'raw'), 
-        (sorted_lucodes, 'raw')], ratio_op, output_path, gdal.GDT_Float32, 
-        NODATA)
+    # precipitation (mm/yr) * pixel area (m^2) * 
+    # 0.001 (m/mm) * ratio = volume (m^3/yr)
+    volume_array[valid_mask] = (
+        precip_array[valid_mask] *
+        ratio_array[valid_mask] *
+        pixel_area * 0.001)
+    return volume_array
 
 
-def calculate_stormwater_volume(ratio_path, precipitation_path, output_path):
-    """Make stormwater retention or infiltration volume map from ratio and 
-       precipitation.
+def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array, sorted_lucodes, emc_array):
+    """Calculate array of avoided pollutant load values from arrays of 
+    LULC codes and stormwater retention volumes."""
+    load_array = numpy.full(lulc_array.shape, NODATA, dtype=float)
+    valid_mask = (
+        (lulc_array != lulc_nodata) &
+        (retention_volume_array != NODATA))
+
+    lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
+    # EMC for pollutant (mg/L) * 1000 (L/m^3) * 0.000001 (kg/mg) * 
+    # retention (m^3/yr) = pollutant load (kg/yr)
+    load_array[valid_mask] = (emc_array[lulc_index][valid_mask] * 
+        0.001 * retention_volume_array[valid_mask])
+    return load_array
+
+
+def retention_value_op(retention_volume_array, replacement_cost):
+    """Multiply array of retention volumes by the retention replacement 
+    cost to get an array of retention values. This is meant to be used with
+    raster_calculator.
 
     Args:
-        ratio_path (str): path to a raster of stormwater ratios
-        precipitation_path (str): path to a raster of precipitation amounts
-        output_path (str): path to write out the volume results (raster)
+        retention_volume_array (numpy.ndarray): 2D array of retention volumes
+        replacement_cost (float): Replacement cost per cubic meter of water
 
     Returns:
-        None
+        numpy.ndarray of retention values with the same dimensions as the input
     """
-    ratio_raster_info = pygeoprocessing.get_raster_info(ratio_path)
-    ratio_nodata = ratio_raster_info['nodata'][0]
-    pixel_area = abs(ratio_raster_info['pixel_size'][0] * 
-        ratio_raster_info['pixel_size'][1])
-    precipitation_nodata = pygeoprocessing.get_raster_info(
-        precipitation_path)['nodata'][0]
+    value_array = numpy.full(retention_volume_array.shape, NODATA, dtype=float)
+    nodata_mask = (retention_volume_array != NODATA)
 
-    def volume_op(ratio_array, precipitation_array):
-        """Calculate array of volumes (retention or infiltration) from arrays 
-        of precipitation values and stormwater ratios"""
-
-        volume_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
-        nodata_mask = (
-            (ratio_array != ratio_nodata) & 
-            (precipitation_array != precipitation_nodata))
-
-        # precipitation (mm/yr) * pixel area (m^2) * 
-        # 0.001 (m/mm) * ratio = volume (m^3/yr)
-        volume_array[nodata_mask] = (
-            precipitation_array[nodata_mask] *
-            ratio_array[nodata_mask] *
-            pixel_area * 0.001)
-        return volume_array
-
-    # Apply volume_op to each block in the ratio and precipitation rasters
-    # Write result to output_path as float32 with nodata=NODATA
-    pygeoprocessing.raster_calculator(
-        [(ratio_path, 1), (precipitation_path, 1)],
-        volume_op, output_path, gdal.GDT_Float32, NODATA)
+    # retention (m^3/yr) * replacement cost ($/m^3) = retention value ($/yr)
+    value_array[nodata_mask] = (
+        retention_volume_array[nodata_mask] * replacement_cost)
+    return value_array
 
 
-def calculate_avoided_pollutant_load(lulc_path, retention_volume_path, 
-        emc_lookup, output_path):
-    """Make avoided pollutant load map from retention volumes and LULC event 
-       mean concentration data.
+def connected_op(lulc_array, lulc_nodata, sorted_lucodes, 
+        impervious_lookup_array):
+    """Convert LULC array to a binary array where 1 is directly connected
+    impervious LULC type and 0 is not.
 
     Args:
-        lulc_path (str): path to a LULC raster whose LULC codes exist in the
-            EMC lookup dictionary
-        retention_volume_path: (str) path to a raster of stormwater retention
-            volumes in m^3
-        emc_lookup (dict): a lookup dictionary where keys are LULC codes 
-            and values are event mean concentration (EMC) values in mg/L for 
-            the pollutant in that LULC area.
-        output_path (str): path to write out the results (raster)
+        lulc_array (numpy.ndarray): 2D array of integer LULC codes
+        lulc_nodata (int): nodata value for the LULC array
+        sorted_lucodes (numpy.ndarray): a 1D array of the LULC codes in order
+        impervious_lookup_array (numpy.ndarray): 1D boolean array indicating 
+            whether each LULC type is impervious or not. The LULC code at 
+            index ``i`` of ``sorted_lucodes`` is impervious iff 
+            ``impervious_lookup_array[i] == 1``.
 
     Returns:
-        None
+        2D boolean numpy.ndarray of the same shape as ``lulc_array``
     """
-    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
-    sorted_lucodes = sorted(list(emc_lookup.keys()))
-    ordered_emc_array = numpy.array(
-        [emc_lookup[lucode] for lucode in sorted_lucodes])
-
-    def avoided_pollutant_load_op(lulc_array, retention_volume_array):
-        """Calculate array of avoided pollutant load values from arrays of 
-        LULC codes and stormwater retention volumes."""
-        load_array = numpy.full(lulc_array.shape, NODATA, dtype=float)
-        valid_mask = (
-            (lulc_array != lulc_nodata) &
-            (retention_volume_array != NODATA))
-
-        lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
-        # EMC for pollutant (mg/L) * 1000 (L/m^3) * 0.000001 (kg/mg) * 
-        # retention (m^3/yr) = pollutant load (kg/yr)
-        load_array[valid_mask] = (ordered_emc_array[lulc_index][valid_mask] * 
-            0.001 * retention_volume_array[valid_mask])
-        return load_array
-
-    # Apply avoided_pollutant_load_op to each block of the LULC and retention 
-    # volume rasters. Write result to output_path as float32 with nodata=NODATA
-    pygeoprocessing.raster_calculator(
-        [(lulc_path, 1), (retention_volume_path, 1)],
-        avoided_pollutant_load_op, output_path, gdal.GDT_Float32, NODATA)
+    is_connected_array = numpy.full(lulc_array.shape, NODATA)
+    valid_mask = (lulc_array != lulc_nodata)
+    lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
+    is_connected_array[valid_mask] = (
+        impervious_lookup_array[lulc_index][valid_mask])
+    return is_connected_array 
 
 
-def calculate_retention_value(retention_volume_path, replacement_cost, output_path):
-    """Calculate retention value from retention volume and replacement cost.
+def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array, 
+        near_road_array):
+    """Apply the retention ratio adjustment algorithm to an array of ratios. 
+    This is meant to be used with raster_calculator.
+
     Args:
-        retention_volume_path (str): path to retention volume raster (m^3/pixel)
-        replacement_cost (float): value in currency units/m^3
-        output_path (str): path to write out valuation results raster
-
+        ratio_array (numpy.ndarray): 2D array of stormwater retention ratios
+        avg_ratio_array (numpy.ndarray): 2D array of averaged ratios
+        near_connected_lulc_array (numpy.ndarray): 2D boolean array where 1 
+            means this pixel is near a directly-connected LULC area
+        near_road_array (numpy.ndarray): 2D boolean array where 1 
+            means this pixel is near a road centerline
+        
     Returns:
-        None
+        2D numpy array of adjusted retention ratios. Has the same shape as 
+        ``retention_ratio_array``.
     """
-    def retention_value_op(retention_volume_array):
-        """Multiply array of retention volumes by the retention replacement 
-        cost to get an array of retention values."""
-        value_array = numpy.full(retention_volume_array.shape, NODATA, dtype=float)
-        nodata_mask = (retention_volume_array != NODATA)
+    adjusted_ratio_array = numpy.full(ratio_array.shape, NODATA)
+    adjustment_factor_array = numpy.full(ratio_array.shape, NODATA)
+    valid_mask = (
+        (ratio_array != NODATA) &
+        (avg_ratio_array != NODATA) &
+        (near_connected_lulc_array != NODATA) &
+        (near_road_array != NODATA))
 
-        # retention (m^3/yr) * replacement cost ($/m^3) = retention value ($/yr)
-        value_array[nodata_mask] = (
-            retention_volume_array[nodata_mask] * replacement_cost)
-        return value_array
+    is_connected = is_near_impervious_lulc | is_near_road
+    # adjustment factor:
+    # - 0 if any of the nearby pixels are impervious/connected;
+    # - average of nearby pixels, otherwise
+    adjustment_factor_array[valid_mask] = (averaged_ratio_array[valid_mask] * 
+        ~(near_connected_lulc_array[valid_mask] | near_road_array[valid_mask]))
 
-    # Apply retention_value_op to each block of the retention volume rasters
-    # Write result to output_path as float32 with nodata=NODATA
-    pygeoprocessing.raster_calculator(
-        [(retention_volume_path, 1)],
-        retention_value_op, output_path, gdal.GDT_Float32, NODATA)
-
+    # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
+    adjusted_ratio_array[valid_mask] = (ratio_array[valid_mask] + 
+        (1 - ratio_array[valid_mask]) * adjustment_factor_array[valid_mask])
+    return adjusted_ratio_array
 
 
 def aggregate_results(aoi_path, r_ratio_path, r_volume_path, 
@@ -734,39 +785,6 @@ def aggregate_results(aoi_path, r_ratio_path, r_volume_path,
     aggregate_vector = None
 
 
-def calculate_connected_lulc(lulc_path, impervious_lookup, output_path):
-    """Convert LULC raster to a binary raster where 1 is directly connected
-    impervious LULC type and 0 is not.
-
-    Args:
-        lulc_path (str): path to a LULC raster
-        impervious_lookup (dict): dictionary mapping each LULC code in the 
-            LULC raster to a boolean value, where True means the LULC type 
-            is a directly-connected impervious surface
-        output_path (str): path to write out the binary raster
-
-    Returns:
-        None
-    """
-    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
-    # make a list of the LULC codes in order and a list of the corresponding
-    # binary impervious values
-    sorted_lucodes = sorted(list(impervious_lookup.keys()))
-    impervious_lookup_array = numpy.array(
-        [impervious_lookup[lucode] for lucode in sorted_lucodes])
-
-    def connected_op(lulc_array):
-        is_connected_array = numpy.full(lulc_array.shape, NODATA)
-        valid_mask = (lulc_array != lulc_nodata)
-        lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
-        is_connected_array[valid_mask] = (
-            impervious_lookup_array[lulc_index][valid_mask])
-        return is_connected_array
-
-    pygeoprocessing.raster_calculator(
-        [(lulc_path, 1)], connected_op, output_path, gdal.GDT_Float32, NODATA)
-
-
 def is_near(input_path, search_kernel, output_path):
     """Take a boolean raster and create a new boolean raster where a pixel is
     assigned '1' iff it's within a search kernel of a '1' pixel in the original
@@ -791,7 +809,7 @@ def is_near(input_path, search_kernel, output_path):
     raster_driver = gdal.GetDriverByName('GTIFF')
     out_raster = raster_driver.Create(
         output_path, raster_width, raster_height, 1, gdal.GDT_Float32,
-        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+        options=RASTER_OPTIONS)
     out_band = out_raster.GetRasterBand(1)
 
     # iterate over the raster by overlapping blocks
@@ -803,69 +821,18 @@ def is_near(input_path, search_kernel, output_path):
             pad_width=((block['top_padding'], block['bottom_padding']), 
                 (block['left_padding'], block['right_padding'])), 
             mode='constant', constant_values=0)
+        # sum up the values that fall within the search kernel of each pixel
         convolved = scipy.signal.convolve(
             padded_array, 
             search_kernel, 
             mode='valid')
-        valid_mask = padded_array[margin:-margin, margin:-margin] != NODATA
+        valid_mask = padded_array[overlap:-overlap, overlap:-overlap] != NODATA
         is_near = numpy.full(convolved.shape, NODATA)
         is_near[valid_mask] = convolved[valid_mask] > 0
 
-        print('writing to', block['xoff'] + (margin - block['left_padding']), block['yoff'] + (margin - block['top_padding']))
         out_band.WriteArray(is_near, 
-            xoff=block['xoff'] + (margin - block['left_padding']), 
-            yoff=block['yoff'] + (margin - block['top_padding']))
-
-        
-
-def line_distance_op(x_coords, y_coords, x1, y1, x2, y2):
-    """Find the minimum distance from each array point to a line segment.
-
-    Args:
-        x_coords (numpy.ndarray): a 2D array where each element is the
-            x-coordinate of a point in the same coordinate system as the
-            line endpoints
-        y_coords (numpy.ndarray): a 2D array where each element is the
-            y-coordinate of a point in the same coordinate system as the
-            line endpoints
-        x1 (float): the x coord of the first endpoint of the line segment
-        y1 (float): the y coord of the first endpoint of the line segment
-        x2 (float): the x coord of the second endpoint of the line segment
-            ((x2, y2) can't be identical to (x1, y1))
-        y2 (float): the y coord of the second endpoint of the line segment
-            ((x2, y2) can't be identical to (x1, y1))
-
-    Returns:
-        numpy.ndarray with the same shape as x_coords and y_coords. The
-        value of an element at [a, b] is the minimum distance from the
-        point (x_coords[a, b], y_coords[a, b]) to the line segment from 
-        (x1, y1) to (x2, y2). 
-    """
-    # Using the algorithm from https://math.stackexchange.com/a/330329:
-    # Parameterize the line segment by parameter t, which represents how far
-    # along the line segment we are from endpoint 1 to endpoint 2.
-    # x(t) = x1 + t(x2 - x1)
-    # y(t) = y1 + t(y2 - y1)
-    # (x(t), y(t)) is on the segment when t ∈ [0, 1]
-
-    # the notation ⟨𝑝−𝑠1,𝑠2−𝑠1⟩ in the SE post means the dot product:
-    # (𝑝-𝑠1)·(𝑠2−𝑠1) = (x-x1)*(x2-x1) + (y-y1)*(y2-y1)
-    # the notation ‖𝑠2−𝑠1‖ means the pythagorean distance
-
-    # solve for the optimal value of t, such that the distance from
-    # (x_coord, y_coord) to (x(t), y(t)) is minimized
-    t_optimal = (
-        ((x_coords - x1) * (x2 - x1) + (y_coords - y1) * (y2 - y1)) / 
-        ((x2 - x1)**2 + (y2 - y1)**2))
-    # constrain t to the bounds of the line segment
-    t_in_bounds = numpy.minimum(numpy.maximum(t_optimal, 0), 1)
-    # solve for x(t) and y(t)
-    nearest_x_coords = x1 + t_in_bounds * (x2 - x1)
-    nearest_y_coords = y1 + t_in_bounds * (y2 - y1)
-    # find the distance from each (x_coord, y_coord) to (x(t), y(t))
-    distances = numpy.hypot(nearest_x_coords - x_coords, 
-        nearest_y_coords - y_coords)
-    return distances
+            xoff=block['xoff'] + (overlap - block['left_padding']), 
+            yoff=block['yoff'] + (overlap - block['top_padding']))
 
 
 def overlap_iterblocks(raster_path, n_pixels):
@@ -926,22 +893,10 @@ def overlap_iterblocks(raster_path, n_pixels):
         if yoff > 0:
             yoff -= top_overlap
             ysize += top_overlap
-
         if xend < raster_width:
             xsize += right_overlap
         if yend < raster_height:
             ysize += bottom_overlap
-
-        print({
-            'xoff': xoff,
-            'yoff': yoff,
-            'xsize': xsize,
-            'ysize': ysize,
-            'top_padding': top_padding,
-            'left_padding': left_padding,
-            'bottom_padding': bottom_padding,
-            'right_padding': right_padding
-        })
 
         yield {
             'xoff': int(xoff),
@@ -988,52 +943,162 @@ def make_search_kernel(raster_path, radius):
     return search_kernel
 
 
-def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array, 
-        near_road_array):
-    """Apply the retention ratio adjustment algorithm to an array of ratios. 
-    This is meant to be used with raster_calculator.
+def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
+    """Make coordinate rasters where each pixel value is the x/y coordinate
+    of that pixel's centerpoint in the raster coordinate system.
 
     Args:
-        ratio_array (numpy.ndarray): 2D array of stormwater retention ratios
-        avg_ratio_array (numpy.ndarray): 2D array of averaged ratios
-        near_connected_lulc_array (numpy.ndarray): 2D boolean array where 1 
-            means this pixel is near a directly-connected LULC area
-        near_road_array (numpy.ndarray): 2D boolean array where 1 
-            means this pixel is near a road centerline
-        
+        raster_path (str): raster to generate coordinates for
+        x_output_path (str): raster path to write out x coordinates
+        y_output_path (str): raster path to write out y coordinates
+
     Returns:
-        2D numpy array of adjusted retention ratios. Has the same shape as 
-        ``retention_ratio_array``.
+        None
     """
-    adjusted_ratio_array = numpy.full(ratio_array.shape, NODATA)
-    adjustment_factor_array = numpy.full(ratio_array.shape, NODATA)
-    valid_mask = (
-        (ratio_array != NODATA) &
-        (avg_ratio_array != NODATA) &
-        (near_connected_lulc_array != NODATA) &
-        (near_road_array != NODATA))
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
+    pixel_size_x, pixel_size_y = raster_info['pixel_size']
+    n_cols, n_rows = raster_info['raster_size']
+    x_origin = raster_info['geotransform'][0]
+    y_origin = raster_info['geotransform'][3]
 
-    is_connected = is_near_impervious_lulc | is_near_road
-    # adjustment factor:
-    # - 0 if any of the nearby pixels are impervious/connected;
-    # - average of nearby pixels, otherwise
-    adjustment_factor_array[valid_mask] = (averaged_ratio_array[valid_mask] * 
-        ~(near_connected_lulc_array[valid_mask] | near_road_array[valid_mask]))
+    # create the output rasters
+    raster_driver = gdal.GetDriverByName('GTIFF')
+    x_raster = raster_driver.Create(
+        x_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
+        options=RASTER_OPTIONS)
+    y_raster = raster_driver.Create(
+        y_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
+        options=RASTER_OPTIONS)
+    x_band, y_band = x_raster.GetRasterBand(1), y_raster.GetRasterBand(1)
 
-    # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
-    adjusted_ratio_array[valid_mask] = (ratio_array[valid_mask] + 
-        (1 - ratio_array[valid_mask]) * adjustment_factor_array[valid_mask])
-    return adjusted_ratio_array
+    # can't use raster_calculator here because we need the block offset info
+    # calculate coords for each block and write them to the output rasters
+    for data, array in pygeoprocessing.iterblocks((raster_path, 1)):
+        y_coords, x_coords = numpy.indices(array.shape)
+        x_coords = (
+            (x_coords * pixel_size_x) +  # convert to pixel size in meters
+            (pixel_size_x / 2) +  # center the point on the pixel
+            (data['xoff'] * pixel_size_x) +   # the offset of this block relative to the raster
+            x_origin)  # the raster's offset relative to the coordinate system
+        y_coords = (
+            (y_coords * pixel_size_y) + 
+            (pixel_size_y / 2) +
+            (data['yoff'] * pixel_size_y) +
+            y_origin)
+
+        x_band.WriteArray(x_coords, xoff=data['xoff'], yoff=data['yoff'])
+        y_band.WriteArray(y_coords, xoff=data['xoff'], yoff=data['yoff'])
+    x_band, y_band, x_raster, y_raster = None, None, None, None
 
 
-def adjust_retention_ratios(ratio_path, avg_ratio_path, 
-        near_connected_lulc_path, near_road_path, output_path):
+def nearest_linestring_op(x_coords, y_coords, linestring_path):
+    """Calculate the distance from each pixel centerpoint to the nearest
+    linestring in a vector.
 
-    pygeoprocessing.raster_calculator(
-        [(ratio_path, 1), (avg_ratio_path, 1), (near_connected_lulc_path, 1), 
-        (near_road_path, 1)], adjust_op, output_path, gdal.GDT_Float32, NODATA)
+    Args:
+        x_coords (numpy.ndarray): 2D array where each pixel value is the 
+            x coordinate of that pixel in the raster coordinate system
+        y_coords (numpy.ndarray): 2D array where each pixel value is the 
+            y coordinate of that pixel in the raster coordinate system
+        linestring_path (str): path to a linestring/multilinestring vector
+
+    Returns:
+        2D numpy.ndarray of the same shape as `x_coords` and `y_coords`.
+        Each pixel value is the distance from that pixel's centerpoint to
+        the nearest linestring in the vector at ``linestring_path``.
+    """
+    segment_generator = iter_linestring_segments(linestring_path)
+    (x1, y1), (x2, y2) = next(segment_generator)
+    min_distance = line_distance(x_coords, y_coords, x1, y1, x2, y2)
+
+    for (x1, y1), (x2, y2) in segment_generator:
+        if x2 == x1 and y2 == y1:
+            continue  # ignore lines with length 0
+        distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
+        min_distance = numpy.minimum(min_distance, distance)
+    return min_distance
 
 
+def line_distance(x_coords, y_coords, x1, y1, x2, y2):
+    """Find the minimum distance from each array point to a line segment.
+
+    Args:
+        x_coords (numpy.ndarray): a 2D array where each element is the
+            x-coordinate of a point in the same coordinate system as the
+            line endpoints
+        y_coords (numpy.ndarray): a 2D array where each element is the
+            y-coordinate of a point in the same coordinate system as the
+            line endpoints
+        x1 (float): the x coord of the first endpoint of the line segment
+        y1 (float): the y coord of the first endpoint of the line segment
+        x2 (float): the x coord of the second endpoint of the line segment
+            ((x2, y2) can't be identical to (x1, y1))
+        y2 (float): the y coord of the second endpoint of the line segment
+            ((x2, y2) can't be identical to (x1, y1))
+
+    Returns:
+        numpy.ndarray with the same shape as x_coords and y_coords. The
+        value of an element at [a, b] is the minimum distance from the
+        point (x_coords[a, b], y_coords[a, b]) to the line segment from 
+        (x1, y1) to (x2, y2). 
+    """
+    # Using the algorithm from https://math.stackexchange.com/a/330329:
+    # Parameterize the line segment by parameter t, which represents how far
+    # along the line segment we are from endpoint 1 to endpoint 2.
+    # x(t) = x1 + t(x2 - x1)
+    # y(t) = y1 + t(y2 - y1)
+    # (x(t), y(t)) is on the segment when t ∈ [0, 1]
+
+    # the notation ⟨𝑝−𝑠1,𝑠2−𝑠1⟩ in the SE post means the dot product:
+    # (𝑝-𝑠1)·(𝑠2−𝑠1) = (x-x1)*(x2-x1) + (y-y1)*(y2-y1)
+    # the notation ‖𝑠2−𝑠1‖ means the pythagorean distance
+
+    # solve for the optimal value of t, such that the distance from
+    # (x_coord, y_coord) to (x(t), y(t)) is minimized
+    t_optimal = (
+        ((x_coords - x1) * (x2 - x1) + (y_coords - y1) * (y2 - y1)) / 
+        ((x2 - x1)**2 + (y2 - y1)**2))
+    # constrain t to the bounds of the line segment
+    t_in_bounds = numpy.minimum(numpy.maximum(t_optimal, 0), 1)
+    # solve for x(t) and y(t)
+    nearest_x_coords = x1 + t_in_bounds * (x2 - x1)
+    nearest_y_coords = y1 + t_in_bounds * (y2 - y1)
+    # find the distance from each (x_coord, y_coord) to (x(t), y(t))
+    distances = numpy.hypot(nearest_x_coords - x_coords, 
+        nearest_y_coords - y_coords)
+    return distances
+
+
+def iter_linestring_segments(vector_path):
+    """Yield (start, end) coordinate pairs for each segment of a linestring.
+
+    Args:
+        vector_path (str): path to a linestring vector to iterate over
+
+    Yields:
+        ((x1, y1), (x2, y2)) tuples representing the start and end point of a
+        linestring segment. (x1, y1) of the nth yielded tuple equals (x2, y2)
+        of the (n-1)th yielded tuple.
+    """
+    vector = gdal.OpenEx(vector_path)
+    layer = vector.GetLayer()
+    for feature in layer:
+        ref = feature.GetGeometryRef()
+        assert ref.GetGeometryName() in ['LINESTRING', 'MULTILINESTRING']
+
+        n_geometries = ref.GetGeometryCount()
+        if ref.GetGeometryCount() > 0:  # a multi type
+            geometries = [ref.GetGeometryRef(i) for i in range(n_geometries)]
+        else:  # not a multi type
+            geometries = [ref]
+
+        for geometry in geometries:
+            points = geometry.GetPoints()  # a list of (x, y) points
+            # iterate over each pair of points (each segment) in the linestring
+            for i in range(len(points) - 1):
+                x1, y1, *_ = points[i]
+                x2, y2, *_ = points[i + 1]
+                yield (x1, y1), (x2, y2)
 
 
 def raster_average(raster_path, search_kernel, n_values_path, sum_path, 
@@ -1074,15 +1139,15 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
     raster_driver = gdal.GetDriverByName('GTIFF')
     n_values_raster = raster_driver.Create(
         n_values_path, raster_width, raster_height, 1, gdal.GDT_Float32,
-        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+        options=RASTER_OPTIONS)
     n_values_band = n_values_raster.GetRasterBand(1)
     sum_raster = raster_driver.Create(
         sum_path, raster_width, raster_height, 1, gdal.GDT_Float32,
-        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+        options=RASTER_OPTIONS)
     sum_band = sum_raster.GetRasterBand(1)
     average_raster = raster_driver.Create(
         average_path, raster_width, raster_height, 1, gdal.GDT_Float32,
-        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+        options=RASTER_OPTIONS)
     average_band = average_raster.GetRasterBand(1)
 
     # calculate the sum and n_values of the neighborhood of each pixel
@@ -1132,123 +1197,6 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
 
     pygeoprocessing.raster_calculator([(n_values_path, 1), (sum_path, 1)], 
         avg_op, average_path, gdal.GDT_Float32, NODATA)
-
-
-def distance_to_road_centerlines(x_coords_path, y_coords_path, 
-        centerlines_path, output_path):
-    """Calculate the distance from each pixel centerpoint to the nearest 
-    road centerline.
-
-    Args:
-        x_coords_path (str): path to a raster where each pixel value is the x 
-            coordinate of that pixel in the raster coordinate system
-        y_coords_path (str): path to a raster where each pixel value is the y
-            coordinate of that pixel in the raster coordinate system
-        centerlines_path (str): path to a linestring vector of road centerlines
-        output_path (str): path to write out the distance raster. This is a
-            raster of the same dimensions, pixel size, and coordinate system 
-            as ``raster_path``, where each pixel value is the distance from 
-            that pixel's centerpoint to the nearest road centerline. Distances 
-            are in the same unit as the raster coordinate system.
-
-    Returns:
-        None
-    """
-    def linestring_geometry_op(x_coords, y_coords):
-        segment_generator = iter_linestring_segments(centerlines_path)
-        (x1, y1), (x2, y2) = next(segment_generator)
-        min_distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
-
-        for (x1, y1), (x2, y2) in segment_generator:
-            if x2 == x1 and y2 == y1:
-                continue  # ignore lines with length 0
-            distance = line_distance_op(x_coords, y_coords, x1, y1, x2, y2)
-            min_distance = numpy.minimum(min_distance, distance)
-        return min_distance
-
-    pygeoprocessing.raster_calculator(
-        [(x_coords_path, 1), (y_coords_path, 1)], 
-        linestring_geometry_op, output_path, gdal.GDT_Float32, NODATA)
-
-
-def iter_linestring_segments(vector_path):
-    """Yield (start, end) coordinate pairs for each segment of a linestring.
-
-    Args:
-        vector_path (str): path to a linestring vector to iterate over
-
-    Yields:
-        ((x1, y1), (x2, y2)) tuples representing the start and end point of a
-        linestring segment. (x1, y1) of the nth yielded tuple equals (x2, y2)
-        of the (n-1)th yielded tuple.
-    """
-    vector = gdal.OpenEx(vector_path)
-    layer = vector.GetLayer()
-    for feature in layer:
-        ref = feature.GetGeometryRef()
-        assert ref.GetGeometryName() in ['LINESTRING', 'MULTILINESTRING']
-
-        n_geometries = ref.GetGeometryCount()
-        if ref.GetGeometryCount() > 0:  # a multi type
-            geometries = [ref.GetGeometryRef(i) for i in range(n_geometries)]
-        else:  # not a multi type
-            geometries = [ref]
-
-        for geometry in geometries:
-            points = geometry.GetPoints()  # a list of (x, y) points
-            # iterate over each pair of points (each segment) in the linestring
-            for i in range(len(points) - 1):
-                x1, y1, *_ = points[i]
-                x2, y2, *_ = points[i + 1]
-                yield (x1, y1), (x2, y2)
-
-
-def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
-    """Make coordinate rasters where each pixel value is the x/y coordinate
-    of that pixel's centerpoint in the raster coordinate system.
-
-    Args:
-        raster_path (str): raster to generate coordinates for
-        x_output_path (str): raster path to write out x coordinates
-        y_output_path (str): raster path to write out y coordinates
-
-    Returns:
-        None
-    """
-    raster_info = pygeoprocessing.get_raster_info(raster_path)
-    pixel_size_x, pixel_size_y = raster_info['pixel_size']
-    n_cols, n_rows = raster_info['raster_size']
-    x_origin = raster_info['geotransform'][0]
-    y_origin = raster_info['geotransform'][3]
-
-    # create the output rasters
-    raster_driver = gdal.GetDriverByName('GTIFF')
-    x_raster = raster_driver.Create(
-        x_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
-        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
-    y_raster = raster_driver.Create(
-        y_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
-        options=pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
-    x_band, y_band = x_raster.GetRasterBand(1), y_raster.GetRasterBand(1)
-
-    # can't use raster_calculator here because we need the block offset info
-    # calculate coords for each block and write them to the output rasters
-    for data, array in pygeoprocessing.iterblocks((raster_path, 1)):
-        y_coords, x_coords = numpy.indices(array.shape)
-        x_coords = (
-            (x_coords * pixel_size_x) +  # convert to pixel size in meters
-            (pixel_size_x / 2) +  # center the point on the pixel
-            (data['xoff'] * pixel_size_x) +   # the offset of this block relative to the raster
-            x_origin)  # the raster's offset relative to the coordinate system
-        y_coords = (
-            (y_coords * pixel_size_y) + 
-            (pixel_size_y / 2) +
-            (data['yoff'] * pixel_size_y) +
-            y_origin)
-
-        x_band.WriteArray(x_coords, xoff=data['xoff'], yoff=data['yoff'])
-        y_band.WriteArray(y_coords, xoff=data['xoff'], yoff=data['yoff'])
-    x_band, y_band, x_raster, y_raster = None, None, None, None
 
     
 @validation.invest_validator
