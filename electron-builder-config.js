@@ -24,7 +24,7 @@ const ARTIFACT_NAME = `invest_${pkg.invest.version}_workbench_${workbenchVersion
 
 const config = {
   extraMetadata: {
-    main: 'build/main.js'
+    main: 'build/main.js',
   },
   extraResources: [
     {
@@ -40,16 +40,9 @@ const config = {
     icon: 'resources/invest-in-shadow-white.png',
     target: 'dmg',
   },
-  linux: {
-    target: [
-      'AppImage',
-    ],
-    icon: 'resources/invest-in-shadow-white.png',
-    category: 'Science',
-  },
   win: {
     target: 'nsis',
-    icon: 'resources/invest-in-shadow-white.png'
+    icon: 'resources/invest-in-shadow-white.png',
   },
   nsis: {
     oneClick: false,
