@@ -1,11 +1,15 @@
+import path from 'path';
 import React from 'react';
 import PropTypes from 'prop-types';
+import { remote, ipcRenderer } from 'electron';
 
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
+
+import SaveFileButton from '../SaveFileButton';
 
 function validateDir(dir) {
   return [true, ''];
@@ -16,10 +20,11 @@ export default class DataDownloadModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
+      defaultTargetPath: '',
       // show: true,
-      downloadDir: null,
-      dirIsValid: null,
-      validationMessage: null,
+      // downloadDir: null,
+      // dirIsValid: null,
+      // validationMessage: null,
     };
 
     // this.handleShow = this.handleShow.bind(this);
@@ -28,8 +33,13 @@ export default class DataDownloadModal extends React.Component {
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
-  componentDidUpdate(prevProps) {
-
+  componentDidMount() {
+    ipcRenderer.on('variable-reply', (event, arg) => {
+      this.setState({
+        defaultTargetPath: arg.userDataPath,
+      });
+    });
+    ipcRenderer.send('variable-request', 'ping');
   }
 
   handleClose() {
@@ -47,38 +57,37 @@ export default class DataDownloadModal extends React.Component {
   //   });
   // }
 
-  handleSubmit(event) {
+  async handleSubmit(event) {
     event.preventDefault();
     // need two things here
     // 1. list of files to download
     // 2. downloadDir to save them
-    // downloadSampleData(fileList);
     // downloads in background? or keep modal open?
     // progress is important.
-    this.props.storeDownloadDir(this.state.downloadDir);
-    // this.setState({
-    //   show: false,
-    // });
+    const allDataURL = path.join(
+      this.props.releaseDataURL, 'InVEST_3.9.0.post235+g296690d7_sample_data.zip'
+    );
+    ipcRenderer.send('download-url', allDataURL);
+    // const data = await remote.dialog.showSaveDialog(
+    //   { defaultPath: this.state.defaultTargetPath }
+    // );
+    // if (data.filePath) {
+      // this.props.storeDownloadDir(path.dirname(data.filePath));
+      // ipcRenderer.send('download-url', allDataURL);
+    // }
   }
 
   handleDirChange(event) {
-    const { value } = event.target;
-    const [isValid, message] = validateDir(value);
-    this.setState({
-      downloadDir: value,
-      dirIsValid: isValid,
-      validationMessage: message,
-    });
+    // const { value } = event.target;
+    // const [isValid, message] = validateDir(value);
+    // this.setState({
+    //   downloadDir: value,
+    //   dirIsValid: isValid,
+    //   validationMessage: message,
+    // });
   }
 
   render() {
-    const {
-      downloadDir,
-      dirIsValid,
-      validationMessage,
-      // show,
-    } = this.state;
-
     return (
       <Modal show={this.props.show} onHide={this.handleClose}>
         <Form>
@@ -91,12 +100,10 @@ export default class DataDownloadModal extends React.Component {
                 Download to:
               </Form.Label>
               <Form.Control
-                name={'downloadDir'}
+                name="downloadDir"
                 type="text"
-                value={downloadDir || ''} // empty string is handled better than `undefined`
+                value={''} // empty string is handled better than `undefined`
                 onChange={this.handleDirChange}
-                isValid={dirIsValid}
-                isInvalid={validationMessage}
               />
             </Form.Group>
           </Modal.Body>
@@ -107,9 +114,8 @@ export default class DataDownloadModal extends React.Component {
             <Button
               variant="primary"
               onClick={this.handleSubmit}
-              type="submit"
             >
-              Download
+              Download All
             </Button>
           </Modal.Footer>
         </Form>

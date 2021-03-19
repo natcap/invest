@@ -40,9 +40,9 @@ const fork = pkg.invest.bucket === 'releases.naturalcapitalproject.org'
   ? '' : pkg.invest.fork;
 const repo = 'invest';
 const prefix = path.join(
-  pkg.invest.bucket, repo, fork, pkg.invest.version, 'data'
+  pkg.invest.bucket, repo, fork, pkg.invest.version
 );
-const sampleDataURL = new URL(prefix, pkg.invest.hostname).href;
+const releaseDataURL = new URL(prefix, pkg.invest.hostname).href;
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -69,11 +69,16 @@ const createWindow = async () => {
     investExe: investExe,
     investVersion: investVersion,
     workbenchVersion: pkg.version,
-    sampleDataURL: sampleDataURL,
+    releaseDataURL: releaseDataURL,
     userDataPath: app.getPath('userData'),
   };
   ipcMain.on('variable-request', (event, arg) => {
+    logger.debug(JSON.stringify(mainProcessVars));
     event.reply('variable-reply', mainProcessVars);
+  });
+  ipcMain.on('download-url', (event, url) => {
+    logger.debug(`${url}`);
+    mainWindow.webContents.downloadURL(url);
   });
 
   // Wait for a response from the server before loading the app
@@ -138,6 +143,30 @@ const createWindow = async () => {
       logger.debug('requesting flask shutdown on main window close');
       await shutdownPythonProcess();
     }
+  });
+
+  mainWindow.webContents.session.on('will-download', (event, item, webContents) => {
+    console.log('will download listener');
+    // setSavePath will subdue the dialog 
+    // item.setSavePath(path.join(app.getPath('userData'), 'sample_data.zip'));
+    item.on('updated', (event, state) => {
+      if (state === 'interrupted') {
+        logger.info('download interrupted');
+      } else if (state === 'progressing') {
+        if (item.isPaused()) {
+          logger.info('download paused');
+        } else {
+          logger.info(`Received bytes: ${item.getReceivedBytes()}`);
+        }
+      }
+    });
+    item.once('done', (event, state) => {
+      if (state === 'completed') {
+        logger.info('download completed');
+      } else {
+        logger.info(`download failed: ${state}`);
+      }
+    });
   });
 };
 

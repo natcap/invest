@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import React from 'react';
 import PropTypes from 'prop-types';
+import { ipcRenderer } from 'electron';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -65,15 +66,27 @@ export default class App extends React.Component {
         investSettings[settingKey] = value;
       }
     } catch (err) {
-      // This code runs if there were any errors.
       investSettings = globalDefaultSettings;
     }
+
+    let didAskForSampleData = false;
+    if (investSettings.sampleDataDir) {
+      didAskForSampleData = true;
+    }
+    // if (!investSettings.sampleDataDir) {
+    //   ipcRenderer.on('variable-reply', (event, arg) => {
+    //     investSettings.sampleDataDir = arg.userDataPath;
+    //   });
+    //   ipcRenderer.send('variable-request', 'ping');
+    // } else {
+    //   didAskForSampleData = true;
+    // }
 
     this.setState({
       investList: investList,
       recentJobs: recentJobs,
       investSettings: investSettings,
-      didAskForSampleData: !!investSettings.sampleDataDir,
+      didAskForSampleData: didAskForSampleData,
     });
   }
 
@@ -164,7 +177,7 @@ export default class App extends React.Component {
   }
 
   render() {
-    const { investExe } = this.props;
+    const { investExe, releaseDataURL } = this.props;
     const {
       investList,
       investSettings,
@@ -210,12 +223,14 @@ export default class App extends React.Component {
         </TabPane>
       );
     });
-    console.log(didAskForSampleData);
+    console.log(releaseDataURL);
     return (
       <React.Fragment>
         <DataDownloadModal
           show={!didAskForSampleData}
           storeDownloadDir={this.storeDownloadDir}
+          releaseDataURL={releaseDataURL}
+          defaultTargetPath={investSettings.sampleDataDir}
         />
         <TabContainer activeKey={activeTab}>
           <Navbar onDragOver={dragOverHandlerNone}>

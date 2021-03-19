@@ -35,11 +35,12 @@ window.addEventListener('contextmenu', (e) => {
   menu.popup({ window: remote.getCurrentWindow() });
 }, false);
 
-const render = async function render(investExe) {
+const render = async function render(investExe, releaseDataURL) {
   reactDom.default.render(
     react.default.createElement(
       app.default, {
         investExe: investExe,
+        releaseDataURL: releaseDataURL,
       }
     ),
     document.getElementById('App')
@@ -49,6 +50,6 @@ const render = async function render(investExe) {
 ipcRenderer.on('variable-reply', (event, arg) => {
   // render the App after receiving any critical data
   // from the main process
-  render(arg.investExe);
-})
+  render(arg.investExe, arg.releaseDataURL);
+});
 ipcRenderer.send('variable-request', 'ping');
