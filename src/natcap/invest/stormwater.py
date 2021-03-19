@@ -16,7 +16,6 @@ LOGGER = logging.getLogger(__name__)
 
 # a constant nodata value to use for intermediates and outputs
 NODATA = -1
-RASTER_OPTIONS = pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1]
 
 ARGS_SPEC = {
     "model_name": "Stormwater Retention",
@@ -64,7 +63,7 @@ ARGS_SPEC = {
             "type": "csv",
             # "columns": {
             #     "lucode": {"type": "code"},
-            #     "is_connected": {"type": "boolean"},
+            #     "is_impervious": {"type": "boolean"},
             #     "EMC_P": {"type": "number", "units": "mg/L"},
             #     "EMC_N": {"type": "number", "units": "mg/L"},
             #     "RC_A": {"type": "ratio"},
@@ -88,7 +87,7 @@ ARGS_SPEC = {
                 "accounts for drainage effects of nearby impervious surfaces "
                 "which are directly connected to artifical urban drainage "
                 "channels (typically roads, parking lots, etc.) Connected "
-                "impervious surfaces are indicated by the is_connected column"
+                "impervious surfaces are indicated by the is_impervious column"
                 "in the biophysical table and/or the road centerlines vector."),
             "name": "adjust retention ratios"
         },
@@ -150,7 +149,7 @@ def execute(args):
             'lucode', 'EMC_x' (event mean concentration mg/L) for each 
             pollutant x, 'RC_y' (retention coefficient) and 'IR_y' 
             (infiltration coefficient) for each soil group y, and 
-            'is_connected' if args['adjust_retention_ratios'] is True
+            'is_impervious' if args['adjust_retention_ratios'] is True
         args['adjust_retention_ratios'] (bool): If True, apply retention ratio 
             adjustment algorithm.
         args['retention_radius'] (float): If args['adjust_retention_ratios'] 
@@ -177,22 +176,24 @@ def execute(args):
         'lulc_aligned_path': os.path.join(intermediate_dir, f'lulc_aligned{suffix}.tif'),
         'soil_group_aligned_path': os.path.join(intermediate_dir, f'soil_group_aligned{suffix}.tif'),
         'precipitation_aligned_path': os.path.join(intermediate_dir, f'precipitation_aligned{suffix}.tif'),
+        'reprojected_centerlines_path': os.path.join(intermediate_dir, f'reprojected_centerlines{suffix}.gpkg'),
+        'reprojected_aoi_path': os.path.join(intermediate_dir, f'reprojected_aois{suffix}.gpkg'),
         'retention_ratio_path': os.path.join(output_dir, f'retention_ratio{suffix}.tif'),
         'retention_volume_path': os.path.join(output_dir, f'retention_volume{suffix}.tif'),
         'infiltration_ratio_path': os.path.join(output_dir, f'infiltration_ratio{suffix}.tif'),
         'infiltration_volume_path': os.path.join(output_dir, f'infiltration_volume{suffix}.tif'),
         'retention_value_path': os.path.join(output_dir, f'retention_value{suffix}.tif'),
         'aggregate_data_path': os.path.join(output_dir, f'aggregate{suffix}.gpkg'),
-        'connected_lulc_path': os.path.join(intermediate_dir, f'is_connected_lulc{suffix}.tif'),
+        'impervious_lulc_path': os.path.join(intermediate_dir, f'is_impervious_lulc{suffix}.tif'),
         'adjusted_retention_ratio_path': os.path.join(intermediate_dir, f'adjusted_retention_ratio{suffix}.tif'),
         'x_coords_path': os.path.join(intermediate_dir, f'x_coords{suffix}.tif'),
         'y_coords_path': os.path.join(intermediate_dir, f'y_coords{suffix}.tif'),
         'road_distance_path': os.path.join(intermediate_dir, f'road_distance{suffix}.tif'),
-        'near_connected_lulc_path': os.path.join(intermediate_dir, f'near_connected_lulc{suffix}.tif'),
+        'near_impervious_lulc_path': os.path.join(intermediate_dir, f'near_impervious_lulc{suffix}.tif'),
         'near_road_path': os.path.join(intermediate_dir, f'near_road{suffix}.tif'),
         'ratio_n_values_path': os.path.join(intermediate_dir, f'ratio_n_values{suffix}.tif'),
         'ratio_sum_path': os.path.join(intermediate_dir, f'ratio_sum{suffix}.tif'),
-        'ratio_average_path': os.path.join(intermediate_dir, f'ratio_average{suffix}.tif'),
+        'ratio_average_path': os.path.join(intermediate_dir, f'ratio_average{suffix}.tif')
     }
     
     align_inputs = [args['lulc_path'], args['soil_group_path'], args['precipitation_path']]
@@ -203,15 +204,15 @@ def execute(args):
 
     task_graph = taskgraph.TaskGraph(args['workspace_dir'], 
         int(args.get('n_workers', -1)))
-    pixel_size = pygeoprocessing.get_raster_info(
-        args['lulc_path'])['pixel_size']
+    target_raster_info = pygeoprocessing.get_raster_info(
+        args['lulc_path'])
+    pixel_size = target_raster_info['pixel_size']
     pixel_area = abs(pixel_size[0] * pixel_size[1])
 
 
+    lulc_nodata = target_raster_info['nodata'][0]
     precipitation_nodata = pygeoprocessing.get_raster_info(
         args['precipitation_path'])['nodata'][0]
-    lulc_nodata = pygeoprocessing.get_raster_info(
-        args['lulc_path'])['nodata'][0]
     soil_group_nodata = pygeoprocessing.get_raster_info(
         args['soil_group_path'])['nodata'][0]
 
@@ -267,41 +268,53 @@ def execute(args):
     # (Optional) adjust stormwater retention ratio using roads
     if args['adjust_retention_ratios']:
         radius = float(args['retention_radius'])  # in raster coord system units
-        # boolean mapping for each LULC code whether it's connected
+        # boolean mapping for each LULC code whether it's impervious
         impervious_lookup_array = numpy.array([
-            biophysical_dict[lucode]['is_connected'] 
+            biophysical_dict[lucode]['is_impervious'] 
                 for lucode in sorted_lucodes])
 
+        reproject_roads_task = task_graph.add_task(
+            func=pygeoprocessing.reproject_vector,
+            args=(
+                args['road_centerlines_path'],
+                target_raster_info['projection_wkt'],
+                FILES['reprojected_centerlines_path']),
+            kwargs={'driver_name': 'GPKG'},
+            target_path_list=[FILES['reprojected_centerlines_path']],
+            task_name='reproject road centerlines vector to match rasters',
+            dependent_task_list=[]
+        )
+        
         # Make a boolean raster indicating which pixels are directly
         # connected impervious LULC type
-        connected_lulc_task = task_graph.add_task(
+        impervious_lulc_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
                     (FILES['lulc_aligned_path'], 1),
                     (lulc_nodata, 'raw'),
                     (sorted_lucodes, 'raw'),
                     (impervious_lookup_array, 'raw')], 
-                connected_op, 
-                FILES['connected_lulc_path'], 
+                impervious_op, 
+                FILES['impervious_lulc_path'], 
                 gdal.GDT_Int16, 
                 NODATA),
-            target_path_list=[FILES['connected_lulc_path']],
-            task_name='calculate binary connected lulc raster',
+            target_path_list=[FILES['impervious_lulc_path']],
+            task_name='calculate binary impervious lulc raster',
             dependent_task_list=[align_task]
         )
         task_graph.join()
 
         # Make a boolean raster indicating which pixels are within the
         # given radius of a directly-connected impervious LULC type
-        connected_lulc_search_kernel = make_search_kernel(
-            FILES['connected_lulc_path'], radius)
-        near_connected_lulc_task = task_graph.add_task(
+        impervious_lulc_search_kernel = make_search_kernel(
+            FILES['impervious_lulc_path'], radius)
+        near_impervious_lulc_task = task_graph.add_task(
             func=is_near,
-            args=(FILES['connected_lulc_path'], connected_lulc_search_kernel,
-                FILES['near_connected_lulc_path']),
-            target_path_list=[FILES['near_connected_lulc_path']],
-            task_name='find pixels within radius of connected LULC',
-            dependent_task_list=[connected_lulc_task])
+            args=(FILES['impervious_lulc_path'], impervious_lulc_search_kernel,
+                FILES['near_impervious_lulc_path']),
+            target_path_list=[FILES['near_impervious_lulc_path']],
+            task_name='find pixels within radius of impervious LULC',
+            dependent_task_list=[impervious_lulc_task])
 
         # Make a raster of the distance from each pixel to the nearest 
         # road centerline
@@ -318,7 +331,7 @@ def execute(args):
             args=([
                     (FILES['x_coords_path'], 1), 
                     (FILES['y_coords_path'], 1), 
-                    (args['road_centerlines_path'], 'raw')
+                    (FILES['reprojected_centerlines_path'], 'raw')
                 ],
                 nearest_linestring_op, 
                 FILES['road_distance_path'], 
@@ -326,7 +339,7 @@ def execute(args):
                 NODATA),
             target_path_list=[FILES['road_distance_path']],
             task_name='calculate pixel distance to roads',
-            dependent_task_list=[coordinate_rasters_task]
+            dependent_task_list=[coordinate_rasters_task, reproject_roads_task]
         )
 
         # Make a boolean raster showing which pixels are within the given
@@ -365,7 +378,7 @@ def execute(args):
             args=([
                     (FILES['retention_ratio_path'], 1), 
                     (FILES['ratio_average_path'], 1),
-                    (FILES['near_connected_lulc_path'], 1),
+                    (FILES['near_impervious_lulc_path'], 1),
                     (FILES['near_road_path'], 1)
                 ],
                 adjust_op, 
@@ -375,7 +388,7 @@ def execute(args):
             target_path_list=[FILES['adjusted_retention_ratio_path']],
             task_name='adjust stormwater retention ratio',
             dependent_task_list=[retention_ratio_task, average_ratios_task, 
-                near_connected_lulc_task, near_road_task])
+                near_impervious_lulc_task, near_road_task])
 
         final_retention_ratio_path = FILES['adjusted_retention_ratio_path']
         final_retention_ratio_task = adjust_retention_ratio_task
@@ -483,7 +496,7 @@ def execute(args):
             args=(
                 [
                     (FILES['retention_volume_path'], 1), 
-                    (args['replacement_cost'], 'raw')
+                    (float(args['replacement_cost']), 'raw')
                 ],
                 retention_value_op, 
                 FILES['retention_value_path'], 
@@ -622,7 +635,7 @@ def retention_value_op(retention_volume_array, replacement_cost):
     return value_array
 
 
-def connected_op(lulc_array, lulc_nodata, sorted_lucodes, 
+def impervious_op(lulc_array, lulc_nodata, sorted_lucodes, 
         impervious_lookup_array):
     """Convert LULC array to a binary array where 1 is directly connected
     impervious LULC type and 0 is not.
@@ -639,15 +652,15 @@ def connected_op(lulc_array, lulc_nodata, sorted_lucodes,
     Returns:
         2D boolean numpy.ndarray of the same shape as ``lulc_array``
     """
-    is_connected_array = numpy.full(lulc_array.shape, NODATA)
+    is_impervious_array = numpy.full(lulc_array.shape, NODATA)
     valid_mask = (lulc_array != lulc_nodata)
     lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
-    is_connected_array[valid_mask] = (
+    is_impervious_array[valid_mask] = (
         impervious_lookup_array[lulc_index][valid_mask])
-    return is_connected_array 
+    return is_impervious_array 
 
 
-def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array, 
+def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array, 
         near_road_array):
     """Apply the retention ratio adjustment algorithm to an array of ratios. 
     This is meant to be used with raster_calculator.
@@ -655,7 +668,7 @@ def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array,
     Args:
         ratio_array (numpy.ndarray): 2D array of stormwater retention ratios
         avg_ratio_array (numpy.ndarray): 2D array of averaged ratios
-        near_connected_lulc_array (numpy.ndarray): 2D boolean array where 1 
+        near_impervious_lulc_array (numpy.ndarray): 2D boolean array where 1 
             means this pixel is near a directly-connected LULC area
         near_road_array (numpy.ndarray): 2D boolean array where 1 
             means this pixel is near a road centerline
@@ -669,18 +682,18 @@ def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array,
     valid_mask = (
         (ratio_array != NODATA) &
         (avg_ratio_array != NODATA) &
-        (near_connected_lulc_array != NODATA) &
+        (near_impervious_lulc_array != NODATA) &
         (near_road_array != NODATA))
 
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
     # - average of nearby pixels, otherwise
-    print(near_connected_lulc_array.dtype, near_road_array.dtype)
-    is_connected = (
-        near_connected_lulc_array[valid_mask] | 
+    print(near_impervious_lulc_array.dtype, near_road_array.dtype)
+    is_impervious = (
+        near_impervious_lulc_array[valid_mask] | 
         near_road_array[valid_mask])
     adjustment_factor_array[valid_mask] = (avg_ratio_array[valid_mask] * 
-        (1 - is_connected))
+        (1 - is_impervious))
 
     # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
     adjusted_ratio_array[valid_mask] = (ratio_array[valid_mask] + 
@@ -749,8 +762,8 @@ def aggregate_results(aoi_path, r_ratio_path, r_volume_path,
         aggregate_layer.ResetReading()
 
         # save the aggregate data to the field for each feature
-        for polygon in aggregate_layer:
-            feature_id = polygon.GetFID()
+        for feature in aggregate_layer:
+            feature_id = feature.GetFID()
             if op == 'mean':
                 pixel_count = aggregate_stats[feature_id]['count']
                 if pixel_count != 0:
@@ -758,13 +771,13 @@ def aggregate_results(aoi_path, r_ratio_path, r_volume_path,
                 else:
                     LOGGER.warning(
                         "no coverage for polygon %s", ', '.join(
-                            [str(polygon.GetField(_)) for _ in range(
-                                polygon.GetFieldCount())]))
+                            [str(feature.GetField(_)) for _ in range(
+                                feature.GetFieldCount())]))
                     value = 0.0
             elif op == 'sum':
                 value = aggregate_stats[feature_id]['sum']
-            polygon.SetField(field_id, float(value))
-            aggregate_layer.SetFeature(polygon)
+            feature.SetField(field_id, float(value))
+            aggregate_layer.SetFeature(feature)
 
     # save the aggregate vector layer and clean up references
     aggregate_layer.SyncToDisk()
@@ -790,16 +803,17 @@ def is_near(input_path, search_kernel, output_path):
         None
     """
     # open the input raster and create the output raster
-    in_raster = gdal.OpenEx(input_path, gdal.OF_RASTER)
+    in_raster = gdal.OpenEx(input_path, gdal.OF_RASTER | gdal.GA_Update)
     in_band = in_raster.GetRasterBand(1)
     raster_width, raster_height = pygeoprocessing.get_raster_info(
         input_path)['raster_size']
     raster_driver = gdal.GetDriverByName('GTIFF')
-    out_raster = raster_driver.Create(
-        output_path, raster_width, raster_height, 1, gdal.GDT_Int16,
-        options=RASTER_OPTIONS)
-    out_band = out_raster.GetRasterBand(1)
 
+    pygeoprocessing.new_raster_from_base(
+        input_path, output_path, gdal.GDT_Int16, [NODATA])
+    out_raster = gdal.OpenEx(output_path, gdal.OF_RASTER | gdal.GA_Update)
+    out_band = out_raster.GetRasterBand(1)
+    
     # iterate over the raster by overlapping blocks
     overlap = int((search_kernel.shape[0] - 1) / 2)
     for block in overlap_iterblocks(input_path, overlap):
@@ -950,13 +964,12 @@ def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
     y_origin = raster_info['geotransform'][3]
 
     # create the output rasters
-    raster_driver = gdal.GetDriverByName('GTIFF')
-    x_raster = raster_driver.Create(
-        x_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
-        options=RASTER_OPTIONS)
-    y_raster = raster_driver.Create(
-        y_output_path, n_cols, n_rows, 1, gdal.GDT_Float32,
-        options=RASTER_OPTIONS)
+    pygeoprocessing.new_raster_from_base(
+        raster_path, x_output_path, gdal.GDT_Float32, [NODATA])
+    pygeoprocessing.new_raster_from_base(
+        raster_path, y_output_path, gdal.GDT_Float32, [NODATA])
+    x_raster = gdal.OpenEx(x_output_path, gdal.OF_RASTER | gdal.GA_Update)
+    y_raster = gdal.OpenEx(y_output_path, gdal.OF_RASTER | gdal.GA_Update)
     x_band, y_band = x_raster.GetRasterBand(1), y_raster.GetRasterBand(1)
 
     # can't use raster_calculator here because we need the block offset info
@@ -995,6 +1008,7 @@ def nearest_linestring_op(x_coords, y_coords, linestring_path):
         Each pixel value is the distance from that pixel's centerpoint to
         the nearest linestring in the vector at ``linestring_path``.
     """
+    print(pygeoprocessing.get_vector_info(linestring_path))
     segment_generator = iter_linestring_segments(linestring_path)
     (x1, y1), (x2, y2) = next(segment_generator)
     min_distance = line_distance(x_coords, y_coords, x1, y1, x2, y2)
@@ -1002,7 +1016,9 @@ def nearest_linestring_op(x_coords, y_coords, linestring_path):
     for (x1, y1), (x2, y2) in segment_generator:
         if x2 == x1 and y2 == y1:
             continue  # ignore lines with length 0
+        print(x_coords, y_coords, x1, y1, x2, y2)
         distance = line_distance(x_coords, y_coords, x1, y1, x2, y2)
+        print('distance:', distance, numpy.min(distance))
         min_distance = numpy.minimum(min_distance, distance)
     return min_distance
 
@@ -1118,24 +1134,25 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
     Returns:
         None
     """
-    raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
+    raster = gdal.OpenEx(raster_path, gdal.OF_RASTER | gdal.GA_Update)
     band = raster.GetRasterBand(1)
     raster_info = pygeoprocessing.get_raster_info(raster_path)
     raster_width, raster_height = raster_info['raster_size']
 
     # create and open the three output rasters
-    raster_driver = gdal.GetDriverByName('GTIFF')
-    n_values_raster = raster_driver.Create(
-        n_values_path, raster_width, raster_height, 1, gdal.GDT_Int16,
-        options=RASTER_OPTIONS)
+    pygeoprocessing.new_raster_from_base(
+        raster_path, n_values_path, gdal.GDT_Int16, [NODATA])
+    pygeoprocessing.new_raster_from_base(
+        raster_path, sum_path, gdal.GDT_Float32, [NODATA])
+    pygeoprocessing.new_raster_from_base(
+        raster_path, average_path, gdal.GDT_Float32, [NODATA])
+
+    n_values_raster = gdal.OpenEx(n_values_path, gdal.OF_RASTER | gdal.GA_Update)
+    sum_raster = gdal.OpenEx(sum_path, gdal.OF_RASTER | gdal.GA_Update)
+    average_raster = gdal.OpenEx(average_path, gdal.OF_RASTER | gdal.GA_Update)
+
     n_values_band = n_values_raster.GetRasterBand(1)
-    sum_raster = raster_driver.Create(
-        sum_path, raster_width, raster_height, 1, gdal.GDT_Float32,
-        options=RASTER_OPTIONS)
     sum_band = sum_raster.GetRasterBand(1)
-    average_raster = raster_driver.Create(
-        average_path, raster_width, raster_height, 1, gdal.GDT_Float32,
-        options=RASTER_OPTIONS)
     average_band = average_raster.GetRasterBand(1)
 
     # calculate the sum and n_values of the neighborhood of each pixel
