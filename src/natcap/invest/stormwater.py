@@ -701,11 +701,16 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
     """
     adjusted_ratio_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
     adjustment_factor_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
+    print(ratio_array)
+    print(avg_ratio_array)
+    print(near_impervious_lulc_array)
+    print(near_road_array)
     valid_mask = (
         (ratio_array != NODATA) &
         (avg_ratio_array != NODATA) &
         (near_impervious_lulc_array != NODATA) &
         (near_road_array != NODATA))
+    print(valid_mask)
 
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
@@ -821,24 +826,27 @@ def is_near(input_path, search_kernel, output_path):
     # iterate over the raster by overlapping blocks
     overlap = int((search_kernel.shape[0] - 1) / 2)
     for block in overlap_iterblocks(input_path, overlap):
-        in_array = in_band.ReadAsArray(block['xoff'], block['yoff'], 
-            block['xsize'], block['ysize'])
+        in_array = in_band.ReadAsArray(
+            block['xoff'] - block['left_overlap'], 
+            block['yoff'] - block['top_overlap'], 
+            block['xsize'] + block['left_overlap'] + block['right_overlap'], 
+            block['ysize'] + block['top_overlap'] + block['bottom_overlap'])
+        in_array[in_array == NODATA] = 0
         padded_array = numpy.pad(in_array, 
-            pad_width=((block['top_padding'], block['bottom_padding']), 
+            pad_width=(
+                (block['top_padding'], block['bottom_padding']), 
                 (block['left_padding'], block['right_padding'])), 
-            mode='constant', constant_values=0)
+            mode='constant', 
+            constant_values=0)
+        nodata_mask = padded_array[overlap:-overlap,overlap:-overlap] == NODATA
         # sum up the values that fall within the search kernel of each pixel
-        convolved = scipy.signal.convolve(
+        is_near = scipy.signal.convolve(
             padded_array, 
             search_kernel, 
-            mode='valid')
-        valid_mask = padded_array[overlap:-overlap, overlap:-overlap] != NODATA
-        is_near = numpy.full(convolved.shape, NODATA, dtype=numpy.int8)
-        is_near[valid_mask] = convolved[valid_mask] > 0
+            mode='valid') > 0
+        is_near[nodata_mask] = NODATA
 
-        out_band.WriteArray(is_near, 
-            xoff=block['xoff'] + (overlap - block['left_padding']), 
-            yoff=block['yoff'] + (overlap - block['top_padding']))
+        out_band.WriteArray(is_near, xoff=block['xoff'], yoff=block['yoff'])
 
 
 def overlap_iterblocks(raster_path, n_pixels):
@@ -1158,27 +1166,27 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
             block['yoff'] - block['top_overlap'], 
             block['xsize'] + block['left_overlap'] + block['right_overlap'], 
             block['ysize'] + block['top_overlap'] + block['bottom_overlap'])
-        valid_mask = ratio_array != NODATA
 
         zeroed_ratio_array = numpy.copy(ratio_array)
         zeroed_ratio_array[zeroed_ratio_array == NODATA] = 0
 
         # the padded array shape will always be extended by 2*overlap
         # in both dimensions from the original iterblocks block
-        padded_ratio_array = numpy.pad(zeroed_ratio_array, 
+        padded_array = numpy.pad(zeroed_ratio_array, 
             pad_width=(
                 (block['top_padding'], block['bottom_padding']), 
                 (block['left_padding'], block['right_padding'])), 
             mode='constant', 
             constant_values=0)
+        nodata_mask = padded_array[overlap:-overlap,overlap:-overlap] == NODATA
         # add up the valid pixel values in the neighborhood of each pixel
         # 'valid' mode includes only the pixels whose kernel doesn't extend
         # over the edge at all. so, the shape
-        sum_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
-        sum_array[valid_mask] = scipy.signal.convolve(
-            padded_ratio_array,
+        sum_array = scipy.signal.convolve(
+            padded_array,
             search_kernel,
-            mode='valid')[valid_mask]
+            mode='valid')
+        sum_array[nodata_mask] = NODATA
 
         # have to pad the array after 
         valid_pixels = (ratio_array != NODATA).astype(int)
@@ -1195,11 +1203,11 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
         # - for kernels that extend past the edge, this is the number of 
         #   elements that are within the original array minus the number of 
         #   those that are nodata
-        n_values_array = numpy.full(ratio_array.shape, NODATA)
-        n_values_array[valid_mask] = scipy.signal.convolve(
+        n_values_array = scipy.signal.convolve(
             padded_valid_pixels, 
             search_kernel, 
-            mode='valid')[valid_mask]
+            mode='valid')
+        n_values_array[nodata_mask] = NODATA
         
         n_values_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
         sum_band.WriteArray(sum_array, xoff=block['xoff'], yoff=block['yoff'])
