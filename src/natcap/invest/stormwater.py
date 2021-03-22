@@ -241,11 +241,6 @@ def execute(args):
             for soil_group in ['a', 'b', 'c', 'd']
         ] for lucode in sorted_lucodes
     ])
-    infiltration_ratio_array = numpy.array([
-        [biophysical_dict[lucode][f'ir_{soil_group}'] 
-            for soil_group in ['a', 'b', 'c', 'd']
-        ] for lucode in sorted_lucodes
-    ])
 
     # Calculate stormwater retention ratio and volume from
     # LULC, soil groups, biophysical data, and precipitation
@@ -414,40 +409,57 @@ def execute(args):
         dependent_task_list=[align_task, final_retention_ratio_task],
         task_name='calculate stormwater retention volume'
     )
+    aggregation_dependencies = [retention_volume_task]
+    data_to_aggregate = [
+        (FILES['retention_ratio_path'], 'RR_mean', 'mean'),
+        (FILES['retention_volume_path'], 'RV_sum', 'sum')]
 
     # (Optional) Calculate stormwater infiltration ratio and volume from
     # LULC, soil groups, biophysical table, and precipitation
-    infiltration_ratio_task = task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([
-                (FILES['lulc_aligned_path'], 1), 
-                (FILES['soil_group_aligned_path'], 1), 
-                (infiltration_ratio_array, 'raw'), 
-                (sorted_lucodes, 'raw')], 
-            ratio_op, 
-            FILES['infiltration_ratio_path'], 
-            gdal.GDT_Float32, 
-            NODATA),
-        target_path_list=[FILES['infiltration_ratio_path']],
-        dependent_task_list=[align_task],
-        task_name='calculate stormwater infiltration ratio'
-    )
-    infiltration_volume_task = task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([
-                (FILES['infiltration_ratio_path'], 1), 
-                (NODATA, 'raw'),
-                (FILES['precipitation_aligned_path'], 1),
-                (precipitation_nodata, 'raw'),
-                (pixel_area, 'raw')],
-            volume_op, 
-            FILES['infiltration_volume_path'], 
-            gdal.GDT_Float32, 
-            NODATA),
-        target_path_list=[FILES['infiltration_volume_path']],
-        dependent_task_list=[align_task, infiltration_ratio_task],
-        task_name='calculate stormwater retention volume'
-    )
+    print(list(next(iter(biophysical_dict.values()))))
+    if 'ir_a' in list(next(iter(biophysical_dict.values()))):
+        LOGGER.info('Infiltration data detected in biophysical table')
+        infiltration_ratio_array = numpy.array([
+            [biophysical_dict[lucode][f'ir_{soil_group}'] 
+                for soil_group in ['a', 'b', 'c', 'd']
+            ] for lucode in sorted_lucodes
+        ])
+        infiltration_ratio_task = task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=([
+                    (FILES['lulc_aligned_path'], 1), 
+                    (FILES['soil_group_aligned_path'], 1), 
+                    (infiltration_ratio_array, 'raw'), 
+                    (sorted_lucodes, 'raw')], 
+                ratio_op, 
+                FILES['infiltration_ratio_path'], 
+                gdal.GDT_Float32, 
+                NODATA),
+            target_path_list=[FILES['infiltration_ratio_path']],
+            dependent_task_list=[align_task],
+            task_name='calculate stormwater infiltration ratio'
+        )
+        infiltration_volume_task = task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=([
+                    (FILES['infiltration_ratio_path'], 1), 
+                    (NODATA, 'raw'),
+                    (FILES['precipitation_aligned_path'], 1),
+                    (precipitation_nodata, 'raw'),
+                    (pixel_area, 'raw')],
+                volume_op, 
+                FILES['infiltration_volume_path'], 
+                gdal.GDT_Float32, 
+                NODATA),
+            target_path_list=[FILES['infiltration_volume_path']],
+            dependent_task_list=[align_task, infiltration_ratio_task],
+            task_name='calculate stormwater retention volume'
+        )
+        aggregation_dependencies.append(infiltration_volume_task)
+        data_to_aggregate.append(
+            (FILES['infiltration_ratio_path'], 'IR_mean', 'mean'))
+        data_to_aggregate.append(
+            (FILES['infiltration_volume_path'], 'IV_sum', 'sum'))
 
     # get all EMC columns from an arbitrary row in the dictionary
     # strip the first four characters off 'EMC_pollutant' to get pollutant name
@@ -459,7 +471,6 @@ def execute(args):
     # Calculate avoided pollutant load for each pollutant from retention volume
     # and biophysical table EMC value
     avoided_load_paths = []
-    aggregation_dependencies = [retention_volume_task, infiltration_volume_task]
     for pollutant in pollutants:
         # one output raster for each pollutant
         avoided_pollutant_load_path = os.path.join(
@@ -487,6 +498,8 @@ def execute(args):
             task_name=f'calculate avoided pollutant {pollutant} load'
         )
         aggregation_dependencies.append(avoided_load_task)
+        data_to_aggregate.append(
+            (avoided_pollutant_load_path, f'avoided_{pollutant}', 'sum'))
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed
@@ -507,22 +520,31 @@ def execute(args):
             task_name='calculate stormwater retention value'
         )
         aggregation_dependencies.append(valuation_task)
+        data_to_aggregate.append(
+            (FILES['retention_value_path'], 'val_sum', 'sum'))
         valuation_path = FILES['retention_value_path']
     else:
         valuation_path = None
 
     # (Optional) Aggregate to watersheds if an aggregate vector is defined
     if (args['aggregate_areas_path']):
+        reproject_aoi_task = task_graph.add_task(
+            func=pygeoprocessing.reproject_vector,
+            args=(
+                args['aggregate_areas_path'],
+                target_raster_info['projection_wkt'],
+                FILES['reprojected_aoi_path']),
+            kwargs={'driver_name': 'GPKG'},
+            target_path_list=[FILES['reprojected_aoi_path']],
+            task_name='reproject aggregate areas vector to match rasters',
+            dependent_task_list=[]
+        )
+        aggregation_dependencies.append(reproject_aoi_task)
         aggregation_task = task_graph.add_task(
             func=aggregate_results,
             args=(
-                args['aggregate_areas_path'],
-                FILES['retention_ratio_path'],
-                FILES['retention_volume_path'],
-                FILES['infiltration_ratio_path'],
-                FILES['infiltration_volume_path'],
-                avoided_load_paths,
-                valuation_path,
+                FILES['reprojected_aoi_path'],
+                data_to_aggregate,
                 FILES['aggregate_data_path']),
             target_path_list=[FILES['aggregate_data_path']],
             dependent_task_list=aggregation_dependencies,
@@ -688,7 +710,6 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
     # - average of nearby pixels, otherwise
-    print(near_impervious_lulc_array.dtype, near_road_array.dtype)
     is_impervious = (
         near_impervious_lulc_array[valid_mask] | 
         near_road_array[valid_mask])
@@ -701,20 +722,16 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
     return adjusted_ratio_array
 
 
-def aggregate_results(aoi_path, r_ratio_path, r_volume_path, 
-        i_ratio_path, i_volume_path, avoided_pollutant_loads, 
-        retention_value, output_path):
+def aggregate_results(aoi_path, aggregations, output_path):
     """Aggregate outputs into regions of interest.
 
     Args:
         aoi_path (str): path to vector of polygon(s) to aggregate over
-        retention_ratio (str): path to stormwater retention ratio raster
-        retention_volume (str): path to stormwater retention volume raster
-        infiltration_ratio (str): path to stormwater infiltration ratio raster
-        infiltration_volume (str): path to stormwater infiltration volume raster
-        avoided_pollutant_loads (list[str]): list of paths to avoided pollutant
-            load rasters
-        retention_value (str): path to retention value raster
+        aggregations (list[tuple(str,str,str)]): list of tuples describing the 
+            datasets to aggregate. Each tuple has 3 items. The first is the
+            path to a raster to aggregate. The second is the field name for
+            this aggregated data in the output vector. The third is either
+            'mean' or 'sum' indicating the aggregation to perform.
         output_path (str): path to write out aggregated vector data
 
     Returns:
@@ -734,19 +751,6 @@ def aggregate_results(aoi_path, r_ratio_path, r_volume_path,
     
     aggregate_vector = gdal.OpenEx(output_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
-
-    aggregations = [
-        (r_ratio_path, 'RR_mean', 'mean'),     # average retention ratio
-        (r_volume_path, 'RV_sum', 'sum'),      # total retention volume
-        (i_ratio_path, 'IR_mean', 'mean'),     # average infiltration ratio
-        (i_volume_path, 'IV_sum', 'sum'),      # total infiltration volume
-    ]
-    if (retention_value):                      # total retention value
-        aggregations.append((retention_value, 'val_sum', 'sum'))
-    for avoided_load_path in avoided_pollutant_loads:
-        pollutant = avoided_load_path.split('_')[-1]
-        field = f'avoided_{pollutant}'
-        aggregations.append((avoided_load_path, field, 'sum'))
 
 
     for raster_path, field_id, op in aggregations:
@@ -858,11 +862,16 @@ def overlap_iterblocks(raster_path, n_pixels):
             relative to the raster
         'xsize' (int): width of the block in pixels
         'ysize' (int): height of the block in pixels
-        'top_padding' (int): number in the range [0, n_pixels] indicating how 
-            many more rows of padding to add to the top of the block. E.g. a
-            block on the top edge of the raster would have `top_padding = n_pixels`.
-            A block that's `k` rows down from the top would have 
-            `min(0, n_pixels - k)`.
+
+        and for side in 'top', 'left', 'bottom', 'right':
+        
+        'side_overlap' (int): number in the range [0, n_pixels] indicating how 
+            many rows you can extend the block on that side.
+        'side_padding' (int): number in the range [0, n_pixels] indicating how 
+            many more rows of padding (filler data) to add to that side.
+        for each side, side_overlap + side_padding = n_pixels. side_overlap is
+        maximized until it hits the edge of the raster, then side_padding covers
+        the rest.
     """
     raster_width, raster_height = pygeoprocessing.get_raster_info(
         raster_path)['raster_size']
@@ -889,22 +898,15 @@ def overlap_iterblocks(raster_path, n_pixels):
         right_padding = n_pixels - right_overlap
         bottom_padding = n_pixels - bottom_overlap
 
-        if xoff > 0:
-            xoff -= left_overlap
-            xsize += left_overlap
-        if yoff > 0:
-            yoff -= top_overlap
-            ysize += top_overlap
-        if xend < raster_width:
-            xsize += right_overlap
-        if yend < raster_height:
-            ysize += bottom_overlap
-
         yield {
             'xoff': int(xoff),
             'yoff': int(yoff),
             'xsize': int(xsize),
             'ysize': int(ysize),
+            'top_overlap': int(top_overlap),
+            'left_overlap': int(left_overlap),
+            'bottom_overlap': int(bottom_overlap),
+            'right_overlap': int(right_overlap),
             'top_padding': int(top_padding),
             'left_padding': int(left_padding),
             'bottom_padding': int(bottom_padding),
@@ -942,6 +944,9 @@ def make_search_kernel(raster_path, radius):
     # boolean kernel where 1=pixel centerpoint is within the radius of the 
     # center pixel's centerpoint
     search_kernel = numpy.array(hypotenuse <= pixel_radius, dtype=numpy.uint8)
+    LOGGER.debug(
+        f'Search kernel for {raster_path} with radius {radius}:'
+        f'\n{search_kernel}')
     return search_kernel
 
 
@@ -1008,7 +1013,6 @@ def nearest_linestring_op(x_coords, y_coords, linestring_path):
         Each pixel value is the distance from that pixel's centerpoint to
         the nearest linestring in the vector at ``linestring_path``.
     """
-    print(pygeoprocessing.get_vector_info(linestring_path))
     segment_generator = iter_linestring_segments(linestring_path)
     (x1, y1), (x2, y2) = next(segment_generator)
     min_distance = line_distance(x_coords, y_coords, x1, y1, x2, y2)
@@ -1016,9 +1020,7 @@ def nearest_linestring_op(x_coords, y_coords, linestring_path):
     for (x1, y1), (x2, y2) in segment_generator:
         if x2 == x1 and y2 == y1:
             continue  # ignore lines with length 0
-        print(x_coords, y_coords, x1, y1, x2, y2)
         distance = line_distance(x_coords, y_coords, x1, y1, x2, y2)
-        print('distance:', distance, numpy.min(distance))
         min_distance = numpy.minimum(min_distance, distance)
     return min_distance
 
@@ -1136,47 +1138,56 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
     """
     raster = gdal.OpenEx(raster_path, gdal.OF_RASTER | gdal.GA_Update)
     band = raster.GetRasterBand(1)
-    raster_info = pygeoprocessing.get_raster_info(raster_path)
-    raster_width, raster_height = raster_info['raster_size']
 
-    # create and open the three output rasters
+    # create and open the output rasters
     pygeoprocessing.new_raster_from_base(
         raster_path, n_values_path, gdal.GDT_Int16, [NODATA])
     pygeoprocessing.new_raster_from_base(
         raster_path, sum_path, gdal.GDT_Float32, [NODATA])
-    pygeoprocessing.new_raster_from_base(
-        raster_path, average_path, gdal.GDT_Float32, [NODATA])
-
     n_values_raster = gdal.OpenEx(n_values_path, gdal.OF_RASTER | gdal.GA_Update)
     sum_raster = gdal.OpenEx(sum_path, gdal.OF_RASTER | gdal.GA_Update)
-    average_raster = gdal.OpenEx(average_path, gdal.OF_RASTER | gdal.GA_Update)
-
     n_values_band = n_values_raster.GetRasterBand(1)
     sum_band = sum_raster.GetRasterBand(1)
-    average_band = average_raster.GetRasterBand(1)
 
     # calculate the sum and n_values of the neighborhood of each pixel
+    # kernel is always centered on one pixel, so the dimensions are always odd
     overlap = int((search_kernel.shape[0] - 1) / 2)
     for block in overlap_iterblocks(raster_path, overlap):
+        ratio_array = band.ReadAsArray(
+            block['xoff'] - block['left_overlap'], 
+            block['yoff'] - block['top_overlap'], 
+            block['xsize'] + block['left_overlap'] + block['right_overlap'], 
+            block['ysize'] + block['top_overlap'] + block['bottom_overlap'])
+        valid_mask = ratio_array != NODATA
 
-        ratio_array = band.ReadAsArray(block['xoff'], block['yoff'], 
-            block['xsize'], block['ysize'])
-        padded_ratio_array = numpy.pad(ratio_array, 
-            pad_width=((block['top_padding'], block['bottom_padding']), 
+        zeroed_ratio_array = numpy.copy(ratio_array)
+        zeroed_ratio_array[zeroed_ratio_array == NODATA] = 0
+
+        # the padded array shape will always be extended by 2*overlap
+        # in both dimensions from the original iterblocks block
+        padded_ratio_array = numpy.pad(zeroed_ratio_array, 
+            pad_width=(
+                (block['top_padding'], block['bottom_padding']), 
                 (block['left_padding'], block['right_padding'])), 
-            mode='constant', constant_values=0)
+            mode='constant', 
+            constant_values=0)
         # add up the valid pixel values in the neighborhood of each pixel
-        sum_array = scipy.signal.convolve(
-            padded_ratio_array, 
-            search_kernel, 
-            mode='valid')
+        # 'valid' mode includes only the pixels whose kernel doesn't extend
+        # over the edge at all. so, the shape
+        sum_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
+        sum_array[valid_mask] = scipy.signal.convolve(
+            padded_ratio_array,
+            search_kernel,
+            mode='valid')[valid_mask]
 
         # have to pad the array after 
         valid_pixels = (ratio_array != NODATA).astype(int)
         padded_valid_pixels = numpy.pad(valid_pixels, 
-            pad_width=((block['top_padding'], block['bottom_padding']), 
+            pad_width=(
+                (block['top_padding'], block['bottom_padding']), 
                 (block['left_padding'], block['right_padding'])), 
-            mode='constant', constant_values=False)
+            mode='constant',
+            constant_values=0)
         # array where each value is the number of valid values within the
         # search kernel. 
         # - for every kernel that doesn't extend past the edge of the original 
@@ -1184,17 +1195,21 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
         # - for kernels that extend past the edge, this is the number of 
         #   elements that are within the original array minus the number of 
         #   those that are nodata
-        n_values_array = scipy.signal.convolve(
+        n_values_array = numpy.full(ratio_array.shape, NODATA)
+        n_values_array[valid_mask] = scipy.signal.convolve(
             padded_valid_pixels, 
             search_kernel, 
-            mode='valid')
+            mode='valid')[valid_mask]
         
         n_values_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
         sum_band.WriteArray(sum_array, xoff=block['xoff'], yoff=block['yoff'])
 
+    n_values_band, sum_band = None, None
+    n_values_raster, sum_raster = None, None
+
     # Calculate the pixel-wise average from the n_values and sum rasters
     def avg_op(n_values_array, sum_array):
-        average_array = numpy.full(n_values_array.shape, NODATA)
+        average_array = numpy.full(n_values_array.shape, NODATA, dtype=float)
         valid_mask = (
             (n_values_array != NODATA) & 
             (n_values_array != 0) &
