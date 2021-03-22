@@ -73,20 +73,16 @@ export default class App extends React.Component {
     if (investSettings.sampleDataDir) {
       didAskForSampleData = true;
     }
-    // if (!investSettings.sampleDataDir) {
-    //   ipcRenderer.on('variable-reply', (event, arg) => {
-    //     investSettings.sampleDataDir = arg.userDataPath;
-    //   });
-    //   ipcRenderer.send('variable-request', 'ping');
-    // } else {
-    //   didAskForSampleData = true;
-    // }
 
     this.setState({
       investList: investList,
       recentJobs: recentJobs,
       investSettings: investSettings,
       didAskForSampleData: didAskForSampleData,
+    });
+
+    ipcRenderer.on('sampledata-update', (event, dir) => {
+      this.storeDownloadDir(dir);
     });
   }
 

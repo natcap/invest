@@ -99,8 +99,10 @@ export function extractZipInplace(zipFilePath) {
     zipfile.on('entry', (entry) => {
       if (/\/$/.test(entry.fileName)) {
         // if entry is a directory
-        fs.mkdirSync(path.join(extractToDir, entry.fileName));
-        zipfile.readEntry();
+        fs.mkdir(path.join(extractToDir, entry.fileName), (err) => {
+          if (err.code === 'EEXIST') { } else logger.error(err);
+          zipfile.readEntry();
+        });
       } else {
         console.log(entry.fileName);
         zipfile.openReadStream(entry, (err, readStream) => {

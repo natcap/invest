@@ -165,6 +165,7 @@ const createWindow = async () => {
         logger.info('download completed');
         logger.debug(item.savePath);
         extractZipInplace(item.savePath);
+        mainWindow.webContents.send('sampledata-update', path.dirname(item.savePath));
       } else {
         logger.info(`download failed: ${state}`);
       }
