@@ -3,10 +3,13 @@ import { ipcRenderer } from 'electron';
 
 let USER_DATA = '';
 
-ipcRenderer.on('variable-reply', (event, arg) => {
-  USER_DATA = arg.userDataPath;
+ipcRenderer.invoke('user-data')
+.then(response => {
+  USER_DATA = response;
 })
-ipcRenderer.send('variable-request', 'ping');
+.catch(e => {
+  console.error("Error processing user data path.");
+});
 
 export const fileRegistry = {
   //  for storing state snapshot files

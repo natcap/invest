@@ -137,15 +137,22 @@
   </body>
   <script>
     const { ipcRenderer, shell } = require('electron');
+    const { getLogger } = require('../logger');
+    const logger = getLogger(__filename.split('/').slice(-1)[0]);
+
     const node1 = document.getElementById('invest-version');
     const node2 = document.getElementById('workbench-version');
-    ipcRenderer.on('variable-reply', (event, arg) => {
-      const text1 = document.createTextNode(arg.investVersion)
+
+    ipcRenderer.invoke('variable-request')
+    .then(response => {
+      const text1 = document.createTextNode(response.investVersion)
       node1.appendChild(text1)
-      const text2 = document.createTextNode(arg.workbenchVersion)
+      const text2 = document.createTextNode(response.workbenchVersion)
       node2.appendChild(text2)
     })
-    ipcRenderer.send('variable-request', 'ping');
+    .catch(e => {
+        logger.error("Error processing versions for About page");
+    });
 
     function handleClick(event) {
       event.preventDefault();

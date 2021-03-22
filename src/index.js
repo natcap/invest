@@ -1,5 +1,8 @@
 const { ipcRenderer } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 
+const { getLogger } = require('./logger');
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
+
 const isDevMode = process.argv.includes('--dev');
 if (isDevMode) {
   // in dev mode we can have babel transpile modules on import
@@ -23,7 +26,7 @@ let rightClickPosition = null
 window.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   rightClickPosition = { x: e.x, y: e.y };
-  ipcRenderer.send('show-context-menu', rightClickPosition);
+  ipcRenderer.invoke('show-context-menu', rightClickPosition);
 })
 
 const render = async function render(investExe) {
@@ -37,9 +40,12 @@ const render = async function render(investExe) {
   );
 };
 
-ipcRenderer.on('variable-reply', (event, arg) => {
+ipcRenderer.invoke('variable-request')
+.then(response => {
   // render the App after receiving any critical data
   // from the main process
-  render(arg.investExe);
+  render(response.investExe);
 })
-ipcRenderer.send('variable-request', 'ping');
+.catch(e => {
+  logger.error("Error rendering the app.");
+});

@@ -7,10 +7,13 @@ let userDataPath = '';
 let isDevMode;
 if (ipcRenderer) {
   // When this module is imported from render process, access via ipcRenderer
-  ipcRenderer.on('variable-reply', (event, arg) => {
-    userDataPath = arg.userDataPath;
+  ipcRenderer.invoke('user-data')
+  .then(response => {
+    userDataPath = response;
   })
-  ipcRenderer.send('variable-request', 'ping');
+  .catch(e => {
+    console.error("Error processing user data path.");
+  });
 
   ipcRenderer.invoke('is-dev-mode').then((result) => {
     isDevMode = result;

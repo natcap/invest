@@ -61,10 +61,7 @@ const createWindow = async () => {
     workbenchVersion: pkg.version,
     userDataPath: app.getPath('userData'),
   };
-  ipcMain.on('variable-request', (event) => {
-    event.reply('variable-reply', mainProcessVars);
-  });
-  ipcMain.on('show-context-menu', (event, rightClickPos) => {
+  ipcMain.handle('show-context-menu', (event, rightClickPos) => {
     const template = [
       {
         label: 'Inspect Element',
@@ -75,7 +72,10 @@ const createWindow = async () => {
     ]
     const menu = Menu.buildFromTemplate(template);
     menu.popup( BrowserWindow.fromWebContents(event.sender));
-  })
+  });
+  ipcMain.handle('variable-request', async (event) => {
+    return mainProcessVars;
+  });
   ipcMain.handle('show-open-dialog', async (event, arg) => {
     const result = await dialog.showOpenDialog(arg);
     return result;
