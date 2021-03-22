@@ -84,7 +84,8 @@
     "sanitize-html": "^2.2.0",
     "tail": "^2.2.0",
     "winston": "^3.3.3",
-    "winston-daily-rotate-file": "^4.5.0"
+    "winston-daily-rotate-file": "^4.5.0",
+    "yauzl": "^2.10.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.13.0",

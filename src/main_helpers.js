@@ -3,6 +3,9 @@ const os = require('os');
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
 const { app } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
+
+const yauzl = require('yauzl');
+
 const { getLogger } = require('./logger');
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -86,4 +89,31 @@ export function createPythonFlaskProcess(investExe) {
   } else {
     logger.error('no existing invest installations found');
   }
+}
+
+export function extractZipInplace(zipFilePath) {
+  const extractToDir = path.dirname(zipFilePath);
+  yauzl.open(zipFilePath, { lazyEntries: true }, (err, zipfile) => {
+    if (err) throw err;
+    zipfile.readEntry();
+    zipfile.on('entry', (entry) => {
+      if (/\/$/.test(entry.fileName)) {
+        // if entry is a directory
+        fs.mkdirSync(path.join(extractToDir, entry.fileName));
+        zipfile.readEntry();
+      } else {
+        console.log(entry.fileName);
+        zipfile.openReadStream(entry, (err, readStream) => {
+          if (err) throw err;
+          readStream.on('end', () => {
+            zipfile.readEntry();
+          });
+          const writable = fs.createWriteStream(path.join(
+            extractToDir, entry.fileName
+          ));
+          readStream.pipe(writable);
+        });
+      }
+    });
+  });
 }

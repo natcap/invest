@@ -22,7 +22,7 @@ const {
   getFlaskIsReady, shutdownPythonProcess
 } = require('./server_requests');
 const {
-  findInvestBinaries, createPythonFlaskProcess
+  findInvestBinaries, createPythonFlaskProcess, extractZipInplace
 } = require('./main_helpers');
 const { getLogger } = require('./logger');
 const { menuTemplate } = require('./menubar');
@@ -163,6 +163,8 @@ const createWindow = async () => {
     item.once('done', (event, state) => {
       if (state === 'completed') {
         logger.info('download completed');
+        logger.debug(item.savePath);
+        extractZipInplace(item.savePath);
       } else {
         logger.info(`download failed: ${state}`);
       }
