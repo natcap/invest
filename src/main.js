@@ -76,10 +76,6 @@ const createWindow = async () => {
     logger.debug(JSON.stringify(mainProcessVars));
     event.reply('variable-reply', mainProcessVars);
   });
-  ipcMain.on('download-url', (event, url) => {
-    logger.debug(`${url}`);
-    mainWindow.webContents.downloadURL(url);
-  });
 
   // Wait for a response from the server before loading the app
   await getFlaskIsReady();
@@ -145,10 +141,15 @@ const createWindow = async () => {
     }
   });
 
+  // Setup handlers & defaults to manage downloads.
+  // Specifically, invest sample data downloads.
+  mainWindow.webContents.session.setDownloadPath(app.getPath('userData'));
+  ipcMain.on('download-url', (event, url) => {
+    logger.debug(`${url}`);
+    mainWindow.webContents.downloadURL(url);
+  });
+
   mainWindow.webContents.session.on('will-download', (event, item, webContents) => {
-    console.log('will download listener');
-    // setSavePath will subdue the dialog 
-    // item.setSavePath(path.join(app.getPath('userData'), 'sample_data.zip'));
     item.on('updated', (event, state) => {
       if (state === 'interrupted') {
         logger.info('download interrupted');

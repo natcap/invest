@@ -10,52 +10,40 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
 import SaveFileButton from '../SaveFileButton';
-
-function validateDir(dir) {
-  return [true, ''];
-}
+import pkg from '../../../package.json';
 
 /** Render a dialog with a form for configuring global invest settings */
 export default class DataDownloadModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      defaultTargetPath: '',
-      // show: true,
-      // downloadDir: null,
-      // dirIsValid: null,
-      // validationMessage: null,
+      all: true,
     };
 
-    // this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
-    this.handleDirChange = this.handleDirChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
   componentDidMount() {
-    ipcRenderer.on('variable-reply', (event, arg) => {
-      this.setState({
-        defaultTargetPath: arg.userDataPath,
+    const prefix = encodeURIComponent(`invest/${pkg.invest.version}/data`);
+    const queryURL = `https://www.googleapis.com/storage/v1/b/${pkg.invest.bucket}/o?prefix=${prefix}`;
+    fetch(queryURL)
+      .then((response) => {
+        if (response.status === 200) {
+          return response.json();
+        }
+        console.log(response.status);
+      })
+      .then((data) => {
+        console.log(data);
       });
-    });
-    ipcRenderer.send('variable-request', 'ping');
   }
 
   handleClose() {
-    // this.setState({
-    //   show: false,
-    // });
     // storing something sends the signal that the user declined
     // and doesn't need to be asked again on app startup.
     this.props.storeDownloadDir('');
   }
-
-  // handleShow() {
-  //   this.setState({
-  //     show: true,
-  //   });
-  // }
 
   async handleSubmit(event) {
     event.preventDefault();
@@ -68,23 +56,6 @@ export default class DataDownloadModal extends React.Component {
       this.props.releaseDataURL, 'InVEST_3.9.0.post235+g296690d7_sample_data.zip'
     );
     ipcRenderer.send('download-url', allDataURL);
-    // const data = await remote.dialog.showSaveDialog(
-    //   { defaultPath: this.state.defaultTargetPath }
-    // );
-    // if (data.filePath) {
-      // this.props.storeDownloadDir(path.dirname(data.filePath));
-      // ipcRenderer.send('download-url', allDataURL);
-    // }
-  }
-
-  handleDirChange(event) {
-    // const { value } = event.target;
-    // const [isValid, message] = validateDir(value);
-    // this.setState({
-    //   downloadDir: value,
-    //   dirIsValid: isValid,
-    //   validationMessage: message,
-    // });
   }
 
   render() {
