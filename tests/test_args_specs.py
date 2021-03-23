@@ -7,7 +7,8 @@ class ValidateArgsSpecs(unittest.TestCase):
     valid_types = {
         'number', 
         'ratio', 
-        'percent', 
+        'percent',
+        'code', 
         'freestyle_string', 
         'option_string', 
         'boolean', 
@@ -18,18 +19,16 @@ class ValidateArgsSpecs(unittest.TestCase):
         'directory'
     }
 
-    valid_raster_band_types = {'number'}
-    valid_vector_field_types = {'freestyle_string'}
-    valid_csv_data_types = {'number', 'freestyle_string', 'option_string', 'boolean', 'raster', 'vector'}
-    valid_directory_path_types = {'raster', 'vector', 'csv', 'file'}
 
-    models = [
-        'carbon', 
-        'coastal_vulnerability', 
-        'crop_production_percentile', 
-        'crop_production_regression']
+
 
     def validate(self, arg, valid_types=valid_types):
+
+        valid_raster_band_types = {'number', 'code'}
+        valid_vector_field_types = {'freestyle_string'}
+        valid_csv_data_types = {'number', 'ratio', 'percent', 'code', 'boolean',
+            'freestyle_string', 'option_string', 'raster', 'vector'}
+        valid_directory_path_types = {'raster', 'vector', 'csv', 'file'}
 
         # the arg should have a 'type' property
         self.assertTrue('type' in arg)
@@ -38,7 +37,8 @@ class ValidateArgsSpecs(unittest.TestCase):
 
         if arg['type'] == 'number':
             self.assertTrue('units' in arg)
-            self.assertEqual(type(arg['units']), str)
+            if arg['units'] is not None:
+                self.assertEqual(type(arg['units']), str)
 
 
         elif arg['type'] == 'raster':
@@ -112,7 +112,7 @@ class ValidateArgsSpecs(unittest.TestCase):
             model = importlib.import_module(f'natcap.invest.{model_name}')
             print(model_name)
             for arg in model.ARGS_SPEC['args'].values():
-                print(arg)
+                print(f'    {arg["name"]}')
                 self.validate(arg)
 
 

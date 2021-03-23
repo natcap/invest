@@ -100,7 +100,7 @@ ARGS_SPEC = {
                 "C_below": {"type": "number", "units": "megagrams/hectare"},
                 "C_soil": {"type": "number", "units": "megagrams/hectare"},
                 "C_dead": {"type": "number", "units": "megagrams/hectare"}
-            }
+            },
             "required": True,
             "about": (
                 "A table that maps the land-cover IDs to carbon pools.  "
