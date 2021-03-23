@@ -1,3 +1,4 @@
+import importlib
 import unittest
 
 
@@ -77,9 +78,44 @@ class ValidateArgsSpecs(unittest.TestCase):
     def test_carbon(self):
         from natcap.invest import carbon
 
-        for arg in carbon.ARGS_SPEC['args'].values():
-            print(arg)
-            self.validate(arg)
+        model_names = [
+            'carbon',
+            'coastal_blue_carbon.coastal_blue_carbon',
+            'coastal_blue_carbon.preprocessor',
+            'coastal_vulnerability',
+            'crop_production_regression',
+            'crop_production_percentile',
+            'delineateit.delineateit',
+            'finfish_aquaculture.finfish_aquaculture',
+            'fisheries.fisheries',
+            'fisheries.fisheries_hst',
+            'forest_carbon_edge_effect',
+            'globio',
+            'habitat_quality',
+            'hra',
+            'hydropower',
+            'ndr.ndr',
+            'pollination',
+            'recreation.recmodel_client',
+            'routedem',
+            'scenic_quality.sceniq_quality',
+            'scenario_gen_proximity',
+            'sdr.sdr',
+            'seasonal_water_yield.seasonal_water_yield',
+            'urban_cooling_model',
+            'urban_flood_risk_mitigation',
+            'wave_energy',
+            'wind_energy'
+        ]
+
+        for model_name in model_names:
+            model = importlib.import_module(f'natcap.invest.{model_name}')
+            print(model_name)
+            for arg in model.ARGS_SPEC['args'].values():
+                print(arg)
+                self.validate(arg)
+
+
 
 
 if __name__ == '__main__':
