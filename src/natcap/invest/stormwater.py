@@ -416,7 +416,6 @@ def execute(args):
 
     # (Optional) Calculate stormwater infiltration ratio and volume from
     # LULC, soil groups, biophysical table, and precipitation
-    print(list(next(iter(biophysical_dict.values()))))
     if 'ir_a' in list(next(iter(biophysical_dict.values()))):
         LOGGER.info('Infiltration data detected in biophysical table')
         infiltration_ratio_array = numpy.array([
@@ -701,16 +700,11 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
     """
     adjusted_ratio_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
     adjustment_factor_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
-    print(ratio_array)
-    print(avg_ratio_array)
-    print(near_impervious_lulc_array)
-    print(near_road_array)
     valid_mask = (
         (ratio_array != NODATA) &
         (avg_ratio_array != NODATA) &
         (near_impervious_lulc_array != NODATA) &
         (near_road_array != NODATA))
-    print(valid_mask)
 
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
@@ -1167,18 +1161,17 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
             block['xsize'] + block['left_overlap'] + block['right_overlap'], 
             block['ysize'] + block['top_overlap'] + block['bottom_overlap'])
 
-        zeroed_ratio_array = numpy.copy(ratio_array)
-        zeroed_ratio_array[zeroed_ratio_array == NODATA] = 0
-
         # the padded array shape will always be extended by 2*overlap
         # in both dimensions from the original iterblocks block
-        padded_array = numpy.pad(zeroed_ratio_array, 
+        padded_array = numpy.pad(ratio_array, 
             pad_width=(
                 (block['top_padding'], block['bottom_padding']), 
                 (block['left_padding'], block['right_padding'])), 
             mode='constant', 
             constant_values=0)
         nodata_mask = padded_array[overlap:-overlap,overlap:-overlap] == NODATA
+        padded_array[padded_array == NODATA] = 0
+        
         # add up the valid pixel values in the neighborhood of each pixel
         # 'valid' mode includes only the pixels whose kernel doesn't extend
         # over the edge at all. so, the shape
