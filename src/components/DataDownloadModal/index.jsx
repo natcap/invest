@@ -9,7 +9,6 @@ import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
-import SaveFileButton from '../SaveFileButton';
 import pkg from '../../../package.json';
 
 /** Render a dialog with a form for configuring global invest settings */
@@ -17,16 +16,25 @@ export default class DataDownloadModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      all: true,
+      allDataCheck: true,
+      sampleDataRegistryArray: [],
+      allLinksArray: [],
+      selectedLinksArray: [],
+      dataListCheckBoxes: {},
     };
 
     this.handleClose = this.handleClose.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleCheckAll = this.handleCheckAll.bind(this);
+    this.handleCheckList = this.handleCheckList.bind(this);
   }
 
   componentDidMount() {
+    // TODO move this query to the build process and package this data in a file?
     const prefix = encodeURIComponent(`invest/${pkg.invest.version}/data`);
     const queryURL = `https://www.googleapis.com/storage/v1/b/${pkg.invest.bucket}/o?prefix=${prefix}`;
+    const linksArray = [];
+    const dataListCheckBoxes = {};
     fetch(queryURL)
       .then((response) => {
         if (response.status === 200) {
@@ -35,7 +43,17 @@ export default class DataDownloadModal extends React.Component {
         console.log(response.status);
       })
       .then((data) => {
-        console.log(data);
+        data.items.forEach((item) => {
+          linksArray.push(item.mediaLink);
+          dataListCheckBoxes[item.name] = true;
+        });
+        console.log(linksArray);
+        this.setState({
+          sampleDataRegistryArray: data.items,
+          allLinksArray: linksArray,
+          selectedLinksArray: linksArray,
+          dataListCheckBoxes: dataListCheckBoxes,
+        });
       });
   }
 
@@ -58,7 +76,65 @@ export default class DataDownloadModal extends React.Component {
     ipcRenderer.send('download-url', allDataURL);
   }
 
+  handleCheckAll(event) {
+    const {
+      dataListCheckBoxes,
+      allLinksArray,
+    } = this.state;
+    const newCheckList = Object.fromEntries(
+      Object.entries(dataListCheckBoxes).map(
+        ([k, v]) => [k, event.target.checked]
+      )
+    );
+    console.log(event.target.checked);
+    console.log(dataListCheckBoxes);
+    let selectedLinks;
+    if (event.target.checked) {
+      selectedLinks = allLinksArray;
+    } else {
+      selectedLinks = [];
+    }
+    this.setState({
+      allDataCheck: event.target.checked,
+      dataListCheckBoxes: newCheckList,
+      selectedLinksArray: selectedLinks,
+    });
+  }
+
+  handleCheckList(event, item) {
+    let { selectedLinksArray, dataListCheckBoxes } = this.state;
+    if (event.target.checked) {
+      selectedLinksArray.push(item.mediaLink);
+      dataListCheckBoxes[item.name] = true;
+    } else {
+      selectedLinksArray = selectedLinksArray.filter((val) => val !== item.mediaLink);
+      dataListCheckBoxes[item.name] = false;
+    }
+    this.setState({
+      allDataCheck: false,
+      selectedLinksArray: selectedLinksArray,
+      dataListCheckBoxes: dataListCheckBoxes,
+    });
+  }
+
   render() {
+    console.log(this.state.selectedLinksArray);
+    const DatasetCheckboxList = [];
+    this.state.sampleDataRegistryArray
+      .forEach((item) => {
+        const name = path.basename(item.name);
+        DatasetCheckboxList.push(
+          <Form.Check
+            key={name}
+            id={name}
+            type="checkbox"
+            checked={this.state.dataListCheckBoxes[item.name]}
+            onChange={(event) => this.handleCheckList(event, item)}
+            label={name}
+          />
+        );
+      });
+
     return (
       <Modal show={this.props.show} onHide={this.handleClose}>
         <Form>
@@ -68,14 +144,19 @@ export default class DataDownloadModal extends React.Component {
           <Modal.Body>
             <Form.Group>
               <Form.Label>
-                Download to:
+                Download All
               </Form.Label>
-              <Form.Control
-                name="downloadDir"
-                type="text"
-                value={''} // empty string is handled better than `undefined`
-                onChange={this.handleDirChange}
+              <Form.Check
+                id="all-sampledata"
+                inline
+                type="checkbox"
+                checked={this.state.allDataCheck}
+                onChange={this.handleCheckAll}
+                name="all-sampledata"
               />
+              <React.Fragment>
+                {DatasetCheckboxList}
+              </React.Fragment>
             </Form.Group>
           </Modal.Body>
           <Modal.Footer>
