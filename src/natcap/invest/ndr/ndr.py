@@ -29,48 +29,41 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "dem_path": {
-            "type": "raster",
-            "required": True,
+            **utils.DEM_ARG,
             "validation_options": {
                 "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing elevation values for "
-                "each cell.  Make sure the DEM is corrected by filling in "
-                "sinks, and if necessary burning hydrographic features into "
-                "the elevation model (recommended when unusual streams are "
-                "observed.) See the Working with the DEM section of the "
-                "InVEST User's Guide for more information."),
-            "name": "DEM"
+            }
         },
         "lulc_path": {
-            "type": "raster",
-            "required": True,
+            **utils.LULC_ARG,
             "validation_options": {
                 "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing integer values "
-                "representing the LULC code for each cell.  The LULC code "
-                "should be an integer."),
-            "name": "Land Use"
+            }
         },
         "runoff_proxy_path": {
             "type": "raster",
             "required": True,
-            "about": (
-                "Weighting factor to nutrient loads.  Internally this value "
-                "is normalized by its average values so a variety of data "
-                "can be used including precipitation or quickflow."),
+            "bands": {1: {
+                "type": "number",
+                "units": None
+            }},
+            "about": ("Map representing the spatial variability in runoff "
+                "potential, i.e. the capacity to transport nutrients "
+                "downstream. This can be a quickflow index (e.g. from the "
+                "InVEST Seasonal Water Yield model) or simply annual "
+                "precipitation. The model will normalize this raster by "
+                "dividing by its average value to compute the runoff "
+                "potential index (RPI)."),
             "name": "Nutrient Runoff Proxy"
         },
         "watersheds_path": {
             "type": "vector",
             "required": True,
             "validation_options": {
-                "required_fields": ['ws_id'],
-                "projected": True,
+                "projected": True
             },
+            "fields": {"ws_id": {"type": "code"}},
+            "geometries": utils.POLYGONS,
             "about": (
                 "A GDAL-supported vector file containing watersheds such "
                 "that each watershed contributes to a point of interest "
@@ -84,13 +77,47 @@ ARGS_SPEC = {
                 "required_fields": ["lucode"],
             },
             "type": "csv",
+            "columns": {
+                "lucode": {"type": "code"},
+                "load_[NUTRIENT]": {
+                    "names": "n for nitrogen, p for phosphorus",
+                    "type": "number", 
+                    "units": "kilograms/hectare/year",
+                    "about": "The nutrient loading for each land use class"},
+                "eff_[NUTRIENT]": {
+                    "names": "n for nitrogen, p for phosphorus",
+                    "type": "ratio",
+                    "about": ("The maximum nutrient retention efficiency for "
+                        "each LULC class. The nutrient retention capacity for "
+                        "a given vegetation type is expressed as a proportion "
+                        "of the amount of nutrient from upstream. For example, "
+                        "high values (0.6 to 0.8) may be assigned to all "
+                        "natural vegetation types (such as forests, natural "
+                        "pastures, wetlands, or prairie), indicating that "
+                        "60-80% of nutrient is retained.")},
+                "crit_len_[NUTRIENT]": {
+                    "names": "n for nitrogen, p for phosphorus",
+                    "type": "number",
+                    "units": "meters",
+                    "about": ("The distance after which it is assumed that a "
+                        "patch of a particular LULC type retains nutrient at "
+                        "its maximum capacity. If nutrients travel a distance "
+                        "smaller than the retention length, the retention "
+                        "efficiency will be less than the maximum value "
+                        "eff_x, following an exponential decay.")},
+                "proportion_subsurface_n": {
+                    "type": "ratio",
+                    "about": ("The proportion of the total amount of nitrogen "
+                        "that are dissolved into the subsurface. By default, "
+                        "this value should be set to 0, indicating that all "
+                        "nutrients are delivered via surface flow. There is "
+                        "no equivalent of this for phosphorus.")}
+            },
             "required": True,
-            "about": (
-                "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input.  It "
-                "must contain the fields 'lucode', 'load_n' (or p), 'eff_n' "
-                "(or p), and 'crit_len_n' (or p) depending on which "
-                "nutrients are selected."),
+            "about": ("A table mapping each LULC class to its biophysical "
+                "properties related to nutrient load and retention. The three "
+                "biophysical properties must be provided for at least one of "
+                "N (nitrogen) and P (phosphorus)."),
             "name": "Biophysical Table"
         },
         "calc_p": {
@@ -110,6 +137,7 @@ ARGS_SPEC = {
                 "expression": "value > 0",
             },
             "type": "number",
+            "units": "pixels",
             "required": True,
             "about": (
                 "The number of upstream cells that must flow into a cell "
@@ -120,6 +148,7 @@ ARGS_SPEC = {
         },
         "k_param": {
             "type": "number",
+            "units": None,
             "required": True,
             "about": (
                 "Calibration parameter that determines the shape of the "
@@ -131,12 +160,13 @@ ARGS_SPEC = {
         },
         "subsurface_critical_length_n": {
             "type": "number",
+            "units": "meters",
             "required": "calc_n",
             "name": "Subsurface Critical Length (Nitrogen)",
             "about": (
                 "The distance (traveled subsurface and downslope) after "
                 "which it is assumed that soil retains nutrient at its "
-                "maximum capacity, given in meters. If dissolved nutrients "
+                "maximum capacity. If dissolved nutrients "
                 "travel a distance smaller than Subsurface Critical Length, "
                 "the retention efficiency will be lower than the Subsurface "
                 "Maximum Retention Efficiency value defined. Setting this "
@@ -146,12 +176,13 @@ ARGS_SPEC = {
         },
         "subsurface_critical_length_p": {
             "type": "number",
+            "units": "meters",
             "required": "calc_p",
             "name": "Subsurface Critical Length (Phosphorous)",
             "about": (
                 "The distance (traveled subsurface and downslope) after "
                 "which it is assumed that soil retains nutrient at its "
-                "maximum capacity, given in meters. If dissolved nutrients "
+                "maximum capacity. If dissolved nutrients "
                 "travel a distance smaller than Subsurface Critical Length, "
                 "the retention efficiency will be lower than the Subsurface "
                 "Maximum Retention Efficiency value defined. Setting this "
@@ -160,24 +191,22 @@ ARGS_SPEC = {
                 "one pixel only."),
         },
         "subsurface_eff_n": {
-            "type": "number",
+            "type": "ratio",
             "required": "calc_n",
             "name": "Subsurface Maximum Retention Efficiency (Nitrogen)",
             "about": (
                 "The maximum nutrient retention efficiency that can be "
-                "reached through subsurface flow, a floating point value "
-                "between 0 and 1. This field characterizes the retention due "
-                "to biochemical degradation in soils."),
+                "reached through subsurface flow. This field characterizes "
+                "the retention due to biochemical degradation in soils."),
         },
         "subsurface_eff_p": {
-            "type": "number",
+            "type": "ratio",
             "required": "calc_p",
             "name": "Subsurface Maximum Retention Efficiency (Phosphorous)",
             "about": (
                 "The maximum nutrient retention efficiency that can be "
-                "reached through subsurface flow, a floating point value "
-                "between 0 and 1. This field characterizes the retention due "
-                "to biochemical degradation in soils."),
+                "reached through subsurface flow. This field characterizes "
+                "the retention due to biochemical degradation in soils."),
         }
     }
 }

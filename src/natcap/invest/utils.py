@@ -85,10 +85,30 @@ METER_RASTER = {
 LULC_ARG = {
     "type": "raster",
     "bands": {1: {"type": "code"}},
+    "required": True,
     "about": (
         "A GDAL-supported raster file containing LULC code "
         "(expressed as integers) for each cell."),
     "name": "land use/land cover"
+}
+
+DEM_ARG = {
+    "type": "raster",
+    "bands": {
+        1: {
+            "type": "number",
+            "units": "meters"
+        }
+    },
+    "required": True,
+    "about": (
+        "A GDAL-supported raster file containing elevation values for "
+        "each cell.  Make sure the DEM is corrected by filling in "
+        "sinks, and if necessary burning hydrographic features into "
+        "the elevation model (recommended when unusual streams are "
+        "observed.) See the Working with the DEM section of the "
+        "InVEST User's Guide for more information."),
+    "name": "digital elevation model"
 }
 
 LINES = {'LINESTRING', 'MULTILINESTRING'}
