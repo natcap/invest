@@ -45,7 +45,4 @@ ipcRenderer.invoke('variable-request')
   // render the App after receiving any critical data
   // from the main process
   render(response.investExe);
-})
-.catch(e => {
-  logger.error("Error rendering the app.");
 });

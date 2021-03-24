@@ -6,9 +6,6 @@ let USER_DATA = '';
 ipcRenderer.invoke('user-data')
 .then(response => {
   USER_DATA = response;
-})
-.catch(e => {
-  console.error("Error processing user data path.");
 });
 
 export const fileRegistry = {

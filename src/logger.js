@@ -10,9 +10,6 @@ if (ipcRenderer) {
   ipcRenderer.invoke('user-data')
   .then(response => {
     userDataPath = response;
-  })
-  .catch(e => {
-    console.error("Error processing user data path.");
   });
 
   ipcRenderer.invoke('is-dev-mode').then((result) => {
