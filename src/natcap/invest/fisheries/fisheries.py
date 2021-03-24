@@ -25,14 +25,17 @@ ARGS_SPEC = {
                 "required_fields": ["NAME"],
             },
             "type": "vector",
+            "fields": {
+                "NAME": {
+                    "type": "freestyle_string", 
+                    "about": "A unique identifier for each area of interest."
+                }
+            },
+            "geometries": utils.POLYGONS,
             "required": False,
             "about": (
                 "A GDAL-supported vector file used to display outputs within "
-                "the region(s) of interest. The layer should contain "
-                "one feature for every region of interest, each feature of "
-                "which should have a 'NAME' attribute.  The 'NAME' "
-                "attribute can be numeric or alphabetic, but must be unique "
-                "within the given file."),
+                "the region(s) of interest."),
             "name": "Area of Interest"
         },
         "total_timesteps": {
@@ -40,6 +43,7 @@ ARGS_SPEC = {
                 "expression": "value > 0",
             },
             "type": "number",
+            "units": None,
             "required": True,
             "about": (
                 "The number of time steps the simulation shall execute "
@@ -109,6 +113,7 @@ ARGS_SPEC = {
         "population_csv_path": {
             "type": "csv",
             "required": "not do_batch",
+            "columns": None,
             "about": (
                 "The provided CSV file should contain all necessary "
                 "attributes for the sub-populations based on lifecycle "
@@ -123,6 +128,12 @@ ARGS_SPEC = {
             "required": "do_batch",
             "validation_options": {
                 "exists": True,
+            },
+            "contents": {
+                "[POP_PARAM_TABLE]": {
+                    "type": "csv",
+                    "columns": None
+                }
             },
             "about": (
                 "The provided CSV folder should contain a set of Population "
@@ -158,6 +169,7 @@ ARGS_SPEC = {
                 "expression": "value > 0",
             },
             "type": "number",
+            "units": None,
             "required": True,
             "about": (
                 "The initial number of recruits in the population model at "
@@ -191,6 +203,7 @@ ARGS_SPEC = {
         },
         "alpha": {
             "type": "number",
+            "units": None,
             "required": False,
             "about": (
                 "Specifies the shape of the stock-recruit curve. Used only "
@@ -201,6 +214,7 @@ ARGS_SPEC = {
         },
         "beta": {
             "type": "number",
+            "units": None,
             "required": False,
             "about": (
                 "Specifies the shape of the stock-recruit curve. Used only "
@@ -209,6 +223,7 @@ ARGS_SPEC = {
         },
         "total_recur_recruits": {
             "type": "number",
+            "units": None,
             "required": False,
             "about": (
                 "Specifies the total number of recruits that come into the "
@@ -228,6 +243,15 @@ ARGS_SPEC = {
             },
             "type": "directory",
             "required": "migr_cont",
+            "contents": {
+                "[MIGRATION_TABLE]": {
+                    "type": "csv",
+                    "columns": {
+                        "Migration": {"type": "freestyle_string"},
+                        "[SOURCE_REGION]": {"type": "freestyle_string"}
+                    }
+                }
+            },
             "about": (
                 "The selected folder contain CSV migration matrices to be "
                 "used in the simulation.  Each CSV file contains a single "
@@ -242,7 +266,7 @@ ARGS_SPEC = {
                 "should contain a decimal fraction indicating the percentage "
                 "of the population that will move from one area to another. "
                 "Each column should sum to one."),
-            "name": "Migration Matrix CSV Folder (Optional)"
+            "name": "Migration Matrix CSV Folder"
         },
         "val_cont": {
             "type": "boolean",
@@ -252,15 +276,16 @@ ARGS_SPEC = {
         },
         "frac_post_process": {
             "validation_options": {},
-            "type": "number",
+            "type": "ratio",
             "required": "val_cont",
             "about": (
-                "Decimal fraction indicating the percentage of harvested "
+                "Proportion of harvested "
                 "catch remaining after post-harvest processing is complete."),
             "name": "Fraction of Harvest Kept After Processing"
         },
         "unit_price": {
             "type": "number",
+            "units": "currency/harvest unit",
             "required": "val_cont",
             "about": (
                 "Specifies the price per harvest unit. If 'Harvest by "

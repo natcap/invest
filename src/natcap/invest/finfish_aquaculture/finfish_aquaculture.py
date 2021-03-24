@@ -25,6 +25,14 @@ ARGS_SPEC = {
                 "numerical identifier for each farm.  File can be "
                 "named anything, but no spaces in the name."),
             "type": "vector",
+            "fields": {
+                "[FARM_ID]": {
+                    "type": "code",
+                    "about": ("A user-defined ID field with a unique integer "
+                        "code identifying each farm geometry.")
+                }
+            },
+            "geometries": {'POLYGON', 'POINT'},
             "required": True,
         },
         "farm_ID": {
@@ -49,6 +57,7 @@ ARGS_SPEC = {
                 "taken for a fish to reach a target harvest weight "
                 "typical for the region of interest is accurate."),
             "type": "number",
+            "units": "g/day",
             "required": True,
         },
         "g_param_b": {
@@ -60,6 +69,7 @@ ARGS_SPEC = {
                 "taken for a fish to reach a target harvest weight "
                 "typical for the region of interest is accurate."),
             "type": "number",
+            "units": "g/day",
             "required": True,
         },
         "g_param_tau": {
@@ -73,6 +83,7 @@ ARGS_SPEC = {
                 "weight typical for the region of interest is "
                 "accurate."),
             "type": "number",
+            "units": "C^-1",
             "required": True,
         },
         "use_uncertainty": {
@@ -88,6 +99,7 @@ ARGS_SPEC = {
                 "This indicates the level of uncertainty in the "
                 "estimate for parameter a."),
             "type": "number",
+            "units": "g/day",
             "required": "use_uncertainty",
         },
         "g_param_b_sd": {
@@ -97,6 +109,7 @@ ARGS_SPEC = {
                 "This indicates the level of uncertainty in the "
                 "estimate for parameter b."),
             "type": "number",
+            "units": "g/day",
             "required": "use_uncertainty",
         },
         "num_monte_carlo_runs": {
@@ -107,12 +120,14 @@ ARGS_SPEC = {
                 "produce more consistent and reliable output, but will "
                 "also take longer to run."),
             "type": "number",
+            "units": "count",
             "required": "use_uncertainty",
         },
         "water_temp_tbl": {
             "name": "Table of Daily Water Temperature at Farm",
             "type": "csv",
             "required": True,
+            "columns": None,
             "about": (
                 "Users must provide a time series of daily water "
                 "temperature (C) for each farm in the vector.  When "
@@ -131,6 +146,7 @@ ARGS_SPEC = {
         "farm_op_tbl": {
             "name": "Farm Operations Table",
             "type": "csv",
+            "columns": None,
             "required": True,
             "about": (
                 "A table of general and farm-specific operations "
@@ -150,6 +166,7 @@ ARGS_SPEC = {
         "outplant_buffer": {
             "name": "Outplant Date Buffer",
             "type": "number",
+            "units": "days",
             "required": True,
             "about": (
                 "This value will allow the outplant start day to "
@@ -163,11 +180,12 @@ ARGS_SPEC = {
             "required": True,
         },
         "p_per_kg": {
-            "name": "Market Price per Kilogram of Processed Fish",
+            "name": "Market Price of Processed Fish",
             "about": (
                 "Default value comes from Urner-Berry monthly fresh "
                 "sheet reports on price of farmed Atlantic salmon."),
             "type": "number",
+            "units": "currency/kilogram",
             "required": "do_valuation",
         },
         "frac_p": {
@@ -176,7 +194,7 @@ ARGS_SPEC = {
                 "Fraction of market price that accounts for costs "
                 "rather than profit.  Default value is 0.3 (30%)."),
             "required": "do_valuation",
-            "type": "number",
+            "type": "ratio",
             "validation_options": {
                 "expression": "(value >= 0) & (value <= 1)",
             }
@@ -187,7 +205,7 @@ ARGS_SPEC = {
                 "We use a 7% annual discount rate, adjusted to a "
                 "daily rate of 0.000192 for 0.0192% (7%/365 days)."),
             "required": "do_valuation",
-            "type": "number",
+            "type": "ratio",
             "validation_options": {
                 "expression": "(value >= 0) & (value <= 1)",
             }

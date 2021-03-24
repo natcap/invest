@@ -270,9 +270,7 @@ ARGS_SPEC = {
         "landcover_transitions_table": {
             "name": "Landcover Transitions Table",
             "type": "csv",
-            "validation_options": {
-                "required_fields": ['lulc-class'],
-            },
+            "required": True,
             "columns": {
                 'lulc-class': {
                     "type": "code",

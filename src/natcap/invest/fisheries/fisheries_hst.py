@@ -36,6 +36,7 @@ ARGS_SPEC = {
         "population_csv_path": {
             "name": "Population Parameters File",
             "type": "csv",
+            "columns": None,
             "required": True,
             "about": (
                 "A CSV file containing all necessary attributes for "
@@ -49,31 +50,41 @@ ARGS_SPEC = {
         "habitat_dep_csv_path": {
             "name": "Habitat Dependency Parameters File",
             "type": "csv",
+            "columns": {
+                "Habitats": {"type": "freestyle_string"},
+                "[AGE_STAGE]": {
+                    "type": "ratio",
+                    "about": ("One column for each life stage or age in the "
+                        "habitat change CSV")
+                }
+            },
             "required": True,
             "about": (
                 "A CSV file containing the habitat dependencies (0-1) "
                 "for each life stage or age and for each habitat type "
-                "included in the Habitat Change CSV File.<br><br>See "
-                "the 'Running the Model >> Habitat Scenario Tool >> "
-                "Habitat Parameters' section in the model's "
-                "documentation for help on how to format this file."),
+                "included in the Habitat Change CSV File."),
         },
         "habitat_chg_csv_path": {
             "name": "Habitat Area Change File",
             "type": "csv",
+            "columns": {
+                "Habitats": {"type": "freestyle_string"},
+                "[SUBREGION]": {
+                    "type": "ratio",
+                    "about": ("For each subregion, the proportion of habitat "
+                        "area gain/loss of each habitat")
+                }
+            },
             "required": True,
             "about": (
                 "A CSV file containing the percent changes in habitat "
                 "area by subregion (if applicable). The habitats "
                 "included should be those which the population depends "
-                "on at any life stage. See the 'Running the "
-                "Model >> Habitat Scenario Tool >> Habitat Parameters' "
-                "section in the model's documentation for help on how "
-                "to format this file."),
+                "on at any life stage."),
         },
         "gamma": {
             "name": "Gamma",
-            "type": "number",
+            "type": "ratio",
             "required": True,
             "validation_options": {
                 "expression": "(value >= 0) & (value <= 1)",
@@ -81,9 +92,7 @@ ARGS_SPEC = {
             "about": (
                 "Gamma describes the relationship between a change in "
                 "habitat area and a change in survival of life stages "
-                "dependent on that habitat.  Specify a value between 0 "
-                "and 1. See the documentation for advice on "
-                "selecting a gamma value."),
+                "dependent on that habitat."),
         }
     }
 }

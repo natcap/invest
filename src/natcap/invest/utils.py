@@ -49,6 +49,13 @@ AREA = {
     "geometries": {"POLYGON", "MULTIPOLYGON"}
 }
 
+PROJECTED_AREA = {
+    **AREA,
+    "validation_options": {
+        "projected": True
+    }
+}
+
 DISTANCE = {
     "type": "number", 
     "units": "meters",
@@ -68,6 +75,8 @@ METER_RASTER = {
 }
 
 LINES = {'LINESTRING', 'MULTILINESTRING'}
+POLYGONS = {'POLYGON', 'MULTIPOLYGON'}
+ALL_GEOMS = {'LINESTRING', 'POLYGON', 'POINT'}
 
 
 @contextlib.contextmanager

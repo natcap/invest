@@ -100,16 +100,16 @@ ARGS_SPEC = {
                         "[CROP]_regression_yield_table.csv": {
                             "type": "csv",
                             "columns": {
-                                'climate_bin':
-                                'yield_ceiling', 
-                                'b_nut', 
-                                'b_k2o', 
-                                'c_n', 
-                                'c_p2o5',
-                                'c_k2o', 
-                                'yield_ceiling_rf'
+                                'climate_bin': {"type": "code"},
+                                'yield_ceiling': {"type": "number", "units": "?"}, 
+                                'b_nut': {"type": "number", "units": "?"}, 
+                                'b_k2o': {"type": "number", "units": "?"}, 
+                                'c_n': {"type": "number", "units": "?"}, 
+                                'c_p2o5': {"type": "number", "units": "?"}, 
+                                'c_k2o': {"type": "number", "units": "?"}, 
+                                'yield_ceiling_rf': {"type": "number", "units": "?"}
                             }
-                        },
+                        }
                     }
                 },
                 "crop_nutrient.csv": {

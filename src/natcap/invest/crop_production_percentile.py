@@ -50,8 +50,7 @@ ARGS_SPEC = {
         "landcover_to_crop_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "code"}
+                "lucode": {"type": "code"},
                 "crop_name": {
                     "type": "option_string",
                     "options": [
@@ -146,25 +145,18 @@ ARGS_SPEC = {
                 "crop_nutrient.csv": {
                     "type": "csv",
                     "columns": {
-                        'Protein', 
-                        'Lipid', 
-                        'Energy', 
-                        'Ca', 
-                        'Fe', 
-                        'Mg', 
-                        'Ph', 
-                        'K', 
-                        'Na', 
-                        'Zn',
-                        'Cu', 
-                        'Fl', 
-                        'Mn', 
-                        'Se', 'VitA', 'betaC', 'alphaC', 'VitE', 'Crypto',
-                        'Lycopene', 'Lutein', 'betaT', 'gammaT', 'deltaT', 'VitC', 'Thiamin',
-                        'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
-                        'VitK'
+                        nutrient: {
+                        "type": "number", "units": "?"
+                        } for nutrient in [
+                            'Protein', 'Lipid', 'Energy', 'Ca', 'Fe', 'Mg', 'Ph', 
+                            'K', 'Na', 'Zn', 'Cu', 'Fl', 'Mn', 
+                            'Se', 'VitA', 'betaC', 'alphaC', 'VitE', 'Crypto',
+                            'Lycopene', 'Lutein', 'betaT', 'gammaT', 'deltaT', 'VitC', 'Thiamin',
+                            'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
+                            'VitK'
+                        ]
                     }
-                }
+                }  
             },
             "required": True,
             "validation_options": {

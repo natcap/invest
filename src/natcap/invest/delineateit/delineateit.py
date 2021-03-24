@@ -39,6 +39,7 @@ ARGS_SPEC = {
                 "projected": True,
             },
             "type": "raster",
+            "bands": {1: {"type": "number", "units": "meters"}},
             "required": True,
             "about": (
                 "A GDAL-supported raster file with an elevation value for "
@@ -55,6 +56,8 @@ ARGS_SPEC = {
         },
         "outlet_vector_path": {
             "type": "vector",
+            "fields": {},
+            "geometries": utils.ALL_GEOMS,
             "required": "not detect_pour_points",
             "about": (
                 "This is a layer of geometries representing watershed "
@@ -75,6 +78,7 @@ ARGS_SPEC = {
                 "expression": "value > 0",
             },
             "type": "number",
+            "units": "pixels",
             "required": "snap_points",
             "about": (
                 "The number of upstream cells that must flow into a cell "
@@ -88,6 +92,7 @@ ARGS_SPEC = {
                 "expression": "value > 0",
             },
             "type": "number",
+            "units": "pixels",
             "required": "snap_points",
             "about": (
                 "If provided, the maximum search radius in pixels to look "

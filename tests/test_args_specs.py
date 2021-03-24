@@ -5,34 +5,45 @@ import unittest
 class ValidateArgsSpecs(unittest.TestCase):
 
     valid_types = {
-        'number', 
-        'ratio', 
+        'number',
+        'ratio',
         'percent',
-        'code', 
-        'freestyle_string', 
-        'option_string', 
-        'boolean', 
-        'raster', 
-        'vector', 
-        'csv', 
-        'file', 
+        'code',
+        'freestyle_string',
+        'option_string',
+        'boolean',
+        'raster',
+        'vector',
+        'csv',
+        'file',
         'directory'
     }
 
 
 
 
+
     def validate(self, arg, valid_types=valid_types):
 
-        valid_raster_band_types = {'number', 'code'}
-        valid_vector_field_types = {'freestyle_string'}
-        valid_csv_data_types = {'number', 'ratio', 'percent', 'code', 'boolean',
+        valid_raster_band_types = {'number', 'code', 'ratio'}
+        valid_vector_field_types = {
+            'freestyle_string',
+            'number',
+            'code',
+            'option_string',
+            'percent',
+            'ratio'}
+        valid_csv_data_types = {
+            'number', 'ratio', 'percent', 'code', 'boolean',
             'freestyle_string', 'option_string', 'raster', 'vector'}
-        valid_directory_path_types = {'raster', 'vector', 'csv', 'file'}
+        valid_directory_path_types = {'raster', 'vector', 'csv', 'file', 'directory'}
 
-        # the arg should have a 'type' property
-        self.assertTrue('type' in arg)
+        # optional_attrs = ['validation_options']
+        # required_attrs = ['type', 'required', 'about', 'name']
 
+        # self.assertEqual(type(arg['name']), str)
+        # self.assertEqual(type(arg['about']), str)
+        # self.assertEqual(type(arg['required']), bool)
         self.assertTrue(arg['type'] in valid_types)
 
         if arg['type'] == 'number':
@@ -40,14 +51,12 @@ class ValidateArgsSpecs(unittest.TestCase):
             if arg['units'] is not None:
                 self.assertEqual(type(arg['units']), str)
 
-
         elif arg['type'] == 'raster':
             self.assertTrue('bands' in arg)
             self.assertEqual(type(arg['bands']), dict)
             for band in arg['bands']:
                 self.assertTrue(isinstance(band, int))
                 self.validate(arg['bands'][band], valid_types=valid_raster_band_types)
-
             
         elif arg['type'] == 'vector':
             self.assertTrue('fields' in arg)
@@ -55,28 +64,32 @@ class ValidateArgsSpecs(unittest.TestCase):
             for field in arg['fields']:
                 self.assertTrue(isinstance(field, str))
                 self.validate(arg['fields'][field], valid_types=valid_vector_field_types)
-            
+
+            self.assertTrue('geometries' in arg)
+            self.assertEqual(type(arg['geometries']), set)
 
         elif arg['type'] == 'csv':
             hasRows = 'rows' in arg
             hasCols = 'columns' in arg
-            self.assertTrue(hasRows or hasCols and not (hasRows and hasCols))
-            self.assertEqual(type(arg['columns']), dict)
-            for column in arg['columns']:
-                self.assertTrue(isinstance(column, str))
-                self.validate(arg['columns'][column], valid_types=valid_csv_data_types)
+            self.assertTrue(hasRows or hasCols and not (hasRows and hasCols),
+                arg)
 
+            # may be None if the table is too complex to define this way
+            if arg['columns'] is not None:
+                self.assertEqual(type(arg['columns']), dict)
+                for column in arg['columns']:
+                    self.assertTrue(isinstance(column, str))
+                    self.validate(arg['columns'][column], valid_types=valid_csv_data_types)
 
         elif arg['type'] == 'directory':
             self.assertTrue('contents' in arg)
             self.assertEqual(type(arg['contents']), dict)
             for path in arg['contents']:
-                self.assertTrue(isinstance(column, str))
+                self.assertTrue(isinstance(path, str))
                 self.validate(arg['contents'][path], valid_types=valid_directory_path_types)
 
 
-    def test_carbon(self):
-        from natcap.invest import carbon
+    def test_model_specs(self):
 
         model_names = [
             'carbon',
@@ -111,8 +124,18 @@ class ValidateArgsSpecs(unittest.TestCase):
         for model_name in model_names:
             model = importlib.import_module(f'natcap.invest.{model_name}')
             print(model_name)
+
+            # validate that each arg meets the expected pattern
             for arg in model.ARGS_SPEC['args'].values():
                 print(f'    {arg["name"]}')
+
+                # attributes that are required at the top level but not 
+                # necessarily in nested levels
+                required_attrs = ['name', 'about', 'required', 'type']
+                for attr in required_attrs:
+                    self.assertTrue(attr in arg,
+                    f'Missing attribute "{attr}" at the top level')
+
                 self.validate(arg)
 
 

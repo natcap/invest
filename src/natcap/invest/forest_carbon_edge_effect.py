@@ -74,7 +74,7 @@ ARGS_SPEC = {
             "required": True,
             "columns": {
                 "lucode": {"type": "code"},
-                "is_tropical_forest": {},
+                "is_tropical_forest": {"type": "boolean"},
                 "c_above": {
                     "type": "number",
                     "units": "megagrams/hectare"
@@ -94,11 +94,11 @@ ARGS_SPEC = {
                     "units": "megagrams/hectare",
                     "required": "pools_to_calculate == 'all'"
                 },
-            }
+            },
             "about": (
                 "A CSV table containing model information corresponding to "
                 "each of the land use classes in the LULC raster input.  "
-                " If the user selects 'all carbon pools' the "
+                "If the user selects 'all carbon pools' the "
                 "table must also contain entries for 'c_below', 'c_soil', "
                 "and 'c_dead'.  See the InVEST Forest Carbon User's Guide "
                 "for more information about these fields."),
@@ -156,7 +156,7 @@ ARGS_SPEC = {
                 "theta2": {"type": "number", "units": None},
                 "theta3": {"type": "number", "units": None}
             },
-            "geometries": utils.POLYGON,
+            "geometries": utils.POLYGONS,
             "required": "compute_forest_edge_effects",
             "about": (
                 "A vector with fields 'method', 'theta1', 'theta2', "
