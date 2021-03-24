@@ -151,7 +151,7 @@
       node2.appendChild(text2)
     })
     .catch(e => {
-        logger.error("Error processing versions for About page");
+        logger.error(e.message);
     });
 
     function handleClick(event) {

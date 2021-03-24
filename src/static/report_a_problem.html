@@ -40,7 +40,7 @@
       userDataPath = response;
     })
     .catch(e => {
-        logger.error("Error processing user data path.");
+        logger.error(e.message);
     });
 
     logger.debug('PROBLEM REPORT: process dump');
