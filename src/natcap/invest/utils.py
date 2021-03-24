@@ -56,6 +56,14 @@ PROJECTED_AREA = {
     }
 }
 
+METER_PROJECTED_AREA = {
+    **AREA,
+    "validation_options": {
+        "projected": True,
+        "projection_units": "m"
+    }
+}
+
 DISTANCE = {
     "type": "number", 
     "units": "meters",
@@ -72,6 +80,15 @@ METER_RASTER = {
             "units": "meters"
         }
     }
+}
+
+LULC_ARG = {
+    "type": "raster",
+    "bands": {1: {"type": "code"}},
+    "about": (
+        "A GDAL-supported raster file containing LULC code "
+        "(expressed as integers) for each cell."),
+    "name": "land use/land cover"
 }
 
 LINES = {'LINESTRING', 'MULTILINESTRING'}

@@ -81,10 +81,44 @@ ARGS_SPEC = {
                 "The `STRESSOR BUFFER (meters)` column should have a buffer "
                 "value if the `TYPE` column is a stressor."),
             "type": "csv",
+            "columns": {
+                "NAME": {
+                    "type": "freestyle_string",
+                    "about": "A unique name for each habitat/stressor input"
+                },
+                "PATH": {
+                    "type": {"vector", "raster"},
+                    "bands": {1: {
+                        "type": "number",
+                        "units": None, 
+                        "about": ("Pixel values are 1, indicating presence of "
+                            "the habitat/stressor, or 0 indicating absence. "
+                            "Any values besides 0 or 1 will be treated as 0.")
+                        }
+                    },
+                    "fields": {},
+                    "geometries": utils.POLYGONS
+                },
+                "TYPE": {
+                    "type": "option_string",
+                    "options": ["habitat", "stressor"]
+                },
+                "STRESSOR BUFFER (METERS)": {
+                    "type": "number",
+                    "units": "meters",
+                    "about": ("The desired buffer distance used to expand a "
+                        "given stressor’s influence or footprint. This should "
+                        "be left blank for habitats, but must not be blank for "
+                        "stressors. Enter 0 if no buffering is desired for a "
+                        "given stressor. The model will round down this buffer "
+                        "distance to the nearest cell unit. e.g., a buffer "
+                        "distance of 600m will buffer a stressor’s footprint "
+                        "by two grid cells if the resolution of analysis is 250m.")
+                }
+            },
             "required": True,
             "validation_options": {
-                "required_fields": ["NAME", "PATH", "TYPE", _BUFFER_HEADER],
-                "excel_ok": True,
+                "excel_ok": True
             }
         },
         "criteria_table_path": {
@@ -94,6 +128,7 @@ ARGS_SPEC = {
                 "ranking  (rating, DQ and weight) of each stressor on each "
                 "habitat, as well as the habitat resilience attributes."),
             "type": "csv",
+            "columns": None,
             "validation_options": {
                 "excel_ok": True,
             },
@@ -106,6 +141,7 @@ ARGS_SPEC = {
                 "stressor files into rasters. This value will be the pixel "
                 "size of the completed raster files."),
             "type": "number",
+            "units": "meters",
             "required": True,
             "validation_options": {
                 "expression": "value > 0",
@@ -119,6 +155,7 @@ ARGS_SPEC = {
                 "with the values within Rating column of the Criteria Scores "
                 "table."),
             "type": "number",
+            "units": None,
             "required": True,
             "validation_options": {
                 "expression": "value > 0",
@@ -150,22 +187,18 @@ ARGS_SPEC = {
             }
         },
         "aoi_vector_path": {
+            **utils.METER_PROJECTED_AREA,
             "name": "Area of Interest",
             "about": (
                 "A GDAL-supported vector file containing feature containing "
                 "one or more planning regions. subregions. An optional field "
                 "called `name` could be added to compute average risk values "
                 "within each subregion."),
-            "type": "vector",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-                "projection_units": "m",
-            }
+            "required": True
         },
         "visualize_outputs": {
             "name": "Generate GeoJSONs for Web Visualization",
-            "help": (
+            "about": (
                 "Check to enable the generation of GeoJSON outputs. This "
                 "could be used to visualize the risk scores on a map in the "
                 "HRA visualization web application."),

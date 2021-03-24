@@ -25,68 +25,65 @@ class ValidateArgsSpecs(unittest.TestCase):
 
     def validate(self, arg, valid_types=valid_types):
 
-        valid_raster_band_types = {'number', 'code', 'ratio'}
-        valid_vector_field_types = {
-            'freestyle_string',
-            'number',
-            'code',
-            'option_string',
-            'percent',
-            'ratio'}
-        valid_csv_data_types = {
-            'number', 'ratio', 'percent', 'code', 'boolean',
-            'freestyle_string', 'option_string', 'raster', 'vector'}
-        valid_directory_path_types = {'raster', 'vector', 'csv', 'file', 'directory'}
+        valid_nested_types = {
+            'raster': {'number', 'code', 'ratio'},
+            'vector': {'freestyle_string', 'number', 'code', 'option_string',
+                'percent', 'ratio'},
+            'csv': {'number', 'ratio', 'percent', 'code', 'boolean',
+                'freestyle_string', 'option_string', 'raster', 'vector'},
+            'directory': {'raster', 'vector', 'csv', 'file', 'directory'}
+        }
 
-        # optional_attrs = ['validation_options']
-        # required_attrs = ['type', 'required', 'about', 'name']
 
-        # self.assertEqual(type(arg['name']), str)
-        # self.assertEqual(type(arg['about']), str)
-        # self.assertEqual(type(arg['required']), bool)
-        self.assertTrue(arg['type'] in valid_types)
+        allowed_attrs = ['name', 'about', 'required', 'type', 'validation_options']
+        # arg['type'] can be either a string or a set of strings
+        types = arg['type'] if isinstance(arg['type'], set) else [arg['type']]
 
-        if arg['type'] == 'number':
-            self.assertTrue('units' in arg)
-            if arg['units'] is not None:
-                self.assertEqual(type(arg['units']), str)
+        for t in types:
+            self.assertTrue(t in valid_types, f'{t} is an invalid type\n{arg}')
 
-        elif arg['type'] == 'raster':
-            self.assertTrue('bands' in arg)
-            self.assertEqual(type(arg['bands']), dict)
-            for band in arg['bands']:
-                self.assertTrue(isinstance(band, int))
-                self.validate(arg['bands'][band], valid_types=valid_raster_band_types)
-            
-        elif arg['type'] == 'vector':
-            self.assertTrue('fields' in arg)
-            self.assertEqual(type(arg['fields']), dict)
-            for field in arg['fields']:
-                self.assertTrue(isinstance(field, str))
-                self.validate(arg['fields'][field], valid_types=valid_vector_field_types)
+            if t == 'number':
+                self.assertTrue('units' in arg)
+                if arg['units'] is not None:
+                    self.assertEqual(type(arg['units']), str)
 
-            self.assertTrue('geometries' in arg)
-            self.assertEqual(type(arg['geometries']), set)
+            elif t == 'raster':
+                self.assertTrue('bands' in arg)
+                self.assertEqual(type(arg['bands']), dict)
+                for band in arg['bands']:
+                    self.assertTrue(isinstance(band, int))
+                    self.validate(arg['bands'][band], valid_types=valid_nested_types['raster'])
+                
+            elif t == 'vector':
+                self.assertTrue('fields' in arg)
+                self.assertEqual(type(arg['fields']), dict)
+                for field in arg['fields']:
+                    self.assertTrue(isinstance(field, str))
+                    self.validate(arg['fields'][field], valid_types=valid_nested_types['vector'])
 
-        elif arg['type'] == 'csv':
-            hasRows = 'rows' in arg
-            hasCols = 'columns' in arg
-            self.assertTrue(hasRows or hasCols and not (hasRows and hasCols),
-                arg)
+                self.assertTrue('geometries' in arg)
+                self.assertEqual(type(arg['geometries']), set)
 
-            # may be None if the table is too complex to define this way
-            if arg['columns'] is not None:
-                self.assertEqual(type(arg['columns']), dict)
-                for column in arg['columns']:
-                    self.assertTrue(isinstance(column, str))
-                    self.validate(arg['columns'][column], valid_types=valid_csv_data_types)
+            elif t == 'csv':
+                has_rows = 'rows' in arg
+                has_cols = 'columns' in arg
+                self.assertTrue(has_rows or has_cols and not (has_rows and has_cols),
+                    arg)
 
-        elif arg['type'] == 'directory':
-            self.assertTrue('contents' in arg)
-            self.assertEqual(type(arg['contents']), dict)
-            for path in arg['contents']:
-                self.assertTrue(isinstance(path, str))
-                self.validate(arg['contents'][path], valid_types=valid_directory_path_types)
+                # may be None if the table is too complex to define this way
+                if arg['columns'] is not None:
+                    self.assertEqual(type(arg['columns']), dict)
+                    for column in arg['columns']:
+                        self.assertTrue(isinstance(column, str))
+                        self.validate(arg['columns'][column], valid_types=valid_nested_types['csv'])
+
+            elif t == 'directory':
+                self.assertTrue('contents' in arg)
+                self.assertEqual(type(arg['contents']), dict)
+                for path in arg['contents']:
+                    self.assertTrue(isinstance(path, str))
+                    self.validate(arg['contents'][path], 
+                        valid_types=valid_nested_types['directory'])
 
 
     def test_model_specs(self):
@@ -106,7 +103,7 @@ class ValidateArgsSpecs(unittest.TestCase):
             'globio',
             'habitat_quality',
             'hra',
-            'hydropower',
+            'hydropower.hydropower_water_yield',
             'ndr.ndr',
             'pollination',
             'recreation.recmodel_client',
@@ -143,10 +140,3 @@ class ValidateArgsSpecs(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-                
-
-
-
-
-
-
