@@ -48,11 +48,10 @@ ARGS_SPEC = {
             "name": "Land-Use/Land-Cover Map"
         },
         "landcover_to_crop_table_path": {
-            "validation_options": {
-                "required_fields": ["crop_name", "lucode"],
-            },
             "type": "csv",
             "columns": {
+                "lucode": {
+                    "type": "code"}
                 "crop_name": {
                     "type": "option_string",
                     "options": [
@@ -88,47 +87,16 @@ ARGS_SPEC = {
                         "vanilla", "vegetablenes", "vegfor", "vetch", "walnut", "watermelon",
                         "wheat", "yam", "yautia"
                     ]
-                },
-                "lucode": {"type": "code"}
-            }
+                }
+            },
             "required": True,
             "about": (
-                "A CSV table mapping canonical crop names to land use codes "
-                "contained in the landcover/use raster.   The allowed crop "
-                "names are abaca", "agave, alfalfa, almond, aniseetc, apple, "
-                "apricot, areca, artichoke, asparagus, avocado, bambara, "
-                "banana, barley, bean, beetfor, berrynes, blueberry, brazil, "
-                "broadbean, buckwheat, cabbage, cabbagefor, canaryseed, "
-                "carob, carrot, carrotfor, cashew, cashewapple, cassava, "
-                "castor, cauliflower, cerealnes, cherry, chestnut, chickpea, "
-                "chicory, chilleetc, cinnamon, citrusnes, clove, clover, "
-                "cocoa, coconut, coffee, cotton, cowpea, cranberry, "
-                "cucumberetc, currant, date, eggplant, fibrenes, fig, flax, "
-                "fonio, fornes, fruitnes, garlic, ginger, gooseberry, grape, "
-                "grapefruitetc, grassnes, greenbean, greenbroadbean, "
-                "greencorn, greenonion, greenpea, groundnut, hazelnut, hemp, "
-                "hempseed, hop, jute, jutelikefiber, kapokfiber, kapokseed, "
-                "karite, kiwi, kolanut, legumenes, lemonlime, lentil, "
-                "lettuce, linseed, lupin, maize, maizefor, mango, mate, "
-                "melonetc, melonseed, millet, mixedgrain, mixedgrass, "
-                "mushroom, mustard, nutmeg, nutnes, oats, oilpalm, "
-                "oilseedfor, oilseednes, okra, olive, onion, orange, papaya, "
-                "pea, peachetc, pear, pepper, peppermint, persimmon, "
-                "pigeonpea, pimento, pineapple, pistachio, plantain, plum, "
-                "poppy, potato, pulsenes, pumpkinetc, pyrethrum, quince, "
-                "quinoa, ramie, rapeseed, rasberry, rice, rootnes, rubber, "
-                "rye, ryefor, safflower, sesame, sisal, sorghum, sorghumfor, "
-                "sourcherry, soybean, spicenes, spinach, stonefruitnes, "
-                "strawberry, stringbean, sugarbeet, sugarcane, sugarnes, "
-                "sunflower, swedefor, sweetpotato, tangetc, taro, tea, "
-                "tobacco, tomato, triticale, tropicalnes, tung, turnipfor, "
-                "vanilla, vegetablenes, vegfor, vetch, walnut, watermelon, "
-                "wheat, yam, and yautia."),
+                "A CSV table mapping canonical crop names to the land use "
+                "codes in the landcover/use raster."),
             "name": "Landcover to Crop Table"
         },
         "aggregate_polygon_path": {
-            "type": "vector",
-            "fields": {},
+            **utils.AREA,
             "required": False,
             "validation_options": {
                 "projected": True,
@@ -202,13 +170,8 @@ ARGS_SPEC = {
             "validation_options": {
                 "exists": True,
             },
-            "about": (
-                "A path to the InVEST Crop Production Data directory. These "
-                "data would have been included with the InVEST installer if "
-                "selected, or can be manually downloaded from "
-                "http://releases.naturalcapitalproject.org/.  If downloaded "
-                "with InVEST, the default value should be used."),
-            "name": "Directory to model data"
+            "about": "Path to the InVEST Crop Production Data directory",
+            "name": "model data directory"
         }
     }
 }

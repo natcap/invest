@@ -30,10 +30,18 @@ ARGS_SPEC = {
                 "in a raster, as well as to indicate whether or not "
                 "the lulc class is a coastal blue carbon habitat."),
             "required": True,
-            "validation_options": {
-                "required_fields": ["lulc-class", "code",
-                                    "is_coastal_blue_carbon_habitat"]
-            },
+            "columns": {
+                "code": {
+                    "type": "code",
+                    "about": "LULC code"},
+                "lulc-class" : {
+                    "type": "freestyle_string",
+                    "about": "Text description of the LULC class"}, 
+                "is_coastal_blue_carbon_habitat": {
+                    "type": "boolean",
+                    "about": ("Enter TRUE if this LULC class is a coastal "
+                        "blue carbon habitat, FALSE if not")}
+            }
         },
         "landcover_snapshot_csv": {
             "validation_options": {
@@ -41,6 +49,21 @@ ARGS_SPEC = {
             },
             "type": "csv",
             "required": True,
+            "columns": {
+                "snapshot_year": {
+                    "type": "number",
+                    "units": "years",
+                    "about": "Year to snapshot"},
+                "raster_path": {
+                    "type": "raster",
+                    "bands": {
+                        1: {
+                            "type": "code",
+                            "about": "Map of LULC codes"
+                        }
+                    }
+                }
+            },
             "about": (
                 "A CSV table where each row represents the year and path "
                 "to a raster file on disk representing the landcover raster "

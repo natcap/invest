@@ -58,13 +58,11 @@ ARGS_SPEC = {
                     ]
                 },
                 "lucode": {"type": "code"}
-            }
+            },
             "required": True,
             "about": (
                 "A CSV table mapping canonical crop names to land use codes "
-                "contained in the landcover/use raster.   The allowed crop "
-                "names are barley, maize, oilpalm, potato, rice, soybean, "
-                "sugarbeet, sugarcane, sunflower, and wheat."),
+                "contained in the landcover/use raster."),
             "name": "Landcover to Crop Table"
         },
         "fertilization_rate_table_path": {
@@ -77,15 +75,12 @@ ARGS_SPEC = {
             },
             "required": True,
             "about": (
-                "A table that maps fertilization rates to crops in the "
-                "simulation.  Must include the headers 'crop_name', "
-                "'nitrogen_rate',  'phosphorous_rate', and "
-                "'potassium_rate'."),
+                "A table that maps crops to fertilization rates for nitrogen, "
+                "phosphorus, and potassium."),
             "name": "Fertilization Rate Table Path"
         },
         "aggregate_polygon_path": {
-            "type": "vector",
-            "fields": {},
+            **utils.AREA,
             "required": False,
             "about": (
                 "A polygon vector containing features with which to "
@@ -120,23 +115,16 @@ ARGS_SPEC = {
                 "crop_nutrient.csv": {
                     "type": "csv",
                     "columns": {
-                        'Protein', 
-                        'Lipid', 
-                        'Energy', 
-                        'Ca', 
-                        'Fe', 
-                        'Mg', 
-                        'Ph', 
-                        'K', 
-                        'Na', 
-                        'Zn',
-                        'Cu', 
-                        'Fl', 
-                        'Mn', 
-                        'Se', 'VitA', 'betaC', 'alphaC', 'VitE', 'Crypto',
-                        'Lycopene', 'Lutein', 'betaT', 'gammaT', 'deltaT', 'VitC', 'Thiamin',
-                        'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
-                        'VitK'
+                        nutrient: {
+                            "type": "number", "units": "?"
+                        } for nutrient in [
+                            'Protein', 'Lipid', 'Energy', 'Ca', 'Fe', 'Mg', 'Ph', 
+                            'K', 'Na', 'Zn', 'Cu', 'Fl', 'Mn', 
+                            'Se', 'VitA', 'betaC', 'alphaC', 'VitE', 'Crypto',
+                            'Lycopene', 'Lutein', 'betaT', 'gammaT', 'deltaT', 'VitC', 'Thiamin',
+                            'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
+                            'VitK'
+                        ]
                     }
                 }
             },

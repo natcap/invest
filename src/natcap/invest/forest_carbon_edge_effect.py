@@ -43,6 +43,7 @@ ARGS_SPEC = {
                 "expression": "int(value) > 0",
             },
             "type": "number",
+            "units": None,
             "required": "compute_forest_edge_effects",
             "about": (
                 "Used when calculating the biomass in a pixel.  This number "
@@ -54,10 +55,10 @@ ARGS_SPEC = {
             "name": "Number of nearest model points to average"
         },
         "aoi_vector_path": {
+            **utils.AREA,
             "validation_options": {
                 "projected": True,
             },
-            "type": "vector",
             "required": False,
             "about": (
                 "This is a set of polygons that will be used to aggregate "
@@ -71,11 +72,33 @@ ARGS_SPEC = {
             },
             "type": "csv",
             "required": True,
+            "columns": {
+                "lucode": {"type": "code"},
+                "is_tropical_forest": {},
+                "c_above": {
+                    "type": "number",
+                    "units": "megagrams/hectare"
+                },
+                "c_below": {
+                    "type": "number",
+                    "units": "megagrams/hectare",
+                    "required": "pools_to_calculate == 'all'"
+                },
+                "c_soil": {
+                    "type": "number",
+                    "units": "megagrams/hectare",
+                    "required": "pools_to_calculate == 'all'"
+                },
+                "c_dead": {
+                    "type": "number",
+                    "units": "megagrams/hectare",
+                    "required": "pools_to_calculate == 'all'"
+                },
+            }
             "about": (
                 "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input.  It "
-                "must contain the fields 'lucode', 'is_tropical_forest', "
-                "'c_above'.  If the user selects 'all carbon pools' the "
+                "each of the land use classes in the LULC raster input.  "
+                " If the user selects 'all carbon pools' the "
                 "table must also contain entries for 'c_below', 'c_soil', "
                 "and 'c_dead'.  See the InVEST Forest Carbon User's Guide "
                 "for more information about these fields."),
@@ -83,6 +106,7 @@ ARGS_SPEC = {
         },
         "lulc_raster_path": {
             "type": "raster",
+            "bands": {1: {"type": "code"}},
             "required": True,
             "validation_options": {
                 "projected": True,
@@ -120,6 +144,19 @@ ARGS_SPEC = {
                 "required_fields": ["method", "theta1", "theta2", "theta3"],
             },
             "type": "vector",
+            "fields": {
+                "method": {
+                    "type": "number",
+                    "units": None,
+                    "validation_options": {
+                        "expression": "value in {1, 2, 3}"
+                    }
+                },
+                "theta1": {"type": "number", "units": None},
+                "theta2": {"type": "number", "units": None},
+                "theta3": {"type": "number", "units": None}
+            },
+            "geometries": utils.POLYGON,
             "required": "compute_forest_edge_effects",
             "about": (
                 "A vector with fields 'method', 'theta1', 'theta2', "
@@ -128,7 +165,7 @@ ARGS_SPEC = {
             "name": "Global forest carbon edge regression models"
         },
         "biomass_to_carbon_conversion_factor": {
-            "type": "number",
+            "type": "ratio",
             "required": "compute_forest_edge_effects",
             "about": (
                 "Number by which to scale forest edge biomass to convert to "

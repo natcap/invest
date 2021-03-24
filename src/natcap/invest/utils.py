@@ -43,6 +43,32 @@ GDAL_ERROR_LEVELS = {
 # leaves Projected CRS alone
 DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
+AREA = {
+    "type": "vector",
+    "fields": {},
+    "geometries": {"POLYGON", "MULTIPOLYGON"}
+}
+
+DISTANCE = {
+    "type": "number", 
+    "units": "meters",
+    "validation_options": {
+        "expression": "value >= 0"
+    }
+}
+
+METER_RASTER = {
+    "type": "raster",
+    "bands": {
+        1: {
+            "type": "number", 
+            "units": "meters"
+        }
+    }
+}
+
+LINES = {'LINESTRING', 'MULTILINESTRING'}
+
 
 @contextlib.contextmanager
 def capture_gdal_logging():
