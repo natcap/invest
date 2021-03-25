@@ -144,47 +144,51 @@ const createWindow = async () => {
 
   // Setup handlers & defaults to manage downloads.
   // Specifically, invest sample data downloads
-  // mainWindow.webContents.session.setDownloadPath(app.getPath('userData'));
+  let downloadDir;
   ipcMain.on('download-url', async (event, urlArray, directory) => {
-    const promises = [];
     logger.debug(`${urlArray}`);
-    logger.debug(directory);
-    // urlArray.forEach((url) => mainWindow.webContents.downloadURL(url));
-    urlArray.forEach((url) => {
-      promises.push(download(mainWindow, url, {
-        directory: directory,
-      }).then((item) => {
-        console.log(item.getSavePath());
-        // extractZipInplace(item.getSavePath());
-      }));
-    });
-    await Promise.all(promises);
-    console.log('all promises resolved');
+    downloadDir = directory;
+    urlArray.forEach((url) => mainWindow.webContents.downloadURL(url));
+    // const promises = urlArray.map((url) => {
+    //   download(mainWindow, url, {
+    //     directory: directory,
+    //     onCompleted: (item) => {
+    //       console.log(`dl complete: ${JSON.stringify(item)}`);
+    //     },
+    //   });
+    // });
+    // const filepaths = await Promise.all(promises);
+    // logger.debug(`after promise.all ${filepaths}`);
   });
 
-  // mainWindow.webContents.session.on('will-download', (event, item, webContents) => {
-  //   item.on('updated', (event, state) => {
-  //     if (state === 'interrupted') {
-  //       logger.info('download interrupted');
-  //     } else if (state === 'progressing') {
-  //       if (item.isPaused()) {
-  //         logger.info('download paused');
-  //       } else {
-  //         logger.info(`Received bytes: ${item.getReceivedBytes()}`);
-  //       }
-  //     }
-  //   });
-  //   item.once('done', (event, state) => {
-  //     if (state === 'completed') {
-  //       logger.info('download completed');
-  //       logger.debug(item.savePath);
-  //       extractZipInplace(item.savePath);
-  //       // mainWindow.webContents.send('sampledata-update', path.dirname(item.savePath));
-  //     } else {
-  //       logger.info(`download failed: ${state}`);
-  //     }
-  //   });
-  // });
+  // mainWindow.webContents.session.setDownloadPath(directory);
+  mainWindow.webContents.session.on('will-download', (event, item, webContents) => {
+    const filename = item.getFilename();
+    item.setSavePath(path.join(downloadDir, filename));
+    logger.debug(`getURL ${item.getURL()}`);
+    item.on('updated', (event, state) => {
+      if (state === 'interrupted') {
+        logger.info('download interrupted');
+      } else if (state === 'progressing') {
+        if (item.isPaused()) {
+          logger.info('download paused');
+        } else {
+          logger.info(`${item.getSavePath()}`);
+          logger.info(`Received bytes: ${item.getReceivedBytes()}`);
+        }
+      }
+    });
+    item.once('done', (event, state) => {
+      if (state === 'completed') {
+        logger.info('download completed');
+        logger.debug(item.savePath);
+        extractZipInplace(item.savePath);
+        // mainWindow.webContents.send('sampledata-update', path.dirname(item.savePath));
+      } else {
+        logger.info(`download failed: ${state}`);
+      }
+    });
+  });
 };
 
 // Single instance lock so subsequent instances of the application redirect to

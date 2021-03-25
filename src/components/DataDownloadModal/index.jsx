@@ -79,7 +79,6 @@ export default class DataDownloadModal extends React.Component {
       { properties: ['openDirectory'] }
       // { defaultPath: this.props.defaultTargetPath }
     );
-    console.log(data);
     if (data.filePaths.length) {
       if (this.state.allDataCheck) {
         ipcRenderer.send('download-url', [allDataURL], data.filePaths[0]);
