@@ -1,4 +1,4 @@
-import { remote } from 'electron';
+import { ipcRenderer } from 'electron';
 import React from 'react';
 import {
   createEvent, fireEvent, render, waitFor, within
@@ -157,7 +157,7 @@ describe('Arguments form interactions', () => {
     // Browsing for a file
     const filepath = 'grilled_cheese.csv';
     let mockDialogData = { filePaths: [filepath] };
-    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     fireEvent.click(await findByText('Browse'));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
@@ -165,7 +165,7 @@ describe('Arguments form interactions', () => {
 
     // Browse again, but cancel it and expect the previous value
     mockDialogData = { filePaths: [] }; // empty array is a mocked 'Cancel'
-    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     fireEvent.click(await findByText('Browse'));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);

@@ -32,10 +32,17 @@
     const { shell, ipcRenderer } = require('electron');
     const { getLogger } = require('../logger');
     const logger = getLogger(__filename.split('/').slice(-1)[0]);
-    ipcRenderer.on('variable-reply', (event, arg) => {
-      userDataPath = arg.userDataPath;
+
+    let userDataPath;
+
+    ipcRenderer.invoke('user-data')
+    .then(response => {
+      userDataPath = response;
+    })
+    .catch(e => {
+        logger.error(e.message);
     });
-    ipcRenderer.send('variable-request', 'ping');
+
     logger.debug('PROBLEM REPORT: process dump');
     logger.debug(JSON.stringify(process, null, 2));
 

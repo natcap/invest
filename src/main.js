@@ -14,6 +14,8 @@ const {
   screen,
   nativeTheme,
   Menu,
+  MenuItem,
+  dialog,
 } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const {
   getFlaskIsReady, shutdownPythonProcess
@@ -59,8 +61,36 @@ const createWindow = async () => {
     workbenchVersion: pkg.version,
     userDataPath: app.getPath('userData'),
   };
-  ipcMain.on('variable-request', (event, arg) => {
-    event.reply('variable-reply', mainProcessVars);
+  ipcMain.handle('show-context-menu', (event, rightClickPos) => {
+    const template = [
+      {
+        label: 'Inspect Element',
+        click: () => {
+          BrowserWindow.fromWebContents(event.sender).inspectElement(rightClickPos.x, rightClickPos.y)
+        }
+      },
+    ]
+    const menu = Menu.buildFromTemplate(template);
+    menu.popup( BrowserWindow.fromWebContents(event.sender));
+  });
+  ipcMain.handle('variable-request', async (event) => {
+    return mainProcessVars;
+  });
+  ipcMain.handle('show-open-dialog', async (event, arg) => {
+    const result = await dialog.showOpenDialog(arg);
+    return result;
+  });
+  ipcMain.handle('show-save-dialog', async (event, arg) => {
+    const result = await dialog.showSaveDialog(arg);
+    return result;
+  });
+  ipcMain.handle('is-dev-mode', async (event) => {
+    const result = ELECTRON_DEV_MODE;
+    return result;
+  });
+  ipcMain.handle('user-data', async (event) => {
+    const result = await mainProcessVars.userDataPath;
+    return result;
   });
 
   // Wait for a response from the server before loading the app
@@ -90,7 +120,7 @@ const createWindow = async () => {
   );
   Menu.setApplicationMenu(menubar);
   mainWindow.loadURL(`file://${__dirname}/index.html`);
-
+  
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();
     // We should be able to hide mainWindow until it's ready,
@@ -111,7 +141,7 @@ const createWindow = async () => {
       mainWindow.webContents.openDevTools();
     }
   });
-
+  
   // Emitted when the window is closed.
   mainWindow.on('closed', async () => {
     // Dereference the window object, usually you would store windows

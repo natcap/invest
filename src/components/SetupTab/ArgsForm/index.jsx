@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { remote } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import Form from 'react-bootstrap/Form';
 
@@ -116,7 +116,7 @@ export default class ArgsForm extends React.Component {
     const { name, value } = event.target; // the arg's key and type
     const prop = (value === 'directory') ? 'openDirectory' : 'openFile';
     // TODO: could add more filters based on argType (e.g. only show .csv)
-    const data = await remote.dialog.showOpenDialog({ properties: [prop] });
+    const data = await ipcRenderer.invoke('show-open-dialog', { properties: [prop] });
     if (data.filePaths.length) {
       this.props.updateArgValues(name, data.filePaths[0]); // dialog defaults allow only 1 selection
     }
