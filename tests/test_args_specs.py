@@ -108,7 +108,7 @@ class ValidateArgsSpecs(unittest.TestCase):
             'pollination',
             'recreation.recmodel_client',
             'routedem',
-            'scenic_quality.sceniq_quality',
+            'scenic_quality.scenic_quality',
             'scenario_gen_proximity',
             'sdr.sdr',
             'seasonal_water_yield.seasonal_water_yield',

@@ -49,18 +49,38 @@ AREA = {
     "geometries": {"POLYGON", "MULTIPOLYGON"}
 }
 
-PROJECTED_AREA = {
-    **AREA,
+PROJECTED = {
     "validation_options": {
         "projected": True
     }
 }
 
-METER_PROJECTED_AREA = {
-    **AREA,
+METER_PROJECTED = {
     "validation_options": {
         "projected": True,
         "projection_units": "m"
+    }
+}
+
+PROJECTED_AREA = {
+    **AREA,
+    **PROJECTED
+}
+
+METER_PROJECTED_AREA = {
+    **AREA,
+    **METER_PROJECTED
+}
+
+GT_0 = {
+    "validation_options": {
+        "expression": "value > 0"
+    }
+}
+
+GTE_0 = {
+    "validation_options": {
+        "expression": "value >= 0"
     }
 }
 
@@ -80,6 +100,18 @@ METER_RASTER = {
             "units": "meters"
         }
     }
+}
+
+AOI_ARG = {
+    **AREA,
+    "name": "area of interest",
+    "required": True,
+    "about": (
+        "A GDAL-supported vector file.  This AOI instructs "
+        "the model where to clip the input data and the extent "
+        "of analysis.  Users will create a polygon feature "
+        "layer that defines their area of interest.  The AOI "
+        "must intersect the Digital Elevation Model (DEM)."),
 }
 
 LULC_ARG = {
@@ -109,6 +141,19 @@ DEM_ARG = {
         "observed.) See the Working with the DEM section of the "
         "InVEST User's Guide for more information."),
     "name": "digital elevation model"
+}
+
+ETO_ARG = {
+    "name": "Reference Evapotranspiration Raster",
+    "type": "raster",
+    "bands": {
+        1: {
+            "type": "number",
+            "units": "millimeters"
+        }
+    },
+    "required": True,
+    "about": "A map of evapotranspiration values"
 }
 
 LINES = {'LINESTRING', 'MULTILINESTRING'}

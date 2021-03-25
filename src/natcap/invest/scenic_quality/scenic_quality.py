@@ -56,20 +56,39 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
-        "aoi_path": {
-            "name": "Area of Interest",
-            "type": "vector",
-            "required": True,
-            "about": (
-                "A GDAL-supported vector file.  This AOI instructs "
-                "the model where to clip the input data and the extent "
-                "of analysis.  Users will create a polygon feature "
-                "layer that defines their area of interest.  The AOI "
-                "must intersect the Digital Elevation Model (DEM)."),
-        },
+        "aoi_path": utils.AOI_ARG,
         "structure_path": {
             "name": "Features Impacted Scenic Quality",
             "type": "vector",
+            "geometries": {"POINT"},
+            "fields": {
+                "RADIUS": {
+                    "type": "number",
+                    "units": "meters",
+                    "required": False,
+                    "about": ("RADIUS preferred, but may also be called RADIUS2 "
+                        "for backwards compatibility. Maximum length of the line "
+                        "of sight originating from a viewpoint. The value can "
+                        "either be positive (preferred) or negative (kept for backwards "
+                        "compatibility), but is converted to a positive number. If the "
+                        "field doesn’t exist, the model will include all pixels in the "
+                        "DEM in the visibility analysis.")},
+                "WEIGHT": {
+                    "type": "number",
+                    "units": None,
+                    "required": False,
+                    "about": ("Viewshed importance coefficient: The user can assign an "
+                        "importance to each viewshed by scaling them with a real number "
+                        "(either positive or negative) stored in the field “WEIGHT”. "
+                        "The model assumes a weight of 1.0 if the field doesn’t exist.")},
+                "HEIGHT": {
+                    "type": "number",
+                    "units": "meters",
+                    "required": False,
+                    "about": ("Viewpoint height: Each feature's elevation above the ground "
+                        "can be specified as a positive real number. The default value is "
+                        "0 if the field doesn’t exist.")}
+            },
             "required": True,
             "about": (
                 "A GDAL-supported vector file.  The user must specify "
@@ -78,16 +97,11 @@ ARGS_SPEC = {
                 "such as aquaculture netpens or wave energy "
                 "facilities.  In order for the viewshed analysis to "
                 "run correctly, the projection of this input must be "
-                "consistent with the project of the DEM input."),
+                "consistent with the projection of the DEM input."),
         },
         "dem_path": {
-            "name": "Digital Elevation Model",
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters",
-            },
+            **utils.DEM_ARG,
+            **utils.METER_PROJECTED,
             "about": (
                 "A GDAL-supported raster file.  An elevation raster "
                 "layer is required to conduct viewshed analysis. "
@@ -97,7 +111,7 @@ ARGS_SPEC = {
         },
         "refraction": {
             "name": "Refractivity Coefficient",
-            "type": "number",
+            "type": "ratio",
             "required": True,
             "validation_options": {
                 "expression": "(value >= 0) & (value <= 1)",
@@ -139,18 +153,21 @@ ARGS_SPEC = {
         "a_coef": {
             "name": "'a' Coefficient",
             "type": "number",
+            "units": None,
             "required": "do_valuation",
             "about": ("First coefficient used by the valuation function"),
         },
         "b_coef": {
             "name": "'a' Coefficient",
             "type": "number",
+            "units": None,
             "required": "do_valuation",
             "about": ("Second coefficient used by the valuation function"),
         },
         "max_valuation_radius": {
             "name": "Maximum Valuation Radius",
             "type": "number",
+            "units": "meters",
             "required": False,
             "validation_options": {
                 "expression": "value > 0",

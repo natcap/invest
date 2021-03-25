@@ -30,16 +30,13 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "base_lulc_path": {
-            "validation_options": {
-                "projected": True,
-            },
-            "type": "raster",
-            "required": True,
+            **utils.LULC_ARG,
+            **utils.PROJECTED,
             "about": "Path to the base landcover map",
             "name": "Base Land Use/Cover"
         },
         "replacment_lucode": {
-            "type": "number",
+            "type": "code",
             "required": True,
             "about": "Code to replace when converting pixels",
             "name": "Replacement Landcover Code"
@@ -49,8 +46,9 @@ ARGS_SPEC = {
                 "expression": "value > 0",
             },
             "type": "number",
+            "units": "hectares",
             "required": True,
-            "about": "Max area (Ha) to convert",
+            "about": "Max area to convert",
             "name": "Max area to convert"
         },
         "focal_landcover_codes": {
@@ -86,6 +84,7 @@ ARGS_SPEC = {
                 "expression": "value > 0",
             },
             "type": "number",
+            "units": None,
             "required": True,
             "about": (
                 "This parameter is used to divide the conversion simulation "
@@ -96,15 +95,12 @@ ARGS_SPEC = {
             "name": "Number of Steps in Conversion"
         },
         "aoi_path": {
-            "type": "vector",
+            **utils.AOI_ARG,
+            **utils.PROJECTED,
             "required": False,
-            "validation_options": {
-                "projected": True,
-            },
             "about": (
                 "This is a set of polygons that will be used to aggregate "
                 "carbon values at the end of the run if provided."),
-            "name": "Area of interest"
         },
         "convert_farthest_from_edge": {
             "type": "boolean",

@@ -143,12 +143,12 @@ ARGS_SPEC = {
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
-            "units": "currency",
+            "units": "currency/ton",
             "required": "do_valuation",
             "about": (
                 "Is the present value of carbon per metric ton. Used if "
                 "``args['do_valuation']`` is present and True."),
-            "name": "Price/Metric ton of carbon"
+            "name": "price of carbon"
         },
         "discount_rate": {
             "type": "ratio",

@@ -21,20 +21,13 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
-        "dem_path": {
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A GDAL-supported raster file containing a base Digital "
-                "Elevation Model to execute the routing functionality "
-                "across."),
-            "name": "Digital Elevation Model"
-        },
+        "dem_path": utils.DEM_ARG,
         "dem_band_index": {
             "validation_options": {
                 "expression": "value >= 1",
             },
             "type": "number",
+            "units": None,
             "required": False,
             "about": (
                 "The band index to use from the raster. This positive "
@@ -62,7 +55,6 @@ ARGS_SPEC = {
             "name": "Calculate Flow Direction"
         },
         "calculate_flow_accumulation": {
-            "validation_options": {},
             "type": "boolean",
             "required": False,
             "about": "Select to calculate flow accumulation.",
@@ -75,8 +67,11 @@ ARGS_SPEC = {
             "name": "Calculate Stream Thresholds"
         },
         "threshold_flow_accumulation": {
-            "validation_options": {},
+            "validation_options": {
+                "expression": "value >= 0"
+            },
             "type": "number",
+            "units": "pixels",
             "required": "calculate_stream_threshold",
             "about": (
                 "The number of upstream cells that must flow into a cell "

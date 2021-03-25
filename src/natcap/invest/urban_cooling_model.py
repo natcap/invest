@@ -38,13 +38,8 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "lulc_raster_path": {
-            "name": "Land Use / Land Cover Raster",
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-                "projection_units": "m",
-            },
+            **utils.LULC_ARG,
+            **utils.METER_PROJECTED,
             "about": (
                 "A GDAL-supported raster file containing integer values "
                 "representing the LULC code for each cell.  The LULC code "
@@ -56,32 +51,40 @@ ARGS_SPEC = {
                 "which may have 30% canopy cover."
             )
         },
-        "ref_eto_raster_path": {
-            "name": "Reference Evapotranspiration Raster",
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A GDAL-supported raster file containing numeric values "
-                "representing the evapotranspiration (in mm) for the period "
-                "of interest."
-            )
-        },
-        "aoi_vector_path": {
-            "name": "Area of Interest Vector",
-            "type": "vector",
-            "required": True,
-            "about": (
-                "A GDAL-compatible vector delineating areas of interest "
-                "(city or neighborhood boundaries).  Results will be "
-                "aggregated within each feature in this vector."
-            )
-        },
+        "ref_eto_raster_path": utils.ETO_ARG,
+        "aoi_vector_path": utils.AOI_ARG,
         "biophysical_table_path": {
             "name": "Biophysical Table",
             "type": "csv",
             "required": True,
             "validation_options": {
                 "required_fields": ["lucode", "kc", "green_area"],
+            },
+            "columns": {
+                "lucode": {"type": "code"},
+                "kc": {"type": "number", "units": None, "about": "Crop coefficient"},
+                "green_area": {
+                    "type": "boolean",
+                    "about": ("A value of either 0 or 1, 1 meaning that the LULC is "
+                        "counted as a green area (green areas larger than 2ha have an "
+                        "additional cooling effect), and 0 meaning that the LULC is "
+                        "not counted as a green area.")},
+                "shade":  {
+                    "type": "ratio",
+                    "required": "cc_method == factors",
+                    "about": ("The proportion of tree cover (0 for no tree; 1 for "
+                        "full tree cover; with trees>2m).")},
+                "albedo": {
+                    "type": "ratio",
+                    "required": "cc_method == factors",
+                    "about": ("The proportion of solar radiation directly reflected by "
+                        "the LULC type. Required if using the weighted factor approach "
+                        "to Cooling Coefficient calculations.")},
+                "building_intensity": {
+                    "type": "ratio",
+                    "required": "cc_method == intensity",
+                    "about": ("The ratio of building floor area to footprint area, "
+                        "normalized between 0 and 1.")}
             },
             "about": (
                 "A CSV table containing model information corresponding "
@@ -91,24 +94,22 @@ ARGS_SPEC = {
             ),
         },
         "green_area_cooling_distance": {
-            "name": "Green area max cooling distance effect (m)",
+            "name": "Green area max cooling distance effect",
             "type": "number",
+            "units": "meters",
             "required": True,
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "about": (
-                "Distance (in m) over which large green areas (> 2 ha) "
+                "Distance over which green areas larger than 2 hectares "
                 "will have a cooling effect."
             ),
         },
         "t_air_average_radius": {
             "name": "T_air moving average radius (m)",
             "type": "number",
+            "units": "meters",
             "required": True,
-            "validation_options": {
-                "expression": "value > 0"
-            },
+            **utils.GT_0,
             "about": (
                 "Radius of the averaging filter for turning T_air_nomix "
                 "into T_air")
@@ -116,6 +117,7 @@ ARGS_SPEC = {
         "t_ref": {
             "name": "Reference Air Temperature",
             "type": "number",
+            "units": "degrees celsius",
             "required": True,
             "about": (
                 "Rural reference temperature (where the urban heat island"
@@ -127,10 +129,10 @@ ARGS_SPEC = {
         "uhi_max": {
             "name": "Magnitude of the UHI effect",
             "type": "number",
+            "units": "degrees celsius",
             "required": True,
             "about": (
-                "The magnitude of the urban heat island effect, in degrees "
-                "C.  Example: the difference between the rural reference "
+                "The magnitude of the urban heat island effect,  Example: the difference between the rural reference "
                 "temperature and the maximum temperature observed in the "
                 "city."
             ),
@@ -148,8 +150,8 @@ ARGS_SPEC = {
             "about": "Select to run the work productivity valuation model."
         },
         "avg_rel_humidity": {
-            "name": "Average relative humidity (0-100%)",
-            "type": "number",
+            "name": "Average relative humidity",
+            "type": "percent",
             "required": "do_productivity_valuation",
             "validation_options": {
                 "expression": "(value >= 0) and (value <= 100)",
@@ -162,10 +164,9 @@ ARGS_SPEC = {
         "building_vector_path": {
             "name": "Buildings vector",
             "type": "vector",
+            "fields": {"type": {"type": "code"}},
+            "geometries": utils.POLYGONS,
             "required": "do_energy_valuation",
-            "validation_options": {
-                "required_fields": ["type"],
-            },
             "about": (
                 "A GDAL-compatible vector with built infrastructure "
                 "footprints.  The attribute table must contain the column "
@@ -177,6 +178,36 @@ ARGS_SPEC = {
         "energy_consumption_table_path": {
             "name": "Energy consumption table",
             "type": "csv",
+            "columns": {
+                "type": {
+                    "type": "code",
+                    "about": "building type codes matching those in the building vector"
+                },
+                "consumption": {
+                    "type": "number",
+                    "units": "kWh/degC/𝑚2",
+                    "about": ("Energy consumption by footprint area for each building type."
+                        "This consumption value must be adjusted for the average number of "
+                        "stories that structures of this type will have.")
+                },
+                "RH": {
+                    "type": "percent",
+                    "required": False,
+                    "about": ("Average relative humidity during the period of interest, "
+                        "which is used to calculate the wet bulb globe temperature for "
+                        "the work productivity module.")
+                },
+                "cost": {
+                    "type": "number",
+                    "units": "currency/kwh",
+                    "required": False,
+                    "about": ("The cost of electricity for each building type. If this "
+                        "column is provided in the Energy Consumption table, the energy_sav "
+                        "field in the output vector buildings_with_stats.shp will be in "
+                        "monetary units rather than kWh. This column is very likely to be "
+                        "the same for all building types.")
+                }
+            },
             "required": "do_energy_valuation",
             "validation_options": {
                 "required_fields": ["type", "consumption"],
@@ -206,11 +237,9 @@ ARGS_SPEC = {
         },
         "cc_weight_shade": {
             "name": "Cooling capacity: adjust shade weight",
-            "type": "number",
+            "type": "ratio",
             "required": False,
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "about": (
                 "The relative weight to apply to shade when calculating the "
                 "cooling index.  Default: 0.6"
@@ -218,11 +247,9 @@ ARGS_SPEC = {
         },
         "cc_weight_albedo": {
             "name": "Cooling capacity: adjust albedo weight",
-            "type": "number",
+            "type": "ratio",
             "required": False,
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "about": (
                 "The relative weight to apply to albedo when calculating the "
                 "cooling index.  Default: 0.2"
@@ -230,11 +257,9 @@ ARGS_SPEC = {
         },
         "cc_weight_eti": {
             "name": "Cooling capacity: adjust evapotranspiration weight",
-            "type": "number",
+            "type": "ratio",
             "required": False,
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "about": (
                 "The relative weight to apply to ETI when calculating the "
                 "cooling index.  Default: 0.2"
