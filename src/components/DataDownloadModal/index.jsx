@@ -73,7 +73,20 @@ export default class DataDownloadModal extends React.Component {
     const allDataURL = path.join(
       this.props.releaseDataURL, 'InVEST_3.9.0.post235+g296690d7_sample_data.zip'
     );
-    ipcRenderer.send('download-url', allDataURL);
+    // even though the idea is to save files, here we just want to chooose
+    // a directory, so must use OpenDialog.
+    const data = await remote.dialog.showOpenDialog(
+      { properties: ['openDirectory'] }
+      // { defaultPath: this.props.defaultTargetPath }
+    );
+    console.log(data);
+    if (data.filePaths.length) {
+      if (this.state.allDataCheck) {
+        ipcRenderer.send('download-url', [allDataURL], data.filePaths[0]);
+      } else {
+        ipcRenderer.send('download-url', this.state.selectedLinksArray, data.filePaths[0]);
+      }
+    }
   }
 
   handleCheckAll(event) {
