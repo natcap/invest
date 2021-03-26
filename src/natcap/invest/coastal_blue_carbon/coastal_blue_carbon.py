@@ -102,6 +102,7 @@ import scipy.sparse
 import taskgraph
 from osgeo import gdal
 
+from ..utils import u
 from .. import utils
 from .. import validation
 
@@ -159,7 +160,7 @@ ARGS_SPEC = {
             "type": "csv",
             "required": False,
             "columns": {
-                "snapshot_year": {"type": "number", "units": "years"},
+                "snapshot_year": {"type": "number", "units": u.year},
                 "raster_path": {
                     "type": "raster", 
                     "bands": {1: {"type": "code"}}
@@ -176,7 +177,7 @@ ARGS_SPEC = {
         },
         "analysis_year": {
             "type": "number",
-            "units": "years",
+            "units": u.year,
             "required": False,
             "name": "Analysis Year",
             "about": (
@@ -199,22 +200,22 @@ ARGS_SPEC = {
                         "rasters to represent this landcover class.")},
                 "biomass-initial": {
                     "type": "number",
-                    "units": "megatonnes/hectare",
+                    "units": u.megatonne/u.hectare,
                     "about": ("the initial carbon stocks in the biomass "
                         "pool for this landcover classification")},
                 "soil-initial": {
                     "type": "number",
-                    "units": "megatonnes/hectare",
+                    "units": u.megatonne/u.hectare,
                     "about": ("the initial carbon stocks in the soil "
                         "pool for this landcover classification")},
                 "litter-initial": {
                     "type": "number",
-                    "units": "megatonnes/hectare",
+                    "units": u.megatonne/u.hectare,
                     "about": ("the initial carbon stocks in the litter "
                         "pool for this landcover classification")},
                 "biomass-half-life": {
                     "type": "number",
-                    "units": "years",
+                    "units": u.year,
                     "about": ("the half-life of carbon in the biomass pool.")},
                 "biomass-low-impact-disturb": {
                     "type": "ratio",
@@ -233,12 +234,12 @@ ARGS_SPEC = {
                         "this landcover class in a high-impact disturbance.")},
                 "biomass-yearly-accumulation": {
                     "type": "number",
-                    "units": "megatonnes/hectare/year",
+                    "units": u.megatonne/u.hectare/u.year,
                     "about": ("the annual rate of CO2E accumulation in "
                         "the biomass pool.")},
                 "soil-half-life": {
                     "type": "number",
-                    "units": "years",
+                    "units": u.year,
                     "about": ("the half-life of carbon in the soil pool.")},
                 "soil-low-impact-disturb": {
                     "type": "ratio",
@@ -257,11 +258,11 @@ ARGS_SPEC = {
                         "this landcover class in a high-impact disturbance.")},
                 "soil-yearly-accumulation": {
                     "type": "number",
-                    "units": "megatonnes/hectare/year",
+                    "units": u.megatonne/u.hectare/u.year,
                     "about": ("Annual rate of CO2E accumulation in the soil pool.")},
                 "litter-yearly-accumulation": {
                     "type": "number",
-                    "units": "megatonnes/hectare/year",
+                    "units": u.megatonne/u.hectare/u.year,
                     "about": ("Annual rate of CO2E accumulation in "
                         "the litter pool.")}
             },
@@ -323,12 +324,12 @@ ARGS_SPEC = {
         "price": {
             "name": "Price",
             "type": "number",
-            "units": "currency/megatonne",
+            "units": u.currency/u.megatonne,
             "required": "do_economic_analysis and (not use_price_table)",
             "about": "The price of CO2E at the base year.",
         },
         "inflation_rate": {
-            "name": "Interest Rate (%)",
+            "name": "Interest Rate",
             "type": "percent",
             "required": "do_economic_analysis and (not use_price_table)",
             "about": "Annual change in the price per unit of carbon.",
@@ -340,11 +341,11 @@ ARGS_SPEC = {
             "columns": {
                 "year": {
                     "type": "number", 
-                    "units": "years",
+                    "units": u.year,
                     "about": "Each year from the snapshot year to analysis year"},
                 "price": {
                     "type": "number", 
-                    "units": "currency/megatonne",
+                    "units": u.currency/u.megatonne,
                     "about": "Price of CO2E in that year"}
             },
             "about": (
@@ -352,7 +353,7 @@ ARGS_SPEC = {
                 "and interest rate inputs."),
         },
         "discount_rate": {
-            "name": "Discount Rate (%)",
+            "name": "Discount Rate",
             "type": "percent",
             "required": "do_economic_analysis",
             "about": (

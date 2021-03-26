@@ -14,6 +14,7 @@ import shapely.wkb
 import taskgraph
 import pygeoprocessing
 
+from .utils import u
 from . import utils
 from . import validation
 
@@ -105,7 +106,7 @@ ARGS_SPEC = {
                 },
                 "STRESSOR BUFFER (METERS)": {
                     "type": "number",
-                    "units": "meters",
+                    "units": u.meter,
                     "about": ("The desired buffer distance used to expand a "
                         "given stressor’s influence or footprint. This should "
                         "be left blank for habitats, but must not be blank for "
@@ -141,7 +142,7 @@ ARGS_SPEC = {
                 "stressor files into rasters. This value will be the pixel "
                 "size of the completed raster files."),
             "type": "number",
-            "units": "meters",
+            "units": u.meter,
             "required": True,
             "validation_options": {
                 "expression": "value > 0",
@@ -157,9 +158,7 @@ ARGS_SPEC = {
             "type": "number",
             "units": None,
             "required": True,
-            "validation_options": {
-                "expression": "value > 0",
-            }
+            **utils.GT_0
         },
         "risk_eq": {
             "name": "Risk Equation",
@@ -187,13 +186,19 @@ ARGS_SPEC = {
             }
         },
         "aoi_vector_path": {
-            **utils.METER_PROJECTED_AREA,
-            "name": "Area of Interest",
+            **utils.AOI_ARG,
+            **utils.METER_PROJECTED,
+            "fields": {
+                "name": {
+                    "required": False,
+                    "type": "freestyle_string",
+                    "about": ("Uniquely identifies each feature. Required if the "
+                        "vector contains more than one feature.")
+                }
+            },
             "about": (
                 "A GDAL-supported vector file containing feature containing "
-                "one or more planning regions. subregions. An optional field "
-                "called `name` could be added to compute average risk values "
-                "within each subregion."),
+                "one or more planning regions or subregions."),
             "required": True
         },
         "visualize_outputs": {

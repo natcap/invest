@@ -22,6 +22,7 @@ from osgeo import osr
 
 import taskgraph
 import pygeoprocessing
+from .utils import u
 from . import validation
 from . import utils
 
@@ -47,11 +48,11 @@ ARGS_SPEC = {
             "columns": {
                 "LONG": {
                     "type": "number",
-                    "units": "decimal degrees"
+                    "units": u.degree
                 },
                 "LATI": {
                     "type": "number",
-                    "units": "decimal degrees"
+                    "units": u.degree
                 },
                 "LAM": {
                     "type": "number",
@@ -65,7 +66,7 @@ ARGS_SPEC = {
                 },
                 "REF": {
                     "type": "number",
-                    "units": "meters",
+                    "units": u.meter,
                     "about": ("The reference height at which wind speed data was collected and LAM was estimated")
                 }
             },
@@ -94,7 +95,7 @@ ARGS_SPEC = {
         },
         "bathymetry_path": {
             "type": "raster",
-            "bands": {1: {"type": "number", "units": "meters"}},
+            "bands": {1: {"type": "number", "units": u.meter}},
             "required": True,
             "about": (
                 "A GDAL-supported raster file containing elevation values "
@@ -124,7 +125,7 @@ ARGS_SPEC = {
             "rows": {
                 "air_density": {
                     "type": "number", 
-                    "units": "kg/m^3", 
+                    "units": u.kilogram/(u.meter**3),
                     "about": "standard atmosphere air density"},
                 "exponent_power_curve": {
                     "type": "number", 
@@ -138,26 +139,26 @@ ARGS_SPEC = {
                 "operation_maintenance_cost": {"type": "ratio"},
                 "miscellaneous_capex_cost": {"type": "ratio"},
                 "installation_cost": {"type": "ratio"},
-                "infield_cable_length": {"type": "number", "units": "kilometers"},
-                "infield_cable_cost": {"type": "number", "units": "millions of $/kilometer"},
+                "infield_cable_length": {"type": "number", "units": u.kilometer},
+                "infield_cable_cost": {"type": "number", "units": u.million_dollars},
                 "mw_coef_ac": {"type": "number", "units": "?"},
                 "mw_coef_dc": {"type": "number", "units": "?"},
                 "cable_coef_ac": {"type": "number", "units": "?"},
                 "cable_coef_dc": {"type": "number", "units": "?"},
                 "ac_dc_distance_break": {
                     "type": "number",
-                    "units": "kilometers",
+                    "units": u.kilometer,
                     "about": ("The threshold above which a wind farm’s distance from "
                         "the grid requires a switch from AC to DC power to overcome "
                         "line losses which reduce the amount of energy delivered")},
                 "time_period": {
                     "type": "number",
-                    "units": "years",
+                    "units": u.year,
                     "about": "The expected lifetime of the facility"},
                 "carbon_coefficient": {"type": "number", "units": "?"},
                 "air_density_coefficient": {
                     "type": "number",
-                    "units": "kg/m^3/m",
+                    "units": u.kilogram/(u.meter**3 * u.meter),
                     "about": "The reduction in air density per meter above sea level"},
                 "loss_parameter": {
                     "type": "ratio",
@@ -179,27 +180,27 @@ ARGS_SPEC = {
             "columns": {
                 "hub_height": {
                     "type": "number",
-                    "units": "meters",
+                    "units": u.meter,
                     "about": "Height of the turbine hub above sea level"},
                 "cut_in_wspd": {
                     "type": "number",
-                    "units": "meters/second",
+                    "units": u.meter/u.second,
                     "about": "Wind speed at which the turbine begins producing power"},
                 "rated_wspd": {
                     "type": "number",
-                    "units": "meters/second",
+                    "units": u.meter/u.second,
                     "about": "Minimum wind speed at which the turbine reaches its rated power output"},
                 "cut_out_wspd": {
                     "type": "number",
-                    "units": "meters/second",
+                    "units": u.meter/u.second,
                     "about": "Wind speed above which the turbine stops generating power for safety reasons"},
                 "turbine_rated_pwr": {
                     "type": "number",
-                    "units": "kilowatts",
+                    "units": u.kilowatt,
                     "about": "The turbine's rated power output"},
                 "turbine_cost": {
                     "type": "number",
-                    "units": "millions of dollars",
+                    "units": u.million_dollars,
                     "about": "The cost of one turbine"}
             },
             "about": (
@@ -216,7 +217,7 @@ ARGS_SPEC = {
         "number_of_turbines": {
             **utils.GT_0,
             "type": "number",
-            "units": None,
+            "units": u.count,
             "required": True,
             "about": "An integer value indicating the number of wind turbines"
                      " per wind farm.",
@@ -224,7 +225,7 @@ ARGS_SPEC = {
         },
         "min_depth": {
             "type": "number",
-            "units": "meters",
+            "units": u.meter,
             "required": True,
             "about": (
                 "A floating point value in meters for the minimum depth of "
@@ -234,7 +235,7 @@ ARGS_SPEC = {
         },
         "max_depth": {
             "type": "number",
-            "units": "meters",
+            "units": u.meter,
             "required": True,
             "about": (
                 "A floating point value in meters for the maximum depth of "
@@ -244,7 +245,7 @@ ARGS_SPEC = {
         },
         "min_distance": {
             "type": "number",
-            "units": "meters",
+            "units": u.meter,
             "required": "valuation_container",
             "about": (
                 "A floating point value in meters that represents the "
@@ -255,7 +256,7 @@ ARGS_SPEC = {
         },
         "max_distance": {
             "type": "number",
-            "units": "meters",
+            "units": u.meter,
             "required": "valuation_container",
             "about": (
                 "A floating point value in meters that represents the "
@@ -272,7 +273,7 @@ ARGS_SPEC = {
         },
         "foundation_cost": {
             "type": "number",
-            "units": "millions of dollars",
+            "units": u.million_dollars,
             "required": "valuation_container",
             "about": (
                 "A floating point number for the unit cost of the foundation "
@@ -306,12 +307,12 @@ ARGS_SPEC = {
                 },
                 "lati": {
                     "type": "number",
-                    "units": "decimal degrees",
+                    "units": u.degree,
                     "about": "latitude of the connection point"
                 },
                 "long": {
                     "type": "number",
-                    "units": "decimal degrees",
+                    "units": u.degree,
                     "about": "longitude of the connection point"
                 }
             },
@@ -332,7 +333,7 @@ ARGS_SPEC = {
         "avg_grid_distance": {
             **utils.GT_0,
             "type": "number",
-            "units": "kilometers",
+            "units": u.kilometer,
             "required": "valuation_container & (not grid_points_path)",
             "about": (
                 "A number in kilometres that is only used if grid points are "
@@ -359,12 +360,12 @@ ARGS_SPEC = {
             "columns": {
                 "year": {
                     "type": "number",
-                    "units": "years",
+                    "units": u.year,
                     "about": "Consecutive years for each year in the lifespan of the wind farm"
                 },
                 "price": {
                     "type": "number",
-                    "units": "currency/kilowatt-hours",
+                    "units": u.currency/u.kilowatt_hour,
                     "about": "Price of energy for each year"
                 }
             },
@@ -389,7 +390,7 @@ ARGS_SPEC = {
         },
         "wind_price": {
             "type": "number",
-            "units": "currency/kilowatt-hour",
+            "units": u.currency/u.kilowatt_hour,
             "required": "valuation_container & (not price_table)",
             "about": (
                 "The price of energy per kilowatt hour.  This is the price "

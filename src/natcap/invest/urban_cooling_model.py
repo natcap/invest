@@ -17,6 +17,7 @@ import shapely.wkb
 import shapely.prepared
 import rtree
 
+from .utils import u
 from . import validation
 from . import utils
 
@@ -94,22 +95,18 @@ ARGS_SPEC = {
             ),
         },
         "green_area_cooling_distance": {
+            **utils.DISTANCE,
             "name": "Green area max cooling distance effect",
-            "type": "number",
-            "units": "meters",
             "required": True,
-            **utils.GT_0,
             "about": (
                 "Distance over which green areas larger than 2 hectares "
                 "will have a cooling effect."
             ),
         },
         "t_air_average_radius": {
-            "name": "T_air moving average radius (m)",
-            "type": "number",
-            "units": "meters",
+            **utils.DISTANCE,
+            "name": "T_air moving average radius",
             "required": True,
-            **utils.GT_0,
             "about": (
                 "Radius of the averaging filter for turning T_air_nomix "
                 "into T_air")
@@ -117,7 +114,7 @@ ARGS_SPEC = {
         "t_ref": {
             "name": "Reference Air Temperature",
             "type": "number",
-            "units": "degrees celsius",
+            "units": u.degree_Celsius,
             "required": True,
             "about": (
                 "Rural reference temperature (where the urban heat island"
@@ -129,7 +126,7 @@ ARGS_SPEC = {
         "uhi_max": {
             "name": "Magnitude of the UHI effect",
             "type": "number",
-            "units": "degrees celsius",
+            "units": u.degree_Celsius,
             "required": True,
             "about": (
                 "The magnitude of the urban heat island effect,  Example: the difference between the rural reference "
@@ -185,7 +182,7 @@ ARGS_SPEC = {
                 },
                 "consumption": {
                     "type": "number",
-                    "units": "kWh/degC/𝑚2",
+                    "units": u.kilowatt_hour/(u.degree_Celsius * u.meter**2),
                     "about": ("Energy consumption by footprint area for each building type."
                         "This consumption value must be adjusted for the average number of "
                         "stories that structures of this type will have.")
@@ -199,7 +196,7 @@ ARGS_SPEC = {
                 },
                 "cost": {
                     "type": "number",
-                    "units": "currency/kwh",
+                    "units": u.currency/u.kilowatt_hour,
                     "required": False,
                     "about": ("The cost of electricity for each building type. If this "
                         "column is provided in the Energy Consumption table, the energy_sav "

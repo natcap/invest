@@ -11,6 +11,7 @@ import numpy
 import pygeoprocessing
 import taskgraph
 
+from .utils import u
 from . import utils
 from . import validation
 
@@ -42,21 +43,11 @@ ARGS_SPEC = {
             "name": "Predefined land use map for GLOBIO"
         },
         "lulc_path": {
-            "type": "raster",
-            "bands": {1: {"type": "code"}},
-            "validation_options": {
-                "projected": True,
-            },
-            "required": "not predefined_globio",
-            "about": (
-                'used in "mode (a)" path to a base landcover map with'
-                ' integer codes'),
-            "name": "Land Use/Cover (Raster)"
+            **utils.LULC_ARG,
+            **utils.PROJECTED,
+            "required": "not predefined_globio"
         },
         "lulc_to_globio_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "globio_lucode"],
-            },
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
@@ -73,16 +64,11 @@ ARGS_SPEC = {
             },
             "type": "directory",
             "contents": {
-                "[INFRASTRUCTURE_RASTER]": {
-                    "options": ("Raster(s) of any forms of infrastructure "
+                "[INFRASTRUCTURE_MAP]": {
+                    "names": ("Raster(s) and/or vector(s) of any forms of infrastructure "
                         "you want to consider in the MSA calculation."),
-                    "type": "raster",
-                    "bands": {1: {"type": "number", "units": None}}
-                },
-                "[INFRASTRUCTURE_VECTOR]": {
-                    "options": ("Vector(s) of any forms of infrastructure "
-                        "you want to consider in the MSA calculation."),
-                    "type": "vector",
+                    "type": {"raster", "vector"},
+                    "bands": {1: {"type": "number", "units": None}},
                     "fields": {},
                     "geometries": utils.ALL_GEOMS
                 }
@@ -98,9 +84,7 @@ ARGS_SPEC = {
         "pasture_path": {
             "type": "raster",
             "bands": {1: {"type": "ratio"}},
-            "validation_options": {
-                "projected": True,
-            },
+            **utils.PROJECTED,
             "required": "not predefined_globio",
             "about": "Map of the proportion of each pixel that is pasture",
             "name": "Pasture"
@@ -109,18 +93,14 @@ ARGS_SPEC = {
             "name": "Potential Vegetation",
             "type": "raster",
             "bands": {1: {"type": "code"}},
-            "validation_options": {
-                "projected": True,
-            },
+            **utils.PROJECTED,
             "required": "not predefined_globio",
             "about": ("This should be the potential vegetation map from "
                 "Ramankutty and Foley (1999), or if a different map, it must "
                 "have the same LULC codes.")
         },
         "pasture_threshold": {
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            },
+            **utils.BETWEEN_0_AND_1,
             "type": "ratio",
             "required": "not predefined_globio",
             "about": ("Areas with a pasture proportion greater than or equal "
@@ -130,9 +110,7 @@ ARGS_SPEC = {
             "name": "Pasture Threshold"
         },
         "intensification_fraction": {
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            },
+            **utils.BETWEEN_0_AND_1,
             "type": "ratio",
             "required": True,
             "about": (
@@ -141,9 +119,7 @@ ARGS_SPEC = {
             "name": "Proportion of of Agriculture Intensified"
         },
         "primary_threshold": {
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            },
+            **utils.BETWEEN_0_AND_1,
             "type": "ratio",
             "required": "not predefined_globio",
             "about": ("Areas with FFQI (forest fragmentation quality index) "
@@ -153,10 +129,6 @@ ARGS_SPEC = {
             "name": "Primary Threshold"
         },
         "msa_parameters_path": {
-            "validation_options": {
-                "required_fields": [
-                    "MSA_type", "measurement", "value", "msa_x", "se"],
-            },
             "type": "csv",
             "columns": {
                 "MSA_type": {
@@ -171,7 +143,9 @@ ARGS_SPEC = {
                         "be a single number e.g. 1000, a range (two numbers "
                         "separated by a hyphen e.g. 1000-2000), or an upper "
                         "or lower bound (a number preceded by > or < e.g. <5")
-                }
+                },
+                "MSA_x": {"type": "number", "units": "?"},
+                "SE": {"type": "number", "units": "?"}
             },
             "required": True,
             "about": (
@@ -181,19 +155,13 @@ ARGS_SPEC = {
             "name": "MSA Parameter Table"
         },
         "aoi_path": {
-            **utils.PROJECTED_AREA,
-            "required": False,
-            "about": (
-                "This is a set of polygons that can be used to aggregate MSA "
-                "sum and mean to a polygon."),
-            "name": "AOI",
+            **utils.AOI_ARG,
+            **utils.PROJECTED,
+            "required": False
         },
         "globio_lulc_path": {
-            "validation_options": {
-                "projected": True,
-            },
-            "type": "raster",
-            "bands": {1: {"type": "code"}},
+            **utils.LULC_ARG,
+            **utils.PROJECTED,
             "required": "predefined_globio",
             "about": 'used in "mode (b)" path to predefined globio raster.',
             "name": "GLOBIO Classified Land Use"

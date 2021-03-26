@@ -17,6 +17,7 @@ import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
+from ..utils import u
 from .. import utils
 from .. import validation
 from . import sdr_core
@@ -51,7 +52,7 @@ ARGS_SPEC = {
             "type": "raster",
             "bands": {1: {
                 "type": "number",
-                "units": "MJ*mm/(ha*h*yr)"}},
+                "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
             "required": True,
             **utils.PROJECTED,
             "about": (
@@ -68,7 +69,7 @@ ARGS_SPEC = {
             "type": "raster",
             "bands": {1: {
                 "type": "number",
-                "units": "T*ha*h/(ha*MJ*mm)"}},
+                "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
             "required": True,
             **utils.PROJECTED,
             "about": (
@@ -118,7 +119,7 @@ ARGS_SPEC = {
         "threshold_flow_accumulation": {
             **utils.GT_0,
             "type": "number",
-            "units": "pixels",
+            "units": u.pixel,
             "required": True,
             "about": (
                 "The number of upstream cells that must flow into a cell "

@@ -10,6 +10,7 @@ from osgeo import osr
 import pygeoprocessing
 import taskgraph
 
+from .utils import u
 from . import utils
 from . import validation
 
@@ -29,12 +30,8 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "lulc_cur_path": {
-            "type": "raster",
-            "bands": {1: {"type": "code"}},
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            **utils.LULC_ARG,
+            **utils.PROJECTED,
             "about": (
                 "A GDAL-supported raster file.  The current LULC must have "
                 "its' own threat rasters, where each threat raster file path "
@@ -46,12 +43,9 @@ ARGS_SPEC = {
             "name": "Current Land Cover"
         },
         "lulc_fut_path": {
-            "type": "raster",
-            "bands": {1: {"type": "code"}},
+            **utils.LULC_ARG,
+            **utils.PROJECTED,
             "required": False,
-            "validation_options": {
-                "projected": True,
-            },
             "about": (
                 "Optional.  A GDAL-supported raster file.  Inputting a "
                 "future LULC will generate degradation, habitat quality, and "
@@ -66,12 +60,9 @@ ARGS_SPEC = {
             "name": "Future Land Cover"
         },
         "lulc_bas_path": {
-            "type": "raster",
-            "bands": {1: {"type": "code"}},
+            **utils.LULC_ARG,
+            **utils.PROJECTED,
             "required": False,
-            "validation_options": {
-                "projected": True,
-            },
             "about": (
                 "Optional.  A GDAL-supported raster file.  If the baseline "
                 "LULC is provided, rarity outputs will be created for the "
@@ -96,7 +87,7 @@ ARGS_SPEC = {
                 "THREAT": {"type": "freestyle_string"},
                 "MAX_DIST": {
                     "type": "number",
-                    "units": "kilometres",
+                    "units": u.kilometer,
                     "about": ("The maximum distance over which each threat "
                         "affects habitat quality. The impact of each "
                         "degradation source will decline to zero at "
@@ -170,9 +161,7 @@ ARGS_SPEC = {
             "name": "Sensitivity of Land Cover Types to Each Threat"
         },
         "half_saturation_constant": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "type": "number",
             "units": None,
             "required": True,

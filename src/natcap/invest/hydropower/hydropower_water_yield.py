@@ -10,6 +10,7 @@ from osgeo import ogr
 import pygeoprocessing
 import taskgraph
 
+from ..utils import u
 from .. import validation
 from .. import utils
 
@@ -34,50 +35,30 @@ ARGS_SPEC = {
         "n_workers": validation.N_WORKERS_SPEC,
         "lulc_path": {
             **utils.LULC_ARG,
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            }
+            **utils.PROJECTED
         },
         "depth_to_root_rest_layer_path": {
             "type": "raster",
             "bands": {1: {
                 "type": "number",
-                "units": "millimeters"
+                "units": u.millimeter
             }},
             "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            **utils.PROJECTED,
             "about": (
                 "A GDAL-supported raster file containing an average root "
                 "restricting layer depth value for each cell."),
             "name": "Depth To Root Restricting Layer"
         },
         "precipitation_path": {
-            "type": "raster",
-            "bands": {1: {
-                "type": "number",
-                "units": "millimeters"
-            }},
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing non-zero, average "
-                "annual precipitation values for each cell."),
-            "name": "Precipitation"
+            **utils.PRECIP_ARG,
+            **utils.PROJECTED
         },
         "pawc_path": {
             "type": "raster",
-            "bands": {1: {
-                "type": "ratio"
-            }},
+            "bands": {1: {"type": "ratio"}},
             "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            **utils.PROJECTED,
             "about": (
                 "A GDAL-supported raster file containing plant available "
                 "water content values for each cell.  The plant available "
@@ -86,24 +67,11 @@ ARGS_SPEC = {
             "name": "Plant Available Water Fraction"
         },
         "eto_path": {
-            "type": "raster",
-            "bands": {1: {
-                "type": "number",
-                "units": "millimeters"
-            }},
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing annual average "
-                "reference evapotranspiration values for each cell."),
-            "name": "Reference Evapotranspiration"
+            **utils.ETO_ARG,
+            **utils.PROJECTED
         },
         "watersheds_path": {
-            "validation_options": {
-                "projected": True,
-            },
+            **utils.PROJECTED,
             "type": "vector",
             "fields": {"ws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
@@ -116,9 +84,7 @@ ARGS_SPEC = {
             "name": "Watersheds"
         },
         "sub_watersheds_path": {
-            "validation_options": {
-                "projected": True
-            },
+            **utils.PROJECTED,
             "type": "vector",
             "fields": {"subws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
@@ -135,7 +101,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
-                "root_depth": {"type": "number", "units": "millimeters"},
+                "root_depth": {"type": "number", "units": u.millimeter},
                 "Kc": {"type": "number", "units": None}
             },
             "required": True,
@@ -147,9 +113,7 @@ ARGS_SPEC = {
             "name": "Biophysical Table"
         },
         "seasonality_constant": {
-            "validation_options": {
-                "expression": "value > 0"
-            },
+            **utils.GT_0,
             "type": "number",
             "units": None,
             "required": True,
@@ -165,7 +129,7 @@ ARGS_SPEC = {
                 "lucode": {"type": "code"},
                 "demand": {
                     "type": "number",
-                    "units": "m^3/year/pixel"}
+                    "units": u.meter**3/u.year/u.pixel}
             },
             "required": False,
             "about": (
@@ -204,27 +168,27 @@ ARGS_SPEC = {
                 },
                 "height": {
                     "type": "number",
-                    "units": "meters",
+                    "units": u.meter,
                     "about": ("The head, measured as the average annual "
                         "effective height of water behind each dam at the "
                         "turbine intake.")
                 },
                 "kw_price": {
                     "type": "number",
-                    "units": "currency/kilowatt-hour",
+                    "units": u.currency/u.kilowatt_hour,
                     "about": ("The price of power produced by the station, in "
                         "the same currency used for the cost column.")
                 },
                 "cost": {
                     "type": "number",
-                    "units": "currency/year",
+                    "units": u.currency/u.year,
                     "about": ("Annual cost of running the hydropower station "
                         "(maintenance and operations costs), in the same "
                         "currency used for the kw_price column.")
                 },
                 "time_span": {
                     "type": "number",
-                    "units": "years",
+                    "units": u.year,
                     "about": ("Either the expected lifespan of the hydropower "
                         "station or the duration of the land use scenario of "
                         "interest. Used in net present value calculations.")

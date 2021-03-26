@@ -11,6 +11,7 @@ import pygeoprocessing
 import taskgraph
 
 from . import utils
+from .utils import u
 from . import validation
 
 
@@ -32,20 +33,14 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "landcover_raster_path": {
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters",
-            },
-            "type": "raster",
-            "bands": {1: {"type": "code"}},
-            "required": True,
+            **utils.LULC_ARG,
+            **utils.METER_PROJECTED,
             "about": (
                 "A raster file, representing integer land use/land code "
                 "covers for each cell. This raster should have a projected "
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
                 "results in hectares."),
-            "name": "Land-Use/Land-Cover Map"
         },
         "landcover_to_crop_table_path": {
             "type": "csv",
@@ -95,55 +90,54 @@ ARGS_SPEC = {
             "name": "Landcover to Crop Table"
         },
         "aggregate_polygon_path": {
-            **utils.AREA,
-            "required": False,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A polygon vector containing features with which to "
-                "aggregate/summarize final results. It is fine to have "
-                "overlapping polygons."),
-            "name": "Aggregate results polygon"
+            **utils.AOI_ARG,
+            **utils.PROJECTED,
+            "required": False
         },
         "model_data_path": {
             "type": "directory",
             "contents": {
                 "climate_percentile_yield_tables": {
                     "type": "directory",
+                    "about": "Table mapping each climate bin to yield percentiles for each crop",
                     "contents": {
                         "[CROP]_percentile_yield_table.csv": {
+                            "names": "One for each of the 175 supported crops",
                             "type": "csv",
                             "columns": {
                                 "climate_bin": {"type": "code"},
-                                "yield_25th": {"type": "number", "units": "tons/hectare"},
-                                "yield_50th": {"type": "number", "units": "tons/hectare"},
-                                "yield_75th": {"type": "number", "units": "tons/hectare"},
-                                "yield_95th": {"type": "number", "units": "tons/hectare"}
+                                "yield_25th": {"type": "number", "units": u.metric_ton/u.hectare},
+                                "yield_50th": {"type": "number", "units": u.metric_ton/u.hectare},
+                                "yield_75th": {"type": "number", "units": u.metric_ton/u.hectare},
+                                "yield_95th": {"type": "number", "units": u.metric_ton/u.hectare}
                             }
                         },
                     }
                 },
                 "extended_climate_bin_maps": {
                     "type": "directory",
+                    "about": "Maps of climate bins for each crop",
                     "contents": {
                         "extendedclimatebins[CROP]": {
+                            "names": "One for each of the 175 supported crops",
                             "type": "raster",
-                            "bands": {1: {"type": "code"}}
+                            "bands": {1: {"type": "code"}},
                         }
                     }
                 },
                 "observed_yield": {
                     "type": "directory",
+                    "about": "Maps of actual observed yield for each crop",
                     "contents": {
                         "[CROP]_observed_yield.tif": {
                             "type": "raster",
-                            "bands": {1: {"type": "number", "units": "tons/hectare"}}
+                            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
                         }
                     }
                 },
                 "crop_nutrient.csv": {
                     "type": "csv",
+                    "about": "Nutritional data for each crop",
                     "columns": {
                         nutrient: {
                         "type": "number", "units": "?"

@@ -10,6 +10,7 @@ import pygeoprocessing.routing
 from osgeo import gdal, ogr
 import taskgraph
 
+from ..utils import u
 from .. import utils, validation
 from . import ndr_core
 
@@ -30,15 +31,11 @@ ARGS_SPEC = {
         "n_workers": validation.N_WORKERS_SPEC,
         "dem_path": {
             **utils.DEM_ARG,
-            "validation_options": {
-                "projected": True,
-            }
+            **utils.PROJECTED
         },
         "lulc_path": {
             **utils.LULC_ARG,
-            "validation_options": {
-                "projected": True,
-            }
+            **utils.PROJECTED
         },
         "runoff_proxy_path": {
             "type": "raster",
@@ -59,9 +56,7 @@ ARGS_SPEC = {
         "watersheds_path": {
             "type": "vector",
             "required": True,
-            "validation_options": {
-                "projected": True
-            },
+            **utils.PROJECTED,
             "fields": {"ws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
             "about": (
@@ -82,7 +77,7 @@ ARGS_SPEC = {
                 "load_[NUTRIENT]": {
                     "names": "n for nitrogen, p for phosphorus",
                     "type": "number", 
-                    "units": "kilograms/hectare/year",
+                    "units": u.kilogram/u.hectare/u.year,
                     "about": "The nutrient loading for each land use class"},
                 "eff_[NUTRIENT]": {
                     "names": "n for nitrogen, p for phosphorus",
@@ -98,7 +93,7 @@ ARGS_SPEC = {
                 "crit_len_[NUTRIENT]": {
                     "names": "n for nitrogen, p for phosphorus",
                     "type": "number",
-                    "units": "meters",
+                    "units": u.meter,
                     "about": ("The distance after which it is assumed that a "
                         "patch of a particular LULC type retains nutrient at "
                         "its maximum capacity. If nutrients travel a distance "
@@ -133,11 +128,9 @@ ARGS_SPEC = {
             "name": "Calculate Nitrogen Retention"
         },
         "threshold_flow_accumulation": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "type": "number",
-            "units": "pixels",
+            "units": u.pixel,
             "required": True,
             "about": (
                 "The number of upstream cells that must flow into a cell "
@@ -160,7 +153,7 @@ ARGS_SPEC = {
         },
         "subsurface_critical_length_n": {
             "type": "number",
-            "units": "meters",
+            "units": u.meter,
             "required": "calc_n",
             "name": "Subsurface Critical Length (Nitrogen)",
             "about": (
@@ -176,7 +169,7 @@ ARGS_SPEC = {
         },
         "subsurface_critical_length_p": {
             "type": "number",
-            "units": "meters",
+            "units": u.meter,
             "required": "calc_p",
             "name": "Subsurface Critical Length (Phosphorous)",
             "about": (

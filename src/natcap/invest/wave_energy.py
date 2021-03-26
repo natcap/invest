@@ -17,6 +17,7 @@ from osgeo import ogr
 
 import taskgraph
 import pygeoprocessing
+from .utils import u
 from . import validation
 from . import utils
 
@@ -153,13 +154,13 @@ ARGS_SPEC = {
             "columns": {
                 "height": {
                     "type": "number",
-                    "units": "meters",
+                    "units": u.meter,
                     "about": "user-defined wave height bins from smallest to largest"
                 },
                 "[WAVE_PERIOD]": {
                     "names": "user-defined wave period bins from smallest to largest",
                     "type": "number",
-                    "units": "seconds"
+                    "units": u.second
                 }
             },
             "required": True,
@@ -217,12 +218,12 @@ ARGS_SPEC = {
                 },
                 "lat": {
                     "type": "number",
-                    "units": "decimal degrees",
+                    "units": u.degree,
                     "about": "latitude of the connection point"
                 },
                 "long": {
                     "type": "number",
-                    "units": "decimal degrees",
+                    "units": u.degree,
                     "about": "longitude of the connection point"
                 },
                 "location": {
@@ -241,20 +242,52 @@ ARGS_SPEC = {
                 'required_fields': ['name', 'value', 'note'],
             },
             "type": "csv",
-            "columns": {
-                "name": {
-                    "type": "option_string",
-                    "about": ("Contains the values CapMax (maximum capacity of device), "
-                        "Cc (capital cost per device installed), Cml (cost of mooring lines), "
-                        "Cul (cost of underwater transmission lines), Col (cost of overland transmission line), "
-                        "Omc (operating and maintenance cost), P (price of electricity), R (discount rate), "
-                        "Smlpm (number of slack lines required per machine)")},
-                "value": {
+            "rows": {
+                "CapMax": {
                     "type": "number",
-                    "units": None,
-                    "about": ("Values for CapMax (in kilowatts), Cc (in currency/kW), Cml (in currency/meter), "
-                        "Cul (currency/kilometer), Col (currency/kilometer), Omc (currency/kWH), "
-                        "P (currency/kWH), R (unitless ratio), and Smlpm (unitless number).")},
+                    "units": u.kilowatt,
+                    "about": "maximum capacity of the device"
+                },
+                "Cc": {
+                    "type": "number",
+                    "units": u.currency/(u.count * u.kilowatt),
+                    "about": "capital cost per kilowatt of capacity per device installed"
+                },
+                "Cml": {
+                    "type": "number",
+                    "units": u.currency/u.meter,
+                    "about": "cost of mooring lines"
+                },
+                "Cul": {
+                    "type": "number",
+                    "units": u.currency/u.kilometer,
+                    "about": "cost of mooring lines"
+                },
+                "Col": {
+                    "type": "number",
+                    "units": u.currency/u.kilometer,
+                    "about": "cost of overland transmission lines"
+                },
+                "Omc": {
+                    "type": "number",
+                    "units": u.currency/u.kilowatt_hour,
+                    "about": "operating and maintenance cost"
+                },
+                "P": {
+                    "type": "number",
+                    "units": u.currency/u.kilowatt_hour,
+                    "about": "price of electricity"
+                },
+                "R": {
+                    "type": "ratio",
+                    "about": "discount rate"
+                },
+                "Smlpm": {
+                    "type": "number",
+                    "units": u.count,
+                    "about": "number of slack lines required per machine"
+                }
+
             },
             "required": "valuation_container",
             "about": (
@@ -265,7 +298,7 @@ ARGS_SPEC = {
         "number_of_machines": {
             **utils.GT_0,
             "type": "number",
-            "units": None,
+            "units": u.count,
             "required": "valuation_container",
             "about": (
                 "An integer for how many wave energy machines will be in the "

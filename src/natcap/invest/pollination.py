@@ -13,6 +13,7 @@ import pygeoprocessing
 import numpy
 import taskgraph
 
+from .utils import u
 from . import utils
 from . import validation
 
@@ -28,18 +29,13 @@ ARGS_SPEC = {
         "n_workers": validation.N_WORKERS_SPEC,
         "landcover_raster_path": {
             **utils.LULC_ARG,
-            "validation_options": {
-                "projected": True,
-            },
+            **utils.PROJECTED,
             "about": (
                 "This is the landcover map that's used to map biophysical "
                 "properties about habitat and floral resources of landcover "
                 "types to a spatial layout.")
         },
         "guild_table_path": {
-            "validation_options": {
-                "required_fields": ["species", "alpha", "relative_abundance"],
-            },
             "type": "csv",
             "columns": {
                 "species": {
@@ -72,7 +68,7 @@ ARGS_SPEC = {
                 },
                 "alpha": {
                     "type": "number",
-                    "units": "meters",
+                    "units": u.meters,
                     "about": ("Average distance each species or guild travels "
                         "to forage on flowers. The model uses this distance "
                         "to define the neighborhood of available flowers "
@@ -96,9 +92,6 @@ ARGS_SPEC = {
             "name": "Guild Table"
         },
         "landcover_biophysical_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode"],
-            },
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
@@ -122,10 +115,6 @@ ARGS_SPEC = {
             "name": "Land Cover Biophysical Table"
         },
         "farm_vector_path": {
-            "validation_options": {
-                "required_fields": ["crop_type", "half_sat", "season", "p_dep",
-                                    "p_managed"],
-            },
             "type": "vector",
             "fields": {
                 "crop_type": {

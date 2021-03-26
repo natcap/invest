@@ -16,6 +16,7 @@ import scipy
 import pygeoprocessing
 import taskgraph
 
+from .utils import u
 from . import validation
 from . import utils
 
@@ -42,11 +43,9 @@ ARGS_SPEC = {
             "name": "Replacement Landcover Code"
         },
         "area_to_convert": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "type": "number",
-            "units": "hectares",
+            "units": u.hectare,
             "required": True,
             "about": "Max area to convert",
             "name": "Max area to convert"
@@ -80,11 +79,9 @@ ARGS_SPEC = {
             "name": "Convertible Landcover Codes"
         },
         "n_fragmentation_steps": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0
             "type": "number",
-            "units": None,
+            "units": u.count,
             "required": True,
             "about": (
                 "This parameter is used to divide the conversion simulation "

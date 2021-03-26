@@ -16,6 +16,7 @@ import pygeoprocessing
 import scipy.spatial
 import taskgraph
 
+from .utils import u
 from . import utils
 from . import validation
 
@@ -39,9 +40,7 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "n_nearest_model_points": {
-            "validation_options": {
-                "expression": "int(value) > 0",
-            },
+            **utils.GT_0,
             "type": "number",
             "units": None,
             "required": "compute_forest_edge_effects",
@@ -55,21 +54,11 @@ ARGS_SPEC = {
             "name": "Number of nearest model points to average"
         },
         "aoi_vector_path": {
-            **utils.AREA,
-            "validation_options": {
-                "projected": True,
-            },
-            "required": False,
-            "about": (
-                "This is a set of polygons that will be used to aggregate "
-                "carbon values at the end of the run if provided."),
-            "name": "Service areas of interest"
+            **utils.AOI_ARG,
+            **utils.PROJECTED,
+            "required": False
         },
         "biophysical_table_path": {
-            "validation_options": {
-                "required_fields": [
-                    "lucode", "is_tropical_forest", "c_above"],
-            },
             "type": "csv",
             "required": True,
             "columns": {
@@ -77,21 +66,21 @@ ARGS_SPEC = {
                 "is_tropical_forest": {"type": "boolean"},
                 "c_above": {
                     "type": "number",
-                    "units": "megagrams/hectare"
+                    "units": u.metric_ton/u.hectare,
                 },
                 "c_below": {
                     "type": "number",
-                    "units": "megagrams/hectare",
+                    "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'"
                 },
                 "c_soil": {
                     "type": "number",
-                    "units": "megagrams/hectare",
+                    "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'"
                 },
                 "c_dead": {
                     "type": "number",
-                    "units": "megagrams/hectare",
+                    "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'"
                 },
             },
@@ -105,16 +94,8 @@ ARGS_SPEC = {
             "name": "Biophysical Table"
         },
         "lulc_raster_path": {
-            "type": "raster",
-            "bands": {1: {"type": "code"}},
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file, with an integer LULC code for "
-                "each cell."),
-            "name": "Land-Use/Land-Cover Map"
+            **utils.LULC_ARG,
+            **utils.PROJECTED
         },
         "pools_to_calculate": {
             "validation_options": {
@@ -140,9 +121,6 @@ ARGS_SPEC = {
             "name": "Compute forest edge effects"
         },
         "tropical_forest_edge_carbon_model_vector_path": {
-            "validation_options": {
-                "required_fields": ["method", "theta1", "theta2", "theta3"],
-            },
             "type": "vector",
             "fields": {
                 "method": {

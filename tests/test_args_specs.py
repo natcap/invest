@@ -1,4 +1,5 @@
 import importlib
+import pint
 import unittest
 
 
@@ -45,7 +46,7 @@ class ValidateArgsSpecs(unittest.TestCase):
             if t == 'number':
                 self.assertTrue('units' in arg)
                 if arg['units'] is not None:
-                    self.assertEqual(type(arg['units']), str)
+                    self.assertEqual(type(arg['units']), pint.Unit)
 
             elif t == 'raster':
                 self.assertTrue('bands' in arg)

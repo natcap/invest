@@ -127,7 +127,7 @@ ARGS_SPEC = {
                 "expression": "value >= 2005",
             },
             "type": "number",
-            "units": "years",
+            "units": u.year,
             "required": True,
             "about": (
                 "Year to start PUD calculations, date starts on Jan "
@@ -139,7 +139,7 @@ ARGS_SPEC = {
                 "expression": "value <= 2017",
             },
             "type": "number",
-            "units": "years",
+            "units": u.year,
             "required": True,
             "about": (
                 "Year to end PUD calculations, date ends and includes Dec "
@@ -175,7 +175,7 @@ ARGS_SPEC = {
                 "expression": "value > 0",
             },
             "type": "number",
-            "units": "projection units",
+            "units": u.projection_unit,
             "required": "grid_aoi",
             "about": (
                 "The size of the grid units measured in the projection "

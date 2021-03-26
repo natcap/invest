@@ -13,6 +13,7 @@ import taskgraph
 
 from . import validation
 from . import utils
+from utils import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,14 +29,8 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "lulc_cur_path": {
-            "type": "raster",
-            "bands": {
-                1: {"type": "number", "units": "unitless"}
-            },
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            **utils.LULC_ARG,
+            **utils.PROJECTED,
             "about": (
                 "A GDAL-supported raster representing the land-cover of the"
                 "current scenario."),
@@ -51,14 +46,9 @@ ARGS_SPEC = {
             "name": "Calculate Sequestration"
         },
         "lulc_fut_path": {
-            "type": "raster",
-            "bands": {
-                1: {"type": "number", "units": "unitless"}
-            },
+            **utils.LULC_ARG,
+            **utils.PROJECTED,
             "required": "calc_sequestration",
-            "validation_options": {
-                "projected": True,
-            },
             "about": (
                 "A GDAL-supported raster representing the land-cover of the "
                 "future scenario. If REDD scenario analysis is "
@@ -78,14 +68,9 @@ ARGS_SPEC = {
             "name": "REDD Scenario Analysis"
         },
         "lulc_redd_path": {
-            "type": "raster",
-            "bands": {
-                1: {"type": "number", "units": "unitless"}
-            },
+            **utils.LULC_ARG,
+            **utils.PROJECTED,
             "required": "do_redd",
-            "validation_options": {
-                "projected": True,
-            },
             "about": (
                 "A GDAL-supported raster representing the land-cover of "
                 "the REDD policy future scenario.  This scenario will be "
@@ -95,19 +80,15 @@ ARGS_SPEC = {
         "carbon_pools_path": {
             "type": "csv",
             "columns": {
-                "LUCODE": {"type": "number", "units": "unitless"},
-                "C_above": {"type": "number", "units": "megagrams/hectare"},
-                "C_below": {"type": "number", "units": "megagrams/hectare"},
-                "C_soil": {"type": "number", "units": "megagrams/hectare"},
-                "C_dead": {"type": "number", "units": "megagrams/hectare"}
+                "LUCODE": {"type": "number", "units": None},
+                "C_above": {"type": "number", "units": u.metric_ton/u.hectare},
+                "C_below": {"type": "number", "units": u.metric_ton/u.hectare},
+                "C_soil": {"type": "number", "units": u.metric_ton/u.hectare},
+                "C_dead": {"type": "number", "units": u.metric_ton/u.hectare}
             },
             "required": True,
-            "about": (
-                "A table that maps the land-cover IDs to carbon pools.  "
-                "The table must contain columns of 'LULC', 'C_above', "
-                "'C_Below', 'C_Soil', 'C_Dead' as described in the User's "
-                "Guide.  The values in LULC must at least include the LULC "
-                "IDs in the land cover maps."),
+            "about": ("A table that maps the each LULC class from the LULC map(s)"
+                "to the amount of carbon in their carbon pools."),
             "name": "Carbon Pools"
         },
         "lulc_cur_year": {
@@ -115,7 +96,7 @@ ARGS_SPEC = {
                 "expression": "int(value)"
             },
             "type": "number",
-            "units": "year",
+            "units": u.year,
             "required": "calc_sequestration",
             "about": "The calendar year of the current scenario.",
             "name": "Current Landcover Calendar Year"
@@ -125,7 +106,7 @@ ARGS_SPEC = {
                 "expression": "int(value)"
             },
             "type": "number",
-            "units": "year",
+            "units": u.year,
             "required": "calc_sequestration",
             "about": "The calendar year of the future scenario.",
             "name": "Future Landcover Calendar Year"
@@ -143,7 +124,7 @@ ARGS_SPEC = {
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
-            "units": "currency/ton",
+            "units": u.currency/u.ton,
             "required": "do_valuation",
             "about": (
                 "Is the present value of carbon per metric ton. Used if "
@@ -162,7 +143,7 @@ ARGS_SPEC = {
             "about": (
                 "The floating point percent increase of the price of "
                 "carbon per year."),
-            "name": "Annual Rate of Change in Price of Carbon (%)"
+            "name": "Annual Rate of Change in Price of Carbon"
         }
     }
 }

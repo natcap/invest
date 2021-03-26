@@ -9,6 +9,7 @@ from osgeo import osr
 import pygeoprocessing
 import taskgraph
 
+from .utils import u
 from . import utils
 from . import validation
 
@@ -28,25 +29,16 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "landcover_raster_path": {
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters",
-            },
-            "type": "raster",
-            "bands": {1: {"type": "code"}},
-            "required": True,
+            **utils.LULC_ARG,
+            **utils.METER_PROJECTED,
             "about": (
                 "A raster file, representing integer land use/land code "
                 "covers for each cell. This raster should have a projected "
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
                 "results in hectares."),
-            "name": "Land-Use/Land-Cover Map"
         },
         "landcover_to_crop_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "crop_name"],
-            },
             "type": "csv",
             "columns": {
                 "crop_name": {
@@ -69,9 +61,9 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "crop_name": {"type": "freestyle_string"},
-                "nitrogen_rate": {"type": "number", "units": "kilograms/hectare"},
-                "phosphorus_rate": {"type": "number", "units": "kilograms/hectare"},
-                "potassium_rate": {"type": "number", "units": "kilograms/hectare"}
+                "nitrogen_rate": {"type": "number", "units": u.kilogram/u.hectare},
+                "phosphorus_rate": {"type": "number", "units": u.kilogram/u.hectare},
+                "potassium_rate": {"type": "number", "units": u.kilogram/u.hectare}
             },
             "required": True,
             "about": (
@@ -80,13 +72,8 @@ ARGS_SPEC = {
             "name": "Fertilization Rate Table Path"
         },
         "aggregate_polygon_path": {
-            **utils.AREA,
-            "required": False,
-            "about": (
-                "A polygon vector containing features with which to "
-                "aggregate/summarize final results. It is fine to have "
-                "overlapping polygons."),
-            "name": "Aggregate results polygon"
+            **utils.AOI_ARG,
+            "required": False
         },
         "model_data_path": {
             "validation_options": {

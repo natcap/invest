@@ -11,6 +11,7 @@ import numpy as np
 
 from . import fisheries_hst_io as io
 from .. import validation
+from .. import utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -86,9 +87,7 @@ ARGS_SPEC = {
             "name": "Gamma",
             "type": "ratio",
             "required": True,
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            },
+            **utils.BETWEEN_0_AND_1,
             "about": (
                 "Gamma describes the relationship between a change in "
                 "habitat area and a change in survival of life stages "

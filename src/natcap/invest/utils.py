@@ -10,6 +10,7 @@ from datetime import datetime
 import time
 
 import pandas
+import pint
 import numpy
 from shapely.wkt import loads
 from osgeo import gdal
@@ -42,6 +43,10 @@ GDAL_ERROR_LEVELS = {
 # axis order, which will use Lon,Lat order for Geographic CRS, but otherwise
 # leaves Projected CRS alone
 DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
+
+# the same unit registry instance should be shared across everything
+u = pint.UnitRegistry()
+u.load_definitions('custom_units')
 
 AREA = {
     "type": "vector",
@@ -77,16 +82,20 @@ GT_0 = {
         "expression": "value > 0"
     }
 }
-
 GTE_0 = {
     "validation_options": {
         "expression": "value >= 0"
     }
 }
+BETWEEN_0_AND_1 = {
+    "validation_options": {
+        "expression": "(value >= 0) & (value <= 1)"
+    }
+}
 
 DISTANCE = {
     "type": "number", 
-    "units": "meters",
+    "units": u.meter,
     "validation_options": {
         "expression": "value >= 0"
     }
@@ -97,7 +106,7 @@ METER_RASTER = {
     "bands": {
         1: {
             "type": "number", 
-            "units": "meters"
+            "units": u.meter
         }
     }
 }
@@ -105,7 +114,6 @@ METER_RASTER = {
 AOI_ARG = {
     **AREA,
     "name": "area of interest",
-    "required": True,
     "about": (
         "A GDAL-supported vector file.  This AOI instructs "
         "the model where to clip the input data and the extent "
@@ -113,7 +121,6 @@ AOI_ARG = {
         "layer that defines their area of interest.  The AOI "
         "must intersect the Digital Elevation Model (DEM)."),
 }
-
 LULC_ARG = {
     "type": "raster",
     "bands": {1: {"type": "code"}},
@@ -123,13 +130,12 @@ LULC_ARG = {
         "(expressed as integers) for each cell."),
     "name": "land use/land cover"
 }
-
 DEM_ARG = {
     "type": "raster",
     "bands": {
         1: {
             "type": "number",
-            "units": "meters"
+            "units": u.meter
         }
     },
     "required": True,
@@ -142,20 +148,18 @@ DEM_ARG = {
         "InVEST User's Guide for more information."),
     "name": "digital elevation model"
 }
-
 ETO_ARG = {
-    "name": "Reference Evapotranspiration Raster",
+    "name": "Evapotranspiration Raster",
     "type": "raster",
     "bands": {
         1: {
             "type": "number",
-            "units": "millimeters"
+            "units": u.millimeter
         }
     },
     "required": True,
     "about": "A map of evapotranspiration values"
 }
-
 SOIL_GROUP_ARG = {
     "type": "raster",
     "bands": {1: {"type": "code"}},
@@ -165,10 +169,22 @@ SOIL_GROUP_ARG = {
         "soil hydrologic group A, B, C, or D, respectively"),
     "name": "soil hydrologic group"
 }
+THRESHOLD_FLOW_ACCUMULATION_ARG = {
+    **GTE_0,
+    "type": "number",
+    "units": u.pixel,
+    "about": (
+        "The number of upstream cells that must flow into a cell "
+        "before it's classified as a stream."),
+    "name": "Threshold Flow Accumulation Limit"
+}
 
 LINES = {'LINESTRING', 'MULTILINESTRING'}
 POLYGONS = {'POLYGON', 'MULTIPOLYGON'}
 ALL_GEOMS = {'LINESTRING', 'POLYGON', 'POINT'}
+
+
+
 
 
 @contextlib.contextmanager

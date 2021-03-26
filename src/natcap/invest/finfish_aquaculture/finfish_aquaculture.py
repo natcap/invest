@@ -4,6 +4,7 @@ import csv
 import logging
 
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
+from ..utils import u
 from .. import utils
 from .. import validation
 
@@ -57,7 +58,7 @@ ARGS_SPEC = {
                 "taken for a fish to reach a target harvest weight "
                 "typical for the region of interest is accurate."),
             "type": "number",
-            "units": "g/day",
+            "units": u.gram/u.day,
             "required": True,
         },
         "g_param_b": {
@@ -69,7 +70,7 @@ ARGS_SPEC = {
                 "taken for a fish to reach a target harvest weight "
                 "typical for the region of interest is accurate."),
             "type": "number",
-            "units": "g/day",
+            "units": u.gram/u.day,
             "required": True,
         },
         "g_param_tau": {
@@ -83,7 +84,7 @@ ARGS_SPEC = {
                 "weight typical for the region of interest is "
                 "accurate."),
             "type": "number",
-            "units": "C^-1",
+            "units": 1/u.degree_Celsius,
             "required": True,
         },
         "use_uncertainty": {
@@ -99,7 +100,7 @@ ARGS_SPEC = {
                 "This indicates the level of uncertainty in the "
                 "estimate for parameter a."),
             "type": "number",
-            "units": "g/day",
+            "units": u.gram/u.day,
             "required": "use_uncertainty",
         },
         "g_param_b_sd": {
@@ -109,7 +110,7 @@ ARGS_SPEC = {
                 "This indicates the level of uncertainty in the "
                 "estimate for parameter b."),
             "type": "number",
-            "units": "g/day",
+            "units": u.gram/u.day,
             "required": "use_uncertainty",
         },
         "num_monte_carlo_runs": {
@@ -120,7 +121,7 @@ ARGS_SPEC = {
                 "produce more consistent and reliable output, but will "
                 "also take longer to run."),
             "type": "number",
-            "units": "count",
+            "units": u.count,
             "required": "use_uncertainty",
         },
         "water_temp_tbl": {
@@ -166,7 +167,7 @@ ARGS_SPEC = {
         "outplant_buffer": {
             "name": "Outplant Date Buffer",
             "type": "number",
-            "units": "days",
+            "units": u.day,
             "required": True,
             "about": (
                 "This value will allow the outplant start day to "
@@ -185,7 +186,7 @@ ARGS_SPEC = {
                 "Default value comes from Urner-Berry monthly fresh "
                 "sheet reports on price of farmed Atlantic salmon."),
             "type": "number",
-            "units": "currency/kilogram",
+            "units": u.currency/u.kilogram,
             "required": "do_valuation",
         },
         "frac_p": {

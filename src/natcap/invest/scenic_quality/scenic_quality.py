@@ -58,13 +58,13 @@ ARGS_SPEC = {
         "n_workers": validation.N_WORKERS_SPEC,
         "aoi_path": utils.AOI_ARG,
         "structure_path": {
-            "name": "Features Impacted Scenic Quality",
+            "name": "Features Impacting Scenic Quality",
             "type": "vector",
             "geometries": {"POINT"},
             "fields": {
                 "RADIUS": {
                     "type": "number",
-                    "units": "meters",
+                    "units": u.meter,
                     "required": False,
                     "about": ("RADIUS preferred, but may also be called RADIUS2 "
                         "for backwards compatibility. Maximum length of the line "
@@ -83,7 +83,7 @@ ARGS_SPEC = {
                         "The model assumes a weight of 1.0 if the field doesn’t exist.")},
                 "HEIGHT": {
                     "type": "number",
-                    "units": "meters",
+                    "units": u.meter,
                     "required": False,
                     "about": ("Viewpoint height: Each feature's elevation above the ground "
                         "can be specified as a positive real number. The default value is "
@@ -113,9 +113,7 @@ ARGS_SPEC = {
             "name": "Refractivity Coefficient",
             "type": "ratio",
             "required": True,
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            },
+            **utils.BETWEEN_0_AND_1,
             "about": (
                 "The earth curvature correction option corrects for "
                 "the curvature of the earth and refraction of visible "
@@ -167,11 +165,9 @@ ARGS_SPEC = {
         "max_valuation_radius": {
             "name": "Maximum Valuation Radius",
             "type": "number",
-            "units": "meters",
+            "units": u.meter,
             "required": False,
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "about": (
                 "Radius beyond which the valuation is set to zero. "
                 "The valuation function 'f' cannot be negative at the "

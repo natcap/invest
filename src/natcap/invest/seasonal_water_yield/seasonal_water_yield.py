@@ -13,6 +13,7 @@ import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
 
+from ..utils import u
 from .. import utils
 from .. import validation
 
@@ -47,7 +48,7 @@ ARGS_SPEC = {
                 "expression": "value > 0"
             },
             "type": "number",
-            "units": "pixels",
+            "units": u.pixel,
             "required": True,
             "about": (
                 "The number of upstream cells that must flow into a cell "
@@ -66,7 +67,7 @@ ARGS_SPEC = {
                     "names": ("Twelve files, one for each month. File names must"
                         "end with the month number (1-12)."),
                     "type": "raster",
-                    "bands": {1: {"type": "number", "units": "millimeters"}}
+                    "bands": {1: {"type": "number", "units": u.millimeter}}
                 }
             },
             "required": "not user_defined_local_recharge",
@@ -86,7 +87,7 @@ ARGS_SPEC = {
                     "names": ("Twelve files, one for each month. File names must"
                         "end with the month number (1-12)."),
                     "type": "raster",
-                    "bands": {1: {"type": "number", "units": "millimeters"}}
+                    "bands": {1: {"type": "number", "units": u.millimeter}}
                 }
             },
             "required": "not user_defined_local_recharge",
@@ -154,7 +155,7 @@ ARGS_SPEC = {
                 },
                 "events": {
                     "type": "number",
-                    "units": "None",
+                    "units": u.count,
                     "about": "The number of rain events in that month"
                 }
             },
@@ -203,7 +204,7 @@ ARGS_SPEC = {
             "type": "raster",
             "bands": {1: {
                 "type": "number",
-                "units": "millimeters"
+                "units": u.millimeter
             }},
             "required": "user_defined_local_recharge",
             **utils.PROJECTED,

@@ -15,6 +15,7 @@ import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
 
+from ..utils import u
 from .. import utils
 from .. import validation
 from . import delineateit_core
@@ -35,16 +36,8 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "dem_path": {
-            "validation_options": {
-                "projected": True,
-            },
-            "type": "raster",
-            "bands": {1: {"type": "number", "units": "meters"}},
-            "required": True,
-            "about": (
-                "A GDAL-supported raster file with an elevation value for "
-                "each cell."),
-            "name": "Digital Elevation Model"
+            **utils.DEM_ARG,
+            **utils.PROJECTED
         },
         "detect_pour_points": {
             "type": "boolean",
@@ -74,11 +67,9 @@ ARGS_SPEC = {
             "name": "Snap points to the nearest stream"
         },
         "flow_threshold": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "type": "number",
-            "units": "pixels",
+            "units": u.pixel,
             "required": "snap_points",
             "about": (
                 "The number of upstream cells that must flow into a cell "
@@ -88,11 +79,9 @@ ARGS_SPEC = {
             "name": "Threshold Flow Accumulation"
         },
         "snap_distance": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "type": "number",
-            "units": "pixels",
+            "units": u.pixels,
             "required": "snap_points",
             "about": (
                 "If provided, the maximum search radius in pixels to look "

@@ -21,29 +21,19 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "aoi_vector_path": {
-            "validation_options": {
-                "required_fields": ["NAME"],
-            },
-            "type": "vector",
+            **utils.AOI_ARG,
             "fields": {
                 "NAME": {
                     "type": "freestyle_string", 
                     "about": "A unique identifier for each area of interest."
                 }
             },
-            "geometries": utils.POLYGONS,
-            "required": False,
-            "about": (
-                "A GDAL-supported vector file used to display outputs within "
-                "the region(s) of interest."),
-            "name": "Area of Interest"
+            "required": False
         },
         "total_timesteps": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "type": "number",
-            "units": None,
+            "units": u.count,
             "required": True,
             "about": (
                 "The number of time steps the simulation shall execute "
@@ -165,11 +155,9 @@ ARGS_SPEC = {
             "name": "Spawners by Individuals or Weight (Beverton-Holt / Ricker)"
         },
         "total_init_recruits": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "type": "number",
-            "units": None,
+            "units": u.count,
             "required": True,
             "about": (
                 "The initial number of recruits in the population model at "
@@ -223,7 +211,7 @@ ARGS_SPEC = {
         },
         "total_recur_recruits": {
             "type": "number",
-            "units": None,
+            "units": u.count,
             "required": False,
             "about": (
                 "Specifies the total number of recruits that come into the "
@@ -285,7 +273,7 @@ ARGS_SPEC = {
         },
         "unit_price": {
             "type": "number",
-            "units": "currency/harvest unit",
+            "units": None",
             "required": "val_cont",
             "about": (
                 "Specifies the price per harvest unit. If 'Harvest by "

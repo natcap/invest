@@ -13,6 +13,7 @@ import rtree
 import shapely.wkb
 import shapely.prepared
 
+from .utils import u
 from . import validation
 from . import utils
 
@@ -36,7 +37,7 @@ ARGS_SPEC = {
         "rainfall_depth": {
             **utils.GT_0,
             "type": "number",
-            "units": "millimeters",
+            "units": u.millimeter,
             "required": True,
             "about": "Depth of rainfall",
             "name": "Depth of rainfall"
@@ -81,7 +82,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "type": {"type": "code"},
-                "damage": {"type": "number", "units": "currency/m^2"}
+                "damage": {"type": "number", "units": u.currency/(u.meter**2)}
             },
             "required": "built_infrastructure_vector_path",
             "about": (

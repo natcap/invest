@@ -8,6 +8,7 @@ import pygeoprocessing.routing
 import taskgraph
 import numpy
 
+from .utils import u
 from . import utils
 from . import validation
 
@@ -67,16 +68,8 @@ ARGS_SPEC = {
             "name": "Calculate Stream Thresholds"
         },
         "threshold_flow_accumulation": {
-            "validation_options": {
-                "expression": "value >= 0"
-            },
-            "type": "number",
-            "units": "pixels",
-            "required": "calculate_stream_threshold",
-            "about": (
-                "The number of upstream cells that must flow into a cell "
-                "before it's classified as a stream."),
-            "name": "Threshold Flow Accumulation Limit"
+            **utils.THRESHOLD_FLOW_ACCUMULATION_ARG,
+            "required": "calculate_stream_threshold"
         },
         "calculate_downstream_distance": {
             "type": "boolean",

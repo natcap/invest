@@ -8,6 +8,7 @@ from osgeo import gdal
 import pygeoprocessing
 import taskgraph
 
+from ..utils import u
 from .. import utils
 from .. import validation
 from . import coastal_blue_carbon
@@ -52,7 +53,7 @@ ARGS_SPEC = {
             "columns": {
                 "snapshot_year": {
                     "type": "number",
-                    "units": "years",
+                    "units": u.year,
                     "about": "Year to snapshot"},
                 "raster_path": {
                     "type": "raster",
