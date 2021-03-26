@@ -7,6 +7,7 @@ if (ELECTRON_DEV_MODE) {
   dotenv.config();
 }
 
+const fs = require('fs');
 const path = require('path');
 
 const {
@@ -145,9 +146,11 @@ const createWindow = async () => {
   // Setup handlers & defaults to manage downloads.
   // Specifically, invest sample data downloads
   let downloadDir;
+  const downloadQueue = [];
   ipcMain.on('download-url', async (event, urlArray, directory) => {
     logger.debug(`${urlArray}`);
     downloadDir = directory;
+    downloadQueue.push(...urlArray);
     urlArray.forEach((url) => mainWindow.webContents.downloadURL(url));
     // const promises = urlArray.map((url) => {
     //   download(mainWindow, url, {
@@ -162,10 +165,12 @@ const createWindow = async () => {
   });
 
   // mainWindow.webContents.session.setDownloadPath(directory);
-  mainWindow.webContents.session.on('will-download', (event, item, webContents) => {
+  mainWindow.webContents.session.on('will-download', (event, item) => {
     const filename = item.getFilename();
     item.setSavePath(path.join(downloadDir, filename));
-    logger.debug(`getURL ${item.getURL()}`);
+    const itemURL = item.getURL();
+    const idx = downloadQueue.findIndex((item) => item === itemURL);
+    downloadQueue.splice(idx, 1);
     item.on('updated', (event, state) => {
       if (state === 'interrupted') {
         logger.info('download interrupted');
@@ -178,14 +183,20 @@ const createWindow = async () => {
         }
       }
     });
-    item.once('done', (event, state) => {
+    item.once('done', async (event, state) => {
       if (state === 'completed') {
-        logger.info('download completed');
-        logger.debug(item.savePath);
-        extractZipInplace(item.savePath);
-        // mainWindow.webContents.send('sampledata-update', path.dirname(item.savePath));
+        logger.info(`${itemURL} complete`);
+        // logger.debug(item.savePath);
+        await extractZipInplace(item.savePath);
+        console.log('deleting ' + item.savePath);
+        fs.unlink(item.savePath, (err) => {
+          if (err) { logger.error(err); }
+        });
       } else {
         logger.info(`download failed: ${state}`);
+      }
+      if (!downloadQueue.length) {
+        logger.info('all downloads complete');
       }
     });
   });

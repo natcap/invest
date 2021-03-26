@@ -92,32 +92,38 @@ export function createPythonFlaskProcess(investExe) {
 }
 
 export function extractZipInplace(zipFilePath) {
-  const extractToDir = path.dirname(zipFilePath);
-  yauzl.open(zipFilePath, { lazyEntries: true }, (err, zipfile) => {
-    if (err) throw err;
-    zipfile.readEntry();
-    zipfile.on('entry', (entry) => {
-      if (/\/$/.test(entry.fileName)) {
-        // if entry is a directory
-        fs.mkdir(path.join(extractToDir, entry.fileName), (err) => {
-          if (err) {
-            if (err.code === 'EEXIST') { } else logger.error(err);
-          }
-          zipfile.readEntry();
-        });
-      } else {
-        console.log(entry.fileName);
-        zipfile.openReadStream(entry, (err, readStream) => {
-          if (err) throw err;
-          readStream.on('end', () => {
+  return new Promise((resolve, reject) => {
+    const extractToDir = path.dirname(zipFilePath);
+    yauzl.open(zipFilePath, { lazyEntries: true }, (err, zipfile) => {
+      if (err) throw err;
+      zipfile.readEntry();
+      zipfile.on('entry', (entry) => {
+        if (/\/$/.test(entry.fileName)) {
+          // if entry is a directory
+          fs.mkdir(path.join(extractToDir, entry.fileName), (err) => {
+            if (err) {
+              if (err.code === 'EEXIST') { } else logger.error(err);
+            }
             zipfile.readEntry();
           });
-          const writable = fs.createWriteStream(path.join(
-            extractToDir, entry.fileName
-          ));
-          readStream.pipe(writable);
-        });
-      }
+        } else {
+          console.log(entry.fileName);
+          zipfile.openReadStream(entry, (err, readStream) => {
+            if (err) throw err;
+            readStream.on('end', () => {
+              zipfile.readEntry();
+            });
+            const writable = fs.createWriteStream(path.join(
+              extractToDir, entry.fileName
+            ));
+            readStream.pipe(writable);
+          });
+        }
+      });
+      zipfile.on('close', () => {
+        console.log('CLOSED')
+        resolve(true);
+      });
     });
   });
 }

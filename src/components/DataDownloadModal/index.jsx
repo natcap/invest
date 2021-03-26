@@ -85,6 +85,7 @@ export default class DataDownloadModal extends React.Component {
       } else {
         ipcRenderer.send('download-url', this.state.selectedLinksArray, data.filePaths[0]);
       }
+      this.props.storeDownloadDir(data.filePaths[0]);
     }
   }
 
