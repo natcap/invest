@@ -156,6 +156,16 @@ ETO_ARG = {
     "about": "A map of evapotranspiration values"
 }
 
+SOIL_GROUP_ARG = {
+    "type": "raster",
+    "bands": {1: {"type": "code"}},
+    "required": True,
+    "about": (
+        "Raster with values equal to 1, 2, 3, 4, corresponding to "
+        "soil hydrologic group A, B, C, or D, respectively"),
+    "name": "soil hydrologic group"
+}
+
 LINES = {'LINESTRING', 'MULTILINESTRING'}
 POLYGONS = {'POLYGON', 'MULTIPOLYGON'}
 ALL_GEOMS = {'LINESTRING', 'POLYGON', 'POINT'}

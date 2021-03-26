@@ -35,6 +35,86 @@ ARGS_SPEC = {
                 "exists": True,
             },
             "type": "directory",
+            "contents": {
+                "NAmerica_WestCoast_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": "point vector for the west coast of North America and Hawaii"},
+                "WCNA_extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": "extract vector for the west coast of North America and Hawaii"},
+                "NAmerica_WestCoast_4m.txt.bin": {
+                    "type": "file",
+                    "about": "WaveWatchIII data for the west coast of North America and Hawaii"},
+                "NAmerica_EastCoast_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": "point vector for the East Coast of North America and Puerto Rico"},
+                "ECNA_extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": "extract vector for the East Coast of North America and Puerto Rico"},
+                "NAmerica_EastCoast_4m.txt.bin": {
+                    "type": "file",
+                    "about": "WaveWatchIII data for the East Coast of North America and Puerto Rico"},
+                "North_Sea_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": "point vector for the North Sea 4 meter resolution"},
+                "North_Sea_4m_Extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": "extract vector for the North Sea 4 meter resolution"},
+                "North_Sea_4m.bin": {
+                    "type": "file",
+                    "about": "WaveWatchIII data for the North Sea 4 meter resolution"},
+                "North_Sea_10m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": "point vector for the North Sea 10 meter resolution"},
+                "North_Sea_10m_Extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": "extract vector for the North Sea 10 meter resolution"},
+                "North_Sea_10m.bin": {
+                    "type": "file",
+                    "about": "WaveWatchIII data for the North Sea 10 meter resolution"},
+                "Australia_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": "point vector for Australia"},
+                "Australia_Extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": "extract vector for Australia"},
+                "Australia_4m.bin": {
+                    "type": "file",
+                    "about": "WaveWatchIII data for Australia"},
+                "Global.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": "Global point vector"},
+                "Global_extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": "Global extract vector"},
+                "Global_WW3.txt.bin": {
+                    "type": "file",
+                    "about": "Global WaveWatchIII data"}
+            },
             "required": True,
             "about": "Select the folder that has the packaged Wave Energy Data.",
             "name": "Wave Base Data Folder"
@@ -59,22 +139,29 @@ ARGS_SPEC = {
             "name": "Analysis Area"
         },
         "aoi_path": {
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters"
-            },
-            "type": "vector",
+            **utils.AOI_ARG,
+            **utils.METER_PROJECTED,
             "required": False,
             "about": (
                 "An OGR-supported vector file containing a single polygon "
                 "representing the area of interest.  This input is required "
                 "for computing valuation and is recommended for biophysical "
-                "runs as well.  The AOI should be projected in linear units "
-                "of meters."),
-            "name": "Area of Interest"
+                "runs as well."),
         },
         "machine_perf_path": {
             "type": "csv",
+            "columns": {
+                "height": {
+                    "type": "number",
+                    "units": "meters",
+                    "about": "user-defined wave height bins from smallest to largest"
+                },
+                "[WAVE_PERIOD]": {
+                    "names": "user-defined wave period bins from smallest to largest",
+                    "type": "number",
+                    "units": "seconds"
+                }
+            },
             "required": True,
             "about": (
                 "A CSV Table that has the performance of a particular wave "
@@ -82,10 +169,20 @@ ARGS_SPEC = {
             "name": "Machine Performance Table"
         },
         "machine_param_path": {
-            "validation_options": {
-                "required_fields": ["name", "value", "note"],
-            },
             "type": "csv",
+            "columns": {
+                "name": {
+                    "type": "option_string",
+                    "about": ("Contains the values CapMax (maximum capacity of device), "
+                        "HsMax (upper limit of wave height for device operation (the device"
+                        "shuts down when waves are higher than this limit), and TpMax (upper "
+                        "limit of wave period for device operation (the device shuts down when "
+                        "wave period is longer than this).")},
+                "value": {
+                    "type": "number",
+                    "units": None,
+                    "about": ("Values for CapMax (in kilowatts), HsMax (in meters), and TpMax (in seconds).")},
+            },
             "required": True,
             "about": (
                 "A CSV Table that has parameter values for a wave energy "
@@ -95,13 +192,11 @@ ARGS_SPEC = {
             "name": "Machine Parameter Table"
         },
         "dem_path": {
-            "type": "raster",
-            "required": True,
+            **utils.DEM_ARG,
             "about": (
                 "A GDAL-supported raster file containing a digital elevation "
                 "model dataset that has elevation values in meters.  Used to "
-                "get the cable distance for wave energy transmission."),
-            "name": "Global Digital Elevation Model"
+                "get the cable distance for wave energy transmission.")
         },
         "valuation_container": {
             "type": "boolean",
@@ -110,10 +205,31 @@ ARGS_SPEC = {
             "name": "Valuation"
         },
         "land_gridPts_path": {
-            "validation_options": {
-                "required_fields": ['id', 'type', 'lat', 'long', 'location'],
-            },
             "type": "csv",
+            "columns": {
+                "id": {"type": "code", "about": "unique identifier for the point"},
+                "type": {
+                    "type": "option_string",
+                    "options": {
+                        "LAND": "a land connection point",
+                        "GRID": "a grid connection point"
+                    }
+                },
+                "lat": {
+                    "type": "number",
+                    "units": "decimal degrees",
+                    "about": "latitude of the connection point"
+                },
+                "long": {
+                    "type": "number",
+                    "units": "decimal degrees",
+                    "about": "longitude of the connection point"
+                },
+                "location": {
+                    "type": "freestyle_string",
+                    "about": "name for the connection point location"
+                }
+            },
             "required": "valuation_container",
             "about": (
                 "A CSV Table that has the landing points and grid points "
@@ -125,6 +241,21 @@ ARGS_SPEC = {
                 'required_fields': ['name', 'value', 'note'],
             },
             "type": "csv",
+            "columns": {
+                "name": {
+                    "type": "option_string",
+                    "about": ("Contains the values CapMax (maximum capacity of device), "
+                        "Cc (capital cost per device installed), Cml (cost of mooring lines), "
+                        "Cul (cost of underwater transmission lines), Col (cost of overland transmission line), "
+                        "Omc (operating and maintenance cost), P (price of electricity), R (discount rate), "
+                        "Smlpm (number of slack lines required per machine)")},
+                "value": {
+                    "type": "number",
+                    "units": None,
+                    "about": ("Values for CapMax (in kilowatts), Cc (in currency/kW), Cml (in currency/meter), "
+                        "Cul (currency/kilometer), Col (currency/kilometer), Omc (currency/kWH), "
+                        "P (currency/kWH), R (unitless ratio), and Smlpm (unitless number).")},
+            },
             "required": "valuation_container",
             "about": (
                 "A CSV Table that has the economic parameters for the wave "
@@ -132,10 +263,9 @@ ARGS_SPEC = {
             "name": "Machine Economic Table"
         },
         "number_of_machines": {
-            "validation_options": {
-                "expression": "int(value) > 0"
-            },
+            **utils.GT_0,
             "type": "number",
+            "units": None,
             "required": "valuation_container",
             "about": (
                 "An integer for how many wave energy machines will be in the "

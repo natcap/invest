@@ -69,13 +69,14 @@ class ValidateArgsSpecs(unittest.TestCase):
                 has_cols = 'columns' in arg
                 self.assertTrue(has_rows or has_cols and not (has_rows and has_cols),
                     arg)
+                headers = arg['columns'] if has_cols else arg['rows']
 
                 # may be None if the table is too complex to define this way
-                if arg['columns'] is not None:
-                    self.assertEqual(type(arg['columns']), dict)
-                    for column in arg['columns']:
-                        self.assertTrue(isinstance(column, str))
-                        self.validate(arg['columns'][column], valid_types=valid_nested_types['csv'])
+                if headers is not None:
+                    self.assertEqual(type(headers), dict)
+                    for header in headers:
+                        self.assertTrue(isinstance(header, str))
+                        self.validate(headers[header], valid_types=valid_nested_types['csv'])
 
             elif t == 'directory':
                 self.assertTrue('contents' in arg)

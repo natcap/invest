@@ -43,8 +43,32 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "wind_data_path": {
-            "validation_options": {},
             "type": "csv",
+            "columns": {
+                "LONG": {
+                    "type": "number",
+                    "units": "decimal degrees"
+                },
+                "LATI": {
+                    "type": "number",
+                    "units": "decimal degrees"
+                },
+                "LAM": {
+                    "type": "number",
+                    "units": None,
+                    "about": "Weibull scale factor at the reference hub height"
+                },
+                "K": {
+                    "type": "number",
+                    "units": None,
+                    "about": "Weibull shape factor"
+                },
+                "REF": {
+                    "type": "number",
+                    "units": "meters",
+                    "about": ("The reference height at which wind speed data was collected and LAM was estimated")
+                }
+            },
             "required": True,
             "about": (
                 "A CSV file that represents the wind input data (Weibull "
@@ -53,11 +77,8 @@ ARGS_SPEC = {
             "name": "Wind Data Points (CSV)"
         },
         "aoi_vector_path": {
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters",
-            },
-            "type": "vector",
+            **utils.AOI_ARG,
+            **utils.METER_PROJECTED,
             "required": "valuation_container & grid_points_path",
             "about": (
                 "A GDAL-supported vector file containing a single polygon "
@@ -70,11 +91,10 @@ ARGS_SPEC = {
                 "AOI should also cover a portion of the land polygon to "
                 "calculate distances correctly.  An AOI is required for "
                 "valuation."),
-            "name": "Area Of Interest"
         },
         "bathymetry_path": {
-            "validation_options": {},
             "type": "raster",
+            "bands": {1: {"type": "number", "units": "meters"}},
             "required": True,
             "about": (
                 "A GDAL-supported raster file containing elevation values "
@@ -85,7 +105,7 @@ ARGS_SPEC = {
             "name": "Bathymetric Digital Elevation Model"
         },
         "land_polygon_vector_path": {
-            "type": "vector",
+            **utils.AREA,
             "required": "min_distance | max_distance | valuation_container",
             "about": (
                 "A GDAL-supported polygon vector that represents the land "
@@ -101,6 +121,49 @@ ARGS_SPEC = {
         "global_wind_parameters_path": {
             "type": "csv",
             "required": True,
+            "rows": {
+                "air_density": {
+                    "type": "number", 
+                    "units": "kg/m^3", 
+                    "about": "standard atmosphere air density"},
+                "exponent_power_curve": {
+                    "type": "number", 
+                    "units": None,
+                    "about": "exponent to use in the power curve function"},
+                "decommission_cost": {
+                    "type": "ratio",
+                    "about": ("cost to decommission a turbine as a proportion of the total"
+                        "upfront costs (cables, foundations, installation?")
+                },
+                "operation_maintenance_cost": {"type": "ratio"},
+                "miscellaneous_capex_cost": {"type": "ratio"},
+                "installation_cost": {"type": "ratio"},
+                "infield_cable_length": {"type": "number", "units": "kilometers"},
+                "infield_cable_cost": {"type": "number", "units": "millions of $/kilometer"},
+                "mw_coef_ac": {"type": "number", "units": "?"},
+                "mw_coef_dc": {"type": "number", "units": "?"},
+                "cable_coef_ac": {"type": "number", "units": "?"},
+                "cable_coef_dc": {"type": "number", "units": "?"},
+                "ac_dc_distance_break": {
+                    "type": "number",
+                    "units": "kilometers",
+                    "about": ("The threshold above which a wind farm’s distance from "
+                        "the grid requires a switch from AC to DC power to overcome "
+                        "line losses which reduce the amount of energy delivered")},
+                "time_period": {
+                    "type": "number",
+                    "units": "years",
+                    "about": "The expected lifetime of the facility"},
+                "carbon_coefficient": {"type": "number", "units": "?"},
+                "air_density_coefficient": {
+                    "type": "number",
+                    "units": "kg/m^3/m",
+                    "about": "The reduction in air density per meter above sea level"},
+                "loss_parameter": {
+                    "type": "ratio",
+                    "about": ("The fraction of energy lost due to downtime, power conversion"
+                        "inefficiency, and electrical grid losses")}
+            },
             "about": (
                 "A CSV file that holds wind energy model parameters for both "
                 "the biophysical and valuation modules. These parameters are "
@@ -111,9 +174,34 @@ ARGS_SPEC = {
             "name": "Global Wind Energy Parameters"
         },
         "turbine_parameters_path": {
-            "validation_options": {},
             "type": "csv",
             "required": True,
+            "columns": {
+                "hub_height": {
+                    "type": "number",
+                    "units": "meters",
+                    "about": "Height of the turbine hub above sea level"},
+                "cut_in_wspd": {
+                    "type": "number",
+                    "units": "meters/second",
+                    "about": "Wind speed at which the turbine begins producing power"},
+                "rated_wspd": {
+                    "type": "number",
+                    "units": "meters/second",
+                    "about": "Minimum wind speed at which the turbine reaches its rated power output"},
+                "cut_out_wspd": {
+                    "type": "number",
+                    "units": "meters/second",
+                    "about": "Wind speed above which the turbine stops generating power for safety reasons"},
+                "turbine_rated_pwr": {
+                    "type": "number",
+                    "units": "kilowatts",
+                    "about": "The turbine's rated power output"},
+                "turbine_cost": {
+                    "type": "number",
+                    "units": "millions of dollars",
+                    "about": "The cost of one turbine"}
+            },
             "about": (
                 "A CSV file that contains parameters corresponding to a "
                 "specific turbine type.  The InVEST package comes with two "
@@ -126,10 +214,9 @@ ARGS_SPEC = {
             "name": "Turbine Type Parameters File"
         },
         "number_of_turbines": {
-            "validation_options": {
-                "expression": "int(value) > 0",
-            },
+            **utils.GT_0,
             "type": "number",
+            "units": None,
             "required": True,
             "about": "An integer value indicating the number of wind turbines"
                      " per wind farm.",
@@ -137,43 +224,45 @@ ARGS_SPEC = {
         },
         "min_depth": {
             "type": "number",
+            "units": "meters",
             "required": True,
             "about": (
                 "A floating point value in meters for the minimum depth of "
                 "the offshore wind farm installation."),
             "name": (
-                "Minimum Depth for Offshore Wind Farm Installation (meters)")
+                "Minimum Depth for Offshore Wind Farm Installation")
         },
         "max_depth": {
             "type": "number",
+            "units": "meters",
             "required": True,
             "about": (
                 "A floating point value in meters for the maximum depth of "
                 "the offshore wind farm installation."),
             "name": (
-                "Maximum Depth for Offshore Wind Farm Installation (meters)")
+                "Maximum Depth for Offshore Wind Farm Installation")
         },
         "min_distance": {
             "type": "number",
+            "units": "meters",
             "required": "valuation_container",
             "about": (
                 "A floating point value in meters that represents the "
                 "minimum distance from shore for offshore wind farm "
                 "installation.  Required for valuation."),
             "name": (
-                "Minimum Distance for Offshore Wind Farm Installation "
-                "(meters)")
+                "Minimum Distance for Offshore Wind Farm Installation")
         },
         "max_distance": {
             "type": "number",
+            "units": "meters",
             "required": "valuation_container",
             "about": (
                 "A floating point value in meters that represents the "
                 "maximum distance from shore for offshore wind farm "
                 "installation.  Required for valuation."),
             "name": (
-                "Maximum Distance for Offshore Wind Farm Installation "
-                "(meters)")
+                "Maximum Distance for Offshore Wind Farm Installation")
         },
         "valuation_container": {
             "type": "boolean",
@@ -183,6 +272,7 @@ ARGS_SPEC = {
         },
         "foundation_cost": {
             "type": "number",
+            "units": "millions of dollars",
             "required": "valuation_container",
             "about": (
                 "A floating point number for the unit cost of the foundation "
@@ -191,11 +281,10 @@ ARGS_SPEC = {
                 "variety of factors including depth and turbine choice.  "
                 "Please see the User's Guide for guidance on properly "
                 "selecting this value."),
-            "name": "Cost of the Foundation Type (USD, in Millions)"
+            "name": "Cost of the Foundation Type"
         },
         "discount_rate": {
-            "validation_options": {},
-            "type": "number",
+            "type": "ratio",
             "required": "valuation_container",
             "about": (
                 "The discount rate reflects preferences for immediate "
@@ -205,10 +294,27 @@ ARGS_SPEC = {
             "name": "Discount Rate"
         },
         "grid_points_path": {
-            "validation_options": {
-                "required_fields": ["id", "type", "lati", "long"],
-            },
             "type": "csv",
+            "columns": {
+                "id": {"type": "code", "about": "unique identifier for the point"},
+                "type": {
+                    "type": "option_string",
+                    "options": {
+                        "LAND": "a land connection point",
+                        "GRID": "a grid connection point"
+                    }
+                },
+                "lati": {
+                    "type": "number",
+                    "units": "decimal degrees",
+                    "about": "latitude of the connection point"
+                },
+                "long": {
+                    "type": "number",
+                    "units": "decimal degrees",
+                    "about": "longitude of the connection point"
+                }
+            },
             "required": "valuation_container & (not avg_grid_distance)",
             "about": (
                 "An optional CSV file with grid and land points to determine "
@@ -224,10 +330,9 @@ ARGS_SPEC = {
             "name": "Grid Connection Points"
         },
         "avg_grid_distance": {
-            "validation_options": {
-                "expression": "value > 0"
-            },
+            **utils.GT_0,
             "type": "number",
+            "units": "kilometers",
             "required": "valuation_container & (not grid_points_path)",
             "about": (
                 "A number in kilometres that is only used if grid points are "
@@ -237,7 +342,7 @@ ARGS_SPEC = {
                 "landing points instead of specific grid connection points.  "
                 "See the User's Guide for a description of the approach and "
                 "the method used to calculate the default value."),
-            "name": "Average Shore to Grid Distance (Kilometers)"
+            "name": "Average Shore to Grid Distance"
         },
         "price_table": {
             "type": "boolean",
@@ -250,10 +355,19 @@ ARGS_SPEC = {
             "name": "Use Price Table"
         },
         "wind_schedule": {
-            "validation_options": {
-                "required_fields": ['year', 'price'],
-            },
             "type": "csv",
+            "columns": {
+                "year": {
+                    "type": "number",
+                    "units": "years",
+                    "about": "Consecutive years for each year in the lifespan of the wind farm"
+                },
+                "price": {
+                    "type": "number",
+                    "units": "currency/kilowatt-hours",
+                    "about": "Price of energy for each year"
+                }
+            },
             "required": "valuation_container & price_table",
             "about": (
                 "A CSV file that has the price of wind energy per kilowatt "
@@ -275,6 +389,7 @@ ARGS_SPEC = {
         },
         "wind_price": {
             "type": "number",
+            "units": "currency/kilowatt-hour",
             "required": "valuation_container & (not price_table)",
             "about": (
                 "The price of energy per kilowatt hour.  This is the price "
@@ -282,14 +397,14 @@ ARGS_SPEC = {
                 "adjusted based on the rate of change percentage from the "
                 "input below.  See the User's Guide for guidance about "
                 "determining this value."),
-            "name": "Price of Energy per Kilowatt Hour ($/kWh)"
+            "name": "Price of Energy"
         },
         "rate_change": {
             "validation_options": {
                 "expression": "(value >= 0) & (value <= 1)",
             },
-            "type": "number",
-            "required": "valuation_container & (not price_table)",
+            "type": "ratio",
+            "required": "valuatixon_container & (not price_table)",
             "about": (
                 "The annual rate of change in the price of wind energy.  "
                 "This should be expressed as a decimal percentage.  For "
@@ -473,8 +588,7 @@ def execute(args):
     biophysical_params = [
         'cut_in_wspd', 'cut_out_wspd', 'rated_wspd', 'hub_height',
         'turbine_rated_pwr', 'air_density', 'exponent_power_curve',
-        'air_density_coefficient', 'loss_parameter', 'turbines_per_circuit',
-        'rotor_diameter', 'rotor_diameter_factor'
+        'air_density_coefficient', 'loss_parameter'
     ]
 
     # Read the biophysical turbine parameters into a dictionary

@@ -32,61 +32,44 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
-        "aoi_watersheds_path": {
-            "type": "vector",
-            "required": True,
-            "about": (
-                "Path to a vector of (sub)watersheds or sewersheds used to "
-                "indicate spatial area of interest."),
-            "name": "Watershed Vector"
-        },
+        "aoi_watersheds_path": utils.AOI_ARG,
         "rainfall_depth": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "type": "number",
+            "units": "millimeters",
             "required": True,
-            "about": "Depth of rainfall in mm.",
-            "name": "Depth of rainfall in mm"
+            "about": "Depth of rainfall",
+            "name": "Depth of rainfall"
         },
         "lulc_path": {
-            "type": "raster",
-            "validation_options": {
-                "projected": True,
-            },
-            "required": True,
-            "about": "Path to a landcover raster",
-            "name": "Landcover Raster"
+            **utils.LULC_ARG,
+            **utils.PROJECTED
         },
         "soils_hydrological_group_raster_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "Raster with values equal to 1, 2, 3, 4, corresponding to "
-                "soil hydrologic group A, B, C, or D, respectively (used to "
-                "derive the CN number)"),
-            "name": "Soils Hydrological Group Raster"
+            **utils.SOIL_GROUP_ARG,
+            **utils.PROJECTED
         },
         "curve_number_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "CN_A", "CN_B", "CN_C", "CN_D"],
-            },
             "type": "csv",
+            "columns": {
+                "lucode": {"type": "code"},
+                "CN_[SOIL_GROUP]": {
+                    "names": "For each soil group A, B, C, D",
+                    "type": "number",
+                    "units": None,
+                    "about": ("Curve number values for each LULC type and each hydrologic soil group.")
+                }
+            },
             "required": True,
             "about": (
                 "Path to a CSV table that to map landcover codes to curve "
-                "numbers and contains at least the headers 'lucode', "
-                "'CN_A', 'CN_B', 'CN_C', 'CN_D'"),
+                "numbers"),
             "name": "Biophysical Table"
         },
         "built_infrastructure_vector_path": {
-            "validation_options": {
-                "required_fields": ["type"],
-            },
             "type": "vector",
+            "fields": {"type": {"type": "code"}},
+            "geometries": utils.POLYGONS,
             "required": False,
             "about": (
                 "Path to a vector with built infrastructure footprints. "
@@ -95,10 +78,11 @@ ARGS_SPEC = {
             "name": "Built Infrastructure Vector"
         },
         "infrastructure_damage_loss_table_path": {
-            "validation_options": {
-                "required_fields": ["type", "damage"],
-            },
             "type": "csv",
+            "columns": {
+                "type": {"type": "code"},
+                "damage": {"type": "number", "units": "currency/m^2"}
+            },
             "required": "built_infrastructure_vector_path",
             "about": (
                 "Path to a a CSV table with columns 'Type' and 'Damage' with "
