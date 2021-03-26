@@ -146,31 +146,24 @@ const createWindow = async () => {
   // Setup handlers & defaults to manage downloads.
   // Specifically, invest sample data downloads
   let downloadDir;
+  let downloadLength;
   const downloadQueue = [];
   ipcMain.on('download-url', async (event, urlArray, directory) => {
     logger.debug(`${urlArray}`);
     downloadDir = directory;
     downloadQueue.push(...urlArray);
+    downloadLength = downloadQueue.length;
+    mainWindow.webContents.send(
+      'download-status',
+      [(downloadLength - downloadQueue.length), downloadLength]
+    );
     urlArray.forEach((url) => mainWindow.webContents.downloadURL(url));
-    // const promises = urlArray.map((url) => {
-    //   download(mainWindow, url, {
-    //     directory: directory,
-    //     onCompleted: (item) => {
-    //       console.log(`dl complete: ${JSON.stringify(item)}`);
-    //     },
-    //   });
-    // });
-    // const filepaths = await Promise.all(promises);
-    // logger.debug(`after promise.all ${filepaths}`);
   });
 
-  // mainWindow.webContents.session.setDownloadPath(directory);
   mainWindow.webContents.session.on('will-download', (event, item) => {
     const filename = item.getFilename();
     item.setSavePath(path.join(downloadDir, filename));
     const itemURL = item.getURL();
-    const idx = downloadQueue.findIndex((item) => item === itemURL);
-    downloadQueue.splice(idx, 1);
     item.on('updated', (event, state) => {
       if (state === 'interrupted') {
         logger.info('download interrupted');
@@ -192,6 +185,12 @@ const createWindow = async () => {
         fs.unlink(item.savePath, (err) => {
           if (err) { logger.error(err); }
         });
+        const idx = downloadQueue.findIndex((item) => item === itemURL);
+        downloadQueue.splice(idx, 1);
+        mainWindow.webContents.send(
+          'download-status',
+          [(downloadLength - downloadQueue.length), downloadLength]
+        );
       } else {
         logger.info(`download failed: ${state}`);
       }

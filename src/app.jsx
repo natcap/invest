@@ -9,6 +9,7 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
+import ProgressBar from 'react-bootstrap/ProgressBar';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -39,6 +40,7 @@ export default class App extends React.Component {
       recentJobs: [],
       investSettings: {},
       didAskForSampleData: false,
+      downloadedNofN: [9, 10],
     };
     this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
@@ -81,8 +83,11 @@ export default class App extends React.Component {
       didAskForSampleData: didAskForSampleData,
     });
 
-    ipcRenderer.on('sampledata-update', (event, dir) => {
-      this.storeDownloadDir(dir);
+    ipcRenderer.on('download-status', (event, downloadedNofN) => {
+      console.log(downloadedNofN);
+      this.setState({
+        downloadedNofN: downloadedNofN
+      });
     });
   }
 
@@ -181,6 +186,8 @@ export default class App extends React.Component {
       openJobs,
       activeTab,
       didAskForSampleData,
+      downloadInProgress,
+      downloadedNofN,
     } = this.state;
 
     const investNavItems = [];
@@ -219,7 +226,7 @@ export default class App extends React.Component {
         </TabPane>
       );
     });
-    console.log(releaseDataURL);
+    console.log(downloadedNofN);
     return (
       <React.Fragment>
         <DataDownloadModal
@@ -248,6 +255,17 @@ export default class App extends React.Component {
             >
               {investNavItems}
             </Nav>
+            {
+              (downloadedNofN[0] < downloadedNofN[1])
+                ? (
+                  <ProgressBar
+                    max={1}
+                    now={downloadedNofN[0] / downloadedNofN[1]}
+                    label={`Downloading ${downloadedNofN[0] + 1} of ${downloadedNofN[1]}`}
+                  />
+                )
+                : <React.Fragment />
+            }
             <LoadButton
               openInvestModel={this.openInvestModel}
               batchUpdateArgs={this.batchUpdateArgs}
