@@ -1,5 +1,5 @@
 import path from 'path';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { remote, ipcRenderer } from 'electron';
 
@@ -8,11 +8,13 @@ import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
+import Alert from 'react-bootstrap/Alert';
+import ProgressBar from 'react-bootstrap/ProgressBar';
 
 import pkg from '../../../package.json';
 
 /** Render a dialog with a form for configuring global invest settings */
-export default class DataDownloadModal extends React.Component {
+export class DataDownloadModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -187,6 +189,36 @@ export default class DataDownloadModal extends React.Component {
       </Modal>
     );
   }
+}
+
+function Expire(props) {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setVisible(false);
+    }, props.delay);
+  }, [props.delay]);
+
+  return visible ? <div>{props.children}</div> : <div />;
+}
+
+export function DownloadProgressBar(props) {
+  const { downloadedNofN } = props;
+  if (downloadedNofN[0] === downloadedNofN[1]) {
+    return (
+      <Expire delay="5000">
+        <Alert variant="success">Download Complete</Alert>
+      </Expire>
+    );
+  }
+  return (
+    <ProgressBar
+      max={1}
+      now={downloadedNofN[0] / downloadedNofN[1]}
+      label={`Downloading ${downloadedNofN[0] + 1} of ${downloadedNofN[1]}`}
+    />
+  );
 }
 
 // DataDownladModal.propTypes = {

@@ -9,20 +9,21 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
-import ProgressBar from 'react-bootstrap/ProgressBar';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
 import LoadButton from './components/LoadButton';
 import SettingsModal from './components/SettingsModal';
-import DataDownloadModal from './components/DataDownloadModal';
+import {
+  DataDownloadModal, DownloadProgressBar
+} from './components/DataDownloadModal';
+import {
+  getDefaultSettings, saveSettingsStore, getSettingsValue
+} from './components/SettingsModal/SettingsStorage';
 import { getInvestModelNames } from './server_requests';
 import { getLogger } from './logger';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
-import {
-  getDefaultSettings, saveSettingsStore, getSettingsValue
-} from './components/SettingsModal/SettingsStorage';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -40,7 +41,7 @@ export default class App extends React.Component {
       recentJobs: [],
       investSettings: {},
       didAskForSampleData: false,
-      downloadedNofN: [9, 10],
+      downloadedNofN: [10, 10],
     };
     this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
@@ -255,17 +256,9 @@ export default class App extends React.Component {
             >
               {investNavItems}
             </Nav>
-            {
-              (downloadedNofN[0] < downloadedNofN[1])
-                ? (
-                  <ProgressBar
-                    max={1}
-                    now={downloadedNofN[0] / downloadedNofN[1]}
-                    label={`Downloading ${downloadedNofN[0] + 1} of ${downloadedNofN[1]}`}
-                  />
-                )
-                : <React.Fragment />
-            }
+            <DownloadProgressBar
+              downloadedNofN={downloadedNofN}
+            />
             <LoadButton
               openInvestModel={this.openInvestModel}
               batchUpdateArgs={this.batchUpdateArgs}
