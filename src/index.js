@@ -1,4 +1,7 @@
-const { remote, ipcRenderer } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
+const { ipcRenderer } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
+
+const { getLogger } = require('./logger');
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const isDevMode = process.argv.includes('--dev');
 if (isDevMode) {
@@ -19,21 +22,12 @@ const app = require('./app');
 // Create a right-click menu
 // TODO: Not sure if Inspect Element should be available in production
 // very useful in dev though.
-const { Menu, MenuItem } = remote;
 let rightClickPosition = null
-const menu = new Menu();
-menu.append(new MenuItem({
-  label: 'Inspect Element',
-  click: () => {
-    remote.getCurrentWindow().inspectElement(rightClickPosition.x, rightClickPosition.y)
-  }
-}));
-
 window.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   rightClickPosition = { x: e.x, y: e.y };
-  menu.popup({ window: remote.getCurrentWindow() });
-}, false);
+  ipcRenderer.invoke('show-context-menu', rightClickPosition);
+})
 
 const render = async function render(investExe, releaseDataURL) {
   reactDom.default.render(
@@ -47,9 +41,9 @@ const render = async function render(investExe, releaseDataURL) {
   );
 };
 
-ipcRenderer.on('variable-reply', (event, arg) => {
+ipcRenderer.invoke('variable-request')
+.then(response => {
   // render the App after receiving any critical data
   // from the main process
-  render(arg.investExe, arg.releaseDataURL);
+  render(response.investExe, response.releaseDataURL);
 });
-ipcRenderer.send('variable-request', 'ping');

@@ -20,7 +20,7 @@ export default class SettingsModal extends React.Component {
         nWorkers: '',
         loggingLevel: '',
         sampleDataDir: null,
-      }
+      },
     };
 
     this.handleShow = this.handleShow.bind(this);
@@ -31,12 +31,7 @@ export default class SettingsModal extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    /** Any time the parent's state of investSettings changes,
-    * this component should reflect that.
-    */
     const { investSettings } = this.props;
-    console.log(investSettings);
-    console.log(prevProps.investSettings);
     if (JSON.stringify(investSettings) !== JSON.stringify(prevProps.investSettings)) {
       this.setState({ localSettings: investSettings });
     }
@@ -47,22 +42,22 @@ export default class SettingsModal extends React.Component {
     const appSettings = Object.assign({}, this.props.investSettings)
     this.setState({
       show: false,
-      localSettings: appSettings
+      localSettings: appSettings,
     });
   }
 
   handleShow() {
-    this.setState({show: true});
+    this.setState({ show: true });
   }
 
   handleSubmit(event) {
     /** Handle a click on the "Save" button.
-      *
-      * Updates the parent's state and persistent store.
-    */
+     *
+     *  Updates the parent's state and persistent store.
+     */
     event.preventDefault();
     this.props.saveSettings(this.state.localSettings);
-    this.setState({show: false});
+    this.setState({ show: false });
   }
 
   /** Handle a click on the "Reset" button, which updates local state */
@@ -70,19 +65,19 @@ export default class SettingsModal extends React.Component {
     event.preventDefault();
     let resetSettings = getDefaultSettings();
     this.setState({
-      localSettings: resetSettings
+      localSettings: resetSettings,
     });
   }
 
   handleChange(event) {
     /** Handle changes to inputs by reflecting them back immediately
-    * via localSettings object. But do not update the values stored
-    * in the parent's state.
-    */
+     * via localSettings object. But do not update the values stored
+     * in the parent's state.
+     */
     let newSettings = Object.assign({}, this.state.localSettings);
     newSettings[event.target.name] = event.target.value
     this.setState({
-      localSettings: newSettings
+      localSettings: newSettings,
     });
   }
 
@@ -221,7 +216,7 @@ export default class SettingsModal extends React.Component {
           </Form>
         </Modal>
       </React.Fragment>
-    )
+    );
   }
 }
 
@@ -230,10 +225,15 @@ SettingsModal.propTypes = {
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
-  })
+  }),
 };
 
-/** Validate that n_wokers is an acceptable value for Taskgraph. */
+/** Validate that n_workers is an acceptable value for Taskgraph.
+ *
+ * @param  {string} value - value for Taskgraph n_workers parameter.
+ * @returns {boolean} - true if a valid value or false otherwise.
+ *
+ */
 function validateNWorkers(value) {
   const nInt = parseInt(value);
   return Number.isInteger(nInt) && nInt >= -1;
