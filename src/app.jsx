@@ -86,7 +86,6 @@ export default class App extends React.Component {
     });
 
     ipcRenderer.on('download-status', (event, downloadedNofN) => {
-      console.log(downloadedNofN);
       this.setState({
         downloadedNofN: downloadedNofN
       });
@@ -112,7 +111,6 @@ export default class App extends React.Component {
   }
 
   storeDownloadDir(dir) {
-    console.log(dir);
     const { investSettings } = this.state;
     investSettings.sampleDataDir = dir;
     this.setState({
