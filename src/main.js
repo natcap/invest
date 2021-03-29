@@ -76,20 +76,18 @@ const createWindow = async () => {
     releaseDataURL: releaseDataURL,
     userDataPath: app.getPath('userData'),
   };
-  ipcMain.on('variable-request', (event, arg) => {
-    logger.debug(JSON.stringify(mainProcessVars));
-    event.reply('variable-reply', mainProcessVars);
   ipcMain.handle('show-context-menu', (event, rightClickPos) => {
     const template = [
       {
         label: 'Inspect Element',
         click: () => {
-          BrowserWindow.fromWebContents(event.sender).inspectElement(rightClickPos.x, rightClickPos.y)
+          BrowserWindow.fromWebContents(event.sender)
+            .inspectElement(rightClickPos.x, rightClickPos.y);
         }
       },
-    ]
+    ];
     const menu = Menu.buildFromTemplate(template);
-    menu.popup( BrowserWindow.fromWebContents(event.sender));
+    menu.popup(BrowserWindow.fromWebContents(event.sender));
   });
   ipcMain.handle('variable-request', async (event) => {
     return mainProcessVars;

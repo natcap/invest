@@ -63,15 +63,20 @@ export default class App extends React.Component {
 
     try {
       for (const settingKey of Object.keys(globalDefaultSettings)) {
-        const value = await getSettingsValue(settingKey);
-        if (!value) {
-          throw new Error('Value not defined or null, use defaults.');
-        }
+        const value = await getSettingsValue(settingKey)
+          || globalDefaultSettings[settingKey];
+        // if (!value) {
+        //   // throw new Error('Value not defined or null, use defaults.');
+        //   investSettings[settingKey] = globalDefaultSettings[settingKey];
+        // } else {
+        //   investSettings[settingKey] = value;
+        // }
         investSettings[settingKey] = value;
       }
     } catch (err) {
       investSettings = globalDefaultSettings;
     }
+    console.log(investSettings);
 
     let didAskForSampleData = false;
     if (investSettings.sampleDataDir) {
@@ -226,7 +231,7 @@ export default class App extends React.Component {
         </TabPane>
       );
     });
-    console.log(downloadedNofN);
+
     return (
       <React.Fragment>
         <DataDownloadModal

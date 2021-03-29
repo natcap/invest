@@ -2,9 +2,8 @@ import path from 'path';
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron';
+import fetch from 'node-fetch';
 
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
@@ -49,7 +48,6 @@ export class DataDownloadModal extends React.Component {
           linksArray.push(item.mediaLink);
           dataListCheckBoxes[item.name] = true;
         });
-        console.log(linksArray);
         this.setState({
           sampleDataRegistryArray: data.items,
           allLinksArray: linksArray,
@@ -101,8 +99,6 @@ export class DataDownloadModal extends React.Component {
         ([k, v]) => [k, event.target.checked]
       )
     );
-    console.log(event.target.checked);
-    console.log(dataListCheckBoxes);
     let selectedLinks;
     if (event.target.checked) {
       selectedLinks = allLinksArray;
@@ -133,7 +129,6 @@ export class DataDownloadModal extends React.Component {
   }
 
   render() {
-    console.log(this.state.selectedLinksArray);
     const DatasetCheckboxList = [];
     this.state.sampleDataRegistryArray
       .forEach((item) => {
@@ -159,7 +154,7 @@ export class DataDownloadModal extends React.Component {
           <Modal.Body>
             <Form.Group>
               <Form.Label>
-                Download All
+                Select All
               </Form.Label>
               <Form.Check
                 id="all-sampledata"
@@ -182,7 +177,7 @@ export class DataDownloadModal extends React.Component {
               variant="primary"
               onClick={this.handleSubmit}
             >
-              Download All
+              Download
             </Button>
           </Modal.Footer>
         </Form>

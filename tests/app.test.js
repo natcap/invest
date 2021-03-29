@@ -40,10 +40,13 @@ afterAll(async () => {
 });
 
 describe('Various ways to open and close InVEST models', () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+    await saveSettingsStore({
+      sampleDataDir: 'dont_show_the_download_modal',
+    });
   });
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore

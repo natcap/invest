@@ -9,6 +9,7 @@ class Store {
     return new Promise((resolve) => resolve(this.store[key]));
   }
   setItem(key, val) {
+    console.log(`from mock: ${key}, ${val}`);
     this.store[key] = val;
   }
   removeItem(key) {
