@@ -43,20 +43,7 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
-        "threshold_flow_accumulation": {
-            "validation_options": {
-                "expression": "value > 0"
-            },
-            "type": "number",
-            "units": u.pixel,
-            "required": True,
-            "about": (
-                "The number of upstream cells that must flow into a cell "
-                "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream.  "
-                "Used to define streams from the DEM."),
-            "name": "Threshold Flow Accumulation"
-        },
+        "threshold_flow_accumulation": utils.THRESHOLD_FLOW_ACCUMULATION_ARG,
         "et0_dir": {
             "validation_options": {
                 "exists": True,
@@ -106,15 +93,9 @@ ARGS_SPEC = {
             **utils.PROJECTED
         },
         "soil_group_path": {
-            "type": "raster",
-            "bands": {1: {"type": "code"}},
-            "required": "not user_defined_local_recharge",
+            **utils.SOIL_GROUP_ARG,
             **utils.PROJECTED,
-            "about": (
-                "Map of SCS soil groups (A, B, C, or D) mapped to integer "
-                "values (1, 2, 3, or 4) used in combination of the LULC map "
-                "to compute the CN map."),
-            "name": "Soil Group"
+            "required": "not user_defined_local_recharge"
         },
         "aoi_path": {
             **utils.AOI_ARG,

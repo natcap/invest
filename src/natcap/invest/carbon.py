@@ -13,7 +13,7 @@ import taskgraph
 
 from . import validation
 from . import utils
-from utils import u
+from .utils import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ ARGS_SPEC = {
                 "A GDAL-supported raster representing the land-cover of "
                 "the REDD policy future scenario.  This scenario will be "
                 "compared to the baseline future scenario."),
-            "name": "REDD Policy)"
+            "name": "REDD Policy"
         },
         "carbon_pools_path": {
             "type": "csv",
