@@ -94,12 +94,12 @@ const createWindow = async () => {
   ipcMain.handle('variable-request', async (event) => {
     return mainProcessVars;
   });
-  ipcMain.handle('show-open-dialog', async (event, arg) => {
-    const result = await dialog.showOpenDialog(arg);
+  ipcMain.handle('show-open-dialog', async (event, options) => {
+    const result = await dialog.showOpenDialog(options);
     return result;
   });
-  ipcMain.handle('show-save-dialog', async (event, arg) => {
-    const result = await dialog.showSaveDialog(arg);
+  ipcMain.handle('show-save-dialog', async (event, options) => {
+    const result = await dialog.showSaveDialog(options);
     return result;
   });
   ipcMain.handle('is-dev-mode', async (event) => {

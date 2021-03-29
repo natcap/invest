@@ -1,7 +1,7 @@
 import path from 'path';
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { remote, ipcRenderer } from 'electron';
+import { ipcRenderer } from 'electron';
 
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
@@ -77,9 +77,9 @@ export class DataDownloadModal extends React.Component {
     );
     // even though the idea is to save files, here we just want to chooose
     // a directory, so must use OpenDialog.
-    const data = await remote.dialog.showOpenDialog(
+    const data = await ipcRenderer.invoke(
+      'show-open-dialog',
       { properties: ['openDirectory'] }
-      // { defaultPath: this.props.defaultTargetPath }
     );
     if (data.filePaths.length) {
       if (this.state.allDataCheck) {

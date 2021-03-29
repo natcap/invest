@@ -90,7 +90,6 @@ function dragLeavingHandler(event) {
 }
 
 export default class ArgInput extends React.PureComponent {
-
   render() {
     const {
       argkey,
