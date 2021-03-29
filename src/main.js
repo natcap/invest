@@ -181,7 +181,6 @@ const createWindow = async () => {
         logger.info(`${itemURL} complete`);
         // logger.debug(item.savePath);
         await extractZipInplace(item.savePath);
-        console.log('deleting ' + item.savePath);
         fs.unlink(item.savePath, (err) => {
           if (err) { logger.error(err); }
         });

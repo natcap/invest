@@ -204,8 +204,8 @@ function Expire(props) {
 }
 
 export function DownloadProgressBar(props) {
-  const { downloadedNofN } = props;
-  if (downloadedNofN[0] === downloadedNofN[1]) {
+  const [nComplete, nTotal] = props.downloadedNofN;
+  if (nComplete === nTotal) {
     return (
       <Expire delay="5000">
         <Alert variant="success">Download Complete</Alert>
@@ -214,9 +214,10 @@ export function DownloadProgressBar(props) {
   }
   return (
     <ProgressBar
+      animated
       max={1}
-      now={downloadedNofN[0] / downloadedNofN[1]}
-      label={`Downloading ${downloadedNofN[0] + 1} of ${downloadedNofN[1]}`}
+      now={nComplete / nTotal}
+      label={`Downloading ${nComplete + 1} of ${nTotal}`}
     />
   );
 }

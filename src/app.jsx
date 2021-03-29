@@ -3,6 +3,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron';
 
+import Row from 'react-bootstrap/Row';
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
@@ -41,7 +42,7 @@ export default class App extends React.Component {
       recentJobs: [],
       investSettings: {},
       didAskForSampleData: false,
-      downloadedNofN: [10, 10],
+      downloadedNofN: null,
     };
     this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
@@ -256,9 +257,15 @@ export default class App extends React.Component {
             >
               {investNavItems}
             </Nav>
-            <DownloadProgressBar
-              downloadedNofN={downloadedNofN}
-            />
+            {
+              (downloadedNofN)
+                ? (
+                  <DownloadProgressBar
+                    downloadedNofN={downloadedNofN}
+                  />
+                )
+                : <div />
+            }
             <LoadButton
               openInvestModel={this.openInvestModel}
               batchUpdateArgs={this.batchUpdateArgs}
