@@ -76,7 +76,6 @@ export default class App extends React.Component {
     } catch (err) {
       investSettings = globalDefaultSettings;
     }
-    console.log(investSettings);
 
     let didAskForSampleData = false;
     if (investSettings.sampleDataDir) {

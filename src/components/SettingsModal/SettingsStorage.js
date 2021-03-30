@@ -33,7 +33,6 @@ export function getDefaultSettings() {
  */
 export async function getSettingsValue(key) {
   const value = await investSettingsStore.getItem(key);
-  console.log(`getSettings ${key}: ${value}`);
   return value;
 }
 
