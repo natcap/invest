@@ -6,19 +6,17 @@ const mockApp = {
   )
 };
 
-// mocks for when electron API accessed via remote from renderer process
-export const remote = {
-  dialog: {
-    showOpenDialog: jest.fn(),
-    showSaveDialog: jest.fn(),
-  },
-  app: mockApp,
-  // there are checks for '--dev' in process.argv[2],
-  // but we don't need '--dev' when running tests.
-  process: {
-    argv: ['', '', '--foo']
-  },
+export const ipcRenderer = {
+  on: jest.fn(),
+  send: jest.fn(),
+  invoke: jest.fn().mockImplementation(() => Promise.resolve()),
 };
+
+export const dialog = {
+  showOpenDialog: jest.fn(),
+  showSaveDialog: jest.fn(),
+}
+
 
 // mocks for when electron API called from main process
 export const app = mockApp;

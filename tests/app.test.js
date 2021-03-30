@@ -5,7 +5,7 @@ import os from 'os';
 import { spawn } from 'child_process';
 import Stream from 'stream';
 import React from 'react';
-import { remote } from 'electron';
+import { ipcRenderer } from 'electron';
 import {
   fireEvent, render, waitFor, within
 } from '@testing-library/react';
@@ -18,6 +18,9 @@ import {
 } from '../src/server_requests';
 import InvestJob from '../src/InvestJob';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
+import {
+  clearSettingsStore, getSettingsValue, saveSettingsStore
+} from '../src/components/SettingsModal/SettingsStorage';
 
 jest.mock('child_process');
 jest.mock('../src/server_requests');
@@ -107,7 +110,7 @@ describe('Various ways to open and close InVEST models', () => {
       model_run_name: 'carbon',
       model_human_name: 'Carbon',
     };
-    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const { findByText, findByLabelText, findByRole } = render(
@@ -129,7 +132,7 @@ describe('Various ways to open and close InVEST models', () => {
     const mockDialogData = {
       filePaths: [],
     };
-    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     const { findByRole } = render(
       <App investExe="foo" />
@@ -177,7 +180,7 @@ describe('Various ways to open and close InVEST models', () => {
         carbon_pools_path: 'Carbon/carbon_pools_willamette.csv',
       },
     };
-    remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
     const openButton = await findByRole('button', { name: 'Open' });
     fireEvent.click(openButton);
@@ -286,74 +289,110 @@ describe('InVEST global settings: dialog interactions', () => {
     getInvestModelNames.mockResolvedValue({});
   });
   afterEach(() => {
+    clearSettingsStore();
     jest.resetAllMocks();
   });
-  test('Set the python logging level to pass to the invest CLI', async () => {
-    const DEFAULT = 'INFO';
+  test('Global settings for cancel, save, and invalid nWorkers', async () => {
+    const nWorkers = '2';
+    const loggingLevel = 'DEBUG';
+    const nWorkersLabelText = 'Taskgraph n_workers parameter';
+    const loggingLabelText = 'Logging threshold';
+    const badValue = 'a';
+
     const { getByText, getByLabelText, getByTitle } = render(
       <App investExe="foo" />
     );
 
-    // Check the default settings
     fireEvent.click(getByTitle('settings'));
+    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
+    const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+
+    // Test that the default values when no global-settings file exists are
+    // loaded. I've found this helps allow componentDidMount processes to
+    // finish
     await waitFor(() => {
-      // waiting because the selected value depends on passed props
-      expect(getByText(DEFAULT).selected).toBeTruthy();
+      expect(nWorkersInput).toHaveValue("-1");
+      expect(loggingInput).toHaveValue("INFO");
     });
 
     // Change the select input and cancel -- expect default selected
-    fireEvent.change(getByLabelText('Logging threshold'),
-      { target: { value: 'DEBUG' } });
+    fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
+    fireEvent.change(loggingInput, { target: { value: loggingLevel } });
+    await waitFor(() => { // the value to test is inherited through props
+      expect(nWorkersInput).toHaveValue(nWorkers);
+      expect(loggingInput).toHaveValue(loggingLevel);
+    });
     fireEvent.click(getByText('Cancel'));
-    // fireEvent.click(getByText('Settings'));  // why is this unecessary?
-    expect(getByText(DEFAULT).selected).toBeTruthy();
+    fireEvent.click(getByText('settings'));
+    await waitFor(() => {
+      expect(nWorkersInput).toHaveValue("-1");
+      expect(loggingInput).toHaveValue("INFO");
+    });
 
-    // Change the select input and save -- expect new value selected
-    fireEvent.change(getByLabelText('Logging threshold'),
-      { target: { value: 'DEBUG' } });
+    // Change the value for real and save
+    fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
+    fireEvent.change(loggingInput, { target: { value: loggingLevel } });
+    // The real test: values saved to global-settings
     fireEvent.click(getByText('Save Changes'));
-    // fireEvent.click(getByText('Settings'));  // why is this unecessary?
-    expect(getByText('DEBUG').selected).toBeTruthy();
+    fireEvent.click(getByTitle('settings'));
+    await waitFor(() => { // the value to test is inherited through props
+      expect(nWorkersInput).toHaveValue(nWorkers);
+      expect(loggingInput).toHaveValue(loggingLevel);
+    });
+    // Check values in the settings store were saved
+    const nWorkersStore = await getSettingsValue('nWorkers');
+    const loggingLevelStore = await getSettingsValue('loggingLevel');
+    expect(nWorkersStore).toBe(nWorkers);
+    expect(loggingLevelStore).toBe(loggingLevel);
+
+    // Change n_workers to bad value -- expect invalid signal
+    fireEvent.change(nWorkersInput, { target: { value: badValue} });
+    expect(nWorkersInput.classList.contains('is-invalid')).toBeTruthy();
+    expect(getByText('Save Changes')).toBeDisabled();
   });
 
-  test('Set the invest n_workers parameter', async () => {
-    const defaultValue = '-1';
-    const newValue = '2';
-    const badValue = 'a';
-    const labelText = 'Taskgraph n_workers parameter';
+  test('Load global settings from storage and test Reset', async () => {
+    const defaultSettings = {
+      nWorkers: '-1',
+      loggingLevel: 'INFO',
+    }
+    const expectedSettings = {
+      nWorkers: '3',
+      loggingLevel: 'ERROR'
+    }
+    const nWorkersLabelText = 'Taskgraph n_workers parameter';
+    const loggingLabelText = 'Logging threshold';
+
+    await saveSettingsStore(expectedSettings);
 
     const { getByText, getByLabelText, getByTitle } = render(
       <App investExe="foo" />
     );
 
     fireEvent.click(getByTitle('settings'));
-    const input = getByLabelText(labelText, { exact: false });
+    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
+    const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
-    // Check the default settings
+    // Test that the global-settings were loaded in from store.
     await waitFor(() => {
-      // waiting because the text value depends on passed props
-      expect(input).toHaveValue(defaultValue);
+      expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
+      expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
     });
 
-    // Change the value and cancel -- expect default value
-    fireEvent.change(input, { target: { value: newValue } });
+    // Test Reset sets values to default
+    fireEvent.click(getByText('Reset'));
+    await waitFor(() => {
+      expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
+      expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
+    });
+
+    // Expect reset values to not have been saved when cancelling
     fireEvent.click(getByText('Cancel'));
-    expect(input).toHaveValue(defaultValue);
-
-    // Change the value and save -- expect new value selected
-    fireEvent.change(input, { target: { value: newValue } });
-    expect(input).toHaveValue(newValue);
-    // The real test: still newValue after saving and re-opening
-    fireEvent.click(getByText('Save Changes'));
-    fireEvent.click(getByTitle('settings'));
-    await waitFor(() => { // the value to test is inherited through props
-      expect(input).toHaveValue(newValue);
+    fireEvent.click(getByText('settings'));
+    await waitFor(() => {
+      expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
+      expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
     });
-
-    // Change to bad value -- expect invalid signal
-    fireEvent.change(input, { target: { value: badValue } });
-    expect(input.classList.contains('is-invalid')).toBeTruthy();
-    expect(getByText('Save Changes')).toBeDisabled();
   });
 });
 
@@ -418,7 +457,7 @@ describe('InVEST subprocess testing', () => {
   afterEach(async () => {
     mockInvestProc = null;
     // being extra careful with recursive rm
-    if (fakeWorkspace.startsWith('tests/data')) {
+    if (fakeWorkspace.startsWith(path.join('tests', 'data'))) {
       fs.rmdirSync(fakeWorkspace, { recursive: true });
     }
     await InvestJob.clearStore();
