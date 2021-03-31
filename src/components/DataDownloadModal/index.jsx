@@ -19,7 +19,6 @@ export class DataDownloadModal extends React.Component {
     super(props);
     this.state = {
       allDataCheck: true,
-      sampleDataRegistryArray: [],
       allLinksArray: [],
       selectedLinksArray: [],
       dataListCheckBoxes: {},
@@ -32,30 +31,18 @@ export class DataDownloadModal extends React.Component {
   }
 
   componentDidMount() {
-    // TODO move this query to the build process and package this data in a file?
-    const prefix = encodeURIComponent(`invest/${pkg.invest.version}/data`);
-    const queryURL = `https://www.googleapis.com/storage/v1/b/${pkg.invest.bucket}/o?prefix=${prefix}`;
     const linksArray = [];
     const dataListCheckBoxes = {};
-    fetch(queryURL)
-      .then((response) => {
-        if (response.status === 200) {
-          return response.json();
-        }
-        console.log(response.status);
-      })
-      .then((data) => {
-        data.items.forEach((item) => {
-          linksArray.push(item.mediaLink);
-          dataListCheckBoxes[item.name] = true;
-        });
-        this.setState({
-          sampleDataRegistryArray: data.items,
-          allLinksArray: linksArray,
-          selectedLinksArray: linksArray,
-          dataListCheckBoxes: dataListCheckBoxes,
-        });
+    Object.entries(sampledataRegistry.Models)
+      .forEach(([modelName, data]) => {
+        linksArray.push(data.url);
+        dataListCheckBoxes[modelName] = true;
       });
+    this.setState({
+      allLinksArray: linksArray,
+      selectedLinksArray: linksArray,
+      dataListCheckBoxes: dataListCheckBoxes,
+    });
   }
 
   handleClose() {
@@ -66,14 +53,7 @@ export class DataDownloadModal extends React.Component {
 
   async handleSubmit(event) {
     event.preventDefault();
-    // need two things here
-    // 1. list of files to download
-    // 2. downloadDir to save them
-    // downloads in background? or keep modal open?
-    // progress is important.
-    const allDataURL = path.join(
-      this.props.releaseDataURL, 'InVEST_3.9.0.post235+g296690d7_sample_data.zip'
-    );
+    const allDataURL = sampledataRegistry.allData.url;
     // even though the idea is to save files, here we just want to chooose
     // a directory, so must use OpenDialog.
     const data = await ipcRenderer.invoke(
@@ -113,14 +93,15 @@ export class DataDownloadModal extends React.Component {
     });
   }
 
-  handleCheckList(event, item) {
+  handleCheckList(event, modelName) {
     let { selectedLinksArray, dataListCheckBoxes } = this.state;
+    const { url } = sampledataRegistry.Models[modelName];
     if (event.target.checked) {
-      selectedLinksArray.push(item.mediaLink);
-      dataListCheckBoxes[item.name] = true;
+      selectedLinksArray.push(url);
+      dataListCheckBoxes[modelName] = true;
     } else {
-      selectedLinksArray = selectedLinksArray.filter((val) => val !== item.mediaLink);
-      dataListCheckBoxes[item.name] = false;
+      selectedLinksArray = selectedLinksArray.filter((val) => val !== url);
+      dataListCheckBoxes[modelName] = false;
     }
     this.setState({
       allDataCheck: false,
@@ -130,18 +111,23 @@ export class DataDownloadModal extends React.Component {
   }
 
   render() {
+    const { dataListCheckBoxes } = this.state;
     const DatasetCheckboxList = [];
-    this.state.sampleDataRegistryArray
-      .forEach((item) => {
-        const name = path.basename(item.name);
+    Object.keys(dataListCheckBoxes)
+      .forEach((modelName) => {
+        const filesize = parseFloat(
+          `${sampledataRegistry.Models[modelName].filesize / 1000000}`
+        ).toFixed(2) + ' MB';
         DatasetCheckboxList.push(
           <Form.Check
-            key={name}
-            id={name}
+            key={modelName}
+            id={modelName}
             type="checkbox"
-            checked={this.state.dataListCheckBoxes[item.name]}
-            onChange={(event) => this.handleCheckList(event, item)}
-            label={name}
+            checked={dataListCheckBoxes[modelName]}
+            onChange={(event) => this.handleCheckList(
+              event, modelName
+            )}
+            label={`${modelName} ${filesize}`}
           />
         );
       });
