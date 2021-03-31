@@ -60,7 +60,23 @@ function download(src, dest) {
   });
 }
 
-async function update_sampledata_registry() {
+/** Update a JSON registry of sampledata zipfiles available on GCS.
+ *
+ * This function validates that all the Models in the registry have
+ * a "filename" that exists in our storage bucket for the invest version
+ * configured in package.json. An error is raised if the file is not found.
+ * Most likely that indicates a typo in the registry's model name or filename.
+ *
+ * If the invest version has changed, this function updates the registry
+ * with new urls & filesizes. If the invest version hasn't changed,
+ * we still query the bucket to confirm the files are still there, but
+ * the registry JSON won't be changed.
+ *
+ * If a new InVEST model is added, or a new sampledata zipfile, a new
+ * entry in the registry should be added manually, but the `url` and `filename`
+ * keys may be left out and then this script can be run to populate those keys.
+ */
+async function updateSampledataRegistry() {
   const googleAPI = 'https://www.googleapis.com/storage/v1/b'
   const template = require('../src/sampledata_registry.json');
   // make a deep copy so we can check if any updates were made and
@@ -104,8 +120,6 @@ async function update_sampledata_registry() {
   const versionEndpoint = `${googleAPI}/${BUCKET}/o?delimiter=${delimiter}&prefix=${versionPrefix}`;
   const versionItems = await queryStorage(versionEndpoint);
   const allDataFilename = `${decodeURIComponent(versionPrefix)}InVEST_${VERSION}_sample_data.zip`;
-  console.log(versionItems);
-  console.log(allDataFilename);
   registry.allData.url = versionItems[allDataFilename].mediaLink;
   registry.allData.filesize = versionItems[allDataFilename].size;
   if (JSON.stringify(template) === JSON.stringify(registry)) {
@@ -120,8 +134,8 @@ async function update_sampledata_registry() {
 }
 
 if (process.argv[2] && process.argv[2] === 'sampledata') {
-  update_sampledata_registry();
+  updateSampledataRegistry();
 } else {
   download(urladdress, DESTFILE);
-  update_sampledata_registry();
+  updateSampledataRegistry();
 }
