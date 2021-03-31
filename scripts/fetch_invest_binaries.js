@@ -61,36 +61,53 @@ function download(src, dest) {
 }
 
 async function update_sampledata_registry() {
+  const googleAPI = 'https://www.googleapis.com/storage/v1/b'
   const template = require('../src/sampledata_registry.json');
   // make a deep copy so we can check if any updates were made and
   // only overwrite the file if necessary.
   const registry = JSON.parse(JSON.stringify(template));
-  const prefix = encodeURIComponent(`invest/${VERSION}/data`);
-  const queryURL = `https://www.googleapis.com/storage/v1/b/${BUCKET}/o?prefix=${prefix}`;
-  let data;
-  const response = await fetch(queryURL);
-  if (response.status === 200) {
-    data = await response.json();
-  } else {
-    throw new Error(response.status);
+  const dataPrefix = encodeURIComponent(`invest/${VERSION}/data`);
+  const dataEndpoint = `${googleAPI}/${BUCKET}/o?prefix=${dataPrefix}`;
+
+  async function queryStorage(endpoint) {
+    let data;
+    const response = await fetch(endpoint);
+    if (response.status === 200) {
+      data = await response.json();
+    } else {
+      throw new Error(response.status);
+    }
+    // organize the data so we can index into it by filename
+    const dataIndex = {};
+    data.items.forEach((item) => {
+      dataIndex[item.name] = item;
+    });
+    return dataIndex;
   }
-  // organize the data so we can index into it by filename
-  const dataIndex = {};
-  data.items.forEach((item) => {
-    dataIndex[item.name] = item;
-  });
-  Object.keys(registry).forEach((model) => {
-    const filename = `invest/${VERSION}/data/${registry[model].filename}`;
+
+  const dataItems = await queryStorage(dataEndpoint);
+  Object.keys(registry.Models).forEach((model) => {
+    const filename = `invest/${VERSION}/data/${registry.Models[model].filename}`;
     try {
-      registry[model].url = dataIndex[filename].mediaLink;
-      registry[model].filesize = dataIndex[filename].size;
-      // registry[model].filesize = parseFloat(
-      //   `${dataIndex[filename].size / 1000000}`
+      registry.Models[model].url = dataItems[filename].mediaLink;
+      registry.Models[model].filesize = dataItems[filename].size;
+      // registry.Models[model].filesize = parseFloat(
+      //   `${dataItems[filename].size / 1000000}`
       // ).toFixed(2) + ' MB';
     } catch {
-      throw new Error(`no item found for ${filename} in ${JSON.stringify(dataIndex, null, 2)}`);
+      throw new Error(`no item found for ${filename} in ${JSON.stringify(dataItems, null, 2)}`);
     }
   });
+
+  const versionPrefix = encodeURIComponent(`invest/${VERSION}/`);
+  const delimiter = '/';
+  const versionEndpoint = `${googleAPI}/${BUCKET}/o?delimiter=${delimiter}&prefix=${versionPrefix}`;
+  const versionItems = await queryStorage(versionEndpoint);
+  const allDataFilename = `${decodeURIComponent(versionPrefix)}InVEST_${VERSION}_sample_data.zip`;
+  console.log(versionItems);
+  console.log(allDataFilename);
+  registry.allData.url = versionItems[allDataFilename].mediaLink;
+  registry.allData.filesize = versionItems[allDataFilename].size;
   if (JSON.stringify(template) === JSON.stringify(registry)) {
     console.log(`sample data registry is already up to date for invest ${VERSION}`);
     return;

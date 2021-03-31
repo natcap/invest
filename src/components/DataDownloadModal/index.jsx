@@ -11,6 +11,7 @@ import Alert from 'react-bootstrap/Alert';
 import ProgressBar from 'react-bootstrap/ProgressBar';
 
 import pkg from '../../../package.json';
+import sampledataRegistry from '../../sampledata_registry.json';
 
 /** Render a dialog with a form for configuring global invest settings */
 export class DataDownloadModal extends React.Component {
