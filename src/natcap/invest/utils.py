@@ -46,7 +46,10 @@ DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
 # the same unit registry instance should be shared across everything
 u = pint.UnitRegistry()
-u.load_definitions('custom_units')
+u.define('currency = [value]')
+u.define('dollar = [USD]')
+u.define('pixel = [?length]')
+u.define('projection_unit = [!length]')
 
 AREA = {
     "type": "vector",
@@ -63,7 +66,7 @@ PROJECTED = {
 METER_PROJECTED = {
     "validation_options": {
         "projected": True,
-        "projection_units": "m"
+        "projection_units": u.meter
     }
 }
 

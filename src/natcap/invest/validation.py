@@ -11,8 +11,9 @@ import importlib
 import queue
 import warnings
 
-import pygeoprocessing
 import pandas
+import pint
+import pygeoprocessing
 from osgeo import gdal, osr
 import numpy
 
@@ -252,12 +253,10 @@ def _check_projection(srs, projected, projection_units):
             representing the spatial reference of a GDAL dataset.
         projected (bool): Whether the spatial reference must be projected in
             linear units.
-        projection_units (string): The string label (case-insensitive)
-            indicating the required linear units of the projection.  Note that
-            "m", "meters", "meter", "metre" and "metres" are all synonymous.
+        projection_units (pint.Unit): The projection's required linear units.
 
     Returns:
-        A string error message if an error was found.  ``None`` otherwise.
+        A string error message if an error was found. ``None`` otherwise.
 
     """
     if srs is None:
@@ -268,16 +267,15 @@ def _check_projection(srs, projected, projection_units):
             return "Dataset must be projected in linear units."
 
     if projection_units:
-        valid_meter_units = set(('m', 'meter', 'meters', 'metre', 'metres'))
         layer_units_name = srs.GetLinearUnitsName().lower()
-
-        if projection_units in valid_meter_units:
-            if layer_units_name not in valid_meter_units:
-                return "Layer must be projected in meters"
-        else:
-            if layer_units_name.lower() != projection_units.lower():
-                return ("Layer must be projected in %s"
-                        % projection_units.lower())
+        try:
+            # this will parse common synonyms: m, meter, meters, metre, metres
+            layer_units = utils.u.parse_expression(layer_units_name)
+            # Compare pint Unit objects
+            if projection_units != layer_units:
+                return f"Layer must be projected in {projection_units}s"
+        except pint.errors.UndefinedUnitError:
+            return f"SRS {srs} has unrecognized unit {layer_units_name})"
 
     return None
 
@@ -290,9 +288,8 @@ def check_raster(filepath, projected=False, projection_units=None):
             and be readable.
         projected=False (bool): Whether the spatial reference must be projected
             in linear units.
-        projection_units=None (string): The string label (case-insensitive)
-            indicating the required linear units of the projection.  If
-            ``None``, the projection units will not be checked.
+        projection_units=None (pint.Units): The required linear units of the 
+            projection. If ``None``, the projection units will not be checked.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -362,9 +359,8 @@ def check_vector(filepath, required_fields=None, projected=False,
             fieldnames will not be checked.
         projected=False (bool): Whether the spatial reference must be projected
             in linear units.  If None, the projection will not be checked.
-        projection_units=None (string): The string label (case-insensitive)
-            indicating the required linear units of the projection.  If
-            ``None``, the projection units will not be checked.
+        projection_units=None (pint.Units): The required linear units of the 
+            projection. If ``None``, the projection units will not be checked.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
