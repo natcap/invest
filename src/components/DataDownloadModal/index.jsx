@@ -47,8 +47,9 @@ export class DataDownloadModal extends React.Component {
 
   handleClose() {
     // storing something sends the signal that the user declined
-    // and doesn't need to be asked again on app startup.
-    this.props.storeDownloadDir('');
+    // and doesn't need to be asked again on app startup. We need
+    // something truthy that won't be confused for a real filepath.
+    this.props.storeDownloadDir(1);
   }
 
   async handleSubmit(event) {
@@ -111,7 +112,8 @@ export class DataDownloadModal extends React.Component {
   }
 
   render() {
-    const { dataListCheckBoxes } = this.state;
+    const { dataListCheckBoxes, selectedLinksArray } = this.state;
+    const downloadEnabled = Boolean(selectedLinksArray.length);
     const DatasetCheckboxList = [];
     Object.keys(dataListCheckBoxes)
       .forEach((modelName) => {
@@ -140,7 +142,7 @@ export class DataDownloadModal extends React.Component {
           </Modal.Header>
           <Modal.Body>
             <Form.Group>
-              <Form.Label>
+              <Form.Label htmlFor="all-sampledata">
                 Select All
               </Form.Label>
               <Form.Check
@@ -163,6 +165,7 @@ export class DataDownloadModal extends React.Component {
             <Button
               variant="primary"
               onClick={this.handleSubmit}
+              disabled={!downloadEnabled}
             >
               Download
             </Button>

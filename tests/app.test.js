@@ -775,4 +775,25 @@ describe.only('Download Sample Data Modal', () => {
         .toBe(dialogData.filePaths[0]);
     });
   });
+
+  test('Cancel caches a dummy sampleDataDir value', async () => {
+    // A truthy value in the cache is how we determine if a user has
+    // seen this dialog before. So we expect something is stored even
+    // after a cancel.
+
+    const {
+      findByRole,
+    } = render(<App investExe="foo" />);
+
+    const cancelButton = await findByRole('button', { name: 'Cancel' });
+    fireEvent.click(cancelButton);
+
+    await waitFor(() => {
+      expect(ipcRenderer.send).toHaveBeenCalledTimes(0);
+    });
+    await waitFor(async () => {
+      expect(await getSettingsValue('sampleDataDir'))
+        .toBe(1);
+    });
+  });
 });
