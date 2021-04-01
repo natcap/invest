@@ -20,7 +20,6 @@ const {
   MenuItem,
   dialog,
 } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
-const { download } = require('electron-dl');
 
 const {
   getFlaskIsReady, shutdownPythonProcess
@@ -38,15 +37,6 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 if (!process.env.PORT) {
   process.env.PORT = '56789';
 }
-
-// forknames are only in the path on the dev-builds bucket
-const fork = pkg.invest.bucket === 'releases.naturalcapitalproject.org'
-  ? '' : pkg.invest.fork;
-const repo = 'invest';
-const prefix = path.join(
-  pkg.invest.bucket, repo, fork, pkg.invest.version
-);
-const releaseDataURL = new URL(prefix, pkg.invest.hostname).href;
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -73,7 +63,6 @@ const createWindow = async () => {
     investExe: investExe,
     investVersion: investVersion,
     workbenchVersion: pkg.version,
-    releaseDataURL: releaseDataURL,
     userDataPath: app.getPath('userData'),
   };
   ipcMain.handle('show-context-menu', (event, rightClickPos) => {
@@ -136,7 +125,7 @@ const createWindow = async () => {
   );
   Menu.setApplicationMenu(menubar);
   mainWindow.loadURL(`file://${__dirname}/index.html`);
-  
+
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();
     // We should be able to hide mainWindow until it's ready,
@@ -157,7 +146,7 @@ const createWindow = async () => {
       mainWindow.webContents.openDevTools();
     }
   });
-  
+
   // Emitted when the window is closed.
   mainWindow.on('closed', async () => {
     // Dereference the window object, usually you would store windows
