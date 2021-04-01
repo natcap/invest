@@ -719,7 +719,7 @@ describe('InVEST subprocess testing', () => {
   });
 });
 
-describe.only('Download Sample Data Modal', () => {
+describe('Download Sample Data Modal', () => {
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
   });
