@@ -41,7 +41,7 @@ export default class App extends React.Component {
       investList: {},
       recentJobs: [],
       investSettings: {},
-      didAskForSampleData: false,
+      didAskForSampleData: true, // for the pre-DidMount render
       downloadedNofN: null,
     };
     this.saveSettings = this.saveSettings.bind(this);
@@ -53,7 +53,7 @@ export default class App extends React.Component {
     this.storeDownloadDir = this.storeDownloadDir.bind(this);
   }
 
-  /** Initialize the list of available invest models and recent invest jobs. */
+  /** Initialize the list of invest models, recent invest jobs, etc. */
   async componentDidMount() {
     const investList = await getInvestModelNames();
     const recentJobs = await InvestJob.getJobStore();
@@ -164,7 +164,7 @@ export default class App extends React.Component {
   }
 
   render() {
-    const { investExe, releaseDataURL } = this.props;
+    const { investExe } = this.props;
     const {
       investList,
       investSettings,
@@ -172,7 +172,6 @@ export default class App extends React.Component {
       openJobs,
       activeTab,
       didAskForSampleData,
-      downloadInProgress,
       downloadedNofN,
     } = this.state;
 
@@ -218,7 +217,6 @@ export default class App extends React.Component {
         <DataDownloadModal
           show={!didAskForSampleData}
           storeDownloadDir={this.storeDownloadDir}
-          releaseDataURL={releaseDataURL}
           defaultTargetPath={investSettings.sampleDataDir}
         />
         <TabContainer activeKey={activeTab}>

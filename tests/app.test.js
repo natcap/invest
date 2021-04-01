@@ -464,7 +464,7 @@ describe('InVEST subprocess testing', () => {
   });
   afterAll(async () => {
     await clearSettingsStore();
-  })
+  });
   beforeEach(() => {
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
     // Need to reset these streams since mockInvestProc is shared by tests
@@ -716,5 +716,63 @@ describe('InVEST subprocess testing', () => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     unmount();
     spy.mockRestore();
+  });
+});
+
+describe.only('Download Sample Data Modal', () => {
+  beforeEach(async () => {
+    getInvestModelNames.mockResolvedValue({});
+  });
+  afterEach(async () => {
+    await clearSettingsStore();
+    jest.resetAllMocks();
+  });
+
+  test('Modal does not display when data is already cached', async () => {
+    await saveSettingsStore({
+      sampleDataDir: 'dont_show_the_download_modal',
+    });
+    const {
+      queryByText,
+    } = render(<App investExe="foo" />);
+
+    const modalTitle = await queryByText('Download InVEST sample data');
+    expect(modalTitle).toBeNull();
+  });
+
+  test('Modal displays immediately when no data is in cache', async () => {
+    const {
+      findByText,
+      getByText,
+    } = render(<App investExe="foo" />);
+
+    const modalTitle = await findByText('Download InVEST sample data');
+    expect(modalTitle).toBeInTheDocument();
+    fireEvent.click(getByText('Cancel'));
+    await waitFor(() => {
+      expect(modalTitle).not.toBeInTheDocument();
+    });
+  });
+
+  test('Download sends signal to main & caches download location', async () => {
+    const dialogData = {
+      filePaths: ['foo/directory'],
+    };
+    ipcRenderer.invoke.mockResolvedValue(dialogData);
+
+    const {
+      findByRole,
+    } = render(<App investExe="foo" />);
+
+    const downloadButton = await findByRole('button', { name: 'Download' });
+    fireEvent.click(downloadButton);
+
+    await waitFor(() => {
+      expect(ipcRenderer.send).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(async () => {
+      expect(await getSettingsValue('sampleDataDir'))
+        .toBe(dialogData.filePaths[0]);
+    });
   });
 });

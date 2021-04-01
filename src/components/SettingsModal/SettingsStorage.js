@@ -46,13 +46,13 @@ export async function getSettingsValue(key) {
 export async function getAllSettings() {
   try {
     const promises = [];
-    const settingsKeys = Object.keys(getDefaultSettings());
-    settingsKeys.forEach((key) => {
+    const keys = Object.keys(getDefaultSettings());
+    keys.forEach((key) => {
       promises.push(getSettingsValue(key));
     });
     const values = await Promise.all(promises);
-    const settings = Object.fromEntries(settingsKeys.map(
-      (_, i) => [settingsKeys[i], values[i]]
+    const settings = Object.fromEntries(keys.map(
+      (_, i) => [keys[i], values[i]]
     ));
     return settings;
   } catch (err) {

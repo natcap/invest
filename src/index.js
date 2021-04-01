@@ -22,19 +22,18 @@ const app = require('./app');
 // Create a right-click menu
 // TODO: Not sure if Inspect Element should be available in production
 // very useful in dev though.
-let rightClickPosition = null
+let rightClickPosition = null;
 window.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   rightClickPosition = { x: e.x, y: e.y };
   ipcRenderer.invoke('show-context-menu', rightClickPosition);
-})
+});
 
-const render = async function render(investExe, releaseDataURL) {
+const render = async function render(investExe) {
   reactDom.default.render(
     react.default.createElement(
       app.default, {
         investExe: investExe,
-        releaseDataURL: releaseDataURL,
       }
     ),
     document.getElementById('App')
@@ -42,8 +41,8 @@ const render = async function render(investExe, releaseDataURL) {
 };
 
 ipcRenderer.invoke('variable-request')
-.then(response => {
   // render the App after receiving any critical data
   // from the main process
-  render(response.investExe, response.releaseDataURL);
-});
+  .then((response) => {
+    render(response.investExe);
+  });
