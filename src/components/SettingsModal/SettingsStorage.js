@@ -33,7 +33,32 @@ export function getDefaultSettings() {
  */
 export async function getSettingsValue(key) {
   const value = await investSettingsStore.getItem(key);
+  if (!value) {
+    return getDefaultSettings()[key];
+  }
   return value;
+}
+
+/** Getter function for entire contents of store.
+ *
+ * @returns {Object} - key: value pairs of settings
+ */
+export async function getAllSettings() {
+  try {
+    const promises = [];
+    const settingsKeys = Object.keys(getDefaultSettings());
+    settingsKeys.forEach((key) => {
+      promises.push(getSettingsValue(key));
+    });
+    const values = await Promise.all(promises);
+    const settings = Object.fromEntries(settingsKeys.map(
+      (_, i) => [settingsKeys[i], values[i]]
+    ));
+    return settings;
+  } catch (err) {
+    logger.error(err.message);
+    return getDefaultSettings();
+  }
 }
 
 /** Clear the settings store. */

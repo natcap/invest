@@ -19,7 +19,7 @@ import {
   DataDownloadModal, DownloadProgressBar
 } from './components/DataDownloadModal';
 import {
-  getDefaultSettings, saveSettingsStore, getSettingsValue
+  saveSettingsStore, getAllSettings
 } from './components/SettingsModal/SettingsStorage';
 import { getInvestModelNames } from './server_requests';
 import { getLogger } from './logger';
@@ -57,25 +57,7 @@ export default class App extends React.Component {
   async componentDidMount() {
     const investList = await getInvestModelNames();
     const recentJobs = await InvestJob.getJobStore();
-    // Placeholder for instantiating global settings.
-    let investSettings = {};
-    const globalDefaultSettings = getDefaultSettings();
-
-    try {
-      for (const settingKey of Object.keys(globalDefaultSettings)) {
-        const value = await getSettingsValue(settingKey)
-          || globalDefaultSettings[settingKey];
-        // if (!value) {
-        //   // throw new Error('Value not defined or null, use defaults.');
-        //   investSettings[settingKey] = globalDefaultSettings[settingKey];
-        // } else {
-        //   investSettings[settingKey] = value;
-        // }
-        investSettings[settingKey] = value;
-      }
-    } catch (err) {
-      investSettings = globalDefaultSettings;
-    }
+    const investSettings = await getAllSettings();
 
     let didAskForSampleData = false;
     if (investSettings.sampleDataDir) {
