@@ -39,15 +39,19 @@ afterAll(async () => {
   jest.resetAllMocks();
 });
 
-describe.only('Various ways to open and close InVEST models', () => {
+describe('Various ways to open and close InVEST models', () => {
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+    // setting a value to avoid render of an initial popup modal
     await saveSettingsStore({
       sampleDataDir: 'dont_show_the_download_modal',
     });
   });
+  afterAll(async () => {
+    await clearSettingsStore();
+  })
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore
     await InvestJob.clearStore(); // should call because a test calls job.save()
@@ -231,6 +235,15 @@ describe.only('Various ways to open and close InVEST models', () => {
 });
 
 describe('Display recently executed InVEST jobs', () => {
+  beforeAll(async () => {
+    // setting a value to avoid render of an initial popup modal
+    await saveSettingsStore({
+      sampleDataDir: 'dont_show_the_download_modal',
+    });
+  });
+  afterAll(async () => {
+    await clearSettingsStore();
+  })
   beforeEach(() => {
     getInvestModelNames.mockResolvedValue({});
   });
@@ -307,14 +320,18 @@ describe('Display recently executed InVEST jobs', () => {
 });
 
 describe('InVEST global settings: dialog interactions', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
+    // setting a value to avoid render of an initial popup modal
+    await saveSettingsStore({
+      sampleDataDir: 'dont_show_the_download_modal',
+    });
   });
-  afterEach(() => {
-    clearSettingsStore();
+  afterEach(async () => {
+    await clearSettingsStore();
     jest.resetAllMocks();
   });
-  test('Global settings for cancel, save, and invalid nWorkers', async () => {
+  test('Invest settings: cancel, save, and invalid nWorkers', async () => {
     const nWorkers = '2';
     const loggingLevel = 'DEBUG';
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
@@ -373,15 +390,15 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(getByText('Save Changes')).toBeDisabled();
   });
 
-  test('Load global settings from storage and test Reset', async () => {
+  test('Load invest settings from storage and test Reset', async () => {
     const defaultSettings = {
       nWorkers: '-1',
       loggingLevel: 'INFO',
-    }
+    };
     const expectedSettings = {
       nWorkers: '3',
-      loggingLevel: 'ERROR'
-    }
+      loggingLevel: 'ERROR',
+    };
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
     const loggingLabelText = 'Logging threshold';
 
@@ -395,7 +412,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
-    // Test that the global-settings were loaded in from store.
+    // Test that the invest settings were loaded in from store.
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
       expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
@@ -439,6 +456,15 @@ describe('InVEST subprocess testing', () => {
   let logfilePath;
   let mockInvestProc;
 
+  beforeAll(async () => {
+    // setting a value to avoid render of an initial popup modal
+    await saveSettingsStore({
+      sampleDataDir: 'dont_show_the_download_modal',
+    });
+  });
+  afterAll(async () => {
+    await clearSettingsStore();
+  })
   beforeEach(() => {
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
     // Need to reset these streams since mockInvestProc is shared by tests
