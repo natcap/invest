@@ -273,7 +273,7 @@ ARGS_SPEC = {
         },
         "unit_price": {
             "type": "number",
-            "units": None",
+            "units": None,
             "required": "val_cont",
             "about": (
                 "Specifies the price per harvest unit. If 'Harvest by "

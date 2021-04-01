@@ -35,6 +35,28 @@ class ValidateArgsSpecs(unittest.TestCase):
             'directory': {'raster', 'vector', 'csv', 'file', 'directory'}
         }
 
+        valid_validation_options = {
+            'csv': {
+                # 'required_fields': list, 
+                'excel_ok': bool
+            },
+            'number': {
+                'expression': str
+            },
+            'boolean': {},
+            'option_string': {
+                'options': list[str]
+            },
+            'freestyle_string': ['regexp'],
+            'vector': [
+                # 'required_fields', 
+                'projected', 'projection_units'],
+            'raster': ['projected', 'projection_units'],
+            'file': ['permissions'],
+            'directory': ['exists', 'permissions']
+
+        }
+
 
         allowed_attrs = ['name', 'about', 'required', 'type', 'validation_options']
         # arg['type'] can be either a string or a set of strings

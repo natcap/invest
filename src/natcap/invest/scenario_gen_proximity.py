@@ -79,7 +79,7 @@ ARGS_SPEC = {
             "name": "Convertible Landcover Codes"
         },
         "n_fragmentation_steps": {
-            **utils.GT_0
+            **utils.GT_0,
             "type": "number",
             "units": u.count,
             "required": True,

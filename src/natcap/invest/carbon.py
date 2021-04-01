@@ -32,7 +32,7 @@ ARGS_SPEC = {
             **utils.LULC_ARG,
             **utils.PROJECTED,
             "about": (
-                "A GDAL-supported raster representing the land-cover of the"
+                "A GDAL-supported raster representing the land-cover of the "
                 "current scenario."),
             "name": "Current Land Use/Land Cover"
         },

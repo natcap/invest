@@ -67,21 +67,25 @@ ARGS_SPEC = {
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
+                    "about": "Carbon density value for the aboveground carbon pool."
                 },
                 "c_below": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "required": "pools_to_calculate == 'all'"
+                    "required": "pools_to_calculate == 'all'",
+                    "about": "Carbon density value for the belowground carbon pool"
                 },
                 "c_soil": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "required": "pools_to_calculate == 'all'"
+                    "required": "pools_to_calculate == 'all'",
+                    "about": "Carbon density value for the soil carbon pool"
                 },
                 "c_dead": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "required": "pools_to_calculate == 'all'"
+                    "required": "pools_to_calculate == 'all'",
+                    "about": "Carbon density value for the dead matter carbon pool"
                 },
             },
             "about": (
