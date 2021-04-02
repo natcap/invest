@@ -317,17 +317,12 @@ def execute(args):
             task_name='make coordinate rasters',
             dependent_task_list=[retention_ratio_task]
         )
+
         distance_task = task_graph.add_task(
-            func=pygeoprocessing.raster_calculator,
-            args=([
-                    (FILES['x_coords_path'], 1), 
-                    (FILES['y_coords_path'], 1), 
-                    (FILES['reprojected_centerlines_path'], 'raw')
-                ],
-                nearest_linestring_op, 
-                FILES['road_distance_path'], 
-                gdal.GDT_Float32, 
-                NODATA),
+            func=optimized_linestring_distance,
+            args=(FILES['x_coords_path'], FILES['y_coords_path'], 
+                FILES['reprojected_centerlines_path'], radius, 
+                FILES['road_distance_path']),
             target_path_list=[FILES['road_distance_path']],
             task_name='calculate pixel distance to roads',
             dependent_task_list=[coordinate_rasters_task, reproject_roads_task]
@@ -1020,34 +1015,6 @@ def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
     x_band, y_band, x_raster, y_raster = None, None, None, None
 
 
-def nearest_linestring_op(x_coords, y_coords, linestring_path):
-    """Calculate the distance from each pixel centerpoint to the nearest
-    linestring in a vector. This is intended to be used with raster_calculator.
-
-    Args:
-        x_coords (numpy.ndarray): 2D array where each pixel value is the 
-            x coordinate of that pixel in the raster coordinate system
-        y_coords (numpy.ndarray): 2D array where each pixel value is the 
-            y coordinate of that pixel in the raster coordinate system
-        linestring_path (str): path to a linestring/multilinestring vector
-
-    Returns:
-        2D numpy.ndarray of the same shape as `x_coords` and `y_coords`.
-        Each pixel value is the distance from that pixel's centerpoint to
-        the nearest linestring in the vector at ``linestring_path``.
-    """
-    segment_generator = iter_linestring_segments(linestring_path)
-    (x1, y1), (x2, y2) = next(segment_generator)
-    min_distance = line_distance(x_coords, y_coords, x1, y1, x2, y2)
-
-    for (x1, y1), (x2, y2) in segment_generator:
-        if x2 == x1 and y2 == y1:
-            continue  # ignore lines with length 0
-        distance = line_distance(x_coords, y_coords, x1, y1, x2, y2)
-        min_distance = numpy.minimum(min_distance, distance)
-    return min_distance
-
-
 def line_distance(x_coords, y_coords, x1, y1, x2, y2):
     """Find the minimum distance from each array point to a line segment.
 
@@ -1244,49 +1211,11 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
     pygeoprocessing.raster_calculator([(n_values_path, 1), (sum_path, 1)], 
         avg_op, average_path, gdal.GDT_Float32, NODATA)
 
-# x_coord_path = '/Users/emily/Documents/stormwater_workspace/intermediate/x_coords.tif'
-# y_coord_path = '/Users/emily/Documents/stormwater_workspace/intermediate/y_coords.tif'
-# line_path = '/Users/emily/Documents/stormwater_workspace/intermediate/reprojected_centerlines.gpkg'
-# radius = 30
-# out_path = '/Users/emily/Documents/out.tif'
-# from natcap.invest import stormwater
 
-# 
-# stormwater.spatial_index_distance1(x_coord_path, y_coord_path, line_path, radius, out_path)
-
-# index of line segments, check by points
-def spatial_index_distance1(x_coords_path, y_coords_path, linestring_path, radius, out_path):
-    index = rtree.index.Index(interleaved=True)
-    segments = []
-    for (x1, y1), (x2, y2) in iter_linestring_segments(linestring_path):
-        segments.append(((x1, y1), (x2, y2)))
-        x_min, y_min = min(x1, x2) - radius, min(y1, y2) - radius
-        x_max, y_max = max(x1, x2) + radius, max(y1, y2) + radius
-        index.insert(len(segments) - 1, (x_min, y_min, x_max, y_max))
-
-    def min_distance_op(x_coords, y_coords):
-        distance_array = numpy.full(x_coords.shape, NODATA, dtype=float)
-        for y in range(distance_array.shape[0]):
-            for x in range(distance_array.shape[1]):
-                line_ids = list(index.intersection(
-                    (x_coords[y,x], y_coords[y,x], x_coords[y,x], y_coords[y,x])))
-                min_distance = numpy.inf
-                for line_id in line_ids:
-                    (x1, y1), (x2, y2) = segments[line_id]
-                    distance = line_distance(
-                        numpy.array(x_coords[y,x]), 
-                        numpy.array(y_coords[y,x]), 
-                        x1, y1, x2, y2)
-                    min_distance = min(min_distance, distance)
-                distance_array[y,x] = min_distance
-        return distance_array
-
-    pygeoprocessing.raster_calculator([(x_coords_path, 1), (y_coords_path, 1)], 
-        min_distance_op, out_path, gdal.GDT_Float32, NODATA)
-
-# index of line segments, check by blocks
-def spatial_index_distance2(x_coords_path, y_coords_path, linestring_path, radius, out_path):
-    """Calculate distance to nearest linestring.
+def optimized_linestring_distance(x_coords_path, y_coords_path, 
+        linestring_path, radius, out_path):
+    """Calculate distance to nearest linestring that could be within a radius.
+    Used to calculate a distance that will be thresholded to a radius later.
 
     NOTE: This algorithm does not produce the distance to the nearest linestring,
     only the distance to the nearest linestring which could be within ``radius`` away.
@@ -1304,9 +1233,13 @@ def spatial_index_distance2(x_coords_path, y_coords_path, linestring_path, radiu
     optimization, and when thresholded to ``radius`` the results are the same.
     See `test_spatial_index_distance` in the test suite for verification.
 
+    This algorithm was tested against a non-optimized version that simply gets
+    the distance from each point to every line segment. The spatial index 
+    optimization proved to be faster even with a single large line segment.
+
     A variation of this algorithm was tested which looks up each point in the line 
     segment index, rather than each memory block bounding box, further minimizing 
-    the number of unnecessary distance calculations. That variation was extremely slow.
+    the number of unnecessary distance calculations. That variation was very slow.
     It would probably only be better if you had millions of line segments. 
 
     Args:
@@ -1383,20 +1316,6 @@ def spatial_index_distance2(x_coords_path, y_coords_path, linestring_path, radiu
         # Write out the minimum distance block to the output raster
         out_band.WriteArray(min_distance_array, xoff=block['xoff'], yoff=block['yoff'])
     out_band, out_raster = None, None
-        
-
-def calculate_distance(x_coords_path, y_coords_path, linestring_path, out_path):
-
-    pygeoprocessing.raster_calculator([
-            (x_coords_path, 1), 
-            (y_coords_path, 1), 
-            (linestring_path, 'raw')
-        ], nearest_linestring_op, out_path, gdal.GDT_Float32, NODATA)
-
-
-# stormwater.spatial_index_distance2('/Users/emily/Documents/stormwater_workspace/intermediate/x_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/y_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/reprojected_centerlines.gpkg', 30, '/Users/emily/Documents/out.tif')
-# stormwater.calculate_distance('/Users/emily/Documents/stormwater_workspace/intermediate/x_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/y_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/reprojected_centerlines.gpkg', '/Users/emily/Documents/out.tif')
-
 
     
 @validation.invest_validator
