@@ -544,7 +544,7 @@ def execute(args):
     task_graph.join()
 
 def threshold_array(array, threshold):
-    """Return a boolean array where 1 means greater than the threshold value.
+    """Return a boolean array where 1 means less than the threshold value.
     Assumes that the array's nodata value is the global NODATA."""
     out = numpy.full(array.shape, NODATA, dtype=numpy.int8)
     valid_mask = array != NODATA
@@ -766,7 +766,6 @@ def aggregate_results(aoi_path, aggregations, output_path):
     
     aggregate_vector = gdal.OpenEx(output_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
-
 
     for raster_path, field_id, op in aggregations:
         # aggregate the raster by the vector region(s)
@@ -1015,6 +1014,9 @@ def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
     x_band, y_band, x_raster, y_raster = None, None, None, None
 
 
+
+
+
 def line_distance(x_coords, y_coords, x1, y1, x2, y2):
     """Find the minimum distance from each array point to a line segment.
 
@@ -1211,7 +1213,6 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
     pygeoprocessing.raster_calculator([(n_values_path, 1), (sum_path, 1)], 
         avg_op, average_path, gdal.GDT_Float32, NODATA)
 
-
 def optimized_linestring_distance(x_coords_path, y_coords_path, 
         linestring_path, radius, out_path):
     """Calculate distance to nearest linestring that could be within a radius.
@@ -1316,6 +1317,20 @@ def optimized_linestring_distance(x_coords_path, y_coords_path,
         # Write out the minimum distance block to the output raster
         out_band.WriteArray(min_distance_array, xoff=block['xoff'], yoff=block['yoff'])
     out_band, out_raster = None, None
+        
+
+def calculate_distance(x_coords_path, y_coords_path, linestring_path, out_path):
+
+    pygeoprocessing.raster_calculator([
+            (x_coords_path, 1), 
+            (y_coords_path, 1), 
+            (linestring_path, 'raw')
+        ], nearest_linestring_op, out_path, gdal.GDT_Float32, NODATA)
+
+
+# stormwater.spatial_index_distance2('/Users/emily/Documents/stormwater_workspace/intermediate/x_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/y_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/reprojected_centerlines.gpkg', 30, '/Users/emily/Documents/out.tif')
+# stormwater.calculate_distance('/Users/emily/Documents/stormwater_workspace/intermediate/x_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/y_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/reprojected_centerlines.gpkg', '/Users/emily/Documents/out.tif')
+
 
     
 @validation.invest_validator
