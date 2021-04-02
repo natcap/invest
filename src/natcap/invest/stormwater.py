@@ -1244,7 +1244,15 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
     pygeoprocessing.raster_calculator([(n_values_path, 1), (sum_path, 1)], 
         avg_op, average_path, gdal.GDT_Float32, NODATA)
 
+# x_coord_path = '/Users/emily/Documents/stormwater_workspace/intermediate/x_coords.tif'
+# y_coord_path = '/Users/emily/Documents/stormwater_workspace/intermediate/y_coords.tif'
+# line_path = '/Users/emily/Documents/stormwater_workspace/intermediate/reprojected_centerlines.gpkg'
+# radius = 30
+# out_path = '/Users/emily/Documents/out.tif'
+# from natcap.invest import stormwater
 
+# 
+# stormwater.spatial_index_distance1(x_coord_path, y_coord_path, line_path, radius, out_path)
 
 # index of line segments, check by points
 def spatial_index_distance1(x_coords_path, y_coords_path, linestring_path, radius, out_path):
@@ -1258,10 +1266,10 @@ def spatial_index_distance1(x_coords_path, y_coords_path, linestring_path, radiu
 
     def min_distance_op(x_coords, y_coords):
         distance_array = numpy.full(x_coords.shape, NODATA, dtype=float)
-        for y in distance_array.shape[0]:
-            for x in distance_array.shape[1]:
+        for y in range(distance_array.shape[0]):
+            for x in range(distance_array.shape[1]):
                 line_ids = list(index.intersection(
-                    x_coords[y,x], y_coords[y,x], x_coords[y,x], y_coords[y,x]))
+                    (x_coords[y,x], y_coords[y,x], x_coords[y,x], y_coords[y,x])))
                 min_distance = numpy.inf
                 for line_id in line_ids:
                     (x1, y1), (x2, y2) = segments[line_id]
@@ -1278,6 +1286,45 @@ def spatial_index_distance1(x_coords_path, y_coords_path, linestring_path, radiu
 
 # index of line segments, check by blocks
 def spatial_index_distance2(x_coords_path, y_coords_path, linestring_path, radius, out_path):
+    """Calculate distance to nearest linestring.
+
+    NOTE: This algorithm does not produce the distance to the nearest linestring,
+    only the distance to the nearest linestring which could be within ``radius`` away.
+    This is an optimization that helps avoid calculating each point's distance to 
+    line segments that are not going to be within the radius anyway. (
+    will be thresholded later).
+    The algorithm uses a spatial index that stores the bounding box of each
+    linestring segment, padded by ``radius``. It iterates by memory blocks over 
+    the x- and y-coord rasters.
+    For each point in the memory block, it calculates the minimum distance 
+    *only to those line segments whose padded bounding box intersects the memory block
+    bounding box*.
+    Because of this, the output raster does not have a smooth distance gradient.
+    Sharp lines may appear along block edges. This is expected and a feature of the
+    optimization, and when thresholded to ``radius`` the results are the same.
+    See `test_spatial_index_distance` in the test suite for verification.
+
+    A variation of this algorithm was tested which looks up each point in the line 
+    segment index, rather than each memory block bounding box, further minimizing 
+    the number of unnecessary distance calculations. That variation was extremely slow.
+    It would probably only be better if you had millions of line segments. 
+
+    Args:
+        x_coords_path (str): path to a raster where each pixel value is 
+            the x coordinate of that pixel's centerpoint in the raster 
+            coordinate system.
+        y_coords_path (str): path to a raster where each pixel value is 
+            the y coordinate of that pixel's centerpoint in the raster 
+            coordinate system.
+        linestring_path (str): path to a linestring/multilinestring vector
+        radius (float): distance in raster coordinate system units which the 
+            output distance raster will be thresholded to in the future.
+            This is used to optimize the algorithm.
+        out_path (str): raster path to write out the distance results
+
+    Returns:
+        None
+    """
     index = rtree.index.Index(interleaved=True)
     segments = []
     for (x1, y1), (x2, y2) in iter_linestring_segments(linestring_path):
@@ -1294,25 +1341,32 @@ def spatial_index_distance2(x_coords_path, y_coords_path, linestring_path, radiu
     # Create and open the output raster for writing
     pygeoprocessing.new_raster_from_base(
         x_coords_path, out_path, gdal.GDT_Float32, [NODATA])
-    out_raster = gdal.OpenEx(output_path, gdal.OF_RASTER | gdal.GA_Update)
+    out_raster = gdal.OpenEx(out_path, gdal.OF_RASTER | gdal.GA_Update)
     out_band = out_raster.GetRasterBand(1)
 
     # Assuming that the x_coords and y_coords rasters have identical properties
-    raster_info = pygeoprocessing.get_raster_info(x_coords)
+    raster_info = pygeoprocessing.get_raster_info(x_coords_path)
     x_origin = raster_info['geotransform'][0]
     y_origin = raster_info['geotransform'][3]
     x_pixel_size, y_pixel_size = raster_info['pixel_size']
     # iterate blockwise over the x_coords and y_coords
     # need to use iterblocks here because we need the block offsets
-    for block in pygeoprocessing.iterblocks((x_coords, 1), offset_only=True):
-        block_bbox = (
-            x_origin + block['xoff'] * x_pixel_size,  # x min
-            y_origin + block['yoff'] * y_pixel_size,  # y min
-            x_origin + (block['xoff'] + block['win_xsize']) * x_pixel_size,  # x max
-            y_origin + (block['yoff'] + block['win_ysize']) * y_pixel_size,  # y max
-        )
+    for block in pygeoprocessing.iterblocks((x_coords_path, 1), offset_only=True):
         x_coords = x_coord_band.ReadAsArray(**block)
         y_coords = y_coord_band.ReadAsArray(**block)
+        # xoff, yoff are not necessarily smaller than xoff+xsize, yoff+ysize
+        # get min and max to look up in rtree index
+        x_edges = (
+            x_origin + block['xoff'] * x_pixel_size, 
+            x_origin + (block['xoff'] + block['win_xsize']) * x_pixel_size)
+        y_edges = (
+            y_origin + block['yoff'] * y_pixel_size,
+            y_origin + (block['yoff'] + block['win_ysize']) * y_pixel_size)
+        block_bbox = (
+            min(*x_edges),
+            min(*y_edges),
+            max(*x_edges),
+            max(*y_edges))
         # Get all the line segments whose padded bounding box intersects the block
         # These are all the line segments that could be within the radius of
         # any point in the block.
@@ -1325,13 +1379,23 @@ def spatial_index_distance2(x_coords_path, y_coords_path, linestring_path, radiu
             distance_array = line_distance(x_coords, y_coords, x1, y1, 
                 x2, y2)
             min_distance_array = numpy.minimum(min_distance_array, distance_array)
+        min_distance_array[min_distance_array == numpy.inf] = NODATA
         # Write out the minimum distance block to the output raster
         out_band.WriteArray(min_distance_array, xoff=block['xoff'], yoff=block['yoff'])
+    out_band, out_raster = None, None
         
 
+def calculate_distance(x_coords_path, y_coords_path, linestring_path, out_path):
+
+    pygeoprocessing.raster_calculator([
+            (x_coords_path, 1), 
+            (y_coords_path, 1), 
+            (linestring_path, 'raw')
+        ], nearest_linestring_op, out_path, gdal.GDT_Float32, NODATA)
 
 
-
+# stormwater.spatial_index_distance2('/Users/emily/Documents/stormwater_workspace/intermediate/x_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/y_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/reprojected_centerlines.gpkg', 30, '/Users/emily/Documents/out.tif')
+# stormwater.calculate_distance('/Users/emily/Documents/stormwater_workspace/intermediate/x_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/y_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/reprojected_centerlines.gpkg', '/Users/emily/Documents/out.tif')
 
 
     
@@ -1351,3 +1415,5 @@ def validate(args):
     """
     return validation.validate(args, ARGS_SPEC['args'],
                                ARGS_SPEC['args_with_spatial_overlap'])
+
+
