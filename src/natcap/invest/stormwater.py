@@ -758,12 +758,6 @@ def aggregate_results(aoi_path, aggregations, output_path):
 
     if os.path.exists(output_path):
         os.remove(output_path)
-
-    original_aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
-
-    # copy AOI vector to the output path and convert to GPKG if needed
-    result = gdal.VectorTranslate(output_path, aoi_path)
-    
     aggregate_vector = gdal.OpenEx(output_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
 
@@ -831,7 +825,7 @@ def is_near(input_path, search_kernel, output_path):
         input_path, output_path, gdal.GDT_Int16, [NODATA])
     out_raster = gdal.OpenEx(output_path, gdal.OF_RASTER | gdal.GA_Update)
     out_band = out_raster.GetRasterBand(1)
-    
+ 
     # iterate over the raster by overlapping blocks
     overlap = int((search_kernel.shape[0] - 1) / 2)
     for block in overlap_iterblocks(input_path, overlap):
@@ -856,6 +850,7 @@ def is_near(input_path, search_kernel, output_path):
         is_near[nodata_mask] = NODATA
 
         out_band.WriteArray(is_near, xoff=block['xoff'], yoff=block['yoff'])
+    in_raster, in_band, out_raster, out_band = None, None, None, None
 
 
 def overlap_iterblocks(raster_path, n_pixels):
@@ -1014,9 +1009,6 @@ def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
     x_band, y_band, x_raster, y_raster = None, None, None, None
 
 
-
-
-
 def line_distance(x_coords, y_coords, x1, y1, x2, y2):
     """Find the minimum distance from each array point to a line segment.
 
@@ -1097,6 +1089,7 @@ def iter_linestring_segments(vector_path):
                 x1, y1, *_ = points[i]
                 x2, y2, *_ = points[i + 1]
                 yield (x1, y1), (x2, y2)
+    layer, vector = None, None
 
 
 def raster_average(raster_path, search_kernel, n_values_path, sum_path, 
@@ -1194,7 +1187,7 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
         
         n_values_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
         sum_band.WriteArray(sum_array, xoff=block['xoff'], yoff=block['yoff'])
-
+    raster, band = None, None
     n_values_band, sum_band = None, None
     n_values_raster, sum_raster = None, None
 
@@ -1319,20 +1312,6 @@ def optimized_linestring_distance(x_coords_path, y_coords_path,
     out_band, out_raster = None, None
         
 
-def calculate_distance(x_coords_path, y_coords_path, linestring_path, out_path):
-
-    pygeoprocessing.raster_calculator([
-            (x_coords_path, 1), 
-            (y_coords_path, 1), 
-            (linestring_path, 'raw')
-        ], nearest_linestring_op, out_path, gdal.GDT_Float32, NODATA)
-
-
-# stormwater.spatial_index_distance2('/Users/emily/Documents/stormwater_workspace/intermediate/x_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/y_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/reprojected_centerlines.gpkg', 30, '/Users/emily/Documents/out.tif')
-# stormwater.calculate_distance('/Users/emily/Documents/stormwater_workspace/intermediate/x_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/y_coords.tif', '/Users/emily/Documents/stormwater_workspace/intermediate/reprojected_centerlines.gpkg', '/Users/emily/Documents/out.tif')
-
-
-    
 @validation.invest_validator
 def validate(args):
     """Validate args to ensure they conform to `execute`'s contract.

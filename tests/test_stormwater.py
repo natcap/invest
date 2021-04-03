@@ -70,8 +70,9 @@ class StormwaterTests(unittest.TestCase):
     def test_basic(self):
         from natcap.invest import stormwater
 
+        # generate 4 unique lucodes
+        lucodes = numpy.random.choice(20, size=4, replace=False)
         biophysical_table = pandas.DataFrame()
-        lucodes = random_array((4,), high=20, precision=0)
         biophysical_table['lucode'] = lucodes
         biophysical_table['EMC_pollutant1'] = random_array((4,), high=10)
 
@@ -209,7 +210,6 @@ class StormwaterTests(unittest.TestCase):
 
         for y in range(y_size):
             for x in range(x_size):
-                print(y, x)
                 if array[x,y] == stormwater.NODATA:
                     self.assertEqual(out[x,y], stormwater.NODATA)
                 elif array[x,y] > threshold:
@@ -547,7 +547,7 @@ class StormwaterTests(unittest.TestCase):
         out_path = os.path.join(self.workspace_dir, 'distance.tif')
         expected_distance_path = os.path.join(self.workspace_dir, 'expected_distance.tif')
         actual_distance_path = os.path.join(self.workspace_dir, 'actual_distance.tif')
-        
+
         # set up an arbitrary spatial reference
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3857)
@@ -557,7 +557,7 @@ class StormwaterTests(unittest.TestCase):
         nodata = -1
         radius = numpy.random.randint(1, 1000)
         pixel_size = numpy.random.randint(1, 500)
-        origin = (numpy.random.randint(-2000, 2000), numpy.random.randint(-2000, 2000))
+        origin = (numpy.random.randint(-1000, 1000), numpy.random.randint(-1000, 1000))
 
         base_array = numpy.zeros(raster_size)
         pygeoprocessing.numpy_array_to_raster(base_array, nodata, 
@@ -567,16 +567,19 @@ class StormwaterTests(unittest.TestCase):
         # Randomly generate some points to make a linestring
         linestring = ogr.Geometry(ogr.wkbLineString)
         for i in range(n_points):
-            linestring.AddPoint(numpy.random.randint(-2000, 2000), 
-                numpy.random.randint(-2000, 2000))
+            # make the linestring on the same region and scale as the raster,
+            # but not necessarily perfectly overlapping
+            linestring.AddPoint(
+                numpy.random.randint(-1000*pixel_size, 1000*pixel_size), 
+                numpy.random.randint(-1000*pixel_size, 1000*pixel_size))
         # Write the linestring to a gpkg file
-        driver = gdal.GetDriverByName('GPKG')
+        driver = ogr.GetDriverByName('GPKG')
         vector = driver.CreateDataSource(linestring_path)
         layer = vector.CreateLayer("1", geom_type=ogr.wkbLineString)
         feature_def = layer.GetLayerDefn()
         feature = ogr.Feature(feature_def)
         feature.SetGeometry(linestring)
-        outLayer.CreateFeature(feature)
+        layer.CreateFeature(feature)
         feature, layer, vector = None, None, None
         
         # This is a simpler implementation of the distance algorithm that
@@ -602,14 +605,14 @@ class StormwaterTests(unittest.TestCase):
                 Each pixel value is the distance from that pixel's centerpoint to
                 the nearest linestring in the vector at ``linestring_path``.
             """
-            segment_generator = iter_linestring_segments(linestring_path)
+            segment_generator = stormwater.iter_linestring_segments(linestring_path)
             (x1, y1), (x2, y2) = next(segment_generator)
-            min_distance = line_distance(x_coords, y_coords, x1, y1, x2, y2)
+            min_distance = stormwater.line_distance(x_coords, y_coords, x1, y1, x2, y2)
 
             for (x1, y1), (x2, y2) in segment_generator:
                 if x2 == x1 and y2 == y1:
                     continue  # ignore lines with length 0
-                distance = line_distance(x_coords, y_coords, x1, y1, x2, y2)
+                distance = stormwater.line_distance(x_coords, y_coords, x1, y1, x2, y2)
                 min_distance = numpy.minimum(min_distance, distance)
             return min_distance
 
@@ -617,7 +620,7 @@ class StormwaterTests(unittest.TestCase):
                 (x_coords_path, 1), 
                 (y_coords_path, 1), 
                 (linestring_path, 'raw')
-            ], nearest_linestring_op, expected_distance_path, gdal.GDT_Float32, NODATA)
+            ], nearest_linestring_op, expected_distance_path, gdal.GDT_Float32, nodata)
         stormwater.optimized_linestring_distance(x_coords_path, y_coords_path, 
             linestring_path, radius, actual_distance_path)
 
@@ -627,11 +630,10 @@ class StormwaterTests(unittest.TestCase):
         # these should be the same
         expected_thresholded = stormwater.threshold_array(expected_distance_array, radius)
         actual_thresholded = stormwater.threshold_array(actual_distance_array, radius)
+        # the expected will not have nodata areas. the actual will because of the
+        # optimization skipping some blocks. treat nodata as 0 for this purpose.
+        actual_thresholded[actual_thresholded == nodata] = 0
         self.assertTrue(numpy.array_equal(expected_thresholded, actual_thresholded))
-
-
-
-    
 
     def test_line_distance(self):
         from natcap.invest import stormwater
@@ -681,7 +683,6 @@ class StormwaterTests(unittest.TestCase):
         self.assertTrue(numpy.allclose(distances, expected_distances),
             f'Expected:\n{expected_distances}\nActual:\n{distances}')
 
-
     def test_iter_linestring_segments(self):
         from natcap.invest import stormwater
         # Create a linestring vector
@@ -719,8 +720,6 @@ class StormwaterTests(unittest.TestCase):
         array[:, 0:128] = 10
         array[:, 128:149] = 20
         array[:, 149] = nodata
-        print(array.dtype)
-
 
         data_path = os.path.join(self.workspace_dir, 'data.tif')
         # set up an arbitrary spatial reference
@@ -755,16 +754,7 @@ class StormwaterTests(unittest.TestCase):
         expected_n_values[0, -2] = 3
         expected_n_values[-1, 0] = 3
         expected_n_values[-1, -2] = 3
-        print(expected_n_values)
-        print(n_values_array)
         self.assertTrue(numpy.array_equal(n_values_array, expected_n_values))
-
-        print(array[:, 126])
-        print(array[:, 127])
-        print(array[:, 128])
-        print(sum_array[:, 127])
-        print(n_values_array[:, 127])
-
 
         expected_average = numpy.empty((150, 150))
         expected_average[:, 0:127] = 10
@@ -776,15 +766,4 @@ class StormwaterTests(unittest.TestCase):
         expected_average[-1, 128] = 17.5
         expected_average[:, 129:149] = 20
         expected_average[:, 149] = -1
-        print(expected_average[:, 127])
-        print(average_array[:, 127])
-
         self.assertTrue(numpy.allclose(average_array, expected_average))
-        
-
-
-
-
-
-
-
