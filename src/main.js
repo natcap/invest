@@ -198,7 +198,6 @@ const createWindow = async () => {
     item.once('done', async (event, state) => {
       if (state === 'completed') {
         logger.info(`${itemURL} complete`);
-        // logger.debug(item.savePath);
         await extractZipInplace(item.savePath);
         fs.unlink(item.savePath, (err) => {
           if (err) { logger.error(err); }

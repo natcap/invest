@@ -1,11 +1,10 @@
 import React from 'react';
-import { ipcRenderer } from 'electron';
 import {
   fireEvent, render, waitFor
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import { DataDownloadModal } from '../src/components/DataDownloadModal';
+import { DataDownloadModal, DownloadProgressBar } from '../src/components/DataDownloadModal';
 import sampledata_registry from '../src/sampledata_registry.json';
 
 const nModels = Object.keys(sampledata_registry.Models).length;
@@ -80,6 +79,36 @@ describe('Sample Data Download Form', () => {
       const pattern = modelName.split('(')[0];
       const modelCheckbox = getByLabelText(new RegExp(pattern));
       expect(modelCheckbox).toBeChecked();
+    });
+  });
+});
+
+describe('DownloadProgressBar', () => {
+  test('Displays progress before complete', () => {
+    const nComplete = 5;
+    const nTotal = 10;
+    const { getByText } = render(
+      <DownloadProgressBar
+        downloadedNofN={[nComplete, nTotal]}
+        expireAfter={5000}
+      />
+    );
+    expect(getByText(/Downloading/)).toBeInTheDocument();
+  });
+
+  test('Displays message on complete, then disappears', async () => {
+    const nComplete = 5;
+    const nTotal = 5;
+    const { getByText } = render(
+      <DownloadProgressBar
+        downloadedNofN={[nComplete, nTotal]}
+        expireAfter={1000}
+      />
+    );
+    const alert = getByText('Download Complete');
+    expect(alert).toBeInTheDocument();
+    await waitFor(() => {
+      expect(alert).not.toBeInTheDocument();
     });
   });
 });

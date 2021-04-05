@@ -244,6 +244,7 @@ export default class App extends React.Component {
                 ? (
                   <DownloadProgressBar
                     downloadedNofN={downloadedNofN}
+                    expireAfter={5000} // milliseconds
                   />
                 )
                 : <div />
