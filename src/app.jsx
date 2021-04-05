@@ -217,7 +217,6 @@ export default class App extends React.Component {
         <DataDownloadModal
           show={!didAskForSampleData}
           storeDownloadDir={this.storeDownloadDir}
-          defaultTargetPath={investSettings.sampleDataDir}
         />
         <TabContainer activeKey={activeTab}>
           <Navbar onDragOver={dragOverHandlerNone}>

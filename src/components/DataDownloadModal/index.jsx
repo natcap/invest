@@ -1,8 +1,6 @@
-import path from 'path';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron';
-import fetch from 'node-fetch';
 
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
@@ -10,7 +8,7 @@ import Modal from 'react-bootstrap/Modal';
 import Alert from 'react-bootstrap/Alert';
 import ProgressBar from 'react-bootstrap/ProgressBar';
 
-import pkg from '../../../package.json';
+import Expire from '../Expire';
 import sampledataRegistry from '../../sampledata_registry.json';
 
 /** Render a dialog with a form for configuring global invest settings */
@@ -176,17 +174,10 @@ export class DataDownloadModal extends React.Component {
   }
 }
 
-function Expire(props) {
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setVisible(false);
-    }, props.delay);
-  }, [props.delay]);
-
-  return visible ? <div>{props.children}</div> : <div />;
-}
+DataDownloadModal.propTypes = {
+  show: PropTypes.bool.isRequired,
+  storeDownloadDir: PropTypes.func.isRequired,
+};
 
 export function DownloadProgressBar(props) {
   const [nComplete, nTotal] = props.downloadedNofN;
@@ -207,10 +198,7 @@ export function DownloadProgressBar(props) {
   );
 }
 
-// DataDownladModal.propTypes = {
-//   saveSettings: PropTypes.func,
-//   investSettings: PropTypes.shape({
-//     nWorkers: PropTypes.string,
-//     loggingLevel: PropTypes.string,
-//   })
-// };
+DownloadProgressBar.propTypes = {
+  downloadedNofN: PropTypes.arrayOf(PropTypes.number).isRequired,
+  expireAfter: PropTypes.number.isRequired,
+};

@@ -20,7 +20,6 @@ describe('Sample Data Download Form', () => {
       <DataDownloadModal
         show={true}
         storeDownloadDir={() => {}}
-        defaultTargetPath="foo/dir"
       />
     );
 
@@ -66,7 +65,6 @@ describe('Sample Data Download Form', () => {
       <DataDownloadModal
         show={true}
         storeDownloadDir={() => {}}
-        defaultTargetPath="foo/dir"
       />
     );
 
