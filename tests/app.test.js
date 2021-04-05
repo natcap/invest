@@ -754,7 +754,7 @@ describe('Download Sample Data Modal', () => {
     });
   });
 
-  test('Download sends signal to main & caches download location', async () => {
+  test('Download sends signal to main & caches location - all selected', async () => {
     const dialogData = {
       filePaths: ['foo/directory'],
     };
@@ -767,8 +767,43 @@ describe('Download Sample Data Modal', () => {
     const downloadButton = await findByRole('button', { name: 'Download' });
     fireEvent.click(downloadButton);
 
+    // All data selected - ipcRenderer.send should be called with
+    // 2nd parameter as an array of length 1 (1 zipfile url to download)
     await waitFor(() => {
-      expect(ipcRenderer.send).toHaveBeenCalledTimes(1);
+      // first call and second parameter
+      expect(ipcRenderer.send.mock.calls[0][1]).toHaveLength(1);
+    });
+    await waitFor(async () => {
+      expect(await getSettingsValue('sampleDataDir'))
+        .toBe(dialogData.filePaths[0]);
+    });
+  });
+
+  test('Download sends signal to main & caches location - some selected', async () => {
+    const dialogData = {
+      filePaths: ['foo/directory'],
+    };
+    ipcRenderer.invoke.mockResolvedValue(dialogData);
+
+    const {
+      findByRole,
+      findAllByRole,
+    } = render(<App investExe="foo" />);
+
+    const allCheckBoxes = await findAllByRole('checkbox');
+    // toggle off one checkbox so not all are selected
+    fireEvent.click(allCheckBoxes[3]); // just avoid [0] - the SelectAll box
+
+    const downloadButton = await findByRole('button', { name: 'Download' });
+    fireEvent.click(downloadButton);
+
+    // Many datasets selected - ipcRenderer.send should be called with
+    // 2nd parameter as an array of length:
+    const nURLs = allCheckBoxes.length - 2; // Select All & 1 more unselected
+    await waitFor(() => {
+      // first call and second parameter
+      expect(ipcRenderer.send.mock.calls[0][1])
+        .toHaveLength(nURLs);
     });
     await waitFor(async () => {
       expect(await getSettingsValue('sampleDataDir'))

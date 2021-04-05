@@ -59,10 +59,9 @@ describe('Sample Data Download Form', () => {
 
   test('Checkbox list matches the sampledata registry', () => {
     // The registry itself is validated during the build process
-    // by the script called by `npm run fetch-invest`. 
+    // by the script called by `npm run fetch-invest`.
     const {
       getByLabelText,
-      getByRole,
       getAllByRole,
     } = render(
       <DataDownloadModal
