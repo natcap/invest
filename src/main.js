@@ -115,8 +115,8 @@ const createWindow = async () => {
     useContentSize: true,
     show: true, // see comment in 'ready-to-show' listener
     webPreferences: {
+      contextIsolation: false,
       nodeIntegration: true,
-      enableRemoteModule: true,
       additionalArguments: [
         ELECTRON_DEV_MODE ? '--dev' : 'packaged'
       ],
