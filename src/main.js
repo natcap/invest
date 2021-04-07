@@ -79,7 +79,6 @@ const createWindow = async () => {
     menu.popup(BrowserWindow.fromWebContents(event.sender));
   });
   ipcMain.handle('variable-request', async (event) => {
-    logger.debug('renderer requested mainProcessVars');
     return mainProcessVars;
   });
   ipcMain.handle('show-open-dialog', async (event, options) => {
@@ -101,7 +100,6 @@ const createWindow = async () => {
 
   // Wait for a response from the server before loading the app
   await getFlaskIsReady();
-  logger.debug('Flask is Ready');
 
   // always use light mode regardless of the OS/browser setting
   // in the future we can add a dark theme
@@ -127,7 +125,6 @@ const createWindow = async () => {
   );
   Menu.setApplicationMenu(menubar);
   mainWindow.loadURL(`file://${__dirname}/index.html`);
-  logger.debug('called mainWindow.loadURL')
 
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();
