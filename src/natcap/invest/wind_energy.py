@@ -231,7 +231,7 @@ ARGS_SPEC = {
             "required": True,
             "about": ("A floating point value in meters for the minimum depth "
                 "of the offshore wind farm installation."),
-            "name": "Minimum Depth for Offshore Wind Farm Installation")
+            "name": "Minimum Depth for Offshore Wind Farm Installation"
         },
         "max_depth": {
             "type": "number",
@@ -239,7 +239,7 @@ ARGS_SPEC = {
             "required": True,
             "about": ("A floating point value in meters for the maximum depth "
                 "of the offshore wind farm installation."),
-            "name": "Maximum Depth for Offshore Wind Farm Installation")
+            "name": "Maximum Depth for Offshore Wind Farm Installation"
         },
         "min_distance": {
             "type": "number",
@@ -248,7 +248,7 @@ ARGS_SPEC = {
             "about": ("A floating point value in meters that represents the "
                 "minimum distance from shore for offshore wind farm "
                 "installation.  Required for valuation."),
-            "name": "Minimum Distance for Offshore Wind Farm Installation")
+            "name": "Minimum Distance for Offshore Wind Farm Installation"
         },
         "max_distance": {
             "type": "number",
@@ -257,7 +257,7 @@ ARGS_SPEC = {
             "about": ("A floating point value in meters that represents the "
                 "maximum distance from shore for offshore wind farm "
                 "installation.  Required for valuation."),
-            "name": "Maximum Distance for Offshore Wind Farm Installation")
+            "name": "Maximum Distance for Offshore Wind Farm Installation"
         },
         "valuation_container": {
             "type": "boolean",

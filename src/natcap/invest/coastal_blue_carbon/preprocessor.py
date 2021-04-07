@@ -67,8 +67,7 @@ ARGS_SPEC = {
             "about": ("A CSV table where each row represents the year and path "
                 "to a raster file on disk representing the landcover raster "
                 "representing the state of the landscape in that year. "
-                "Landcover codes match those in the LULC lookup table.")
-            ),
+                "Landcover codes match those in the LULC lookup table."),
             "name": "LULC Snapshots Table",
         },
     }

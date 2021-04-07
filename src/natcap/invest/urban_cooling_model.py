@@ -49,7 +49,6 @@ ARGS_SPEC = {
                 "landscape, although LULC categories can comprise a mix of "
                 "vegetated and non-vegetated covers (e.g. 'residential', which "
                 "may have 30% canopy cover.")
-            )
         },
         "ref_eto_raster_path": utils.ETO_ARG,
         "aoi_vector_path": utils.AOI_ARG,
@@ -91,16 +90,14 @@ ARGS_SPEC = {
             "about": ("A CSV table containing model information corresponding "
                 "to each of the land use classes in the LULC.  All classes in "
                 "the land cover raster MUST have corresponding values in this "
-                "table.  Each row is a land use/land cover class.")
-            ),
+                "table.  Each row is a land use/land cover class."),
         },
         "green_area_cooling_distance": {
             **utils.DISTANCE,
             "name": "Green area max cooling distance effect",
             "required": True,
             "about": ("Distance over which green areas larger than 2 hectares "
-                "will have a cooling effect.")
-            ),
+                "will have a cooling effect."),
         },
         "t_air_average_radius": {
             **utils.DISTANCE,
@@ -127,8 +124,7 @@ ARGS_SPEC = {
             "required": True,
             "about": ("The magnitude of the urban heat island effect, "
                 "Example: the difference between the rural reference "
-                "temperature and the maximum temperature observed in the city.")
-            ),
+                "temperature and the maximum temperature observed in the city."),
         },
         "do_energy_valuation": {
             "name": "Run Energy Savings Valuation Model",
@@ -150,8 +146,7 @@ ARGS_SPEC = {
                 "expression": "(value >= 0) and (value <= 100)",
             },
             "about": ("The average relative humidity (0-100%) over the time "
-                "period of interest.")
-            ),
+                "period of interest."),
         },
         "building_vector_path": {
             "name": "Buildings vector",
@@ -163,8 +158,7 @@ ARGS_SPEC = {
                 "footprints.  The attribute table must contain the column "
                 "'type', with integers referencing the building type (e.g. "
                 "1=residential, 2=office, etc.) that match types in the energy "
-                "consumption table.")
-            ),
+                "consumption table."),
         },
         "energy_consumption_table_path": {
             "name": "Energy consumption table",
@@ -207,8 +201,7 @@ ARGS_SPEC = {
                 "required_fields": ["type", "consumption"],
             },
             "about": ("A CSV table containing information on energy "
-                "consumption for various types of buildings, in kWh/deg C/m^2.")
-            ),
+                "consumption for various types of buildings, in kWh/deg C/m^2."),
         },
         "cc_method": {
             "name": "Cooling capacity calculation method",
@@ -218,14 +211,13 @@ ARGS_SPEC = {
                 "options": ['factors', 'intensity'],
             },
             "about": ("The method selected here determines the predictor used "
-                "for air temperature.  If <b>"Weighted Factors"</b> is "
-                "selected, the Cooling Capacity calculations will use the "
-                "weighted factors for shade, albedo and ETI as a predictor for "
-                "daytime temperatures. <br/>Alternatively, if <b>"Building "
-                "Intensity"</b> is selected, building intensity will be used "
-                "as a predictor for nighttime temperature instead of shade, "
-                "albedo and ETI.")
-            ),
+                "for air temperature.  If 'Weighted Factors' is selected, the "
+                "Cooling Capacity calculations will use the weighted factors "
+                "for shade, albedo and ETI as a predictor for daytime "
+                "temperatures. <br/>Alternatively, if <b>'Building Intensity'"
+                "</b> is selected, building intensity will be used as a "
+                "predictor for nighttime temperature instead of shade, albedo "
+                "and ETI."),
         },
         "cc_weight_shade": {
             "name": "Cooling capacity: adjust shade weight",
@@ -233,8 +225,7 @@ ARGS_SPEC = {
             "required": False,
             **utils.GT_0,
             "about": ("The relative weight to apply to shade when calculating "
-                "the cooling index.  Default: 0.6")
-            ),
+                "the cooling index.  Default: 0.6"),
         },
         "cc_weight_albedo": {
             "name": "Cooling capacity: adjust albedo weight",
@@ -242,8 +233,7 @@ ARGS_SPEC = {
             "required": False,
             **utils.GT_0,
             "about": ("The relative weight to apply to albedo when calculating "
-                "the cooling index.  Default: 0.2")
-            ),
+                "the cooling index.  Default: 0.2"),
         },
         "cc_weight_eti": {
             "name": "Cooling capacity: adjust evapotranspiration weight",
@@ -252,7 +242,6 @@ ARGS_SPEC = {
             **utils.GT_0,
             "about": ("The relative weight to apply to ETI when calculating "
                 "the cooling index.  Default: 0.2")
-            )
         },
     }
 }

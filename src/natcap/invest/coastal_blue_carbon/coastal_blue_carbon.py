@@ -170,8 +170,7 @@ ARGS_SPEC = {
                 "to a raster file on disk representing the landcover raster "
                 "representing the state of the landscape in that year. "
                 "Landcover codes match those in the biophysical table and in "
-                "the landcover transitions table.")
-            ),
+                "the landcover transitions table."),
             "name": "Landcover Snapshots Table",
         },
         "analysis_year": {
@@ -181,8 +180,7 @@ ARGS_SPEC = {
             "name": "Analysis Year",
             "about": ("An analysis year extends the transient analysis beyond "
                 "the transition years. If not provided, the analysis will halt "
-                "at the final transition year.")
-            ),
+                "at the final transition year."),
         },
         "biophysical_table_path": {
             "name": "Biophysical Table",
@@ -191,7 +189,7 @@ ARGS_SPEC = {
             "columns": {
                 "code": {
                     "type": "freestyle_string",
-                    "about": "Textual description of the landcover class.")},
+                    "about": "Textual description of the landcover class."},
                 "lulc-class": {
                     "type": "code",
                     "about": ("The landcover code used in the LULC snapshot "
@@ -214,7 +212,7 @@ ARGS_SPEC = {
                 "biomass-half-life": {
                     "type": "number",
                     "units": u.year,
-                    "about": "the half-life of carbon in the biomass pool.")},
+                    "about": "the half-life of carbon in the biomass pool."},
                 "biomass-low-impact-disturb": {
                     "type": "ratio",
                     "about": ("ratio of carbon stock in the biomass pool that "
@@ -238,7 +236,7 @@ ARGS_SPEC = {
                 "soil-half-life": {
                     "type": "number",
                     "units": u.year,
-                    "about": "the half-life of carbon in the soil pool.")},
+                    "about": "the half-life of carbon in the soil pool."},
                 "soil-low-impact-disturb": {
                     "type": "ratio",
                     "about": ("ratio of carbon stock in the soil pool that is "

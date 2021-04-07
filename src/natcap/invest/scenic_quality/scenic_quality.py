@@ -82,7 +82,7 @@ ARGS_SPEC = {
                         "assign an importance to each viewshed by scaling them "
                         "with a real number (either positive or negative) "
                         "stored in the field “WEIGHT”. The model assumes a "
-                        "weight of 1.0 if the field doesn’t exist."),
+                        "weight of 1.0 if the field doesn’t exist.")},
                 "HEIGHT": {
                     "type": "number",
                     "units": u.meter,
@@ -90,7 +90,7 @@ ARGS_SPEC = {
                     "about": ("Viewpoint height: Each feature's elevation "
                         "above the ground can be specified as a positive real "
                         "number. The default value is 0 if the field doesn’t "
-                        "exist.")
+                        "exist.")}
             },
             "required": True,
             "about": ("A GDAL-supported vector file.  The user must specify a "
@@ -149,14 +149,14 @@ ARGS_SPEC = {
             "type": "number",
             "units": None,
             "required": "do_valuation",
-            "about": "First coefficient used by the valuation function"),
+            "about": "First coefficient used by the valuation function",
         },
         "b_coef": {
             "name": "'a' Coefficient",
             "type": "number",
             "units": None,
             "required": "do_valuation",
-            "about": "Second coefficient used by the valuation function"),
+            "about": "Second coefficient used by the valuation function",
         },
         "max_valuation_radius": {
             "name": "Maximum Valuation Radius",

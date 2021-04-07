@@ -126,7 +126,7 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.year,
             "required": True,
-            "about": "Year to start PUD calculations, date starts on Jan 1st."),
+            "about": "Year to start PUD calculations, date starts on Jan 1st.",
             "name": "Start Year (inclusive, must be >= 2005)"
         },
         "end_year": {

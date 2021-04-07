@@ -39,7 +39,7 @@ ARGS_SPEC = {
         "predefined_globio": {
             "type": "boolean",
             "required": False,
-            "about": "if True then "mode (b)" else "mode (a)"",
+            "about": "if True then mode (b) else mode (a)",
             "name": "Predefined land use map for GLOBIO"
         },
         "lulc_path": {
@@ -75,7 +75,7 @@ ARGS_SPEC = {
                 }
             },
             "required": True,
-            "about": ("Used in "mode (a) and (b)" a path to a folder "
+            "about": ("Used in mode (a) and (b) a path to a folder "
                 "containing maps of either GDAL compatible rasters or vectors. "
                 "These data will be used in the infrastructure to calculation "
                 "of MSA."),
@@ -161,7 +161,7 @@ ARGS_SPEC = {
             **utils.LULC_ARG,
             **utils.PROJECTED,
             "required": "predefined_globio",
-            "about": "used in "mode (b)" path to predefined globio raster.",
+            "about": "used in mode (b) path to predefined globio raster.",
             "name": "GLOBIO Classified Land Use"
         }
     }
