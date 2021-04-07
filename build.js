@@ -4,6 +4,7 @@ const { spawnSync } = require('child_process');
 const fs = require('fs-extra');
 const path = require('path');
 const glob = require('glob');
+const { DEFAULT_EXTENSIONS } = require('@babel/core');
 
 const SRC_DIR = 'src';
 const BUILD_DIR = 'build';
@@ -65,7 +66,7 @@ function build() {
   // copy all other files to their same relative location in the build dir
   const files = glob.sync(SRC_DIR.concat(path.sep, '**', path.sep, '*'));
   files.forEach((file) => {
-    if (['.css', '.html', '.png'].includes(path.extname(file))) {
+    if (!DEFAULT_EXTENSIONS.includes(path.extname(file))) {
       const dest = file.replace(SRC_DIR, BUILD_DIR);
       fs.copySync(file, dest);
     }
