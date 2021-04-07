@@ -44,12 +44,11 @@ ARGS_SPEC = {
             "type": "number",
             "units": None,
             "required": "compute_forest_edge_effects",
-            "about": (
-                "Used when calculating the biomass in a pixel.  This number "
-                "determines the number of closest regression models that are "
-                "used when calculating the total biomass.  Each local model "
-                "is linearly weighted by distance such that the biomass in "
-                "the pixel is a function of each of these points with the "
+            "about": ("Used when calculating the biomass in a pixel.  This "
+                "number determines the number of closest regression models "
+                "that are used when calculating the total biomass.  Each local "
+                "model is linearly weighted by distance such that the biomass "
+                "in the pixel is a function of each of these points with the "
                 "closest point having the highest effect."),
             "name": "Number of nearest model points to average"
         },
@@ -67,13 +66,15 @@ ARGS_SPEC = {
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": "Carbon density value for the aboveground carbon pool."
+                    "about": ("Carbon density value for the aboveground carbon "
+                        "pool.")
                 },
                 "c_below": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": "Carbon density value for the belowground carbon pool"
+                    "about": ("Carbon density value for the belowground carbon "
+                        "pool")
                 },
                 "c_soil": {
                     "type": "number",
@@ -85,16 +86,16 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": "Carbon density value for the dead matter carbon pool"
+                    "about": ("Carbon density value for the dead matter carbon "
+                        "pool")
                 },
             },
-            "about": (
-                "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input.  "
-                "If the user selects 'all carbon pools' the "
-                "table must also contain entries for 'c_below', 'c_soil', "
-                "and 'c_dead'.  See the InVEST Forest Carbon User's Guide "
-                "for more information about these fields."),
+            "about": ("A CSV table containing model information corresponding "
+                "to each of the land use classes in the LULC raster input.  If "
+                "the user selects 'all carbon pools' the table must also "
+                "contain entries for 'c_below', 'c_soil', and 'c_dead'.  See "
+                "the InVEST Forest Carbon User's Guide for more information "
+                "about these fields."),
             "name": "Biophysical Table"
         },
         "lulc_raster_path": {
@@ -107,8 +108,7 @@ ARGS_SPEC = {
             },
             "type": "option_string",
             "required": True,
-            "about": (
-                "If 'all carbon pools' is selected then the headers "
+            "about": ("If 'all carbon pools' is selected then the headers "
                 "'c_above', 'c_below', 'c_dead', 'c_soil' are used in the "
                 "carbon pool calculation.  Otherwise only 'c_above' is "
                 "considered."),
@@ -117,11 +117,10 @@ ARGS_SPEC = {
         "compute_forest_edge_effects": {
             "type": "boolean",
             "required": True,
-            "about": (
-                "If selected, will use the Chaplin-Kramer, et. al method to "
-                "account for above ground carbon stocks in tropical forest "
-                "types indicated by a '1' in the 'is_tropical_forest' field "
-                "in the biophysical table."),
+            "about": ("If selected, will use the Chaplin-Kramer, et. al method "
+                "to account for above ground carbon stocks in tropical forest "
+                "types indicated by a '1' in the 'is_tropical_forest' field in "
+                "the biophysical table."),
             "name": "Compute forest edge effects"
         },
         "tropical_forest_edge_carbon_model_vector_path": {
@@ -140,21 +139,19 @@ ARGS_SPEC = {
             },
             "geometries": utils.POLYGONS,
             "required": "compute_forest_edge_effects",
-            "about": (
-                "A vector with fields 'method', 'theta1', 'theta2', "
-                "'theta3' describing the global forest carbon edge models.  "
+            "about": ("A vector with fields 'method', 'theta1', 'theta2', "
+                "'theta3' describing the global forest carbon edge models. "
                 "Provided as default data for the model."),
             "name": "Global forest carbon edge regression models"
         },
         "biomass_to_carbon_conversion_factor": {
             "type": "ratio",
             "required": "compute_forest_edge_effects",
-            "about": (
-                "Number by which to scale forest edge biomass to convert to "
-                "carbon.  Default value is 0.47 (according to IPCC 2006). "
+            "about": ("Number by which to scale forest edge biomass to convert "
+                "to carbon.  Default value is 0.47 (according to IPCC 2006). "
                 "This pertains to forest classes only; values in the "
-                "biophysical table for non-forest classes should already be "
-                "in terms of carbon, not biomass."),
+                "biophysical table for non-forest classes should already be in "
+                "terms of carbon, not biomass."),
             "name": "Forest Edge Biomass to Carbon Conversion Factor"
         }
     }

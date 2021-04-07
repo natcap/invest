@@ -29,8 +29,7 @@ ARGS_SPEC = {
             "validation_options": {
                 "options": ["No", "Yes"],
             },
-            "about": (
-                "Specifies whether or not the population classes "
+            "about": ("Specifies whether or not the population classes "
                 "provided in the Population Parameters CSV file are "
                 "distinguished by sex."),
         },
@@ -39,14 +38,12 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": None,
             "required": True,
-            "about": (
-                "A CSV file containing all necessary attributes for "
-                "population classes based on age/stage, sex, and area "
-                "- excluding possible migration "
-                "information.<br><br>See the 'Running the Model >> "
-                "Core Model >> Population Parameters' section in the "
-                "model's documentation for help on how to format this "
-                "file."),
+            "about": ("A CSV file containing all necessary attributes for "
+                "population classes based on age/stage, sex, and area - "
+                "excluding possible migration information.<br><br>See the "
+                "'Running the Model >> Core Model >> Population Parameters' "
+                "section in the model's documentation for help on how to "
+                "format this file."),
         },
         "habitat_dep_csv_path": {
             "name": "Habitat Dependency Parameters File",
@@ -60,10 +57,9 @@ ARGS_SPEC = {
                 }
             },
             "required": True,
-            "about": (
-                "A CSV file containing the habitat dependencies (0-1) "
-                "for each life stage or age and for each habitat type "
-                "included in the Habitat Change CSV File."),
+            "about": ("A CSV file containing the habitat dependencies (0-1) "
+                "for each life stage or age and for each habitat type included "
+                "in the Habitat Change CSV File."),
         },
         "habitat_chg_csv_path": {
             "name": "Habitat Area Change File",
@@ -77,19 +73,17 @@ ARGS_SPEC = {
                 }
             },
             "required": True,
-            "about": (
-                "A CSV file containing the percent changes in habitat "
-                "area by subregion (if applicable). The habitats "
-                "included should be those which the population depends "
-                "on at any life stage."),
+            "about": ("A CSV file containing the percent changes in habitat "
+                "area by subregion (if applicable). The habitats included "
+                "should be those which the population depends on at any life "
+                "stage."),
         },
         "gamma": {
             "name": "Gamma",
             "type": "ratio",
             "required": True,
             **utils.BETWEEN_0_AND_1,
-            "about": (
-                "Gamma describes the relationship between a change in "
+            "about": ("Gamma describes the relationship between a change in "
                 "habitat area and a change in survival of life stages "
                 "dependent on that habitat."),
         }

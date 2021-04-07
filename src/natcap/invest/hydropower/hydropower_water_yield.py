@@ -45,8 +45,7 @@ ARGS_SPEC = {
             }},
             "required": True,
             **utils.PROJECTED,
-            "about": (
-                "A GDAL-supported raster file containing an average root "
+            "about": ("A GDAL-supported raster file containing an average root "
                 "restricting layer depth value for each cell."),
             "name": "Depth To Root Restricting Layer"
         },
@@ -59,11 +58,9 @@ ARGS_SPEC = {
             "bands": {1: {"type": "ratio"}},
             "required": True,
             **utils.PROJECTED,
-            "about": (
-                "A GDAL-supported raster file containing plant available "
+            "about": ("A GDAL-supported raster file containing plant available "
                 "water content values for each cell.  The plant available "
-                "water content fraction should be a value between 0 "
-                "and 1."),
+                "water content fraction should be a value between 0 and 1."),
             "name": "Plant Available Water Fraction"
         },
         "eto_path": {
@@ -76,8 +73,7 @@ ARGS_SPEC = {
             "fields": {"ws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
             "required": True,
-            "about": (
-                "A GDAL-supported vector file containing one polygon per "
+            "about": ("A GDAL-supported vector file containing one polygon per "
                 "watershed.  Each polygon that represents a watershed is "
                 "required to have a field 'ws_id' that is a unique integer "
                 "which identifies that watershed."),
@@ -89,12 +85,11 @@ ARGS_SPEC = {
             "fields": {"subws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
             "required": False,
-            "about": (
-                "A GDAL-supported vector file with one polygon per "
-                "sub-watershed within the main watersheds specified in the "
-                "Watersheds shapefile.  Each polygon that represents a "
-                "sub-watershed is required to have a field 'subws_id' that "
-                "is a unique integer which identifies that sub-watershed."),
+            "about": ("A GDAL-supported vector file with one polygon per sub- "
+                "watershed within the main watersheds specified in the "
+                "Watersheds shapefile.  Each polygon that represents a sub- "
+                "watershed is required to have a field 'subws_id' that is a "
+                "unique integer which identifies that sub-watershed."),
             "name": "Sub-Watersheds"
         },
         "biophysical_table_path": {
@@ -105,11 +100,10 @@ ARGS_SPEC = {
                 "Kc": {"type": "number", "units": None}
             },
             "required": True,
-            "about": (
-                "A CSV table of land use/land cover (LULC) classes, "
+            "about": ("A CSV table of land use/land cover (LULC) classes, "
                 "containing data on biophysical coefficients used in this "
-                "model.  The following columns are required: "
-                "'lucode' (integer), 'root_depth' (mm), 'Kc' (coefficient)."),
+                "model.  The following columns are required: 'lucode' "
+                "(integer), 'root_depth' (mm), 'Kc' (coefficient)."),
             "name": "Biophysical Table"
         },
         "seasonality_constant": {
@@ -117,10 +111,8 @@ ARGS_SPEC = {
             "type": "number",
             "units": None,
             "required": True,
-            "about": (
-                "Floating point value on the order of 1 to 30 "
-                "corresponding to the seasonal distribution of "
-                "precipitation."),
+            "about": ("Floating point value on the order of 1 to 30 "
+                "corresponding to the seasonal distribution of precipitation."),
             "name": "Z parameter"
         },
         "demand_table_path": {
@@ -132,11 +124,10 @@ ARGS_SPEC = {
                     "units": u.meter**3/u.year/u.pixel}
             },
             "required": False,
-            "about": (
-                "A table mapping each LULC class to the estimated average "
-                "consumptive water use for that class. NOTE: the accounting "
-                "for pixel area is important since larger areas will consume "
-                "more water for the same land-cover type."),
+            "about": ("A table mapping each LULC class to the estimated "
+                "average consumptive water use for that class. NOTE: the "
+                "accounting for pixel area is important since larger areas "
+                "will consume more water for the same land-cover type."),
             "name": "Water Demand Table"
         },
         "valuation_table_path": {

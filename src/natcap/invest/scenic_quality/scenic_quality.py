@@ -66,65 +66,63 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
-                    "about": ("RADIUS preferred, but may also be called RADIUS2 "
-                        "for backwards compatibility. Maximum length of the line "
-                        "of sight originating from a viewpoint. The value can "
-                        "either be positive (preferred) or negative (kept for backwards "
-                        "compatibility), but is converted to a positive number. If the "
-                        "field doesn’t exist, the model will include all pixels in the "
-                        "DEM in the visibility analysis.")},
+                    "about": ("RADIUS preferred, but may also be called "
+                        "RADIUS2 for backwards compatibility. Maximum length "
+                        "of the line of sight originating from a viewpoint. "
+                        "The value can either be positive (preferred) or "
+                        "negative (kept for backwards compatibility), but is "
+                        "converted to a positive number. If the field doesn’t "
+                        "exist, the model will include all pixels in the DEM "
+                        "in the visibility analysis.")},
                 "WEIGHT": {
                     "type": "number",
                     "units": None,
                     "required": False,
-                    "about": ("Viewshed importance coefficient: The user can assign an "
-                        "importance to each viewshed by scaling them with a real number "
-                        "(either positive or negative) stored in the field “WEIGHT”. "
-                        "The model assumes a weight of 1.0 if the field doesn’t exist.")},
+                    "about": ("Viewshed importance coefficient: The user can "
+                        "assign an importance to each viewshed by scaling them "
+                        "with a real number (either positive or negative) "
+                        "stored in the field “WEIGHT”. The model assumes a "
+                        "weight of 1.0 if the field doesn’t exist."),
                 "HEIGHT": {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
-                    "about": ("Viewpoint height: Each feature's elevation above the ground "
-                        "can be specified as a positive real number. The default value is "
-                        "0 if the field doesn’t exist.")}
+                    "about": ("Viewpoint height: Each feature's elevation "
+                        "above the ground can be specified as a positive real "
+                        "number. The default value is 0 if the field doesn’t "
+                        "exist.")
             },
             "required": True,
-            "about": (
-                "A GDAL-supported vector file.  The user must specify "
-                "a point feature layer that indicates locations of "
-                "objects that contribute to negative scenic quality, "
-                "such as aquaculture netpens or wave energy "
-                "facilities.  In order for the viewshed analysis to "
-                "run correctly, the projection of this input must be "
-                "consistent with the projection of the DEM input."),
+            "about": ("A GDAL-supported vector file.  The user must specify a "
+                "point feature layer that indicates locations of objects that "
+                "contribute to negative scenic quality, such as aquaculture "
+                "netpens or wave energy facilities.  In order for the viewshed "
+                "analysis to run correctly, the projection of this input must "
+                "be consistent with the projection of the DEM input."),
         },
         "dem_path": {
             **utils.DEM_ARG,
             **utils.METER_PROJECTED,
-            "about": (
-                "A GDAL-supported raster file.  An elevation raster "
-                "layer is required to conduct viewshed analysis. "
-                "Elevation data allows the model to determine areas "
-                "within the AOI's land-seascape where point features "
-                "contributing to negative scenic quality are visible."),
+            "about": ("A GDAL-supported raster file.  An elevation raster "
+                "layer is required to conduct viewshed analysis. Elevation "
+                "data allows the model to determine areas within the AOI's "
+                "land-seascape where point features contributing to negative "
+                "scenic quality are visible."),
         },
         "refraction": {
             "name": "Refractivity Coefficient",
             "type": "ratio",
             "required": True,
             **utils.BETWEEN_0_AND_1,
-            "about": (
-                "The earth curvature correction option corrects for "
-                "the curvature of the earth and refraction of visible "
-                "light in air.  Changes in air density curve the light "
-                "downward causing an observer to see further and the "
-                "earth to appear less curved.  While the magnitude of "
-                "this effect varies with atmospheric conditions, a "
-                "standard rule of thumb is that refraction of visible "
-                "light reduces the apparent curvature of the earth by "
-                "one-seventh.  By default, this model corrects for the "
-                "curvature of the earth and sets the refractivity "
+            "about": ("The earth curvature correction option corrects for the "
+                "curvature of the earth and refraction of visible light in "
+                "air.  Changes in air density curve the light downward causing "
+                "an observer to see further and the earth to appear less "
+                "curved.  While the magnitude of this effect varies with "
+                "atmospheric conditions, a standard rule of thumb is that "
+                "refraction of visible light reduces the apparent curvature of "
+                "the earth by one-seventh.  By default, this model corrects "
+                "for the curvature of the earth and sets the refractivity "
                 "coefficient to 0.13."),
         },
         "do_valuation": {
@@ -143,24 +141,22 @@ ARGS_SPEC = {
                     'logarithmic: a + b log(x+1)',
                     'exponential: a * e^(-bx)'],
             },
-            "about": (
-                "This field indicates the functional form f(x) the "
-                "model will use to value the visual impact for each "
-                "viewpoint."),
+            "about": ("This field indicates the functional form f(x) the model "
+                "will use to value the visual impact for each viewpoint."),
         },
         "a_coef": {
             "name": "'a' Coefficient",
             "type": "number",
             "units": None,
             "required": "do_valuation",
-            "about": ("First coefficient used by the valuation function"),
+            "about": "First coefficient used by the valuation function"),
         },
         "b_coef": {
             "name": "'a' Coefficient",
             "type": "number",
             "units": None,
             "required": "do_valuation",
-            "about": ("Second coefficient used by the valuation function"),
+            "about": "Second coefficient used by the valuation function"),
         },
         "max_valuation_radius": {
             "name": "Maximum Valuation Radius",
@@ -168,10 +164,9 @@ ARGS_SPEC = {
             "units": u.meter,
             "required": False,
             **utils.GT_0,
-            "about": (
-                "Radius beyond which the valuation is set to zero. "
-                "The valuation function 'f' cannot be negative at the "
-                "radius 'r' (f(r)>=0)."),
+            "about": ("Radius beyond which the valuation is set to zero. The "
+                "valuation function 'f' cannot be negative at the radius 'r' "
+                "(f(r)>=0)."),
         },
     }
 }

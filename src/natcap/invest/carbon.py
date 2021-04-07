@@ -31,16 +31,14 @@ ARGS_SPEC = {
         "lulc_cur_path": {
             **utils.LULC_ARG,
             **utils.PROJECTED,
-            "about": (
-                "A GDAL-supported raster representing the land-cover of the "
-                "current scenario."),
+            "about": ("A GDAL-supported raster representing the land-cover of "
+                "the current scenario."),
             "name": "Current Land Use/Land Cover"
         },
         "calc_sequestration": {
             "type": "boolean",
             "required": "do_valuation | do_redd",
-            "about": (
-                "Check to enable sequestration analysis. This requires "
+            "about": ("Check to enable sequestration analysis. This requires "
                 "inputs of Land Use/Land Cover maps for both current and "
                 "future scenarios."),
             "name": "Calculate Sequestration"
@@ -49,30 +47,26 @@ ARGS_SPEC = {
             **utils.LULC_ARG,
             **utils.PROJECTED,
             "required": "calc_sequestration",
-            "about": (
-                "A GDAL-supported raster representing the land-cover of the "
-                "future scenario. If REDD scenario analysis is "
-                "enabled, this should be the reference, or baseline, future "
-                "scenario against which to compare the REDD policy "
-                "scenario."),
+            "about": ("A GDAL-supported raster representing the land-cover of "
+                "the future scenario. If REDD scenario analysis is enabled, "
+                "this should be the reference, or baseline, future scenario "
+                "against which to compare the REDD policy scenario."),
             "name": "Future Landcover"
         },
         "do_redd": {
             "type": "boolean",
             "required": False,
-            "about": (
-                "Check to enable REDD scenario analysis.  This requires "
-                "three Land Use/Land Cover maps: one for the current "
-                "scenario, one for the future baseline scenario, and one for "
-                "the future REDD policy scenario."),
+            "about": ("Check to enable REDD scenario analysis.  This requires "
+                "three Land Use/Land Cover maps: one for the current scenario, "
+                "one for the future baseline scenario, and one for the future "
+                "REDD policy scenario."),
             "name": "REDD Scenario Analysis"
         },
         "lulc_redd_path": {
             **utils.LULC_ARG,
             **utils.PROJECTED,
             "required": "do_redd",
-            "about": (
-                "A GDAL-supported raster representing the land-cover of "
+            "about": ("A GDAL-supported raster representing the land-cover of "
                 "the REDD policy future scenario.  This scenario will be "
                 "compared to the baseline future scenario."),
             "name": "REDD Policy"
@@ -87,8 +81,8 @@ ARGS_SPEC = {
                 "C_dead": {"type": "number", "units": u.metric_ton/u.hectare}
             },
             "required": True,
-            "about": ("A table that maps the each LULC class from the LULC map(s)"
-                "to the amount of carbon in their carbon pools."),
+            "about": ("A table that maps the each LULC class from the LULC "
+                "map(s)to the amount of carbon in their carbon pools."),
             "name": "Carbon Pools"
         },
         "lulc_cur_year": {
@@ -114,11 +108,10 @@ ARGS_SPEC = {
         "do_valuation": {
             "type": "boolean",
             "required": False,
-            "about": (
-                "if true then run the valuation model on available outputs.  "
-                "At a minimum will run on carbon stocks, if sequestration "
-                "with a future scenario is done and/or a REDD scenario "
-                "calculate NPV for either and report in final HTML "
+            "about": ("if true then run the valuation model on available "
+                "outputs.  At a minimum will run on carbon stocks, if "
+                "sequestration with a future scenario is done and/or a REDD "
+                "scenario calculate NPV for either and report in final HTML "
                 "document."),
             "name": "Run Valuation Model"
         },
@@ -126,8 +119,7 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.currency/u.ton,
             "required": "do_valuation",
-            "about": (
-                "Is the present value of carbon per metric ton. Used if "
+            "about": ("Is the present value of carbon per metric ton. Used if "
                 "``args['do_valuation']`` is present and True."),
             "name": "price of carbon"
         },
@@ -140,8 +132,7 @@ ARGS_SPEC = {
         "rate_change": {
             "type": "ratio",
             "required": "do_valuation",
-            "about": (
-                "The floating point percent increase of the price of "
+            "about": ("The floating point percent increase of the price of "
                 "carbon per year."),
             "name": "Annual Rate of Change in Price of Carbon"
         }

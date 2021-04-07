@@ -31,8 +31,7 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **utils.LULC_ARG,
             **utils.METER_PROJECTED,
-            "about": (
-                "A raster file, representing integer land use/land code "
+            "about": ("A raster file, representing integer land use/land code "
                 "covers for each cell. This raster should have a projected "
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
@@ -52,9 +51,8 @@ ARGS_SPEC = {
                 "lucode": {"type": "code"}
             },
             "required": True,
-            "about": (
-                "A CSV table mapping canonical crop names to land use codes "
-                "contained in the landcover/use raster."),
+            "about": ("A CSV table mapping canonical crop names to land use "
+                "codes contained in the landcover/use raster."),
             "name": "Landcover to Crop Table"
         },
         "fertilization_rate_table_path": {
@@ -66,9 +64,8 @@ ARGS_SPEC = {
                 "potassium_rate": {"type": "number", "units": u.kilogram/u.hectare}
             },
             "required": True,
-            "about": (
-                "A table that maps crops to fertilization rates for nitrogen, "
-                "phosphorus, and potassium."),
+            "about": ("A table that maps crops to fertilization rates for "
+                "nitrogen, phosphorus, and potassium."),
             "name": "Fertilization Rate Table Path"
         },
         "aggregate_polygon_path": {
@@ -94,7 +91,7 @@ ARGS_SPEC = {
                                 'c_n': {"type": "number", "units": "?"}, 
                                 'c_p2o5': {"type": "number", "units": "?"}, 
                                 'c_k2o': {"type": "number", "units": "?"}, 
-                                'yield_ceiling_rf': {"type": "number", "units": "?"}
+                                'yield_ceiling_rf': {"type": "number", "units": ("?")}
                             }
                         }
                     }
@@ -116,13 +113,11 @@ ARGS_SPEC = {
                 }
             },
             "required": True,
-            "about": (
-                "A path to the InVEST Crop Production Data directory. These "
-                "data would have been included with the InVEST installer if "
-                "selected, or can be manually downloaded from "
-                "http://releases.naturalcapitalproject.org/invest. "
-                "If downloaded with InVEST, the default value should be "
-                "used."),
+            "about": ("A path to the InVEST Crop Production Data directory. "
+                "These data would have been included with the InVEST installer "
+                "if selected, or can be manually downloaded from "
+                "http://releases.naturalcapitalproject.org/invest. If "
+                "downloaded with InVEST, the default value should be used."),
             "name": "Directory to model data"
         }
     }

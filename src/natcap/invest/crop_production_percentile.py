@@ -35,8 +35,7 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **utils.LULC_ARG,
             **utils.METER_PROJECTED,
-            "about": (
-                "A raster file, representing integer land use/land code "
+            "about": ("A raster file, representing integer land use/land code "
                 "covers for each cell. This raster should have a projected "
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
@@ -84,9 +83,8 @@ ARGS_SPEC = {
                 }
             },
             "required": True,
-            "about": (
-                "A CSV table mapping canonical crop names to the land use "
-                "codes in the landcover/use raster."),
+            "about": ("A CSV table mapping canonical crop names to the land "
+                "use codes in the landcover/use raster."),
             "name": "Landcover to Crop Table"
         },
         "aggregate_polygon_path": {
@@ -99,7 +97,8 @@ ARGS_SPEC = {
             "contents": {
                 "climate_percentile_yield_tables": {
                     "type": "directory",
-                    "about": "Table mapping each climate bin to yield percentiles for each crop",
+                    "about": ("Table mapping each climate bin to yield "
+                        "percentiles for each crop"),
                     "contents": {
                         "[CROP]_percentile_yield_table.csv": {
                             "names": "One for each of the 175 supported crops",

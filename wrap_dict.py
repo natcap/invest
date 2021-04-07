@@ -12,7 +12,57 @@ max_width = 80
 tab = '    '
 space = ' '
 
-def wrap_str(key, val, indent=0):
+def wrap_str(key, val, before, after, linebreak, indent=0):
+    """Wrap a key-value pair from a dictionary.
+
+    Args:
+        key (str): the key of the key-value pair. e.g. "about" 
+        val (str):
+        linebreak (str): the linebreak character(s), typically \n or \r\n
+        indent (int): how many spaces to indent the first line by.
+            wrapped lines are indented by one additional tab.
+        trailing_comma (bool): whether to append a comma to the end of
+            the last line
+
+    Returns:
+        list[str]: list of complete wrapped lines (without newline chars)
+    """
+    print(':'.join([str(indent), before, key, val, after]))
+    # see if it can all fit in one line
+    one_line = f'{space * indent}{before}"{key}": "{val}"'
+    if len(one_line) <= max_width:
+        return [f'{one_line}{after}']
+
+    wrapper = textwrap.TextWrapper()
+    # allow room for a space and quote on the end (for the wrapped text)
+    wrapper.width = max_width - 2
+    # start the first line indented, with key: "...
+    wrapper.initial_indent = f'{space * indent}{before}"{key}": ("'
+    # start subsequent lines indented one more level 
+    # and with a quote for the wrapped text block
+    wrapper.subsequent_indent = f'{space * indent}{tab}"'
+    # drop whitespace on the ends of wrapped lines
+    # we will replace it to make sure each line ends with a space
+    wrapper.drop_whitespace = True
+
+    lines = wrapper.wrap(val)
+    # add a quote to the end of each line of wrapped text
+    for i in range(len(lines) - 1):
+        lines[i] += ' "'
+    # close the wrapped text block with a quote and parenthesis at the end
+    lines[-1] += f'"{")" if after[0] != ")" else ""}{after}'
+    # add the linebreak to the end of each line
+    for i in range(len(lines) - 1):
+        lines[i] += linebreak
+
+    # check that they are all as short as expected
+    for line in lines:
+        if len(line) > max_width + len(linebreak):
+            print(line, len(line))
+
+    return lines
+
+def wrap_str2(text, initial_indent=0, subsequent_indent=0):
     """Wrap a key-value pair from a dictionary.
 
     Args:
@@ -24,24 +74,20 @@ def wrap_str(key, val, indent=0):
     Returns:
         list[str]: list of complete wrapped lines (without newline chars)
     """
-    # see if it can all fit in one line
-    one_line = f'{space * indent}"{key}": "{val}"'
-    if len(one_line) <= max_width:
-        return [one_line]
 
     wrapper = textwrap.TextWrapper()
     # allow room for a space and quote on the end (for the wrapped text)
     wrapper.width = max_width - 2
-    # start the first line indented, with key: "...
-    wrapper.initial_indent = f'{space * indent}"{key}": ("'
+    # start the first line indented, with "(...
+    wrapper.initial_indent = f'{space * initial_indent}("'
     # start subsequent lines indented one more level 
     # and with a quote for the wrapped text block
-    wrapper.subsequent_indent = f'{space * indent}{tab}"'
+    wrapper.subsequent_indent = f'{space * subsequent_indent}"'
     # drop whitespace on the ends of wrapped lines
     # we will replace it to make sure each line ends with a space
     wrapper.drop_whitespace = True
 
-    lines = wrapper.wrap(val)
+    lines = wrapper.wrap(text)
     # add a quote to the end of each line of wrapped text
     for i in range(len(lines) - 1):
         lines[i] += ' "'
@@ -73,13 +119,10 @@ def wrap_dict(dic, indent=1):
 
 
 
-def wrap_strings(module, dict_name):
-    # parse the python source file into an abstract syntax tree
-    with open(module.__file__) as f:
-        source = f.read()
-        tree = ast.parse(source)
 
-    with open(module.__file__, newline='') as f:
+def wrap_strings2(ast_node, path):
+
+    with open(path, newline='') as f:
         lines = f.readlines()
 
     # identify the linebreak (newline or carriage return)
@@ -91,30 +134,40 @@ def wrap_strings(module, dict_name):
     else:
         raise ValueError(f'Unknown linebreak: {repr(lines[0][-1])}')
 
-    # find where the variable name is assigned to
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, ast.Assign):
-            if node.targets[0].id == dict_name:
-                root_node = node
-                start, end = node.lineno, node.end_lineno
-                print(node.lineno, node.end_lineno)
 
     changes = []
-    for node in ast.walk(root_node):
-        if isinstance(node, ast.Dict):
-            for i, (key, val) in enumerate(zip(node.keys, node.values)):
-                if type(val) is ast.Constant and type(val.value) is str:
-                    print('wrapping', val.value)
-                    wrapped = wrap_str(key.value, val.value, indent=key.col_offset)
-                    if wrapped[0] == f'{space * key.col_offset}"{key.value}": "{val.value}"':
-                        print('no changes')
-                        continue
-                    if i < len(node.keys) - 1:
-                        wrapped[-1] += ','
-                    wrapped = [line + linebreak for line in wrapped]
-                    print(key.lineno, key.end_lineno, val.lineno, val.end_lineno, wrapped)
-                    # start inclusive, end exclusive
-                    changes.append((key.lineno - 1, val.end_lineno, wrapped))
+    for node in ast.walk(ast_node):
+        if type(node) is ast.Dict:
+            print(ast.dump(node))
+            dict_node = node
+
+            for i, (key, val) in enumerate(zip(dict_node.keys, dict_node.values)):
+                if (isinstance(key, ast.Constant) and 
+                    isinstance(val, ast.Constant) and
+                    isinstance(val.value, str)):
+
+                    initial_indent = len(lines[key.lineno - 1]) - len(lines[key.lineno - 1].lstrip())
+                    subsequent_indent = initial_indent + len(tab)
+
+                    stuff_before = lines[key.lineno - 1][initial_indent : key.col_offset]
+                    stuff_after = lines[val.end_lineno - 1][val.end_col_offset:]
+
+                    is_not_last_entry = i != len(dict_node.keys) - 1
+                    wrapped = wrap_str(
+                        key.value, 
+                        val.value,
+                        stuff_before,
+                        stuff_after,
+                        linebreak,
+                        indent=initial_indent)
+                    
+                    print('\n\n\n')
+                    for line in lines[key.lineno - 1 : val.end_lineno]:
+                        print(line)
+                    for line in wrapped:
+                        print(line)
+                    if wrapped != lines[key.lineno - 1 : val.end_lineno]:
+                        changes.append((key.lineno - 1, val.end_lineno, wrapped))
 
     line_offset = 0
     for start, end, changed_lines in sorted(changes):
@@ -138,73 +191,62 @@ def wrap_strings(module, dict_name):
 
 
     # print out if any are longer than expected
-    for i, line in enumerate(wrapped):
+    for i, line in enumerate(lines):
         if len(line) > max_width + len(linebreak):
             print(len(line), line)
 
 
     # overwrite the module file with the modified lines
-    with open(module.__file__, 'w', newline='') as f:
-        print(module.__file__)
+    with open(path, 'w', newline='') as f:
         for line in lines:
             f.write(line)
 
 
 
-def wrap_dictionary(module, dict_name):
-    """Modify source code to correctly wrap a dictionary in place.
 
-    Args:
-        module (module): imported module containing the dictionary
-        dict_name (str): name of the dictionary variable to wrap
-
-    Returns:
-        None
-    """
-    # parse the python source file into an abstract syntax tree
-    with open(module.__file__) as f:
-        tree = ast.parse(f.read())
-
-    # find where the variable name is assigned to
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, ast.Assign):
-            if node.targets[0].id == dict_name:
-                start, end = node.lineno, node.end_lineno
-                print(node.lineno, node.end_lineno)
-
-    # read in the text of the file
-    with open(module.__file__, newline='') as f:
-        lines = f.readlines()
-    # identify the linebreak (newline or carriage return)
-    # avoid changing the linebreak unnecessarily (minimize diff size)
-    if lines[0][-2:] == '\r\n':
-        linebreak = '\r\n'
-    elif lines[0][-1] == '\n':
-        linebreak = '\n'
-    else:
-        raise ValueError(f'Unknown linebreak: {repr(lines[0][-1])}')
-
-    # wrap each line to the max_width
-    wrapped = wrap_dict(getattr(module, dict_name))
-    wrapped = [line + linebreak for line in wrapped]
-
-    # print out if any are longer than expected
-    for i, line in enumerate(wrapped):
-        if len(line) > max_width + len(linebreak):
-            print(len(line), line)
-
-    modified = lines[:start - 1]
-    modified += [f'{dict_name} = {{{linebreak}']  # add the assignment line back in
-    modified += wrapped
-    modified += [f'}}{linebreak}']  # final closing bracket for the dict
-    modified += lines[end:]
-
-    # overwrite the module file with the modified lines
-    with open(module.__file__, 'w', newline='') as f:
-        for line in modified:
-            f.write(line)
 
 
 if __name__ == '__main__':
-    module = importlib.import_module('src.natcap.invest.carbon')
-    wrap_strings(module, 'ARGS_SPEC')
+   
+    for model in [
+        'carbon',
+        'coastal_blue_carbon/coastal_blue_carbon',
+        'coastal_blue_carbon/preprocessor',
+        'coastal_vulnerability',
+        'crop_production_regression',
+        'crop_production_percentile',
+        'delineateit/delineateit',
+        'finfish_aquaculture/finfish_aquaculture',
+        'fisheries/fisheries',
+        'fisheries/fisheries_hst',
+        'forest_carbon_edge_effect',
+        'globio',
+        'habitat_quality',
+        'hra',
+        'hydropower/hydropower_water_yield',
+        'ndr/ndr',
+        'pollination',
+        'recreation/recmodel_client',
+        'routedem',
+        'scenic_quality/scenic_quality',
+        'scenario_gen_proximity',
+        'sdr/sdr',
+        'seasonal_water_yield/seasonal_water_yield',
+        'urban_cooling_model',
+        'urban_flood_risk_mitigation',
+        'wave_energy',
+        'wind_energy'
+    ]:
+        path = f'src/natcap/invest/{model}.py'
+        # parse the python source file into an abstract syntax tree
+        with open(path) as f:
+            tree = ast.parse(f.read())
+        for node in ast.iter_child_nodes(tree):
+            if (isinstance(node, ast.Assign) and 
+                hasattr(node.targets[0], 'id') and
+                node.targets[0].id == 'ARGS_SPEC'):
+                print(ast.dump(node))
+                args_spec_node = node.value
+                break
+
+        wrap_strings2(args_spec_node, path)

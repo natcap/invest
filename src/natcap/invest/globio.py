@@ -39,7 +39,7 @@ ARGS_SPEC = {
         "predefined_globio": {
             "type": "boolean",
             "required": False,
-            "about": 'if True then "mode (b)" else "mode (a)"',
+            "about": "if True then "mode (b)" else "mode (a)"",
             "name": "Predefined land use map for GLOBIO"
         },
         "lulc_path": {
@@ -54,8 +54,8 @@ ARGS_SPEC = {
                 "globio_lucode": {"type": "code"}
             },
             "required": "not predefined_globio",
-            "about": ("A table mapping each LULC code in the LULC raster "
-                "input to the corresponding GLOBIO LULC code."),
+            "about": ("A table mapping each LULC code in the LULC raster input "
+                "to the corresponding GLOBIO LULC code."),
             "name": "Landcover to GLOBIO Landcover Table"
         },
         "infrastructure_dir": {
@@ -65,8 +65,9 @@ ARGS_SPEC = {
             "type": "directory",
             "contents": {
                 "[INFRASTRUCTURE_MAP]": {
-                    "names": ("Raster(s) and/or vector(s) of any forms of infrastructure "
-                        "you want to consider in the MSA calculation."),
+                    "names": ("Raster(s) and/or vector(s) of any forms of "
+                        "infrastructure you want to consider in the MSA "
+                        "calculation."),
                     "type": {"raster", "vector"},
                     "bands": {1: {"type": "number", "units": None}},
                     "fields": {},
@@ -74,11 +75,10 @@ ARGS_SPEC = {
                 }
             },
             "required": True,
-            "about": (
-                'Used in "mode (a) and (b)" a path to a folder containing '
-                'maps of either GDAL compatible rasters or vectors. '
-                'These data will be used in the infrastructure '
-                'to calculation of MSA.'),
+            "about": ("Used in "mode (a) and (b)" a path to a folder "
+                "containing maps of either GDAL compatible rasters or vectors. "
+                "These data will be used in the infrastructure to calculation "
+                "of MSA."),
             "name": "Infrastructure Directory"
         },
         "pasture_path": {
@@ -113,8 +113,7 @@ ARGS_SPEC = {
             **utils.BETWEEN_0_AND_1,
             "type": "ratio",
             "required": True,
-            "about": (
-                "A value between 0 and 1 denoting proportion of total "
+            "about": ("A value between 0 and 1 denoting proportion of total "
                 "agriculture that should be classified as 'high input'."),
             "name": "Proportion of of Agriculture Intensified"
         },
@@ -141,16 +140,15 @@ ARGS_SPEC = {
                     "type": "freestyle_string",
                     "about": ("Indicates a number or range of a bin. This may "
                         "be a single number e.g. 1000, a range (two numbers "
-                        "separated by a hyphen e.g. 1000-2000), or an upper "
-                        "or lower bound (a number preceded by > or < e.g. <5")
+                        "separated by a hyphen e.g. 1000-2000), or an upper or "
+                        "lower bound (a number preceded by > or < e.g. <5")
                 },
                 "MSA_x": {"type": "number", "units": "?"},
                 "SE": {"type": "number", "units": "?"}
             },
             "required": True,
-            "about": (
-                "A CSV table containing MSA threshold values as defined in "
-                "the user's guide.  Provided for advanced users that may "
+            "about": ("A CSV table containing MSA threshold values as defined "
+                "in the user's guide.  Provided for advanced users that may "
                 "wish to change those values."),
             "name": "MSA Parameter Table"
         },
@@ -163,7 +161,7 @@ ARGS_SPEC = {
             **utils.LULC_ARG,
             **utils.PROJECTED,
             "required": "predefined_globio",
-            "about": 'used in "mode (b)" path to predefined globio raster.',
+            "about": "used in "mode (b)" path to predefined globio raster.",
             "name": "GLOBIO Classified Land Use"
         }
     }

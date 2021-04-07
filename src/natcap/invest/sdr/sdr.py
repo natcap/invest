@@ -40,9 +40,8 @@ ARGS_SPEC = {
         "dem_path": {
             **utils.DEM_ARG,
             **utils.PROJECTED,
-            "about": (
-                "A GDAL-supported raster file with an elevation value for "
-                "each cell.  Make sure the DEM is corrected by filling in "
+            "about": ("A GDAL-supported raster file with an elevation value "
+                "for each cell.  Make sure the DEM is corrected by filling in "
                 "sinks, and if necessary burning hydrographic features into "
                 "the elevation model (recommended when unusual streams are "
                 "observed.) See the 'Working with the DEM' section of the "
@@ -55,14 +54,13 @@ ARGS_SPEC = {
                 "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
             "required": True,
             **utils.PROJECTED,
-            "about": (
-                "A GDAL-supported raster file, with an erosivity index value "
-                "for each cell.  This variable depends on the intensity and "
-                "duration of rainfall in the area of interest.  The greater "
-                "the intensity and duration of the rain storm, the higher "
-                "the erosion potential. The erosivity index is widely used, "
-                "but in case of its absence, there are methods and equations "
-                "to help generate a grid using climatic data."),
+            "about": ("A GDAL-supported raster file, with an erosivity index "
+                "value for each cell.  This variable depends on the intensity "
+                "and duration of rainfall in the area of interest.  The "
+                "greater the intensity and duration of the rain storm, the "
+                "higher the erosion potential. The erosivity index is widely "
+                "used, but in case of its absence, there are methods and "
+                "equations to help generate a grid using climatic data."),
             "name": "Rainfall Erosivity Index (R)"
         },
         "erodibility_path": {
@@ -72,10 +70,9 @@ ARGS_SPEC = {
                 "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
             "required": True,
             **utils.PROJECTED,
-            "about": (
-                "A GDAL-supported raster file, with a soil erodibility value "
-                "for each cell which is a measure of the susceptibility of "
-                "soil particles to detachment and transport by rainfall and "
+            "about": ("A GDAL-supported raster file, with a soil erodibility "
+                "value for each cell which is a measure of the susceptibility "
+                "of soil particles to detachment and transport by rainfall and "
                 "runoff."),
             "name": "Soil Erodibility"
         },
@@ -91,12 +88,11 @@ ARGS_SPEC = {
             "geometries": utils.POLYGONS,
             **utils.PROJECTED,
             "required": True,
-            "about": (
-                "This is a layer of polygons representing watersheds such "
-                "that each watershed contributes to a point of interest "
+            "about": ("This is a layer of polygons representing watersheds "
+                "such that each watershed contributes to a point of interest "
                 "where water quality will be analyzed.  It must have the "
-                "integer field 'ws_id' where the values uniquely identify "
-                "each watershed."),
+                "integer field 'ws_id' where the values uniquely identify each "
+                "watershed."),
             "name": "Watersheds"
         },
         "biophysical_table_path": {
@@ -111,9 +107,8 @@ ARGS_SPEC = {
                     "about": "Support practice factor for the USLE"}
             },
             "required": True,
-            "about": (
-                "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input."),
+            "about": ("A CSV table containing model information corresponding "
+                "to each of the land use classes in the LULC raster input."),
             "name": "Biophysical Table"
         },
         "threshold_flow_accumulation": {
@@ -121,10 +116,9 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.pixel,
             "required": True,
-            "about": (
-                "The number of upstream cells that must flow into a cell "
+            "about": ("The number of upstream cells that must flow into a cell "
                 "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream.  "
+                "stops and the remaining export is exported to the stream. "
                 "Used to define streams from the DEM."),
             "name": "Threshold Flow Accumulation"
         },
@@ -152,10 +146,9 @@ ARGS_SPEC = {
             "type": "raster",
             "bands": {1: {"type": "number", "units": None}},
             "required": False,
-            "about": (
-                "An optional GDAL-supported raster file mask, that indicates "
-                "areas that drain to the watershed.  Format is that 1's "
-                "indicate drainage areas and 0's or nodata indicate areas "
+            "about": ("An optional GDAL-supported raster file mask, that "
+                "indicates areas that drain to the watershed.  Format is that "
+                "1's indicate drainage areas and 0's or nodata indicate areas "
                 "with no additional drainage.  This model is most accurate "
                 "when the drainage raster aligns with the DEM."),
             "name": "Drainages"

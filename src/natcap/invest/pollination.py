@@ -30,10 +30,9 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **utils.LULC_ARG,
             **utils.PROJECTED,
-            "about": (
-                "This is the landcover map that's used to map biophysical "
-                "properties about habitat and floral resources of landcover "
-                "types to a spatial layout.")
+            "about": ("This is the landcover map that's used to map "
+                "biophysical properties about habitat and floral resources of "
+                "landcover types to a spatial layout.")
         },
         "guild_table_path": {
             "type": "csv",
@@ -48,9 +47,9 @@ ARGS_SPEC = {
                     "about": ("Utilization of this substrate by this species, "
                         "with 1 indicating a nesting substrate that is fully "
                         "utilized and 0 indicating a nest substrate that is "
-                        "not utilized at all. Substrates are user defined, "
-                        "but might include ground nests, tree cavities, etc. "
-                        "The SUBSTRATE string must match a "
+                        "not utilized at all. Substrates are user defined, but "
+                        "might include ground nests, tree cavities, etc. The "
+                        "SUBSTRATE string must match a "
                         "nesting_[SUBSTRATE]_availability_index in the "
                         "biophysical table.")
                 },
@@ -70,13 +69,13 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.meters,
                     "about": ("Average distance each species or guild travels "
-                        "to forage on flowers. The model uses this distance "
-                        "to define the neighborhood of available flowers "
-                        "around a given cell, and to weight the sums of "
-                        "floral resources and pollinator abundances on "
-                        "farms. This value can be determined by typical "
-                        "foraging distance of a bee species based on an "
-                        "allometric relationship (see Greenleaf et al. 2007).")
+                        "to forage on flowers. The model uses this distance to "
+                        "define the neighborhood of available flowers around a "
+                        "given cell, and to weight the sums of floral "
+                        "resources and pollinator abundances on farms. This "
+                        "value can be determined by typical foraging distance "
+                        "of a bee species based on an allometric relationship "
+                        "(see Greenleaf et al. 2007).")
                 },
                 "relative_abundance": {
                     "type": "ratio",
@@ -99,14 +98,14 @@ ARGS_SPEC = {
                     "names": "One column for each substrate defined",
                     "type": "ratio",
                     "about": ("Availability of the given nesting type within "
-                        "each LULC type. The SUBSTRATE name must exactly "
-                        "match a substrate given in the Guild Table.")},
+                        "each LULC type. The SUBSTRATE name must exactly match "
+                        "a substrate given in the Guild Table.")},
                 "floral_resources_[SEASON]_index": {
                     "names": "One column for each season defined",
                     "type": "ratio",
-                    "about": ("Abundance of flowers in each LULC class for "
-                        "the given season (floral coverage x proportion of "
-                        "the season for which there is that coverage).")}
+                    "about": ("Abundance of flowers in each LULC class for the "
+                        "given season (floral coverage x proportion of the "
+                        "season for which there is that coverage).")}
             },
             "required": True,
             "about": ("A table mapping each LULC class to nesting availability "
@@ -127,11 +126,11 @@ ARGS_SPEC = {
                 "half_sat": {
                     "type": "ratio",
                     "about": ("The half saturation coefficient for the crop "
-                        "grown on each farm. This represents the proportion "
-                        "of wild pollinators that results in 50% of "
-                        "pollinator-dependent crop yield being attained. This "
-                        "is a tunable parameter that may be most useful to "
-                        "adjust following an initial run of the model and an "
+                        "grown on each farm. This represents the proportion of "
+                        "wild pollinators that results in 50% of pollinator- "
+                        "dependent crop yield being attained. This is a "
+                        "tunable parameter that may be most useful to adjust "
+                        "following an initial run of the model and an "
                         "examination of the results.")},
                 "season": {
                     "type": "freestyle_string",
@@ -140,8 +139,8 @@ ARGS_SPEC = {
                 "fr_[SEASON]": {
                     "names": "One for each season of interest",
                     "type": "ratio",
-                    "about": ("The floral resources available at this farm "
-                        "for the given season. The SEASON string must exactly "
+                    "about": ("The floral resources available at this farm for "
+                        "the given season. The SEASON string must exactly "
                         "match one of the seasons provided in the guild table")},
                 "n_[SUBSTRATE]": {
                     "names": "One for each substrate of interest",
