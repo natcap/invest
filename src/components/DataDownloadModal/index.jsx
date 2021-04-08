@@ -118,42 +118,51 @@ export class DataDownloadModal extends React.Component {
         const filesize = parseFloat(
           `${sampledataRegistry.Models[modelName].filesize / 1000000}`
         ).toFixed(2) + ' MB';
+        const labelSuffix = sampledataRegistry.Models[modelName].labelSuffix || '';
         DatasetCheckboxList.push(
           <Form.Check
+            className="pt-1"
             key={modelName}
             id={modelName}
-            type="checkbox"
-            checked={dataListCheckBoxes[modelName]}
-            onChange={(event) => this.handleCheckList(
-              event, modelName
-            )}
-            label={`${modelName} ${filesize}`}
-          />
+          >
+            <Form.Check.Input
+              type="checkbox"
+              checked={dataListCheckBoxes[modelName]}
+              onChange={(event) => this.handleCheckList(
+                event, modelName
+              )}
+            />
+            <Form.Check.Label>
+              {modelName}
+              <em>{` ${labelSuffix} . . . ${filesize}`}</em>
+            </Form.Check.Label>
+          </Form.Check>
         );
       });
 
     return (
-      <Modal show={this.props.show} onHide={this.handleClose}>
+      <Modal
+        show={this.props.show}
+        onHide={this.handleClose}
+        size="lg"
+      >
         <Form>
           <Modal.Header>
             <Modal.Title>Download InVEST sample data</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <Form.Group>
-              <Form.Label htmlFor="all-sampledata">
-                Select All
-              </Form.Label>
+            <h5>
               <Form.Check
-                id="all-sampledata"
-                inline
                 type="checkbox"
+                id="all-sampledata"
                 checked={this.state.allDataCheck}
                 onChange={this.handleCheckAll}
                 name="all-sampledata"
+                label="Select All"
               />
-              <React.Fragment>
-                {DatasetCheckboxList}
-              </React.Fragment>
+            </h5>
+            <Form.Group>
+              {DatasetCheckboxList}
             </Form.Group>
           </Modal.Body>
           <Modal.Footer>

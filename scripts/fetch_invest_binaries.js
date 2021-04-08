@@ -107,9 +107,6 @@ async function updateSampledataRegistry() {
     try {
       registry.Models[model].url = dataItems[filename].mediaLink;
       registry.Models[model].filesize = dataItems[filename].size;
-      // registry.Models[model].filesize = parseFloat(
-      //   `${dataItems[filename].size / 1000000}`
-      // ).toFixed(2) + ' MB';
     } catch {
       throw new Error(`no item found for ${filename} in ${JSON.stringify(dataItems, null, 2)}`);
     }

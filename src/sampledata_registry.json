@@ -17,12 +17,14 @@
     "Coastal Vulnerability": {
       "filename": "CoastalVulnerability.zip",
       "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post235%2Bg296690d7%2Fdata%2FCoastalVulnerability.zip?generation=1612383913748050&alt=media",
-      "filesize": "39929828"
+      "filesize": "39929828",
+      "labelSuffix": "(recommended to run model)"
     },
     "Crop Production": {
       "filename": "CropProduction.zip",
       "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post235%2Bg296690d7%2Fdata%2FCropProduction.zip?generation=1612383914823377&alt=media",
-      "filesize": "86383205"
+      "filesize": "86383205",
+      "labelSuffix": "(required to run model)"
     },
     "DelineateIt: Watershed Delineation": {
       "filename": "DelineateIt.zip",
@@ -42,7 +44,8 @@
     "Forest Carbon Edge Effect Model": {
       "filename": "forest_carbon_edge_effect.zip",
       "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post235%2Bg296690d7%2Fdata%2Fforest_carbon_edge_effect.zip?generation=1612383913629820&alt=media",
-      "filesize": "1036009"
+      "filesize": "1036009",
+      "labelSuffix": "(required to run model)"
     },
     "GLOBIO": {
       "filename": "globio.zip",
@@ -117,12 +120,14 @@
     "Wave Energy": {
       "filename": "WaveEnergy.zip",
       "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post235%2Bg296690d7%2Fdata%2FWaveEnergy.zip?generation=1612383914851245&alt=media",
-      "filesize": "77716454"
+      "filesize": "77716454",
+      "labelSuffix": "(required to run model)"
     },
     "Wind Energy": {
       "filename": "WindEnergy.zip",
       "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post235%2Bg296690d7%2Fdata%2FWindEnergy.zip?generation=1612383913834200&alt=media",
-      "filesize": "5442492"
+      "filesize": "5442492",
+      "labelSuffix": "(required to run model)"
     }
   }
 }
