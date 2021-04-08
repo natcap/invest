@@ -173,13 +173,12 @@ def execute(args):
         'soil_group_aligned_path': os.path.join(intermediate_dir, f'soil_group_aligned{suffix}.tif'),
         'precipitation_aligned_path': os.path.join(intermediate_dir, f'precipitation_aligned{suffix}.tif'),
         'reprojected_centerlines_path': os.path.join(intermediate_dir, f'reprojected_centerlines{suffix}.gpkg'),
-        'reprojected_aoi_path': os.path.join(intermediate_dir, f'reprojected_aois{suffix}.gpkg'),
+        'reprojected_aoi_path': os.path.join(output_dir, f'aggregate_data{suffix}.gpkg'),
         'retention_ratio_path': os.path.join(output_dir, f'retention_ratio{suffix}.tif'),
         'retention_volume_path': os.path.join(output_dir, f'retention_volume{suffix}.tif'),
         'infiltration_ratio_path': os.path.join(output_dir, f'infiltration_ratio{suffix}.tif'),
         'infiltration_volume_path': os.path.join(output_dir, f'infiltration_volume{suffix}.tif'),
         'retention_value_path': os.path.join(output_dir, f'retention_value{suffix}.tif'),
-        'aggregate_data_path': os.path.join(output_dir, f'aggregate{suffix}.gpkg'),
         'impervious_lulc_path': os.path.join(intermediate_dir, f'is_impervious_lulc{suffix}.tif'),
         'adjusted_retention_ratio_path': os.path.join(intermediate_dir, f'adjusted_retention_ratio{suffix}.tif'),
         'x_coords_path': os.path.join(intermediate_dir, f'x_coords{suffix}.tif'),
@@ -533,9 +532,8 @@ def execute(args):
             func=aggregate_results,
             args=(
                 FILES['reprojected_aoi_path'],
-                data_to_aggregate,
-                FILES['aggregate_data_path']),
-            target_path_list=[FILES['aggregate_data_path']],
+                data_to_aggregate),
+            target_path_list=[FILES['reprojected_aoi_path']],
             dependent_task_list=aggregation_dependencies,
             task_name='aggregate data over polygons'
         )
@@ -545,8 +543,9 @@ def execute(args):
 
 def threshold_array(array, threshold):
     """Return a boolean array where 1 means less than the threshold value.
-    Assumes that the array's nodata value is the global NODATA."""
-    out = numpy.full(array.shape, NODATA, dtype=numpy.int8)
+    Assumes that the array's nodata value is the global NODATA.
+    Assume that nodata areas in the array are further than the threshold."""
+    out = numpy.full(array.shape, 0, dtype=numpy.int8)
     valid_mask = array != NODATA
     out[valid_mask] = array[valid_mask] <= threshold
     return out
@@ -740,37 +739,30 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
     return adjusted_ratio_array
 
 
-def aggregate_results(aoi_path, aggregations, output_path):
+def aggregate_results(aoi_path, aggregations):
     """Aggregate outputs into regions of interest.
 
     Args:
-        aoi_path (str): path to vector of polygon(s) to aggregate over
+        aoi_path (str): path to vector of polygon(s) to aggregate over.
+            this should be a copy that it's okay to modify.
         aggregations (list[tuple(str,str,str)]): list of tuples describing the 
             datasets to aggregate. Each tuple has 3 items. The first is the
             path to a raster to aggregate. The second is the field name for
             this aggregated data in the output vector. The third is either
             'mean' or 'sum' indicating the aggregation to perform.
-        output_path (str): path to write out aggregated vector data
 
     Returns:
         None
     """
-    if os.path.exists(output_path):
-        os.remove(output_path)
     # create a copy of the AOI vector to write to
-    aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
-    print(aoi_vector)
-    driver = gdal.GetDriverByName('GPKG')
-    print(driver)
-    driver.CreateCopy(output_path, aoi_vector)
-    aggregate_vector = gdal.OpenEx(output_path, 1)
-    print(aggregate_vector)
+    print(aoi_path)
+    aggregate_vector = gdal.OpenEx(aoi_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
 
     for raster_path, field_id, op in aggregations:
         # aggregate the raster by the vector region(s)
         aggregate_stats = pygeoprocessing.zonal_statistics(
-            (raster_path, 1), output_path)
+            (raster_path, 1), aoi_path)
 
         # set up the field to hold the aggregate data
         aggregate_field = ogr.FieldDefn(field_id, ogr.OFTReal)
