@@ -755,10 +755,16 @@ def aggregate_results(aoi_path, aggregations, output_path):
     Returns:
         None
     """
-
     if os.path.exists(output_path):
         os.remove(output_path)
+    # create a copy of the AOI vector to write to
+    aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
+    print(aoi_vector)
+    driver = gdal.GetDriverByName('GPKG')
+    print(driver)
+    driver.CreateCopy(output_path, aoi_vector)
     aggregate_vector = gdal.OpenEx(output_path, 1)
+    print(aggregate_vector)
     aggregate_layer = aggregate_vector.GetLayer()
 
     for raster_path, field_id, op in aggregations:
@@ -867,20 +873,26 @@ def overlap_iterblocks(raster_path, n_pixels):
         n_pixels (int): Number of pixels by which to overlap the blocks
 
     Yields:
-        dictionary with block dimensions and padding.
-        'xoff' (int): x offset in pixels of the block's top-left corner 
+        dictionary with block dimensions and padding:
+
+        - 'xoff' (int): x offset in pixels of the block's top-left corner 
             relative to the raster
-        'yoff' (int): y offset in pixels of the block's top-left corner 
+
+        - 'yoff' (int): y offset in pixels of the block's top-left corner 
             relative to the raster
-        'xsize' (int): width of the block in pixels
-        'ysize' (int): height of the block in pixels
+
+        - 'xsize' (int): width of the block in pixels
+
+        - 'ysize' (int): height of the block in pixels
 
         and for side in 'top', 'left', 'bottom', 'right':
         
-        'side_overlap' (int): number in the range [0, n_pixels] indicating how 
+        - 'side_overlap' (int): number in the range [0, n_pixels] indicating how
             many rows you can extend the block on that side.
-        'side_padding' (int): number in the range [0, n_pixels] indicating how 
+
+        - 'side_padding' (int): number in the range [0, n_pixels] indicating how
             many more rows of padding (filler data) to add to that side.
+
         for each side, side_overlap + side_padding = n_pixels. side_overlap is
         maximized until it hits the edge of the raster, then side_padding covers
         the rest.
