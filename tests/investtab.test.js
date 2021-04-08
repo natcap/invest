@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import React from 'react';
-import { remote } from 'electron';
+import { ipcRenderer } from 'electron';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
@@ -82,7 +82,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     const mockDialogData = {
       filePath: 'foo.json'
     };
-    remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     const { findByText } = renderInvestTab();
 
@@ -115,7 +115,7 @@ describe('Save InVEST Model Setup Buttons', () => {
       (payload) => payload
     );
     const mockDialogData = { filePath: 'foo.py' };
-    remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     const { findByText } = renderInvestTab();
 
@@ -146,7 +146,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     const mockDialogData = {
       filePath: ''
     };
-    remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     // Spy on this method so we can assert it was never called.
     // Don't forget to restore! Otherwise a 'resetAllMocks'
     // can silently turn this spy into a function that returns nothing.
@@ -168,7 +168,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     const mockDialogData = {
       filePath: ''
     };
-    remote.dialog.showSaveDialog.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     // Spy on this method so we can assert it was never called.
     // Don't forget to restore! Otherwise the beforeEach will 'resetAllMocks'
     // will silently turn this spy into a function that returns nothing.

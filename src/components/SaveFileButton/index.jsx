@@ -1,5 +1,5 @@
 import React from 'react';
-import { remote } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import { ipcRenderer } from 'electron';
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
@@ -17,9 +17,7 @@ export default class SaveFileButton extends React.Component {
   }
 
   async browseSaveFile(event) {
-    const data = await remote.dialog.showSaveDialog(
-      { defaultPath: this.props.defaultTargetPath }
-    );
+    const data = await ipcRenderer.invoke('show-save-dialog', { defaultPath: this.props.defaultTargetPath });
     if (data.filePath) {
       this.props.func(data.filePath);
     }
