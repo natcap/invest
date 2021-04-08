@@ -111,10 +111,22 @@ test('Run a real invest model', async () => {
   const page = await target.page();
   const doc = await getDocument(page);
 
-  // Setting up Recreation model because it has very few data requirements
+  const extraTime = 3000; // long timeouts finding the first elements, just in case
+  try {
+    // On a fresh install, we'll encounter this Modal.
+    // But on a machine that has run this app before, we may not.
+    const downloadModalCancel = await findByRole(
+      doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
+    );
+    downloadModalCancel.click();
+  } catch { }
   const investTable = await findByRole(doc, 'table');
-  const button = await findByRole(investTable, 'button', { name: /Visitation/ });
-  button.click();
+
+  // Setting up Recreation model because it has very few data requirements
+  const modelButton = await findByRole(
+    investTable, 'button', { name: /Visitation/ }
+  );
+  modelButton.click();
   const runButton = await findByRole(doc, 'button', { name: 'Run' });
   const typeDelay = 10;
   const workspace = await findByLabelText(doc, /Workspace/);
