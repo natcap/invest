@@ -205,6 +205,71 @@ def wrap_strings2(ast_node, path):
 
 
 
+def format_dict(dict_node, indent_width=0):
+    """Format a dictionary nicely"""
+    quote = '"'
+    indent = ' ' * indent_width
+    items = [
+        f'{indent}{{'
+    ]
+    for i, (key, value) in enumerate(zip(dict_node.keys, dict_node.values)):
+        # should always be a constant
+        if isinstance(key, ast.Constant) and isinstance(key.value, str):
+            key_string = f'{quote}{key.value}{quote}: '
+
+        trailing_comma = ',' if (i != len(dict_node.keys) - 1) else ''
+
+        if isinstance(val, ast.Constant):
+            if isinstance(val.value, str):
+                one_line = f'{indent}{key_string}"{val.value}"{trailing_comma}{linebreak}'
+                if len(one_line) <= max_width + len(linebreak):
+                    items.append(one_line)
+
+                else:
+                    wrapper = textwrap.TextWrapper()
+                    # allow room for a space and quote on the end (for the wrapped text)
+                    wrapper.width = max_width - 2
+                    # start the first line indented, with key: "...
+                    wrapper.initial_indent = f'{indent}{key_string}("'
+                    # start subsequent lines indented one more level 
+                    # and with a quote for the wrapped text block
+                    wrapper.subsequent_indent = f'{indent}{tab}"'
+                    # drop whitespace on the ends of wrapped lines
+                    # we will replace it to make sure each line ends with a space
+                    wrapper.drop_whitespace = True
+
+                    lines = wrapper.wrap(val)
+                    # add a space and quote to the end of each line of wrapped text
+                    for i in range(len(lines) - 1):
+                        lines[i] += f' "{linebreak}'
+                    # close the wrapped text block with a quote and parenthesis at the end
+                    lines[-1] += f'"){trailing_comma}{linebreak}'
+
+                    # check that they are all as short as expected
+                    for line in lines:
+                        if len(line) > max_width + len(linebreak):
+                            print(line, len(line))
+                    items += lines
+
+
+        elif isinstance(val.value, list):
+            f'{key_string}: ['
+            elif isinstance(val.value, tuple):
+
+        elif isinstance(val, ast.Dict):
+            items += format_dict(val)
+
+    items.append(f'{indent}}}')
+    return items
+
+
+    def format_list()
+
+
+
+
+
+
 
 if __name__ == '__main__':
    
