@@ -126,11 +126,11 @@ test('Run a real invest model', async () => {
   const typeDelay = 10;
   const workspace = await findByLabelText(doc, /Workspace/);
   await workspace.type(TMP_DIR, { delay: typeDelay });
-  const aoi = await findByLabelText(doc, /Area of Interest/);
+  const aoi = await findByLabelText(doc, /area of interest/);
   await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
-  const startYear = await findByLabelText(doc, /Start Year/);
+  const startYear = await findByLabelText(doc, /start year/);
   await startYear.type('2008', { delay: typeDelay });
-  const endYear = await findByLabelText(doc, /End Year/);
+  const endYear = await findByLabelText(doc, /end year/);
   await endYear.type('2012', { delay: typeDelay });
   
   // Button is disabled until validation completes
