@@ -35,10 +35,10 @@ function clean() {
       ]
     }
   );
-  files.forEach((file) => {
-    fs.unlinkSync(file);
-  });
   try {
+    files.forEach((file) => {
+      fs.unlinkSync(file);
+    });
     fs.unlinkSync(ELECTRON_BUILDER_ENV);
   } catch {}
 }
