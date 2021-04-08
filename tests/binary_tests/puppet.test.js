@@ -129,9 +129,10 @@ test('Run a real invest model', async () => {
   const investTable = await findByRole(doc, 'table');
 
   // Setting up Recreation model because it has very few data requirements
-  const modelButton = await findByRole(
-    investTable, 'button', { name: /Visitation/ }
-  );
+  // const modelButton = await findByRole(
+  //   investTable, 'button', { name: /Visitation/ }
+  // );
+  const modelButton = await findByText(investTable, /Visitation/);
   modelButton.click();
   const runButton = await findByRole(doc, 'button', { name: 'Run' });
   const typeDelay = 10;
