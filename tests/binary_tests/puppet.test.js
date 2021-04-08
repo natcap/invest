@@ -119,7 +119,13 @@ test('Run a real invest model', async () => {
       doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
     );
     downloadModalCancel.click();
-  } catch { }
+  } catch (error) {
+    if (!error.message.startsWith(
+      'Evaluation failed: Error: Unable to find'
+    )) {
+      throw error;
+    }
+  }
   const investTable = await findByRole(doc, 'table');
 
   // Setting up Recreation model because it has very few data requirements
