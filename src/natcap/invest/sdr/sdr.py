@@ -727,7 +727,7 @@ def _calculate_ls_factor(
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
         beta = (
-            (numpy.sin(slope_in_radians) / 0.0986) /
+            (numpy.sin(slope_in_radians) / 0.0896) /
             (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
         # Set m value via lookup table: Table 1 in
