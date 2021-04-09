@@ -790,7 +790,8 @@ def _calculate_ls_factor(
             10.8 * numpy.sin(slope_in_radians) + 0.03,
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
-        return slope_factor
+        result[valid_mask] = slope_factor
+        return result
 
     # call vectorize datasets to calculate the ls_factor
     pygeoprocessing.raster_calculator(
