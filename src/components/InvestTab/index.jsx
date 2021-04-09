@@ -96,6 +96,11 @@ export default class InvestTab extends React.Component {
     }, () => { this.switchTabs('setup'); });
   }
 
+  componentWillUnmout() {
+    // this object holds stream handlers, so it's important to clean up
+    this.investRun = null;
+  }
+
   /** Write an invest args JSON file for passing to invest cli.
    *
    * Outsourcing this to natcap.invest.datastack via flask ensures
