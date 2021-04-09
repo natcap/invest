@@ -15,21 +15,24 @@ let ELECTRON_PROCESS;
 let BROWSER;
 // append to this filename and the image will be uploaded to github artifacts
 // E.g. page.screenshot({ path: `${SCREENSHOT_PREFIX}screenshot.png` })
-const SCREENSHOT_PREFIX = path.join(
-  os.homedir(), 'AppData/Roaming/invest-workbench/invest-workbench-'
-);
 
 // For ease of automated testing, run the app from the 'unpacked' directory
 // to avoid need to install first on windows or extract on mac.
 let BINARY_PATH;
+let SCREENSHOT_PREFIX;
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
   [BINARY_PATH] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
+  SCREENSHOT_PREFIX = path.join(
+    os.homedir(), 'invest-workbench-'
+  );
 } else if (process.platform === 'win32') {
   [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');
-} else {
-  BINARY_PATH = './dist/linux-unpacked/invest-workbench';
+  SCREENSHOT_PREFIX = path.join(
+    os.homedir(), 'AppData/Roaming/invest-workbench/invest-workbench-'
+  );
 }
+
 if (!fs.existsSync(BINARY_PATH)) {
   throw new Error(`Binary file not found: ${BINARY_PATH}`);
 }
