@@ -10,6 +10,9 @@ import ProgressBar from 'react-bootstrap/ProgressBar';
 
 import Expire from '../Expire';
 import sampledataRegistry from '../../sampledata_registry.json';
+import { getLogger } from './logger';
+
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 /** Render a dialog with a form for configuring global invest settings */
 export class DataDownloadModal extends React.Component {
@@ -48,6 +51,7 @@ export class DataDownloadModal extends React.Component {
     // and doesn't need to be asked again on app startup. We need
     // something truthy that won't be confused for a real filepath.
     this.props.storeDownloadDir(1);
+    logger.debug('canceled sampledata Modal');
   }
 
   async handleSubmit(event) {

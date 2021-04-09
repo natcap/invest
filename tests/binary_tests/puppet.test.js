@@ -118,6 +118,7 @@ test('Run a real invest model', async () => {
     const downloadModalCancel = await findByRole(
       doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
     );
+    console.log('found Modal Cancel');
     downloadModalCancel.click();
   } catch (error) {
     if (!error.message.startsWith(
@@ -134,8 +135,10 @@ test('Run a real invest model', async () => {
   //   investTable, 'button', { name: /Visitation/ }
   // );
   const modelButton = await findByText(investTable, /Visitation/);
+  console.log('found Visitation model button')
   modelButton.click();
   const runButton = await findByRole(doc, 'button', { name: 'Run' });
+  console.log('found run button');
   const typeDelay = 10;
   const workspace = await findByLabelText(doc, /Workspace/);
   await workspace.type(TMP_DIR, { delay: typeDelay });

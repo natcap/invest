@@ -3,7 +3,6 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron';
 
-import Row from 'react-bootstrap/Row';
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
@@ -63,6 +62,7 @@ export default class App extends React.Component {
     if (investSettings.sampleDataDir) {
       didAskForSampleData = true;
     }
+    logger.debug(`Already asked for sample data? ${didAskForSampleData}`)
 
     this.setState({
       investList: investList,
