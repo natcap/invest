@@ -99,7 +99,7 @@ jobs:
       run: npm run test-flask-app
 
     - name: Test electron app with puppeteer
-      if: matrix.os != 'macos-latest'
+      # if: matrix.os != 'macos-latest'
       run: npm run test-electron-app
 
     - name: Upload app logging from puppeteer to github
