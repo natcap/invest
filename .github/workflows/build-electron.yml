@@ -106,7 +106,7 @@ jobs:
       if: matrix.os == 'macos-latest' && always()
       with:
         name: 'macos_puppeteer_log.zip'
-        path: '~/Library/Application Support/invest-workbench/'
+        path: '~/Library/Application Support/invest-workbench/invest-workbench*'
 
     - name: Upload app logging from puppeteer to github - Windows
       uses: actions/upload-artifact@v2.2.1
