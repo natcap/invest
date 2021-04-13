@@ -16,8 +16,9 @@ if (isDevMode) {
 const _interopRequireDefault = require('@babel/runtime/helpers/interopRequireDefault');
 const react = _interopRequireDefault(require('react'));
 const reactDom = _interopRequireDefault(require('react-dom'));
-
+logger.debug('after indexjs react requires')
 const app = require('./app');
+logger.debug('after app.jsx require')
 
 // Create a right-click menu
 // TODO: Not sure if Inspect Element should be available in production
@@ -40,9 +41,11 @@ const render = async function render(investExe) {
   );
 };
 
+logger.debug('invoking variable request from main')
 ipcRenderer.invoke('variable-request')
   // render the App after receiving any critical data
   // from the main process
   .then((response) => {
+    logger.debug('rendering react on response from main')
     render(response.investExe);
   });
