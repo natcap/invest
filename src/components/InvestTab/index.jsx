@@ -96,8 +96,8 @@ export default class InvestTab extends React.Component {
     }, () => { this.switchTabs('setup'); });
   }
 
-  componentWillUnmount() {
-    // cleanup the object holding all the stream handlers
+  componentWillUnmout() {
+    // this object holds stream handlers, so it's important to clean up
     this.investRun = null;
   }
 
