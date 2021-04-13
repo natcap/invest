@@ -7,6 +7,7 @@ import { spawn, spawnSync } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
+process.env.DEBUG_PRINT_LIMIT = '1000000';
 jest.setTimeout(120000); // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
 const TMP_DIR = fs.mkdtempSync('tests/data/_');
