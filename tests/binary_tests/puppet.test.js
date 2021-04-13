@@ -7,6 +7,7 @@ import { spawn, spawnSync } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
+console.log(process.env.DEBUG_PRINT_LIMIT)
 jest.setTimeout(120000); // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
 const TMP_DIR = fs.mkdtempSync('tests/data/_');
@@ -110,6 +111,7 @@ test('Run a real invest model', async () => {
   );
   const page = await target.page();
   const doc = await getDocument(page);
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
 
   const extraTime = 3000; // long timeouts finding the first elements, just in case
   try {
@@ -129,6 +131,7 @@ test('Run a real invest model', async () => {
     }
   }
   const investTable = await findByRole(doc, 'table');
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}2-found-table.png` });
 
   // Setting up Recreation model because it has very few data requirements
   // const modelButton = await findByRole(
@@ -137,6 +140,8 @@ test('Run a real invest model', async () => {
   const modelButton = await findByText(investTable, /Visitation/);
   console.log('found Visitation model button')
   modelButton.click();
+  console.log(await page.content());
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-after-model-click.png` });
   const runButton = await findByRole(doc, 'button', { name: 'Run' });
   console.log('found run button');
   const typeDelay = 10;
@@ -157,7 +162,7 @@ test('Run a real invest model', async () => {
     );
     expect(isEnabled).toBe(true);
   });
-  page.screenshot({ path: `${SCREENSHOT_PREFIX}before-run-click.png` });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-before-run-click.png` });
   await runButton.click();
   const logTab = await findByText(doc, 'Log');
   // Log tab is not active until after the invest logfile is opened
