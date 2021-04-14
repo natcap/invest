@@ -20,7 +20,6 @@ if (ipcRenderer) {
   userDataPath = app.getPath('userData');
   isDevMode = process.argv[2] === '--dev';
 }
-console.log('user data path:', userDataPath);
 
 /**
  * Creates and returns a logger with Console & File transports.
