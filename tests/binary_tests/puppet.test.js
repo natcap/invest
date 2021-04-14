@@ -119,28 +119,24 @@ test('Run a real invest model', async () => {
     const downloadModalCancel = await findByRole(
       doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
     );
-    console.log('found Modal Cancel');
     downloadModalCancel.click();
   } catch (error) {
     if (!error.message.startsWith(
       'Evaluation failed: Error: Unable to find'
     )) {
-      // throw error;
-      console.log(error.message);
+      throw error;
     }
   }
   const investTable = await findByRole(doc, 'table');
-  await page.screenshot({ path: `${SCREENSHOT_PREFIX}2-found-table.png` });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}2-models-list.png` });
 
   // Setting up Recreation model because it has very few data requirements
-  // const modelButton = await findByRole(
-  //   investTable, 'button', { name: /Visitation/ }
-  // );
-  const modelButton = await findByText(investTable, /Visitation/);
-  console.log('found Visitation model button')
+  const modelButton = await findByRole(
+    investTable, 'button', { name: /Visitation/ }
+  );
   await modelButton.click();
-  console.log(await page.content());
-  await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-after-model-click.png` });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });
+
   const typeDelay = 10;
   const workspace = await findByLabelText(doc, /Workspace/);
   await workspace.type(TMP_DIR, { delay: typeDelay });
@@ -151,10 +147,9 @@ test('Run a real invest model', async () => {
   const endYear = await findByLabelText(doc, /End Year/);
   await endYear.type('2012', { delay: typeDelay });
 
-  await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-before-run-click.png` });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
   // Button is disabled until validation completes
   const runButton = await findByRole(doc, 'button', { name: 'Run' });
-  console.log('found run button');
   await waitFor(async () => {
     const isEnabled = await page.evaluate(
       (btn) => !btn.disabled,
@@ -163,12 +158,6 @@ test('Run a real invest model', async () => {
     expect(isEnabled).toBe(true);
   });
   await runButton.click();
-  // page.evaluate(() => {
-  //   // sometimes the node is detached when we click, so it's safest
-  //   // to select the node and click in the same eval context.
-  //   const btn = queries.getByRole(doc, 'button', { name: 'Run' });
-  //   btn.click();
-  // });
 
   const logTab = await findByText(doc, 'Log');
   // Log tab is not active until after the invest logfile is opened
@@ -177,6 +166,7 @@ test('Run a real invest model', async () => {
     const vals = await prop.jsonValue();
     expect(vals.includes('active')).toBeTruthy();
   });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}5-active-log-tab.png` });
 
   const cancelButton = await findByText(doc, 'Cancel Run');
   await cancelButton.click();
@@ -184,6 +174,7 @@ test('Run a real invest model', async () => {
     expect(await findByText(doc, 'Run Canceled'));
     expect(await findByText(doc, 'Open Workspace'));
   });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
 }, 50000); // 10x default timeout: sometimes expires in GHA
 
 // Test for duplicate application launch.
