@@ -114,12 +114,9 @@ test('Run a real invest model', async () => {
 
   const extraTime = 10000; // long timeouts finding the first elements, just in case
   try {
-    // TODO: I think it sometimes fails here because the modal
-    // hasn't loaded yet - meaning we can get past this try/catch
-    // but still be faced with the Modal.
-
     // On a fresh install, we'll encounter this Modal.
     // But on a machine that has run this app before, we may not.
+    // Even in GHA, sometimes we encounter this and sometimes we don't.
     const downloadModalCancel = await findByRole(
       doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
     );
