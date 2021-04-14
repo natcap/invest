@@ -99,14 +99,20 @@ jobs:
       run: npm run test-flask-app
 
     - name: Test electron app with puppeteer
-      if: matrix.os != 'macos-latest'
       run: npm run test-electron-app
 
-    - name: Upload app logging from puppeteer to github
+    - name: Upload app logging from puppeteer to github - MacOS
       uses: actions/upload-artifact@v2.2.1
-      if: matrix.os != 'macos-latest' && always()
+      if: matrix.os == 'macos-latest' && always()
       with:
-        name: 'puppeteer_log.zip'
+        name: 'macos_puppeteer_log.zip'
+        path: '~/Library/Application Support/invest-workbench/invest-workbench*'
+
+    - name: Upload app logging from puppeteer to github - Windows
+      uses: actions/upload-artifact@v2.2.1
+      if: matrix.os == 'windows-latest' && always()
+      with:
+        name: 'windows_puppeteer_log.zip'
         path: '~/AppData/Roaming/invest-workbench/invest-workbench*'
 
     - name: Upload installer artifacts to github
