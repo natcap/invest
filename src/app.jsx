@@ -18,7 +18,7 @@ import {
   DataDownloadModal, DownloadProgressBar
 } from './components/DataDownloadModal';
 import {
-  saveSettingsStore, getAllSettings
+  saveSettingsStore, getAllSettings, getDefaultSettings,
 } from './components/SettingsModal/SettingsStorage';
 import { getInvestModelNames } from './server_requests';
 import { getLogger } from './logger';
@@ -50,6 +50,7 @@ export default class App extends React.Component {
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
     this.storeDownloadDir = this.storeDownloadDir.bind(this);
+    this.clearDownloadDirPath = this.clearDownloadDirPath.bind(this);
   }
 
   /** Initialize the list of invest models, recent invest jobs, etc. */
@@ -96,11 +97,25 @@ export default class App extends React.Component {
     saveSettingsStore(settings);
   }
 
+  /** Store a sampledata filepath in localforage.
+   *
+   * @param {String} dir - the path to the user-selected dir
+   */
   storeDownloadDir(dir) {
     const { investSettings } = this.state;
     investSettings.sampleDataDir = dir;
     this.setState({
       didAskForSampleData: true,
+    });
+    this.saveSettings(investSettings);
+  }
+
+  /** Clear the stored sampledata filepath. Prompt Modal to show. */
+  clearDownloadDirPath() {
+    const { investSettings } = this.state;
+    investSettings.sampleDataDir = getDefaultSettings()['sampleDataDir'];
+    this.setState({
+      didAskForSampleData: false,
     });
     this.saveSettings(investSettings);
   }
@@ -257,6 +272,7 @@ export default class App extends React.Component {
               saveSettings={this.saveSettings}
               investSettings={investSettings}
               clearJobsStorage={this.clearRecentJobs}
+              clearDownloadDirPath={this.clearDownloadDirPath}
             />
           </Navbar>
 

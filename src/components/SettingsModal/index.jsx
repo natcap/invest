@@ -28,6 +28,7 @@ export default class SettingsModal extends React.Component {
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleReset = this.handleReset.bind(this);
+    this.showDownloadModal = this.showDownloadModal.bind(this);
   }
 
   componentDidUpdate(prevProps) {
@@ -81,6 +82,11 @@ export default class SettingsModal extends React.Component {
     });
   }
 
+  showDownloadModal() {
+    this.props.clearDownloadDirPath();
+    this.handleClose();
+  }
+
   render() {
     const logLevelOptions = [
       'DEBUG', 'INFO', 'WARNING', 'ERROR'];
@@ -127,7 +133,8 @@ export default class SettingsModal extends React.Component {
                     as="select"
                     name="loggingLevel"
                     value={this.state.localSettings.loggingLevel}
-                    onChange={this.handleChange}>
+                    onChange={this.handleChange}
+                  >
                     {logLevelOptions.map(opt =>
                       <option value={opt} key={opt}>{opt}</option>
                     )}
@@ -167,21 +174,12 @@ export default class SettingsModal extends React.Component {
                 </Col>
               </Form.Group>
               <hr />
-              <Form.Group as={Row}>
-                <Form.Label column sm="8" htmlFor="sampledata-dir">
-                  Sample Data Directory
-                </Form.Label>
-                <Col sm="4">
-                  <Form.Control
-                    id="sampledata-dir"
-                    name="sampleDataDir"
-                    type="text"
-                    value={this.state.localSettings.sampleDataDir || ''}
-                    onChange={this.handleChange}
-                    // isInvalid={!nWorkersIsValid}
-                  />
-                </Col>
-              </Form.Group>
+              <Button
+                variant="primary"
+                onClick={this.showDownloadModal}
+              >
+                Download Sample Data
+              </Button>
               <hr />
               <Form.Group as={Row}>
                 <Form.Label column sm="8">
