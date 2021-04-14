@@ -115,6 +115,7 @@ function openAboutWindow(parentWindow, isDevMode) {
       enableRemoteModule: false,
       nodeIntegration: true,
       minimumFontSize: 18,
+      defaultEncoding: 'UTF-8',
     },
   });
   child.setMenu(null);
@@ -134,6 +135,7 @@ function openReportWindow(parentWindow, isDevMode) {
       enableRemoteModule: true,
       nodeIntegration: true,
       minimumFontSize: 18,
+      defaultEncoding: 'UTF-8',
     },
   });
   child.setMenu(null);

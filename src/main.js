@@ -113,6 +113,7 @@ const createWindow = async () => {
       additionalArguments: [
         ELECTRON_DEV_MODE ? '--dev' : 'packaged'
       ],
+      defaultEncoding: 'UTF-8',
     },
   });
   const menubar = Menu.buildFromTemplate(
