@@ -7,7 +7,6 @@ import { spawn, spawnSync } from 'child_process';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
-console.log(process.env.DEBUG_PRINT_LIMIT)
 jest.setTimeout(120000); // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
 const TMP_DIR = fs.mkdtempSync('tests/data/_');
@@ -139,7 +138,7 @@ test('Run a real invest model', async () => {
   // );
   const modelButton = await findByText(investTable, /Visitation/);
   console.log('found Visitation model button')
-  modelButton.click();
+  await modelButton.click();
   console.log(await page.content());
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-after-model-click.png` });
   const typeDelay = 10;
@@ -163,12 +162,13 @@ test('Run a real invest model', async () => {
     );
     expect(isEnabled).toBe(true);
   });
-  page.evaluate(() => {
-    // sometimes the node is detached when we click, so it's safest
-    // to select the node and click in the same eval context.
-    const btn = queries.getByRole(doc, 'button', { name: 'Run' });
-    btn.click();
-  });
+  await runButton.click();
+  // page.evaluate(() => {
+  //   // sometimes the node is detached when we click, so it's safest
+  //   // to select the node and click in the same eval context.
+  //   const btn = queries.getByRole(doc, 'button', { name: 'Run' });
+  //   btn.click();
+  // });
 
   const logTab = await findByText(doc, 'Log');
   // Log tab is not active until after the invest logfile is opened

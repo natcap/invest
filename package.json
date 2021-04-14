@@ -9,7 +9,7 @@
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest --testMatch **/tests/*.test.js",
     "test-flask-app": "jest --runInBand --testMatch **/tests/binary_tests/flaskapp.test.js",
-    "test-electron-app": "cross-env DEBUG_PRINT_LIMIT=100 jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
+    "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
     "postinstall": "electron-builder install-app-deps",
     "fetch-invest": "node ./scripts/fetch_invest_binaries.js && unzip ./build/binaries.zip -d build/invest/",
     "build": "node ./build.js",
