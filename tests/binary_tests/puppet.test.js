@@ -80,7 +80,7 @@ beforeAll(async () => {
 
   // get data about the remote debugging endpoint
   // so we don't make the next fetch too early
-  await new Promise((resolve) => setTimeout(resolve, 60000));
+  await new Promise((resolve) => setTimeout(resolve, 20000));
   const res = await fetch(`http://localhost:${PORT}/json/version`);
   const data = JSON.parse(await res.text());
   BROWSER = await puppeteer.connect({
