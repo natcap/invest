@@ -142,8 +142,6 @@ test('Run a real invest model', async () => {
   modelButton.click();
   console.log(await page.content());
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-after-model-click.png` });
-  const runButton = await findByRole(doc, 'button', { name: 'Run' });
-  console.log('found run button');
   const typeDelay = 10;
   const workspace = await findByLabelText(doc, /Workspace/);
   await workspace.type(TMP_DIR, { delay: typeDelay });
@@ -154,7 +152,10 @@ test('Run a real invest model', async () => {
   const endYear = await findByLabelText(doc, /End Year/);
   await endYear.type('2012', { delay: typeDelay });
 
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-before-run-click.png` });
   // Button is disabled until validation completes
+  const runButton = await findByRole(doc, 'button', { name: 'Run' });
+  console.log('found run button');
   await waitFor(async () => {
     const isEnabled = await page.evaluate(
       (btn) => !btn.disabled,
@@ -162,8 +163,13 @@ test('Run a real invest model', async () => {
     );
     expect(isEnabled).toBe(true);
   });
-  await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-before-run-click.png` });
-  await runButton.click();
+  page.evaluate(() => {
+    // sometimes the node is detached when we click, so it's safest
+    // to select the node and click in the same eval context.
+    const btn = queries.getByRole(doc, 'button', { name: 'Run' });
+    btn.click();
+  });
+
   const logTab = await findByText(doc, 'Log');
   // Log tab is not active until after the invest logfile is opened
   await waitFor(async () => {
