@@ -112,8 +112,12 @@ test('Run a real invest model', async () => {
   const doc = await getDocument(page);
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
 
-  const extraTime = 3000; // long timeouts finding the first elements, just in case
+  const extraTime = 10000; // long timeouts finding the first elements, just in case
   try {
+    // TODO: I think it sometimes fails here because the modal
+    // hasn't loaded yet - meaning we can get past this try/catch
+    // but still be faced with the Modal.
+
     // On a fresh install, we'll encounter this Modal.
     // But on a machine that has run this app before, we may not.
     const downloadModalCancel = await findByRole(
