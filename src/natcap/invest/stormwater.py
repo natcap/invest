@@ -249,9 +249,9 @@ def execute(args):
     if args['adjust_retention_ratios']:
         radius = float(args['retention_radius'])  # in raster coord system units
         # boolean mapping for each LULC code whether it's impervious
-        impervious_lookup_array = numpy.array([
-            biophysical_dict[lucode]['is_impervious'] 
-                for lucode in sorted_lucodes])
+        is_impervious_map = {
+            1 if biophysical_dict[lucode]['is_impervious'] else 0 
+                for lucode in biophysical_dict}
 
         reproject_roads_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
@@ -265,18 +265,15 @@ def execute(args):
             dependent_task_list=[]
         )
         
-        # Make a boolean raster indicating which pixels are directly
+         # Make a boolean raster indicating which pixels are directly
         # connected impervious LULC type
         impervious_lulc_task = task_graph.add_task(
-            func=pygeoprocessing.raster_calculator,
-            args=([
-                    (FILES['lulc_aligned_path'], 1),
-                    (lulc_nodata, 'raw'),
-                    (sorted_lucodes, 'raw'),
-                    (impervious_lookup_array, 'raw')], 
-                impervious_op, 
-                FILES['impervious_lulc_path'], 
-                gdal.GDT_Int16, 
+            func=pygeoprocessing.reclassify_raster,
+            args=(
+                (FILES['lulc_aligned_path'], 1),
+                is_impervious_map,
+                FILES['impervious_lulc_path'],
+                gdal.GDT_Byte,
                 NODATA),
             target_path_list=[FILES['impervious_lulc_path']],
             task_name='calculate binary impervious lulc raster',
@@ -672,34 +669,6 @@ def retention_value_op(retention_volume_array, replacement_cost):
     value_array[valid_mask] = (
         retention_volume_array[valid_mask] * replacement_cost)
     return value_array
-
-
-def impervious_op(lulc_array, lulc_nodata, sorted_lucodes, 
-        impervious_lookup_array):
-    """Convert LULC array to a binary array where 1 is directly connected
-    impervious LULC type and 0 is not.
-
-    Args:
-        lulc_array (numpy.ndarray): 2D array of integer LULC codes
-        lulc_nodata (int): nodata value for the LULC array
-        sorted_lucodes (numpy.ndarray): a 1D array of the LULC codes in order 
-            from smallest to largest
-        impervious_lookup_array (numpy.ndarray): 1D boolean array indicating 
-            whether each LULC type is impervious or not. The LULC code at 
-            index ``i`` of ``sorted_lucodes`` is impervious iff 
-            ``impervious_lookup_array[i] == 1``.
-
-    Returns:
-        2D boolean numpy.ndarray of the same shape as ``lulc_array``
-    """
-    is_impervious_array = numpy.full(lulc_array.shape, NODATA)
-    valid_mask = (lulc_array != lulc_nodata)
-    # bin the lulc values such that 
-    # lulc_array[i,j] == sorted_lucodes[lulc_index[i,j]]
-    lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
-    is_impervious_array[valid_mask] = (
-        impervious_lookup_array[lulc_index][valid_mask])
-    return is_impervious_array 
 
 
 def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array, 
