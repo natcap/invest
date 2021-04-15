@@ -109,11 +109,42 @@ ARGS_SPEC = {
     }
 }
 
+FILES = {
+    'lulc_aligned_path': os.path.join(intermediate_dir, f'lulc_aligned{suffix}.tif'),
+    'soil_group_aligned_path': os.path.join(intermediate_dir, f'soil_group_aligned{suffix}.tif'),
+    'precipitation_aligned_path': os.path.join(intermediate_dir, f'precipitation_aligned{suffix}.tif'),
+    'reprojected_centerlines_path': os.path.join(intermediate_dir, f'reprojected_centerlines{suffix}.gpkg'),
+    'reprojected_aoi_path': os.path.join(output_dir, f'aggregate_data{suffix}.gpkg'),
+    'retention_ratio_path': os.path.join(output_dir, f'retention_ratio{suffix}.tif'),
+    'retention_volume_path': os.path.join(output_dir, f'retention_volume{suffix}.tif'),
+    'infiltration_ratio_path': os.path.join(output_dir, f'infiltration_ratio{suffix}.tif'),
+    'infiltration_volume_path': os.path.join(output_dir, f'infiltration_volume{suffix}.tif'),
+    'retention_value_path': os.path.join(output_dir, f'retention_value{suffix}.tif'),
+    'impervious_lulc_path': os.path.join(intermediate_dir, f'is_impervious_lulc{suffix}.tif'),
+    'adjusted_retention_ratio_path': os.path.join(intermediate_dir, f'adjusted_retention_ratio{suffix}.tif'),
+    'x_coords_path': os.path.join(intermediate_dir, f'x_coords{suffix}.tif'),
+    'y_coords_path': os.path.join(intermediate_dir, f'y_coords{suffix}.tif'),
+    'road_distance_path': os.path.join(intermediate_dir, f'road_distance{suffix}.tif'),
+    'near_impervious_lulc_path': os.path.join(intermediate_dir, f'near_impervious_lulc{suffix}.tif'),
+    'near_road_path': os.path.join(intermediate_dir, f'near_road{suffix}.tif'),
+    'ratio_n_values_path': os.path.join(intermediate_dir, f'ratio_n_values{suffix}.tif'),
+    'ratio_sum_path': os.path.join(intermediate_dir, f'ratio_sum{suffix}.tif'),
+    'ratio_average_path': os.path.join(intermediate_dir, f'ratio_average{suffix}.tif')
+}
+
 
 def execute(args):
     """Execute the stormwater model.
     
     Args:
+        args['workspace_dir'] (str): path to a directory to write intermediate 
+            and final outputs. May already exist or not.
+        args['results_suffix'] (str, optional): string to append to all output 
+            file names from this model run
+        args['n_workers'] (int): if present, indicates how many worker 
+            processes should be used in parallel processing. -1 indicates
+            single process mode, 0 is single process but non-blocking mode,
+            and >= 1 is number of processes.
         args['lulc_path'] (str): path to LULC raster
         args['soil_group_path'] (str): path to soil group raster, where pixel 
             values 1, 2, 3, 4 correspond to groups A, B, C, D
@@ -143,31 +174,8 @@ def execute(args):
     suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = args['workspace_dir']
     intermediate_dir = os.path.join(output_dir, 'intermediate')
-    cache_dir = os.path.join(output_dir, 'cache_dir')
+    cache_dir = os.path.join(intermediate_dir, 'cache_dir')
     utils.make_directories([args['workspace_dir'], intermediate_dir, cache_dir])
-
-    FILES = {
-        'lulc_aligned_path': os.path.join(intermediate_dir, f'lulc_aligned{suffix}.tif'),
-        'soil_group_aligned_path': os.path.join(intermediate_dir, f'soil_group_aligned{suffix}.tif'),
-        'precipitation_aligned_path': os.path.join(intermediate_dir, f'precipitation_aligned{suffix}.tif'),
-        'reprojected_centerlines_path': os.path.join(intermediate_dir, f'reprojected_centerlines{suffix}.gpkg'),
-        'reprojected_aoi_path': os.path.join(output_dir, f'aggregate_data{suffix}.gpkg'),
-        'retention_ratio_path': os.path.join(output_dir, f'retention_ratio{suffix}.tif'),
-        'retention_volume_path': os.path.join(output_dir, f'retention_volume{suffix}.tif'),
-        'infiltration_ratio_path': os.path.join(output_dir, f'infiltration_ratio{suffix}.tif'),
-        'infiltration_volume_path': os.path.join(output_dir, f'infiltration_volume{suffix}.tif'),
-        'retention_value_path': os.path.join(output_dir, f'retention_value{suffix}.tif'),
-        'impervious_lulc_path': os.path.join(intermediate_dir, f'is_impervious_lulc{suffix}.tif'),
-        'adjusted_retention_ratio_path': os.path.join(intermediate_dir, f'adjusted_retention_ratio{suffix}.tif'),
-        'x_coords_path': os.path.join(intermediate_dir, f'x_coords{suffix}.tif'),
-        'y_coords_path': os.path.join(intermediate_dir, f'y_coords{suffix}.tif'),
-        'road_distance_path': os.path.join(intermediate_dir, f'road_distance{suffix}.tif'),
-        'near_impervious_lulc_path': os.path.join(intermediate_dir, f'near_impervious_lulc{suffix}.tif'),
-        'near_road_path': os.path.join(intermediate_dir, f'near_road{suffix}.tif'),
-        'ratio_n_values_path': os.path.join(intermediate_dir, f'ratio_n_values{suffix}.tif'),
-        'ratio_sum_path': os.path.join(intermediate_dir, f'ratio_sum{suffix}.tif'),
-        'ratio_average_path': os.path.join(intermediate_dir, f'ratio_average{suffix}.tif')
-    }
     
     align_inputs = [args['lulc_path'], args['soil_group_path'], args['precipitation_path']]
     align_outputs = [
@@ -175,8 +183,7 @@ def execute(args):
         FILES['soil_group_aligned_path'], 
         FILES['precipitation_aligned_path']]
 
-    task_graph = taskgraph.TaskGraph(args['workspace_dir'], 
-        int(args.get('n_workers', -1)))
+    task_graph = taskgraph.TaskGraph(cache_dir, int(args.get('n_workers', -1)))
     target_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_path'])
     pixel_size = target_raster_info['pixel_size']
