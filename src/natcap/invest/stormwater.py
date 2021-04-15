@@ -208,7 +208,9 @@ def execute(args):
     # Build a lookup dictionary mapping each LULC code to its row
     biophysical_dict = utils.build_lookup_from_csv(
         args['biophysical_table'], 'lucode')
-    sorted_lucodes = sorted(list(biophysical_dict.keys()))
+    # sort the LULC codes upfront because we use the sorted list in multiple 
+    # places. it's more efficient to do this once.
+    sorted_lucodes = sorted(biophysical_dict)
 
     # convert the nested dictionary in to a 2D array where rows are LULC codes 
     # in sorted order and columns correspond to soil groups in order
@@ -216,8 +218,11 @@ def execute(args):
 
     # Biophysical table has runoff coefficents so subtract 
     # from 1 to get retention coefficient.
+    # add a placeholder in column 0 so that the soil groups 1, 2, 3, 4 line 
+    # up with their indices in the array. this is more efficient than
+    # decrementing the whole soil group array by 1.
     retention_ratio_array = numpy.array([
-        [1 - biophysical_dict[lucode][f'rc_{soil_group}'] 
+        [numpy.nan] + [1 - biophysical_dict[lucode][f'rc_{soil_group}'] 
             for soil_group in ['a', 'b', 'c', 'd']
         ] for lucode in sorted_lucodes
     ])
@@ -545,8 +550,10 @@ def ratio_op(lulc_array, soil_group_array, ratio_lookup, sorted_lucodes):
             ``lulc_array``. Values in {1, 2, 3, 4} corresponding to soil 
             groups A, B, C, and D.
         ratio_lookup (numpy.ndarray): 2D array where rows correspond to 
-            sorted LULC codes and columns correspond to soil groups
-            A, B, C, D in order. Shape: (number of lulc codes, 4)
+            sorted LULC codes and columns 1, 2, 3, 4 correspond to soil groups
+            A, B, C, D in order. Shape: (number of lulc codes, 5). Column 0 
+            is ignored, it's just there so that the existing soil group array 
+            values line up with their indexes.
         sorted_lucodes (list[int]): List of LULC codes sorted from smallest 
             to largest. These correspond to the rows of ``ratio_lookup``.
 
@@ -555,13 +562,9 @@ def ratio_op(lulc_array, soil_group_array, ratio_lookup, sorted_lucodes):
         ``soil_group_array``. Each value is the corresponding ratio for that
         LULC code x soil group pair.
     """
-    sorted_soil_groups = [1, 2, 3, 4]
-    # the index of each soil group in the sorted soil groups array
-    soil_group_index = numpy.digitize(soil_group_array, sorted_soil_groups, 
-        right=True)
     # the index of each lucode in the sorted lucodes array
     lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
-    output_ratio_array = ratio_lookup[lulc_index, soil_group_index]
+    output_ratio_array = ratio_lookup[lulc_index, soil_group_array]
     return output_ratio_array
 
 
@@ -581,7 +584,7 @@ def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
     Returns:
         2D numpy.ndarray of precipitation volumes in m^3/year
     """
-    volume_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
+    volume_array = numpy.full(ratio_array.shape, NODATA, dtype=numpy.float32)
     valid_mask = (
         (ratio_array != NODATA) & 
         (precip_array != precip_nodata))
@@ -617,7 +620,7 @@ def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array,
         Each value is the avoided pollutant load on that pixel in kg/yr,
         or NODATA if any of the inputs have nodata on that pixel.
     """
-    load_array = numpy.full(lulc_array.shape, NODATA, dtype=float)
+    load_array = numpy.full(lulc_array.shape, NODATA, dtype=numpy.float32)
     valid_mask = (
         (lulc_array != lulc_nodata) &
         (retention_volume_array != NODATA))
@@ -646,7 +649,7 @@ def retention_value_op(retention_volume_array, replacement_cost):
     Returns:
         numpy.ndarray of retention values with the same dimensions as the input
     """
-    value_array = numpy.full(retention_volume_array.shape, NODATA, dtype=float)
+    value_array = numpy.full(retention_volume_array.shape, NODATA, dtype=numpy.float32)
     nodata_mask = (retention_volume_array != NODATA)
 
     # retention (m^3/yr) * replacement cost ($/m^3) = retention value ($/yr)
@@ -701,8 +704,8 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
         2D numpy array of adjusted retention ratios. Has the same shape as 
         ``retention_ratio_array``.
     """
-    adjusted_ratio_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
-    adjustment_factor_array = numpy.full(ratio_array.shape, NODATA, dtype=float)
+    adjusted_ratio_array = numpy.full(ratio_array.shape, NODATA, dtype=numpy.float32)
+    adjustment_factor_array = numpy.full(ratio_array.shape, NODATA, dtype=numpy.float32)
     valid_mask = (
         (ratio_array != NODATA) &
         (avg_ratio_array != NODATA) &
@@ -1182,7 +1185,7 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
 
     # Calculate the pixel-wise average from the n_values and sum rasters
     def avg_op(n_values_array, sum_array):
-        average_array = numpy.full(n_values_array.shape, NODATA, dtype=float)
+        average_array = numpy.full(n_values_array.shape, NODATA, dtype=numpy.float32)
         valid_mask = (
             (n_values_array != NODATA) & 
             (n_values_array != 0) &
