@@ -532,23 +532,35 @@ def execute(args):
     task_graph.join()
 
 def threshold_array(array, threshold):
-    """Return a boolean array where 1 means less than the threshold value.
-    Assumes that the array's nodata value is the global NODATA.
-    Assume that nodata areas in the array are further than the threshold."""
+    """Return a boolean array where 1 means less than or equal to the 
+    threshold value. Assume that nodata areas in the array are above
+    the threshold.
+
+    Args:
+        array (numpy.ndarray): Array to threshold. It is assumed that 
+            the array's nodata value is the global NODATA.
+        threshold (float): Threshold value to apply to the array.
+
+    Returns:
+        boolean numpy.ndarray
+    """
     out = numpy.full(array.shape, 0, dtype=numpy.int8)
     valid_mask = array != NODATA
     out[valid_mask] = array[valid_mask] <= threshold
     return out
 
-def ratio_op(lulc_array, soil_group_array, ratio_lookup, sorted_lucodes):
+def ratio_op(lulc_array, lulc_nodata, soil_group_array, soil_group_nodata, 
+        ratio_lookup, sorted_lucodes):
     """Make an array of stormwater retention or infiltration ratios from 
     arrays of LULC codes and hydrologic soil groups.
 
     Args:
         lulc_array (numpy.ndarray): 2D array of LULC codes
+        lulc_nodata (int): nodata value for the LULC array
         soil_group_array (numpy.ndarray): 2D array with the same shape as
             ``lulc_array``. Values in {1, 2, 3, 4} corresponding to soil 
             groups A, B, C, and D.
+        soil_group_nodata (int): nodata value for the soil group array
         ratio_lookup (numpy.ndarray): 2D array where rows correspond to 
             sorted LULC codes and columns 1, 2, 3, 4 correspond to soil groups
             A, B, C, D in order. Shape: (number of lulc codes, 5). Column 0 
@@ -562,11 +574,15 @@ def ratio_op(lulc_array, soil_group_array, ratio_lookup, sorted_lucodes):
         ``soil_group_array``. Each value is the corresponding ratio for that
         LULC code x soil group pair.
     """
+    output_ratio_array = numpy.full(lulc_array.shape, NODATA)
+    valid_mask = ((lulc_array != lulc_nodata) &
+        (soil_group_array != soil_group_nodata))
     # the index of each lucode in the sorted lucodes array
-    lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
-    output_ratio_array = ratio_lookup[lulc_index, soil_group_array]
+    lulc_index = numpy.digitize(lulc_array[valid_mask], sorted_lucodes, 
+        right=True)
+    output_ratio_array[valid_mask] = ratio_lookup[lulc_index, 
+        soil_group_array[valid_mask]]
     return output_ratio_array
-
 
 def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
     """Calculate array of volumes (retention or infiltration) from arrays 
@@ -650,11 +666,11 @@ def retention_value_op(retention_volume_array, replacement_cost):
         numpy.ndarray of retention values with the same dimensions as the input
     """
     value_array = numpy.full(retention_volume_array.shape, NODATA, dtype=numpy.float32)
-    nodata_mask = (retention_volume_array != NODATA)
+    valid_mask = (retention_volume_array != NODATA)
 
     # retention (m^3/yr) * replacement cost ($/m^3) = retention value ($/yr)
-    value_array[nodata_mask] = (
-        retention_volume_array[nodata_mask] * replacement_cost)
+    value_array[valid_mask] = (
+        retention_volume_array[valid_mask] * replacement_cost)
     return value_array
 
 
@@ -743,7 +759,6 @@ def aggregate_results(aoi_path, aggregations):
         None
     """
     # create a copy of the AOI vector to write to
-    print(aoi_path)
     aggregate_vector = gdal.OpenEx(aoi_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
 
@@ -790,7 +805,8 @@ def is_near(input_path, search_kernel, output_path):
     raster.
 
     Args:
-        input_path (str): path to a boolean raster
+        input_path (str): path to a boolean raster. It is assumed that this 
+            raster's nodata value is the global NODATA.
         search_kernel (numpy.ndarray): 2D numpy array to center on each pixel.
             Pixels that fall on a '1' in the search kernel are counted.
         output_path (str): path to write out the result raster. This is a 
@@ -1100,7 +1116,8 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
     don't count towards the total.
 
     Args:
-        raster_path (str): path to the raster to average
+        raster_path (str): path to the raster to average. It is assumed that 
+            this raster's nodata value is the global NODATA.
         search_kernel (numpy.ndarray): 2D numpy array to center on each pixel.
             Pixels that are on a '1' in the search kernel are counted.
         n_values_path (str): path to write out the number of valid pixels in 
