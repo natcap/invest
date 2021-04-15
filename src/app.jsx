@@ -39,7 +39,7 @@ export default class App extends React.Component {
       openJobs: [],
       investList: {},
       recentJobs: [],
-      investSettings: {},
+      investSettings: null,
       didAskForSampleData: true, // for the pre-DidMount render
       downloadedNofN: null,
     };
@@ -63,7 +63,6 @@ export default class App extends React.Component {
     if (investSettings.sampleDataDir) {
       didAskForSampleData = true;
     }
-    logger.debug(`Already asked for sample data? ${didAskForSampleData}`)
 
     this.setState({
       investList: investList,
@@ -267,13 +266,20 @@ export default class App extends React.Component {
               openInvestModel={this.openInvestModel}
               batchUpdateArgs={this.batchUpdateArgs}
             />
-            <SettingsModal
-              className="mx-3"
-              saveSettings={this.saveSettings}
-              investSettings={investSettings}
-              clearJobsStorage={this.clearRecentJobs}
-              clearDownloadDirPath={this.clearDownloadDirPath}
-            />
+            {
+              // don't render until after we fetched the data
+              (investSettings)
+                ? (
+                  <SettingsModal
+                    className="mx-3"
+                    saveSettings={this.saveSettings}
+                    investSettings={investSettings}
+                    clearJobsStorage={this.clearRecentJobs}
+                    clearDownloadDirPath={this.clearDownloadDirPath}
+                  />
+                )
+                : <div />
+            }
           </Navbar>
 
           <TabContent id="top-tab-content">

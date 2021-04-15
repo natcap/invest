@@ -338,11 +338,13 @@ describe('InVEST global settings: dialog interactions', () => {
     const loggingLabelText = 'Logging threshold';
     const badValue = 'a';
 
-    const { getByText, getByLabelText, getByTitle } = render(
+    const {
+      getByText, getByLabelText, getByTitle, findByTitle
+    } = render(
       <App investExe="foo" />
     );
 
-    fireEvent.click(getByTitle('settings'));
+    fireEvent.click(await findByTitle('settings'));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
@@ -350,8 +352,8 @@ describe('InVEST global settings: dialog interactions', () => {
     // loaded. I've found this helps allow componentDidMount processes to
     // finish
     await waitFor(() => {
-      expect(nWorkersInput).toHaveValue("-1");
-      expect(loggingInput).toHaveValue("INFO");
+      expect(nWorkersInput).toHaveValue('-1');
+      expect(loggingInput).toHaveValue('INFO');
     });
 
     // Change the select input and cancel -- expect default selected
@@ -364,8 +366,8 @@ describe('InVEST global settings: dialog interactions', () => {
     fireEvent.click(getByText('Cancel'));
     fireEvent.click(getByText('settings'));
     await waitFor(() => {
-      expect(nWorkersInput).toHaveValue("-1");
-      expect(loggingInput).toHaveValue("INFO");
+      expect(nWorkersInput).toHaveValue('-1');
+      expect(loggingInput).toHaveValue('INFO');
     });
 
     // Change the value for real and save
@@ -404,11 +406,11 @@ describe('InVEST global settings: dialog interactions', () => {
 
     await saveSettingsStore(expectedSettings);
 
-    const { getByText, getByLabelText, getByTitle } = render(
+    const { getByText, getByLabelText, findByTitle } = render(
       <App investExe="foo" />
     );
 
-    fireEvent.click(getByTitle('settings'));
+    fireEvent.click(await findByTitle('settings'));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
@@ -432,6 +434,24 @@ describe('InVEST global settings: dialog interactions', () => {
       expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
       expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
     });
+  });
+
+  test('Access sampledata download Modal from settings', async () => {
+    const {
+      findByText, findByRole, findByTitle, queryByText
+    } = render(
+      <App investExe="foo" />
+    );
+
+    const settingsBtn = await findByTitle('settings');
+    fireEvent.click(settingsBtn);
+    fireEvent.click(
+      await findByRole('button', { name: 'Download Sample Data' })
+    );
+
+    expect(await findByText('Download InVEST sample data'))
+      .toBeInTheDocument();
+    expect(queryByText('Settings')).toBeNull();
   });
 });
 
@@ -813,8 +833,9 @@ describe('Download Sample Data Modal', () => {
 
   test('Cancel caches a dummy sampleDataDir value', async () => {
     // A truthy value in the cache is how we determine if a user has
-    // seen this dialog before. So we expect something is stored even
-    // after a cancel.
+    // seen this dialog before. So we expect something truthy even
+    // after a cancel. But it must not be a string, because strings
+    // are reserved for the real directory path.
 
     const {
       findByRole,
@@ -827,8 +848,9 @@ describe('Download Sample Data Modal', () => {
       expect(ipcRenderer.send).toHaveBeenCalledTimes(0);
     });
     await waitFor(async () => {
-      expect(await getSettingsValue('sampleDataDir'))
-        .toBe(1);
+      const value = await getSettingsValue('sampleDataDir');
+      expect(value).toBeTruthy();
+      expect(typeof value).not.toBe('string');
     });
   });
 });

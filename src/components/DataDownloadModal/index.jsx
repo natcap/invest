@@ -50,7 +50,7 @@ export class DataDownloadModal extends React.Component {
     // storing something sends the signal that the user declined
     // and doesn't need to be asked again on app startup. We need
     // something truthy that won't be confused for a real filepath.
-    this.props.storeDownloadDir(1);
+    this.props.storeDownloadDir(true);
     logger.debug('canceled sampledata Modal');
   }
 
