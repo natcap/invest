@@ -1,14 +1,14 @@
 import functools
 import math
-import numpy
 import os
-import pandas
-import pygeoprocessing
 import tempfile
 import unittest
 from unittest import mock
 
+import numpy
 from osgeo import gdal, ogr, osr
+import pandas
+import pygeoprocessing
 
 
 def mock_iterblocks(*args, xoffs=[], xsizes=[], yoffs=[], ysizes=[], **kwargs):
@@ -110,7 +110,6 @@ class StormwaterTests(unittest.TestCase):
             pygeoprocessing.numpy_array_to_raster(array, nodata, pixel_size, 
                 origin, projection_wkt, path)
         biophysical_table.to_csv(biophysical_table_path)
-
 
         args = {
             'workspace_dir': self.workspace_dir,
