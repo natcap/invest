@@ -1,8 +1,9 @@
 """Stormwater Retention"""
 import logging
 import math
-import numpy
 import os
+
+import numpy
 from osgeo import gdal, ogr
 import pygeoprocessing
 import rtree
@@ -12,7 +13,6 @@ import taskgraph
 
 from . import validation
 from . import utils
-# from .utils import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +33,6 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "lulc_path": {
-            # **utils.LULC_ARG
             "type": "raster",
             "required": True,
             "about": (
@@ -41,7 +40,6 @@ ARGS_SPEC = {
             "name": "land use/land cover"
         },
         "soil_group_path": {
-            # **utils.SOIL_GROUP_ARG
             "type": "raster",
             "required": True,
             "about": (
@@ -50,7 +48,6 @@ ARGS_SPEC = {
             "name": "soil groups"
         },
         "precipitation_path": {
-            # **utils.PRECIP_ARG
             "type": "raster",
             "required": True,
             "about": ("Map of total annual precipitation"),
@@ -58,20 +55,6 @@ ARGS_SPEC = {
         },
         "biophysical_table": {
             "type": "csv",
-            # "columns": {
-            #     "lucode": {"type": "code"},
-            #     "is_impervious": {"type": "boolean"},
-            #     "EMC_P": {"type": "number", "units": u.milligram/u.liter},
-            #     "EMC_N": {"type": "number", "units": u.milligram/u.liter},
-            #     "RC_A": {"type": "ratio"},
-            #     "RC_B": {"type": "ratio"},
-            #     "RC_C": {"type": "ratio"},
-            #     "RC_D": {"type": "ratio"},
-            #     "IR_A": {"type": "ratio"},
-            #     "IR_B": {"type": "ratio"},
-            #     "IR_C": {"type": "ratio"},
-            #     "IR_D": {"type": "ratio"}
-            # },
             "required": True,
             "about": "biophysical table",
             "name": "biophysical table"
@@ -90,7 +73,6 @@ ARGS_SPEC = {
         },
         "retention_radius": {
             "type": "number",
-            # "units": u.meter,
             "required": "adjust_retention_ratios",
             "about": (
                 "Radius around each pixel to adjust retention ratios. For the "
@@ -101,14 +83,11 @@ ARGS_SPEC = {
         },
         "road_centerlines_path": {
             "type": "vector",
-            # "fields": {},
-            # "geometry": {'LINESTRING'},
             "required": "adjust_retention_ratios",
             "about": "Map of road centerlines",
             "name": "road centerlines"
         },
         "aggregate_areas_path": {
-            # **utils.AOI_ARG
             "type": "vector",
             "required": False,
             "about": (
@@ -123,7 +102,6 @@ ARGS_SPEC = {
         },
         "replacement_cost": {
             "type": "number",
-            # "units": u.currency/u.meter**3,
             "required": False,
             "about": "Replacement cost of stormwater retention devices",
             "name": "replacement cost"
