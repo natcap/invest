@@ -19,6 +19,7 @@ describe('Sample Data Download Form', () => {
     } = render(
       <DataDownloadModal
         show={true}
+        closeModal={() => {}}
         storeDownloadDir={() => {}}
       />
     );
@@ -64,6 +65,7 @@ describe('Sample Data Download Form', () => {
     } = render(
       <DataDownloadModal
         show={true}
+        closeModal={() => {}}
         storeDownloadDir={() => {}}
       />
     );

@@ -40,7 +40,7 @@ export default class App extends React.Component {
       investList: {},
       recentJobs: [],
       investSettings: null,
-      showDownloadModal: false, // for the pre-DidMount render
+      showDownloadModal: false,
       downloadedNofN: null,
     };
     this.saveSettings = this.saveSettings.bind(this);
@@ -103,20 +103,13 @@ export default class App extends React.Component {
   storeDownloadDir(dir) {
     const { investSettings } = this.state;
     investSettings.sampleDataDir = dir;
-    this.setState({
-      showDownloadModal: false,
-    });
     this.saveSettings(investSettings);
   }
 
-  /** Clear the stored sampledata filepath. Prompt Modal to show. */
-  showDownloadModal() {
-    // const { investSettings } = this.state;
-    // investSettings.sampleDataDir = getDefaultSettings()['sampleDataDir'];
+  showDownloadModal(shouldShow) {
     this.setState({
-      showDownloadModal: true,
+      showDownloadModal: shouldShow,
     });
-    // this.saveSettings(investSettings);
   }
 
   /** Push data for a new InvestTab component to an array.
@@ -230,6 +223,7 @@ export default class App extends React.Component {
       <React.Fragment>
         <DataDownloadModal
           show={showDownloadModal}
+          closeModal={() => this.showDownloadModal(false)}
           storeDownloadDir={this.storeDownloadDir}
         />
         <TabContainer activeKey={activeTab}>
@@ -275,7 +269,7 @@ export default class App extends React.Component {
                     saveSettings={this.saveSettings}
                     investSettings={investSettings}
                     clearJobsStorage={this.clearRecentJobs}
-                    showDownloadModal={this.showDownloadModal}
+                    showDownloadModal={() => this.showDownloadModal(true)}
                   />
                 )
                 : <div />

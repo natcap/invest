@@ -239,4 +239,5 @@ SettingsModal.propTypes = {
       [PropTypes.string, PropTypes.bool]
     ),
   }),
+  showDownloadModal: PropTypes.func,
 };

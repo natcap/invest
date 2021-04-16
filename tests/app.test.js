@@ -44,14 +44,11 @@ describe('Various ways to open and close InVEST models', () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
-    // setting a value to avoid render of an initial popup modal
-    await saveSettingsStore({
-      sampleDataDir: 'dont_show_the_download_modal',
-    });
   });
   afterAll(async () => {
-    await clearSettingsStore();
-  })
+    // await clearSettingsStore();
+    // TODO reset the beforeAll mocks?
+  });
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore
     await InvestJob.clearStore(); // should call because a test calls job.save()
@@ -235,15 +232,6 @@ describe('Various ways to open and close InVEST models', () => {
 });
 
 describe('Display recently executed InVEST jobs', () => {
-  beforeAll(async () => {
-    // setting a value to avoid render of an initial popup modal
-    await saveSettingsStore({
-      sampleDataDir: 'dont_show_the_download_modal',
-    });
-  });
-  afterAll(async () => {
-    await clearSettingsStore();
-  })
   beforeEach(() => {
     getInvestModelNames.mockResolvedValue({});
   });
@@ -322,13 +310,8 @@ describe('Display recently executed InVEST jobs', () => {
 describe('InVEST global settings: dialog interactions', () => {
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
-    // setting a value to avoid render of an initial popup modal
-    await saveSettingsStore({
-      sampleDataDir: 'dont_show_the_download_modal',
-    });
   });
   afterEach(async () => {
-    await clearSettingsStore();
     jest.resetAllMocks();
   });
   test('Invest settings: cancel, save, and invalid nWorkers', async () => {
@@ -476,15 +459,6 @@ describe('InVEST subprocess testing', () => {
   let logfilePath;
   let mockInvestProc;
 
-  beforeAll(async () => {
-    // setting a value to avoid render of an initial popup modal
-    await saveSettingsStore({
-      sampleDataDir: 'dont_show_the_download_modal',
-    });
-  });
-  afterAll(async () => {
-    await clearSettingsStore();
-  });
   beforeEach(() => {
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
     // Need to reset these streams since mockInvestProc is shared by tests
@@ -748,23 +722,28 @@ describe('Download Sample Data Modal', () => {
     jest.resetAllMocks();
   });
 
-  test('Modal does not display when data is already cached', async () => {
-    await saveSettingsStore({
-      sampleDataDir: 'dont_show_the_download_modal',
-    });
-    const {
-      queryByText,
-    } = render(<App investExe="foo" />);
+  test('Modal does not display when app has been run before', async () => {
+    const { queryByText } = render(
+      <App
+        investExe="foo"
+        isFirstRun={false}
+      />
+    );
 
     const modalTitle = await queryByText('Download InVEST sample data');
     expect(modalTitle).toBeNull();
   });
 
-  test('Modal displays immediately when no data is in cache', async () => {
+  test('Modal displays immediately on user`s first run', async () => {
     const {
       findByText,
       getByText,
-    } = render(<App investExe="foo" />);
+    } = render(
+      <App
+        investExe="foo"
+        isFirstRun={true}
+      />
+    );
 
     const modalTitle = await findByText('Download InVEST sample data');
     expect(modalTitle).toBeInTheDocument();
@@ -774,15 +753,18 @@ describe('Download Sample Data Modal', () => {
     });
   });
 
-  test('Download sends signal to main & caches location - all selected', async () => {
+  test('Download sends signal to main & stores location - all boxes selected', async () => {
     const dialogData = {
       filePaths: ['foo/directory'],
     };
     ipcRenderer.invoke.mockResolvedValue(dialogData);
 
-    const {
-      findByRole,
-    } = render(<App investExe="foo" />);
+    const { findByRole } = render(
+      <App
+        investExe="foo"
+        isFirstRun={true}
+      />
+    );
 
     const downloadButton = await findByRole('button', { name: 'Download' });
     fireEvent.click(downloadButton);
@@ -799,7 +781,7 @@ describe('Download Sample Data Modal', () => {
     });
   });
 
-  test('Download sends signal to main & caches location - some selected', async () => {
+  test('Download sends signal to main & stores location - some boxes selected', async () => {
     const dialogData = {
       filePaths: ['foo/directory'],
     };
@@ -808,7 +790,12 @@ describe('Download Sample Data Modal', () => {
     const {
       findByRole,
       findAllByRole,
-    } = render(<App investExe="foo" />);
+    } = render(
+      <App
+        investExe="foo"
+        isFirstRun={true}
+      />
+    );
 
     const allCheckBoxes = await findAllByRole('checkbox');
     // toggle off one checkbox so not all are selected
@@ -831,16 +818,15 @@ describe('Download Sample Data Modal', () => {
     });
   });
 
-  test('Cancel caches a dummy sampleDataDir value', async () => {
-    // A truthy value in the cache is how we determine if a user has
-    // seen this dialog before. So we expect something truthy even
-    // after a cancel. But it must not be a string, because strings
-    // are reserved for the real directory path.
+  test('Cancel does not store a sampleDataDir value', async () => {
+    const { findByRole } = render(
+      <App
+        investExe="foo"
+        isFirstRun={true}
+      />
+    );
 
-    const {
-      findByRole,
-    } = render(<App investExe="foo" />);
-
+    const existingValue = await getSettingsValue('sampleDataDir');
     const cancelButton = await findByRole('button', { name: 'Cancel' });
     fireEvent.click(cancelButton);
 
@@ -849,8 +835,7 @@ describe('Download Sample Data Modal', () => {
     });
     await waitFor(async () => {
       const value = await getSettingsValue('sampleDataDir');
-      expect(value).toBeTruthy();
-      expect(typeof value).not.toBe('string');
+      expect(value).toBe(existingValue);
     });
   });
 });

@@ -25,7 +25,6 @@ export class DataDownloadModal extends React.Component {
       dataListCheckBoxes: {},
     };
 
-    this.handleClose = this.handleClose.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleCheckAll = this.handleCheckAll.bind(this);
     this.handleCheckList = this.handleCheckList.bind(this);
@@ -46,14 +45,6 @@ export class DataDownloadModal extends React.Component {
     });
   }
 
-  handleClose() {
-    // storing something sends the signal that the user declined
-    // and doesn't need to be asked again on app startup. We need
-    // something truthy that won't be confused for a real filepath.
-    this.props.storeDownloadDir(true);
-    logger.debug('canceled sampledata Modal');
-  }
-
   async handleSubmit(event) {
     event.preventDefault();
     const allDataURL = sampledataRegistry.allData.url;
@@ -71,6 +62,7 @@ export class DataDownloadModal extends React.Component {
       }
       this.props.storeDownloadDir(data.filePaths[0]);
     }
+    this.props.closeModal();
   }
 
   handleCheckAll(event) {
@@ -147,7 +139,7 @@ export class DataDownloadModal extends React.Component {
     return (
       <Modal
         show={this.props.show}
-        onHide={this.handleClose}
+        onHide={this.props.closeModal}
         size="lg"
       >
         <Form>
@@ -170,7 +162,10 @@ export class DataDownloadModal extends React.Component {
             </Form.Group>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={this.handleClose}>
+            <Button
+              variant="secondary"
+              onClick={this.props.closeModal}
+            >
               Cancel
             </Button>
             <Button
@@ -189,6 +184,7 @@ export class DataDownloadModal extends React.Component {
 
 DataDownloadModal.propTypes = {
   show: PropTypes.bool.isRequired,
+  closeModal: PropTypes.func.isRequired,
   storeDownloadDir: PropTypes.func.isRequired,
 };
 
