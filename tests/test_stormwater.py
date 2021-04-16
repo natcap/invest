@@ -161,14 +161,12 @@ class StormwaterTests(unittest.TestCase):
                 # precipitation (mm/yr) * 0.001 (m/mm) * pixel area (m^2) = m^3/yr
                 volume = retention_volume[row, col]
                 expected_volume = (1 - rc_value) * precipitation * 0.001 * pixel_area
-                self.assertTrue(numpy.isclose(volume, expected_volume), 
-                    f'values: {volume}, {expected_volume}')
+                numpy.testing.assert_allclose(volume, expected_volume)
 
                 # retention (m^3/yr) * cost ($/m^3) = value ($/yr)
                 value = retention_value[row, col]
                 expected_value = expected_volume * retention_cost
-                self.assertTrue(numpy.isclose(value, expected_value), 
-                    f'values: {value}, {expected_value}')
+                numpy.testing.assert_allclose(value, expected_value)
 
         for row in range(infiltration_volume.shape[0]):
             for col in range(infiltration_volume.shape[1]):
@@ -181,9 +179,7 @@ class StormwaterTests(unittest.TestCase):
 
                 # precipitation (mm/yr) * 0.001 (m/mm) * pixel area (m^2) = m^3
                 expected_volume = (ir_value) * precipitation * 0.001 * pixel_area
-                self.assertTrue(
-                    numpy.isclose(infiltration_volume[row][col], expected_volume),
-                    f'values: {infiltration_volume[row][col]}, {expected_volume}')
+                numpy.testing.assert_allclose(infiltration_volume[row][col], expected_volume)
 
         for row in range(avoided_pollutant_load.shape[0]):
             for col in range(avoided_pollutant_load.shape[1]):
@@ -195,8 +191,7 @@ class StormwaterTests(unittest.TestCase):
                 # retention (m^3/yr) * emc (mg/L) * 1000 (L/m^3) * 0.000001 (kg/mg) = kg/yr
                 avoided_load = avoided_pollutant_load[row, col]
                 expected_avoided_load = retention * emc * 0.001
-                self.assertTrue(numpy.isclose(avoided_load, expected_avoided_load),
-                    f'values: {avoided_load}, {expected_avoided_load}')
+                numpy.testing.assert_allclose(avoided_load, expected_avoided_load)
 
     def test_threshold_array(self):
         from natcap.invest import stormwater
@@ -236,8 +231,7 @@ class StormwaterTests(unittest.TestCase):
             [0.22, 0.12]])
         output_ratios = stormwater.ratio_op(
             lulc_array, soil_group_array, ratio_array, sorted_lucodes)
-        self.assertTrue(numpy.array_equal(expected_ratios, output_ratios),
-            f'Expected:\n{expected_ratios}\nActual:\n{output_ratios}')
+        numpy.testing.assert_allclose(expected_ratios, output_ratios)
 
     def test_volume_op(self):
         from natcap.invest import stormwater
@@ -255,10 +249,10 @@ class StormwaterTests(unittest.TestCase):
             for x in range(x_size):
                 if (ratio_array[y,x] == stormwater.NODATA or 
                         precip_array[y,x] == precip_nodata):
-                    self.assertEqual(out[y,x], stormwater.NODATA)
+                    numpy.testing.assert_allclose(out[y,x], stormwater.NODATA)
                 else:
-                    self.assertTrue(numpy.isclose(out[y,x], 
-                        precip_array[y,x] * ratio_array[y,x] * pixel_area / 1000))
+                    numpy.testing.assert_allclose(out[y,x], 
+                        precip_array[y,x] * ratio_array[y,x] * pixel_area / 1000)
 
     def test_avoided_pollutant_load_op(self):
         from natcap.invest import stormwater
@@ -278,12 +272,11 @@ class StormwaterTests(unittest.TestCase):
             for x in range(shape[1]):
                 if (lulc_array[y,x] == lulc_nodata or 
                         retention_volume_array[y,x] == stormwater.NODATA):
-                    self.assertEqual(out[y,x], stormwater.NODATA)
+                    numpy.testing.assert_allclose(out[y,x], stormwater.NODATA)
                 else:
                     emc_value = emc_array[lulc_array[y,x]]
                     expected = emc_value * retention_volume_array[y,x] / 1000
-                    self.assertTrue(numpy.isclose(out[y,x], expected),
-                        f'Expected: {expected} Actual: {out[y,x]}')
+                    numpy.testing.assert_allclose(out[y,x], expected)
 
     def test_retention_value_op(self):
         from natcap.invest import stormwater
@@ -298,9 +291,9 @@ class StormwaterTests(unittest.TestCase):
         for y in range(shape[0]):
             for x in range(shape[1]):
                 if (retention_volume_array[y,x] == stormwater.NODATA):
-                    self.assertEqual(out[y,x], stormwater.NODATA)
+                    numpy.testing.assert_allclose(out[y,x], stormwater.NODATA)
                 else:
-                    self.assertEqual(out[y,x], 
+                    numpy.testing.assert_allclose(out[y,x], 
                         retention_volume_array[y,x] * replacement_cost)
 
     def test_impervious_op(self):
@@ -345,7 +338,7 @@ class StormwaterTests(unittest.TestCase):
                     avg_ratio_array[y,x] == stormwater.NODATA or
                     near_impervious_lulc_array[y,x] == stormwater.NODATA or
                     near_road_centerline_array[y,x] == stormwater.NODATA):
-                    self.assertEqual(out[y,x], stormwater.NODATA)
+                    numpy.testing.assert_allclose(out[y,x], stormwater.NODATA)
                 else:
                     # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
                     adjust_factor = (
@@ -355,7 +348,7 @@ class StormwaterTests(unittest.TestCase):
                         ) else avg_ratio_array[y,x])
                     adjusted = (
                         ratio_array[y,x] + (1 - ratio_array[y,x]) * adjust_factor)
-                    self.assertEqual(out[y,x], adjusted)
+                    numpy.testing.assert_allclose(out[y,x], adjusted)
 
     def test_is_near(self):
         from natcap.invest import stormwater
@@ -395,7 +388,7 @@ class StormwaterTests(unittest.TestCase):
                 mocked):
             stormwater.is_near(connected_path, search_kernel, out_path)
             actual = pygeoprocessing.raster_to_numpy_array(out_path)
-            self.assertTrue(numpy.array_equal(expected, actual))
+            numpy.testing.assert_equal(expected, actual)
 
     def test_overlap_iterblocks(self):
         from natcap.invest import stormwater
@@ -470,25 +463,25 @@ class StormwaterTests(unittest.TestCase):
 
         expected_5 = numpy.array([[1]])
         actual_5 = stormwater.make_search_kernel(path, 5)
-        self.assertTrue(numpy.array_equal(expected_5, actual_5))
+        numpy.testing.assert_equal(expected_5, actual_5)
 
         expected_9 = numpy.array([[1]])
         actual_9 = stormwater.make_search_kernel(path, 9)
-        self.assertTrue(numpy.array_equal(expected_9, actual_9))
+        numpy.testing.assert_equal(expected_9, actual_9)
 
         expected_10 = numpy.array([
             [0, 1, 0],
             [1, 1, 1],
             [0, 1, 0]])
         actual_10 = stormwater.make_search_kernel(path, 10)
-        self.assertTrue(numpy.array_equal(expected_10, actual_10))
+        numpy.testing.assert_equal(expected_10, actual_10)
 
         expected_15 = numpy.array([
             [1, 1, 1],
             [1, 1, 1],
             [1, 1, 1]])
         actual_15 = stormwater.make_search_kernel(path, 15)
-        self.assertTrue(numpy.array_equal(expected_15, actual_15))
+        numpy.testing.assert_equal(expected_15, actual_15)
 
     def test_make_coordinate_rasters(self):
         from natcap.invest import stormwater
@@ -522,19 +515,19 @@ class StormwaterTests(unittest.TestCase):
 
         # x coords should increment by one pixel width
         for x_value in first_x_coords_row:
-            self.assertEqual(x_value, x_expected)
+            numpy.testing.assert_allclose(x_value, x_expected)
             x_expected += pixel_size[0]
         # each row of x_coords should be identical
         for row in x_coords:
-            self.assertTrue(numpy.array_equal(row, first_x_coords_row))
+            numpy.testing.assert_allclose(row, first_x_coords_row)
 
         # y coords should increment by one pixel height
         for y_value in first_y_coords_col:
-            self.assertEqual(y_value, y_expected)
+            numpy.testing.assert_allclose(y_value, y_expected)
             y_expected += pixel_size[1]
         # each column of y_coords should be identical
         for col in y_coords.T:
-            self.assertTrue(numpy.array_equal(col, first_y_coords_col))
+            numpy.testing.assert_allclose(col, first_y_coords_col)
 
     def test_nearest_linestring(self):
         from natcap.invest import stormwater
@@ -632,7 +625,7 @@ class StormwaterTests(unittest.TestCase):
         # the expected will not have nodata areas. the actual will because of the
         # optimization skipping some blocks. treat nodata as 0 for this purpose.
         actual_thresholded[actual_thresholded == nodata] = 0
-        self.assertTrue(numpy.array_equal(expected_thresholded, actual_thresholded))
+        numpy.testing.assert_allclose(expected_thresholded, actual_thresholded)
 
     def test_line_distance(self):
         from natcap.invest import stormwater
@@ -657,8 +650,7 @@ class StormwaterTests(unittest.TestCase):
         distances = stormwater.line_distance(
             x_coords, y_coords, x1, y1, x2, y2)
         expected_distances = numpy.hypot(x_coords - x1, y_coords - y1)
-        self.assertTrue(numpy.allclose(distances, expected_distances),
-            f'Expected:\n{expected_distances}\nActual:\n{distances}')
+        numpy.testing.assert_allclose(distances, expected_distances)
 
         # this segment is to the left of the coordinate block and parallel to 
         # the x-axis, so for all points, their shortest distance will be the 
@@ -667,8 +659,7 @@ class StormwaterTests(unittest.TestCase):
         distances = stormwater.line_distance(
             x_coords, y_coords, x1, y1, x2, y2)
         expected_distances = numpy.hypot(x_coords - x2, y_coords - y2)
-        self.assertTrue(numpy.allclose(distances, expected_distances),
-            f'Expected:\n{expected_distances}\nActual:\n{distances}')
+        numpy.testing.assert_allclose(distances, expected_distances)
 
         # this is a line segment that goes diagonally through the cooridnate
         # block. (must be a square)
@@ -679,8 +670,7 @@ class StormwaterTests(unittest.TestCase):
         # |y - x| * sqrt(2) / 2
         expected_distances = (numpy.abs(numpy.abs(y_coords - y_start) - 
             numpy.abs(x_coords - x_start)) * math.sqrt(2) / 2)
-        self.assertTrue(numpy.allclose(distances, expected_distances),
-            f'Expected:\n{expected_distances}\nActual:\n{distances}')
+        numpy.testing.assert_allclose(distances, expected_distances)
 
     def test_iter_linestring_segments(self):
         from natcap.invest import stormwater
@@ -753,7 +743,7 @@ class StormwaterTests(unittest.TestCase):
         expected_n_values[0, -2] = 3
         expected_n_values[-1, 0] = 3
         expected_n_values[-1, -2] = 3
-        self.assertTrue(numpy.array_equal(n_values_array, expected_n_values))
+        numpy.testing.assert_equal(n_values_array, expected_n_values)
 
         expected_average = numpy.empty((150, 150))
         expected_average[:, 0:127] = 10
@@ -765,4 +755,4 @@ class StormwaterTests(unittest.TestCase):
         expected_average[-1, 128] = 17.5
         expected_average[:, 129:149] = 20
         expected_average[:, 149] = -1
-        self.assertTrue(numpy.allclose(average_array, expected_average))
+        numpy.testing.assert_allclose(average_array, expected_average)
