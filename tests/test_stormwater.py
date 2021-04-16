@@ -11,7 +11,7 @@ import pandas
 import pygeoprocessing
 
 
-def mock_iterblocks(*args, xoffs=[], xsizes=[], yoffs=[], ysizes=[], **kwargs):
+def mock_iterblocks(*args, **kwargs):
     """Mock function for pygeoprocessing.iterblocks that yields custom blocks.
 
     Args:
@@ -20,12 +20,15 @@ def mock_iterblocks(*args, xoffs=[], xsizes=[], yoffs=[], ysizes=[], **kwargs):
         yoffs (list[int]): list of y-offsets for each block in order
         ysizes (list[int]): list of heights for each block in order
 
+        For python 3.7 compatibility, these have to be extracted from the 
+        kwargs dictionary (can't have keyword-only arguments).
+
     Yields:
         dictionary with keys 'xoff', 'yoff', 'win_xsize', 'win_ysize'
         that have the same meaning as in pygeoprocessing.iterblocks.
     """
-    for yoff, ysize in zip(yoffs, ysizes):
-        for xoff, xsize in zip(xoffs, xsizes):
+    for yoff, ysize in zip(kwargs['yoffs'], kwargs['ysizes']):
+        for xoff, xsize in zip(kwargs['xoffs'],kwargs['xsizes']):
             yield {
                 'xoff': xoff, 
                 'yoff': yoff,
@@ -51,7 +54,7 @@ def random_array(shape, low=0, high=1, nodata=None, p_nodata=0.2, precision=2):
     magnitude = 10**precision
     # multiplying then dividing by the magnitude gives the desired precision
     array = numpy.random.randint(
-        low * magnitude, (high + 1) * magnitude, shape) / magnitude
+        low * magnitude, (high + 1) * magnitude, shape, dtype=numpy.int32) / magnitude
 
     if nodata is not None:  # could be zero
         # randomly assign some values to nodata
@@ -66,6 +69,10 @@ class StormwaterTests(unittest.TestCase):
     def setUp(self):
         """Create a temp directory for the workspace."""
         self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
 
     def test_basic(self):
         from natcap.invest import stormwater
@@ -83,7 +90,7 @@ class StormwaterTests(unittest.TestCase):
             biophysical_table[header] = random_array((4,))
 
         biophysical_table = biophysical_table.set_index(['lucode'])
-        retention_cost = numpy.random.randint(0, 30)
+        retention_cost = numpy.random.randint(0, 30, dtype=numpy.uint8)
 
         lulc_array = numpy.random.choice(lucodes, size=(10, 10)).astype(numpy.int8)
         soil_group_array = numpy.random.choice([1, 2, 3, 4], size=(10, 10)).astype(numpy.int8)
@@ -284,7 +291,7 @@ class StormwaterTests(unittest.TestCase):
         shape = 5, 5
         retention_volume_array = random_array(shape, nodata=stormwater.NODATA, 
             high=1000)
-        replacement_cost = numpy.random.rand() * 20
+        replacement_cost = numpy.random.rand() * 20  # a reasonable range of costs
 
         out = stormwater.retention_value_op(retention_volume_array, 
             replacement_cost)

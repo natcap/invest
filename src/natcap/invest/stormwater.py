@@ -758,13 +758,11 @@ def aggregate_results(aggregate_areas_path, aggregations):
             feature_id = feature.GetFID()
             if op == 'mean':
                 pixel_count = aggregate_stats[feature_id]['count']
-                if pixel_count != 0:
+                try:
                     value = (aggregate_stats[feature_id]['sum'] / pixel_count)
-                else:
+                except ZeroDivisionError:
                     LOGGER.warning(
-                        "no coverage for polygon %s", ', '.join(
-                            [str(feature.GetField(_)) for _ in range(
-                                feature.GetFieldCount())]))
+                        f'Polygon {feature_id} does not overlap {raster_path}')
                     value = 0.0
             elif op == 'sum':
                 value = aggregate_stats[feature_id]['sum']
@@ -796,15 +794,12 @@ def is_near(input_path, search_kernel, output_path):
         None
     """
     # open the input raster and create the output raster
-    in_raster = gdal.OpenEx(input_path, gdal.OF_RASTER | gdal.GA_Update)
+    in_raster = gdal.OpenEx(input_path, gdal.OF_RASTER)
     in_band = in_raster.GetRasterBand(1)
-    raster_width, raster_height = pygeoprocessing.get_raster_info(
-        input_path)['raster_size']
-    raster_driver = gdal.GetDriverByName('GTIFF')
 
     pygeoprocessing.new_raster_from_base(
         input_path, output_path, gdal.GDT_Int16, [NODATA])
-    out_raster = gdal.OpenEx(output_path, gdal.OF_RASTER | gdal.GA_Update)
+    out_raster = gdal.OpenEx(output_path, gdal.OF_RASTER)
     out_band = out_raster.GetRasterBand(1)
  
     # iterate over the raster by overlapping blocks
@@ -972,8 +967,8 @@ def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
         raster_path, x_output_path, gdal.GDT_Float32, [NODATA])
     pygeoprocessing.new_raster_from_base(
         raster_path, y_output_path, gdal.GDT_Float32, [NODATA])
-    x_raster = gdal.OpenEx(x_output_path, gdal.OF_RASTER | gdal.GA_Update)
-    y_raster = gdal.OpenEx(y_output_path, gdal.OF_RASTER | gdal.GA_Update)
+    x_raster = gdal.OpenEx(x_output_path, gdal.OF_RASTER)
+    y_raster = gdal.OpenEx(y_output_path, gdal.OF_RASTER)
     x_band, y_band = x_raster.GetRasterBand(1), y_raster.GetRasterBand(1)
 
     # can't use raster_calculator here because we need the block offset info
@@ -1060,14 +1055,17 @@ def iter_linestring_segments(vector_path):
     vector = gdal.OpenEx(vector_path)
     layer = vector.GetLayer()
     for feature in layer:
-        ref = feature.GetGeometryRef()
-        assert ref.GetGeometryName() in ['LINESTRING', 'MULTILINESTRING']
+        geometry = feature.GetGeometryRef()
+        geometry_name = geometry.GetGeometryName()
+        if geometry_name not in ['LINESTRING', 'MULTILINESTRING']:
+            raise AssertionError(f'{vector_path} contains a {geometry_name} geometry.'
+                'Allowed geometries: LINESTRING, MULTILINESTRING')
 
-        n_geometries = ref.GetGeometryCount()
-        if ref.GetGeometryCount() > 0:  # a multi type
-            geometries = [ref.GetGeometryRef(i) for i in range(n_geometries)]
+        n_geometries = geometry.GetGeometryCount()
+        if n_geometries > 0:  # a multi type
+            geometries = [geometry.GetGeometryRef(i) for i in range(n_geometries)]
         else:  # not a multi type
-            geometries = [ref]
+            geometries = [geometry]
 
         for geometry in geometries:
             points = geometry.GetPoints()  # a list of (x, y) points
@@ -1109,7 +1107,7 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
     Returns:
         None
     """
-    raster = gdal.OpenEx(raster_path, gdal.OF_RASTER | gdal.GA_Update)
+    raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
     band = raster.GetRasterBand(1)
 
     # create and open the output rasters
@@ -1117,8 +1115,8 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
         raster_path, n_values_path, gdal.GDT_Int16, [NODATA])
     pygeoprocessing.new_raster_from_base(
         raster_path, sum_path, gdal.GDT_Float32, [NODATA])
-    n_values_raster = gdal.OpenEx(n_values_path, gdal.OF_RASTER | gdal.GA_Update)
-    sum_raster = gdal.OpenEx(sum_path, gdal.OF_RASTER | gdal.GA_Update)
+    n_values_raster = gdal.OpenEx(n_values_path, gdal.OF_RASTER)
+    sum_raster = gdal.OpenEx(sum_path, gdal.OF_RASTER)
     n_values_band = n_values_raster.GetRasterBand(1)
     sum_band = sum_raster.GetRasterBand(1)
 
@@ -1257,7 +1255,7 @@ def optimized_linestring_distance(x_coords_path, y_coords_path,
     # Create and open the output raster for writing
     pygeoprocessing.new_raster_from_base(
         x_coords_path, out_path, gdal.GDT_Float32, [NODATA])
-    out_raster = gdal.OpenEx(out_path, gdal.OF_RASTER | gdal.GA_Update)
+    out_raster = gdal.OpenEx(out_path, gdal.OF_RASTER)
     out_band = out_raster.GetRasterBand(1)
 
     # Assuming that the x_coords and y_coords rasters have identical properties
@@ -1286,7 +1284,7 @@ def optimized_linestring_distance(x_coords_path, y_coords_path,
         # Get all the line segments whose padded bounding box intersects the block
         # These are all the line segments that could be within the radius of
         # any point in the block.
-        line_ids = list(index.intersection(block_bbox))
+        line_ids = index.intersection(block_bbox)
         
         # Find each point's minimum distance to a line segment
         min_distance_array = numpy.full(x_coords.shape, numpy.inf)
