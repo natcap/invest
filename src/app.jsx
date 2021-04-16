@@ -40,7 +40,7 @@ export default class App extends React.Component {
       investList: {},
       recentJobs: [],
       investSettings: null,
-      didAskForSampleData: true, // for the pre-DidMount render
+      showDownloadModal: false, // for the pre-DidMount render
       downloadedNofN: null,
     };
     this.saveSettings = this.saveSettings.bind(this);
@@ -50,7 +50,7 @@ export default class App extends React.Component {
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
     this.storeDownloadDir = this.storeDownloadDir.bind(this);
-    this.clearDownloadDirPath = this.clearDownloadDirPath.bind(this);
+    this.showDownloadModal = this.showDownloadModal.bind(this);
   }
 
   /** Initialize the list of invest models, recent invest jobs, etc. */
@@ -59,16 +59,16 @@ export default class App extends React.Component {
     const recentJobs = await InvestJob.getJobStore();
     const investSettings = await getAllSettings();
 
-    let didAskForSampleData = false;
-    if (investSettings.sampleDataDir) {
-      didAskForSampleData = true;
-    }
+    // let didAskForSampleData = false;
+    // if (investSettings.sampleDataDir) {
+    //   didAskForSampleData = true;
+    // }
 
     this.setState({
       investList: investList,
       recentJobs: recentJobs,
       investSettings: investSettings,
-      didAskForSampleData: didAskForSampleData,
+      showDownloadModal: this.props.isFirstRun,
     });
 
     ipcRenderer.on('download-status', (event, downloadedNofN) => {
@@ -104,19 +104,19 @@ export default class App extends React.Component {
     const { investSettings } = this.state;
     investSettings.sampleDataDir = dir;
     this.setState({
-      didAskForSampleData: true,
+      showDownloadModal: false,
     });
     this.saveSettings(investSettings);
   }
 
   /** Clear the stored sampledata filepath. Prompt Modal to show. */
-  clearDownloadDirPath() {
-    const { investSettings } = this.state;
-    investSettings.sampleDataDir = getDefaultSettings()['sampleDataDir'];
+  showDownloadModal() {
+    // const { investSettings } = this.state;
+    // investSettings.sampleDataDir = getDefaultSettings()['sampleDataDir'];
     this.setState({
-      didAskForSampleData: false,
+      showDownloadModal: true,
     });
-    this.saveSettings(investSettings);
+    // this.saveSettings(investSettings);
   }
 
   /** Push data for a new InvestTab component to an array.
@@ -185,7 +185,7 @@ export default class App extends React.Component {
       recentJobs,
       openJobs,
       activeTab,
-      didAskForSampleData,
+      showDownloadModal,
       downloadedNofN,
     } = this.state;
 
@@ -229,7 +229,7 @@ export default class App extends React.Component {
     return (
       <React.Fragment>
         <DataDownloadModal
-          show={!didAskForSampleData}
+          show={showDownloadModal}
           storeDownloadDir={this.storeDownloadDir}
         />
         <TabContainer activeKey={activeTab}>
@@ -275,7 +275,7 @@ export default class App extends React.Component {
                     saveSettings={this.saveSettings}
                     investSettings={investSettings}
                     clearJobsStorage={this.clearRecentJobs}
-                    clearDownloadDirPath={this.clearDownloadDirPath}
+                    showDownloadModal={this.showDownloadModal}
                   />
                 )
                 : <div />
@@ -300,4 +300,11 @@ export default class App extends React.Component {
 
 App.propTypes = {
   investExe: PropTypes.string.isRequired,
+  isFirstRun: PropTypes.bool,
+};
+
+// Setting a default here mainly to make testing easy, so this prop
+// can be undefined for unrelated tests.
+App.defaultProps = {
+  isFirstRun: false,
 };

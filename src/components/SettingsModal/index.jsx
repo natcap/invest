@@ -39,7 +39,7 @@ export default class SettingsModal extends React.Component {
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleReset = this.handleReset.bind(this);
-    this.showDownloadModal = this.showDownloadModal.bind(this);
+    this.switchToDownloadModal = this.switchToDownloadModal.bind(this);
   }
 
   componentDidMount() {
@@ -94,8 +94,8 @@ export default class SettingsModal extends React.Component {
     });
   }
 
-  showDownloadModal() {
-    this.props.clearDownloadDirPath();
+  switchToDownloadModal() {
+    this.props.showDownloadModal();
     this.handleClose();
   }
 
@@ -189,7 +189,7 @@ export default class SettingsModal extends React.Component {
             <hr />
             <Button
               variant="primary"
-              onClick={this.showDownloadModal}
+              onClick={this.switchToDownloadModal}
             >
               Download Sample Data
             </Button>

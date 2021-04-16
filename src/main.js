@@ -43,6 +43,10 @@ if (!process.env.PORT) {
 let mainWindow;
 let splashScreen;
 
+function isFirstRun() {
+  return true;
+}
+
 /** Create an Electron browser window and start the flask application. */
 const createWindow = async () => {
   splashScreen = new BrowserWindow({
@@ -64,6 +68,7 @@ const createWindow = async () => {
     investVersion: investVersion,
     workbenchVersion: pkg.version,
     userDataPath: app.getPath('userData'),
+    isFirstRun: isFirstRun(),
   };
   ipcMain.handle('show-context-menu', (event, rightClickPos) => {
     const template = [

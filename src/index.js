@@ -30,11 +30,12 @@ window.addEventListener('contextmenu', (e) => {
   ipcRenderer.invoke('show-context-menu', rightClickPosition);
 });
 
-const render = async function render(investExe) {
+const render = async function render(investExe, isFirstRun) {
   reactDom.default.render(
     react.default.createElement(
       app.default, {
         investExe: investExe,
+        isFirstRun: isFirstRun,
       }
     ),
     document.getElementById('App')
@@ -47,5 +48,5 @@ ipcRenderer.invoke('variable-request')
   // from the main process
   .then((response) => {
     logger.debug('rendering react on response from main')
-    render(response.investExe);
+    render(response.investExe, response.isFirstRun);
   });
