@@ -121,7 +121,7 @@ test('Run a real invest model', async () => {
   const doc = await getDocument(page);
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
 
-  const extraTime = 10000; // long timeouts finding the first elements, just in case
+  const extraTime = 5000; // long timeouts finding the first elements, just in case
   try {
     // On a fresh install, we'll encounter this Modal.
     // But on a machine that has run this app before, we may not.
