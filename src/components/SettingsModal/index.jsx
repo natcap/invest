@@ -235,9 +235,7 @@ SettingsModal.propTypes = {
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
-    sampleDataDir: PropTypes.oneOfType(
-      [PropTypes.string, PropTypes.bool]
-    ),
+    sampleDataDir: PropTypes.string,
   }),
   showDownloadModal: PropTypes.func,
 };

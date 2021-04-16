@@ -126,3 +126,21 @@ export function extractZipInplace(zipFilePath) {
     });
   });
 }
+
+/** Check if the user has run this application before.
+ *
+ * @returns {boolean}
+ */
+export function checkFirstRun() {
+  const userDataPath = app.getPath('userData');
+  const hasRunTokenPath = path.join(userDataPath, 'app-has-run-token');
+  try {
+    if (fs.existsSync(hasRunTokenPath)) {
+      return false;
+    }
+    fs.writeFileSync(hasRunTokenPath, '');
+  } catch (error) {
+    logger.warn(`Unable to write first-run token: ${error}`);
+  }
+  return true;
+}

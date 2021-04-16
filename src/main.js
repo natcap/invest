@@ -25,7 +25,10 @@ const {
   getFlaskIsReady, shutdownPythonProcess
 } = require('./server_requests');
 const {
-  findInvestBinaries, createPythonFlaskProcess, extractZipInplace
+  findInvestBinaries,
+  createPythonFlaskProcess,
+  extractZipInplace,
+  checkFirstRun,
 } = require('./main_helpers');
 const { getLogger } = require('./logger');
 const { menuTemplate } = require('./menubar');
@@ -42,10 +45,6 @@ if (!process.env.PORT) {
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 let splashScreen;
-
-function isFirstRun() {
-  return true;
-}
 
 /** Create an Electron browser window and start the flask application. */
 const createWindow = async () => {
@@ -68,7 +67,7 @@ const createWindow = async () => {
     investVersion: investVersion,
     workbenchVersion: pkg.version,
     userDataPath: app.getPath('userData'),
-    isFirstRun: isFirstRun(),
+    isFirstRun: checkFirstRun(),
   };
   ipcMain.handle('show-context-menu', (event, rightClickPos) => {
     const template = [
