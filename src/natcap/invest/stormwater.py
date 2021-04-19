@@ -119,6 +119,7 @@ FILES = {
     'soil_group_aligned_path': os.path.join(intermediate_dir, f'soil_group_aligned{suffix}.tif'),
     'precipitation_aligned_path': os.path.join(intermediate_dir, f'precipitation_aligned{suffix}.tif'),
     'reprojected_centerlines_path': os.path.join(intermediate_dir, f'reprojected_centerlines{suffix}.gpkg'),
+    'rasterized_centerlines_path': os.path.join(intermediate_dir, f'rasterized_centerlines{suffix}.tif')
     'reprojected_aggregate_areas_path': os.path.join(output_dir, f'aggregate_data{suffix}.gpkg'),
     'retention_ratio_path': os.path.join(output_dir, f'retention_ratio{suffix}.tif'),
     'retention_volume_path': os.path.join(output_dir, f'retention_volume{suffix}.tif'),
@@ -274,14 +275,13 @@ def execute(args):
             dependent_task_list=[]
         )
 
-        centerlines_raster_path = 
         rasterize_centerlines_task = task_graph.add_task(
             func=pygeoprocessing.rasterize,
             args=(
                 args['reprojected_centerlines_path'],
-                centerlines_raster_path,
+                FILES['rasterized_centerlines_path'],
                 [1]),
-            target_path_list=[centerlines_raster_path],
+            target_path_list=[FILES['rasterized_centerlines_path']],
             task_name='rasterize road centerlines vector',
             dependent_task_list=[reproject_roads_task])
 
@@ -291,7 +291,21 @@ def execute(args):
                 args['centerlines_raster_path'],
                 args['road_distance_path']),
             target_path_list=[args['road_distance_path']],
-            task_name='')
+            task_name='calculate distance from each pixel to centerline pixel')
+
+        # Make a boolean raster showing which pixels are within the given
+        # radius of a road centerline
+        distance_threshold_task = task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=(
+                [(FILES['road_distance_path'], 1), (radius, 'raw')],
+                threshold_array,
+                FILES['near_road_path'],
+                gdal.GDT_Byte, 
+                UINT8_NODATA),
+            target_path_list=[FILES['near_road_path']],
+            task_name='find pixels within radius of road centerlines',
+            dependent_task_list=[distance_transform_task])
         
         # Make a boolean raster indicating which pixels are directly
         # connected impervious LULC type
@@ -308,19 +322,7 @@ def execute(args):
             dependent_task_list=[align_task]
         )
 
-        # Make a boolean raster showing which pixels are within the given
-        # radius of a road centerline
-        near_road_task = task_graph.add_task(
-            func=pygeoprocessing.raster_calculator,
-            args=(
-                [(FILES['road_distance_path'], 1), (radius, 'raw')],
-                threshold_array,
-                FILES['near_road_path'],
-                gdal.GDT_Byte, 
-                UINT8_NODATA),
-            target_path_list=[FILES['near_road_path']],
-            task_name='find pixels within radius of road centerlines',
-            dependent_task_list=[distance_task])
+
 
         average_ratios_task = task_graph.add_task(
             func=raster_average,
@@ -899,13 +901,15 @@ def overlap_iterblocks(raster_path, n_pixels):
         }
 
 
-def make_search_kernel(raster_path, radius):
-    """Make a search kernel for a raster that marks pixels within a radius
+def make_search_kernel(raster_path, radius, out_path):
+    """Make a search kernel for a raster that marks pixels within a radius.
+    Save the search kernel to a raster for use with pygeoprocessing.convolve_2d
 
     Args:
         raster_path (str): path to a raster to make kernel for
         radius (float): distance around each pixel's centerpoint to search
             in raster coordinate system units
+        out_path (str): path to write out the search kernel as a raster
 
     Returns:
         2D boolean numpy.ndarray. '1' pixels are within ``radius`` of the 
@@ -932,130 +936,69 @@ def make_search_kernel(raster_path, radius):
     LOGGER.debug(
         f'Search kernel for {raster_path} with radius {radius}:'
         f'\n{search_kernel}')
+
     return search_kernel
 
 
-def raster_average(raster_path, radius, n_values_path, sum_path, average_path):
-    """Average pixel values within a radius.
-
-    Make a search kernel where a pixel has '1' if its centerpoint is within 
-    the radius of the center pixel's centerpoint.
-    For each pixel in a raster, center the search kernel on top of it. Then
-    its "neighborhood" includes all the pixels that are below a '1' in the
-    search kernel. Add up the neighborhood pixel values and divide by how 
-    many there are.
-    
-    This accounts for edge pixels and nodata pixels. For instance, if the 
-    kernel covers a 3x3 pixel area centered on each pixel, most pixels will 
-    have 9 valid pixels in their neighborhood, most edge pixels will have 6, 
-    and most corner pixels will have 4. Nodata pixels in the neighborhood 
-    don't count towards the total.
-
-    Args:
-        raster_path (str): path to the raster to average. It is assumed that 
-            this raster's nodata value is the global FLOAT_NODATA.
-        radius (float): distance around each pixel to average in raster 
-            coordinate system units
-        n_values_path (str): path to write out the number of valid pixels in 
-            each pixel's neighborhood (this is the denominator in the average)
-        sum_path (str): path to write out the sum of valid pixel values in 
-            each pixel's neighborhood (this is the numerator in the average)
-        average_path (str): path to write out the average of the valid pixel 
-            values in each pixel's neighborhood (``n_values_path / sum_path``)
-
-    Returns:
-        None
-    """
-    raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
-    band = raster.GetRasterBand(1)
-
-    # create and open the output rasters
+def raster_average():
+    search_kernel = make_search_kernel(raster_path, radius, out_path)
+    # create and open the output raster
     pygeoprocessing.new_raster_from_base(
-        raster_path, n_values_path, gdal.GDT_UInt16, [UINT16_NODATA])
-    pygeoprocessing.new_raster_from_base(
-        raster_path, sum_path, gdal.GDT_Float32, [FLOAT_NODATA])
-    n_values_raster = gdal.OpenEx(n_values_path, gdal.OF_RASTER)
-    sum_raster = gdal.OpenEx(sum_path, gdal.OF_RASTER)
-    n_values_band = n_values_raster.GetRasterBand(1)
-    sum_band = sum_raster.GetRasterBand(1)
+        raster_path, kernel_path, gdal.GDT_Byte, [UINT8_NODATA])
+    kernel_raster = gdal.OpenEx(kernel_path, gdal.OF_RASTER)
+    kernel_band = kernel_raster.GetRasterBand(1)
 
-     # Average the retention ratio values around each pixel
-    search_kernel = make_search_kernel(FILES['raster_path'],
-        radius)
+    def ones_op(array):
+        ones_array = numpy.zeros(array.shape, dtype=numpy.uint8)
+        valid_mask = array != FLOAT_NODATA
+        ones_array[valid_mask] = 1
+        return ones_array
 
-    # calculate the sum and n_values of the neighborhood of each pixel
-    # kernel is always centered on one pixel, so the dimensions are always odd
-    overlap = int((search_kernel.shape[0] - 1) / 2)
-    for block in overlap_iterblocks(raster_path, overlap):
-        in_array = band.ReadAsArray(
-            block['xoff'] - block['left_overlap'], 
-            block['yoff'] - block['top_overlap'], 
-            block['xsize'] + block['left_overlap'] + block['right_overlap'], 
-            block['ysize'] + block['top_overlap'] + block['bottom_overlap'])
+    pygeoprocessing.raster_calculator(
+        [(ratio_path, 1)],
+        ones_op, 
+        ones_path,
+        gdal.GDT_Byte,
+        UINT8_NODATA)
 
-        # the padded array shape will always be extended by 2*overlap
-        # in both dimensions from the original iterblocks block
-        padded_array = numpy.pad(in_array, 
-            pad_width=(
-                (block['top_padding'], block['bottom_padding']), 
-                (block['left_padding'], block['right_padding'])), 
-            mode='constant', 
-            constant_values=0)
-        nodata_mask = numpy.isclose(
-            padded_array[overlap:-overlap,overlap:-overlap], FLOAT_NODATA)
-        padded_array[padded_array == FLOAT_NODATA] = 0
-        
-        # add up the valid pixel values in the neighborhood of each pixel
-        # 'valid' mode includes only the pixels whose kernel doesn't extend
-        # over the edge at all. so, the shape
-        sum_array = scipy.signal.convolve(
-            padded_array,
-            search_kernel,
-            mode='valid')
-        sum_array[nodata_mask] = FLOAT_NODATA
+    # the numerator, the sum of values within the search kernel
+    pygeoprocessing.convolve_2d(
+        ratio_path,
+        kernel_path,
+        sum_path,
+        ignore_nodata_and_edges=True,
+        mask_nodata=True,
+        target_dtype=gdal.GDT_Float32,
+        target_nodata=FLOAT_NODATA)
 
-        # have to pad the array after 
-        valid_pixels = (in_array != FLOAT_NODATA).astype(int)
-        padded_valid_pixels = numpy.pad(valid_pixels, 
-            pad_width=(
-                (block['top_padding'], block['bottom_padding']), 
-                (block['left_padding'], block['right_padding'])), 
-            mode='constant',
-            constant_values=0)
-        # array where each value is the number of valid values within the
-        # search kernel. 
-        # - for every kernel that doesn't extend past the edge of the original 
-        #   array, this is search_kernel.size - number of nodata pixels in kernel
-        # - for kernels that extend past the edge, this is the number of 
-        #   elements that are within the original array minus the number of 
-        #   those that are nodata
-        n_values_array = scipy.signal.convolve(
-            padded_valid_pixels, 
-            search_kernel, 
-            mode='valid')
-        n_values_array[nodata_mask] = UINT16_NODATA
-        
-        n_values_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
-        sum_band.WriteArray(sum_array, xoff=block['xoff'], yoff=block['yoff'])
-    raster, band = None, None
-    n_values_band, sum_band = None, None
-    n_values_raster, sum_raster = None, None
+    # the denominator, the number of valid values within the search kernel
+    # nodata does not matter here because there are no nodata pixels in ones_path.
+    # they have already been filled with 0s
+    pygeoprocessing.convolve_2d(
+        ones_path,
+        kernel_path,
+        n_values_path,
+        ignore_nodata_and_edges=True,
+        target_dtype=gdal.GDT_Float32,
+        target_nodata=FLOAT_NODATA)
 
-    # Calculate the pixel-wise average from the n_values and sum rasters
-    def avg_op(n_values_array, sum_array):
-        average_array = numpy.full(n_values_array.shape, FLOAT_NODATA, 
+    def divide_op(numerator_array, denominator_array):
+        out_array = numpy.full(numerator_array.shape, FLOAT_NODATA, 
             dtype=numpy.float32)
         valid_mask = (
-            (n_values_array != UINT16_NODATA) & 
-            (n_values_array != 0) &
-            ~numpy.isclose(sum_array, FLOAT_NODATA))
-        average_array[n_values_array == 0] = 0
-        average_array[valid_mask] = (
-            sum_array[valid_mask] / n_values_array[valid_mask])
-        return average_array
+            ~numpy.isclose(numerator_array, FLOAT_NODATA) &
+            (denominator_array != FLOAT_NODATA))
+        out_array[valid_mask] = (
+            numerator_array[valid_mask] / denominator_array[valid_mask])
+        return out_array
 
-    pygeoprocessing.raster_calculator([(n_values_path, 1), (sum_path, 1)], 
-        avg_op, average_path, gdal.GDT_Float32, FLOAT_NODATA)
+    # compute the average and save to a raster
+    pygeoprocessing.raster_calculator(
+        [(sum_path, 1), (n_values_path, 1)],
+        divide_op, 
+        average_path,
+        gdal.GDT_Float32,
+        FLOAT_NODATA)
 
 
 @validation.invest_validator
@@ -1074,5 +1017,3 @@ def validate(args):
     """
     return validation.validate(args, ARGS_SPEC['args'],
                                ARGS_SPEC['args_with_spatial_overlap'])
-
-
