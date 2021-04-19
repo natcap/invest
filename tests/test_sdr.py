@@ -293,9 +293,9 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_retent': 335578.875,
-            'sed_export': 0.60814452171,
-            'usle_tot': 11.43409824371,
+            'sed_retent': 376752.75,
+            'sed_export': 0.6872266531,
+            'usle_tot': 12.6965303421,
         }
 
         vector_path = os.path.join(
