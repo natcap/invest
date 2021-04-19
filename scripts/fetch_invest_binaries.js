@@ -1,8 +1,9 @@
-const https = require('https');
+const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const fetch = require('node-fetch');
+const { exec, execFileSync } = require('child_process');
 const pkg = require('../package');
 
 let filePrefix;
@@ -21,7 +22,6 @@ switch (process.platform) {
     );
 }
 
-const HOSTNAME = pkg.invest.hostname;
 const BUCKET = pkg.invest.bucket;
 // forknames are only in the path on the dev-builds bucket
 const FORK = BUCKET === 'releases.naturalcapitalproject.org'
@@ -29,34 +29,37 @@ const FORK = BUCKET === 'releases.naturalcapitalproject.org'
 const REPO = 'invest';
 const VERSION = pkg.invest.version;
 const SRCFILE = `${filePrefix}_invest_binaries.zip`;
-const DESTFILE = path.join(__dirname, '../build/binaries.zip');
-
-const urladdress = url.resolve(
-  HOSTNAME, path.join(BUCKET, REPO, FORK, VERSION, SRCFILE)
+const DESTFILE = path.join(
+  __dirname, `../build/version_${VERSION}_${SRCFILE}`
+);
+const SRC_URL = url.resolve(
+  'gs://', path.join(BUCKET, REPO, FORK, VERSION, SRCFILE)
 );
 
 /**
- * Download a file from src to dest.
+ * Download a zip file and unzip it, overwriting all.
  *
- * @param  {string} src - url for a single publicly hosted file
+ * @param  {string} src - url for a single file
  * @param  {string} dest - local path for saving the file
  */
-function download(src, dest) {
-  console.log(`downloading ${src}`);
-  fs.existsSync(path.dirname(dest)) || fs.mkdirSync(path.dirname(dest));
-  const fileStream = fs.createWriteStream(dest);
-  https.get(src, (response) => {
-    console.log(`http status: ${response.statusCode}`);
-    if (response.statusCode !== 200) {
-      fileStream.close();
-      return;
+function downloadAndUnzipBinaries(src, dest) {
+  const cp = exec(`gsutil cp ${src} ${dest}`);
+  cp.stdout.on('data', (data) => {
+    console.log(`${data}`);
+  });
+  cp.stderr.on('data', (data) => {
+    console.log(`${data}`);
+  });
+  cp.on('close', (code) => {
+    if (code === 0) {
+      const unzip = exec(`unzip -o ${dest} -d build/invest/`);
+      unzip.stdout.on('data', (data) => {
+        console.log(`${data}`);
+      });
+      unzip.stderr.on('data', (data) => {
+        console.log(`${data}`);
+      });
     }
-    response.pipe(fileStream);
-    fileStream.on('finish', () => {
-      fileStream.close();
-    });
-  }).on('error', (e) => {
-    console.log(e);
   });
 }
 
@@ -132,6 +135,27 @@ async function updateSampledataRegistry() {
 if (process.argv[2] && process.argv[2] === 'sampledata') {
   updateSampledataRegistry();
 } else {
-  download(urladdress, DESTFILE);
-  updateSampledataRegistry();
+  // Find the local binaries that we'll be packaging, if they already
+  // exist and match the version in package.json, we don't need to download.
+  let willDownload = true;
+  const ext = (process.platform === 'win32') ? '.exe' : '';
+  const investExe = `build/invest/invest${ext}`;
+  try {
+    const investVersion = execFileSync(investExe, ['--version']);
+    if (`${investVersion}`.trim(os.EOL) === VERSION) {
+      willDownload = false;
+      console.log(`binaries already up-to-date with version ${VERSION}`);
+    } else {
+      console.log(`existing binaries are outdated at version ${investVersion}`);
+      console.log(`will download for version ${VERSION}`);
+    }
+  } catch {
+    console.log('no local binaries in build/invest/');
+    console.log(`will download for version ${VERSION}`);
+  } finally {
+    if (willDownload) {
+      downloadAndUnzipBinaries(SRC_URL, DESTFILE);
+      updateSampledataRegistry();
+    }
+  }
 }
