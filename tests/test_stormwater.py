@@ -75,6 +75,7 @@ class StormwaterTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_basic(self):
+        """Stormwater: basic model run"""
         from natcap.invest import stormwater
 
         # generate 4 unique lucodes
@@ -201,6 +202,7 @@ class StormwaterTests(unittest.TestCase):
                 numpy.testing.assert_allclose(avoided_load, expected_avoided_load)
 
     def test_threshold_array(self):
+        """Stormwater: test array thresholding function"""
         from natcap.invest import stormwater
 
         x_size, y_size = 5, 5
@@ -219,6 +221,7 @@ class StormwaterTests(unittest.TestCase):
                     self.assertEqual(out[x,y], 1)
 
     def test_ratio_op(self):
+        """Stormwater: test ratio_op function"""
         from natcap.invest import stormwater
 
         sorted_lucodes = [10, 11, 12, 13]
@@ -241,6 +244,7 @@ class StormwaterTests(unittest.TestCase):
         numpy.testing.assert_allclose(expected_ratios, output_ratios)
 
     def test_volume_op(self):
+        """Stormwater: test volume_op function"""
         from natcap.invest import stormwater
 
         x_size, y_size = 5, 5
@@ -262,6 +266,7 @@ class StormwaterTests(unittest.TestCase):
                         precip_array[y,x] * ratio_array[y,x] * pixel_area / 1000)
 
     def test_avoided_pollutant_load_op(self):
+        """Stormwater: test avoided_pollutant_load_op function"""
         from natcap.invest import stormwater
 
         shape = 5, 5
@@ -286,6 +291,7 @@ class StormwaterTests(unittest.TestCase):
                     numpy.testing.assert_allclose(out[y,x], expected)
 
     def test_retention_value_op(self):
+        """Stormwater: test retention_value_op function"""
         from natcap.invest import stormwater
 
         shape = 5, 5
@@ -304,6 +310,7 @@ class StormwaterTests(unittest.TestCase):
                         retention_volume_array[y,x] * replacement_cost)
 
     def test_impervious_op(self):
+        """Stormwater: test impervious_op function"""
         from natcap.invest import stormwater
 
         shape = 5, 5
@@ -324,6 +331,7 @@ class StormwaterTests(unittest.TestCase):
                     self.assertEqual(out[y,x], is_impervious)
 
     def test_adjust_op(self):
+        """Stormwater: test adjust_op function"""
         from natcap.invest import stormwater
 
         shape = 10, 10
@@ -358,6 +366,7 @@ class StormwaterTests(unittest.TestCase):
                     numpy.testing.assert_allclose(out[y,x], adjusted)
 
     def test_is_near(self):
+        """Stormwater: test is_near function"""
         from natcap.invest import stormwater
         is_connected_array = numpy.array([
             [0, 0, 1, 0, 0, 0],
@@ -398,6 +407,7 @@ class StormwaterTests(unittest.TestCase):
             numpy.testing.assert_equal(expected, actual)
 
     def test_overlap_iterblocks(self):
+        """Stormwater: test overlap_iterblocks function"""
         from natcap.invest import stormwater
 
         raster_path = os.path.join(self.workspace_dir, 'iterblocks_array.tif')
@@ -457,6 +467,7 @@ class StormwaterTests(unittest.TestCase):
             }])
 
     def test_make_search_kernel(self):
+        """Stormwater: test make_search_kernel function"""
         from natcap.invest import stormwater
 
         array = numpy.zeros((10, 10))
@@ -490,53 +501,9 @@ class StormwaterTests(unittest.TestCase):
         actual_15 = stormwater.make_search_kernel(path, 15)
         numpy.testing.assert_equal(expected_15, actual_15)
 
-    def test_make_coordinate_rasters(self):
-        from natcap.invest import stormwater
-
-        # set up an array (values don't matter) and save as raster
-        array = numpy.zeros((512, 512), dtype=numpy.int8)
-        pixel_size = (10, -10)
-        origin = (15100, 7000)
-        raster_path = os.path.join(self.workspace_dir, 'input_array.tif')
-        # set up an arbitrary spatial reference
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3857)
-        projection_wkt = srs.ExportToWkt()
-        pygeoprocessing.numpy_array_to_raster(
-            array, -1, pixel_size, origin, projection_wkt, raster_path)
-
-        x_coord_path = os.path.join(self.workspace_dir, 'x_coords.tif')
-        y_coord_path = os.path.join(self.workspace_dir, 'y_coords.tif')
-        
-        # make x- and y- coordinate rasters from the input raster and open them
-        stormwater.make_coordinate_rasters(raster_path, 
-            x_coord_path, y_coord_path)
-        x_coords = pygeoprocessing.raster_to_numpy_array(x_coord_path)
-        y_coords = pygeoprocessing.raster_to_numpy_array(y_coord_path)
-
-        # coords should start at the raster origin plus 1/2 a pixel
-        x_expected = origin[0] + pixel_size[0] / 2
-        y_expected = origin[1] + pixel_size[1] / 2
-        first_x_coords_row = x_coords[0]
-        first_y_coords_col = y_coords[:,0]
-
-        # x coords should increment by one pixel width
-        for x_value in first_x_coords_row:
-            numpy.testing.assert_allclose(x_value, x_expected)
-            x_expected += pixel_size[0]
-        # each row of x_coords should be identical
-        for row in x_coords:
-            numpy.testing.assert_allclose(row, first_x_coords_row)
-
-        # y coords should increment by one pixel height
-        for y_value in first_y_coords_col:
-            numpy.testing.assert_allclose(y_value, y_expected)
-            y_expected += pixel_size[1]
-        # each column of y_coords should be identical
-        for col in y_coords.T:
-            numpy.testing.assert_allclose(col, first_y_coords_col)
 
     def test_nearest_linestring(self):
+        """Stormwater: test nearest_linestring function"""
         from natcap.invest import stormwater
 
         base_path = os.path.join(self.workspace_dir, 'coord_base.tif')
@@ -635,6 +602,7 @@ class StormwaterTests(unittest.TestCase):
         numpy.testing.assert_allclose(expected_thresholded, actual_thresholded)
 
     def test_line_distance(self):
+        """Stormwater: test line_distance function"""
         from natcap.invest import stormwater
 
         x_start, y_start = 100, -100
@@ -679,36 +647,8 @@ class StormwaterTests(unittest.TestCase):
             numpy.abs(x_coords - x_start)) * math.sqrt(2) / 2)
         numpy.testing.assert_allclose(distances, expected_distances)
 
-    def test_iter_linestring_segments(self):
-        from natcap.invest import stormwater
-        # Create a linestring vector
-        path = os.path.join(self.workspace_dir, 'linestring.gpkg')
-        spatial_reference = osr.SpatialReference()
-        spatial_reference.ImportFromEPSG(3857)
-        driver = gdal.GetDriverByName('GPKG')
-        linestring_vector = driver.Create(path, 0, 0, 0, gdal.GDT_Unknown)
-        layer = linestring_vector.CreateLayer('linestring', 
-            spatial_reference, ogr.wkbLineString)
-        layer_defn = layer.GetLayerDefn()
-        layer.StartTransaction()
-        linestring = ogr.Geometry(ogr.wkbLineString)
-        # Create a linestring from the list of coords and save it to the vector
-        coords = [(100, 1), (105.5, 2), (-7, 0)]
-        for coord in coords:
-            linestring.AddPoint(*coord)
-        feature = ogr.Feature(layer_defn)
-        feature.SetGeometry(linestring)
-        layer.CreateFeature(feature)
-        layer.CommitTransaction()
-        layer = None
-        linestring_vector = None
-
-        # Expect the coordinate pairs are yielded in order
-        expected_pairs = [(coords[0], coords[1]), (coords[1], coords[2])]
-        output_pairs = list(stormwater.iter_linestring_segments(path))
-        self.assertEqual(expected_pairs, output_pairs)
-
     def test_raster_average(self):
+        """Stormwater: test raster_average function"""
         from natcap.invest import stormwater
 
         array = numpy.empty((150, 150))
