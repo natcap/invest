@@ -32,13 +32,13 @@ def assert_expected_results_in_vector(expected_results, vector_path):
         # orders of magnitude are tested
         try:
             numpy.testing.assert_allclose(
-                actual_results[key], expected_results[key], rtol=0.000001, atol=0)
+                actual_results[key], expected_results[key],
+                rtol=0.000001, atol=0)
         except AssertionError:
             incorrect_vals[key] = (actual_results[key], expected_results[key])
     if incorrect_vals:
         raise AssertionError(
             f'these key (actual/expected) errors occured: {incorrect_vals}')
-
 
 
 class SDRTests(unittest.TestCase):
@@ -207,14 +207,8 @@ class SDRTests(unittest.TestCase):
         args = SDRTests.generate_base_args(self.workspace_dir)
         # make args explicit that this is a base run of SWY
 
-        gpkg_driver = ogr.GetDriverByName('GPKG')
-        base_vector = ogr.Open(args['watersheds_path'])
         target_watersheds_path = os.path.join(
             args['workspace_dir'], 'input_watersheds.gpkg')
-        target_vector = gpkg_driver.CopyDataSource(
-            base_vector, target_watersheds_path)
-        base_vector = None
-        target_vector = None
         args['watersheds_path'] = target_watersheds_path
         sdr.execute(args)
         expected_results = {
@@ -362,14 +356,8 @@ class SDRTests(unittest.TestCase):
         args = SDRTests.generate_base_args(self.workspace_dir)
         # make args explicit that this is a base run of SWY
 
-        gpkg_driver = ogr.GetDriverByName('GPKG')
-        base_vector = ogr.Open(args['watersheds_path'])
         target_watersheds_path = os.path.join(
             args['workspace_dir'], 'input_watersheds.gpkg')
-        target_vector = gpkg_driver.CopyDataSource(
-            base_vector, target_watersheds_path)
-        base_vector = None
-        target_vector = None
         args['watersheds_path'] = target_watersheds_path
 
         # remove a row from the biophysical table so that lulc value is missing
@@ -404,10 +392,10 @@ class SDRTests(unittest.TestCase):
                 expected aggregated_results.shp table in the form of
                 fid,vri_sum,qb_val per line
 
-        Returns:
-            None
+        Return:
+            ``None``
 
-        Raises:
+        Raise:
             AssertionError if any files are missing or results are out of
             range by `tolerance_places`
         """
@@ -462,10 +450,10 @@ class SDRTests(unittest.TestCase):
             directory_path (string): a path to a directory whose contents will
                 be checked against the files listed in `base_list_file`
 
-        Returns:
-            None
+        Return:
+            ``None``
 
-        Raises:
+        Raise:
             AssertionError when there are files listed in `base_list_file`
                 that don't exist in the directory indicated by `path`
         """
