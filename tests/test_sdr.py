@@ -218,10 +218,10 @@ class SDRTests(unittest.TestCase):
         args['watersheds_path'] = target_watersheds_path
         sdr.execute(args)
         expected_results = {
-            'usle_tot': 12.04494380951,
-            'sed_retent': 367660.25,
-            'sed_export': 0.71140885353,
-            'sed_dep': 7.84880876541,
+            'usle_tot': 14.25030517578,
+            'sed_retent': 443994.1875,
+            'sed_export': 0.87300693989,
+            'sed_dep': 9.32623577118,
         }
 
         vector_path = os.path.join(
