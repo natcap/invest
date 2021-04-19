@@ -82,11 +82,16 @@ Unreleased Changes (3.9.1)
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
 * Seasonal Water Yield
-    * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata 
+    * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata
       values and could show negative numbers.
 * SDR
     * Fixed a bug in validation that did not warn against different coordinate
       systems (all SDR inputs must share a common coordinate system).
+    * Fixed a bug that was incorrectly using a factor of 0.0986 rather than
+      0.0896. This would have a minor affect on end-user results.
+    * Changed how SDR thresholds its L factor to allow direct thresholding
+      rather than based off of upstream area. Exposed this parameter as
+      ``l_max`` in the ``args`` input and in the user interface.
 * Wind Energy
     * Raising ValueError when AOI does not intersect Wind Data points.
 
