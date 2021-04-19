@@ -123,6 +123,14 @@ class SDR(model.InVESTModel):
             label='Max SDR Value',
             validator=self.validator)
         self.add_input(self.sdr_max)
+        self.l_max = inputs.Text(
+            args_key='l_max',
+            helptext=(
+                'L will not exceed this value. Ranges of 122-333m are found '
+                'in relevant literature.'),
+            label='Max L Value',
+            validator=self.validator)
+        self.add_input(self.l_max)
 
     def assemble_args(self):
         args = {

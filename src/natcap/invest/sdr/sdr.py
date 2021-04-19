@@ -152,6 +152,14 @@ ARGS_SPEC = {
             "about": "Borselli IC0 parameter.",
             "name": "Borselli IC0 Parameter"
         },
+        "l_max": {
+            "type": "number",
+            "required": True,
+            "about": (
+                "L will not exceed this value. Ranges of 122-333m are found "
+                "in relevant literature."),
+            "name": "Max L Value",
+        },
         "drainage_path": {
             "type": "raster",
             "required": False,
@@ -661,8 +669,8 @@ def execute(args):
 
 
 def _calculate_ls_factor(
-        flow_accumulation_path, slope_path, avg_aspect_path,
-        out_ls_prime_factor_path):
+        flow_accumulation_path, slope_path, avg_aspect_path, l_max,
+        target_ls_prime_factor_path):
     """Calculate LS factor.
 
     Calculates a modified LS factor as Equation 3 from "Extension and
@@ -678,7 +686,9 @@ def _calculate_ls_factor(
         slope_path (string): path to slope raster as a percent
         avg_aspect_path (string): The path to to raster of the weighted average
             of aspects based on proportional flow.
-        out_ls_prime_factor_path (string): path to output ls_prime_factor
+        l_max (float): if the calculated value of L exceeds this value
+            it is clamped to this value.
+        target_ls_prime_factor_path (string): path to output ls_prime_factor
             raster
 
     Returns:
@@ -749,62 +759,23 @@ def _calculate_ls_factor(
         # length calculations ... cap of 333m"
         # from Rafa, this should really be the upstream area capped to
         # "333^2 m^2" because McCool is 1D
-        contributing_area[contributing_area > 333**2] = 333**2
-
         ls_prime_factor = (
             ((contributing_area + cell_area)**(m_exp+1) -
              contributing_area ** (m_exp+1)) /
             ((cell_size ** (m_exp + 2)) * (avg_aspect[valid_mask]**m_exp) *
              (22.13**m_exp)))
 
+        ls_prime_factor[ls_prime_factor > l_max] = l_max
+
         result[valid_mask] = ls_prime_factor * slope_factor
         return result
 
-    def _slope_factor_function(percent_slope, flow_accumulation, avg_aspect):
-        """Calculate the LS' factor.
-
-        Args:
-            percent_slope (numpy.ndarray): slope in percent
-            flow_accumulation (numpy.ndarray): upstream pixels
-            avg_aspect (numpy.ndarray): the weighted average aspect from MFD
-
-        Returns:
-            ls_factor
-
-        """
-        # avg aspect intermediate output should always have a defined
-        # nodata value from pygeoprocessing
-        valid_mask = (
-            (~numpy.isclose(avg_aspect, avg_aspect_nodata)) &
-            (percent_slope != slope_nodata) &
-            (flow_accumulation != flow_accumulation_nodata))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-
-        slope_in_radians = numpy.arctan(percent_slope[valid_mask] / 100.0)
-
-        # From Equation 4 in "Extension and validation of a geographic
-        # information system ..."
-        slope_factor = numpy.where(
-            percent_slope[valid_mask] < 9.0,
-            10.8 * numpy.sin(slope_in_radians) + 0.03,
-            16.8 * numpy.sin(slope_in_radians) - 0.5)
-
-        result[valid_mask] = slope_factor
-        return result
-
     # call vectorize datasets to calculate the ls_factor
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in [
-            slope_path, flow_accumulation_path, avg_aspect_path]],
-        ls_factor_function, out_ls_prime_factor_path, gdal.GDT_Float32,
-        _TARGET_NODATA)
-
-    # call vectorize datasets to calculate the ls_factor
-    pygeoprocessing.raster_calculator(
-        [(path, 1) for path in [
-            slope_path, flow_accumulation_path, avg_aspect_path]],
-        _slope_factor_function, 'slopefactor.tif', gdal.GDT_Float32,
+            slope_path, flow_accumulation_path, avg_aspect_path]] + [
+            (l_max, 'raw')],
+        ls_factor_function, target_ls_prime_factor_path, gdal.GDT_Float32,
         _TARGET_NODATA)
 
 
