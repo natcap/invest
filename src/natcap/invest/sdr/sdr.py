@@ -408,6 +408,7 @@ def execute(args):
             f_reg['flow_accumulation_path'],
             f_reg['slope_path'],
             f_reg['weighted_avg_aspect_path'],
+            float(args['l_max']),
             f_reg['ls_path']),
         target_path_list=[f_reg['ls_path']],
         dependent_task_list=[
@@ -705,13 +706,15 @@ def _calculate_ls_factor(
     cell_size = abs(flow_accumulation_info['pixel_size'][0])
     cell_area = cell_size ** 2
 
-    def ls_factor_function(percent_slope, flow_accumulation, avg_aspect):
+    def ls_factor_function(
+            percent_slope, flow_accumulation, avg_aspect, l_max):
         """Calculate the LS' factor.
 
         Args:
             percent_slope (numpy.ndarray): slope in percent
             flow_accumulation (numpy.ndarray): upstream pixels
             avg_aspect (numpy.ndarray): the weighted average aspect from MFD
+            l_max (float): max L factor, clamp to this value if L exceeds it
 
         Returns:
             ls_factor
@@ -755,19 +758,16 @@ def _calculate_ls_factor(
             beta[big_slope_mask] / (1 + beta[big_slope_mask]))
         m_exp[~big_slope_mask] = m_table[m_indexes]
 
-        # from McCool paper: "as a final check against excessively long slope
-        # length calculations ... cap of 333m"
-        # from Rafa, this should really be the upstream area capped to
-        # "333^2 m^2" because McCool is 1D
-        ls_prime_factor = (
+        l_factor = (
             ((contributing_area + cell_area)**(m_exp+1) -
              contributing_area ** (m_exp+1)) /
             ((cell_size ** (m_exp + 2)) * (avg_aspect[valid_mask]**m_exp) *
              (22.13**m_exp)))
 
-        ls_prime_factor[ls_prime_factor > l_max] = l_max
+        # threshold L factor to l_max
+        l_factor[l_factor > l_max] = l_max
 
-        result[valid_mask] = ls_prime_factor * slope_factor
+        result[valid_mask] = l_factor * slope_factor
         return result
 
     # call vectorize datasets to calculate the ls_factor

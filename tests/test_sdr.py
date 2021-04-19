@@ -26,11 +26,19 @@ def assert_expected_results_in_vector(expected_results, vector_path):
     watershed_results_vector = None
     watershed_results_layer = None
     watershed_results_feature = None
+    incorrect_vals = {}
     for key in expected_results:
         # Using relative tolerance here because results with different
         # orders of magnitude are tested
-        numpy.testing.assert_allclose(
-            actual_results[key], expected_results[key], rtol=0.000001, atol=0)
+        try:
+            numpy.testing.assert_allclose(
+                actual_results[key], expected_results[key], rtol=0.000001, atol=0)
+        except AssertionError:
+            incorrect_vals[key] = (actual_results[key], expected_results[key])
+    if incorrect_vals:
+        raise AssertionError(
+            f'these key (actual/expected) errors occured: {incorrect_vals}')
+
 
 
 class SDRTests(unittest.TestCase):
@@ -58,6 +66,7 @@ class SDRTests(unittest.TestCase):
             'k_param': '2',
             'lulc_path': os.path.join(SAMPLE_DATA, 'landuse_90.tif'),
             'sdr_max': '0.8',
+            'l_max': '122',
             'threshold_flow_accumulation': '1000',
             'watersheds_path': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
             'workspace_dir': workspace_dir,
@@ -103,7 +112,7 @@ class SDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = {}
         validation_warnings = sdr.validate(args, limit_to=None)
-        self.assertEqual(len(validation_warnings[0][0]), 11)
+        self.assertEqual(len(validation_warnings[0][0]), 12)
 
     def test_sdr_validation_key_no_value(self):
         """SDR test validation that's missing a value on a key."""
@@ -260,9 +269,9 @@ class SDRTests(unittest.TestCase):
 
         sdr.execute(args)
         expected_results = {
-            'sed_retent': 367660.25,
-            'sed_export': 0.71140885353,
-            'usle_tot': 12.04494380951,
+            'sed_retent': 443994.1875,
+            'sed_export': 0.87300693989,
+            'usle_tot': 14.25030517578,
         }
 
         vector_path = os.path.join(
