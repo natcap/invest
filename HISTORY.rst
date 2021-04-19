@@ -88,7 +88,7 @@ Unreleased Changes (3.9.1)
     * Fixed a bug in validation that did not warn against different coordinate
       systems (all SDR inputs must share a common coordinate system).
     * Fixed a bug that was incorrectly using a factor of 0.0986 rather than
-      0.0896. This would have a minor affect on end-user results.
+      0.0896. This would have a minor effect on end-user results.
     * Changed how SDR thresholds its L factor to allow direct thresholding
       rather than based off of upstream area. Exposed this parameter as
       ``l_max`` in the ``args`` input and in the user interface.
