@@ -7,6 +7,7 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import Alert from 'react-bootstrap/Alert';
 import ProgressBar from 'react-bootstrap/ProgressBar';
+import Table from 'react-bootstrap/Table';
 
 import Expire from '../Expire';
 import sampledataRegistry from '../../sampledata_registry.json';
@@ -108,36 +109,41 @@ export class DataDownloadModal extends React.Component {
   render() {
     const { dataListCheckBoxes, selectedLinksArray } = this.state;
     const downloadEnabled = Boolean(selectedLinksArray.length);
-    const DatasetCheckboxList = [];
+    const DatasetCheckboxRows = [];
     Object.keys(dataListCheckBoxes)
       .forEach((modelName) => {
         const filesize = parseFloat(
           `${sampledataRegistry.Models[modelName].filesize / 1000000}`
         ).toFixed(2) + ' MB';
         const labelSuffix = sampledataRegistry.Models[modelName].labelSuffix || '';
-        DatasetCheckboxList.push(
-          <Form.Check
-            className="pt-1"
-            key={modelName}
-            id={modelName}
-          >
-            <Form.Check.Input
-              type="checkbox"
-              checked={dataListCheckBoxes[modelName]}
-              onChange={(event) => this.handleCheckList(
-                event, modelName
-              )}
-            />
-            <Form.Check.Label>
-              {modelName}
-              <em>{` ${labelSuffix} . . . ${filesize}`}</em>
-            </Form.Check.Label>
-          </Form.Check>
+        DatasetCheckboxRows.push(
+          <tr>
+            <td>
+              <Form.Check
+                className="pt-1"
+                key={modelName}
+                id={modelName}
+              >
+                <Form.Check.Input
+                  type="checkbox"
+                  checked={dataListCheckBoxes[modelName]}
+                  onChange={(event) => this.handleCheckList(
+                    event, modelName
+                  )}
+                />
+                <Form.Check.Label>
+                  {modelName}
+                </Form.Check.Label>
+              </Form.Check>
+            </td>
+            <td><em>{labelSuffix}</em></td>
+            <td>{filesize}</td>
+          </tr>
         );
       });
 
     return (
-      <Modal
+      <Modal className="download-data-modal"
         show={this.props.show}
         onHide={this.props.closeModal}
         size="lg"
@@ -147,19 +153,29 @@ export class DataDownloadModal extends React.Component {
             <Modal.Title>Download InVEST sample data</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <h5>
-              <Form.Check
-                type="checkbox"
-                id="all-sampledata"
-                checked={this.state.allDataCheck}
-                onChange={this.handleCheckAll}
-                name="all-sampledata"
-                label="Select All"
-              />
-            </h5>
-            <Form.Group>
-              {DatasetCheckboxList}
-            </Form.Group>
+            <Table
+              size="sm"
+              borderless
+              striped
+            >
+              <thead>
+                <tr>
+                  <th>
+                    <Form.Check
+                      type="checkbox"
+                      id="all-sampledata"
+                      checked={this.state.allDataCheck}
+                      onChange={this.handleCheckAll}
+                      name="all-sampledata"
+                      label="Select All"
+                    />
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="table-body">
+                {DatasetCheckboxRows}
+              </tbody>
+            </Table>
           </Modal.Body>
           <Modal.Footer>
             <Button

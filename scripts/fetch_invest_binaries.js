@@ -77,7 +77,7 @@ function download(src, dest) {
  * keys may be left out and then this script can be run to populate those keys.
  */
 async function updateSampledataRegistry() {
-  const googleAPI = 'https://www.googleapis.com/storage/v1/b'
+  const googleAPI = 'https://www.googleapis.com/storage/v1/b';
   const template = require('../src/sampledata_registry.json');
   // make a deep copy so we can check if any updates were made and
   // only overwrite the file if necessary.
@@ -127,7 +127,6 @@ async function updateSampledataRegistry() {
     path.join(__dirname, '../src/sampledata_registry.json'), JSON.stringify(registry, null, 2)
   );
   console.log('sample data registry was updated. Please review the changes and commit them');
-  console.log('git diff src/sampledata_registry.json');
 }
 
 if (process.argv[2] && process.argv[2] === 'sampledata') {

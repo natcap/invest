@@ -265,10 +265,10 @@ input[type=text]::placeholder {
 	margin-left: 1rem;
 }
 
-.form-check-label {
+/*.form-check-label {
 	padding-left: 0.5rem;
 	padding-right: 1rem;
-}
+}*/
 
 .invalid-feedback {
 	font-size: 1.15rem;
@@ -321,4 +321,14 @@ input[type=text]::placeholder {
 .spinner-border {
 	margin-left: 1rem;
 	margin-bottom: 0.25rem;
+}
+
+/* Download Data Modal */
+.download-data-modal .modal-dialog {
+	overflow-y: initial;
+}
+
+.download-data-modal .modal-body {
+	height: 80vh;
+	overflow-y: auto;
 }
