@@ -17,7 +17,9 @@ from . import utils
 LOGGER = logging.getLogger(__name__)
 
 # a constant nodata value to use for intermediates and outputs
-NODATA = -1
+FLOAT_NODATA = -1
+UINT8_NODATA = 255
+UINT16_NODATA = 65535
 
 ARGS_SPEC = {
     "model_name": "Stormwater Retention",
@@ -202,8 +204,12 @@ def execute(args):
     # Align all three input rasters to the same projection
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(align_inputs, align_outputs, ['near' for _ in align_inputs],
-            pixel_size, 'intersection'),
+        args=(
+            align_inputs, 
+            align_outputs, 
+            ['near' for _ in align_inputs],
+            pixel_size, 
+            'intersection'),
         kwargs={'raster_align_index': 0},
         target_path_list=align_outputs,
         task_name='align input rasters')
@@ -242,7 +248,7 @@ def execute(args):
             ratio_op, 
             FILES['retention_ratio_path'], 
             gdal.GDT_Float32, 
-            NODATA),
+            FLOAT_NODATA),
         target_path_list=[FILES['retention_ratio_path']],
         dependent_task_list=[align_task],
         task_name='calculate stormwater retention ratio'
@@ -267,8 +273,27 @@ def execute(args):
             task_name='reproject road centerlines vector to match rasters',
             dependent_task_list=[]
         )
+
+        centerlines_raster_path = 
+        rasterize_centerlines_task = task_graph.add_task(
+            func=pygeoprocessing.rasterize,
+            args=(
+                args['reprojected_centerlines_path'],
+                centerlines_raster_path,
+                [1]),
+            target_path_list=[centerlines_raster_path],
+            task_name='rasterize road centerlines vector',
+            dependent_task_list=[reproject_roads_task])
+
+        distance_transform_task = task_graph.add_task(
+            func=pygeoprocessing.distance_transform_edt,
+            args=(
+                args['centerlines_raster_path'],
+                args['road_distance_path']),
+            target_path_list=[args['road_distance_path']],
+            task_name='')
         
-         # Make a boolean raster indicating which pixels are directly
+        # Make a boolean raster indicating which pixels are directly
         # connected impervious LULC type
         impervious_lulc_task = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
@@ -277,44 +302,10 @@ def execute(args):
                 is_impervious_map,
                 FILES['impervious_lulc_path'],
                 gdal.GDT_Byte,
-                NODATA),
+                UINT8_NODATA),
             target_path_list=[FILES['impervious_lulc_path']],
             task_name='calculate binary impervious lulc raster',
             dependent_task_list=[align_task]
-        )
-        task_graph.join()
-
-        # Make a boolean raster indicating which pixels are within the
-        # given radius of a directly-connected impervious LULC type
-        impervious_lulc_search_kernel = make_search_kernel(
-            FILES['impervious_lulc_path'], radius)
-        near_impervious_lulc_task = task_graph.add_task(
-            func=is_near,
-            args=(FILES['impervious_lulc_path'], impervious_lulc_search_kernel,
-                FILES['near_impervious_lulc_path']),
-            target_path_list=[FILES['near_impervious_lulc_path']],
-            task_name='find pixels within radius of impervious LULC',
-            dependent_task_list=[impervious_lulc_task])
-
-        # Make a raster of the distance from each pixel to the nearest 
-        # road centerline
-        coordinate_rasters_task = task_graph.add_task(
-            func=make_coordinate_rasters,
-            args=(FILES['retention_ratio_path'], 
-                FILES['x_coords_path'], FILES['y_coords_path']),
-            target_path_list=[FILES['x_coords_path'], FILES['y_coords_path']],
-            task_name='make coordinate rasters',
-            dependent_task_list=[retention_ratio_task]
-        )
-
-        distance_task = task_graph.add_task(
-            func=optimized_linestring_distance,
-            args=(FILES['x_coords_path'], FILES['y_coords_path'], 
-                FILES['reprojected_centerlines_path'], radius, 
-                FILES['road_distance_path']),
-            target_path_list=[FILES['road_distance_path']],
-            task_name='calculate pixel distance to roads',
-            dependent_task_list=[coordinate_rasters_task, reproject_roads_task]
         )
 
         # Make a boolean raster showing which pixels are within the given
@@ -325,20 +316,17 @@ def execute(args):
                 [(FILES['road_distance_path'], 1), (radius, 'raw')],
                 threshold_array,
                 FILES['near_road_path'],
-                gdal.GDT_Int16, 
-                NODATA),
+                gdal.GDT_Byte, 
+                UINT8_NODATA),
             target_path_list=[FILES['near_road_path']],
             task_name='find pixels within radius of road centerlines',
             dependent_task_list=[distance_task])
 
-        # Average the retention ratio values around each pixel
-        ratio_search_kernel = make_search_kernel(FILES['retention_ratio_path'],
-            radius)
         average_ratios_task = task_graph.add_task(
             func=raster_average,
             args=(
                 FILES['retention_ratio_path'],
-                ratio_search_kernel,
+                radius,
                 FILES['ratio_n_values_path'],
                 FILES['ratio_sum_path'],
                 FILES['ratio_average_path']),
@@ -354,12 +342,11 @@ def execute(args):
                     (FILES['retention_ratio_path'], 1), 
                     (FILES['ratio_average_path'], 1),
                     (FILES['near_impervious_lulc_path'], 1),
-                    (FILES['near_road_path'], 1)
-                ],
+                    (FILES['near_road_path'], 1)],
                 adjust_op, 
                 FILES['adjusted_retention_ratio_path'],
                 gdal.GDT_Float32, 
-                NODATA),
+                FLOAT_NODATA),
             target_path_list=[FILES['adjusted_retention_ratio_path']],
             task_name='adjust stormwater retention ratio',
             dependent_task_list=[retention_ratio_task, average_ratios_task, 
@@ -374,8 +361,7 @@ def execute(args):
     # Calculate stormwater retention volume from ratios and precipitation
     retention_volume_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=(
-            [
+        args=([
                 (final_retention_ratio_path, 1), 
                 (FILES['precipitation_aligned_path'], 1),
                 (precipitation_nodata, 'raw'),
@@ -383,7 +369,7 @@ def execute(args):
             volume_op, 
             FILES['retention_volume_path'], 
             gdal.GDT_Float32, 
-            NODATA),
+            FLOAT_NODATA),
         target_path_list=[FILES['retention_volume_path']],
         dependent_task_list=[align_task, final_retention_ratio_task],
         task_name='calculate stormwater retention volume'
@@ -414,7 +400,7 @@ def execute(args):
                 ratio_op, 
                 FILES['infiltration_ratio_path'], 
                 gdal.GDT_Float32, 
-                NODATA),
+                FLOAT_NODATA),
             target_path_list=[FILES['infiltration_ratio_path']],
             dependent_task_list=[align_task],
             task_name='calculate stormwater infiltration ratio'
@@ -429,7 +415,7 @@ def execute(args):
                 volume_op, 
                 FILES['infiltration_volume_path'], 
                 gdal.GDT_Float32, 
-                NODATA),
+                FLOAT_NODATA),
             target_path_list=[FILES['infiltration_volume_path']],
             dependent_task_list=[align_task, infiltration_ratio_task],
             task_name='calculate stormwater retention volume'
@@ -470,7 +456,7 @@ def execute(args):
                 avoided_pollutant_load_op,
                 avoided_pollutant_load_path,
                 gdal.GDT_Float32,
-                NODATA),
+                FLOAT_NODATA),
             target_path_list=[avoided_pollutant_load_path],
             dependent_task_list=[retention_volume_task],
             task_name=f'calculate avoided pollutant {pollutant} load'
@@ -484,15 +470,13 @@ def execute(args):
     if 'replacement_cost' in args and args['replacement_cost'] not in [None, '']:
         valuation_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=(
-                [
+            args=([
                     (FILES['retention_volume_path'], 1), 
-                    (float(args['replacement_cost']), 'raw')
-                ],
+                    (float(args['replacement_cost']), 'raw')],
                 retention_value_op, 
                 FILES['retention_value_path'], 
                 gdal.GDT_Float32, 
-                NODATA),
+                FLOAT_NODATA),
             target_path_list=[FILES['retention_value_path']],
             dependent_task_list=[retention_volume_task],
             task_name='calculate stormwater retention value'
@@ -538,14 +522,14 @@ def threshold_array(array, threshold):
 
     Args:
         array (numpy.ndarray): Array to threshold. It is assumed that 
-            the array's nodata value is the global NODATA.
+            the array's nodata value is the global FLOAT_NODATA.
         threshold (float): Threshold value to apply to the array.
 
     Returns:
         boolean numpy.ndarray
     """
-    out = numpy.full(array.shape, 0, dtype=numpy.int8)
-    valid_mask = ~numpy.isclose(array, NODATA)
+    out = numpy.full(array.shape, 0, dtype=numpy.uint8)
+    valid_mask = ~numpy.isclose(array, FLOAT_NODATA)
     out[valid_mask] = array[valid_mask] <= threshold
     return out
 
@@ -574,7 +558,8 @@ def ratio_op(lulc_array, lulc_nodata, soil_group_array, soil_group_nodata,
         ``soil_group_array``. Each value is the corresponding ratio for that
         LULC code x soil group pair.
     """
-    output_ratio_array = numpy.full(lulc_array.shape, NODATA)
+    output_ratio_array = numpy.full(lulc_array.shape, FLOAT_NODATA, 
+        dtype=numpy.float32)
     valid_mask = ((lulc_array != lulc_nodata) &
         (soil_group_array != soil_group_nodata))
     # the index of each lucode in the sorted lucodes array
@@ -591,7 +576,7 @@ def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
 
     Args:
         ratio_array (numpy.ndarray): 2D array of stormwater ratios. Assuming
-            that its nodata value is the global NODATA.
+            that its nodata value is the global FLOAT_NODATA.
         precip_array (numpy.ndarray): 2D array of precipitation amounts 
             in millimeters/year
         precip_nodata (float): nodata value for the precipitation array
@@ -600,9 +585,10 @@ def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
     Returns:
         2D numpy.ndarray of precipitation volumes in m^3/year
     """
-    volume_array = numpy.full(ratio_array.shape, NODATA, dtype=numpy.float32)
+    volume_array = numpy.full(ratio_array.shape, FLOAT_NODATA, 
+        dtype=numpy.float32)
     valid_mask = (
-        ~numpy.isclose(ratio_array, NODATA) & 
+        ~numpy.isclose(ratio_array, FLOAT_NODATA) & 
         ~numpy.isclose(precip_array, precip_nodata))
 
     # precipitation (mm/yr) * pixel area (m^2) * 
@@ -624,7 +610,8 @@ def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array,
         lulc_nodata (int): nodata value for the LULC array
         retention_volume_array (numpy.ndarray): 2D array of stormwater 
             retention volumes, with the same shape as ``lulc_array``. It is
-            assumed that the retention volume nodata value is the global NODATA
+            assumed that the retention volume nodata value is the global 
+            FLOAT_NODATA.
         sorted_lucodes (numpy.ndarray): 1D array of the LULC codes in order
             from smallest to largest
         emc_array (numpy.ndarray): 1D array of pollutant EMC values for each 
@@ -634,12 +621,12 @@ def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array,
     Returns:
         2D numpy.ndarray with the same shape as ``lulc_array``.
         Each value is the avoided pollutant load on that pixel in kg/yr,
-        or NODATA if any of the inputs have nodata on that pixel.
+        or FLOAT_NODATA if any of the inputs have nodata on that pixel.
     """
-    load_array = numpy.full(lulc_array.shape, NODATA, dtype=numpy.float32)
+    load_array = numpy.full(lulc_array.shape, FLOAT_NODATA, dtype=numpy.float32)
     valid_mask = (
         (lulc_array != lulc_nodata) &
-        ~numpy.isclose(retention_volume_array, NODATA))
+        ~numpy.isclose(retention_volume_array, FLOAT_NODATA))
 
     # bin each value in the LULC array such that 
     # lulc_array[i,j] == sorted_lucodes[lulc_index[i,j]]. thus, 
@@ -659,14 +646,16 @@ def retention_value_op(retention_volume_array, replacement_cost):
 
     Args:
         retention_volume_array (numpy.ndarray): 2D array of retention volumes.
-            Assumes that the retention volume nodata value is the global NODATA
+            Assumes that the retention volume nodata value is the global 
+            FLOAT_NODATA.
         replacement_cost (float): Replacement cost per cubic meter of water
 
     Returns:
         numpy.ndarray of retention values with the same dimensions as the input
     """
-    value_array = numpy.full(retention_volume_array.shape, NODATA, dtype=numpy.float32)
-    valid_mask = ~numpy.isclose(retention_volume_array, NODATA)
+    value_array = numpy.full(retention_volume_array.shape, FLOAT_NODATA, 
+        dtype=numpy.float32)
+    valid_mask = ~numpy.isclose(retention_volume_array, FLOAT_NODATA)
 
     # retention (m^3/yr) * replacement cost ($/m^3) = retention value ($/yr)
     value_array[valid_mask] = (
@@ -678,7 +667,7 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
         near_road_array):
     """Apply the retention ratio adjustment algorithm to an array of ratios. 
     This is meant to be used with raster_calculator. Assumes that the nodata
-    value for all four input arrays is the global NODATA.
+    value for all four input arrays is the global FLOAT_NODATA.
 
     Args:
         ratio_array (numpy.ndarray): 2D array of stormwater retention ratios
@@ -692,13 +681,15 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
         2D numpy array of adjusted retention ratios. Has the same shape as 
         ``retention_ratio_array``.
     """
-    adjusted_ratio_array = numpy.full(ratio_array.shape, NODATA, dtype=numpy.float32)
-    adjustment_factor_array = numpy.full(ratio_array.shape, NODATA, dtype=numpy.float32)
+    adjusted_ratio_array = numpy.full(ratio_array.shape, FLOAT_NODATA, 
+        dtype=numpy.float32)
+    adjustment_factor_array = numpy.full(ratio_array.shape, FLOAT_NODATA, 
+        dtype=numpy.float32)
     valid_mask = (
-        ~numpy.isclose(ratio_array, NODATA) &
-        ~numpy.isclose(avg_ratio_array, NODATA) &
-        (near_impervious_lulc_array != NODATA) &
-        (near_road_array != NODATA))
+        ~numpy.isclose(ratio_array, FLOAT_NODATA) &
+        ~numpy.isclose(avg_ratio_array, FLOAT_NODATA) &
+        (near_impervious_lulc_array != FLOAT_NODATA) &
+        (near_road_array != FLOAT_NODATA))
 
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
@@ -783,7 +774,7 @@ def is_near(input_path, search_kernel, output_path):
 
     Args:
         input_path (str): path to a boolean raster. It is assumed that this 
-            raster's nodata value is the global NODATA.
+            raster's nodata value is the global FLOAT_NODATA.
         search_kernel (numpy.ndarray): 2D numpy array to center on each pixel.
             Pixels that fall on a '1' in the search kernel are counted.
         output_path (str): path to write out the result raster. This is a 
@@ -798,7 +789,7 @@ def is_near(input_path, search_kernel, output_path):
     in_band = in_raster.GetRasterBand(1)
 
     pygeoprocessing.new_raster_from_base(
-        input_path, output_path, gdal.GDT_Int16, [NODATA])
+        input_path, output_path, gdal.GDT_Byte, [UINT8_NODATA])
     out_raster = gdal.OpenEx(output_path, gdal.OF_RASTER)
     out_band = out_raster.GetRasterBand(1)
  
@@ -810,20 +801,20 @@ def is_near(input_path, search_kernel, output_path):
             block['yoff'] - block['top_overlap'], 
             block['xsize'] + block['left_overlap'] + block['right_overlap'], 
             block['ysize'] + block['top_overlap'] + block['bottom_overlap'])
-        in_array[in_array == NODATA] = 0
+        in_array[in_array == FLOAT_NODATA] = 0
         padded_array = numpy.pad(in_array, 
             pad_width=(
                 (block['top_padding'], block['bottom_padding']), 
                 (block['left_padding'], block['right_padding'])), 
             mode='constant', 
             constant_values=0)
-        nodata_mask = padded_array[overlap:-overlap,overlap:-overlap] == NODATA
+        nodata_mask = padded_array[overlap:-overlap,overlap:-overlap] == FLOAT_NODATA
         # sum up the values that fall within the search kernel of each pixel
         is_near = scipy.signal.convolve(
             padded_array, 
             search_kernel, 
             mode='valid') > 0
-        is_near[nodata_mask] = NODATA
+        is_near[nodata_mask] = UINT8_NODATA
 
         out_band.WriteArray(is_near, xoff=block['xoff'], yoff=block['yoff'])
     in_raster, in_band, out_raster, out_band = None, None, None, None
@@ -944,143 +935,11 @@ def make_search_kernel(raster_path, radius):
     return search_kernel
 
 
-def make_coordinate_rasters(raster_path, x_output_path, y_output_path):
-    """Make coordinate rasters where each pixel value is the x/y coordinate
-    of that pixel's centerpoint in the raster coordinate system.
+def raster_average(raster_path, radius, n_values_path, sum_path, average_path):
+    """Average pixel values within a radius.
 
-    Args:
-        raster_path (str): raster to generate coordinates for
-        x_output_path (str): raster path to write out x coordinates
-        y_output_path (str): raster path to write out y coordinates
-
-    Returns:
-        None
-    """
-    raster_info = pygeoprocessing.get_raster_info(raster_path)
-    pixel_size_x, pixel_size_y = raster_info['pixel_size']
-    n_cols, n_rows = raster_info['raster_size']
-    x_origin = raster_info['geotransform'][0]
-    y_origin = raster_info['geotransform'][3]
-
-    # create the output rasters
-    pygeoprocessing.new_raster_from_base(
-        raster_path, x_output_path, gdal.GDT_Float32, [NODATA])
-    pygeoprocessing.new_raster_from_base(
-        raster_path, y_output_path, gdal.GDT_Float32, [NODATA])
-    x_raster = gdal.OpenEx(x_output_path, gdal.OF_RASTER)
-    y_raster = gdal.OpenEx(y_output_path, gdal.OF_RASTER)
-    x_band, y_band = x_raster.GetRasterBand(1), y_raster.GetRasterBand(1)
-
-    # can't use raster_calculator here because we need the block offset info
-    # calculate coords for each block and write them to the output rasters
-    for data, array in pygeoprocessing.iterblocks((raster_path, 1)):
-        y_coords, x_coords = numpy.indices(array.shape)
-        x_coords = (
-            (x_coords * pixel_size_x) +  # convert to pixel size in meters
-            (pixel_size_x / 2) +  # center the point on the pixel
-            (data['xoff'] * pixel_size_x) +   # the offset of this block relative to the raster
-            x_origin)  # the raster's offset relative to the coordinate system
-        y_coords = (
-            (y_coords * pixel_size_y) + 
-            (pixel_size_y / 2) +
-            (data['yoff'] * pixel_size_y) +
-            y_origin)
-
-        x_band.WriteArray(x_coords, xoff=data['xoff'], yoff=data['yoff'])
-        y_band.WriteArray(y_coords, xoff=data['xoff'], yoff=data['yoff'])
-    x_band, y_band, x_raster, y_raster = None, None, None, None
-
-
-def line_distance(x_coords, y_coords, x1, y1, x2, y2):
-    """Find the minimum distance from each array point to a line segment.
-
-    Args:
-        x_coords (numpy.ndarray): a 2D array where each element is the
-            x-coordinate of a point in the same coordinate system as the
-            line endpoints
-        y_coords (numpy.ndarray): a 2D array where each element is the
-            y-coordinate of a point in the same coordinate system as the
-            line endpoints
-        x1 (float): the x coord of the first endpoint of the line segment
-        y1 (float): the y coord of the first endpoint of the line segment
-        x2 (float): the x coord of the second endpoint of the line segment
-            ((x2, y2) can't be identical to (x1, y1))
-        y2 (float): the y coord of the second endpoint of the line segment
-            ((x2, y2) can't be identical to (x1, y1))
-
-    Returns:
-        numpy.ndarray with the same shape as x_coords and y_coords. The
-        value of an element at [a, b] is the minimum distance from the
-        point (x_coords[a, b], y_coords[a, b]) to the line segment from 
-        (x1, y1) to (x2, y2). 
-    """
-    # Using the algorithm from https://math.stackexchange.com/a/330329:
-    # Parameterize the line segment by parameter t, which represents how far
-    # along the line segment we are from endpoint 1 to endpoint 2.
-    # x(t) = x1 + t(x2 - x1)
-    # y(t) = y1 + t(y2 - y1)
-    # (x(t), y(t)) is on the segment when t ∈ [0, 1]
-
-    # the notation ⟨𝑝−𝑠1,𝑠2−𝑠1⟩ in the SE post means the dot product:
-    # (𝑝-𝑠1)·(𝑠2−𝑠1) = (x-x1)*(x2-x1) + (y-y1)*(y2-y1)
-    # the notation ‖𝑠2−𝑠1‖ means the pythagorean distance
-
-    # solve for the optimal value of t, such that the distance from
-    # (x_coord, y_coord) to (x(t), y(t)) is minimized
-    t_optimal = (
-        ((x_coords - x1) * (x2 - x1) + (y_coords - y1) * (y2 - y1)) / 
-        ((x2 - x1)**2 + (y2 - y1)**2))
-    # constrain t to the bounds of the line segment
-    t_in_bounds = numpy.minimum(numpy.maximum(t_optimal, 0), 1)
-    # solve for x(t) and y(t)
-    nearest_x_coords = x1 + t_in_bounds * (x2 - x1)
-    nearest_y_coords = y1 + t_in_bounds * (y2 - y1)
-    # find the distance from each (x_coord, y_coord) to (x(t), y(t))
-    distances = numpy.hypot(nearest_x_coords - x_coords, 
-        nearest_y_coords - y_coords)
-    return distances
-
-
-def iter_linestring_segments(vector_path):
-    """Yield (start, end) coordinate pairs for each segment of a linestring.
-
-    Args:
-        vector_path (str): path to a linestring vector to iterate over
-
-    Yields:
-        ((x1, y1), (x2, y2)) tuples representing the start and end point of a
-        linestring segment. (x1, y1) of the nth yielded tuple equals (x2, y2)
-        of the (n-1)th yielded tuple.
-    """
-    vector = gdal.OpenEx(vector_path)
-    layer = vector.GetLayer()
-    for feature in layer:
-        geometry = feature.GetGeometryRef()
-        geometry_name = geometry.GetGeometryName()
-        if geometry_name not in ['LINESTRING', 'MULTILINESTRING']:
-            raise AssertionError(f'{vector_path} contains a {geometry_name} geometry.'
-                'Allowed geometries: LINESTRING, MULTILINESTRING')
-
-        n_geometries = geometry.GetGeometryCount()
-        if n_geometries > 0:  # a multi type
-            geometries = [geometry.GetGeometryRef(i) for i in range(n_geometries)]
-        else:  # not a multi type
-            geometries = [geometry]
-
-        for geometry in geometries:
-            points = geometry.GetPoints()  # a list of (x, y) points
-            # iterate over each pair of points (each segment) in the linestring
-            for i in range(len(points) - 1):
-                x1, y1, *_ = points[i]
-                x2, y2, *_ = points[i + 1]
-                yield (x1, y1), (x2, y2)
-    layer, vector = None, None
-
-
-def raster_average(raster_path, search_kernel, n_values_path, sum_path, 
-        average_path):
-    """Average pixel values within a search kernel.
-
+    Make a search kernel where a pixel has '1' if its centerpoint is within 
+    the radius of the center pixel's centerpoint.
     For each pixel in a raster, center the search kernel on top of it. Then
     its "neighborhood" includes all the pixels that are below a '1' in the
     search kernel. Add up the neighborhood pixel values and divide by how 
@@ -1094,9 +953,9 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
 
     Args:
         raster_path (str): path to the raster to average. It is assumed that 
-            this raster's nodata value is the global NODATA.
-        search_kernel (numpy.ndarray): 2D numpy array to center on each pixel.
-            Pixels that are on a '1' in the search kernel are counted.
+            this raster's nodata value is the global FLOAT_NODATA.
+        radius (float): distance around each pixel to average in raster 
+            coordinate system units
         n_values_path (str): path to write out the number of valid pixels in 
             each pixel's neighborhood (this is the denominator in the average)
         sum_path (str): path to write out the sum of valid pixel values in 
@@ -1112,19 +971,23 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
 
     # create and open the output rasters
     pygeoprocessing.new_raster_from_base(
-        raster_path, n_values_path, gdal.GDT_Int16, [NODATA])
+        raster_path, n_values_path, gdal.GDT_UInt16, [UINT16_NODATA])
     pygeoprocessing.new_raster_from_base(
-        raster_path, sum_path, gdal.GDT_Float32, [NODATA])
+        raster_path, sum_path, gdal.GDT_Float32, [FLOAT_NODATA])
     n_values_raster = gdal.OpenEx(n_values_path, gdal.OF_RASTER)
     sum_raster = gdal.OpenEx(sum_path, gdal.OF_RASTER)
     n_values_band = n_values_raster.GetRasterBand(1)
     sum_band = sum_raster.GetRasterBand(1)
 
+     # Average the retention ratio values around each pixel
+    search_kernel = make_search_kernel(FILES['raster_path'],
+        radius)
+
     # calculate the sum and n_values of the neighborhood of each pixel
     # kernel is always centered on one pixel, so the dimensions are always odd
     overlap = int((search_kernel.shape[0] - 1) / 2)
     for block in overlap_iterblocks(raster_path, overlap):
-        ratio_array = band.ReadAsArray(
+        in_array = band.ReadAsArray(
             block['xoff'] - block['left_overlap'], 
             block['yoff'] - block['top_overlap'], 
             block['xsize'] + block['left_overlap'] + block['right_overlap'], 
@@ -1132,14 +995,15 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
 
         # the padded array shape will always be extended by 2*overlap
         # in both dimensions from the original iterblocks block
-        padded_array = numpy.pad(ratio_array, 
+        padded_array = numpy.pad(in_array, 
             pad_width=(
                 (block['top_padding'], block['bottom_padding']), 
                 (block['left_padding'], block['right_padding'])), 
             mode='constant', 
             constant_values=0)
-        nodata_mask = numpy.isclose(padded_array[overlap:-overlap,overlap:-overlap], NODATA)
-        padded_array[padded_array == NODATA] = 0
+        nodata_mask = numpy.isclose(
+            padded_array[overlap:-overlap,overlap:-overlap], FLOAT_NODATA)
+        padded_array[padded_array == FLOAT_NODATA] = 0
         
         # add up the valid pixel values in the neighborhood of each pixel
         # 'valid' mode includes only the pixels whose kernel doesn't extend
@@ -1148,10 +1012,10 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
             padded_array,
             search_kernel,
             mode='valid')
-        sum_array[nodata_mask] = NODATA
+        sum_array[nodata_mask] = FLOAT_NODATA
 
         # have to pad the array after 
-        valid_pixels = (ratio_array != NODATA).astype(int)
+        valid_pixels = (in_array != FLOAT_NODATA).astype(int)
         padded_valid_pixels = numpy.pad(valid_pixels, 
             pad_width=(
                 (block['top_padding'], block['bottom_padding']), 
@@ -1169,7 +1033,7 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
             padded_valid_pixels, 
             search_kernel, 
             mode='valid')
-        n_values_array[nodata_mask] = NODATA
+        n_values_array[nodata_mask] = UINT16_NODATA
         
         n_values_band.WriteArray(n_values_array, xoff=block['xoff'], yoff=block['yoff'])
         sum_band.WriteArray(sum_array, xoff=block['xoff'], yoff=block['yoff'])
@@ -1179,125 +1043,20 @@ def raster_average(raster_path, search_kernel, n_values_path, sum_path,
 
     # Calculate the pixel-wise average from the n_values and sum rasters
     def avg_op(n_values_array, sum_array):
-        average_array = numpy.full(n_values_array.shape, NODATA, dtype=numpy.float32)
+        average_array = numpy.full(n_values_array.shape, FLOAT_NODATA, 
+            dtype=numpy.float32)
         valid_mask = (
-            (n_values_array != NODATA) & 
+            (n_values_array != UINT16_NODATA) & 
             (n_values_array != 0) &
-            ~numpy.isclose(sum_array, NODATA))
+            ~numpy.isclose(sum_array, FLOAT_NODATA))
         average_array[n_values_array == 0] = 0
         average_array[valid_mask] = (
             sum_array[valid_mask] / n_values_array[valid_mask])
         return average_array
 
     pygeoprocessing.raster_calculator([(n_values_path, 1), (sum_path, 1)], 
-        avg_op, average_path, gdal.GDT_Float32, NODATA)
+        avg_op, average_path, gdal.GDT_Float32, FLOAT_NODATA)
 
-def optimized_linestring_distance(x_coords_path, y_coords_path, 
-        linestring_path, radius, out_path):
-    """Calculate distance to nearest linestring that could be within a radius.
-    Used to calculate a distance that will be thresholded to a radius later.
-
-    NOTE: This algorithm does not produce the distance to the nearest linestring,
-    only the distance to the nearest linestring which could be within ``radius`` away.
-    This is an optimization that helps avoid calculating each point's distance to 
-    line segments that are not going to be within the radius anyway. (
-    will be thresholded later).
-    The algorithm uses a spatial index that stores the bounding box of each
-    linestring segment, padded by ``radius``. It iterates by memory blocks over 
-    the x- and y-coord rasters.
-    For each point in the memory block, it calculates the minimum distance 
-    *only to those line segments whose padded bounding box intersects the memory block
-    bounding box*.
-    Because of this, the output raster does not have a smooth distance gradient.
-    Sharp lines may appear along block edges. This is expected and a feature of the
-    optimization, and when thresholded to ``radius`` the results are the same.
-    See `test_spatial_index_distance` in the test suite for verification.
-
-    This algorithm was tested against a non-optimized version that simply gets
-    the distance from each point to every line segment. The spatial index 
-    optimization proved to be faster even with a single large line segment.
-
-    A variation of this algorithm was tested which looks up each point in the line 
-    segment index, rather than each memory block bounding box, further minimizing 
-    the number of unnecessary distance calculations. That variation was very slow.
-    It would probably only be better if you had millions of line segments. 
-
-    Args:
-        x_coords_path (str): path to a raster where each pixel value is 
-            the x coordinate of that pixel's centerpoint in the raster 
-            coordinate system.
-        y_coords_path (str): path to a raster where each pixel value is 
-            the y coordinate of that pixel's centerpoint in the raster 
-            coordinate system.
-        linestring_path (str): path to a linestring/multilinestring vector
-        radius (float): distance in raster coordinate system units which the 
-            output distance raster will be thresholded to in the future.
-            This is used to optimize the algorithm.
-        out_path (str): raster path to write out the distance results
-
-    Returns:
-        None
-    """
-    index = rtree.index.Index(interleaved=True)
-    segments = {}
-    for i, ((x1, y1), (x2, y2)) in enumerate(iter_linestring_segments(
-            linestring_path)):
-        segments[i] = ((x1, y1), (x2, y2))
-        x_min, y_min = min(x1, x2) - radius, min(y1, y2) - radius
-        x_max, y_max = max(x1, x2) + radius, max(y1, y2) + radius
-        index.insert(i, (x_min, y_min, x_max, y_max))
-
-    # Open the x_coords and y_coords rasters for reading
-    x_coord_raster = gdal.OpenEx(x_coords_path, gdal.OF_RASTER)
-    x_coord_band = x_coord_raster.GetRasterBand(1)
-    y_coord_raster = gdal.OpenEx(y_coords_path, gdal.OF_RASTER)
-    y_coord_band = y_coord_raster.GetRasterBand(1)
-    # Create and open the output raster for writing
-    pygeoprocessing.new_raster_from_base(
-        x_coords_path, out_path, gdal.GDT_Float32, [NODATA])
-    out_raster = gdal.OpenEx(out_path, gdal.OF_RASTER)
-    out_band = out_raster.GetRasterBand(1)
-
-    # Assuming that the x_coords and y_coords rasters have identical properties
-    raster_info = pygeoprocessing.get_raster_info(x_coords_path)
-    x_origin = raster_info['geotransform'][0]
-    y_origin = raster_info['geotransform'][3]
-    x_pixel_size, y_pixel_size = raster_info['pixel_size']
-    # iterate blockwise over the x_coords and y_coords
-    # need to use iterblocks here because we need the block offsets
-    for block in pygeoprocessing.iterblocks((x_coords_path, 1), offset_only=True):
-        x_coords = x_coord_band.ReadAsArray(**block)
-        y_coords = y_coord_band.ReadAsArray(**block)
-        # xoff, yoff are not necessarily smaller than xoff+xsize, yoff+ysize
-        # get min and max to look up in rtree index
-        x_edges = (
-            x_origin + block['xoff'] * x_pixel_size, 
-            x_origin + (block['xoff'] + block['win_xsize']) * x_pixel_size)
-        y_edges = (
-            y_origin + block['yoff'] * y_pixel_size,
-            y_origin + (block['yoff'] + block['win_ysize']) * y_pixel_size)
-        block_bbox = (
-            min(*x_edges),
-            min(*y_edges),
-            max(*x_edges),
-            max(*y_edges))
-        # Get all the line segments whose padded bounding box intersects the block
-        # These are all the line segments that could be within the radius of
-        # any point in the block.
-        line_ids = index.intersection(block_bbox)
-        
-        # Find each point's minimum distance to a line segment
-        min_distance_array = numpy.full(x_coords.shape, numpy.inf)
-        for line_id in line_ids:
-            (x1, y1), (x2, y2) = segments[line_id]
-            distance_array = line_distance(x_coords, y_coords, x1, y1, 
-                x2, y2)
-            min_distance_array = numpy.minimum(min_distance_array, distance_array)
-        min_distance_array[min_distance_array == numpy.inf] = NODATA
-        # Write out the minimum distance block to the output raster
-        out_band.WriteArray(min_distance_array, xoff=block['xoff'], yoff=block['yoff'])
-    out_band, out_raster = None, None
-        
 
 @validation.invest_validator
 def validate(args):
