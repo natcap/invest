@@ -28,6 +28,8 @@ preventing react-devtools from integrating with the electron browser's devtools 
 
 ## To package this app for distribution  
 
+`npm run fetch-invest` - downloads invest binaries and updates the sampledata_registry.json.
+
 `npm run build`  - calls babel to transpile ES6 and jsx code to commonjs; moves other resources (CSS, JSON) to the build directory
 
 `npm run dist`  - packages build source into an electron application using electron-builder. Configure the build in `electron-builder-config.js`.  

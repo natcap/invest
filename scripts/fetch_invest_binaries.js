@@ -111,7 +111,9 @@ async function updateSampledataRegistry() {
       registry.Models[model].url = dataItems[filename].mediaLink;
       registry.Models[model].filesize = dataItems[filename].size;
     } catch {
-      throw new Error(`no item found for ${filename} in ${JSON.stringify(dataItems, null, 2)}`);
+      throw new Error(
+        `no item found for ${filename} in ${JSON.stringify(dataItems, null, 2)}`
+      );
     }
   });
 
@@ -127,7 +129,14 @@ async function updateSampledataRegistry() {
     return;
   }
   fs.writeFileSync(
-    path.join(__dirname, '../src/sampledata_registry.json'), JSON.stringify(registry, null, 2)
+    path.join(__dirname, '../src/sampledata_registry.json'),
+    JSON.stringify(registry, null, 2)
+  );
+  // build.js does this copy also, but doing it here too so that
+  // it doesn't matter if this script is run before or after build.js
+  fs.copyFileSync(
+    path.join(__dirname, '../src/sampledata_registry.json'),
+    path.join(__dirname, '../build/sampledata_registry.json')
   );
   console.log('sample data registry was updated. Please review the changes and commit them');
 }
