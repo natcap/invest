@@ -265,10 +265,10 @@ input[type=text]::placeholder {
 	margin-left: 1rem;
 }
 
-/*.form-check-label {
+.form-check-label {
 	padding-left: 0.5rem;
 	padding-right: 1rem;
-}*/
+}
 
 .invalid-feedback {
 	font-size: 1.15rem;
