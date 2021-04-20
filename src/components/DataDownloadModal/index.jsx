@@ -117,11 +117,10 @@ export class DataDownloadModal extends React.Component {
         ).toFixed(2) + ' MB';
         const labelSuffix = sampledataRegistry.Models[modelName].labelSuffix || '';
         DatasetCheckboxRows.push(
-          <tr>
+          <tr key={modelName}>
             <td>
               <Form.Check
                 className="pt-1"
-                key={modelName}
                 id={modelName}
               >
                 <Form.Check.Input
