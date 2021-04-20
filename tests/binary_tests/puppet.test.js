@@ -192,18 +192,25 @@ test('Run a real invest model', async () => {
 // The test is that the subprocess exits within a certain reasonable timeout.
 // Also verify that window 1 has focus.
 test('App re-launch will exit and focus on first instance', async () => {
-  await waitFor(() => {
-    expect(BROWSER.isConnected()).toBeTruthy();
-  });
+  if (process.platform === 'win32') {
+      await waitFor(() => {
+      expect(BROWSER.isConnected()).toBeTruthy();
+    });
 
-  // Open another instance of the Workbench application.
-  // This should return quickly.  The test timeout is there in case the new i
-  // process hangs for some reason.
-  const otherElectronProcess = spawnSync(
-    `"${BINARY_PATH}"`, [`--remote-debugging-port=${PORT}`],
-    { shell: true }
-  );
+    // Open another instance of the Workbench application.
+    // This should return quickly.  The test timeout is there in case the new i
+    // process hangs for some reason.
+    const otherElectronProcess = spawnSync(
+      `"${BINARY_PATH}"`, [`--remote-debugging-port=${PORT}`],
+      { shell: true }
+    );
 
-  // When another instance is already open, we expect an exit code of 1.
-  expect(otherElectronProcess.status).toBe(1);
+    // When another instance is already open, we expect an exit code of 1.
+    expect(otherElectronProcess.status).toBe(1);
+  } else {
+    // Single instance lock caused the app to crash on macOS, and also
+    // is less important because mac generally won't open multiple instances
+    console.log("Skipping this test because we're not on Windows");
+  }
+
 });
