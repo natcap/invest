@@ -18,7 +18,7 @@ import {
   DataDownloadModal, DownloadProgressBar
 } from './components/DataDownloadModal';
 import {
-  saveSettingsStore, getAllSettings, getDefaultSettings,
+  saveSettingsStore, getAllSettings,
 } from './components/SettingsModal/SettingsStorage';
 import { getInvestModelNames } from './server_requests';
 import { getLogger } from './logger';
@@ -58,11 +58,6 @@ export default class App extends React.Component {
     const investList = await getInvestModelNames();
     const recentJobs = await InvestJob.getJobStore();
     const investSettings = await getAllSettings();
-
-    // let didAskForSampleData = false;
-    // if (investSettings.sampleDataDir) {
-    //   didAskForSampleData = true;
-    // }
 
     this.setState({
       investList: investList,
