@@ -129,7 +129,7 @@ test('Run a real invest model', async () => {
     const downloadModalCancel = await findByRole(
       doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
     );
-    downloadModalCancel.click();
+    await downloadModalCancel.click();
   } catch (error) {
     if (!error.message.startsWith(
       'Evaluation failed: Error: Unable to find'
@@ -137,7 +137,10 @@ test('Run a real invest model', async () => {
       throw error;
     }
   }
-  const investTable = await findByRole(doc, 'table');
+  // Resorting to a class selector because we have two tables to differentiate
+  // Also, need to get the modelButton from w/in this table because there are
+  // buttons with the same name in the Recent Jobs container.
+  const investTable = await page.$('.invest-list-table');
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}2-models-list.png` });
 
   // Setting up Recreation model because it has very few data requirements

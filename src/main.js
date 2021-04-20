@@ -224,9 +224,8 @@ const createWindow = async () => {
 };
 
 // calling requestSingleInstanceLock on mac causes a crash
-console.log(process.platform);
 if (process.platform.startsWith('win')) {
-  console.log('Windows detected, requesting single instance lock');
+  logger.info('Windows detected, requesting single instance lock');
   // Single instance lock so subsequent instances of the application redirect to
   // the already-open one.
   // Adapted from https://www.electronjs.org/docs/api/app#apprequestsingleinstancelock
