@@ -62,8 +62,12 @@ function downloadAndUnzipBinaries(src, dest) {
       unzip.on('close', (code) => {
         if (code === 0) {
           fs.unlinkSync(dest);
+        } else {
+          throw new Error(code);
         }
       });
+    } else {
+      throw new Error(code);
     }
   });
 }
