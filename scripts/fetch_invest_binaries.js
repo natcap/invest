@@ -59,6 +59,11 @@ function downloadAndUnzipBinaries(src, dest) {
       unzip.stderr.on('data', (data) => {
         console.log(`${data}`);
       });
+      unzip.on('close', (code) => {
+        if (code === 0) {
+          fs.unlinkSync(dest);
+        }
+      });
     }
   });
 }
@@ -149,6 +154,7 @@ if (process.argv[2] && process.argv[2] === 'sampledata') {
   let willDownload = true;
   const ext = (process.platform === 'win32') ? '.exe' : '';
   const investExe = `build/invest/invest${ext}`;
+
   try {
     const investVersion = execFileSync(investExe, ['--version']);
     if (`${investVersion}`.trim(os.EOL) === VERSION) {
