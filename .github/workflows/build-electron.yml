@@ -47,10 +47,17 @@ jobs:
       if: github.event_name != 'pull_request'
       uses: google-github-actions/setup-gcloud@v0.2.0
       with:
-          version: '281.0.0'
-          service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+        version: '281.0.0'
+        service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-    - name: Fetch InVEST Binaries
+    - name: Fetch InVEST Binaries - Windows
+      if: matrix.os == 'windows-latest'
+      env:
+        CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
+      run: npm run fetch-invest
+
+    - name: Fetch InVEST Binaries - Mac
+      if: matrix.os == 'macos-latest'
       run: npm run fetch-invest
 
     - name: Run the build script
