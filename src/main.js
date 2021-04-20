@@ -113,6 +113,7 @@ const createWindow = async () => {
       additionalArguments: [
         ELECTRON_DEV_MODE ? '--dev' : 'packaged'
       ],
+      defaultEncoding: 'UTF-8',
     },
   });
   const menubar = Menu.buildFromTemplate(
@@ -158,40 +159,45 @@ const createWindow = async () => {
   });
 };
 
-// Single instance lock so subsequent instances of the application redirect to
-// the already-open one.
-// Adapted from https://www.electronjs.org/docs/api/app#apprequestsingleinstancelock
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-  // If we don't get the lock, then we assume another instance has the lock.
-  logger.info('Another instance already has the application lock; exiting');
-  app.exit(1);
-} else {
-  // On mac, it's possible to bypass above single instance constraint by
-  // launching the app through the CLI.  If this happens, focus on the main
-  // window.
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore();
+// calling requestSingleInstanceLock on mac causes a crash
+console.log(process.platform);
+if (process.platform.startsWith('win')) {
+  console.log('Windows detected, requesting single instance lock');
+  // Single instance lock so subsequent instances of the application redirect to
+  // the already-open one.
+  // Adapted from https://www.electronjs.org/docs/api/app#apprequestsingleinstancelock
+  const gotTheLock = app.requestSingleInstanceLock();
+  if (!gotTheLock) {
+    // If we don't get the lock, then we assume another instance has the lock.
+    logger.info('Another instance already has the application lock; exiting');
+    app.exit(1);
+  } else {
+    // On mac, it's possible to bypass above single instance constraint by
+    // launching the app through the CLI.  If this happens, focus on the main
+    // window.
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.focus();
       }
-      mainWindow.focus();
-    }
-  });
-
-  // This method will be called when Electron has finished
-  // initialization and is ready to create browser windows.
-  // Some APIs can only be used after this event occurs.
-  app.on('ready', createWindow);
-
-  app.on('activate', () => {
-    // On OS X it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (mainWindow === null) {
-      createWindow();
-    }
-  });
+    });
+  }
 }
+
+// This method will be called when Electron has finished
+// initialization and is ready to create browser windows.
+// Some APIs can only be used after this event occurs.
+app.on('ready', createWindow);
+
+app.on('activate', () => {
+  // On OS X it's common to re-create a window in the app when the
+  // dock icon is clicked and there are no other windows open.
+  if (mainWindow === null) {
+    createWindow();
+  }
+});
 
 // Quit when all windows are closed.
 app.on('window-all-closed', async () => {
