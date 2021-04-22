@@ -4,7 +4,7 @@ import math
 import os
 
 import numpy
-from osgeo import gdal, ogr
+from osgeo import gdal, ogr, osr
 import pygeoprocessing
 import taskgraph
 
@@ -236,26 +236,23 @@ def execute(args):
     # up with their indices in the array. this is more efficient than
     # decrementing the whole soil group array by 1.
     retention_ratio_array = numpy.array([
-        [numpy.nan] + [1 - biophysical_dict[lucode][f'rc_{soil_group}']
-                       for soil_group in ['a', 'b', 'c', 'd']
-                       ] for lucode in sorted_lucodes
+        [1 - biophysical_dict[lucode][f'rc_{soil_group}']
+            for soil_group in ['a', 'b', 'c', 'd']
+        ] for lucode in sorted_lucodes
     ], dtype=numpy.float32)
 
     # Calculate stormwater retention ratio and volume from
     # LULC, soil groups, biophysical data, and precipitation
     retention_ratio_task = task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([
-            (files['lulc_aligned_path'], 1),
-            (lulc_nodata, 'raw'),
-            (files['soil_group_aligned_path'], 1),
-            (soil_group_nodata, 'raw'),
-            (retention_ratio_array, 'raw'),
-            (sorted_lucodes, 'raw')],
-            ratio_op,
-            files['retention_ratio_path'],
-            gdal.GDT_Float32,
-            FLOAT_NODATA),
+        func=lookup_ratios,
+        args=(
+            files['lulc_aligned_path'],
+            lulc_nodata,
+            files['soil_group_aligned_path'],
+            soil_group_nodata,
+            retention_ratio_array,
+            sorted_lucodes,
+            files['retention_ratio_path']),
         target_path_list=[files['retention_ratio_path']],
         dependent_task_list=[align_task],
         task_name='calculate stormwater retention ratio'
@@ -405,22 +402,19 @@ def execute(args):
              ] for lucode in sorted_lucodes
         ], dtype=numpy.float32)
         infiltration_ratio_task = task_graph.add_task(
-            func=pygeoprocessing.raster_calculator,
-            args=([
-                (files['lulc_aligned_path'], 1),
-                (lulc_nodata, 'raw'),
-                (files['soil_group_aligned_path'], 1),
-                (soil_group_nodata, 'raw'),
-                (infiltration_ratio_array, 'raw'),
-                (sorted_lucodes, 'raw')],
-                ratio_op,
-                files['infiltration_ratio_path'],
-                gdal.GDT_Float32,
-                FLOAT_NODATA),
+            func=lookup_ratios,
+            args=(
+                files['lulc_aligned_path'],
+                lulc_nodata,
+                files['soil_group_aligned_path'],
+                soil_group_nodata,
+                infiltration_ratio_array,
+                sorted_lucodes,
+                files['infiltration_ratio_path']),
             target_path_list=[files['infiltration_ratio_path']],
             dependent_task_list=[align_task],
-            task_name='calculate stormwater infiltration ratio'
-        )
+            task_name='calculate stormwater infiltration ratio')
+
         infiltration_volume_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
@@ -530,27 +524,8 @@ def execute(args):
     task_graph.join()
 
 
-def threshold_array(array, threshold):
-    """Return a boolean array where 1 means less than or equal to the
-    threshold value. Assume that nodata areas in the array are above
-    the threshold.
-
-    Args:
-        array (numpy.ndarray): Array to threshold. It is assumed that
-            the array's nodata value is the global FLOAT_NODATA.
-        threshold (float): Threshold value to apply to the array.
-
-    Returns:
-        boolean numpy.ndarray
-    """
-    out = numpy.full(array.shape, 0, dtype=numpy.uint8)
-    valid_mask = ~numpy.isclose(array, FLOAT_NODATA)
-    out[valid_mask] = array[valid_mask] <= threshold
-    return out
-
-
-def ratio_op(lulc_array, lulc_nodata, soil_group_array, soil_group_nodata,
-             ratio_lookup, sorted_lucodes):
+def lookup_ratios(lulc_path, lulc_nodata, soil_group_path, soil_group_nodata,
+             ratio_lookup, sorted_lucodes, output_path):
     """Make an array of stormwater retention or infiltration ratios from
     arrays of LULC codes and hydrologic soil groups.
 
@@ -562,28 +537,41 @@ def ratio_op(lulc_array, lulc_nodata, soil_group_array, soil_group_nodata,
             groups A, B, C, and D.
         soil_group_nodata (int): nodata value for the soil group array
         ratio_lookup (numpy.ndarray): 2D array where rows correspond to
-            sorted LULC codes and columns 1, 2, 3, 4 correspond to soil groups
-            A, B, C, D in order. Shape: (number of lulc codes, 5). Column 0
-            is ignored, it's just there so that the existing soil group array
-            values line up with their indexes.
+            sorted LULC codes and the 4 columns correspond to soil groups
+            A, B, C, D in order. Shape: (number of lulc codes, 4).
         sorted_lucodes (list[int]): List of LULC codes sorted from smallest
             to largest. These correspond to the rows of ``ratio_lookup``.
+        output_path (str): path to a raster to write out the result. has the
+            same shape as the lulc and soil group rasters. Each value is the
+            corresponding ratio for that LULC code x soil group pair.
 
     Returns:
-        2D numpy array with the same shape as ``lulc_array`` and
-        ``soil_group_array``. Each value is the corresponding ratio for that
-        LULC code x soil group pair.
+        2D numpy array
     """
-    output_ratio_array = numpy.full(lulc_array.shape, FLOAT_NODATA,
-                                    dtype=numpy.float32)
-    valid_mask = ((lulc_array != lulc_nodata) &
-                  (soil_group_array != soil_group_nodata))
-    # the index of each lucode in the sorted lucodes array
-    lulc_index = numpy.digitize(lulc_array[valid_mask], sorted_lucodes,
-                                right=True)
-    output_ratio_array[valid_mask] = ratio_lookup[lulc_index,
-                                                  soil_group_array[valid_mask]]
-    return output_ratio_array
+    # insert a column on the left side of the array so that the soil
+    # group codes 1-4 line up with their indexes. this is faster than
+    # decrementing every value in a large raster.
+    ratio_lookup = numpy.insert(ratio_lookup, 0,
+        numpy.zeros(ratio_lookup.shape[0]), axis=1)
+
+    def ratio_op(lulc_array, soil_group_array):
+        output_ratio_array = numpy.full(lulc_array.shape, FLOAT_NODATA,
+            dtype=numpy.float32)
+        valid_mask = ((lulc_array != lulc_nodata) &
+                      (soil_group_array != soil_group_nodata))
+        # the index of each lucode in the sorted lucodes array
+        lulc_index = numpy.digitize(lulc_array[valid_mask], sorted_lucodes,
+                                    right=True)
+        output_ratio_array[valid_mask] = ratio_lookup[lulc_index,
+            soil_group_array[valid_mask]]
+        return output_ratio_array
+
+    pygeoprocessing.raster_calculator(
+        [(lulc_path, 1), (soil_group_path, 1)],
+        ratio_op,
+        output_path,
+        gdal.GDT_Float32,
+        FLOAT_NODATA)
 
 
 def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
@@ -875,19 +863,31 @@ def raster_average(raster_path, radius, kernel_path, out_path):
     neighborhood don't count towards the total (denominator in the average).
     """
     search_kernel = make_search_kernel(raster_path, radius)
-    # create and open the output raster and save the kernel to it
-    pygeoprocessing.new_raster_from_base(
-        raster_path, kernel_path, gdal.GDT_Byte, [UINT8_NODATA])
-    kernel_raster = gdal.OpenEx(kernel_path, gdal.OF_RASTER)
-    kernel_band = kernel_raster.GetRasterBand(1)
-    kernel_band.WriteArray(search_kernel)
-    kernel_band, kernel_raster = None, None
+
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(3857)
+    projection_wkt = srs.ExportToWkt()
+    pygeoprocessing.numpy_array_to_raster(
+        search_kernel,
+        UINT8_NODATA,
+        (20, -20),
+        (0, 0),
+        projection_wkt,
+        kernel_path)
+
+    # # create and open the output raster and save the kernel to it
+    # pygeoprocessing.new_raster_from_base(
+    #     raster_path, kernel_path, gdal.GDT_Byte, [UINT8_NODATA])
+    # kernel_raster = gdal.OpenEx(kernel_path, gdal.OF_UPDATE)
+    # kernel_band = kernel_raster.GetRasterBand(1)
+    # kernel_band.WriteArray(search_kernel)
+    # kernel_band, kernel_raster = None, None
 
     # convolve the signal (input raster) with the kernel and normalize
     # this is equivalent to taking an average of each pixel's neighborhood
     pygeoprocessing.convolve_2d(
-        raster_path,
-        kernel_path,
+        (raster_path, 1),
+        (kernel_path, 1),
         out_path,
         # pixels with nodata or off the edge of the raster won't count towards
         # the sum or the number of values to normalize by
@@ -896,7 +896,7 @@ def raster_average(raster_path, radius, kernel_path, out_path):
         normalize_kernel=True,
         # output will have nodata where ratio_path has nodata
         mask_nodata=True,
-        target_dtype=gdal.GDT_Float32,
+        target_datatype=gdal.GDT_Float32,
         target_nodata=FLOAT_NODATA)
 
 

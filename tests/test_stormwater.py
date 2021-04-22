@@ -1,6 +1,7 @@
 import functools
 import math
 import os
+import shutil
 import tempfile
 import unittest
 from unittest import mock
@@ -11,6 +12,15 @@ import pandas
 import pygeoprocessing
 
 
+def to_raster(array, path, nodata=-1, pixel_size=(20, -20), origin=(0, 0),
+        epsg=3857):
+    """Wrapper around pygeoprocessing.numpy_array_to_raster setting defaults"""
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(epsg)
+    projection_wkt = srs.ExportToWkt()
+    pygeoprocessing.numpy_array_to_raster(array, nodata, pixel_size,
+        origin, projection_wkt, path)
+
 def mock_iterblocks(*args, **kwargs):
     """Mock function for pygeoprocessing.iterblocks that yields custom blocks.
 
@@ -20,7 +30,7 @@ def mock_iterblocks(*args, **kwargs):
         yoffs (list[int]): list of y-offsets for each block in order
         ysizes (list[int]): list of heights for each block in order
 
-        For python 3.7 compatibility, these have to be extracted from the 
+        For python 3.7 compatibility, these have to be extracted from the
         kwargs dictionary (can't have keyword-only arguments).
 
     Yields:
@@ -28,12 +38,13 @@ def mock_iterblocks(*args, **kwargs):
         that have the same meaning as in pygeoprocessing.iterblocks.
     """
     for yoff, ysize in zip(kwargs['yoffs'], kwargs['ysizes']):
-        for xoff, xsize in zip(kwargs['xoffs'],kwargs['xsizes']):
+        for xoff, xsize in zip(kwargs['xoffs'], kwargs['xsizes']):
             yield {
-                'xoff': xoff, 
+                'xoff': xoff,
                 'yoff': yoff,
                 'win_xsize': xsize,
                 'win_ysize': ysize}
+
 
 def random_array(shape, low=0, high=1, nodata=None, p_nodata=0.2, precision=2):
     """Generate a random array useful as made-up raster data.
@@ -78,45 +89,55 @@ class StormwaterTests(unittest.TestCase):
         """Stormwater: basic model run"""
         from natcap.invest import stormwater
 
-        # generate 4 unique lucodes
-        lucodes = numpy.random.choice(20, size=4, replace=False)
-        biophysical_table = pandas.DataFrame()
-        biophysical_table['lucode'] = lucodes
-        biophysical_table['EMC_pollutant1'] = random_array((4,), high=10)
-
         # In practice RC_X + IR_X <= 1, but they are independent in the model,
         # so ignoring that constraint for convenience.
-        for header in ['RC_A', 'RC_B', 'RC_C', 'RC_D', 'IR_A', 'IR_B', 
-                'IR_C', 'IR_D']:
-            biophysical_table[header] = random_array((4,))
+        biophysical_dict = {
+            'lucode': [0, 1, 11, 12],
+            'EMC_pollutant1': [2.55, 0, 1, 5],
+            'RC_A': [0, 0.15, 0.1, 1],
+            'RC_B': [0, 0.25, 0.2, 1],
+            'RC_C': [0, 0.35, 0.3, 1],
+            'RC_D': [0, 0.45, 0.4, 1],
+            'IR_A': [0, 0.55, 0.5, 1],
+            'IR_B': [0, 0.65, 0.6, 1],
+            'IR_C': [0, 0.75, 0.7, 1],
+            'IR_D': [0, 0.85, 0.8, 1]
 
-        biophysical_table = biophysical_table.set_index(['lucode'])
-        retention_cost = numpy.random.randint(0, 30, dtype=numpy.uint8)
+        }
+        biophysical_table = pandas.DataFrame(
+            biophysical_dict).set_index(['lucode'])
+        retention_cost = 2.53
 
-        lulc_array = numpy.random.choice(lucodes, size=(10, 10)).astype(numpy.int8)
-        soil_group_array = numpy.random.choice([1, 2, 3, 4], size=(10, 10)).astype(numpy.int8)
-        precipitation_array = random_array((10, 10), high=50)
-
+        lulc_array = numpy.array([
+            [0,  0,  0,  0],
+            [1,  1,  1,  1],
+            [11, 11, 11, 11],
+            [12, 12, 12, 12]], dtype=numpy.uint8)
+        soil_group_array = numpy.array([
+            [1, 2, 3, 4],
+            [1, 2, 3, 4],
+            [1, 2, 3, 4],
+            [1, 2, 3, 4]], dtype=numpy.uint8)
+        precipitation_array = numpy.array([
+            [0,    0,    0,    0],
+            [0,    0,    0,    0],
+            [12.5, 12.5, 12.5, 12.5],
+            [12.5, 12.5, 12.5, 12.5]], dtype=numpy.float32)
         lulc_path = os.path.join(self.workspace_dir, 'lulc.tif')
         soil_group_path = os.path.join(self.workspace_dir, 'soil_group.tif')
-        precipitation_path = os.path.join(self.workspace_dir, 'precipitation.tif')
-        biophysical_table_path = os.path.join(self.workspace_dir, 'biophysical.csv')
+        precipitation_path = os.path.join(
+            self.workspace_dir, 'precipitation.tif')
+        biophysical_table_path = os.path.join(
+            self.workspace_dir, 'biophysical.csv')
 
-        # set up a spatial reference and raster properties
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3857)
-        projection_wkt = srs.ExportToWkt()
-        origin = (-10300000, 5610000)
         pixel_size = (20, -20)
-        nodata = -1
-
+        pixel_area = abs(pixel_size[0] * pixel_size[1])
         # save each dataset to a file
         for (array, path) in [
-            (lulc_array, lulc_path), 
-            (soil_group_array, soil_group_path), 
+            (lulc_array, lulc_path),
+            (soil_group_array, soil_group_path),
             (precipitation_array, precipitation_path)]:
-            pygeoprocessing.numpy_array_to_raster(array, nodata, pixel_size, 
-                origin, projection_wkt, path)
+            to_raster(array, path, pixel_size=pixel_size)
         biophysical_table.to_csv(biophysical_table_path)
 
         args = {
@@ -133,7 +154,6 @@ class StormwaterTests(unittest.TestCase):
         }
 
         soil_group_codes = {1: 'A', 2: 'B', 3: 'C', 4: 'D'}
-        pixel_area = abs(pixel_size[0] * pixel_size[1])
 
         stormwater.execute(args)
 
@@ -148,11 +168,14 @@ class StormwaterTests(unittest.TestCase):
         retention_raster = gdal.OpenEx(retention_volume_path, gdal.OF_RASTER)
         retention_volume = retention_raster.GetRasterBand(1).ReadAsArray()
 
-        infiltration_raster = gdal.OpenEx(infiltration_volume_path, gdal.OF_RASTER)
-        infiltration_volume = infiltration_raster.GetRasterBand(1).ReadAsArray()
+        infiltration_raster = gdal.OpenEx(
+            infiltration_volume_path, gdal.OF_RASTER)
+        infiltration_volume = infiltration_raster.GetRasterBand(
+            1).ReadAsArray()
 
         avoided_pollutant_raster = gdal.OpenEx(pollutant_path, gdal.OF_RASTER)
-        avoided_pollutant_load = avoided_pollutant_raster.GetRasterBand(1).ReadAsArray()
+        avoided_pollutant_load = avoided_pollutant_raster.GetRasterBand(
+            1).ReadAsArray()
 
         retention_value_raster = gdal.OpenEx(value_path, gdal.OF_RASTER)
         retention_value = retention_value_raster.GetRasterBand(1).ReadAsArray()
@@ -166,19 +189,24 @@ class StormwaterTests(unittest.TestCase):
 
                 rc_value = biophysical_table[f'RC_{soil_group_codes[soil_group]}'][lulc]
 
-                # precipitation (mm/yr) * 0.001 (m/mm) * pixel area (m^2) = m^3/yr
-                volume = retention_volume[row, col]
-                expected_volume = (1 - rc_value) * precipitation * 0.001 * pixel_area
-                numpy.testing.assert_allclose(volume, expected_volume)
+                # precipitation (mm/yr) * 0.001 (m/mm) * pixel area (m^2) =
+                # m^3/yr
+                actual_volume = retention_volume[row, col]
+                expected_volume = (1 - rc_value) * \
+                    precipitation * 0.001 * pixel_area
+                print(1 - rc_value, precipitation, pixel_area)
+                numpy.testing.assert_allclose(actual_volume, expected_volume,
+                    rtol=1e-6)
 
                 # retention (m^3/yr) * cost ($/m^3) = value ($/yr)
-                value = retention_value[row, col]
+                actual_value = retention_value[row, col]
                 expected_value = expected_volume * retention_cost
-                numpy.testing.assert_allclose(value, expected_value)
+                numpy.testing.assert_allclose(actual_value, expected_value,
+                    rtol=1e-6)
 
         for row in range(infiltration_volume.shape[0]):
             for col in range(infiltration_volume.shape[1]):
-                
+
                 soil_group = soil_group_array[row][col]
                 lulc = lulc_array[row][col]
                 precipitation = precipitation_array[row][col]
@@ -186,84 +214,85 @@ class StormwaterTests(unittest.TestCase):
                 ir_value = biophysical_table[f'IR_{soil_group_codes[soil_group]}'][lulc]
 
                 # precipitation (mm/yr) * 0.001 (m/mm) * pixel area (m^2) = m^3
-                expected_volume = (ir_value) * precipitation * 0.001 * pixel_area
-                numpy.testing.assert_allclose(infiltration_volume[row][col], expected_volume)
+                expected_volume = (ir_value) * \
+                    precipitation * 0.001 * pixel_area
+                numpy.testing.assert_allclose(infiltration_volume[row][col],
+                    expected_volume, rtol=1e-6)
 
         for row in range(avoided_pollutant_load.shape[0]):
             for col in range(avoided_pollutant_load.shape[1]):
-                
+
                 lulc = lulc_array[row, col]
                 retention = retention_volume[row, col]
                 emc = biophysical_table['EMC_pollutant1'][lulc]
 
-                # retention (m^3/yr) * emc (mg/L) * 1000 (L/m^3) * 0.000001 (kg/mg) = kg/yr
+                # retention (m^3/yr) * emc (mg/L) * 1000 (L/m^3) * 0.000001
+                # (kg/mg) = kg/yr
                 avoided_load = avoided_pollutant_load[row, col]
                 expected_avoided_load = retention * emc * 0.001
-                numpy.testing.assert_allclose(avoided_load, expected_avoided_load)
+                numpy.testing.assert_allclose(avoided_load,
+                    expected_avoided_load, rtol=1e-6)
 
-    def test_threshold_array(self):
-        """Stormwater: test array thresholding function"""
-        from natcap.invest import stormwater
-
-        x_size, y_size = 5, 5
-        threshold = numpy.random.rand()  # a random value in [0, 1)
-        array = random_array((y_size, x_size), nodata=stormwater.NODATA)
-
-        out = stormwater.threshold_array(array, threshold)
-
-        for y in range(y_size):
-            for x in range(x_size):
-                if array[x,y] == stormwater.NODATA:
-                    self.assertEqual(out[x,y], stormwater.NODATA)
-                elif array[x,y] > threshold:
-                    self.assertEqual(out[x,y], 0)
-                else:
-                    self.assertEqual(out[x,y], 1)
-
-    def test_ratio_op(self):
-        """Stormwater: test ratio_op function"""
+    def test_lookup_ratios(self):
+        """Stormwater: test lookup_ratios function"""
         from natcap.invest import stormwater
 
         sorted_lucodes = [10, 11, 12, 13]
         lulc_array = numpy.array([
             [13, 12],
-            [11, 10]])
+            [11, 10]], dtype=numpy.uint8)
         soil_group_array = numpy.array([
             [4, 4],
-            [2, 2]])
+            [2, 2]], dtype=numpy.uint8)
+        lulc_nodata = 255
+        soil_group_nodata = 255
+        lulc_path = os.path.join(self.workspace_dir, 'lulc.tif')
+        soil_group_path = os.path.join(self.workspace_dir, 'soil_groups.tif')
+        output_path = os.path.join(self.workspace_dir, 'out.tif')
+        to_raster(lulc_array, lulc_path)
+        to_raster(soil_group_array, soil_group_path)
+        # rows correspond to sorted lucodes, columns to soil groups A-D
         ratio_array = numpy.array([
             [0.11, 0.12, 0.13, 0.14],
             [0.21, 0.22, 0.23, 0.24],
             [0.31, 0.32, 0.33, 0.34],
             [0.41, 0.42, 0.43, 0.44]])
-        expected_ratios = numpy.array([
+        expected_output = numpy.array([
             [0.44, 0.34],
             [0.22, 0.12]])
-        output_ratios = stormwater.ratio_op(
-            lulc_array, soil_group_array, ratio_array, sorted_lucodes)
-        numpy.testing.assert_allclose(expected_ratios, output_ratios)
+        stormwater.lookup_ratios(
+            lulc_path,
+            lulc_nodata,
+            soil_group_path,
+            soil_group_nodata,
+            ratio_array,
+            sorted_lucodes,
+            output_path)
+        actual_output = pygeoprocessing.raster_to_numpy_array(output_path)
+        numpy.testing.assert_allclose(expected_output, actual_output)
 
     def test_volume_op(self):
         """Stormwater: test volume_op function"""
         from natcap.invest import stormwater
 
         x_size, y_size = 5, 5
-        ratio_array = random_array((y_size, x_size), nodata=stormwater.NODATA)
+        ratio_array = random_array((y_size, x_size), nodata=stormwater.FLOAT_NODATA)
         precip_nodata = -1 * numpy.random.rand()
-        precip_array = random_array((y_size, x_size), high=100, nodata=precip_nodata)
+        precip_array = random_array(
+            (y_size, x_size), high=100, nodata=precip_nodata)
         pixel_area = numpy.random.rand() * 1000
 
-        out = stormwater.volume_op(ratio_array, precip_array, precip_nodata, 
+        out = stormwater.volume_op(ratio_array, precip_array, precip_nodata,
             pixel_area)
         # precip (mm/yr) * area (m^2) * 0.001 (m/mm) * ratio = volume (m^3/yr)
         for y in range(y_size):
             for x in range(x_size):
-                if (ratio_array[y,x] == stormwater.NODATA or 
-                        precip_array[y,x] == precip_nodata):
-                    numpy.testing.assert_allclose(out[y,x], stormwater.NODATA)
+                if (ratio_array[y, x] == stormwater.FLOAT_NODATA or
+                        precip_array[y, x] == precip_nodata):
+                    numpy.testing.assert_allclose(out[y, x], stormwater.FLOAT_NODATA)
                 else:
-                    numpy.testing.assert_allclose(out[y,x], 
-                        precip_array[y,x] * ratio_array[y,x] * pixel_area / 1000)
+                    numpy.testing.assert_allclose(out[y, x],
+                        precip_array[y, x] * ratio_array[y, x] * pixel_area / 1000)
 
     def test_avoided_pollutant_load_op(self):
         """Stormwater: test avoided_pollutant_load_op function"""
@@ -271,9 +300,9 @@ class StormwaterTests(unittest.TestCase):
 
         shape = 5, 5
         lulc_nodata = -1
-        lulc_array = random_array(shape, nodata=lulc_nodata, high=3, 
+        lulc_array = random_array(shape, nodata=lulc_nodata, high=3,
             precision=0).astype(int)
-        retention_volume_array = random_array(shape, nodata=stormwater.NODATA, 
+        retention_volume_array = random_array(shape, nodata=stormwater.FLOAT_NODATA,
             high=1000)
         sorted_lucodes = numpy.array([0, 1, 2, 3])
         emc_array = random_array((4,), high=10)
@@ -282,88 +311,69 @@ class StormwaterTests(unittest.TestCase):
             retention_volume_array, sorted_lucodes, emc_array)
         for y in range(shape[0]):
             for x in range(shape[1]):
-                if (lulc_array[y,x] == lulc_nodata or 
-                        retention_volume_array[y,x] == stormwater.NODATA):
-                    numpy.testing.assert_allclose(out[y,x], stormwater.NODATA)
+                if (lulc_array[y, x] == lulc_nodata or
+                        retention_volume_array[y, x] == stormwater.FLOAT_NODATA):
+                    numpy.testing.assert_allclose(out[y, x], stormwater.FLOAT_NODATA)
                 else:
-                    emc_value = emc_array[lulc_array[y,x]]
-                    expected = emc_value * retention_volume_array[y,x] / 1000
-                    numpy.testing.assert_allclose(out[y,x], expected)
+                    emc_value = emc_array[lulc_array[y, x]]
+                    expected = emc_value * retention_volume_array[y, x] / 1000
+                    numpy.testing.assert_allclose(out[y, x], expected)
 
     def test_retention_value_op(self):
         """Stormwater: test retention_value_op function"""
         from natcap.invest import stormwater
 
         shape = 5, 5
-        retention_volume_array = random_array(shape, nodata=stormwater.NODATA, 
+        retention_volume_array = random_array(shape, nodata=stormwater.FLOAT_NODATA,
             high=1000)
         replacement_cost = numpy.random.rand() * 20  # a reasonable range of costs
 
-        out = stormwater.retention_value_op(retention_volume_array, 
+        out = stormwater.retention_value_op(retention_volume_array,
             replacement_cost)
         for y in range(shape[0]):
             for x in range(shape[1]):
-                if (retention_volume_array[y,x] == stormwater.NODATA):
-                    numpy.testing.assert_allclose(out[y,x], stormwater.NODATA)
+                if (retention_volume_array[y, x] == stormwater.FLOAT_NODATA):
+                    numpy.testing.assert_allclose(out[y, x], stormwater.FLOAT_NODATA)
                 else:
-                    numpy.testing.assert_allclose(out[y,x], 
-                        retention_volume_array[y,x] * replacement_cost)
+                    numpy.testing.assert_allclose(out[y, x],
+                        retention_volume_array[y, x] * replacement_cost)
 
-    def test_impervious_op(self):
-        """Stormwater: test impervious_op function"""
-        from natcap.invest import stormwater
-
-        shape = 5, 5
-        lulc_nodata = -1
-        lulc_array = random_array(shape, nodata=lulc_nodata, high=3, 
-            precision=0).astype(int)
-        sorted_lucodes = numpy.array([0, 1, 2, 3])
-        impervious_lookup_array = random_array((4,), precision=0) # 0s and 1s
-
-        out = stormwater.impervious_op(lulc_array, lulc_nodata, sorted_lucodes,
-            impervious_lookup_array)
-        for y in range(shape[0]):
-            for x in range(shape[1]):
-                if (lulc_array[y,x] == lulc_nodata):
-                    self.assertEqual(out[y,x], stormwater.NODATA)
-                else:
-                    is_impervious = impervious_lookup_array[lulc_array[y,x]]
-                    self.assertEqual(out[y,x], is_impervious)
 
     def test_adjust_op(self):
         """Stormwater: test adjust_op function"""
         from natcap.invest import stormwater
 
         shape = 10, 10
-        ratio_array = random_array(shape, nodata=stormwater.NODATA)
-         # these are obv not averages from the above array but
+        ratio_array = random_array(shape, nodata=stormwater.FLOAT_NODATA)
+        # these are obv not averages from the above array but
         # it doesn't matter for this test
-        avg_ratio_array = random_array(shape, nodata=stormwater.NODATA)
+        avg_ratio_array = random_array(shape, nodata=stormwater.FLOAT_NODATA)
         # boolean 0/1 arrays
-        near_impervious_lulc_array = random_array(shape, precision=0, 
-            nodata=stormwater.NODATA).astype(int)
-        near_road_centerline_array = random_array(shape, precision=0, 
-            nodata=stormwater.NODATA).astype(int)
+        near_impervious_lulc_array = random_array(shape, precision=0,
+            nodata=stormwater.FLOAT_NODATA).astype(int)
+        near_road_centerline_array = random_array(shape, precision=0,
+            nodata=stormwater.FLOAT_NODATA).astype(int)
 
-        out = stormwater.adjust_op(ratio_array, avg_ratio_array, 
+        out = stormwater.adjust_op(ratio_array, avg_ratio_array,
             near_impervious_lulc_array, near_road_centerline_array)
         for y in range(shape[0]):
             for x in range(shape[1]):
-                if (ratio_array[y,x] == stormwater.NODATA or
-                    avg_ratio_array[y,x] == stormwater.NODATA or
-                    near_impervious_lulc_array[y,x] == stormwater.NODATA or
-                    near_road_centerline_array[y,x] == stormwater.NODATA):
-                    numpy.testing.assert_allclose(out[y,x], stormwater.NODATA)
+                if (ratio_array[y, x] == stormwater.FLOAT_NODATA or
+                    avg_ratio_array[y, x] == stormwater.FLOAT_NODATA or
+                    near_impervious_lulc_array[y, x] == stormwater.FLOAT_NODATA or
+                        near_road_centerline_array[y, x] == stormwater.FLOAT_NODATA):
+                    numpy.testing.assert_allclose(out[y, x], stormwater.FLOAT_NODATA)
                 else:
                     # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
                     adjust_factor = (
                         0 if (
-                            near_impervious_lulc_array[y,x] or 
-                            near_road_centerline_array[y,x]
-                        ) else avg_ratio_array[y,x])
-                    adjusted = (
-                        ratio_array[y,x] + (1 - ratio_array[y,x]) * adjust_factor)
-                    numpy.testing.assert_allclose(out[y,x], adjusted)
+                            near_impervious_lulc_array[y, x] or
+                            near_road_centerline_array[y, x]
+                        ) else avg_ratio_array[y, x])
+                    adjusted = (ratio_array[y, x] +
+                        (1 - ratio_array[y, x]) * adjust_factor)
+                    numpy.testing.assert_allclose(out[y, x], adjusted,
+                        rtol=1e-6)
 
     def test_is_near(self):
         """Stormwater: test is_near function"""
@@ -373,14 +383,15 @@ class StormwaterTests(unittest.TestCase):
             [1, 0, 1, 0, 0, 0],
             [0, 0, 0, 0, 0, 1]
         ], dtype=numpy.uint8)
-        search_kernel = numpy.array([
-            [0, 1, 0],
-            [1, 1, 1],
-            [0, 1, 0]], dtype=numpy.uint8)
+        radius = 1  # 1 pixel
+        # search kernel:
+        # [0, 1, 0],
+        # [1, 1, 1],
+        # [0, 1, 0]
         # convolution sum array:
-        # 1, 1, 2, 1, 0, 0
-        # 1, 1, 2, 1, 0, 1
-        # 1, 0, 1, 0, 1, 1
+        # [1, 1, 2, 1, 0, 0],
+        # [1, 1, 2, 1, 0, 1],
+        # [1, 0, 1, 0, 1, 1]
         # expected is_near array: sum > 0
         expected = numpy.array([
             [1, 1, 1, 1, 0, 0],
@@ -389,82 +400,18 @@ class StormwaterTests(unittest.TestCase):
         ])
 
         connected_path = os.path.join(self.workspace_dir, 'connected.tif')
+        distance_path = os.path.join(self.workspace_dir, 'distance.tif')
         out_path = os.path.join(self.workspace_dir, 'near_connected.tif')
+        to_raster(is_connected_array, connected_path, pixel_size=(10, -10))
 
-        # set up an arbitrary spatial reference
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3857)
-        projection_wkt = srs.ExportToWkt()
-        pygeoprocessing.numpy_array_to_raster(is_connected_array, -1, 
-            (10, -10), (0, 0), projection_wkt, connected_path)
-
-        mocked = functools.partial(mock_iterblocks, 
+        mocked = functools.partial(mock_iterblocks,
             yoffs=[0], ysizes=[3], xoffs=[0, 3], xsizes=[3, 3])
-        with mock.patch('natcap.invest.stormwater.pygeoprocessing.iterblocks', 
+        with mock.patch('natcap.invest.stormwater.pygeoprocessing.iterblocks',
                 mocked):
-            stormwater.is_near(connected_path, search_kernel, out_path)
+            stormwater.is_near(connected_path, radius, distance_path, out_path)
             actual = pygeoprocessing.raster_to_numpy_array(out_path)
+            print(actual)
             numpy.testing.assert_equal(expected, actual)
-
-    def test_overlap_iterblocks(self):
-        """Stormwater: test overlap_iterblocks function"""
-        from natcap.invest import stormwater
-
-        raster_path = os.path.join(self.workspace_dir, 'iterblocks_array.tif')
-        array = numpy.array([
-            [1, 1, 1, 1, 1, 2],
-            [1, 1, 1, 1, 1, 2],
-            [1, 1, 1, 1, 1, 2],
-            [1, 1, 1, 1, 1, 2],
-            [1, 1, 1, 1, 1, 2],
-            [3, 3, 3, 3, 3, 4]
-        ], dtype=numpy.int8)
-
-        # set up an arbitrary spatial reference and save the array to a raster
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3857)
-        projection_wkt = srs.ExportToWkt()
-        pygeoprocessing.numpy_array_to_raster(
-            array, -1, (10, -10), (0, 0), projection_wkt, raster_path)
-
-        mocked = functools.partial(mock_iterblocks,
-            xoffs=[0], xsizes=[6], yoffs=[0], ysizes=[6])
-        with mock.patch(
-            'natcap.invest.stormwater.pygeoprocessing.iterblocks', 
-            mocked):
-            blocks = list(stormwater.overlap_iterblocks(raster_path, 2))
-            self.assertEqual(blocks, [{
-                'xoff': 0, 'yoff': 0, 'xsize': 6, 'ysize': 6,
-                'top_overlap': 0, 'left_overlap': 0, 'bottom_overlap': 0, 'right_overlap': 0,
-                'top_padding': 2, 'left_padding': 2, 'bottom_padding': 2, 'right_padding': 2
-            }])
-
-        mocked = functools.partial(mock_iterblocks,
-            xoffs=[0, 5], xsizes=[5, 1], yoffs=[0, 5], ysizes=[5, 1])
-        with mock.patch('natcap.invest.stormwater.pygeoprocessing.iterblocks', 
-                mocked):
-            blocks = list(stormwater.overlap_iterblocks(raster_path, 2))
-
-            self.assertEqual(blocks, [{
-                'xoff': 0, 'yoff': 0, 'xsize': 5, 'ysize': 5,
-                'top_overlap': 0, 'left_overlap': 0, 'bottom_overlap': 1, 'right_overlap': 1,
-                'top_padding': 2, 'left_padding': 2, 'bottom_padding': 1, 'right_padding': 1
-            },
-            {
-                'xoff': 5, 'yoff': 0, 'xsize': 1, 'ysize': 5,
-                'top_overlap': 0, 'left_overlap': 2, 'bottom_overlap': 1, 'right_overlap': 0,
-                'top_padding': 2, 'left_padding': 0, 'bottom_padding': 1, 'right_padding': 2
-            },
-            {
-                'xoff': 0, 'yoff': 5, 'xsize': 5, 'ysize': 1,
-                'top_overlap': 2, 'left_overlap': 0, 'bottom_overlap': 0, 'right_overlap': 1,
-                'top_padding': 0, 'left_padding': 2, 'bottom_padding': 2, 'right_padding': 1
-            },
-            {
-                'xoff': 5, 'yoff': 5, 'xsize': 1, 'ysize': 1,
-                'top_overlap': 2, 'left_overlap': 2, 'bottom_overlap': 0, 'right_overlap': 0,
-                'top_padding': 0, 'left_padding': 0, 'bottom_padding': 2, 'right_padding': 2
-            }])
 
     def test_make_search_kernel(self):
         """Stormwater: test make_search_kernel function"""
@@ -472,12 +419,7 @@ class StormwaterTests(unittest.TestCase):
 
         array = numpy.zeros((10, 10))
         path = os.path.join(self.workspace_dir, 'make_search_kernel.tif')
-        # set up an arbitrary spatial reference
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3857)
-        projection_wkt = srs.ExportToWkt()
-        pygeoprocessing.numpy_array_to_raster(array, -1, (10, -10), 
-            (0, 0), projection_wkt, path)
+        to_raster(array, path, pixel_size=(10, -10))
 
         expected_5 = numpy.array([[1]])
         actual_5 = stormwater.make_search_kernel(path, 5)
@@ -501,152 +443,6 @@ class StormwaterTests(unittest.TestCase):
         actual_15 = stormwater.make_search_kernel(path, 15)
         numpy.testing.assert_equal(expected_15, actual_15)
 
-
-    def test_nearest_linestring(self):
-        """Stormwater: test nearest_linestring function"""
-        from natcap.invest import stormwater
-
-        base_path = os.path.join(self.workspace_dir, 'coord_base.tif')
-        x_coords_path = os.path.join(self.workspace_dir, 'x_coords.tif')
-        y_coords_path = os.path.join(self.workspace_dir, 'y_coords.tif')
-        linestring_path = os.path.join(self.workspace_dir, 'linestring.gpkg')
-        out_path = os.path.join(self.workspace_dir, 'distance.tif')
-        expected_distance_path = os.path.join(self.workspace_dir, 'expected_distance.tif')
-        actual_distance_path = os.path.join(self.workspace_dir, 'actual_distance.tif')
-
-        # set up an arbitrary spatial reference
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3857)
-        projection_wkt = srs.ExportToWkt()
-        raster_size = 1000, 1000
-        n_points = 10
-        nodata = -1
-        radius = numpy.random.randint(1, 1000)
-        pixel_size = numpy.random.randint(1, 500)
-        origin = (numpy.random.randint(-1000, 1000), numpy.random.randint(-1000, 1000))
-
-        base_array = numpy.zeros(raster_size)
-        pygeoprocessing.numpy_array_to_raster(base_array, nodata, 
-            (pixel_size, pixel_size), origin, projection_wkt, base_path)
-        stormwater.make_coordinate_rasters(base_path, x_coords_path, y_coords_path)
-
-        # Randomly generate some points to make a linestring
-        linestring = ogr.Geometry(ogr.wkbLineString)
-        for i in range(n_points):
-            # make the linestring on the same region and scale as the raster,
-            # but not necessarily perfectly overlapping
-            linestring.AddPoint(
-                numpy.random.randint(-1000*pixel_size, 1000*pixel_size), 
-                numpy.random.randint(-1000*pixel_size, 1000*pixel_size))
-        # Write the linestring to a gpkg file
-        driver = ogr.GetDriverByName('GPKG')
-        vector = driver.CreateDataSource(linestring_path)
-        layer = vector.CreateLayer("1", geom_type=ogr.wkbLineString)
-        feature_def = layer.GetLayerDefn()
-        feature = ogr.Feature(feature_def)
-        feature.SetGeometry(linestring)
-        layer.CreateFeature(feature)
-        feature, layer, vector = None, None, None
-        
-        # This is a simpler implementation of the distance algorithm that
-        # doesn't have the spatial index optimization.
-        # Note that this and the optimized algorithm both rely on 
-        # `iter_linestring_segments` and `line_distance`, which are
-        # tested separately.
-        # This just tests that the optimized and non-optimized version,
-        # when thresholded, give the same result.
-        def nearest_linestring_op(x_coords, y_coords, linestring_path):
-            """Calculate the distance from each pixel centerpoint to the nearest
-            linestring in a vector. This is intended to be used with raster_calculator.
-
-            Args:
-                x_coords (numpy.ndarray): 2D array where each pixel value is the 
-                    x coordinate of that pixel in the raster coordinate system
-                y_coords (numpy.ndarray): 2D array where each pixel value is the 
-                    y coordinate of that pixel in the raster coordinate system
-                linestring_path (str): path to a linestring/multilinestring vector
-
-            Returns:
-                2D numpy.ndarray of the same shape as `x_coords` and `y_coords`.
-                Each pixel value is the distance from that pixel's centerpoint to
-                the nearest linestring in the vector at ``linestring_path``.
-            """
-            segment_generator = stormwater.iter_linestring_segments(linestring_path)
-            (x1, y1), (x2, y2) = next(segment_generator)
-            min_distance = stormwater.line_distance(x_coords, y_coords, x1, y1, x2, y2)
-
-            for (x1, y1), (x2, y2) in segment_generator:
-                if x2 == x1 and y2 == y1:
-                    continue  # ignore lines with length 0
-                distance = stormwater.line_distance(x_coords, y_coords, x1, y1, x2, y2)
-                min_distance = numpy.minimum(min_distance, distance)
-            return min_distance
-
-        pygeoprocessing.raster_calculator([
-                (x_coords_path, 1), 
-                (y_coords_path, 1), 
-                (linestring_path, 'raw')
-            ], nearest_linestring_op, expected_distance_path, gdal.GDT_Float32, nodata)
-        stormwater.optimized_linestring_distance(x_coords_path, y_coords_path, 
-            linestring_path, radius, actual_distance_path)
-
-        # these are not the same
-        expected_distance_array = pygeoprocessing.raster_to_numpy_array(expected_distance_path)
-        actual_distance_array = pygeoprocessing.raster_to_numpy_array(actual_distance_path)
-        # these should be the same
-        expected_thresholded = stormwater.threshold_array(expected_distance_array, radius)
-        actual_thresholded = stormwater.threshold_array(actual_distance_array, radius)
-        # the expected will not have nodata areas. the actual will because of the
-        # optimization skipping some blocks. treat nodata as 0 for this purpose.
-        actual_thresholded[actual_thresholded == nodata] = 0
-        numpy.testing.assert_allclose(expected_thresholded, actual_thresholded)
-
-    def test_line_distance(self):
-        """Stormwater: test line_distance function"""
-        from natcap.invest import stormwater
-
-        x_start, y_start = 100, -100
-        x_stop, y_stop = 200, 0
-
-        width, height = 11, 11
-
-        # Generate x- and y- coordinate arrays of shape (height, width)
-        x_coord_series = numpy.linspace(x_start, x_stop, num=width)
-        y_coord_series = numpy.linspace(y_start, y_stop, num=height)
-        # repeat the x-coord series for each row in height
-        x_coords = numpy.tile(x_coord_series, (height, 1))
-        # repeat the y-coord series for each column in width
-        y_coords = numpy.tile(numpy.array([y_coord_series]).T, (1, width))  
-
-        # this is a line segment that's below the coordinate block and
-        # parallel to the y-axis. so for all points, their shortest distance 
-        # will be the distance to the point (x1, y1).
-        (x1, y1), (x2, y2) = (150, 50), (150, 100)
-        distances = stormwater.line_distance(
-            x_coords, y_coords, x1, y1, x2, y2)
-        expected_distances = numpy.hypot(x_coords - x1, y_coords - y1)
-        numpy.testing.assert_allclose(distances, expected_distances)
-
-        # this segment is to the left of the coordinate block and parallel to 
-        # the x-axis, so for all points, their shortest distance will be the 
-        # distance to the point (x2, y2).
-        (x1, y1), (x2, y2) = (0, 50), (50, 50)
-        distances = stormwater.line_distance(
-            x_coords, y_coords, x1, y1, x2, y2)
-        expected_distances = numpy.hypot(x_coords - x2, y_coords - y2)
-        numpy.testing.assert_allclose(distances, expected_distances)
-
-        # this is a line segment that goes diagonally through the cooridnate
-        # block. (must be a square)
-        (x1, y1), (x2, y2) = (x_start, y_start), (x_stop, y_stop)
-        distances = stormwater.line_distance(
-            x_coords, y_coords, x1, y1, x2, y2)
-        # in a square grid, any point (x, y)'s distance from the diagonal is
-        # |y - x| * sqrt(2) / 2
-        expected_distances = (numpy.abs(numpy.abs(y_coords - y_start) - 
-            numpy.abs(x_coords - x_start)) * math.sqrt(2) / 2)
-        numpy.testing.assert_allclose(distances, expected_distances)
-
     def test_raster_average(self):
         """Stormwater: test raster_average function"""
         from natcap.invest import stormwater
@@ -658,40 +454,19 @@ class StormwaterTests(unittest.TestCase):
         array[:, 149] = nodata
 
         data_path = os.path.join(self.workspace_dir, 'data.tif')
-        # set up an arbitrary spatial reference
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3857)
-        projection_wkt = srs.ExportToWkt()
-        pygeoprocessing.numpy_array_to_raster(array, nodata, (10, -10), 
-            (0, 0), projection_wkt, data_path)
+        kernel_path = os.path.join(self.workspace_dir, 'kernel.tif')
+        average_path = os.path.join(self.workspace_dir, 'average.tif')
+        to_raster(array, data_path, pixel_size=(10, -10))
+        stormwater.raster_average(data_path, 11, kernel_path, average_path)
 
-        search_kernel = numpy.array([
+        expected_kernel = numpy.array([
             [0, 1, 0],
             [1, 1, 1],
             [0, 1, 0]])
-        n_values_path = os.path.join(self.workspace_dir, 'n_values.tif')
-        sum_path = os.path.join(self.workspace_dir, 'sum.tif')
-        average_path = os.path.join(self.workspace_dir, 'average.tif')
+        actual_kernel = pygeoprocessing.raster_to_numpy_array(kernel_path)
+        numpy.testing.assert_equal(actual_kernel, expected_kernel)
 
-        stormwater.raster_average(data_path, search_kernel, n_values_path, 
-            sum_path, average_path)
-
-        n_values_array = pygeoprocessing.raster_to_numpy_array(n_values_path)
-        sum_array = pygeoprocessing.raster_to_numpy_array(sum_path)
-        average_array = pygeoprocessing.raster_to_numpy_array(average_path)
-
-        expected_n_values = numpy.full((150, 150), 5)
-        expected_n_values[0] = 4
-        expected_n_values[-1] = 4
-        expected_n_values[:, 0] = 4
-        expected_n_values[:, -2] = 4
-        expected_n_values[:, -1] = nodata
-        expected_n_values[0, 0] = 3
-        expected_n_values[0, -2] = 3
-        expected_n_values[-1, 0] = 3
-        expected_n_values[-1, -2] = 3
-        numpy.testing.assert_equal(n_values_array, expected_n_values)
-
+        actual_average = pygeoprocessing.raster_to_numpy_array(average_path)
         expected_average = numpy.empty((150, 150))
         expected_average[:, 0:127] = 10
         expected_average[:, 127] = 12
@@ -702,4 +477,4 @@ class StormwaterTests(unittest.TestCase):
         expected_average[-1, 128] = 17.5
         expected_average[:, 129:149] = 20
         expected_average[:, 149] = -1
-        numpy.testing.assert_allclose(average_array, expected_average)
+        numpy.testing.assert_allclose(actual_average, expected_average)
