@@ -868,8 +868,9 @@ def raster_average(raster_path, radius, kernel_path, out_path):
     srs.ImportFromEPSG(3857)
     projection_wkt = srs.ExportToWkt()
     pygeoprocessing.numpy_array_to_raster(
-        search_kernel,
-        UINT8_NODATA,
+        # float32 here to avoid pygeoprocessing bug issue #180
+        search_kernel.astype(numpy.float32),
+        FLOAT_NODATA,
         (20, -20),
         (0, 0),
         projection_wkt,
