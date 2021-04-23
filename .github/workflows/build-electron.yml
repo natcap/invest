@@ -33,11 +33,9 @@ jobs:
     - name: NPM Install
       run: npm install
 
-    # Steps that use github secrets do not run in pull requests.
-    # These include codesigning & GCS deploy-related things.
     - name: Set up Python for gsutil
       # gsutil requires a python, which is not included on Windows
-      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
+      if: matrix.os == 'windows-latest'
       uses: actions/setup-python@v2
       with:
         python-version: 3.7
