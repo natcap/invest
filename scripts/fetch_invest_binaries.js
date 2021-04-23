@@ -1,5 +1,6 @@
 const os = require('os');
 const fs = require('fs');
+const https = require('https');
 const path = require('path');
 const url = require('url');
 const fetch = require('node-fetch');
@@ -33,7 +34,8 @@ const DESTFILE = path.join(
   __dirname, `../build/version_${VERSION}_${SRCFILE}`
 );
 const SRC_URL = url.resolve(
-  'gs://', path.join(BUCKET, REPO, FORK, VERSION, SRCFILE)
+  'https://storage.googleapis.com',
+  path.join(BUCKET, REPO, FORK, VERSION, SRCFILE)
 );
 
 /**
@@ -43,15 +45,17 @@ const SRC_URL = url.resolve(
  * @param  {string} dest - local path for saving the file
  */
 function downloadAndUnzipBinaries(src, dest) {
-  const cp = exec(`gsutil cp ${src} ${dest}`);
-  cp.stdout.on('data', (data) => {
-    console.log(`${data}`);
-  });
-  cp.stderr.on('data', (data) => {
-    console.log(`${data}`);
-  });
-  cp.on('close', (code) => {
-    if (code === 0) {
+  fs.existsSync(path.dirname(dest)) || fs.mkdirSync(path.dirname(dest));
+  const fileStream = fs.createWriteStream(dest);
+  https.get(src, (response) => {
+    console.log(`http status: ${response.statusCode}`);
+    if (response.statusCode !== 200) {
+      fileStream.close();
+      return;
+    }
+    response.pipe(fileStream);
+    fileStream.on('finish', () => {
+      fileStream.close();
       const unzip = exec(`unzip -o ${dest} -d build/invest/`);
       unzip.stdout.on('data', (data) => {
         console.log(`${data}`);
@@ -66,9 +70,9 @@ function downloadAndUnzipBinaries(src, dest) {
           throw new Error(code);
         }
       });
-    } else {
-      throw new Error(code);
-    }
+    });
+  }).on('error', (e) => {
+    console.log(e);
   });
 }
 
