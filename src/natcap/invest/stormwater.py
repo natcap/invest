@@ -118,10 +118,13 @@ INTERMEDIATE_OUTPUTS = {
     'reprojected_centerlines_path': 'reprojected_centerlines.gpkg',
     'rasterized_centerlines_path': 'rasterized_centerlines.tif',
     'impervious_lulc_path': 'is_impervious_lulc.tif',
+    'retention_ratio_path': 'retention_ratio.tif',
     'adjusted_retention_ratio_path': 'adjusted_retention_ratio.tif',
     'x_coords_path': 'x_coords.tif',
     'y_coords_path': 'y_coords.tif',
     'road_distance_path': 'road_distance.tif',
+    'search_kernel_path': 'search_kernel.tif',
+    'impervious_lulc_distance_path': 'impervious_lulc_distance.tif',
     'near_impervious_lulc_path': 'near_impervious_lulc.tif',
     'near_road_path': 'near_road.tif',
     'ratio_n_values_path': 'ratio_n_values.tif',
@@ -131,7 +134,6 @@ INTERMEDIATE_OUTPUTS = {
 
 FINAL_OUTPUTS = {
     'reprojected_aggregate_areas_path': 'aggregate_data.gpkg',
-    'retention_ratio_path': 'retention_ratio.tif',
     'retention_volume_path': 'retention_volume.tif',
     'infiltration_ratio_path': 'infiltration_ratio.tif',
     'infiltration_volume_path': 'infiltration_volume.tif',
@@ -264,7 +266,7 @@ def execute(args):
         radius = float(args['retention_radius'])
         # boolean mapping for each LULC code whether it's impervious
         is_impervious_map = {
-            1 if biophysical_dict[lucode]['is_impervious'] else 0
+            lucode: 1 if biophysical_dict[lucode]['is_impervious'] else 0
             for lucode in biophysical_dict}
 
         reproject_roads_task = task_graph.add_task(
@@ -276,8 +278,19 @@ def execute(args):
             kwargs={'driver_name': 'GPKG'},
             target_path_list=[files['reprojected_centerlines_path']],
             task_name='reproject road centerlines vector to match rasters',
-            dependent_task_list=[]
-        )
+            dependent_task_list=[])
+
+        # pygeoprocessing.rasterize expects the target raster to already exist
+        make_raster_task = task_graph.add_task(
+            func=pygeoprocessing.new_raster_from_base,
+            args=(
+                files['lulc_aligned_path'],
+                files['rasterized_centerlines_path'],
+                gdal.GDT_Byte,
+                [UINT8_NODATA]),
+            target_path_list=[files['rasterized_centerlines_path']],
+            task_name='create raster to pass to pygeoprocessing.rasterize',
+            dependent_task_list=[align_task])
 
         rasterize_centerlines_task = task_graph.add_task(
             func=pygeoprocessing.rasterize,
@@ -287,7 +300,7 @@ def execute(args):
                 [1]),
             target_path_list=[files['rasterized_centerlines_path']],
             task_name='rasterize road centerlines vector',
-            dependent_task_list=[reproject_roads_task])
+            dependent_task_list=[make_raster_task, reproject_roads_task])
 
         # Make a boolean raster showing which pixels are within the given
         # radius of a road centerline

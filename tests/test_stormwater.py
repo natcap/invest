@@ -12,6 +12,9 @@ import pandas
 import pygeoprocessing
 
 
+TEST_DATA = os.path.join(os.path.dirname(__file__), '..', 'data',
+    'invest-test-data', 'stormwater')
+
 def to_raster(array, path, nodata=-1, pixel_size=(20, -20), origin=(0, 0),
         epsg=3857):
     """Wrapper around pygeoprocessing.numpy_array_to_raster setting defaults"""
@@ -85,10 +88,8 @@ class StormwaterTests(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_basic(self):
-        """Stormwater: basic model run"""
-        from natcap.invest import stormwater
-
+    def basic_setup(self, ir=False):
+        """Basic setup used by the full model run tests"""
         # In practice RC_X + IR_X <= 1, but they are independent in the model,
         # so ignoring that constraint for convenience.
         biophysical_dict = {
@@ -98,12 +99,16 @@ class StormwaterTests(unittest.TestCase):
             'RC_B': [0, 0.25, 0.2, 1],
             'RC_C': [0, 0.35, 0.3, 1],
             'RC_D': [0, 0.45, 0.4, 1],
-            'IR_A': [0, 0.55, 0.5, 1],
-            'IR_B': [0, 0.65, 0.6, 1],
-            'IR_C': [0, 0.75, 0.7, 1],
-            'IR_D': [0, 0.85, 0.8, 1]
-
+            'is_impervious': [0, 0, 0, 1]
         }
+        if ir:
+            biophysical_dict.update({
+                'IR_A': [0, 0.55, 0.5, 1],
+                'IR_B': [0, 0.65, 0.6, 1],
+                'IR_C': [0, 0.75, 0.7, 1],
+                'IR_D': [0, 0.85, 0.8, 1]
+            })
+
         biophysical_table = pandas.DataFrame(
             biophysical_dict).set_index(['lucode'])
         retention_cost = 2.53
@@ -140,6 +145,34 @@ class StormwaterTests(unittest.TestCase):
             to_raster(array, path, pixel_size=pixel_size)
         biophysical_table.to_csv(biophysical_table_path)
 
+        return [
+            biophysical_table,
+            biophysical_table_path,
+            lulc_array,
+            lulc_path,
+            soil_group_array,
+            soil_group_path,
+            precipitation_array,
+            precipitation_path,
+            retention_cost,
+            pixel_area
+        ]
+
+    def test_basic(self):
+        """Stormwater: basic model run"""
+        from natcap.invest import stormwater
+
+        (biophysical_table,
+        biophysical_table_path,
+        lulc_array,
+        lulc_path,
+        soil_group_array,
+        soil_group_path,
+        precipitation_array,
+        precipitation_path,
+        retention_cost,
+        pixel_area) = self.basic_setup()
+
         args = {
             'workspace_dir': self.workspace_dir,
             'lulc_path': lulc_path,
@@ -164,6 +197,97 @@ class StormwaterTests(unittest.TestCase):
         pollutant_path = os.path.join(
             self.workspace_dir, 'avoided_pollutant_load_pollutant1.tif')
         value_path = os.path.join(self.workspace_dir, 'retention_value.tif')
+        # there should be no infiltration output because there's no
+        # infiltration data in the biophysical table
+        self.assertFalse(os.path.exists(infiltration_volume_path))
+
+        retention_raster = gdal.OpenEx(retention_volume_path, gdal.OF_RASTER)
+        retention_volume = retention_raster.GetRasterBand(1).ReadAsArray()
+
+        avoided_pollutant_raster = gdal.OpenEx(pollutant_path, gdal.OF_RASTER)
+        avoided_pollutant_load = avoided_pollutant_raster.GetRasterBand(
+            1).ReadAsArray()
+
+        retention_value_raster = gdal.OpenEx(value_path, gdal.OF_RASTER)
+        retention_value = retention_value_raster.GetRasterBand(1).ReadAsArray()
+
+        for row in range(retention_volume.shape[0]):
+            for col in range(retention_volume.shape[1]):
+
+                soil_group = soil_group_array[row, col]
+                lulc = lulc_array[row, col]
+                precipitation = precipitation_array[row, col]
+
+                rc_value = biophysical_table[f'RC_{soil_group_codes[soil_group]}'][lulc]
+
+                # precipitation (mm/yr) * 0.001 (m/mm) * pixel area (m^2) =
+                # m^3/yr
+                actual_volume = retention_volume[row, col]
+                expected_volume = (1 - rc_value) * \
+                    precipitation * 0.001 * pixel_area
+                numpy.testing.assert_allclose(actual_volume, expected_volume,
+                    rtol=1e-6)
+
+                # retention (m^3/yr) * cost ($/m^3) = value ($/yr)
+                actual_value = retention_value[row, col]
+                expected_value = expected_volume * retention_cost
+                numpy.testing.assert_allclose(actual_value, expected_value,
+                    rtol=1e-6)
+
+        for row in range(avoided_pollutant_load.shape[0]):
+            for col in range(avoided_pollutant_load.shape[1]):
+
+                lulc = lulc_array[row, col]
+                retention = retention_volume[row, col]
+                emc = biophysical_table['EMC_pollutant1'][lulc]
+
+                # retention (m^3/yr) * emc (mg/L) * 1000 (L/m^3) * 0.000001
+                # (kg/mg) = kg/yr
+                avoided_load = avoided_pollutant_load[row, col]
+                expected_avoided_load = retention * emc * 0.001
+                numpy.testing.assert_allclose(avoided_load,
+                    expected_avoided_load, rtol=1e-6)
+
+    def test_ir(self):
+        """Stormwater: full model run with IR data in biophysical table"""
+        from natcap.invest import stormwater
+
+        (biophysical_table,
+        biophysical_table_path,
+        lulc_array,
+        lulc_path,
+        soil_group_array,
+        soil_group_path,
+        precipitation_array,
+        precipitation_path,
+        retention_cost,
+        pixel_area) = self.basic_setup(ir=True)
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'lulc_path': lulc_path,
+            'soil_group_path': soil_group_path,
+            'precipitation_path': precipitation_path,
+            'biophysical_table': biophysical_table_path,
+            'adjust_retention_ratios': False,
+            'retention_radius': None,
+            'road_centerlines_path': None,
+            'aggregate_areas_path': None,
+            'replacement_cost': retention_cost
+        }
+
+        soil_group_codes = {1: 'A', 2: 'B', 3: 'C', 4: 'D'}
+
+        stormwater.execute(args)
+
+        retention_volume_path = os.path.join(self.workspace_dir,
+            stormwater.FINAL_OUTPUTS['retention_volume_path'])
+        infiltration_volume_path = os.path.join(self.workspace_dir,
+            stormwater.FINAL_OUTPUTS['infiltration_volume_path'])
+        pollutant_path = os.path.join(self.workspace_dir,
+            'avoided_pollutant_load_pollutant1.tif')
+        value_path = os.path.join(self.workspace_dir,
+            stormwater.FINAL_OUTPUTS['retention_value_path'])
 
         retention_raster = gdal.OpenEx(retention_volume_path, gdal.OF_RASTER)
         retention_volume = retention_raster.GetRasterBand(1).ReadAsArray()
@@ -194,7 +318,6 @@ class StormwaterTests(unittest.TestCase):
                 actual_volume = retention_volume[row, col]
                 expected_volume = (1 - rc_value) * \
                     precipitation * 0.001 * pixel_area
-                print(1 - rc_value, precipitation, pixel_area)
                 numpy.testing.assert_allclose(actual_volume, expected_volume,
                     rtol=1e-6)
 
@@ -219,19 +342,117 @@ class StormwaterTests(unittest.TestCase):
                 numpy.testing.assert_allclose(infiltration_volume[row][col],
                     expected_volume, rtol=1e-6)
 
-        for row in range(avoided_pollutant_load.shape[0]):
-            for col in range(avoided_pollutant_load.shape[1]):
+    def test_adjust(self):
+        """Stormwater: full model run with adjust retention ratios"""
+        from natcap.invest import stormwater
 
-                lulc = lulc_array[row, col]
-                retention = retention_volume[row, col]
-                emc = biophysical_table['EMC_pollutant1'][lulc]
+        (biophysical_table,
+        biophysical_table_path,
+        lulc_array,
+        lulc_path,
+        soil_group_array,
+        soil_group_path,
+        precipitation_array,
+        precipitation_path,
+        retention_cost,
+        pixel_area) = self.basic_setup()
 
-                # retention (m^3/yr) * emc (mg/L) * 1000 (L/m^3) * 0.000001
-                # (kg/mg) = kg/yr
-                avoided_load = avoided_pollutant_load[row, col]
-                expected_avoided_load = retention * emc * 0.001
-                numpy.testing.assert_allclose(avoided_load,
-                    expected_avoided_load, rtol=1e-6)
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'lulc_path': lulc_path,
+            'soil_group_path': soil_group_path,
+            'precipitation_path': precipitation_path,
+            'biophysical_table': biophysical_table_path,
+            'adjust_retention_ratios': True,
+            'retention_radius': 30,
+            'road_centerlines_path': os.path.join(
+                TEST_DATA, 'centerlines.gpkg'),
+            'aggregate_areas_path': None,
+            'replacement_cost': retention_cost
+        }
+        stormwater.execute(args)
+
+        adjusted_ratio_raster = gdal.OpenEx(
+            os.path.join(
+                self.workspace_dir,
+                'intermediate',
+                stormwater.INTERMEDIATE_OUTPUTS['adjusted_retention_ratio_path']),
+            gdal.OF_RASTER)
+        retention_volume_raster = gdal.OpenEx(
+            os.path.join(
+                self.workspace_dir, 'retention_volume.tif'),
+            gdal.OF_RASTER)
+        actual_adjusted_ratios = adjusted_ratio_raster.GetRasterBand(
+            1).ReadAsArray()
+        actual_retention_volume = retention_volume_raster.GetRasterBand(
+            1).ReadAsArray()
+
+        expected_adjusted_ratios = numpy.array([
+            [1,      1,      1,        1],
+            [0.9825, 0.9625, 0.924167, 0.8875],
+            [0.9,    0.8,    0.7,      0.6],
+            [0,      0,      0,        0]])
+        numpy.testing.assert_allclose(actual_adjusted_ratios,
+            expected_adjusted_ratios, rtol=1e-6)
+        expected_retention_volume = (expected_adjusted_ratios *
+            precipitation_array * pixel_area * 0.001)
+        numpy.testing.assert_allclose(actual_retention_volume,
+            expected_retention_volume, rtol=1e-6)
+
+    def test_aggregate(self):
+        """Stormwater: full model run with aggregate results"""
+        from natcap.invest import stormwater
+
+        (biophysical_table,
+        biophysical_table_path,
+        lulc_array,
+        lulc_path,
+        soil_group_array,
+        soil_group_path,
+        precipitation_array,
+        precipitation_path,
+        retention_cost,
+        pixel_area) = self.basic_setup()
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'lulc_path': lulc_path,
+            'soil_group_path': soil_group_path,
+            'precipitation_path': precipitation_path,
+            'biophysical_table': biophysical_table_path,
+            'adjust_retention_ratios': False,
+            'retention_radius': None,
+            'road_centerlines_path': None,
+            'aggregate_areas_path': os.path.join(TEST_DATA, 'aoi.gpkg'),
+            'replacement_cost': retention_cost
+        }
+        stormwater.execute(args)
+
+        expected_feature_fields = {
+            1: {
+                'RR_mean': 0.825,
+                'RV_sum': 8.5,
+                'avoided_pollutant1': .0085,
+                'val_sum': 21.505
+            },
+            2: {
+                'RR_mean': 0.5375,
+                'RV_sum': 7.5,
+                'avoided_pollutant1': .0075,
+                'val_sum': 18.975
+            }
+        }
+
+        aggregate_data_path = os.path.join(self.workspace_dir,
+            stormwater.FINAL_OUTPUTS['reprojected_aggregate_areas_path'])
+        aggregate_vector = gdal.OpenEx(aggregate_data_path, gdal.OF_VECTOR)
+        aggregate_layer = aggregate_vector.GetLayer()
+        for feature in aggregate_layer:
+            feature_id = feature.GetFID()
+            for key, val in expected_feature_fields[feature_id].items():
+                field_index = feature.GetFieldIndex(key)
+                field_value = feature.GetField(field_index)
+                numpy.testing.assert_allclose(field_value, val)
 
     def test_lookup_ratios(self):
         """Stormwater: test lookup_ratios function"""
@@ -410,7 +631,6 @@ class StormwaterTests(unittest.TestCase):
                 mocked):
             stormwater.is_near(connected_path, radius, distance_path, out_path)
             actual = pygeoprocessing.raster_to_numpy_array(out_path)
-            print(actual)
             numpy.testing.assert_equal(expected, actual)
 
     def test_make_search_kernel(self):
