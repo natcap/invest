@@ -702,8 +702,8 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
     valid_mask = (
         ~numpy.isclose(ratio_array, FLOAT_NODATA) &
         ~numpy.isclose(avg_ratio_array, FLOAT_NODATA) &
-        (near_impervious_lulc_array != FLOAT_NODATA) &
-        (near_road_array != FLOAT_NODATA))
+        (near_impervious_lulc_array != UINT8_NODATA) &
+        (near_road_array != UINT8_NODATA))
 
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
