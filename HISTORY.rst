@@ -6,7 +6,7 @@
   - Coastal Blue Carbon
   - Coastal Vulnerability
   - Crop Production
-  - Delineateit
+  - DelineateIt
   - Finfish
   - Fisheries
   - Forest Carbon Edge Effects
@@ -52,17 +52,38 @@ Unreleased Changes (3.9.1)
     * Fixed an issue on Mac OS when certain models would loop indefinitely and
       never complete.  This was addressed by bumping the ``taskgraph``
       requirement version to ``0.10.3``
+    * Allow Windows users to install for all users or current user. This allows
+      non-admin users to install InVEST locally.
     * Fixed a bug where saving a datastack parameter set with relative paths
       would not convert Windows separators to linux style.
     * Provide a better validation error message when an overview '.ovr' file
       is input instead of a valid raster.
+    * Removed internal references to ``TaskGraph``
+      ``copy_duplicate_artifact`` calls in anticipation from that feature
+      being removed from ``TaskGraph``. User facing changes include
+      slightly faster initial runtimes for the Coastal Vulnerability,
+      Coastal Blue Carbon, SDR, DelineateIt, and Seasonal Water Yield models.
+      These models will no longer attempt to copy intermediate artifacts that
+      could have been computed by previous runs.
 * Carbon
     * Fixed a bug where, if rate change and discount rate were set to 0, the
-      valuation results were in $/year rather than $, too small by a factor of 
+      valuation results were in $/year rather than $, too small by a factor of
       ``lulc_fut_year - lulc_cur_year``.
+* DelineateIt:
+    * The DelineateIt UI has been updated so that the point-snapping options
+      will always be interactive.
+    * DelineateIt's point-snapping routine has been updated to snap
+      ``MULTIPOINT`` geometries with 1 component point as well as primitive
+      ``POINT`` geometries.  All other geometric types will not be snapped.
+      When a geometry cannot be snapped, a log message is now recorded with the
+      feature ID, the geometry type and the number of component geometries.
+      Features with empty geometries are now also skipped.
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
+* Seasonal Water Yield
+    * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata 
+      values and could show negative numbers.
 * SDR
     * Fixed a bug in validation that did not warn against different coordinate
       systems (all SDR inputs must share a common coordinate system).

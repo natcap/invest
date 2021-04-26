@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 39d4f500ad55463c106b36cca632cd342229c1eb
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := bbfa26dc0c9158d13d209c1bc61448a9166708da
+GIT_UG_REPO_REV              := 69993168d50422593a39ea5b47cc87e8b94122a1
 
 
 
@@ -163,16 +163,10 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --omit='*/invest/ui/*' $(TESTRUNNER) tests
-	coverage report
-	coverage html
-	coverage xml
+	$(TESTRUNNER) tests
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --include='*/invest/ui/*' $(TESTRUNNER) ui_tests
-	coverage report
-	coverage html
-	coverage xml
+	$(TESTRUNNER) ui_tests
 
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
