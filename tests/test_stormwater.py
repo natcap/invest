@@ -540,21 +540,15 @@ class StormwaterTests(unittest.TestCase):
 
         retention_volume_array = numpy.array([
             [0, 1.5, stormwater.FLOAT_NODATA],
-            [0, 1.5, 100],
             [0, 1.5, 100]])
         replacement_cost = 1.5
-        out = stormwater.retention_value_op(
+        expected = [
+            [0, 2.25, stormwater.FLOAT_NODATA],
+            [0, 2.25, 150]]
+        actual = stormwater.retention_value_op(
             retention_volume_array,
             replacement_cost)
-
-        for y in range(retention_volume_array.shape[0]):
-            for x in range(retention_volume_array.shape[1]):
-                if (retention_volume_array[y, x] == stormwater.FLOAT_NODATA):
-                    numpy.testing.assert_allclose(out[y, x], stormwater.FLOAT_NODATA)
-                else:
-                    numpy.testing.assert_allclose(out[y, x],
-                        retention_volume_array[y, x] * replacement_cost)
-
+        numpy.testing.assert_allclose(actual, expected)
 
     def test_adjust_op(self):
         """Stormwater: test adjust_op function."""
