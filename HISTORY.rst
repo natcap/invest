@@ -36,6 +36,8 @@
 Unreleased Changes (3.9.1)
 --------------------------
 * General:
+    * Moved the sample data JSON files out of the root sample_data folder and
+      into their respective model folders.
     * Updated documentation on installing InVEST from source.
     * Restructured API reference docs and removed outdated and redundant pages.
     * Include logger name in the logging format. This is helpful for the cython
