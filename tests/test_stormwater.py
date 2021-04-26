@@ -440,6 +440,12 @@ class StormwaterTests(unittest.TestCase):
                 'RV_sum': 7.5,
                 'avoided_pollutant1': .0075,
                 'val_sum': 18.975
+            },
+            3: {
+                'RR_mean': 0,
+                'RV_sum': 0,
+                'avoided_pollutant1': 0,
+                'val_sum': 0
             }
         }
 
@@ -698,3 +704,25 @@ class StormwaterTests(unittest.TestCase):
         expected_average[:, 129:149] = 20
         expected_average[:, 149] = -1
         numpy.testing.assert_allclose(actual_average, expected_average)
+
+    def test_validate(self):
+        """Stormwater: test arg validation"""
+        from natcap.invest import stormwater
+
+        # test args missing necessary values for adjust ratios
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'lulc_path': 'x',
+            'soil_group_path': 'x',
+            'precipitation_path': 'x',
+            'biophysical_table': 'x',
+            'adjust_retention_ratios': True,
+            'retention_radius': None,
+            'road_centerlines_path': None,
+            'aggregate_areas_path': None,
+            'replacement_cost': None
+        }
+        messages = stormwater.validate(args)
+        for arg_list, message in messages:
+            if arg_list[0] in ['retention_radius', 'road_centerlines_path']:
+                self.assertEqual(message, 'Key is required but has no value')

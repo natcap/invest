@@ -915,12 +915,16 @@ def raster_average(raster_path, radius, kernel_path, out_path):
 
 
 @validation.invest_validator
-def validate(args):
+def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
     Args:
         args (dict): dictionary of key(str)/value pairs where keys and
             values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
 
     Returns:
         list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
