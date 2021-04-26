@@ -36,7 +36,7 @@ ARGS_SPEC = {
             "required": True,
             "about": ("A map of land use/land cover classes in the area of "
                 "interest"),
-            "name": "land use/land cover",
+            "name": "Land use/land cover",
             "validation_options": {
                 "projected": True
             }
@@ -47,19 +47,19 @@ ARGS_SPEC = {
             "about": (
                 "Map of hydrologic soil groups, where pixel values 1, 2, 3, "
                 "and 4 correspond to groups A, B, C, and D respectively"),
-            "name": "soil groups"
+            "name": "Soil groups"
         },
         "precipitation_path": {
             "type": "raster",
             "required": True,
-            "about": ("Map of total annual precipitation"),
-            "name": "precipitation"
+            "about": "Map of total annual precipitation",
+            "name": "Precipitation"
         },
         "biophysical_table": {
             "type": "csv",
             "required": True,
             "about": "biophysical table",
-            "name": "biophysical table"
+            "name": "Biophysical table"
         },
         "adjust_retention_ratios": {
             "type": "boolean",
@@ -71,7 +71,7 @@ ARGS_SPEC = {
                 "channels (typically roads, parking lots, etc.) Connected "
                 "impervious surfaces are indicated by the is_impervious column"
                 "in the biophysical table and/or the road centerlines vector."),
-            "name": "adjust retention ratios"
+            "name": "Adjust retention ratios"
         },
         "retention_radius": {
             "type": "number",
@@ -81,13 +81,13 @@ ARGS_SPEC = {
                 "adjustment algorithm, a pixel is 'near' a connected "
                 "impervious surface if its centerpoint is within this radius "
                 "of connected-impervious LULC and/or a road centerline."),
-            "name": "retention radius"
+            "name": "Retention radius"
         },
         "road_centerlines_path": {
             "type": "vector",
             "required": "adjust_retention_ratios",
             "about": "Map of road centerlines",
-            "name": "road centerlines"
+            "name": "Road centerlines"
         },
         "aggregate_areas_path": {
             "type": "vector",
@@ -100,13 +100,13 @@ ARGS_SPEC = {
                 "provided; total retention value if replacement cost was "
                 "provided; and total avoided pollutant load for each "
                 "pollutant provided."),
-            "name": "watersheds"
+            "name": "Aggregate areas"
         },
         "replacement_cost": {
             "type": "number",
             "required": False,
             "about": "Replacement cost of stormwater retention devices",
-            "name": "replacement cost"
+            "name": "Replacement cost"
         }
     }
 }
