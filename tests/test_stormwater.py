@@ -1,3 +1,4 @@
+"""InVEST stormwater model tests."""
 import functools
 import math
 import os
@@ -17,7 +18,7 @@ TEST_DATA = os.path.join(os.path.dirname(__file__), '..', 'data',
 
 def to_raster(array, path, nodata=-1, pixel_size=(20, -20), origin=(0, 0),
         epsg=3857):
-    """Wrapper around pygeoprocessing.numpy_array_to_raster setting defaults"""
+    """Wrap around pygeoprocessing.numpy_array_to_raster to set defaults."""
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(epsg)
     projection_wkt = srs.ExportToWkt()
@@ -49,36 +50,8 @@ def mock_iterblocks(*args, **kwargs):
                 'win_ysize': ysize}
 
 
-def random_array(shape, low=0, high=1, nodata=None, p_nodata=0.2, precision=2):
-    """Generate a random array useful as made-up raster data.
-
-    Args:
-        shape (tuple(int)): the shape of the array to make
-        low (float): the minimum possible value to include
-        high (float): the maximum possible value to include
-        nodata (int): If a nodata value is given, set some random elements
-            to this nodata value that may be outside the range.
-        p_nodata (float): A value in the range [0, 1] representing the
-            fraction of elements to make nodata (if a nodata value is provided)
-        precision (int): The number of decimal places to include
-
-    Returns:
-        numpy.ndarray with the given shape
-    """
-    magnitude = 10**precision
-    # multiplying then dividing by the magnitude gives the desired precision
-    array = numpy.random.randint(
-        low * magnitude, (high + 1) * magnitude, shape, dtype=numpy.int32) / magnitude
-
-    if nodata is not None:  # could be zero
-        # randomly assign some values to nodata
-        nodata_indices = numpy.random.choice(
-            [False, True], shape, p=[(1 - p_nodata), p_nodata])
-        array[nodata_indices] = nodata
-    return array
-
-
 class StormwaterTests(unittest.TestCase):
+    """Tests for InVEST stormwater model."""
 
     def setUp(self):
         """Create a temp directory for the workspace."""
@@ -89,7 +62,7 @@ class StormwaterTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def basic_setup(self, ir=False):
-        """Basic setup used by the full model run tests"""
+        """Set up for the full model run tests."""
         # In practice RC_X + IR_X <= 1, but they are independent in the model,
         # so ignoring that constraint for convenience.
         biophysical_dict = {
@@ -159,7 +132,7 @@ class StormwaterTests(unittest.TestCase):
         ]
 
     def test_basic(self):
-        """Stormwater: basic model run"""
+        """Stormwater: basic model run."""
         from natcap.invest import stormwater
 
         (biophysical_table,
@@ -249,7 +222,7 @@ class StormwaterTests(unittest.TestCase):
                     expected_avoided_load, rtol=1e-6)
 
     def test_ir(self):
-        """Stormwater: full model run with IR data in biophysical table"""
+        """Stormwater: full model run with IR data in biophysical table."""
         from natcap.invest import stormwater
 
         (biophysical_table,
@@ -343,7 +316,7 @@ class StormwaterTests(unittest.TestCase):
                     expected_volume, rtol=1e-6)
 
     def test_adjust(self):
-        """Stormwater: full model run with adjust retention ratios"""
+        """Stormwater: full model run with adjust retention ratios."""
         from natcap.invest import stormwater
 
         (biophysical_table,
@@ -400,7 +373,7 @@ class StormwaterTests(unittest.TestCase):
             expected_retention_volume, rtol=1e-6)
 
     def test_aggregate(self):
-        """Stormwater: full model run with aggregate results"""
+        """Stormwater: full model run with aggregate results."""
         from natcap.invest import stormwater
 
         (biophysical_table,
@@ -461,7 +434,7 @@ class StormwaterTests(unittest.TestCase):
                 numpy.testing.assert_allclose(field_value, val)
 
     def test_lookup_ratios(self):
-        """Stormwater: test lookup_ratios function"""
+        """Stormwater: test lookup_ratios function."""
         from natcap.invest import stormwater
 
         sorted_lucodes = [10, 11, 12, 13]
@@ -499,45 +472,60 @@ class StormwaterTests(unittest.TestCase):
         numpy.testing.assert_allclose(expected_output, actual_output)
 
     def test_volume_op(self):
-        """Stormwater: test volume_op function"""
+        """Stormwater: test volume_op function."""
         from natcap.invest import stormwater
 
-        x_size, y_size = 5, 5
-        ratio_array = random_array((y_size, x_size), nodata=stormwater.FLOAT_NODATA)
-        precip_nodata = -1 * numpy.random.rand()
-        precip_array = random_array(
-            (y_size, x_size), high=100, nodata=precip_nodata)
-        pixel_area = numpy.random.rand() * 1000
+        precip_nodata = -2.5
+        ratio_array = numpy.array([
+            [0,   0.0001, stormwater.FLOAT_NODATA],
+            [0.5, 0.9,    1]])
+        precip_array = numpy.array([
+            [10.5, 0, 1],
+            [0.5,  0, precip_nodata]])
+        pixel_area = 400
 
-        out = stormwater.volume_op(ratio_array, precip_array, precip_nodata,
+        out = stormwater.volume_op(
+            ratio_array,
+            precip_array,
+            precip_nodata,
             pixel_area)
         # precip (mm/yr) * area (m^2) * 0.001 (m/mm) * ratio = volume (m^3/yr)
-        for y in range(y_size):
-            for x in range(x_size):
+        for y in range(ratio_array.shape[0]):
+            for x in range(ratio_array.shape[1]):
                 if (ratio_array[y, x] == stormwater.FLOAT_NODATA or
                         precip_array[y, x] == precip_nodata):
-                    numpy.testing.assert_allclose(out[y, x], stormwater.FLOAT_NODATA)
+                    numpy.testing.assert_allclose(
+                        out[y, x],
+                        stormwater.FLOAT_NODATA)
                 else:
-                    numpy.testing.assert_allclose(out[y, x],
+                    numpy.testing.assert_allclose(
+                        out[y, x],
                         precip_array[y, x] * ratio_array[y, x] * pixel_area / 1000)
 
     def test_avoided_pollutant_load_op(self):
-        """Stormwater: test avoided_pollutant_load_op function"""
+        """Stormwater: test avoided_pollutant_load_op function."""
         from natcap.invest import stormwater
 
-        shape = 5, 5
         lulc_nodata = -1
-        lulc_array = random_array(shape, nodata=lulc_nodata, high=3,
-            precision=0).astype(int)
-        retention_volume_array = random_array(shape, nodata=stormwater.FLOAT_NODATA,
-            high=1000)
-        sorted_lucodes = numpy.array([0, 1, 2, 3])
-        emc_array = random_array((4,), high=10)
+        lulc_array = numpy.array([
+            [0, 0, 0],
+            [1, 1, 1],
+            [2, 2, lulc_nodata]])
+        retention_volume_array = numpy.array([
+            [0, 1.5, stormwater.FLOAT_NODATA],
+            [0, 1.5, 100],
+            [0, 1.5, 100]])
+        sorted_lucodes = numpy.array([0, 1, 2])
+        emc_array = numpy.array([0, 0.5, 3])
 
-        out = stormwater.avoided_pollutant_load_op(lulc_array, lulc_nodata,
-            retention_volume_array, sorted_lucodes, emc_array)
-        for y in range(shape[0]):
-            for x in range(shape[1]):
+        out = stormwater.avoided_pollutant_load_op(
+            lulc_array,
+            lulc_nodata,
+            retention_volume_array,
+            sorted_lucodes,
+            emc_array)
+        for y in range(lulc_array.shape[0]):
+            for x in range(lulc_array.shape[1]):
                 if (lulc_array[y, x] == lulc_nodata or
                         retention_volume_array[y, x] == stormwater.FLOAT_NODATA):
                     numpy.testing.assert_allclose(out[y, x], stormwater.FLOAT_NODATA)
@@ -547,18 +535,20 @@ class StormwaterTests(unittest.TestCase):
                     numpy.testing.assert_allclose(out[y, x], expected)
 
     def test_retention_value_op(self):
-        """Stormwater: test retention_value_op function"""
+        """Stormwater: test retention_value_op function."""
         from natcap.invest import stormwater
 
-        shape = 5, 5
-        retention_volume_array = random_array(shape, nodata=stormwater.FLOAT_NODATA,
-            high=1000)
-        replacement_cost = numpy.random.rand() * 20  # a reasonable range of costs
-
-        out = stormwater.retention_value_op(retention_volume_array,
+        retention_volume_array = numpy.array([
+            [0, 1.5, stormwater.FLOAT_NODATA],
+            [0, 1.5, 100],
+            [0, 1.5, 100]])
+        replacement_cost = 1.5
+        out = stormwater.retention_value_op(
+            retention_volume_array,
             replacement_cost)
-        for y in range(shape[0]):
-            for x in range(shape[1]):
+
+        for y in range(retention_volume_array.shape[0]):
+            for x in range(retention_volume_array.shape[1]):
                 if (retention_volume_array[y, x] == stormwater.FLOAT_NODATA):
                     numpy.testing.assert_allclose(out[y, x], stormwater.FLOAT_NODATA)
                 else:
@@ -567,28 +557,32 @@ class StormwaterTests(unittest.TestCase):
 
 
     def test_adjust_op(self):
-        """Stormwater: test adjust_op function"""
+        """Stormwater: test adjust_op function."""
         from natcap.invest import stormwater
 
-        shape = 10, 10
-        ratio_array = random_array(shape, nodata=stormwater.FLOAT_NODATA)
-        # these are obv not averages from the above array but
+        ratio_array = numpy.array([
+            [0,   0.0001, stormwater.FLOAT_NODATA],
+            [0.5, 0.9,    1]])
+        # these are obviously not averages from the above array but
         # it doesn't matter for this test
-        avg_ratio_array = random_array(shape, nodata=stormwater.FLOAT_NODATA)
-        # boolean 0/1 arrays
-        near_impervious_lulc_array = random_array(shape, precision=0,
-            nodata=stormwater.FLOAT_NODATA).astype(int)
-        near_road_centerline_array = random_array(shape, precision=0,
-            nodata=stormwater.FLOAT_NODATA).astype(int)
+        avg_ratio_array = numpy.array([
+            [0.5, 0.5, 0.5],
+            [0.5, stormwater.FLOAT_NODATA, 0.5]])
+        near_impervious_lulc_array = numpy.array([
+            [0, 0, 1],
+            [stormwater.UINT8_NODATA, 0, 1]], dtype=numpy.uint8)
+        near_road_centerline_array = numpy.array([
+            [1, 1, 1],
+            [0, 0, 0]], dtype=numpy.uint8)
 
         out = stormwater.adjust_op(ratio_array, avg_ratio_array,
             near_impervious_lulc_array, near_road_centerline_array)
-        for y in range(shape[0]):
-            for x in range(shape[1]):
+        for y in range(ratio_array.shape[0]):
+            for x in range(ratio_array.shape[1]):
                 if (ratio_array[y, x] == stormwater.FLOAT_NODATA or
                     avg_ratio_array[y, x] == stormwater.FLOAT_NODATA or
-                    near_impervious_lulc_array[y, x] == stormwater.FLOAT_NODATA or
-                        near_road_centerline_array[y, x] == stormwater.FLOAT_NODATA):
+                    near_impervious_lulc_array[y, x] == stormwater.UINT8_NODATA or
+                        near_road_centerline_array[y, x] == stormwater.UINT8_NODATA):
                     numpy.testing.assert_allclose(out[y, x], stormwater.FLOAT_NODATA)
                 else:
                     # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
@@ -603,7 +597,7 @@ class StormwaterTests(unittest.TestCase):
                         rtol=1e-6)
 
     def test_is_near(self):
-        """Stormwater: test is_near function"""
+        """Stormwater: test is_near function."""
         from natcap.invest import stormwater
         is_connected_array = numpy.array([
             [0, 0, 1, 0, 0, 0],
@@ -640,7 +634,7 @@ class StormwaterTests(unittest.TestCase):
             numpy.testing.assert_equal(expected, actual)
 
     def test_make_search_kernel(self):
-        """Stormwater: test make_search_kernel function"""
+        """Stormwater: test make_search_kernel function."""
         from natcap.invest import stormwater
 
         array = numpy.zeros((10, 10))
@@ -670,7 +664,7 @@ class StormwaterTests(unittest.TestCase):
         numpy.testing.assert_equal(expected_15, actual_15)
 
     def test_raster_average(self):
-        """Stormwater: test raster_average function"""
+        """Stormwater: test raster_average function."""
         from natcap.invest import stormwater
 
         array = numpy.empty((150, 150))
@@ -706,7 +700,7 @@ class StormwaterTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_average, expected_average)
 
     def test_validate(self):
-        """Stormwater: test arg validation"""
+        """Stormwater: test arg validation."""
         from natcap.invest import stormwater
 
         # test args missing necessary values for adjust ratios

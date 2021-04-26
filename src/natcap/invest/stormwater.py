@@ -1,4 +1,4 @@
-"""Stormwater Retention"""
+"""Stormwater Retention."""
 import logging
 import math
 import os
@@ -538,9 +538,8 @@ def execute(args):
 
 
 def lookup_ratios(lulc_path, lulc_nodata, soil_group_path, soil_group_nodata,
-             ratio_lookup, sorted_lucodes, output_path):
-    """Make an array of stormwater retention or infiltration ratios from
-    arrays of LULC codes and hydrologic soil groups.
+    ratio_lookup, sorted_lucodes, output_path):
+    """Look up retention/infiltration ratios from LULC codes and soil groups.
 
     Args:
         lulc_array (numpy.ndarray): 2D array of LULC codes
@@ -588,9 +587,7 @@ def lookup_ratios(lulc_path, lulc_nodata, soil_group_path, soil_group_nodata,
 
 
 def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
-    """Calculate array of volumes (retention or infiltration) from arrays
-    of precipitation values and stormwater ratios. This is meant to be used
-    with raster_calculator.
+    """Calculate stormwater volumes from precipitation and ratios.
 
     Args:
         ratio_array (numpy.ndarray): 2D array of stormwater ratios. Assuming
@@ -619,9 +616,8 @@ def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
 
 
 def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array,
-                              sorted_lucodes, emc_array):
+    sorted_lucodes, emc_array):
     """Calculate avoided pollutant loads from LULC codes retention volumes.
-    This is intented to be used with pygeoprocessing.raster_calculator.
 
     Args:
         lulc_array (numpy.ndarray): 2D array of LULC codes
@@ -659,9 +655,7 @@ def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array,
 
 
 def retention_value_op(retention_volume_array, replacement_cost):
-    """Multiply array of retention volumes by the retention replacement
-    cost to get an array of retention values. This is meant to be used with
-    raster_calculator.
+    """Multiply retention volumes by the retention replacement cost.
 
     Args:
         retention_volume_array (numpy.ndarray): 2D array of retention volumes.
@@ -685,6 +679,7 @@ def retention_value_op(retention_volume_array, replacement_cost):
 def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
               near_road_array):
     """Apply the retention ratio adjustment algorithm to an array of ratios.
+
     This is meant to be used with raster_calculator. Assumes that the nodata
     value for all four input arrays is the global FLOAT_NODATA.
 
@@ -808,7 +803,7 @@ def is_near(input_path, radius, distance_path, out_path):
         distance_path)
 
     def lte_threshold_op(array, threshold):
-        """Binary array of elements that are less than or equal to threshold"""
+        """Binary array of elements less than or equal to the threshold."""
         # no need to mask nodata because distance_transform_edt doesn't
         # output any nodata pixels
         return array <= threshold
@@ -824,7 +819,6 @@ def is_near(input_path, radius, distance_path, out_path):
 
 def make_search_kernel(raster_path, radius):
     """Make a search kernel for a raster that marks pixels within a radius.
-    Save the search kernel to a raster for use with pygeoprocessing.convolve_2d
 
     Args:
         raster_path (str): path to a raster to make kernel for
