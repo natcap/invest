@@ -2,7 +2,6 @@
 import os
 import logging
 import time
-import math
 
 from osgeo import gdal
 from osgeo import ogr
@@ -143,7 +142,7 @@ def execute(args):
             'Working with the DEM' section of the InVEST User's Guide for more
             information. (required)
         args['outlet_vector_path'] (string):  This is a vector representing
-            geometries that the watersheds should be built around. Required if 
+            geometries that the watersheds should be built around. Required if
             ``args['detect_pour_points']`` is False; not used otherwise.
         args['snap_points'] (bool): Whether to snap point geometries to the
             nearest stream pixel.  If ``True``, ``args['flow_threshold']``
@@ -160,7 +159,7 @@ def execute(args):
             found.  If ``True``, invalid geometries will be left out of
             the vector to be delineated.  Default: True
         args['detect_pour_points'] (bool): Whether to run the pour point
-            detection algorithm. If True, detected pour points are used instead 
+            detection algorithm. If True, detected pour points are used instead
             of outlet_vector_path geometries. Default: False
         args['n_workers'] (int): The number of worker processes to use with
             taskgraph. Defaults to -1 (no parallelism).
@@ -457,7 +456,9 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
                 continue
 
         if shapely_geom.is_empty:
-            LOGGER.warning('Feature %s has no geometry. Skipping', feature.GetFID())
+            LOGGER.warning(
+                'Feature %s has no geometry. Skipping',
+                feature.GetFID())
             continue
 
         shapely_bbox = shapely.geometry.box(*shapely_geom.bounds)
@@ -635,7 +636,7 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
                 321
                 4x0
                 567
-                
+
         target_vector_path (string): path to save pour point vector to.
 
     Returns:
@@ -680,7 +681,7 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
 def _find_raster_pour_points(flow_dir_raster_path_band):
     """
     Memory-safe pour point calculation from a flow direction raster.
-    
+
     Args:
         flow_dir_raster_path_band (tuple): tuple of (raster path, band index)
             indicating the flow direction raster to use.
@@ -702,9 +703,9 @@ def _find_raster_pour_points(flow_dir_raster_path_band):
     pour_points = set()
     # Read in flow direction data and find pour points one block at a time
     for offsets in pygeoprocessing.iterblocks((flow_dir_raster_path, band_index),
-                                               offset_only=True): 
-        # Expand each block by a one-pixel-wide margin, if possible. 
-        # This way the blocks will overlap so the watershed 
+                                              offset_only=True):
+        # Expand each block by a one-pixel-wide margin, if possible.
+        # This way the blocks will overlap so the watershed
         # calculation will be continuous.
         if offsets['xoff'] > 0:
             offsets['xoff'] -= 1
@@ -728,17 +729,17 @@ def _find_raster_pour_points(flow_dir_raster_path_band):
         flow_dir_block = band.ReadAsArray(**offsets)
         pour_points = pour_points.union(
             delineateit_core.calculate_pour_point_array(
-                # numpy.intc is equivalent to an int in C (normally int32 or 
-                # int64). This way it can be passed directly into a memoryview 
+                # numpy.intc is equivalent to an int in C (normally int32 or
+                # int64). This way it can be passed directly into a memoryview
                 # (int[:, :]) in the Cython function.
-                flow_dir_block.astype(numpy.intc), 
-                edges, 
+                flow_dir_block.astype(numpy.intc),
+                edges,
                 nodata=raster_info['nodata'][band_index - 1],
                 offset=(offsets['xoff'], offsets['yoff']),
-                origin=(raster_info['geotransform'][0], 
+                origin=(raster_info['geotransform'][0],
                         raster_info['geotransform'][3]),
                 pixel_size=raster_info['pixel_size']))
-            
+
     raster = None
     band = None
 

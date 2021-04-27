@@ -7,6 +7,7 @@ from osgeo import gdal
 
 from . import fisheries_io as io
 from . import fisheries_model as model
+from ..utils import u
 from .. import utils
 from .. import validation
 
@@ -24,7 +25,7 @@ ARGS_SPEC = {
             **utils.AOI_ARG,
             "fields": {
                 "NAME": {
-                    "type": "freestyle_string", 
+                    "type": "freestyle_string",
                     "about": "A unique identifier for each area of interest."
                 }
             },

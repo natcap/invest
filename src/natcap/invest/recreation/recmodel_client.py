@@ -31,6 +31,7 @@ if shapely.speedups.available:
 
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
+from ..utils import u
 from .. import utils
 from .. import validation
 

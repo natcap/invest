@@ -15,6 +15,7 @@ import rtree
 import shapely.geometry
 
 from natcap.invest.scenic_quality.viewshed import viewshed
+from ..utils import u
 from .. import utils
 from .. import validation
 
@@ -499,7 +500,7 @@ def _determine_valid_viewpoints(dem_path, structures_path):
                 LOGGER.info(
                     ("Checking structures in layer %s, approx. "
                      "%.2f%%complete."), layer_name,
-                    100.0*(n_features_touched /
+                    100.0 * (n_features_touched /
                            structures_layer.GetFeatureCount()))
                 last_log_time = time.time()
 
@@ -724,7 +725,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
             x = distance[valid_pixels]
             valuation[valid_pixels] = (
-                (a+b*x)*(weight*visibility[valid_pixels]))
+                (a + b * x) * (weight * visibility[valid_pixels]))
             return valuation
 
     elif valuation_method == 'logarithmic':
@@ -739,8 +740,8 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             # Also per Rob (and Rich), we'll use log(x+1) because log of values
             # where 0 < x < 1 yields strange results indeed.
             valuation[valid_pixels] = (
-                (a+b*numpy.log(distance[valid_pixels] + 1))*(
-                    weight*visibility[valid_pixels]))
+                (a + b * numpy.log(distance[valid_pixels] + 1)) * (
+                    weight * visibility[valid_pixels]))
             return valuation
 
     elif valuation_method == 'exponential':
@@ -752,8 +753,8 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             valuation[(visibility == 0) | valid_pixels] = 0
 
             valuation[valid_pixels] = (
-                (a*numpy.exp(-b*distance[valid_pixels])) * (
-                    weight*visibility[valid_pixels]))
+                (a * numpy.exp(-b * distance[valid_pixels])) * (
+                    weight * visibility[valid_pixels]))
             return valuation
 
     pygeoprocessing.new_raster_from_base(
@@ -940,7 +941,7 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
             if time.time() - last_log_time > 5.0:
                 LOGGER.info(
                     'Weighting and summing approx. %.2f%% complete.',
-                    100.0*(n_visibility_pixels_touched/n_visibility_pixels))
+                    100.0 * (n_visibility_pixels_touched / n_visibility_pixels))
                 last_log_time = time.time()
 
             visibility_raster = gdal.OpenEx(vis_raster_path, gdal.OF_RASTER)
