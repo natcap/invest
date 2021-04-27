@@ -216,7 +216,7 @@ export function DownloadProgressBar(props) {
     <ProgressBar
       animated
       max={1}
-      now={nComplete / nTotal}
+      now={(nComplete + 1) / nTotal}
       label={`Downloading ${nComplete + 1} of ${nTotal}`}
     />
   );

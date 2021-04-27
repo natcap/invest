@@ -93,6 +93,7 @@ export function createPythonFlaskProcess(investExe) {
 export function extractZipInplace(zipFilePath) {
   return new Promise((resolve, reject) => {
     const extractToDir = path.dirname(zipFilePath);
+    logger.info(`extracting ${zipFilePath}`);
     yauzl.open(zipFilePath, { lazyEntries: true }, (err, zipfile) => {
       if (err) throw err;
       zipfile.readEntry();
@@ -106,7 +107,6 @@ export function extractZipInplace(zipFilePath) {
             zipfile.readEntry();
           });
         } else {
-          logger.info(`extracting ${entry.fileName}`);
           zipfile.openReadStream(entry, (err, readStream) => {
             if (err) throw err;
             readStream.on('end', () => {
