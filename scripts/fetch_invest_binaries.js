@@ -178,7 +178,7 @@ if (process.argv[2] && process.argv[2] === 'sampledata') {
   } finally {
     if (willDownload) {
       downloadAndUnzipBinaries(SRC_URL, DESTFILE);
-      updateSampledataRegistry();
     }
+    updateSampledataRegistry();
   }
 }
