@@ -106,7 +106,7 @@ export function extractZipInplace(zipFilePath) {
             zipfile.readEntry();
           });
         } else {
-          console.log(entry.fileName);
+          logger.info(`extracting ${entry.fileName}`);
           zipfile.openReadStream(entry, (err, readStream) => {
             if (err) throw err;
             readStream.on('end', () => {
@@ -120,7 +120,6 @@ export function extractZipInplace(zipFilePath) {
         }
       });
       zipfile.on('close', () => {
-        console.log('CLOSED')
         resolve(true);
       });
     });
