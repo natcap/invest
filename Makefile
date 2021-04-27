@@ -6,11 +6,11 @@ GIT_SAMPLE_DATA_REPO_REV    := b7a51f189315e08484b5ba997a5c1de88ab7f06d
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 6fd5fa39cd9d81080caa7581f9acca7b9fadb7c8
+GIT_TEST_DATA_REPO_REV      := 0057a412104fbf97d1777bfffa3ad725485b9e02
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := bbfa26dc0c9158d13d209c1bc61448a9166708da
+GIT_UG_REPO_REV              := 69993168d50422593a39ea5b47cc87e8b94122a1
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -161,16 +161,10 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --omit='*/invest/ui/*' $(TESTRUNNER) tests
-	coverage report
-	coverage html
-	coverage xml
+	$(TESTRUNNER) tests
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --include='*/invest/ui/*' $(TESTRUNNER) ui_tests
-	coverage report
-	coverage html
-	coverage xml
+	$(TESTRUNNER) ui_tests
 
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
