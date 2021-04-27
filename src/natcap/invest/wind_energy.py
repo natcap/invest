@@ -121,11 +121,11 @@ ARGS_SPEC = {
             "required": True,
             "rows": {
                 "air_density": {
-                    "type": "number", 
+                    "type": "number",
                     "units": u.kilogram/(u.meter**3),
                     "about": "standard atmosphere air density"},
                 "exponent_power_curve": {
-                    "type": "number", 
+                    "type": "number",
                     "units": None,
                     "about": "exponent to use in the power curve function"},
                 "decommission_cost": {
@@ -393,7 +393,7 @@ ARGS_SPEC = {
                 "expression": "(value >= 0) & (value <= 1)",
             },
             "type": "ratio",
-            "required": "valuatixon_container & (not price_table)",
+            "required": "valuation_container & (not price_table)",
             "about": ("The annual rate of change in the price of wind energy. "
                 "This should be expressed as a decimal percentage.  For "
                 "example, 0.1 for a 10% annual price change."),

@@ -50,6 +50,7 @@ u.define('currency = [value]')
 u.define('dollar = [USD]')
 u.define('pixel = [?length]')
 u.define('projection_unit = [!length]')
+u.define('million_dollars = 1000000 * dollar')
 
 AREA = {
     "type": "vector",
@@ -97,7 +98,7 @@ BETWEEN_0_AND_1 = {
 }
 
 DISTANCE = {
-    "type": "number", 
+    "type": "number",
     "units": u.meter,
     "validation_options": {
         "expression": "value >= 0"
@@ -108,7 +109,7 @@ METER_RASTER = {
     "type": "raster",
     "bands": {
         1: {
-            "type": "number", 
+            "type": "number",
             "units": u.meter
         }
     }
@@ -616,7 +617,7 @@ def build_lookup_from_csv(
             string values. default=True.
 
     Returns:
-        lookup_dict (dict): a dictionary of the form 
+        lookup_dict (dict): a dictionary of the form
         {key_field_0: {csv_header_0: value0, csv_header_1: value1...},
         key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}}
 
@@ -987,7 +988,7 @@ def reclassify_raster(
             each key represent:
 
                 'raster_name' - string for the raster name being reclassified
-                'column_name' - name of the table column that ``value_map`` 
+                'column_name' - name of the table column that ``value_map``
                 dictionary keys came from.
                 'table_name' - table name that ``value_map`` came from.
 
