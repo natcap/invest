@@ -24,3 +24,4 @@ taskgraph[niced_processes]>=0.10.3  # pip-only
 psutil>=5.6.6
 chardet>=3.0.4
 openpyxl
+pint
