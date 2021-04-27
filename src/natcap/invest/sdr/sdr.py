@@ -330,8 +330,6 @@ def execute(args):
             'raster_align_index': 0,
             'vector_mask_options': vector_mask_options,
             },
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=aligned_list,
         task_name='align input rasters')
 
@@ -340,8 +338,6 @@ def execute(args):
         args=(
             (f_reg['aligned_dem_path'], 1),
             f_reg['pit_filled_dem_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['pit_filled_dem_path']],
         dependent_task_list=[align_task],
         task_name='fill pits')
@@ -351,8 +347,6 @@ def execute(args):
         args=(
             (f_reg['pit_filled_dem_path'], 1),
             f_reg['slope_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         dependent_task_list=[pit_fill_task],
         target_path_list=[f_reg['slope_path']],
         task_name='calculate slope')
@@ -360,8 +354,6 @@ def execute(args):
     threshold_slope_task = task_graph.add_task(
         func=_threshold_slope,
         args=(f_reg['slope_path'], f_reg['thresholded_slope_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['thresholded_slope_path']],
         dependent_task_list=[slope_task],
         task_name='threshold slope')
@@ -371,8 +363,6 @@ def execute(args):
         args=(
             (f_reg['pit_filled_dem_path'], 1),
             f_reg['flow_direction_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['flow_direction_path']],
         dependent_task_list=[pit_fill_task],
         task_name='flow direction calculation')
@@ -381,8 +371,6 @@ def execute(args):
         func=sdr_core.calculate_average_aspect,
         args=(f_reg['flow_direction_path'],
               f_reg['weighted_avg_aspect_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['weighted_avg_aspect_path']],
         dependent_task_list=[flow_dir_task],
         task_name='weighted average of multiple-flow aspects')
@@ -392,8 +380,6 @@ def execute(args):
         args=(
             (f_reg['flow_direction_path'], 1),
             f_reg['flow_accumulation_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['flow_accumulation_path']],
         dependent_task_list=[flow_dir_task],
         task_name='flow accumulation calculation')
@@ -405,8 +391,6 @@ def execute(args):
             f_reg['slope_path'],
             f_reg['weighted_avg_aspect_path'],
             f_reg['ls_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['ls_path']],
         dependent_task_list=[
             flow_accumulation_task, slope_task,
@@ -420,8 +404,6 @@ def execute(args):
             (f_reg['flow_direction_path'], 1),
             float(args['threshold_flow_accumulation']),
             f_reg['stream_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         kwargs={'trace_threshold_proportion': 0.7},
         target_path_list=[f_reg['stream_path']],
         dependent_task_list=[flow_accumulation_task],
@@ -433,8 +415,6 @@ def execute(args):
                 f_reg['stream_path'],
                 f_reg['aligned_drainage_path'],
                 f_reg['stream_and_drainage_path']),
-            hash_algorithm='md5',
-            copy_duplicate_artifact=True,
             target_path_list=[f_reg['stream_and_drainage_path']],
             dependent_task_list=[stream_task, align_task],
             task_name='add drainage')
@@ -448,8 +428,6 @@ def execute(args):
         args=(
             biophysical_table, f_reg['aligned_lulc_path'], f_reg['w_path'],
             f_reg['thresholded_w_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['w_path'], f_reg['thresholded_w_path']],
         dependent_task_list=[align_task],
         task_name='calculate W')
@@ -459,8 +437,6 @@ def execute(args):
         args=(
             biophysical_table, f_reg['aligned_lulc_path'],
             f_reg['cp_factor_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['cp_factor_path']],
         dependent_task_list=[align_task],
         task_name='calculate CP')
@@ -473,8 +449,6 @@ def execute(args):
             f_reg['aligned_erodibility_path'],
             drainage_raster_path_task[0],
             f_reg['rkls_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['rkls_path']],
         dependent_task_list=[
             align_task, drainage_raster_path_task[1], ls_factor_task],
@@ -487,8 +461,6 @@ def execute(args):
             f_reg['cp_factor_path'],
             drainage_raster_path_task[0],
             f_reg['usle_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['usle_path']],
         dependent_task_list=[
             rkls_task, cp_task, drainage_raster_path_task[1]],
@@ -510,8 +482,6 @@ def execute(args):
                 f_reg['flow_direction_path'], factor_path,
                 f_reg['flow_accumulation_path'],
                 accumulation_path, out_bar_path),
-            hash_algorithm='md5',
-            copy_duplicate_artifact=True,
             target_path_list=[accumulation_path, out_bar_path],
             dependent_task_list=[
                 align_task, factor_task, flow_accumulation_task,
@@ -525,8 +495,6 @@ def execute(args):
             f_reg['w_bar_path'], f_reg['s_bar_path'],
             f_reg['flow_accumulation_path'], f_reg['d_up_path']),
         target_path_list=[f_reg['d_up_path']],
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         dependent_task_list=[
             bar_task_map['s_bar'], bar_task_map['w_bar'],
             flow_accumulation_task],
@@ -538,8 +506,6 @@ def execute(args):
             f_reg['thresholded_slope_path'], f_reg['thresholded_w_path'],
             f_reg['ws_inverse_path']),
         target_path_list=[f_reg['ws_inverse_path']],
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         dependent_task_list=[threshold_slope_task, threshold_w_task],
         task_name='calculate inverse ws factor')
 
@@ -551,8 +517,6 @@ def execute(args):
             f_reg['d_dn_path']),
         kwargs={'weight_raster_path_band': (f_reg['ws_inverse_path'], 1)},
         target_path_list=[f_reg['d_dn_path']],
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         dependent_task_list=[
             flow_dir_task, drainage_raster_path_task[1],
             inverse_ws_factor_task],
@@ -563,8 +527,6 @@ def execute(args):
         args=(
             f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_path']),
         target_path_list=[f_reg['ic_path']],
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         dependent_task_list=[d_up_task, d_dn_task],
         task_name='calculate ic')
 
@@ -574,8 +536,6 @@ def execute(args):
             float(args['k_param']), float(args['ic_0_param']),
             float(args['sdr_max']), f_reg['ic_path'],
             drainage_raster_path_task[0], f_reg['sdr_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['sdr_path']],
         dependent_task_list=[ic_task],
         task_name='calculate sdr')
@@ -584,8 +544,6 @@ def execute(args):
         func=_calculate_sed_export,
         args=(
             f_reg['usle_path'], f_reg['sdr_path'], f_reg['sed_export_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['sed_export_path']],
         dependent_task_list=[usle_task, sdr_task],
         task_name='calculate sed export')
@@ -594,8 +552,6 @@ def execute(args):
         func=_calculate_e_prime,
         args=(
             f_reg['usle_path'], f_reg['sdr_path'], f_reg['e_prime_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['e_prime_path']],
         dependent_task_list=[usle_task, sdr_task],
         task_name='calculate export prime')
@@ -607,8 +563,6 @@ def execute(args):
             f_reg['f_path'], f_reg['sdr_path'],
             f_reg['sed_deposition_path']),
         dependent_task_list=[e_prime_task, sdr_task, flow_dir_task],
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['sed_deposition_path']],
         task_name='sediment deposition')
 
@@ -617,8 +571,6 @@ def execute(args):
         args=(
             f_reg['rkls_path'], f_reg['usle_path'], f_reg['sdr_path'],
             float(args['sdr_max']), f_reg['sed_retention_index_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['sed_retention_index_path']],
         dependent_task_list=[rkls_task, usle_task, sdr_task],
         task_name='calculate sediment retention index')
@@ -627,8 +579,6 @@ def execute(args):
     s_inverse_task = task_graph.add_task(
         func=_calculate_inverse_s_factor,
         args=(f_reg['thresholded_slope_path'], f_reg['s_inverse_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['s_inverse_path']],
         dependent_task_list=[threshold_slope_task],
         task_name='calculate S factor')
@@ -640,8 +590,6 @@ def execute(args):
             (drainage_raster_path_task[0], 1),
             f_reg['d_dn_bare_soil_path']),
         kwargs={'weight_raster_path_band': (f_reg['s_inverse_path'], 1)},
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['d_dn_bare_soil_path']],
         dependent_task_list=[
             flow_dir_task, drainage_raster_path_task[1], s_inverse_task],
@@ -653,8 +601,6 @@ def execute(args):
             f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
             f_reg['d_up_bare_soil_path']),
         target_path_list=[f_reg['d_up_bare_soil_path']],
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         dependent_task_list=[bar_task_map['s_bar'], flow_accumulation_task],
         task_name='calculating d_up bare soil')
 
@@ -664,8 +610,6 @@ def execute(args):
             f_reg['d_up_bare_soil_path'], f_reg['d_dn_bare_soil_path'],
             f_reg['ic_bare_soil_path']),
         target_path_list=[f_reg['ic_bare_soil_path']],
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         dependent_task_list=[d_up_bare_task, d_dn_bare_task],
         task_name='calculate bare soil ic')
 
@@ -676,8 +620,6 @@ def execute(args):
             float(args['sdr_max']), f_reg['ic_bare_soil_path'],
             drainage_raster_path_task[0], f_reg['sdr_bare_soil_path']),
         target_path_list=[f_reg['sdr_bare_soil_path']],
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         dependent_task_list=[ic_bare_task, drainage_raster_path_task[1]],
         task_name='calculate bare SDR')
 
@@ -687,8 +629,6 @@ def execute(args):
             f_reg['rkls_path'], f_reg['usle_path'],
             drainage_raster_path_task[0], f_reg['sdr_path'],
             f_reg['sdr_bare_soil_path'], f_reg['sed_retention_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['sed_retention_path']],
         dependent_task_list=[
             rkls_task, usle_task, drainage_raster_path_task[1], sdr_task,
