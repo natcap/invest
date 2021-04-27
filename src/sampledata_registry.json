@@ -4,12 +4,6 @@
     "filesize": "406770767"
   },
   "Models": {
-    "Global DEM & Landmass Polygon": {
-      "filename": "Base_Data.zip",
-      "labelSuffix": "(required for Wind & Wave Energy models)",
-      "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FBase_Data.zip?generation=1614051204819529&alt=media",
-      "filesize": "151372182"
-    },
     "InVEST Carbon Model": {
       "filename": "Carbon.zip",
       "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FCarbon.zip?generation=1614051202294534&alt=media",
@@ -134,6 +128,12 @@
       "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FWindEnergy.zip?generation=1614051203573001&alt=media",
       "filesize": "5442492",
       "labelSuffix": "(required to run model)"
+    },
+    "Global DEM & Landmass Polygon": {
+      "filename": "Base_Data.zip",
+      "labelSuffix": "(required for Wind & Wave Energy)",
+      "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FBase_Data.zip?generation=1614051204819529&alt=media",
+      "filesize": "151372182"
     }
   }
 }
