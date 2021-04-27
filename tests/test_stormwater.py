@@ -364,7 +364,7 @@ class StormwaterTests(unittest.TestCase):
             [1,      1,      1,        1],
             [0.9825, 0.9625, 0.924167, 0.8875],
             [0.9,    0.8,    0.7,      0.6],
-            [0,      0,      0,        0]])
+            [0,      0,      0,        0]], dtype=numpy.float32)
         numpy.testing.assert_allclose(actual_adjusted_ratios,
             expected_adjusted_ratios, rtol=1e-6)
         expected_retention_volume = (expected_adjusted_ratios *
@@ -456,10 +456,10 @@ class StormwaterTests(unittest.TestCase):
             [0.11, 0.12, 0.13, 0.14],
             [0.21, 0.22, 0.23, 0.24],
             [0.31, 0.32, 0.33, 0.34],
-            [0.41, 0.42, 0.43, 0.44]])
+            [0.41, 0.42, 0.43, 0.44]], dtype=numpy.float32)
         expected_output = numpy.array([
             [0.44, 0.34],
-            [0.22, 0.12]])
+            [0.22, 0.12]], dtype=numpy.float32)
         stormwater.lookup_ratios(
             lulc_path,
             lulc_nodata,
@@ -478,10 +478,10 @@ class StormwaterTests(unittest.TestCase):
         precip_nodata = -2.5
         ratio_array = numpy.array([
             [0,   0.0001, stormwater.FLOAT_NODATA],
-            [0.5, 0.9,    1]])
+            [0.5, 0.9,    1]], dtype=numpy.float32)
         precip_array = numpy.array([
             [10.5, 0, 1],
-            [0.5,  0, precip_nodata]])
+            [0.5,  0, precip_nodata]], dtype=numpy.float32)
         pixel_area = 400
 
         out = stormwater.volume_op(
@@ -510,13 +510,13 @@ class StormwaterTests(unittest.TestCase):
         lulc_array = numpy.array([
             [0, 0, 0],
             [1, 1, 1],
-            [2, 2, lulc_nodata]])
+            [2, 2, lulc_nodata]], dtype=numpy.int8)
         retention_volume_array = numpy.array([
             [0, 1.5, stormwater.FLOAT_NODATA],
             [0, 1.5, 100],
-            [0, 1.5, 100]])
-        sorted_lucodes = numpy.array([0, 1, 2])
-        emc_array = numpy.array([0, 0.5, 3])
+            [0, 1.5, 100]], dtype=numpy.float32)
+        sorted_lucodes = numpy.array([0, 1, 2], dtype=numpy.uint8)
+        emc_array = numpy.array([0, 0.5, 3], dtype=numpy.float32)
 
         out = stormwater.avoided_pollutant_load_op(
             lulc_array,
@@ -540,11 +540,11 @@ class StormwaterTests(unittest.TestCase):
 
         retention_volume_array = numpy.array([
             [0, 1.5, stormwater.FLOAT_NODATA],
-            [0, 1.5, 100]])
+            [0, 1.5, 100]], dtype=numpy.float32)
         replacement_cost = 1.5
-        expected = [
+        expected = numpy.array([
             [0, 2.25, stormwater.FLOAT_NODATA],
-            [0, 2.25, 150]]
+            [0, 2.25, 150]], dtype=numpy.float32)
         actual = stormwater.retention_value_op(
             retention_volume_array,
             replacement_cost)
@@ -556,12 +556,12 @@ class StormwaterTests(unittest.TestCase):
 
         ratio_array = numpy.array([
             [0,   0.0001, stormwater.FLOAT_NODATA],
-            [0.5, 0.9,    1]])
+            [0.5, 0.9,    1]], dtype=numpy.float32)
         # these are obviously not averages from the above array but
         # it doesn't matter for this test
         avg_ratio_array = numpy.array([
             [0.5, 0.5, 0.5],
-            [0.5, stormwater.FLOAT_NODATA, 0.5]])
+            [0.5, stormwater.FLOAT_NODATA, 0.5]], dtype=numpy.float32)
         near_impervious_lulc_array = numpy.array([
             [0, 0, 1],
             [stormwater.UINT8_NODATA, 0, 1]], dtype=numpy.uint8)
@@ -612,7 +612,7 @@ class StormwaterTests(unittest.TestCase):
             [1, 1, 1, 1, 0, 0],
             [1, 1, 1, 1, 0, 1],
             [1, 0, 1, 0, 1, 1]
-        ])
+        ], dtype=numpy.uint8)
 
         connected_path = os.path.join(self.workspace_dir, 'connected.tif')
         distance_path = os.path.join(self.workspace_dir, 'distance.tif')
@@ -635,25 +635,25 @@ class StormwaterTests(unittest.TestCase):
         path = os.path.join(self.workspace_dir, 'make_search_kernel.tif')
         to_raster(array, path, pixel_size=(10, -10))
 
-        expected_5 = numpy.array([[1]])
+        expected_5 = numpy.array([[1]], dtype=numpy.uint8)
         actual_5 = stormwater.make_search_kernel(path, 5)
         numpy.testing.assert_equal(expected_5, actual_5)
 
-        expected_9 = numpy.array([[1]])
+        expected_9 = numpy.array([[1]], dtype=numpy.uint8)
         actual_9 = stormwater.make_search_kernel(path, 9)
         numpy.testing.assert_equal(expected_9, actual_9)
 
         expected_10 = numpy.array([
             [0, 1, 0],
             [1, 1, 1],
-            [0, 1, 0]])
+            [0, 1, 0]], dtype=numpy.uint8)
         actual_10 = stormwater.make_search_kernel(path, 10)
         numpy.testing.assert_equal(expected_10, actual_10)
 
         expected_15 = numpy.array([
             [1, 1, 1],
             [1, 1, 1],
-            [1, 1, 1]])
+            [1, 1, 1]], dtype=numpy.uint8)
         actual_15 = stormwater.make_search_kernel(path, 15)
         numpy.testing.assert_equal(expected_15, actual_15)
 
@@ -676,7 +676,7 @@ class StormwaterTests(unittest.TestCase):
         expected_kernel = numpy.array([
             [0, 1, 0],
             [1, 1, 1],
-            [0, 1, 0]])
+            [0, 1, 0]], dtype=numpy.uint8)
         actual_kernel = pygeoprocessing.raster_to_numpy_array(kernel_path)
         numpy.testing.assert_equal(actual_kernel, expected_kernel)
 
