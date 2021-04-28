@@ -248,9 +248,6 @@ ARGS_SPEC = {
             "name": "Grid Connection Points Table"
         },
         "machine_econ_path": {
-            "validation_options": {
-                'required_fields': ['name', 'value', 'note'],
-            },
             "type": "csv",
             "rows": {
                 "CapMax": {
