@@ -210,7 +210,7 @@ $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs install
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
-	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs checkout
+	git -C $(GIT_TEST_DATA_REPO_PATH) lfs checkout
 
 fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
 
