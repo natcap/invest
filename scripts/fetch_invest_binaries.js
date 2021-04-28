@@ -118,11 +118,11 @@ async function updateSampledataRegistry() {
   }
 
   const dataItems = await queryStorage(dataEndpoint);
-  Object.keys(registry.Models).forEach((model) => {
-    const filename = `invest/${VERSION}/data/${registry.Models[model].filename}`;
+  Object.keys(registry).forEach((model) => {
+    const filename = `invest/${VERSION}/data/${registry[model].filename}`;
     try {
-      registry.Models[model].url = dataItems[filename].mediaLink;
-      registry.Models[model].filesize = dataItems[filename].size;
+      registry[model].url = dataItems[filename].mediaLink;
+      registry[model].filesize = dataItems[filename].size;
     } catch {
       throw new Error(
         `no item found for ${filename} in ${JSON.stringify(dataItems, null, 2)}`
@@ -130,13 +130,6 @@ async function updateSampledataRegistry() {
     }
   });
 
-  const versionPrefix = encodeURIComponent(`invest/${VERSION}/`);
-  const delimiter = '/';
-  const versionEndpoint = `${googleAPI}/${BUCKET}/o?delimiter=${delimiter}&prefix=${versionPrefix}`;
-  const versionItems = await queryStorage(versionEndpoint);
-  const allDataFilename = `${decodeURIComponent(versionPrefix)}InVEST_${VERSION}_sample_data.zip`;
-  registry.allData.url = versionItems[allDataFilename].mediaLink;
-  registry.allData.filesize = versionItems[allDataFilename].size;
   if (JSON.stringify(template) === JSON.stringify(registry)) {
     console.log(`sample data registry is already up to date for invest ${VERSION}`);
     return;

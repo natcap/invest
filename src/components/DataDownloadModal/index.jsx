@@ -48,7 +48,6 @@ export class DataDownloadModal extends React.Component {
 
   async handleSubmit(event) {
     event.preventDefault();
-    const allDataURL = sampledataRegistry.allData.url;
     // even though the idea is to save files, here we just want to chooose
     // a directory, so must use OpenDialog.
     const data = await ipcRenderer.invoke(
@@ -56,11 +55,11 @@ export class DataDownloadModal extends React.Component {
       { properties: ['openDirectory'] }
     );
     if (data.filePaths.length) {
-      if (this.state.allDataCheck) {
-        ipcRenderer.send('download-url', [allDataURL], data.filePaths[0]);
-      } else {
-        ipcRenderer.send('download-url', this.state.selectedLinksArray, data.filePaths[0]);
-      }
+      ipcRenderer.send(
+        'download-url',
+        this.state.selectedLinksArray,
+        data.filePaths[0]
+      );
       this.props.storeDownloadDir(data.filePaths[0]);
     }
     this.props.closeModal();
