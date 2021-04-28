@@ -288,7 +288,7 @@ def check_raster(filepath, projected=False, projection_units=None):
             and be readable.
         projected=False (bool): Whether the spatial reference must be projected
             in linear units.
-        projection_units=None (pint.Units): The required linear units of the 
+        projection_units=None (pint.Units): The required linear units of the
             projection. If ``None``, the projection units will not be checked.
 
     Returns:
@@ -359,7 +359,7 @@ def check_vector(filepath, required_fields=None, projected=False,
             fieldnames will not be checked.
         projected=False (bool): Whether the spatial reference must be projected
             in linear units.  If None, the projection will not be checked.
-        projection_units=None (pint.Units): The required linear units of the 
+        projection_units=None (pint.Units): The required linear units of the
             projection. If ``None``, the projection units will not be checked.
 
     Returns:
@@ -458,21 +458,87 @@ def check_number(value, expression=None):
     try:
         float(value)
     except (TypeError, ValueError):
-        return "Value '%s' could not be interpreted as a number" % value
+        return f'Value {value} could not be interpreted as a number'
 
     if expression:
         # Check to make sure that 'value' is in the expression.
         if 'value' not in expression:
             raise AssertionError(
                 'The variable name value is not found in the '
-                'expression: "%s"' % expression)
+                f'expression: {expression}')
 
         # Expression is assumed to return a boolean, something like
         # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
         # be raised if asteval can't evaluate the expression.
         result = _evaluate_expression(expression, {'value': float(value)})
         if not result:  # A python bool object is returned.
-            return "Value does not meet condition %s" % expression
+            return f'Value does not meet condition {expression}'
+
+    return None
+
+
+def check_ratio(value):
+    """Validate a ratio (a proportion expressed as a value from 0 to 1).
+
+    Args:
+        value: A python value. This should be able to be cast to a float.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
+    try:
+        as_float = float(value)
+    except (TypeError, ValueError):
+        return f'Value {value} could not be interpreted as a number'
+
+    if as_float < 0 or as_float > 1:
+        return f'Value {as_float} is not in the range [0, 1]'
+
+    return None
+
+
+def check_percent(value):
+    """Validate a percent (a proportion expressed as a value from 0 to 100).
+
+    Args:
+        value: A python value. This should be able to be cast to a float.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
+    try:
+        as_float = float(value)
+    except (TypeError, ValueError):
+        return f'Value {value} could not be interpreted as a number'
+
+    if as_float < 0 or as_float > 100:
+        return f'Value {as_float} is not in the range [0, 100]'
+
+    return None
+
+
+def check_code(value):
+    """Validate a code (an integer ID).
+
+    Args:
+        value: A python value. This should be able to be cast to an int.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
+    try:
+        # must first cast to float, to handle both string and float inputs
+        as_float = float(value)
+        if not as_float.is_integer():
+            return f'Value {value} does not represent an integer'
+    except (TypeError, ValueError):
+        return f'Value {value} could not be interpreted as a number'
+
+    if as_float < 0:
+        return f'Value {value} is less than zero'
 
     return None
 
@@ -494,6 +560,110 @@ def check_boolean(value):
     if not isinstance(value, bool):
         return "Value must be either True or False, not %s %s" % (
             type(value), value)
+
+
+def check_csv2(filepath, column_patterns=None, row_patterns=None, excel_ok=False):
+    """Validate a table.
+
+    Args:
+        filepath (string): The string filepath to the table.
+        required_fields=None (list): A case-insensitive list of fieldnames that
+            must exist in the table.  If None, fieldnames will not be checked.
+        excel_ok=False (boolean): Whether it's OK for the file to be an Excel
+            table.  This is not a common case.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
+    file_warning = check_file(filepath, permissions='r')
+    if file_warning:
+        return file_warning
+
+    try:
+        # Check if the file encoding is UTF-8 BOM first
+        encoding = None
+        if utils.has_utf8_bom(filepath):
+            encoding = 'utf-8-sig'
+
+        # engine=python handles unknown characters by replacing them with a
+        # replacement character, instead of raising an error
+        # use sep=None, engine='python' to infer what the separator is
+        dataframe = pandas.read_csv(
+            filepath, sep=None, engine='python', encoding=encoding)
+    except Exception:
+        if excel_ok:
+            try:
+                dataframe = pandas.read_excel(filepath)
+            except ValueError:
+                return "File could not be opened as a CSV or Excel file."
+        else:
+            return ("File could not be opened as a CSV. "
+                    "File must be encoded as a UTF-8 CSV.")
+
+    if column_patterns and row_patterns:
+        return 'Should not specify both row and column patterns for CSV'
+
+    elif column_patterns:
+        columns = [name.lower() for name in dataframe.columns.str.strip()]
+        check_headers(column_patterns, columns)
+    elif row_patterns:
+        rows = [name.lower() for name in dataframe.columns.str.strip()]
+        check_headers(row_patterns, rows)
+
+
+def check_headers(patterns, headers):
+    """Validate that table headers (rows/columns) match a list of patterns.
+
+    Each pattern should match at least one header.
+    No header should be matched by more than one pattern.
+    Each header that's matched by any pattern should not be duplicated.
+    Headers are allowed to not match any pattern.
+
+    Args:
+        patterns (list[str]): A list of patterns expected to match header(s).
+            Each pattern should be parse-able as regex and will be anchored to
+            the header start and end.
+        headers (list[str]): A list of headers to validate.
+
+    Returns:
+        None, if validation passes; or a string describing the problem, if a
+        validation rule is broken.
+    """
+    # map each expected header pattern to a list of headers that it matches
+    pattern_to_headers = {col: [] for col in headers}
+    # map each actual header to a list of patterns that match it
+    header_to_patterns = {col: [] for col in actual_header}
+
+    for pattern in headers:
+        # add $ to the end to make it try to match the entire string
+        # re.match already anchors the pattern to the string start
+        compiled_pattern = re.compile(expected + '$')
+        for header in headers:
+            match = re.match(compiled_pattern, header)
+            if match:
+                pattern_to_headers[pattern].append(header)
+                header_to_patterns[header].append(pattern)
+
+    for pattern, headers in pattern_to_headers.items():
+        # each pattern should match at least one header
+        if len(headers) == 0:
+            return f'{pattern} matched 0 headers'
+
+    for header, patterns in header_to_patterns.items():
+        # no header should be matched by more than one pattern
+        # it would be neat to prove that all patterns are mutually
+        # exclusive in test_args_specs.py, but easier to check it here.
+        if len(patterns) > 1:
+            return (f'Header {header} was matched by more than one '
+                    f'pattern: {patterns}. Expected exactly one.')
+        # each header that's matched by a pattern should not be duplicated
+        if len(patterns) > 0:
+            count = headers.count(header)
+            if count > 1:
+                return (f'Header {header} (matched pattern {patterns[0]}) '
+                        f'was found {count} times, expected only once.')
+    return None
 
 
 def check_csv(filepath, required_fields=None, excel_ok=False):
@@ -646,10 +816,12 @@ _VALIDATION_FUNCS = {
     'boolean': check_boolean,
     'csv': functools.partial(timeout, check_csv),
     'file': functools.partial(timeout, check_file),
-    'folder': functools.partial(timeout, check_directory),
     'directory': functools.partial(timeout, check_directory),
     'freestyle_string': check_freestyle_string,
     'number': check_number,
+    'ratio': check_ratio,
+    'percent': check_percent,
+    'code': check_code,
     'option_string': check_option_string,
     'raster': functools.partial(timeout, check_raster),
     'vector': functools.partial(timeout, check_vector),
@@ -804,16 +976,19 @@ def validate(args, spec, spatial_overlap_opts=None):
             continue
 
         try:
+            print('validation options:', validation_options)
             warning_msg = type_validation_func(
                 args[key], **validation_options)
 
             if warning_msg:
                 validation_warnings.append(([key], warning_msg))
                 invalid_keys.add(key)
-        except Exception:
+        except Exception as ex:
             LOGGER.exception(
                 'Error when validating key %s with value %s',
                 key, args[key])
+            print(ex)
+            print(ex.message)
             validation_warnings.append(
                 ([key], 'An unexpected error occurred in validation'))
     # step 5: check spatial overlap if applicable
@@ -871,7 +1046,7 @@ def invest_validator(validate_func):
         AssertionError when an invalid format is found.
 
     Example::
-    
+
         from natcap.invest import validation
         @validation.invest_validator
         def validate(args, limit_to=None):
