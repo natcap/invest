@@ -590,18 +590,6 @@ def execute(args):
 
     LOGGER.debug('Biophysical Turbine Parameters: %s', bio_parameters_dict)
 
-    # Check that all the necessary input fields from the CSV files have been
-    # collected by comparing the number of dictionary keys to the number of
-    # elements in our known list
-    missing_biophysical_params = list(
-        set(biophysical_params) - set(bio_parameters_dict.keys()))
-    if missing_biophysical_params:
-        raise ValueError(
-            'The following field value(s) are missing from either the Turbine '
-            'CSV file or the Global Wind Energy parameters CSV file: %s'
-            'Please make sure all the necessary fields are present and '
-            'spelled correctly.' % missing_biophysical_params)
-
     if ('valuation_container' not in args or
             args['valuation_container'] is False):
         LOGGER.info('Valuation Not Selected')
@@ -615,9 +603,6 @@ def execute(args):
         # Read the biophysical turbine parameters into a dictionary
         val_turbine_dict = _read_csv_wind_parameters(
             args['turbine_parameters_path'], valuation_turbine_params)
-        # Check that all the necessary input fields from the CSV file
-        missing_turbine_params = list(
-            set(valuation_turbine_params) - set(val_turbine_dict.keys()))
 
         valuation_global_params = [
             'carbon_coefficient', 'time_period', 'infield_cable_cost',
@@ -629,16 +614,6 @@ def execute(args):
         # Read the biophysical global parameters into a dictionary
         val_global_param_dict = _read_csv_wind_parameters(
             args['global_wind_parameters_path'], valuation_global_params)
-        # Check all the necessary input fields from the CSV file
-        missing_global_params = list(
-            set(valuation_global_params) - set(val_global_param_dict.keys()))
-
-        if missing_turbine_params or missing_global_params:
-            raise ValueError(
-                'The following field value(s) are missing: \nTurbine CSV file:'
-                ' %s. \nGlobal Wind Energy parameters CSV file: %s. \nPlease '
-                'make sure all the necessary fields are present and spelled '
-                'correctly.' % (missing_turbine_params, missing_global_params))
 
         # Combine the turbine and global parameters into one dictionary
         val_parameters_dict = val_global_param_dict.copy()

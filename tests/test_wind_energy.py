@@ -588,47 +588,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'output', vector_path),
             os.path.join(REGRESSION_DATA, 'priceval', vector_path))
 
-    def test_field_error_missing_bio_param(self):
-        """WindEnergy: test that ValueError raised when missing bio param."""
-        from natcap.invest import wind_energy
-
-        # for testing raised exceptions, running on a set of data that was
-        # created by hand and has no numerical validity. Helps test the
-        # raised exception quicker
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_path': os.path.join(
-                SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_vector_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_vector_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000
-        }
-
-        # creating a stand in turbine parameter csv file that is missing
-        # the required field 'hub_height'. This should raise the exception
-        tmp, file_path = tempfile.mkstemp(
-            suffix='.csv', dir=args['workspace_dir'])
-        os.close(tmp)
-        data = {
-            'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
-            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
-            'turbine_cost': 8.0, 'turbines_per_circuit': 8
-        }
-        _create_vertical_csv(data, file_path)
-        args['turbine_parameters_path'] = file_path
-
-        self.assertRaises(ValueError, wind_energy.execute, args)
-
     def test_time_period_exceptoin(self):
         """WindEnergy: raise ValueError if 'time' and 'wind_sched' differ."""
         from natcap.invest import wind_energy
