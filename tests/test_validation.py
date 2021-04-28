@@ -773,6 +773,35 @@ class CSVValidation(unittest.TestCase):
                 self.assertTrue(len(ws) == 1)
                 self.assertTrue('timed out' in str(ws[0].message))
 
+    def test_check_headers(self):
+        """Validation: check that CSV header validation works."""
+        from natcap.invest import validation
+        patterns = ['hello', r'\d+']
+        headers = ['hello', '1', '2']
+        result = validation.check_headers(patterns, headers)
+        self.assertTrue(result is None)
+
+        # each pattern should match at least one header
+        headers = ['1', '2']
+        result = validation.check_headers(patterns, headers)
+        self.assertTrue(result is not None)
+
+        # duplicate headers that match a pattern are not allowed
+        headers = ['hello', '1', '1']
+        result = validation.check_headers(patterns, headers)
+        self.assertTrue(result is not None)
+
+        # duplicate headers that don't match a pattern are allowed
+        headers = ['hello', '1', 'x', 'x']
+        result = validation.check_headers(patterns, headers)
+        self.assertTrue(result is None)
+
+        # two patterns matching the same header is not allowed
+        patterns = ['hello', r'h.*']
+        headers = ['hello']
+        result = validation.check_headers(patterns, headers)
+        self.assertTrue(result is not None)
+
 
 class TestValidationFromSpec(unittest.TestCase):
     """Test Validation From Spec."""

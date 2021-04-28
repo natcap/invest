@@ -562,18 +562,23 @@ def check_boolean(value):
             type(value), value)
 
 
-def check_csv2(filepath, column_patterns=None, row_patterns=None, excel_ok=False):
+def check_csv(filepath, header_patterns=None, axis=1, excel_ok=False):
     """Validate a table.
 
     Args:
         filepath (string): The string filepath to the table.
-        required_fields=None (list): A case-insensitive list of fieldnames that
-            must exist in the table.  If None, fieldnames will not be checked.
+        header_patterns (list[str]): A list of regex-compilable patterns that
+            are expected to match the table headers (as defined by ``axis``).
+            Patterns may be an ordinary string to match a header exactly, or
+            use any valid regex syntax to match 1 or more headers. See the
+            docstring of ``check_headers`` for details on matching rules.
+        axis (int): The axis of the table to use as the header. If 0, the first
+            column will be used. If 1, the first row will be used.
         excel_ok=False (boolean): Whether it's OK for the file to be an Excel
             table.  This is not a common case.
 
     Returns:
-        A string error message if an error was found.  ``None`` otherwise.
+        A string error message if an error was found. ``None`` otherwise.
 
     """
     file_warning = check_file(filepath, permissions='r')
@@ -601,24 +606,21 @@ def check_csv2(filepath, column_patterns=None, row_patterns=None, excel_ok=False
             return ("File could not be opened as a CSV. "
                     "File must be encoded as a UTF-8 CSV.")
 
-    if column_patterns and row_patterns:
-        return 'Should not specify both row and column patterns for CSV'
-
-    elif column_patterns:
-        columns = [name.lower() for name in dataframe.columns.str.strip()]
-        check_headers(column_patterns, columns)
-    elif row_patterns:
-        rows = [name.lower() for name in dataframe.columns.str.strip()]
-        check_headers(row_patterns, rows)
+    if header_patterns:
+        if axis == 1:
+            headers = [name.lower() for name in dataframe.columns.str.strip()]
+        elif axis == 0:
+            headers = [name.lower() for name in dataframe.iloc[:, 0]]
+        check_headers(header_patterns, headers)
 
 
 def check_headers(patterns, headers):
     """Validate that table headers (rows/columns) match a list of patterns.
 
-    Each pattern should match at least one header.
-    No header should be matched by more than one pattern.
-    Each header that's matched by any pattern should not be duplicated.
-    Headers are allowed to not match any pattern.
+    - Each pattern should match at least one header.
+    - No header should be matched by more than one pattern.
+    - Each header that's matched by any pattern should not be duplicated.
+    - Headers are allowed to not match any pattern.
 
     Args:
         patterns (list[str]): A list of patterns expected to match header(s).
@@ -631,14 +633,14 @@ def check_headers(patterns, headers):
         validation rule is broken.
     """
     # map each expected header pattern to a list of headers that it matches
-    pattern_to_headers = {col: [] for col in headers}
+    pattern_to_headers = {pattern: [] for pattern in patterns}
     # map each actual header to a list of patterns that match it
-    header_to_patterns = {col: [] for col in actual_header}
+    header_to_patterns = {header: [] for header in headers}
 
-    for pattern in headers:
+    for pattern in patterns:
         # add $ to the end to make it try to match the entire string
         # re.match already anchors the pattern to the string start
-        compiled_pattern = re.compile(expected + '$')
+        compiled_pattern = re.compile(pattern + '$')
         for header in headers:
             match = re.match(compiled_pattern, header)
             if match:
@@ -648,7 +650,7 @@ def check_headers(patterns, headers):
     for pattern, headers in pattern_to_headers.items():
         # each pattern should match at least one header
         if len(headers) == 0:
-            return f'{pattern} matched 0 headers'
+            return f'{pattern} matched 0 headers, expected at least one.'
 
     for header, patterns in header_to_patterns.items():
         # no header should be matched by more than one pattern
@@ -663,57 +665,6 @@ def check_headers(patterns, headers):
             if count > 1:
                 return (f'Header {header} (matched pattern {patterns[0]}) '
                         f'was found {count} times, expected only once.')
-    return None
-
-
-def check_csv(filepath, required_fields=None, excel_ok=False):
-    """Validate a table.
-
-    Args:
-        filepath (string): The string filepath to the table.
-        required_fields=None (list): A case-insensitive list of fieldnames that
-            must exist in the table.  If None, fieldnames will not be checked.
-        excel_ok=False (boolean): Whether it's OK for the file to be an Excel
-            table.  This is not a common case.
-
-    Returns:
-        A string error message if an error was found.  ``None`` otherwise.
-
-    """
-    file_warning = check_file(filepath, permissions='r')
-    if file_warning:
-        return file_warning
-
-    try:
-        # Check if the file encoding is UTF-8 BOM first
-        encoding = None
-        if utils.has_utf8_bom(filepath):
-            encoding = 'utf-8-sig'
-
-        # engine=python handles unknown characters by replacing them with a
-        # replacement character, instead of raising an error
-        # use sep=None, engine='python' to infer what the separator is
-        dataframe = pandas.read_csv(
-            filepath, sep=None, engine='python', encoding=encoding)
-    except Exception:
-        if excel_ok:
-            try:
-                dataframe = pandas.read_excel(filepath)
-            except ValueError:
-                return "File could not be opened as a CSV or Excel file."
-        else:
-            return ("File could not be opened as a CSV. "
-                    "File must be encoded as a UTF-8 CSV.")
-
-    if required_fields:
-        dataframe.columns = dataframe.columns.str.strip()
-        fields_in_table = set([name.upper() for name in dataframe.columns])
-        missing_fields = (
-            set(field.upper() for field in required_fields) - fields_in_table)
-
-        if missing_fields:
-            return ("Fields are missing from this table: %s" %
-                    sorted(missing_fields))
     return None
 
 
@@ -965,18 +916,31 @@ def validate(args, spec, spatial_overlap_opts=None):
         except KeyError:
             LOGGER.debug(f'Provided key {key} does not exist in ARGS_SPEC')
             continue
+
         # If no validation options specified, assume defaults.
         try:
             validation_options = parameter_spec['validation_options']
         except KeyError:
             validation_options = {}
+
+        if parameter_spec['type'] == 'csv':
+            # assuming that the spec won't have both 'rows' and 'columns'
+            # this is verified in test_args_specs.py
+            if 'columns' in parameter_spec:
+                validation_options['header_patterns'] = (
+                    parameter_spec['columns'].keys())
+                validation_options['axis'] = 1
+            elif 'rows' in parameter_spec:
+                validation_options['header_patterns'] = (
+                    parameter_spec['rows'].keys())
+                validation_options['axis'] = 1
+
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
             continue
 
         try:
-            print('validation options:', validation_options)
             warning_msg = type_validation_func(
                 args[key], **validation_options)
 
@@ -987,8 +951,6 @@ def validate(args, spec, spatial_overlap_opts=None):
             LOGGER.exception(
                 'Error when validating key %s with value %s',
                 key, args[key])
-            print(ex)
-            print(ex.message)
             validation_warnings.append(
                 ([key], 'An unexpected error occurred in validation'))
     # step 5: check spatial overlap if applicable
@@ -1116,12 +1078,22 @@ def invest_validator(validate_func):
                     input_type = args_key_spec['type']
                     validator_func = _VALIDATION_FUNCS[input_type]
 
-
                     try:
                         validation_options = (
                             args_key_spec['validation_options'])
                     except KeyError:
                         validation_options = {}
+                    if args_key_spec['type'] == 'csv':
+                        # assume the spec won't have both 'rows' and 'columns'
+                        # this is verified in test_args_specs.py
+                        if 'columns' in args_key_spec:
+                            validation_options['header_patterns'] = (
+                                args_key_spec['columns'].keys())
+                            validation_options['axis'] = 1
+                        elif 'rows' in args_key_spec:
+                            validation_options['header_patterns'] = (
+                                args_key_spec['rows'].keys())
+                            validation_options['axis'] = 1
 
                     error_msg = (
                         validator_func(args_value, **validation_options))

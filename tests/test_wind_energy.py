@@ -615,12 +615,12 @@ class WindEnergyRegressionTests(unittest.TestCase):
         }
 
         # creating a stand in turbine parameter csv file that is missing
-        # a biophysical field / value. This should raise the exception
+        # the required field 'hub_height'. This should raise the exception
         tmp, file_path = tempfile.mkstemp(
             suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
-            'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
+            'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
             'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
             'turbine_cost': 8.0, 'turbines_per_circuit': 8
         }
@@ -756,7 +756,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args['wind_data_path'] = wind_data_csv
 
-        # AOI and wind data should not overlap, leading to a ValueError in 
+        # AOI and wind data should not overlap, leading to a ValueError in
         # clip_vector_by_vector
         with self.assertRaises(ValueError) as cm:
             wind_energy.execute(args)

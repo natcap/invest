@@ -389,9 +389,6 @@ ARGS_SPEC = {
             "name": "Price of Energy"
         },
         "rate_change": {
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            },
             "type": "ratio",
             "required": "valuation_container & (not price_table)",
             "about": ("The annual rate of change in the price of wind energy. "
