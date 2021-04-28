@@ -7,8 +7,8 @@ import '@testing-library/jest-dom';
 import { DataDownloadModal, DownloadProgressBar } from '../src/components/DataDownloadModal';
 import sampledata_registry from '../src/sampledata_registry.json';
 
-const nModels = Object.keys(sampledata_registry.Models).length;
-const modelName = Object.keys(sampledata_registry.Models)[0];
+const nModels = Object.keys(sampledata_registry).length;
+const modelName = Object.keys(sampledata_registry)[0];
 
 describe('Sample Data Download Form', () => {
   test('Checkbox initial state & interactions', () => {
@@ -74,7 +74,7 @@ describe('Sample Data Download Form', () => {
     expect(allCheckBoxes).toHaveLength(nModels + 1); // +1 for Select All
 
     // Each checkbox is labeled by the model's name
-    Object.keys(sampledata_registry.Models).forEach((modelName) => {
+    Object.keys(sampledata_registry).forEach((modelName) => {
       // some names have trailing parentheticals that trip up the query.
       const pattern = modelName.split('(')[0];
       const modelCheckbox = getByLabelText(new RegExp(pattern));

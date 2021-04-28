@@ -34,7 +34,7 @@ export class DataDownloadModal extends React.Component {
   componentDidMount() {
     const linksArray = [];
     const dataListCheckBoxes = {};
-    Object.entries(sampledataRegistry.Models)
+    Object.entries(sampledataRegistry)
       .forEach(([modelName, data]) => {
         linksArray.push(data.url);
         dataListCheckBoxes[modelName] = true;
@@ -90,7 +90,7 @@ export class DataDownloadModal extends React.Component {
 
   handleCheckList(event, modelName) {
     let { selectedLinksArray, dataListCheckBoxes } = this.state;
-    const { url } = sampledataRegistry.Models[modelName];
+    const { url } = sampledataRegistry[modelName];
     if (event.target.checked) {
       selectedLinksArray.push(url);
       dataListCheckBoxes[modelName] = true;
@@ -112,9 +112,9 @@ export class DataDownloadModal extends React.Component {
     Object.keys(dataListCheckBoxes)
       .forEach((modelName) => {
         const filesize = parseFloat(
-          `${sampledataRegistry.Models[modelName].filesize / 1000000}`
+          `${sampledataRegistry[modelName].filesize / 1000000}`
         ).toFixed(2) + ' MB';
-        const labelSuffix = sampledataRegistry.Models[modelName].labelSuffix || '';
+        const labelSuffix = sampledataRegistry[modelName].labelSuffix || '';
         DatasetCheckboxRows.push(
           <tr key={modelName}>
             <td>

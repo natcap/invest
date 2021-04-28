@@ -753,35 +753,7 @@ describe('Download Sample Data Modal', () => {
     });
   });
 
-  test('Download sends signal to main & stores location - all boxes selected', async () => {
-    const dialogData = {
-      filePaths: ['foo/directory'],
-    };
-    ipcRenderer.invoke.mockResolvedValue(dialogData);
-
-    const { findByRole } = render(
-      <App
-        investExe="foo"
-        isFirstRun={true}
-      />
-    );
-
-    const downloadButton = await findByRole('button', { name: 'Download' });
-    fireEvent.click(downloadButton);
-
-    // All data selected - ipcRenderer.send should be called with
-    // 2nd parameter as an array of length 1 (1 zipfile url to download)
-    await waitFor(() => {
-      // first call and second parameter
-      expect(ipcRenderer.send.mock.calls[0][1]).toHaveLength(1);
-    });
-    await waitFor(async () => {
-      expect(await getSettingsValue('sampleDataDir'))
-        .toBe(dialogData.filePaths[0]);
-    });
-  });
-
-  test('Download sends signal to main & stores location - some boxes selected', async () => {
+  test('Download sends signal to main & stores location', async () => {
     const dialogData = {
       filePaths: ['foo/directory'],
     };
@@ -798,15 +770,15 @@ describe('Download Sample Data Modal', () => {
     );
 
     const allCheckBoxes = await findAllByRole('checkbox');
-    // toggle off one checkbox so not all are selected
-    fireEvent.click(allCheckBoxes[3]); // just avoid [0] - the SelectAll box
+    // // toggle off one checkbox so not all are selected
+    // fireEvent.click(allCheckBoxes[3]); // just avoid [0] - the SelectAll box
 
     const downloadButton = await findByRole('button', { name: 'Download' });
     fireEvent.click(downloadButton);
 
     // Many datasets selected - ipcRenderer.send should be called with
     // 2nd parameter as an array of length:
-    const nURLs = allCheckBoxes.length - 2; // Select All & 1 more unselected
+    const nURLs = allCheckBoxes.length - 1; // all except Select All
     await waitFor(() => {
       // first call and second parameter
       expect(ipcRenderer.send.mock.calls[0][1])
