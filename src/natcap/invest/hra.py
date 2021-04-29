@@ -2596,8 +2596,8 @@ def _get_criteria_dataframe(base_criteria_table_path):
     # Drop columns that have all NA values
     criteria_df.dropna(axis=1, how='all', inplace=True)
 
-    # Convert empty cells (those that are not in string or unicode format) to
-    # None
+    # Convert empty cells (those that are not in string or unicode format)
+    # to None
     criteria_df.index = [x if isinstance(x, str) else None
                          for x in criteria_df.index]
 
@@ -2728,7 +2728,8 @@ def _validate_rating(
 
     Args:
         rating (str): a string of either digit or file path. If it's a digit,
-            it should range between 1 to maximum rating.
+            it should range between 1 to maximum rating. It could be a filepath
+            if the user is using spatially-explicit ratings.
         max_rating (float): a number representing the highest value that
             is represented in criteria rating.
         criteria_name (str): the name of the criteria attribute where rating
@@ -2738,42 +2739,42 @@ def _validate_rating(
             None when we're checking the habitat-only attributes. (optional)
 
     Returns:
-        _rating_lg_one (bool): a value indicating if the rating is at least 1.
+        True for values from 1 to max_rating.
+        False for values less than 1.
 
     Raises:
-        A ValueError if the rating score is larger than the maximum rating that
-            the user indicates.
+        ValueError if the rating score is larger than the maximum rating
+            or if the rating is numpy.nan, indicating a missing rating.
 
     """
-    _rating_lg_one = True
+    try:
+        num_rating = float(rating)
+    except ValueError:
+        # assume it's a path to a file, which is validated elsewhere
+        return True
 
-    # Rating might be a string of path or a string of digit. Validate the value
-    # when it's a digit
-    if isinstance(rating, str) and rating.isdigit():
-        rating = float(rating)
-        # If rating is less than 1, ignore this criteria attribute
-        if rating < 1:
-            _rating_lg_one = False
-            warning_message = '"%s" for habitat %s' % (criteria_name, habitat)
-            if stressor:
-                warning_message += (' and stressor %s' % stressor)
-            warning_message += (
-                ' has a rating %s less than 1, so this criteria attribute is '
-                'ignored in calculation.' % rating)
-            LOGGER.warning(warning_message)
+    message_prefix = '"%s" for habitat %s' % (criteria_name, habitat)
+    if stressor:
+        message_prefix += (' and stressor %s' % stressor)
 
-        # Raise an exception if rating is larger than the maximum rating that
-        # the user specified
-        elif rating > float(max_rating):
-            error_message = '"%s" for habitat %s' % (criteria_name, habitat)
-            if stressor:
-                error_message += (' and stressor %s' % stressor)
-            error_message += (
-                ' has a rating %s larger than the maximum rating %s. '
-                'Please check your criteria table.' % (rating, max_rating))
-            raise ValueError(error_message)
+    if num_rating < 1:
+        warning_message = message_prefix + (
+            ' has a rating %s less than 1, so this criteria attribute is '
+            'ignored in calculation.' % num_rating)
+        LOGGER.warning(warning_message)
+        return False
 
-    return _rating_lg_one
+    if num_rating > float(max_rating):
+        error_message = message_prefix + (
+            ' has a rating %s larger than the maximum rating %s. '
+            'Please check your criteria table.' % (rating, max_rating))
+        raise ValueError(error_message)
+
+    if numpy.isnan(num_rating):
+        raise ValueError(
+            f'{message_prefix} has no rating. Please check the criteria table.')
+
+    return True
 
 
 def _validate_dq_weight(dq, weight, habitat, stressor=None):
