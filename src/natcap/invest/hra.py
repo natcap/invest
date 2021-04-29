@@ -2778,7 +2778,7 @@ def _validate_rating(
 
 
 def _validate_dq_weight(dq, weight, habitat, stressor=None):
-    """Check if DQ and Weight column values are numbers.
+    """Check if DQ and Weight column values are numbers and not 0.
 
     Args:
         dq (str): a string representing the value of data quality score.
@@ -2791,7 +2791,7 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
         None
 
     Raises:
-        ValueError if the value of the DQ or weight is not a number.
+        ValueError if the value of the DQ or weight is 0 or not a number.
 
     """
     for key, value in {
@@ -2800,17 +2800,18 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
 
         # The value might be NaN or a string of non-digit, therefore check for
         # both cases
-        if (isinstance(value, (float, int)) and numpy.isnan(value)) or (
-                isinstance(value, str) and not value.isdigit()):
-            error_message = (
+        error_message = (
                 'Values in the %s column for habitat "%s" ' % (key, habitat))
+        if stressor:
+            error_message += 'and stressor "%s"' % stressor
+        error_message += ' should be a number, but is "%s".' % value
 
-            # Format the error message based on whether stressor name is given
-            if stressor:
-                error_message += 'and stressor "%s"' % stressor
+        try:
+            num_value = float(value)
+        except ValueError:
+            raise ValueError(error_message)
 
-            error_message += ' should be a number, but is "%s".' % value
-
+        if numpy.isnan(num_value) or num_value == 0:
             raise ValueError(error_message)
 
 
@@ -2884,95 +2885,76 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
         # If stressor exists and the row index is not None
         elif stressor and row_idx:
             criteria_name = row_idx
-            criteria_type = row_data[_CRITERIA_TYPE_HEADER]
+            criteria_type = row_data.pop(_CRITERIA_TYPE_HEADER)
             criteria_type = criteria_type.upper()
             if criteria_type not in ['E', 'C']:
                 raise ValueError('Criteria Type in the criteria scores table '
                                  'should be either E or C.')
 
-            for idx, (row_key, row_value) in enumerate(row_data.items()):
-                # The first value in the criteria row should be a rating value
-                # with habitat name as key, after a stressor was found
-                if idx % 3 == 0:
-                    if row_key in habitat_names:
-                        habitat = row_key
+            # Values are always grouped in threes (rating, dq, weight)
+            for idx in range(0, row_data.size, 3):
+                habitat = row_data.keys()[idx]
+                rating = row_data[idx]
+                dq = row_data[idx + 1]
+                weight = row_data[idx + 2]
 
-                        # Create E or C raster paths on habitat-stressor pair
-                        overlap_df.loc[
-                            (habitat, stressor),
-                            criteria_type + '_RASTER_PATH'] = os.path.join(
-                                output_dir, criteria_type + '_' + habitat
-                                + '_' + stressor + suffix + '.tif')
-                        overlap_df.loc[
-                            (habitat, stressor),
-                            criteria_type + '_NUM_RASTER_PATH'] = os.path.join(
-                                inter_dir, criteria_type + '_num_' +
-                                habitat + '_' + stressor + suffix + '.tif')
+                # Create E or C raster paths on habitat-stressor pair
+                overlap_df.loc[
+                    (habitat, stressor),
+                    criteria_type + '_RASTER_PATH'] = os.path.join(
+                        output_dir, criteria_type + '_' + habitat
+                        + '_' + stressor + suffix + '.tif')
+                overlap_df.loc[
+                    (habitat, stressor),
+                    criteria_type + '_NUM_RASTER_PATH'] = os.path.join(
+                        inter_dir, criteria_type + '_num_' +
+                        habitat + '_' + stressor + suffix + '.tif')
 
-                        # Create individual habitat-stressor risk raster path
-                        overlap_df.loc[
-                            (habitat, stressor),
-                            'PAIR_RISK_RASTER_PATH'] = os.path.join(
-                                output_dir, 'RISK_' +
-                                habitat + '_' + stressor + suffix + '.tif')
+                # Create individual habitat-stressor risk raster path
+                overlap_df.loc[
+                    (habitat, stressor),
+                    'PAIR_RISK_RASTER_PATH'] = os.path.join(
+                        output_dir, 'RISK_' +
+                        habitat + '_' + stressor + suffix + '.tif')
 
-                        # Create pickle file path that stores zonal stats dict
-                        overlap_df.loc[
-                            (habitat, stressor), criteria_type +
-                            '_PICKLE_STATS_PATH'] = os.path.join(
-                                inter_dir, criteria_type + '_' +
-                                habitat + '_' + stressor + suffix + '_.pickle')
-                        overlap_df.loc[
-                            (habitat, stressor),
-                            'PAIR_RISK_PICKLE_STATS_PATH'] = os.path.join(
-                                inter_dir, 'risk_' +
-                                habitat + '_' + stressor + suffix + '_.pickle')
+                # Create pickle file path that stores zonal stats dict
+                overlap_df.loc[
+                    (habitat, stressor), criteria_type +
+                    '_PICKLE_STATS_PATH'] = os.path.join(
+                        inter_dir, criteria_type + '_' +
+                        habitat + '_' + stressor + suffix + '_.pickle')
+                overlap_df.loc[
+                    (habitat, stressor),
+                    'PAIR_RISK_PICKLE_STATS_PATH'] = os.path.join(
+                        inter_dir, 'risk_' +
+                        habitat + '_' + stressor + suffix + '_.pickle')
 
-                        # If rating is less than 1, skip this criteria row
-                        rating = row_value
-                        if not _validate_rating(
-                                rating, max_rating, criteria_name, habitat,
-                                stressor):
-                            continue
+                _ = _validate_rating(
+                        rating, max_rating, criteria_name, habitat, stressor)
 
-                    # If the first value is not a rating value, break the loop
-                    # since it has reaches the end of the criteria row
-                    else:
-                        break
+                # Check the DQ and weight values when we have collected
+                # both of them
+                _validate_dq_weight(dq, weight, habitat, stressor)
+                # Calculate cumulative numerator score if rating is a digit
+                if (isinstance(rating, str) and rating.isdigit()) or (
+                        isinstance(rating, (int, float))):
+                    overlap_df.loc[(habitat, stressor),
+                                   criteria_type + '_NUM'] += \
+                        float(rating)/float(dq)/float(weight)
 
-                # The second value in the row should be data quality (dq) for
-                # that habitat-stressor criteria
-                elif idx % 3 == 1:
-                    dq = row_value
-
-                # The third value in the row should be weight for the habitat-
-                # stressor criteria
+                # Save the rating, dq, and weight to the spatial criteria
+                # dictionary in the dataframe if rating is not a number
                 else:
-                    weight = row_value
-
-                    # Check the DQ and weight values when we have collected
-                    # both of them
-                    _validate_dq_weight(dq, weight, habitat, stressor)
-                    # Calculate cumulative numerator score if rating is a digit
-                    if (isinstance(rating, str) and rating.isdigit()) or (
-                            isinstance(rating, (int, float))):
-                        overlap_df.loc[(habitat, stressor),
-                                       criteria_type + '_NUM'] += \
-                            float(rating)/float(dq)/float(weight)
-
-                    # Save the rating, dq, and weight to the spatial criteria
-                    # dictionary in the dataframe if rating is not a number
-                    else:
-                        overlap_df.loc[
-                            (habitat, stressor),
-                            criteria_type + '_SPATIAL']['_'.join(
-                                [habitat, stressor, criteria_name])] = [
-                                    rating, dq, weight]
-
-                    # Calculate the cumulative denominator score
                     overlap_df.loc[
-                        (habitat, stressor), criteria_type + '_DENOM'] += \
-                        1/float(dq)/float(weight)
+                        (habitat, stressor),
+                        criteria_type + '_SPATIAL']['_'.join(
+                            [habitat, stressor, criteria_name])] = [
+                                rating, dq, weight]
+
+                # Calculate the cumulative denominator score
+                overlap_df.loc[
+                    (habitat, stressor), criteria_type + '_DENOM'] += \
+                    1/float(dq)/float(weight)
 
     # If any stressor-habitat doesn't have at least one E or C criteria rating,
     # raise an exception

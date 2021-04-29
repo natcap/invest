@@ -827,7 +827,22 @@ class HraUnitTests(unittest.TestCase):
                 msg=f'for value: {r}')
         for r in invalid_ratings_to_raise:
             with self.assertRaises(ValueError, msg=f'for value: {r}'):
-                _validate_rating(r, 3, criteria_name, habitat),
+                _validate_rating(r, 3, criteria_name, habitat)
+
+    def test_validate_dq_weight(self):
+        """HRA: test _validate_dq_weight raises ValueErrors"""
+        from natcap.invest.hra import _validate_dq_weight
+        import numpy
+
+        habitat = 'bar'
+        invalid_vals = [0, '0', numpy.nan, 'foo']
+        for v in invalid_vals:
+            with self.assertRaises(ValueError, msg=f'for value: {v}'):
+                _validate_dq_weight(v, v, habitat)
+
+        valid_vals = [1, '1']
+        for v in valid_vals:
+            _validate_dq_weight(v, v, habitat)
 
 
 class HraRegressionTests(unittest.TestCase):
