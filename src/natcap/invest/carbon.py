@@ -103,7 +103,7 @@ ARGS_SPEC = {
                 "expression": "int(value)"
             },
             "type": "number",
-            "required": "calc_sequestration",
+            "required": "do_valuation",
             "about": "The calendar year of the current scenario.",
             "name": "Current Landcover Calendar Year"
         },
@@ -112,7 +112,7 @@ ARGS_SPEC = {
                 "expression": "int(value)"
             },
             "type": "number",
-            "required": "calc_sequestration",
+            "required": "do_valuation",
             "about": "The calendar year of the future scenario.",
             "name": "Future Landcover Calendar Year"
         },
