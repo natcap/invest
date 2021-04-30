@@ -114,12 +114,8 @@ class Carbon(model.InVESTModel):
         self.valuation_container.add_input(self.rate_change)
 
         # Set interactivity, requirement as input sufficiency changes
-        # self.calc_sequestration.sufficiency_changed.connect(
-        #     self.cur_lulc_year.set_interactive)
         self.calc_sequestration.sufficiency_changed.connect(
             self.fut_lulc_raster.set_interactive)
-        # self.calc_sequestration.sufficiency_changed.connect(
-        #     self.fut_lulc_year.set_interactive)
         self.calc_sequestration.sufficiency_changed.connect(
             self.redd.set_interactive)
         self.redd.sufficiency_changed.connect(

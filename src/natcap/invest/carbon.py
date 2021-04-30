@@ -94,8 +94,8 @@ ARGS_SPEC = {
                 "A table that maps the land-cover IDs to carbon pools.  "
                 "The table must contain columns of 'LULC', 'C_above', "
                 "'C_Below', 'C_Soil', 'C_Dead' as described in the User's "
-                "Guide.  The values in LULC must at least include the LULC "
-                "IDs in the land cover maps."),
+                "Guide.  The LULC column must include all the pixel values "
+                "present in the land cover maps."),
             "name": "Carbon Pools"
         },
         "lulc_cur_year": {
@@ -120,19 +120,15 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": False,
             "about": (
-                "if true then run the valuation model on available outputs.  "
-                "At a minimum will run on carbon stocks, if sequestration "
-                "with a future scenario is done and/or a REDD scenario "
-                "calculate NPV for either and report in final HTML "
-                "document."),
+                "Calculate NPV for a future scenario or a REDD scenario "
+                "and report in final HTML document."),
             "name": "Run Valuation Model"
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
             "required": "do_valuation",
             "about": (
-                "Is the present value of carbon per metric ton. Used if "
-                "``args['do_valuation']`` is present and True."),
+                "The present value of carbon per metric ton."),
             "name": "Price/Metric ton of carbon"
         },
         "discount_rate": {
