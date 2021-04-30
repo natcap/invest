@@ -662,7 +662,7 @@ def check_headers(patterns, headers):
         # exclusive in test_args_specs.py, but easier to check it here.
         if len(matching_patterns) > 1:
             return (f'Header {headers[header_index]} was matched by more than '
-                    f'one pattern: {patterns}, expected exactly one')
+                    f'one pattern: {matching_patterns}, expected exactly one')
         # each header that's matched by a pattern should not be duplicated
         if len(matching_patterns) > 0:
             count = headers.count(headers[header_index])
@@ -813,6 +813,7 @@ def validate(args, spec, spatial_overlap_opts=None):
 
     """
     validation_warnings = []
+
     # step 1: check absolute requirement
     missing_keys = set()
     keys_with_no_value = set()
@@ -922,26 +923,30 @@ def validate(args, spec, spatial_overlap_opts=None):
             LOGGER.debug(f'Provided key {key} does not exist in ARGS_SPEC')
             continue
 
-        # If no validation options specified, assume defaults.
-        try:
-            validation_options = parameter_spec['validation_options']
-        except KeyError:
-            validation_options = {}
-
         if parameter_spec['type'] == 'csv':
             # assuming that the spec won't have both 'rows' and 'columns'
             # this is verified in test_args_specs.py
             if 'columns' in parameter_spec:
-                validation_options['header_patterns'] = (
-                    parameter_spec['columns'].keys())
-                validation_options['axis'] = 1
+                validation_options = {
+                    'header_patterns': list(parameter_spec['columns'].keys()),
+                    'axis': 1
+                }
             elif 'rows' in parameter_spec:
-                validation_options['header_patterns'] = (
-                    parameter_spec['rows'].keys())
-                validation_options['axis'] = 1
+                validation_options = {
+                    'header_patterns': list(parameter_spec['rows'].keys()),
+                    'axis': 1
+                }
         elif parameter_spec['type'] == 'vector':
             # assuming the spec must have a 'fields' property
-            validation_options['required_fields'] = parameter_spec['fields'].keys()
+            validation_options = {
+                'required_fields': list(parameter_spec['fields'].keys())
+            }
+        else:
+            try:
+                validation_options = parameter_spec['validation_options']
+            except KeyError:
+                # If no validation options specified, assume defaults.
+                validation_options = {}
 
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
         if type_validation_func is None:
@@ -1086,26 +1091,30 @@ def invest_validator(validate_func):
                     input_type = args_key_spec['type']
                     validator_func = _VALIDATION_FUNCS[input_type]
 
-                    try:
-                        validation_options = (
-                            args_key_spec['validation_options'])
-                    except KeyError:
-                        validation_options = {}
                     if args_key_spec['type'] == 'csv':
-                        # assume the spec won't have both 'rows' and 'columns'
+                        # assuming that the spec won't have both 'rows' and 'columns'
                         # this is verified in test_args_specs.py
                         if 'columns' in args_key_spec:
-                            validation_options['header_patterns'] = (
-                                args_key_spec['columns'].keys())
-                            validation_options['axis'] = 1
+                            validation_options = {
+                                'header_patterns': list(args_key_spec['columns'].keys()),
+                                'axis': 1
+                            }
                         elif 'rows' in args_key_spec:
-                            validation_options['header_patterns'] = (
-                                args_key_spec['rows'].keys())
-                            validation_options['axis'] = 1
+                            validation_options = {
+                                'header_patterns': list(args_key_spec['rows'].keys()),
+                                'axis': 1
+                            }
                     elif args_key_spec['type'] == 'vector':
                         # assuming the spec must have a 'fields' property
-                        validation_options['required_fields'] = (
-                            args_key_spec['fields'].keys())
+                        validation_options = {
+                            'required_fields': list(args_key_spec['fields'].keys())
+                        }
+                    else:
+                        try:
+                            validation_options = args_key_spec['validation_options']
+                        except KeyError:
+                            # If no validation options specified, assume defaults.
+                            validation_options = {}
 
                     error_msg = (
                         validator_func(args_value, **validation_options))

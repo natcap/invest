@@ -70,12 +70,12 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
-                "load_[NUTRIENT]": {
+                "load_(\w+)": {
                     "names": "n for nitrogen, p for phosphorus",
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
                     "about": "The nutrient loading for each land use class"},
-                "eff_[NUTRIENT]": {
+                "eff_(\w+)": {
                     "names": "n for nitrogen, p for phosphorus",
                     "type": "ratio",
                     "about": ("The maximum nutrient retention efficiency for "
@@ -86,7 +86,7 @@ ARGS_SPEC = {
                         "natural vegetation types (such as forests, natural "
                         "pastures, wetlands, or prairie), indicating that "
                         "60-80% of nutrient is retained.")},
-                "crit_len_[NUTRIENT]": {
+                "crit_len_(\w+)": {
                     "names": "n for nitrogen, p for phosphorus",
                     "type": "number",
                     "units": u.meter,
@@ -824,15 +824,13 @@ def validate(args, limit_to=None):
     LOGGER.debug('Starting logging for biophysical table')
     if 'biophysical_table_path' not in invalid_keys:
         # Check required fields given the state of ``calc_n`` and ``calc_p``
-        required_fields = list(ARGS_SPEC['args'][
-            'biophysical_table_path']['columns'])
-
+        nutrient_required_fields = []
         nutrients_selected = set()
         for nutrient_letter in ('n', 'p'):
             do_nutrient_key = 'calc_%s' % nutrient_letter
             if do_nutrient_key in args and args[do_nutrient_key]:
                 nutrients_selected.add(do_nutrient_key)
-                required_fields += [
+                nutrient_required_fields += [
                     'load_%s' % nutrient_letter,
                     'eff_%s' % nutrient_letter,
                     'crit_len_%s' % nutrient_letter,
@@ -843,13 +841,15 @@ def validate(args, limit_to=None):
                 (['calc_n', 'calc_p'],
                  'Either calc_n or calc_p must be True'))
 
-        LOGGER.debug('Required keys in CSV: %s', required_fields)
+        LOGGER.debug('Required nutrient-specific keys in CSV: %s',
+                     nutrient_required_fields)
+        # Check that these nutrient-specific keys are in the table
+        # validate has already checked all the other keys
         error_msg = validation.check_csv(
             args['biophysical_table_path'],
-            header_patterns=required_fields,
-            axis=1)
-        LOGGER.debug('Error: %s', error_msg)
+            header_patterns=nutrient_required_fields)
         if error_msg:
+            LOGGER.debug('Error: %s', error_msg)
             validation_warnings.append(
                 (['biophysical_table_path'], error_msg))
 
