@@ -770,9 +770,6 @@ describe('Download Sample Data Modal', () => {
     );
 
     const allCheckBoxes = await findAllByRole('checkbox');
-    // // toggle off one checkbox so not all are selected
-    // fireEvent.click(allCheckBoxes[3]); // just avoid [0] - the SelectAll box
-
     const downloadButton = await findByRole('button', { name: 'Download' });
     fireEvent.click(downloadButton);
 
