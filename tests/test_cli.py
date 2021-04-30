@@ -224,7 +224,18 @@ class CLIHeadlessTests(unittest.TestCase):
                     'validate',
                     new_parameter_set_path,
                 ])
-        self.assertTrue(len(stdout_stream.getvalue()) > 0)
+        validation_output = stdout_stream.getvalue()
+        # it's expected that these paths aren't found because it's looking in
+        # the temporary test directory. do_batch is False so it doesn't check
+        # the population_csv_dir path, which also wouldn't exist.
+        expected_warnings = [
+            "(['aoi_vector_path'], 'File not found')",
+            "(['migration_dir'], 'Directory not found')",
+            "(['population_csv_path'], 'File not found')"]
+        for warning in expected_warnings:
+            self.assertTrue(warning in validation_output)
+        # 3 lines = 3 warning messages
+        self.assertEqual(len(validation_output.split('\n')), 3)
         self.assertEqual(exit_cm.exception.code, 0)
 
     def test_validate_fisheries_missing_workspace(self):
@@ -321,7 +332,6 @@ class CLIHeadlessTests(unittest.TestCase):
                 ])
         stdout = stdout_stream.getvalue()
         stdout_json = json.loads(stdout)
-        print(stdout_json)
         self.assertEqual(len(stdout_json), 1)
         # migration path, aoi_vector_path, population_csv_path not found
         # population_csv_dir is also incorrect, but shouldn't be marked

@@ -273,7 +273,6 @@ def _check_projection(srs, projected, projection_units):
         try:
             # this will parse common synonyms: m, meter, meters, metre, metres
             layer_units = utils.u.Unit(layer_units_name)
-            print(projection_units, layer_units)
             # Compare pint Unit objects
             if projection_units != layer_units:
                 return ("Layer must be projected in this unit: "
@@ -387,8 +386,7 @@ def check_vector(filepath, required_fields=None, projected=False,
     srs = layer.GetSpatialRef()
 
     if required_fields:
-        fieldnames = set([defn.GetName().lower() for defn in layer.schema])
-
+        fieldnames = [defn.GetName() for defn in layer.schema]
         required_field_warning = check_headers(required_fields, fieldnames)
         if required_field_warning:
             return required_field_warning
@@ -610,9 +608,9 @@ def check_csv(filepath, header_patterns=None, axis=1, excel_ok=False):
 
     if header_patterns:
         if axis == 1:
-            headers = [name.lower() for name in dataframe.columns.str.strip()]
+            headers = list(dataframe.columns.str.strip())
         elif axis == 0:
-            headers = [name.lower() for name in dataframe.iloc[:, 0]]
+            headers = list(dataframe.iloc[:, 0])
         return check_headers(header_patterns, headers)
 
 
@@ -623,6 +621,7 @@ def check_headers(patterns, headers):
     - No header should be matched by more than one pattern.
     - Each header that's matched by any pattern should not be duplicated.
     - Headers are allowed to not match any pattern.
+    - Headers are converted to lowercase before matching.
 
     Args:
         patterns (list[str]): A list of patterns expected to match header(s).
@@ -634,6 +633,7 @@ def check_headers(patterns, headers):
         None, if validation passes; or a string describing the problem, if a
         validation rule is broken.
     """
+    headers = [header.lower() for header in headers]  # case insensitive
     # use a list not a dict in case there's duplicates
     # map each expected header pattern to a list of headers that it matches
     pattern_to_headers = [[] for pattern in patterns]
@@ -641,21 +641,15 @@ def check_headers(patterns, headers):
     header_to_patterns = [[] for header in headers]
 
     for pattern_index, pattern in enumerate(patterns):
-        print(pattern_index, pattern)
         # add $ to the end to make it try to match the entire string
         # re.match already anchors the pattern to the string start
         compiled_pattern = re.compile(pattern + '$')
         for header_index, header in enumerate(headers):
-            print(header_index, header)
             match = re.match(compiled_pattern, header)
             if match:
                 pattern_to_headers[pattern_index].append(header)
                 header_to_patterns[header_index].append(pattern)
 
-    print(pattern_to_headers)
-    print(header_to_patterns)
-    print(headers)
-    print(patterns)
     for pattern_index, matching_headers in enumerate(pattern_to_headers):
         # each pattern should match at least one header
         if len(matching_headers) == 0:
@@ -949,7 +943,7 @@ def validate(args, spec, spatial_overlap_opts=None):
             # assuming the spec must have a 'fields' property
             validation_options['required_fields'] = parameter_spec['fields'].keys()
 
-        type_validation_func = _VALIDATION_FUNCS[ter_spec['type']]
+        type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
             continue
