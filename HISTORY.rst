@@ -81,6 +81,9 @@ Unreleased Changes (3.9.1)
 * Fisheries Habitat Scenario Tool
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
+* HRA
+    * Fixed bugs that allowed zeros in DQ & Weight columns of criteria 
+      table to raise DivideByZero errors.
 * Seasonal Water Yield
     * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata 
       values and could show negative numbers.
