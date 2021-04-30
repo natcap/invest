@@ -70,7 +70,9 @@ class ValidateArgsSpecs(unittest.TestCase):
                 self.assertEqual(type(arg['bands']), dict)
                 for band in arg['bands']:
                     self.assertTrue(isinstance(band, int))
-                    self.validate(arg['bands'][band], valid_types=valid_nested_types['raster'])
+                    self.validate(
+                        arg['bands'][band],
+                        valid_types=valid_nested_types['raster'])
                 attrs.remove('bands')
 
             elif t == 'vector':
@@ -78,7 +80,9 @@ class ValidateArgsSpecs(unittest.TestCase):
                 self.assertEqual(type(arg['fields']), dict)
                 for field in arg['fields']:
                     self.assertTrue(isinstance(field, str))
-                    self.validate(arg['fields'][field], valid_types=valid_nested_types['vector'])
+                    self.validate(
+                        arg['fields'][field],
+                        valid_types=valid_nested_types['vector'])
 
                 self.assertTrue('geometries' in arg)
                 self.assertEqual(type(arg['geometries']), set)
@@ -89,27 +93,29 @@ class ValidateArgsSpecs(unittest.TestCase):
             elif t == 'csv':
                 has_rows = 'rows' in arg
                 has_cols = 'columns' in arg
-                self.assertTrue(
-                    has_rows or has_cols and not (has_rows and has_cols),
-                    arg)
-                headers = arg['columns'] if has_cols else arg['rows']
+                # may have neither if table is too complex to define this way
+                self.assertTrue(not (has_rows and has_cols), arg)
 
-                # may be None if the table is too complex to define this way
-                if headers is not None:
+                if has_cols or has_rows:
+                    headers = arg['columns'] if has_cols else arg['rows']
                     self.assertEqual(type(headers), dict)
+
                     for header in headers:
                         self.assertTrue(isinstance(header, str))
-                        self.validate(headers[header], valid_types=valid_nested_types['csv'])
+                        self.validate(
+                            headers[header],
+                            valid_types=valid_nested_types['csv'])
 
-                attrs.discard('rows')
-                attrs.discard('columns')
+                    attrs.discard('rows')
+                    attrs.discard('columns')
 
             elif t == 'directory':
                 self.assertTrue('contents' in arg)
                 self.assertEqual(type(arg['contents']), dict)
                 for path in arg['contents']:
                     self.assertTrue(isinstance(path, str))
-                    self.validate(arg['contents'][path],
+                    self.validate(
+                        arg['contents'][path],
                         valid_types=valid_nested_types['directory'])
                 attrs.remove('contents')
 

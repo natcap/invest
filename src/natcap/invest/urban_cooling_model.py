@@ -56,9 +56,6 @@ ARGS_SPEC = {
             "name": "Biophysical Table",
             "type": "csv",
             "required": True,
-            "validation_options": {
-                "required_fields": ["lucode", "kc", "green_area"],
-            },
             "columns": {
                 "lucode": {"type": "code"},
                 "kc": {"type": "number", "units": None, "about": ("Crop "
@@ -197,9 +194,6 @@ ARGS_SPEC = {
                 }
             },
             "required": "do_energy_valuation",
-            "validation_options": {
-                "required_fields": ["type", "consumption"],
-            },
             "about": ("A CSV table containing information on energy "
                 "consumption for various types of buildings, in kWh/deg C/m^2."),
         },
@@ -270,9 +264,9 @@ def execute(args):
         args['t_air_average_radius'] (float): radius of the averaging filter
             for turning T_air_nomix into T_air.
         args['uhi_max'] (float): Magnitude of the UHI effect.
-        args['do_energy_valuation'] (bool): if True, calculate energy savings 
+        args['do_energy_valuation'] (bool): if True, calculate energy savings
             valuation for buildings.
-        args['do_productivity_valuation'] (bool): if True, calculate work 
+        args['do_productivity_valuation'] (bool): if True, calculate work
             productivity valuation based on humidity and temperature.
         args['avg_rel_humidity'] (float): (optional, depends on
             'do_productivity_valuation') Average relative humidity (0-100%).
@@ -766,7 +760,7 @@ def calculate_uhi_result_vector(
             if no valuation occurred.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
-            
+
                 * avg_cc
                 * avg_tmp_an
                 * avd_eng_cn
@@ -1449,10 +1443,11 @@ def validate(args, limit_to=None):
 
         required_keys = (
             extra_biophysical_keys +
-            ARGS_SPEC['args']['biophysical_table_path'][
-                'validation_options']['required_fields'][:])
+            list(ARGS_SPEC['args']['biophysical_table_path']['columns']))
         error_msg = validation.check_csv(
-            args['biophysical_table_path'], required_fields=required_keys)
+            args['biophysical_table_path'],
+            header_patterns=required_keys,
+            axis=1)
         if error_msg:
             validation_warnings.append((['biophysical_table_path'], error_msg))
 

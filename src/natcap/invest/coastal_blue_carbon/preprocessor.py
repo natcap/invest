@@ -36,7 +36,7 @@ ARGS_SPEC = {
                     "about": "LULC code"},
                 "lulc-class" : {
                     "type": "freestyle_string",
-                    "about": "Text description of the LULC class"}, 
+                    "about": "Text description of the LULC class"},
                 "is_coastal_blue_carbon_habitat": {
                     "type": "boolean",
                     "about": ("Enter TRUE if this LULC class is a coastal blue "
@@ -44,9 +44,6 @@ ARGS_SPEC = {
             }
         },
         "landcover_snapshot_csv": {
-            "validation_options": {
-                "required_fields": ["snapshot_year", "raster_path"],
-            },
             "type": "csv",
             "required": True,
             "columns": {
@@ -316,7 +313,7 @@ def _create_biophysical_table(landcover_table, target_biophysical_table_path):
     """
     target_column_names = [
         colname.lower() for colname in coastal_blue_carbon.ARGS_SPEC['args'][
-            'biophysical_table_path']['validation_options']['required_fields']]
+            'biophysical_table_path']['columns']]
 
     with open(target_biophysical_table_path, 'w') as bio_table:
         bio_table.write(f"{','.join(target_column_names)}\n")

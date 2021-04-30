@@ -46,11 +46,13 @@ DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
 # the same unit registry instance should be shared across everything
 u = pint.UnitRegistry()
-u.define('currency = [value]')
-u.define('dollar = [USD]')
-u.define('pixel = [?length]')
-u.define('projection_unit = [!length]')
+u.define('currency = [value_generic]')
+u.define('dollar = [value_USD]')
+u.define('pixel = [area_pixel]')
+u.define('projection_unit = [length_projection_unit]')
 u.define('million_dollars = 1000000 * dollar')
+# add "us_survey_foot" on to the aliases
+u.define('survey_foot = 1200 / 3937 * meter = sft = us_survey_foot')
 
 AREA = {
     "type": "vector",

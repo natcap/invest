@@ -131,15 +131,10 @@ ARGS_SPEC = {
             "name": "Water Demand Table"
         },
         "valuation_table_path": {
-            "validation_options": {
-                "required_fields": ["ws_id", "efficiency", "fraction",
-                                    "height", "kw_price", "cost", "time_span",
-                                    "discount"],
-            },
             "type": "csv",
             "columns": {
                 "ws_id": {
-                    "type": "code", 
+                    "type": "code",
                     "about": ("Watershed ID corresponding to a watershed in "
                         "the watersheds vector file")
                 },
@@ -266,7 +261,7 @@ def execute(args):
         args['valuation_table_path'] (string): (optional) if a non-empty
             string, a path to an input CSV table of
             hydropower stations with the following fields to calculate
-            valuation: 'ws_id', 'time_span', 'discount', 'efficiency', 
+            valuation: 'ws_id', 'time_span', 'discount', 'efficiency',
             'fraction', 'cost', 'height', 'kw_price'
             Required if ``calculate_valuation`` is True.
 

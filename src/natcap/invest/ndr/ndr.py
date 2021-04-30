@@ -67,15 +67,12 @@ ARGS_SPEC = {
             "name": "Watersheds"
         },
         "biophysical_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode"],
-            },
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
                 "load_[NUTRIENT]": {
                     "names": "n for nitrogen, p for phosphorus",
-                    "type": "number", 
+                    "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
                     "about": "The nutrient loading for each land use class"},
                 "eff_[NUTRIENT]": {
@@ -827,9 +824,8 @@ def validate(args, limit_to=None):
     LOGGER.debug('Starting logging for biophysical table')
     if 'biophysical_table_path' not in invalid_keys:
         # Check required fields given the state of ``calc_n`` and ``calc_p``
-        required_fields = ARGS_SPEC['args'][
-            'biophysical_table_path']['validation_options'][
-                'required_fields'][:]
+        required_fields = list(ARGS_SPEC['args'][
+            'biophysical_table_path']['columns'])
 
         nutrients_selected = set()
         for nutrient_letter in ('n', 'p'):
@@ -849,7 +845,9 @@ def validate(args, limit_to=None):
 
         LOGGER.debug('Required keys in CSV: %s', required_fields)
         error_msg = validation.check_csv(
-            args['biophysical_table_path'], required_fields=required_fields)
+            args['biophysical_table_path'],
+            header_patterns=required_fields,
+            axis=1)
         LOGGER.debug('Error: %s', error_msg)
         if error_msg:
             validation_warnings.append(
@@ -1283,7 +1281,7 @@ def _calculate_sub_ndr(
 
     def _sub_ndr_op(dist_to_channel_array):
         """Calculate subsurface NDR."""
-        # nodata value from this ntermediate output should always be 
+        # nodata value from this ntermediate output should always be
         # defined by pygeoprocessing, not None
         valid_mask = ~numpy.isclose(
             dist_to_channel_array, dist_to_channel_nodata)

@@ -667,8 +667,8 @@ def _map_distance_from_tropical_forest_edge(
         masked_distance_block = numpy.where(
             lulc_block == lulc_nodata, NODATA_VALUE, distance_block)
         edge_distance_band.WriteArray(
-            masked_distance_block, 
-            xoff=offset_dict['xoff'], 
+            masked_distance_block,
+            xoff=offset_dict['xoff'],
             yoff=offset_dict['yoff'])
 
 
@@ -874,14 +874,14 @@ def _calculate_tropical_forest_edge_carbon_map(
             edge_distance_block[valid_edge_distance_mask] * cell_size_km,
             n_nearest_model_points).reshape(-1, n_nearest_model_points)
 
-        # For each forest pixel x, for each of its k nearest neighbors, the 
+        # For each forest pixel x, for each of its k nearest neighbors, the
         # chosen regression method (1, 2, or 3). model_index shape: (x, k)
-        model_index = numpy.zeros(indexes.shape, dtype=numpy.int8) 
-        model_index[valid_index_mask] = ( 
-            method_model_parameter[indexes[valid_index_mask]]) 
+        model_index = numpy.zeros(indexes.shape, dtype=numpy.int8)
+        model_index[valid_index_mask] = (
+            method_model_parameter[indexes[valid_index_mask]])
 
         # biomass shape: (x, k)
-        biomass = numpy.zeros((indexes.shape[0], indexes.shape[1]), 
+        biomass = numpy.zeros((indexes.shape[0], indexes.shape[1]),
             dtype=numpy.float32)
 
         # mask shapes: (x, k)
@@ -926,7 +926,7 @@ def _calculate_tropical_forest_edge_carbon_map(
                       biomass[valid_denom], axis=1) / denom[valid_denom])
 
         # Ensure the result has nodata everywhere the distance was invalid
-        result = numpy.full(edge_distance_block.shape, NODATA_VALUE, 
+        result = numpy.full(edge_distance_block.shape, NODATA_VALUE,
             dtype=numpy.float32)
         # convert biomass to carbon in this stage
         result[valid_edge_distance_mask] = (
@@ -973,7 +973,8 @@ def validate(args, limit_to=None):
                 ['c_below', 'c_soil', 'c_dead'])
             error_msg = validation.check_csv(
                 args['biophysical_table_path'],
-                required_fields=required_fields)
+                header_patterns=required_fields,
+                axis=1)
             if error_msg:
                 validation_warnings.append(
                     (['biophysical_table_path'], error_msg))

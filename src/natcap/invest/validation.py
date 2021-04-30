@@ -267,15 +267,19 @@ def _check_projection(srs, projected, projection_units):
             return "Dataset must be projected in linear units."
 
     if projection_units:
-        layer_units_name = srs.GetLinearUnitsName().lower()
+        # pint uses underscores in multi-word units e.g. 'survey_foot'
+        # it is case-sensitive
+        layer_units_name = srs.GetLinearUnitsName().lower().replace(' ', '_')
         try:
             # this will parse common synonyms: m, meter, meters, metre, metres
-            layer_units = utils.u.parse_expression(layer_units_name)
+            layer_units = utils.u.Unit(layer_units_name)
+            print(projection_units, layer_units)
             # Compare pint Unit objects
             if projection_units != layer_units:
-                return f"Layer must be projected in {projection_units}s"
+                return ("Layer must be projected in this unit: "
+                        f"'{projection_units}'")
         except pint.errors.UndefinedUnitError:
-            return f"SRS {srs} has unrecognized unit {layer_units_name})"
+            return f"SRS has unrecognized unit '{layer_units_name}'"
 
     return None
 
@@ -354,9 +358,11 @@ def check_vector(filepath, required_fields=None, projected=False,
     Args:
         filepath (string): The path to the vector on disk.  The file must exist
             and be readable.
-        required_fields=None (list): The string fieldnames (case-insensitive)
-            that must be present in the vector layer's table.  If None,
-            fieldnames will not be checked.
+        required_fields=None (list[str]): A list of regex-compilable patterns
+            that are expected to match the vector fields. Patterns may be an
+            ordinary string to match a header exactly, or use any valid regex
+            syntax to match 1 or more headers. See the docstring of
+            ``check_headers`` for details on matching rules.
         projected=False (bool): Whether the spatial reference must be projected
             in linear units.  If None, the projection will not be checked.
         projection_units=None (pint.Units): The required linear units of the
@@ -375,24 +381,20 @@ def check_vector(filepath, required_fields=None, projected=False,
     gdal.PopErrorHandler()
 
     if gdal_dataset is None:
-        return "File could not be opened as a GDAL vector"
+        return 'File could not be opened as a GDAL vector'
 
     layer = gdal_dataset.GetLayer()
     srs = layer.GetSpatialRef()
 
     if required_fields:
-        fieldnames = set([defn.GetName().upper() for defn in layer.schema])
-        missing_fields = (
-            set(field.upper() for field in required_fields) - fieldnames)
-        if missing_fields:
-            return "Fields are missing from the first layer: %s" % sorted(
-                missing_fields)
+        fieldnames = set([defn.GetName().lower() for defn in layer.schema])
+
+        required_field_warning = check_headers(required_fields, fieldnames)
+        if required_field_warning:
+            return required_field_warning
 
     projection_warning = _check_projection(srs, projected, projection_units)
-    if projection_warning:
-        return projection_warning
-
-    return None
+    return projection_warning
 
 
 def check_freestyle_string(value, regexp=None):
@@ -458,7 +460,7 @@ def check_number(value, expression=None):
     try:
         float(value)
     except (TypeError, ValueError):
-        return f'Value {value} could not be interpreted as a number'
+        return f'Value "{value}" could not be interpreted as a number'
 
     if expression:
         # Check to make sure that 'value' is in the expression.
@@ -490,7 +492,7 @@ def check_ratio(value):
     try:
         as_float = float(value)
     except (TypeError, ValueError):
-        return f'Value {value} could not be interpreted as a number'
+        return f'Value "{value}" could not be interpreted as a number'
 
     if as_float < 0 or as_float > 1:
         return f'Value {as_float} is not in the range [0, 1]'
@@ -511,7 +513,7 @@ def check_percent(value):
     try:
         as_float = float(value)
     except (TypeError, ValueError):
-        return f'Value {value} could not be interpreted as a number'
+        return f'Value "{value}" could not be interpreted as a number'
 
     if as_float < 0 or as_float > 100:
         return f'Value {as_float} is not in the range [0, 100]'
@@ -533,12 +535,12 @@ def check_code(value):
         # must first cast to float, to handle both string and float inputs
         as_float = float(value)
         if not as_float.is_integer():
-            return f'Value {value} does not represent an integer'
+            return f'Value "{value}" does not represent an integer'
     except (TypeError, ValueError):
-        return f'Value {value} could not be interpreted as a number'
+        return f'Value "{value}" could not be interpreted as a number'
 
     if as_float < 0:
-        return f'Value {value} is less than zero'
+        return f'Value "{value}" is less than zero'
 
     return None
 
@@ -611,7 +613,7 @@ def check_csv(filepath, header_patterns=None, axis=1, excel_ok=False):
             headers = [name.lower() for name in dataframe.columns.str.strip()]
         elif axis == 0:
             headers = [name.lower() for name in dataframe.iloc[:, 0]]
-        check_headers(header_patterns, headers)
+        return check_headers(header_patterns, headers)
 
 
 def check_headers(patterns, headers):
@@ -632,39 +634,49 @@ def check_headers(patterns, headers):
         None, if validation passes; or a string describing the problem, if a
         validation rule is broken.
     """
+    # use a list not a dict in case there's duplicates
     # map each expected header pattern to a list of headers that it matches
-    pattern_to_headers = {pattern: [] for pattern in patterns}
+    pattern_to_headers = [[] for pattern in patterns]
     # map each actual header to a list of patterns that match it
-    header_to_patterns = {header: [] for header in headers}
+    header_to_patterns = [[] for header in headers]
 
-    for pattern in patterns:
+    for pattern_index, pattern in enumerate(patterns):
+        print(pattern_index, pattern)
         # add $ to the end to make it try to match the entire string
         # re.match already anchors the pattern to the string start
         compiled_pattern = re.compile(pattern + '$')
-        for header in headers:
+        for header_index, header in enumerate(headers):
+            print(header_index, header)
             match = re.match(compiled_pattern, header)
             if match:
-                pattern_to_headers[pattern].append(header)
-                header_to_patterns[header].append(pattern)
+                pattern_to_headers[pattern_index].append(header)
+                header_to_patterns[header_index].append(pattern)
 
-    for pattern, headers in pattern_to_headers.items():
+    print(pattern_to_headers)
+    print(header_to_patterns)
+    print(headers)
+    print(patterns)
+    for pattern_index, matching_headers in enumerate(pattern_to_headers):
         # each pattern should match at least one header
-        if len(headers) == 0:
-            return f'{pattern} matched 0 headers, expected at least one.'
+        if len(matching_headers) == 0:
+            return (f'{patterns[pattern_index]} matched 0 headers, expected '
+                    'at least one')
 
-    for header, patterns in header_to_patterns.items():
+    for header_index, matching_patterns in enumerate(header_to_patterns):
         # no header should be matched by more than one pattern
         # it would be neat to prove that all patterns are mutually
         # exclusive in test_args_specs.py, but easier to check it here.
-        if len(patterns) > 1:
-            return (f'Header {header} was matched by more than one '
-                    f'pattern: {patterns}. Expected exactly one.')
+        if len(matching_patterns) > 1:
+            return (f'Header {headers[header_index]} was matched by more than '
+                    f'one pattern: {patterns}, expected exactly one')
         # each header that's matched by a pattern should not be duplicated
-        if len(patterns) > 0:
-            count = headers.count(header)
+        if len(matching_patterns) > 0:
+            count = headers.count(headers[header_index])
             if count > 1:
-                return (f'Header {header} (matched pattern {patterns[0]}) '
-                        f'was found {count} times, expected only once.')
+                return (f'Header {headers[header_index]} (matched pattern '
+                        f'{matching_patterns[0]}) was found {count} times, '
+                        'expected only once')
+
     return None
 
 
@@ -807,7 +819,6 @@ def validate(args, spec, spatial_overlap_opts=None):
 
     """
     validation_warnings = []
-
     # step 1: check absolute requirement
     missing_keys = set()
     keys_with_no_value = set()
@@ -934,8 +945,11 @@ def validate(args, spec, spatial_overlap_opts=None):
                 validation_options['header_patterns'] = (
                     parameter_spec['rows'].keys())
                 validation_options['axis'] = 1
+        elif parameter_spec['type'] == 'vector':
+            # assuming the spec must have a 'fields' property
+            validation_options['required_fields'] = parameter_spec['fields'].keys()
 
-        type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
+        type_validation_func = _VALIDATION_FUNCS[ter_spec['type']]
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
             continue
@@ -1094,6 +1108,10 @@ def invest_validator(validate_func):
                             validation_options['header_patterns'] = (
                                 args_key_spec['rows'].keys())
                             validation_options['axis'] = 1
+                    elif args_key_spec['type'] == 'vector':
+                        # assuming the spec must have a 'fields' property
+                        validation_options['required_fields'] = (
+                            args_key_spec['fields'].keys())
 
                     error_msg = (
                         validator_func(args_value, **validation_options))

@@ -644,59 +644,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
-    def test_missing_valuation_params(self):
-        """WindEnergy: test that ValueError is thrown when val params miss."""
-        from natcap.invest import wind_energy
-
-        # for testing raised exceptions, running on a set of data that was
-        # created by hand and has no numerical validity. Helps test the
-        # raised exception quicker
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_path': os.path.join(
-                SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_vector_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_vector_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'price_table_example.csv'),
-            'results_suffix': '_test'
-        }
-
-        # creating a stand in turbine parameter csv file that is missing
-        # a valuation field / value. This should raise the exception
-        tmp, file_path = tempfile.mkstemp(
-            suffix='.csv', dir=args['workspace_dir'])
-        os.close(tmp)
-        data = {
-            'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
-            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
-            'turbines_per_circuit': 8, 'rotor_diameter': 40
-        }
-        _create_vertical_csv(data, file_path)
-        args['turbine_parameters_path'] = file_path
-
-        self.assertRaises(ValueError, wind_energy.execute, args)
-
     def test_clip_vector_value_error(self):
         """WindEnergy: Test AOI doesn't intersect Wind Data points."""
         from natcap.invest import wind_energy
-        from natcap.invest.utils import _assert_vectors_equal
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(

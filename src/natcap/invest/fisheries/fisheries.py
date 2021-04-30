@@ -24,7 +24,7 @@ ARGS_SPEC = {
         "aoi_vector_path": {
             **utils.AOI_ARG,
             "fields": {
-                "NAME": {
+                "name": {
                     "type": "freestyle_string",
                     "about": "A unique identifier for each area of interest."
                 }
@@ -98,7 +98,6 @@ ARGS_SPEC = {
         "population_csv_path": {
             "type": "csv",
             "required": "not do_batch",
-            "columns": None,
             "about": ("The provided CSV file should contain all necessary "
                 "attributes for the sub-populations based on lifecycle class, "
                 "sex, and area - excluding possible migration information. "
@@ -116,7 +115,6 @@ ARGS_SPEC = {
             "contents": {
                 "[POP_PARAM_TABLE]": {
                     "type": "csv",
-                    "columns": None
                 }
             },
             "about": ("The provided CSV folder should contain a set of "

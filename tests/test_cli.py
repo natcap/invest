@@ -236,7 +236,6 @@ class CLIHeadlessTests(unittest.TestCase):
 
         # The InVEST sample data JSON arguments don't have a workspace.  In
         # this case, I want to leave it out and verify validation catches it.
-
         with redirect_stdout() as stdout_stream:
             with self.assertRaises(SystemExit) as exit_cm:
                 cli.main([
@@ -322,6 +321,7 @@ class CLIHeadlessTests(unittest.TestCase):
                 ])
         stdout = stdout_stream.getvalue()
         stdout_json = json.loads(stdout)
+        print(stdout_json)
         self.assertEqual(len(stdout_json), 1)
         # migration path, aoi_vector_path, population_csv_path not found
         # population_csv_dir is also incorrect, but shouldn't be marked
