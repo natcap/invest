@@ -17,6 +17,7 @@ from osgeo import ogr
 
 import taskgraph
 import pygeoprocessing
+from .utils import u
 from . import validation
 from . import utils
 
@@ -35,6 +36,97 @@ ARGS_SPEC = {
                 "exists": True,
             },
             "type": "directory",
+            "contents": {
+                "NAmerica_WestCoast_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": ("point vector for the west coast of North "
+                        "America and Hawaii")},
+                "WCNA_extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": ("extract vector for the west coast of North "
+                        "America and Hawaii")},
+                "NAmerica_WestCoast_4m.txt.bin": {
+                    "type": "file",
+                    "about": ("WaveWatchIII data for the west coast of North "
+                        "America and Hawaii")},
+                "NAmerica_EastCoast_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": ("point vector for the East Coast of North "
+                        "America and Puerto Rico")},
+                "ECNA_extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": ("extract vector for the East Coast of North "
+                        "America and Puerto Rico")},
+                "NAmerica_EastCoast_4m.txt.bin": {
+                    "type": "file",
+                    "about": ("WaveWatchIII data for the East Coast of North "
+                        "America and Puerto Rico")},
+                "North_Sea_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": "point vector for the North Sea 4 meter resolution"},
+                "North_Sea_4m_Extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": ("extract vector for the North Sea 4 meter "
+                        "resolution")},
+                "North_Sea_4m.bin": {
+                    "type": "file",
+                    "about": ("WaveWatchIII data for the North Sea 4 meter "
+                        "resolution")},
+                "North_Sea_10m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": ("point vector for the North Sea 10 meter "
+                        "resolution")},
+                "North_Sea_10m_Extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": ("extract vector for the North Sea 10 meter "
+                        "resolution")},
+                "North_Sea_10m.bin": {
+                    "type": "file",
+                    "about": ("WaveWatchIII data for the North Sea 10 meter "
+                        "resolution")},
+                "Australia_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": "point vector for Australia"},
+                "Australia_Extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": "extract vector for Australia"},
+                "Australia_4m.bin": {
+                    "type": "file",
+                    "about": "WaveWatchIII data for Australia"},
+                "Global.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POINT'},
+                    "about": "Global point vector"},
+                "Global_extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": {'POLYGON'},
+                    "about": "Global extract vector"},
+                "Global_WW3.txt.bin": {
+                    "type": "file",
+                    "about": "Global WaveWatchIII data"}
+            },
             "required": True,
             "about": "Select the folder that has the packaged Wave Energy Data.",
             "name": "Wave Base Data Folder"
@@ -52,56 +144,70 @@ ARGS_SPEC = {
             },
             "type": "option_string",
             "required": True,
-            "about": (
-                "A list of analysis areas for which the model can currently "
-                "be run.  All the wave energy data needed for these areas "
-                "are pre-packaged in the WaveData folder."),
+            "about": ("A list of analysis areas for which the model can "
+                "currently be run.  All the wave energy data needed for these "
+                "areas are pre-packaged in the WaveData folder."),
             "name": "Analysis Area"
         },
         "aoi_path": {
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters"
-            },
-            "type": "vector",
+            **utils.AOI_ARG,
+            **utils.METER_PROJECTED,
             "required": False,
-            "about": (
-                "An OGR-supported vector file containing a single polygon "
-                "representing the area of interest.  This input is required "
-                "for computing valuation and is recommended for biophysical "
-                "runs as well.  The AOI should be projected in linear units "
-                "of meters."),
-            "name": "Area of Interest"
+            "about": ("An OGR-supported vector file containing a single "
+                "polygon representing the area of interest.  This input is "
+                "required for computing valuation and is recommended for "
+                "biophysical runs as well."),
         },
         "machine_perf_path": {
             "type": "csv",
+            "columns": {
+                "height": {
+                    "type": "number",
+                    "units": u.meter,
+                    "about": ("user-defined wave height bins from smallest to "
+                        "largest")
+                },
+                "[WAVE_PERIOD]": {
+                    "names": ("user-defined wave period bins from smallest to "
+                        "largest"),
+                    "type": "number",
+                    "units": u.second
+                }
+            },
             "required": True,
-            "about": (
-                "A CSV Table that has the performance of a particular wave "
-                "energy machine at certain sea state conditions."),
+            "about": ("A CSV Table that has the performance of a particular "
+                "wave energy machine at certain sea state conditions."),
             "name": "Machine Performance Table"
         },
         "machine_param_path": {
-            "validation_options": {
-                "required_fields": ["name", "value", "note"],
-            },
             "type": "csv",
+            "columns": {
+                "name": {
+                    "type": "option_string",
+                    "about": ("Contains the values CapMax (maximum capacity of "
+                        "device), HsMax (upper limit of wave height for device "
+                        "operation (the deviceshuts down when waves are higher "
+                        "than this limit), and TpMax (upper limit of wave "
+                        "period for device operation (the device shuts down "
+                        "when wave period is longer than this).")},
+                "value": {
+                    "type": "number",
+                    "units": None,
+                    "about": ("Values for CapMax (in kilowatts), HsMax (in "
+                        "meters), and TpMax (in seconds).")},
+            },
             "required": True,
-            "about": (
-                "A CSV Table that has parameter values for a wave energy "
-                "machine.  This includes information on the maximum "
-                "capacity of the device and the upper limits for wave height "
-                "and period."),
+            "about": ("A CSV Table that has parameter values for a wave energy "
+                "machine.  This includes information on the maximum capacity "
+                "of the device and the upper limits for wave height and "
+                "period."),
             "name": "Machine Parameter Table"
         },
         "dem_path": {
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A GDAL-supported raster file containing a digital elevation "
-                "model dataset that has elevation values in meters.  Used to "
-                "get the cable distance for wave energy transmission."),
-            "name": "Global Digital Elevation Model"
+            **utils.DEM_ARG,
+            "about": ("A GDAL-supported raster file containing a digital "
+                "elevation model dataset that has elevation values in meters. "
+                "Used to get the cable distance for wave energy transmission.")
         },
         "valuation_container": {
             "type": "boolean",
@@ -110,36 +216,99 @@ ARGS_SPEC = {
             "name": "Valuation"
         },
         "land_gridPts_path": {
-            "validation_options": {
-                "required_fields": ['id', 'type', 'lat', 'long', 'location'],
-            },
             "type": "csv",
+            "columns": {
+                "id": {"type": "code", "about": ("unique identifier for the "
+                    "point")},
+                "type": {
+                    "type": "option_string",
+                    "options": {
+                        "LAND": "a land connection point",
+                        "GRID": "a grid connection point"
+                    }
+                },
+                "lat": {
+                    "type": "number",
+                    "units": u.degree,
+                    "about": "latitude of the connection point"
+                },
+                "long": {
+                    "type": "number",
+                    "units": u.degree,
+                    "about": "longitude of the connection point"
+                },
+                "location": {
+                    "type": "freestyle_string",
+                    "about": "name for the connection point location"
+                }
+            },
             "required": "valuation_container",
-            "about": (
-                "A CSV Table that has the landing points and grid points "
+            "about": ("A CSV Table that has the landing points and grid points "
                 "locations for computing cable distances."),
             "name": "Grid Connection Points Table"
         },
         "machine_econ_path": {
-            "validation_options": {
-                'required_fields': ['name', 'value', 'note'],
-            },
             "type": "csv",
+            "rows": {
+                "CapMax": {
+                    "type": "number",
+                    "units": u.kilowatt,
+                    "about": "maximum capacity of the device"
+                },
+                "Cc": {
+                    "type": "number",
+                    "units": u.currency/(u.count * u.kilowatt),
+                    "about": ("capital cost per kilowatt of capacity per "
+                        "device installed")
+                },
+                "Cml": {
+                    "type": "number",
+                    "units": u.currency/u.meter,
+                    "about": "cost of mooring lines"
+                },
+                "Cul": {
+                    "type": "number",
+                    "units": u.currency/u.kilometer,
+                    "about": "cost of mooring lines"
+                },
+                "Col": {
+                    "type": "number",
+                    "units": u.currency/u.kilometer,
+                    "about": "cost of overland transmission lines"
+                },
+                "Omc": {
+                    "type": "number",
+                    "units": u.currency/u.kilowatt_hour,
+                    "about": "operating and maintenance cost"
+                },
+                "P": {
+                    "type": "number",
+                    "units": u.currency/u.kilowatt_hour,
+                    "about": "price of electricity"
+                },
+                "R": {
+                    "type": "ratio",
+                    "about": "discount rate"
+                },
+                "Smlpm": {
+                    "type": "number",
+                    "units": u.count,
+                    "about": "number of slack lines required per machine"
+                }
+
+            },
             "required": "valuation_container",
-            "about": (
-                "A CSV Table that has the economic parameters for the wave "
-                "energy machine."),
+            "about": ("A CSV Table that has the economic parameters for the "
+                "wave energy machine."),
             "name": "Machine Economic Table"
         },
         "number_of_machines": {
-            "validation_options": {
-                "expression": "int(value) > 0"
-            },
+            **utils.GT_0,
             "type": "number",
+            "units": u.count,
             "required": "valuation_container",
-            "about": (
-                "An integer for how many wave energy machines will be in the "
-                "wave farm."),
+            "about": ("An integer for how many wave energy machines will be in "
+                "the wave farm."),
             "name": "Number of Machines"
         }
     }

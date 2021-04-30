@@ -9,6 +9,7 @@ from osgeo import osr
 import pygeoprocessing
 import taskgraph
 
+from .utils import u
 from . import utils
 from . import validation
 
@@ -28,71 +29,95 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "landcover_raster_path": {
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters",
-            },
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A raster file, representing integer land use/land code "
+            **utils.LULC_ARG,
+            **utils.METER_PROJECTED,
+            "about": ("A raster file, representing integer land use/land code "
                 "covers for each cell. This raster should have a projected "
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
                 "results in hectares."),
-            "name": "Land-Use/Land-Cover Map"
         },
         "landcover_to_crop_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "crop_name"],
-            },
             "type": "csv",
+            "columns": {
+                "crop_name": {
+                    "type": "option_string",
+                    "options": [
+                        "barley", "maize", "oilpalm", "potato", "rice", 
+                        "soybean", "sugarbeet", "sugarcane", "sunflower",
+                        "wheat"
+                    ]
+                },
+                "lucode": {"type": "code"}
+            },
             "required": True,
-            "about": (
-                "A CSV table mapping canonical crop names to land use codes "
-                "contained in the landcover/use raster.   The allowed crop "
-                "names are barley, maize, oilpalm, potato, rice, soybean, "
-                "sugarbeet, sugarcane, sunflower, and wheat."),
+            "about": ("A CSV table mapping canonical crop names to land use "
+                "codes contained in the landcover/use raster."),
             "name": "Landcover to Crop Table"
         },
         "fertilization_rate_table_path": {
-            "validation_options": {
-                "required_fields": [
-                    "crop_name", "nitrogen_rate", "phosphorous_rate",
-                    "potassium_rate"
-                ],
-            },
             "type": "csv",
+            "columns": {
+                "crop_name": {"type": "freestyle_string"},
+                "nitrogen_rate": {"type": "number", "units": u.kilogram/u.hectare},
+                "phosphorus_rate": {"type": "number", "units": u.kilogram/u.hectare},
+                "potassium_rate": {"type": "number", "units": u.kilogram/u.hectare}
+            },
             "required": True,
-            "about": (
-                "A table that maps fertilization rates to crops in the "
-                "simulation.  Must include the headers 'crop_name', "
-                "'nitrogen_rate',  'phosphorous_rate', and "
-                "'potassium_rate'."),
+            "about": ("A table that maps crops to fertilization rates for "
+                "nitrogen, phosphorus, and potassium."),
             "name": "Fertilization Rate Table Path"
         },
         "aggregate_polygon_path": {
-            "type": "vector",
-            "required": False,
-            "about": (
-                "A polygon vector containing features with which to "
-                "aggregate/summarize final results. It is fine to have "
-                "overlapping polygons."),
-            "name": "Aggregate results polygon"
+            **utils.AOI_ARG,
+            "required": False
         },
         "model_data_path": {
             "validation_options": {
                 "exists": True,
             },
             "type": "directory",
+            "contents": {
+                "climate_regression_yield_tables": {
+                    "type": "directory",
+                    "contents": {
+                        "[CROP]_regression_yield_table.csv": {
+                            "type": "csv",
+                            "columns": {
+                                'climate_bin': {"type": "code"},
+                                'yield_ceiling': {"type": "number", "units": "?"}, 
+                                'b_nut': {"type": "number", "units": "?"}, 
+                                'b_k2o': {"type": "number", "units": "?"}, 
+                                'c_n': {"type": "number", "units": "?"}, 
+                                'c_p2o5': {"type": "number", "units": "?"}, 
+                                'c_k2o': {"type": "number", "units": "?"}, 
+                                'yield_ceiling_rf': {"type": "number", "units": ("?")}
+                            }
+                        }
+                    }
+                },
+                "crop_nutrient.csv": {
+                    "type": "csv",
+                    "columns": {
+                        nutrient: {
+                            "type": "number", "units": "?"
+                        } for nutrient in [
+                            'Protein', 'Lipid', 'Energy', 'Ca', 'Fe', 'Mg', 'Ph', 
+                            'K', 'Na', 'Zn', 'Cu', 'Fl', 'Mn', 
+                            'Se', 'VitA', 'betaC', 'alphaC', 'VitE', 'Crypto',
+                            'Lycopene', 'Lutein', 'betaT', 'gammaT', 'deltaT', 'VitC', 'Thiamin',
+                            'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
+                            'VitK'
+                        ]
+                    }
+                }
+            },
             "required": True,
-            "about": (
-                "A path to the InVEST Crop Production Data directory. These "
-                "data would have been included with the InVEST installer if "
-                "selected, or can be manually downloaded from "
-                "http://releases.naturalcapitalproject.org/invest. "
-                "If downloaded with InVEST, the default value should be "
-                "used."),
+            "about": ("A path to the InVEST Crop Production Data directory. "
+                "These data would have been included with the InVEST installer "
+                "if selected, or can be manually downloaded from "
+                "http://releases.naturalcapitalproject.org/invest. If "
+                "downloaded with InVEST, the default value should be used."),
             "name": "Directory to model data"
         }
     }

@@ -10,6 +10,7 @@ from datetime import datetime
 import time
 
 import pandas
+import pint
 import numpy
 from shapely.wkt import loads
 from osgeo import gdal
@@ -42,6 +43,154 @@ GDAL_ERROR_LEVELS = {
 # axis order, which will use Lon,Lat order for Geographic CRS, but otherwise
 # leaves Projected CRS alone
 DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
+
+# the same unit registry instance should be shared across everything
+u = pint.UnitRegistry()
+u.define('currency = [value_generic]')
+u.define('dollar = [value_USD]')
+u.define('pixel = [area_pixel]')
+u.define('projection_unit = [length_projection_unit]')
+u.define('million_dollars = 1000000 * dollar')
+# add "us_survey_foot" on to the aliases
+u.define('survey_foot = 1200 / 3937 * meter = sft = us_survey_foot')
+
+AREA = {
+    "type": "vector",
+    "fields": {},
+    "geometries": {"POLYGON", "MULTIPOLYGON"}
+}
+
+PROJECTED = {
+    "validation_options": {
+        "projected": True
+    }
+}
+
+METER_PROJECTED = {
+    "validation_options": {
+        "projected": True,
+        "projection_units": u.meter
+    }
+}
+
+PROJECTED_AREA = {
+    **AREA,
+    **PROJECTED
+}
+
+METER_PROJECTED_AREA = {
+    **AREA,
+    **METER_PROJECTED
+}
+
+GT_0 = {
+    "validation_options": {
+        "expression": "value > 0"
+    }
+}
+GTE_0 = {
+    "validation_options": {
+        "expression": "value >= 0"
+    }
+}
+BETWEEN_0_AND_1 = {
+    "validation_options": {
+        "expression": "(value >= 0) & (value <= 1)"
+    }
+}
+
+DISTANCE = {
+    "type": "number",
+    "units": u.meter,
+    "validation_options": {
+        "expression": "value >= 0"
+    }
+}
+
+METER_RASTER = {
+    "type": "raster",
+    "bands": {
+        1: {
+            "type": "number",
+            "units": u.meter
+        }
+    }
+}
+
+AOI_ARG = {
+    **AREA,
+    "name": "area of interest",
+    "about": (
+        "A GDAL-supported vector file.  This AOI instructs "
+        "the model where to clip the input data and the extent "
+        "of analysis.  Users will create a polygon feature "
+        "layer that defines their area of interest.  The AOI "
+        "must intersect the Digital Elevation Model (DEM)."),
+}
+LULC_ARG = {
+    "type": "raster",
+    "bands": {1: {"type": "code"}},
+    "required": True,
+    "about": (
+        "A GDAL-supported raster file containing LULC code "
+        "(expressed as integers) for each cell."),
+    "name": "land use/land cover"
+}
+DEM_ARG = {
+    "type": "raster",
+    "bands": {
+        1: {
+            "type": "number",
+            "units": u.meter
+        }
+    },
+    "required": True,
+    "about": (
+        "A GDAL-supported raster file containing elevation values for "
+        "each cell.  Make sure the DEM is corrected by filling in "
+        "sinks, and if necessary burning hydrographic features into "
+        "the elevation model (recommended when unusual streams are "
+        "observed.) See the Working with the DEM section of the "
+        "InVEST User's Guide for more information."),
+    "name": "digital elevation model"
+}
+ETO_ARG = {
+    "name": "Evapotranspiration Raster",
+    "type": "raster",
+    "bands": {
+        1: {
+            "type": "number",
+            "units": u.millimeter
+        }
+    },
+    "required": True,
+    "about": "A map of evapotranspiration values"
+}
+SOIL_GROUP_ARG = {
+    "type": "raster",
+    "bands": {1: {"type": "code"}},
+    "required": True,
+    "about": (
+        "Raster with values equal to 1, 2, 3, 4, corresponding to "
+        "soil hydrologic group A, B, C, or D, respectively"),
+    "name": "soil hydrologic group"
+}
+THRESHOLD_FLOW_ACCUMULATION_ARG = {
+    **GTE_0,
+    "type": "number",
+    "units": u.pixel,
+    "about": (
+        "The number of upstream cells that must flow into a cell "
+        "before it's classified as a stream."),
+    "name": "Threshold Flow Accumulation Limit"
+}
+
+LINES = {'LINESTRING', 'MULTILINESTRING'}
+POLYGONS = {'POLYGON', 'MULTIPOLYGON'}
+ALL_GEOMS = {'LINESTRING', 'POLYGON', 'POINT'}
+
+
+
 
 
 @contextlib.contextmanager
@@ -470,7 +619,7 @@ def build_lookup_from_csv(
             string values. default=True.
 
     Returns:
-        lookup_dict (dict): a dictionary of the form 
+        lookup_dict (dict): a dictionary of the form
         {key_field_0: {csv_header_0: value0, csv_header_1: value1...},
         key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}}
 
@@ -841,7 +990,7 @@ def reclassify_raster(
             each key represent:
 
                 'raster_name' - string for the raster name being reclassified
-                'column_name' - name of the table column that ``value_map`` 
+                'column_name' - name of the table column that ``value_map``
                 dictionary keys came from.
                 'table_name' - table name that ``value_map`` came from.
 

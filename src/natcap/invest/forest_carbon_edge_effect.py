@@ -16,6 +16,7 @@ import pygeoprocessing
 import scipy.spatial
 import taskgraph
 
+from .utils import u
 from . import utils
 from . import validation
 
@@ -39,58 +40,67 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "n_nearest_model_points": {
-            "validation_options": {
-                "expression": "int(value) > 0",
-            },
+            **utils.GT_0,
             "type": "number",
+            "units": None,
             "required": "compute_forest_edge_effects",
-            "about": (
-                "Used when calculating the biomass in a pixel.  This number "
-                "determines the number of closest regression models that are "
-                "used when calculating the total biomass.  Each local model "
-                "is linearly weighted by distance such that the biomass in "
-                "the pixel is a function of each of these points with the "
+            "about": ("Used when calculating the biomass in a pixel.  This "
+                "number determines the number of closest regression models "
+                "that are used when calculating the total biomass.  Each local "
+                "model is linearly weighted by distance such that the biomass "
+                "in the pixel is a function of each of these points with the "
                 "closest point having the highest effect."),
             "name": "Number of nearest model points to average"
         },
         "aoi_vector_path": {
-            "validation_options": {
-                "projected": True,
-            },
-            "type": "vector",
-            "required": False,
-            "about": (
-                "This is a set of polygons that will be used to aggregate "
-                "carbon values at the end of the run if provided."),
-            "name": "Service areas of interest"
+            **utils.AOI_ARG,
+            **utils.PROJECTED,
+            "required": False
         },
         "biophysical_table_path": {
-            "validation_options": {
-                "required_fields": [
-                    "lucode", "is_tropical_forest", "c_above"],
-            },
             "type": "csv",
             "required": True,
-            "about": (
-                "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input.  It "
-                "must contain the fields 'lucode', 'is_tropical_forest', "
-                "'c_above'.  If the user selects 'all carbon pools' the "
-                "table must also contain entries for 'c_below', 'c_soil', "
-                "and 'c_dead'.  See the InVEST Forest Carbon User's Guide "
-                "for more information about these fields."),
+            "columns": {
+                "lucode": {"type": "code"},
+                "is_tropical_forest": {"type": "boolean"},
+                "c_above": {
+                    "type": "number",
+                    "units": u.metric_ton/u.hectare,
+                    "about": ("Carbon density value for the aboveground carbon "
+                        "pool.")
+                },
+                "c_below": {
+                    "type": "number",
+                    "units": u.metric_ton/u.hectare,
+                    "required": "pools_to_calculate == 'all'",
+                    "about": ("Carbon density value for the belowground carbon "
+                        "pool")
+                },
+                "c_soil": {
+                    "type": "number",
+                    "units": u.metric_ton/u.hectare,
+                    "required": "pools_to_calculate == 'all'",
+                    "about": "Carbon density value for the soil carbon pool"
+                },
+                "c_dead": {
+                    "type": "number",
+                    "units": u.metric_ton/u.hectare,
+                    "required": "pools_to_calculate == 'all'",
+                    "about": ("Carbon density value for the dead matter carbon "
+                        "pool")
+                },
+            },
+            "about": ("A CSV table containing model information corresponding "
+                "to each of the land use classes in the LULC raster input.  If "
+                "the user selects 'all carbon pools' the table must also "
+                "contain entries for 'c_below', 'c_soil', and 'c_dead'.  See "
+                "the InVEST Forest Carbon User's Guide for more information "
+                "about these fields."),
             "name": "Biophysical Table"
         },
         "lulc_raster_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file, with an integer LULC code for "
-                "each cell."),
-            "name": "Land-Use/Land-Cover Map"
+            **utils.LULC_ARG,
+            **utils.PROJECTED
         },
         "pools_to_calculate": {
             "validation_options": {
@@ -98,8 +108,7 @@ ARGS_SPEC = {
             },
             "type": "option_string",
             "required": True,
-            "about": (
-                "If 'all carbon pools' is selected then the headers "
+            "about": ("If 'all carbon pools' is selected then the headers "
                 "'c_above', 'c_below', 'c_dead', 'c_soil' are used in the "
                 "carbon pool calculation.  Otherwise only 'c_above' is "
                 "considered."),
@@ -108,34 +117,41 @@ ARGS_SPEC = {
         "compute_forest_edge_effects": {
             "type": "boolean",
             "required": True,
-            "about": (
-                "If selected, will use the Chaplin-Kramer, et. al method to "
-                "account for above ground carbon stocks in tropical forest "
-                "types indicated by a '1' in the 'is_tropical_forest' field "
-                "in the biophysical table."),
+            "about": ("If selected, will use the Chaplin-Kramer, et. al method "
+                "to account for above ground carbon stocks in tropical forest "
+                "types indicated by a '1' in the 'is_tropical_forest' field in "
+                "the biophysical table."),
             "name": "Compute forest edge effects"
         },
         "tropical_forest_edge_carbon_model_vector_path": {
-            "validation_options": {
-                "required_fields": ["method", "theta1", "theta2", "theta3"],
-            },
             "type": "vector",
+            "fields": {
+                "method": {
+                    "type": "number",
+                    "units": None,
+                    "validation_options": {
+                        "expression": "value in {1, 2, 3}"
+                    }
+                },
+                "theta1": {"type": "number", "units": None},
+                "theta2": {"type": "number", "units": None},
+                "theta3": {"type": "number", "units": None}
+            },
+            "geometries": utils.POLYGONS,
             "required": "compute_forest_edge_effects",
-            "about": (
-                "A vector with fields 'method', 'theta1', 'theta2', "
-                "'theta3' describing the global forest carbon edge models.  "
+            "about": ("A vector with fields 'method', 'theta1', 'theta2', "
+                "'theta3' describing the global forest carbon edge models. "
                 "Provided as default data for the model."),
             "name": "Global forest carbon edge regression models"
         },
         "biomass_to_carbon_conversion_factor": {
-            "type": "number",
+            "type": "ratio",
             "required": "compute_forest_edge_effects",
-            "about": (
-                "Number by which to scale forest edge biomass to convert to "
-                "carbon.  Default value is 0.47 (according to IPCC 2006). "
+            "about": ("Number by which to scale forest edge biomass to convert "
+                "to carbon.  Default value is 0.47 (according to IPCC 2006). "
                 "This pertains to forest classes only; values in the "
-                "biophysical table for non-forest classes should already be "
-                "in terms of carbon, not biomass."),
+                "biophysical table for non-forest classes should already be in "
+                "terms of carbon, not biomass."),
             "name": "Forest Edge Biomass to Carbon Conversion Factor"
         }
     }
@@ -651,8 +667,8 @@ def _map_distance_from_tropical_forest_edge(
         masked_distance_block = numpy.where(
             lulc_block == lulc_nodata, NODATA_VALUE, distance_block)
         edge_distance_band.WriteArray(
-            masked_distance_block, 
-            xoff=offset_dict['xoff'], 
+            masked_distance_block,
+            xoff=offset_dict['xoff'],
             yoff=offset_dict['yoff'])
 
 
@@ -858,14 +874,14 @@ def _calculate_tropical_forest_edge_carbon_map(
             edge_distance_block[valid_edge_distance_mask] * cell_size_km,
             n_nearest_model_points).reshape(-1, n_nearest_model_points)
 
-        # For each forest pixel x, for each of its k nearest neighbors, the 
+        # For each forest pixel x, for each of its k nearest neighbors, the
         # chosen regression method (1, 2, or 3). model_index shape: (x, k)
-        model_index = numpy.zeros(indexes.shape, dtype=numpy.int8) 
-        model_index[valid_index_mask] = ( 
-            method_model_parameter[indexes[valid_index_mask]]) 
+        model_index = numpy.zeros(indexes.shape, dtype=numpy.int8)
+        model_index[valid_index_mask] = (
+            method_model_parameter[indexes[valid_index_mask]])
 
         # biomass shape: (x, k)
-        biomass = numpy.zeros((indexes.shape[0], indexes.shape[1]), 
+        biomass = numpy.zeros((indexes.shape[0], indexes.shape[1]),
             dtype=numpy.float32)
 
         # mask shapes: (x, k)
@@ -910,7 +926,7 @@ def _calculate_tropical_forest_edge_carbon_map(
                       biomass[valid_denom], axis=1) / denom[valid_denom])
 
         # Ensure the result has nodata everywhere the distance was invalid
-        result = numpy.full(edge_distance_block.shape, NODATA_VALUE, 
+        result = numpy.full(edge_distance_block.shape, NODATA_VALUE,
             dtype=numpy.float32)
         # convert biomass to carbon in this stage
         result[valid_edge_distance_mask] = (
@@ -957,7 +973,8 @@ def validate(args, limit_to=None):
                 ['c_below', 'c_soil', 'c_dead'])
             error_msg = validation.check_csv(
                 args['biophysical_table_path'],
-                required_fields=required_fields)
+                header_patterns=required_fields,
+                axis=1)
             if error_msg:
                 validation_warnings.append(
                     (['biophysical_table_path'], error_msg))

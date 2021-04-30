@@ -2,7 +2,6 @@
 import os
 import logging
 import time
-import math
 
 from osgeo import gdal
 from osgeo import ogr
@@ -15,6 +14,7 @@ import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
 
+from ..utils import u
 from .. import utils
 from .. import validation
 from . import delineateit_core
@@ -35,77 +35,64 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "dem_path": {
-            "validation_options": {
-                "projected": True,
-            },
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A GDAL-supported raster file with an elevation value for "
-                "each cell."),
-            "name": "Digital Elevation Model"
+            **utils.DEM_ARG,
+            **utils.PROJECTED
         },
         "detect_pour_points": {
             "type": "boolean",
             "required": False,
-            "about": (
-                "If ``True``, the pour point detection algorithm will run, "
-                "creating a point vector file pour_points.gpkg."),
+            "about": ("If ``True``, the pour point detection algorithm will "
+                "run, creating a point vector file pour_points.gpkg."),
             "name": "Detect pour points"
         },
         "outlet_vector_path": {
             "type": "vector",
+            "fields": {},
+            "geometries": utils.ALL_GEOMS,
             "required": "not detect_pour_points",
-            "about": (
-                "This is a layer of geometries representing watershed "
+            "about": ("This is a layer of geometries representing watershed "
                 "outlets such as municipal water intakes or lakes."),
             "name": "Outlet Features"
         },
         "snap_points": {
             "type": "boolean",
             "required": False,
-            "about": (
-                "Whether to snap point geometries to the nearest stream "
+            "about": ("Whether to snap point geometries to the nearest stream "
                 "pixel.  If ``True``, ``args['flow_threshold']`` and "
                 "``args['snap_distance']`` must also be defined."),
             "name": "Snap points to the nearest stream"
         },
         "flow_threshold": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "type": "number",
+            "units": u.pixel,
             "required": "snap_points",
-            "about": (
-                "The number of upstream cells that must flow into a cell "
+            "about": ("The number of upstream cells that must flow into a cell "
                 "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream.  "
+                "stops and the remaining export is exported to the stream. "
                 "Used to define streams from the DEM."),
             "name": "Threshold Flow Accumulation"
         },
         "snap_distance": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            **utils.GT_0,
             "type": "number",
+            "units": u.pixels,
             "required": "snap_points",
-            "about": (
-                "If provided, the maximum search radius in pixels to look "
-                "for stream pixels.  If a stream pixel is found within the "
-                "snap distance, the outflow point will be snapped to the "
-                "center of the nearest stream pixel.  Geometries that are "
-                "not points (such as Lines and Polygons) will not be "
-                "snapped.  MultiPoint geoemtries will also not be snapped."),
+            "about": ("If provided, the maximum search radius in pixels to "
+                "look for stream pixels.  If a stream pixel is found within "
+                "the snap distance, the outflow point will be snapped to the "
+                "center of the nearest stream pixel.  Geometries that are not "
+                "points (such as Lines and Polygons) will not be snapped. "
+                "MultiPoint geoemtries will also not be snapped."),
             "name": "Pixel Distance to Snap Outlet Points"
         },
         "skip_invalid_geometry": {
             "type": "boolean",
             "required": False,
-            "about": (
-                "If ``True``, any invalid geometries encountered "
-                "in the outlet vector will not be included in the "
-                "delineation.  If ``False``, an invalid geometry "
-                "will cause DelineateIt to crash."),
+            "about": ("If ``True``, any invalid geometries encountered in the "
+                "outlet vector will not be included in the delineation.  If "
+                "``False``, an invalid geometry will cause DelineateIt to "
+                "crash."),
             "name": "Crash on invalid geometries"
         }
     }

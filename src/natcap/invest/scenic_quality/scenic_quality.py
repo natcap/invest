@@ -15,6 +15,7 @@ import rtree
 import shapely.geometry
 
 from natcap.invest.scenic_quality.viewshed import viewshed
+from ..utils import u
 from .. import utils
 from .. import validation
 
@@ -56,63 +57,73 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
-        "aoi_path": {
-            "name": "Area of Interest",
-            "type": "vector",
-            "required": True,
-            "about": (
-                "A GDAL-supported vector file.  This AOI instructs "
-                "the model where to clip the input data and the extent "
-                "of analysis.  Users will create a polygon feature "
-                "layer that defines their area of interest.  The AOI "
-                "must intersect the Digital Elevation Model (DEM)."),
-        },
+        "aoi_path": utils.AOI_ARG,
         "structure_path": {
-            "name": "Features Impacted Scenic Quality",
+            "name": "Features Impacting Scenic Quality",
             "type": "vector",
+            "geometries": {"POINT"},
+            "fields": {
+                "RADIUS": {
+                    "type": "number",
+                    "units": u.meter,
+                    "required": False,
+                    "about": ("RADIUS preferred, but may also be called "
+                        "RADIUS2 for backwards compatibility. Maximum length "
+                        "of the line of sight originating from a viewpoint. "
+                        "The value can either be positive (preferred) or "
+                        "negative (kept for backwards compatibility), but is "
+                        "converted to a positive number. If the field doesn’t "
+                        "exist, the model will include all pixels in the DEM "
+                        "in the visibility analysis.")},
+                "WEIGHT": {
+                    "type": "number",
+                    "units": None,
+                    "required": False,
+                    "about": ("Viewshed importance coefficient: The user can "
+                        "assign an importance to each viewshed by scaling them "
+                        "with a real number (either positive or negative) "
+                        "stored in the field “WEIGHT”. The model assumes a "
+                        "weight of 1.0 if the field doesn’t exist.")},
+                "HEIGHT": {
+                    "type": "number",
+                    "units": u.meter,
+                    "required": False,
+                    "about": ("Viewpoint height: Each feature's elevation "
+                        "above the ground can be specified as a positive real "
+                        "number. The default value is 0 if the field doesn’t "
+                        "exist.")}
+            },
             "required": True,
-            "about": (
-                "A GDAL-supported vector file.  The user must specify "
-                "a point feature layer that indicates locations of "
-                "objects that contribute to negative scenic quality, "
-                "such as aquaculture netpens or wave energy "
-                "facilities.  In order for the viewshed analysis to "
-                "run correctly, the projection of this input must be "
-                "consistent with the project of the DEM input."),
+            "about": ("A GDAL-supported vector file.  The user must specify a "
+                "point feature layer that indicates locations of objects that "
+                "contribute to negative scenic quality, such as aquaculture "
+                "netpens or wave energy facilities.  In order for the viewshed "
+                "analysis to run correctly, the projection of this input must "
+                "be consistent with the projection of the DEM input."),
         },
         "dem_path": {
-            "name": "Digital Elevation Model",
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters",
-            },
-            "about": (
-                "A GDAL-supported raster file.  An elevation raster "
-                "layer is required to conduct viewshed analysis. "
-                "Elevation data allows the model to determine areas "
-                "within the AOI's land-seascape where point features "
-                "contributing to negative scenic quality are visible."),
+            **utils.DEM_ARG,
+            **utils.METER_PROJECTED,
+            "about": ("A GDAL-supported raster file.  An elevation raster "
+                "layer is required to conduct viewshed analysis. Elevation "
+                "data allows the model to determine areas within the AOI's "
+                "land-seascape where point features contributing to negative "
+                "scenic quality are visible."),
         },
         "refraction": {
             "name": "Refractivity Coefficient",
-            "type": "number",
+            "type": "ratio",
             "required": True,
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            },
-            "about": (
-                "The earth curvature correction option corrects for "
-                "the curvature of the earth and refraction of visible "
-                "light in air.  Changes in air density curve the light "
-                "downward causing an observer to see further and the "
-                "earth to appear less curved.  While the magnitude of "
-                "this effect varies with atmospheric conditions, a "
-                "standard rule of thumb is that refraction of visible "
-                "light reduces the apparent curvature of the earth by "
-                "one-seventh.  By default, this model corrects for the "
-                "curvature of the earth and sets the refractivity "
+            **utils.BETWEEN_0_AND_1,
+            "about": ("The earth curvature correction option corrects for the "
+                "curvature of the earth and refraction of visible light in "
+                "air.  Changes in air density curve the light downward causing "
+                "an observer to see further and the earth to appear less "
+                "curved.  While the magnitude of this effect varies with "
+                "atmospheric conditions, a standard rule of thumb is that "
+                "refraction of visible light reduces the apparent curvature of "
+                "the earth by one-seventh.  By default, this model corrects "
+                "for the curvature of the earth and sets the refractivity "
                 "coefficient to 0.13."),
         },
         "do_valuation": {
@@ -131,34 +142,32 @@ ARGS_SPEC = {
                     'logarithmic: a + b log(x+1)',
                     'exponential: a * e^(-bx)'],
             },
-            "about": (
-                "This field indicates the functional form f(x) the "
-                "model will use to value the visual impact for each "
-                "viewpoint."),
+            "about": ("This field indicates the functional form f(x) the model "
+                "will use to value the visual impact for each viewpoint."),
         },
         "a_coef": {
             "name": "'a' Coefficient",
             "type": "number",
+            "units": None,
             "required": "do_valuation",
-            "about": ("First coefficient used by the valuation function"),
+            "about": "First coefficient used by the valuation function",
         },
         "b_coef": {
             "name": "'a' Coefficient",
             "type": "number",
+            "units": None,
             "required": "do_valuation",
-            "about": ("Second coefficient used by the valuation function"),
+            "about": "Second coefficient used by the valuation function",
         },
         "max_valuation_radius": {
             "name": "Maximum Valuation Radius",
             "type": "number",
+            "units": u.meter,
             "required": False,
-            "validation_options": {
-                "expression": "value > 0",
-            },
-            "about": (
-                "Radius beyond which the valuation is set to zero. "
-                "The valuation function 'f' cannot be negative at the "
-                "radius 'r' (f(r)>=0)."),
+            **utils.GT_0,
+            "about": ("Radius beyond which the valuation is set to zero. The "
+                "valuation function 'f' cannot be negative at the radius 'r' "
+                "(f(r)>=0)."),
         },
     }
 }
@@ -491,7 +500,7 @@ def _determine_valid_viewpoints(dem_path, structures_path):
                 LOGGER.info(
                     ("Checking structures in layer %s, approx. "
                      "%.2f%%complete."), layer_name,
-                    100.0*(n_features_touched /
+                    100.0 * (n_features_touched /
                            structures_layer.GetFeatureCount()))
                 last_log_time = time.time()
 
@@ -716,7 +725,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
             x = distance[valid_pixels]
             valuation[valid_pixels] = (
-                (a+b*x)*(weight*visibility[valid_pixels]))
+                (a + b * x) * (weight * visibility[valid_pixels]))
             return valuation
 
     elif valuation_method == 'logarithmic':
@@ -731,8 +740,8 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             # Also per Rob (and Rich), we'll use log(x+1) because log of values
             # where 0 < x < 1 yields strange results indeed.
             valuation[valid_pixels] = (
-                (a+b*numpy.log(distance[valid_pixels] + 1))*(
-                    weight*visibility[valid_pixels]))
+                (a + b * numpy.log(distance[valid_pixels] + 1)) * (
+                    weight * visibility[valid_pixels]))
             return valuation
 
     elif valuation_method == 'exponential':
@@ -744,8 +753,8 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             valuation[(visibility == 0) | valid_pixels] = 0
 
             valuation[valid_pixels] = (
-                (a*numpy.exp(-b*distance[valid_pixels])) * (
-                    weight*visibility[valid_pixels]))
+                (a * numpy.exp(-b * distance[valid_pixels])) * (
+                    weight * visibility[valid_pixels]))
             return valuation
 
     pygeoprocessing.new_raster_from_base(
@@ -932,7 +941,7 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
             if time.time() - last_log_time > 5.0:
                 LOGGER.info(
                     'Weighting and summing approx. %.2f%% complete.',
-                    100.0*(n_visibility_pixels_touched/n_visibility_pixels))
+                    100.0 * (n_visibility_pixels_touched / n_visibility_pixels))
                 last_log_time = time.time()
 
             visibility_raster = gdal.OpenEx(vis_raster_path, gdal.OF_RASTER)

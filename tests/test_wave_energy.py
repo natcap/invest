@@ -679,16 +679,29 @@ class WaveEnergyValidateTests(unittest.TestCase):
         for expected_error in expected_errors:
             self.assertTrue(expected_error in validation_error_list)
 
-    def test_validate_bad_aoi_format(self):
-        """WaveEnergy: testing bad AOI vector format with validate."""
+    def test_validate_bad_aoi_incorrect_proj_units(self):
+        """WaveEnergy: test validating AOI vector with incorrect units"""
         from natcap.invest import wave_energy
 
         args = {}
-        args['aoi_path'] = os.path.join(SAMPLE_DATA, 'bad_AOI_WCVI.shp')
+        # Validation will recognize the units "foot" and say it's incorrect
+        args['aoi_path'] = os.path.join(SAMPLE_DATA, 'bad_AOI_inch.shp')
+        validation_error_list = wave_energy.validate(args)
+        expected_error = (['aoi_path'], 'Layer must be projected in meters')
+        print(validation_error_list)
+        self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_bad_aoi_unrecognized_proj_units(self):
+        """WaveEnergy: test validating AOI vector with unrecognized units"""
+        from natcap.invest import wave_energy
+
+        args = {}
+        # The unit "US survey foot" is not recognized by pint
+        args['aoi_path'] = os.path.join(
+            SAMPLE_DATA, 'bad_AOI_us_survey_foot.shp')
 
         validation_error_list = wave_energy.validate(args)
-        expected_errors = [
-            (['aoi_path'], 'Layer must be projected in meters'),
-        ]
-        for expected_error in expected_errors:
-            self.assertTrue(expected_error in validation_error_list)
+        expected_error = (
+            ['aoi_path'], 'SRS has unrecognized unit us survey foot')
+        print(validation_error_list)
+        self.assertTrue(expected_error in validation_error_list)

@@ -31,6 +31,7 @@ if shapely.speedups.available:
 
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
+from ..utils import u
 from .. import utils
 from .. import validation
 
@@ -42,6 +43,49 @@ RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/i
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
 
+predictor_table_columns = {
+    "id": {
+        "type": "freestyle_string",
+        "about": ("A unique identifier for the predictor (10 "
+            "characters or less).")
+    },
+    "path": {
+        "type": {"raster", "vector"},
+        "about": "A spatial file to use as a predictor",
+        "bands": {1: {"type": "number", "units": None}},
+        "fields": {},
+        "geometries": {'POINT', 'LINE', 'POLYGON'}
+    },
+    "type": {
+        "type": "option_string",
+        "options": {
+            "raster_mean": ("Predictor is a raster. Metric is the "
+                "mean of the non-nodata values of the raster that "
+                "intersect the AOI grid cell or polygon."),
+            "raster_sum": ("Predictor is a raster. Metric is the "
+                "sum of the non-nodata values of the raster that "
+                "intersect the AOI grid cell or polygon."),
+            "point_count": ("Predictor is a point shapefile. "
+                "Metric is the count of those points in each AOI "
+                "grid cell or polygon."),
+            "point_nearest_distance": ("Predictor is a point "
+                "shapefile. Metric is the euclidean distance "
+                "between the center of each AOI grid cell and the "
+                "nearest point in this predictor layer."),
+            "line_intersect_length": ("Predictor is a line "
+                "shapefile. Metric is the total length of the lines "
+                "intersecting each AOI grid cell."),
+            "polygon_area_coverage": ("Predictor is a polygon "
+                "shapefile. Metric is the area of overlap between "
+                "the predictor and each AOI grid cell."),
+            "polygon_percent_coverage": ("Predictor is a polygon "
+                "shapefile. Metric is the percent (0-100) of area "
+                "of overlap between the predictor and each AOI "
+                "grid cell.")
+        }
+    }
+}
+
 
 ARGS_SPEC = {
     "model_name": "Recreation Model",
@@ -52,39 +96,38 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "aoi_path": {
-            "type": "vector",
+            **utils.AREA,
             "required": True,
-            "about": (
-                "A GDAL-supported vector file representing the area of "
+            "about": ("A GDAL-supported vector file representing the area of "
                 "interest where the model will run the analysis."),
             "name": "Area of Interest (Vector)"
         },
         "hostname": {
             "type": "freestyle_string",
             "required": False,
-            "about": (
-                "FQDN to a recreation server.  If not provided, a default "
-                "is assumed."),
+            "about": ("FQDN to a recreation server.  If not provided, a "
+                "default is assumed."),
+            "name": "hostname"
         },
         "port": {
             "validation_options": {
                 "expression": "value >= 0",
             },
             "type": "number",
+            "units": None,
             "required": False,
-            "about": (
-                "the port on ``hostname`` to use for contacting the "
+            "about": ("the port on ``hostname`` to use for contacting the "
                 "recreation server."),
+            "name": "port"
         },
         "start_year": {
             "validation_options": {
                 "expression": "value >= 2005",
             },
             "type": "number",
+            "units": u.year,
             "required": True,
-            "about": (
-                "Year to start PUD calculations, date starts on Jan "
-                "1st."),
+            "about": "Year to start PUD calculations, date starts on Jan 1st.",
             "name": "Start Year (inclusive, must be >= 2005)"
         },
         "end_year": {
@@ -92,19 +135,18 @@ ARGS_SPEC = {
                 "expression": "value <= 2017",
             },
             "type": "number",
+            "units": u.year,
             "required": True,
-            "about": (
-                "Year to end PUD calculations, date ends and includes Dec "
-                "31st."),
+            "about": ("Year to end PUD calculations, date ends and includes "
+                "Dec 31st."),
             "name": "End Year (inclusive, must be <= 2017)"
         },
         "grid_aoi": {
             "type": "boolean",
             "required": False,
-            "about": (
-                "If true the polygon vector in ``args['aoi_path']`` should be "
-                "gridded into a new vector and the recreation model should "
-                "be executed on that"),
+            "about": ("If true the polygon vector in ``args['aoi_path']`` "
+                "should be gridded into a new vector and the recreation model "
+                "should be executed on that"),
             "name": "Grid the AOI"
         },
         "grid_type": {
@@ -116,9 +158,8 @@ ARGS_SPEC = {
             },
             "type": "option_string",
             "required": "grid_aoi",
-            "about": (
-                "Optional, but must exist if args['grid_aoi'] is True.  Is "
-                "one of 'hexagon' or 'square' and\nindicates the style of "
+            "about": ("Optional, but must exist if args['grid_aoi'] is True. "
+                "Is one of 'hexagon' or 'square' and indicates the style of "
                 "gridding."),
             "name": "Grid Type"
         },
@@ -127,43 +168,35 @@ ARGS_SPEC = {
                 "expression": "value > 0",
             },
             "type": "number",
+            "units": u.projection_unit,
             "required": "grid_aoi",
-            "about": (
-                "The size of the grid units measured in the projection "
-                "units of the AOI. For example, UTM projections use "
-                "meters."),
+            "about": ("The size of the grid units measured in the projection "
+                "units of the AOI. For example, UTM projections use meters."),
             "name": "Cell Size"
         },
         "compute_regression": {
             "type": "boolean",
             "required": False,
-            "about": (
-                "If True, then process the predictor table and scenario "
+            "about": ("If True, then process the predictor table and scenario "
                 "table (if present)."),
             "name": "Compute Regression"
         },
         "predictor_table_path": {
-            "validation_options": {
-                "required_fields": ['id', 'path', 'type'],
-            },
             "type": "csv",
+            "columns": predictor_table_columns,
             "required": "compute_regression",
-            "about": (
-                "A table that maps predictor IDs to files and their types "
-                "with required headers of 'id', 'path', and 'type'.  The "
-                "file paths can be absolute, or relative to the table."),
+            "about": ("A table that maps predictor IDs to spatial files and "
+                "their predictor metric types. The file paths can be absolute "
+                "or relative to the table."),
             "name": "Predictor Table"
         },
         "scenario_predictor_table_path": {
-            "validation_options": {
-                "required_fields": ['id', 'path', 'type'],
-            },
             "type": "csv",
+            "columns": predictor_table_columns,
             "required": False,
-            "about": (
-                "A table that maps predictor IDs to files and their types "
-                "with required headers of 'id', 'path', and 'type'.  The "
-                "file paths can be absolute, or relative to the table."),
+            "about": ("A table of future or alternative scenario predictors. "
+                "Maps IDs to files and their types. The file paths can be "
+                "absolute or relative to the table."),
             "name": "Scenario Predictor Table"
         }
     }
