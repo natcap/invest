@@ -3,6 +3,8 @@ const os = require('os');
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
 const { app } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
+const yauzl = require('yauzl');
+
 const { getLogger } = require('./logger');
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -86,4 +88,58 @@ export function createPythonFlaskProcess(investExe) {
   } else {
     logger.error('no existing invest installations found');
   }
+}
+
+export function extractZipInplace(zipFilePath) {
+  return new Promise((resolve, reject) => {
+    const extractToDir = path.dirname(zipFilePath);
+    logger.info(`extracting ${zipFilePath}`);
+    yauzl.open(zipFilePath, { lazyEntries: true }, (err, zipfile) => {
+      if (err) throw err;
+      zipfile.readEntry();
+      zipfile.on('entry', (entry) => {
+        if (/\/$/.test(entry.fileName)) {
+          // if entry is a directory
+          fs.mkdir(path.join(extractToDir, entry.fileName), (err) => {
+            if (err) {
+              if (err.code === 'EEXIST') { } else logger.error(err);
+            }
+            zipfile.readEntry();
+          });
+        } else {
+          zipfile.openReadStream(entry, (err, readStream) => {
+            if (err) throw err;
+            readStream.on('end', () => {
+              zipfile.readEntry();
+            });
+            const writable = fs.createWriteStream(path.join(
+              extractToDir, entry.fileName
+            ));
+            readStream.pipe(writable);
+          });
+        }
+      });
+      zipfile.on('close', () => {
+        resolve(true);
+      });
+    });
+  });
+}
+
+/** Check if the user has run this application before.
+ *
+ * @returns {boolean}
+ */
+export function checkFirstRun() {
+  const userDataPath = app.getPath('userData');
+  const hasRunTokenPath = path.join(userDataPath, 'app-has-run-token');
+  try {
+    if (fs.existsSync(hasRunTokenPath)) {
+      return false;
+    }
+    fs.writeFileSync(hasRunTokenPath, '');
+  } catch (error) {
+    logger.warn(`Unable to write first-run token: ${error}`);
+  }
+  return true;
 }

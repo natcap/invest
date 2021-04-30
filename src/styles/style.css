@@ -9,6 +9,7 @@ body {
 /*Top Navigation*/
 
 .navbar {
+	align-items: baseline;
 	padding-bottom: 0px;
 	border-bottom: 3px solid var(--invest-green);
 	background-color: #fff
@@ -40,6 +41,21 @@ body {
 
 .navbar-nav .nav-item {
 	white-space: nowrap;
+}
+
+.progress {
+	height: 2rem;
+	font-size: 1rem;
+	background-color: #aeb1b3;
+}
+
+.progress-bar {
+	padding-left: 0.5rem;
+	padding-right: 0.5rem;
+}
+
+.navbar .alert {
+	padding: 0.4rem;
 }
 
 .settings-icon {
@@ -305,4 +321,14 @@ input[type=text]::placeholder {
 .spinner-border {
 	margin-left: 1rem;
 	margin-bottom: 0.25rem;
+}
+
+/* Download Data Modal */
+.download-data-modal .modal-dialog {
+	overflow-y: initial;
+}
+
+.download-data-modal .modal-body {
+	height: 80vh;
+	overflow-y: auto;
 }

@@ -7,6 +7,9 @@ if (ELECTRON_DEV_MODE) {
   dotenv.config();
 }
 
+const fs = require('fs');
+const path = require('path');
+
 const {
   app,
   BrowserWindow,
@@ -17,11 +20,15 @@ const {
   MenuItem,
   dialog,
 } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
+
 const {
   getFlaskIsReady, shutdownPythonProcess
 } = require('./server_requests');
 const {
-  findInvestBinaries, createPythonFlaskProcess
+  findInvestBinaries,
+  createPythonFlaskProcess,
+  extractZipInplace,
+  checkFirstRun,
 } = require('./main_helpers');
 const { getLogger } = require('./logger');
 const { menuTemplate } = require('./menubar');
@@ -60,28 +67,30 @@ const createWindow = async () => {
     investVersion: investVersion,
     workbenchVersion: pkg.version,
     userDataPath: app.getPath('userData'),
+    isFirstRun: checkFirstRun(),
   };
   ipcMain.handle('show-context-menu', (event, rightClickPos) => {
     const template = [
       {
         label: 'Inspect Element',
         click: () => {
-          BrowserWindow.fromWebContents(event.sender).inspectElement(rightClickPos.x, rightClickPos.y)
+          BrowserWindow.fromWebContents(event.sender)
+            .inspectElement(rightClickPos.x, rightClickPos.y);
         }
       },
-    ]
+    ];
     const menu = Menu.buildFromTemplate(template);
-    menu.popup( BrowserWindow.fromWebContents(event.sender));
+    menu.popup(BrowserWindow.fromWebContents(event.sender));
   });
   ipcMain.handle('variable-request', async (event) => {
     return mainProcessVars;
   });
-  ipcMain.handle('show-open-dialog', async (event, arg) => {
-    const result = await dialog.showOpenDialog(arg);
+  ipcMain.handle('show-open-dialog', async (event, options) => {
+    const result = await dialog.showOpenDialog(options);
     return result;
   });
-  ipcMain.handle('show-save-dialog', async (event, arg) => {
-    const result = await dialog.showSaveDialog(arg);
+  ipcMain.handle('show-save-dialog', async (event, options) => {
+    const result = await dialog.showSaveDialog(options);
     return result;
   });
   ipcMain.handle('is-dev-mode', async (event) => {
@@ -108,8 +117,8 @@ const createWindow = async () => {
     useContentSize: true,
     show: true, // see comment in 'ready-to-show' listener
     webPreferences: {
+      contextIsolation: false,
       nodeIntegration: true,
-      enableRemoteModule: true,
       additionalArguments: [
         ELECTRON_DEV_MODE ? '--dev' : 'packaged'
       ],
@@ -121,7 +130,7 @@ const createWindow = async () => {
   );
   Menu.setApplicationMenu(menubar);
   mainWindow.loadURL(`file://${__dirname}/index.html`);
-  
+
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();
     // We should be able to hide mainWindow until it's ready,
@@ -142,7 +151,7 @@ const createWindow = async () => {
       mainWindow.webContents.openDevTools();
     }
   });
-  
+
   // Emitted when the window is closed.
   mainWindow.on('closed', async () => {
     // Dereference the window object, usually you would store windows
@@ -157,12 +166,66 @@ const createWindow = async () => {
       await shutdownPythonProcess();
     }
   });
+
+  // Setup handlers & defaults to manage downloads.
+  // Specifically, invest sample data downloads
+  let downloadDir;
+  let downloadLength;
+  const downloadQueue = [];
+  ipcMain.on('download-url', async (event, urlArray, directory) => {
+    logger.debug(`${urlArray}`);
+    downloadDir = directory;
+    downloadQueue.push(...urlArray);
+    downloadLength = downloadQueue.length;
+    mainWindow.webContents.send(
+      'download-status',
+      [(downloadLength - downloadQueue.length), downloadLength]
+    );
+    urlArray.forEach((url) => mainWindow.webContents.downloadURL(url));
+  });
+
+  mainWindow.webContents.session.on('will-download', (event, item) => {
+    const filename = item.getFilename();
+    item.setSavePath(path.join(downloadDir, filename));
+    const itemURL = item.getURL();
+    item.on('updated', (event, state) => {
+      if (state === 'interrupted') {
+        logger.info('download interrupted');
+      } else if (state === 'progressing') {
+        if (item.isPaused()) {
+          logger.info('download paused');
+        } else {
+          logger.info(`${item.getSavePath()}`);
+          logger.info(`Received bytes: ${item.getReceivedBytes()}`);
+        }
+      }
+    });
+    item.once('done', async (event, state) => {
+      if (state === 'completed') {
+        logger.info(`${itemURL} complete`);
+        await extractZipInplace(item.savePath);
+        fs.unlink(item.savePath, (err) => {
+          if (err) { logger.error(err); }
+        });
+        const idx = downloadQueue.findIndex((item) => item === itemURL);
+        downloadQueue.splice(idx, 1);
+        mainWindow.webContents.send(
+          'download-status',
+          [(downloadLength - downloadQueue.length), downloadLength]
+        );
+      } else {
+        logger.info(`download failed: ${state}`);
+      }
+      if (!downloadQueue.length) {
+        logger.info('all downloads complete');
+      }
+    });
+  });
 };
 
 // calling requestSingleInstanceLock on mac causes a crash
-console.log(process.platform);
 if (process.platform.startsWith('win')) {
-  console.log('Windows detected, requesting single instance lock');
+  logger.info('Windows detected, requesting single instance lock');
   // Single instance lock so subsequent instances of the application redirect to
   // the already-open one.
   // Adapted from https://www.electronjs.org/docs/api/app#apprequestsingleinstancelock

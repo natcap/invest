@@ -4,6 +4,7 @@ const { spawnSync } = require('child_process');
 const fs = require('fs-extra');
 const path = require('path');
 const glob = require('glob');
+const { DEFAULT_EXTENSIONS } = require('@babel/core');
 
 const SRC_DIR = 'src';
 const BUILD_DIR = 'build';
@@ -12,6 +13,9 @@ const ELECTRON_BUILDER_ENV = 'electron-builder.env';
 if (process.argv[2] && process.argv[2] === 'clean') {
   clean();
 } else {
+  // clean before build just to remove any files that may
+  // have been removed from src/ code but are still in build/
+  // from a previous build.
   clean();
   build();
 }
@@ -19,7 +23,7 @@ if (process.argv[2] && process.argv[2] === 'clean') {
 /** Remove all the files created during build()
  *
  * Do not remove other things in the build/ folder such as
- * PyInstaller's output.
+ * invest binaries, which are not created during build().
  */
 function clean() {
   const files = glob.sync(
@@ -31,20 +35,15 @@ function clean() {
       ]
     }
   );
-  files.forEach((file) => {
-    if (['.js', '.jsx', '.css', '.html', '.json']
-      .includes(path.extname(file))
-    ) {
-      // console.log(file);
-      fs.unlinkSync(file);
-    }
-  });
   try {
+    files.forEach((file) => {
+      fs.unlinkSync(file);
+    });
     fs.unlinkSync(ELECTRON_BUILDER_ENV);
   } catch {}
 }
 
-/** Transpile and copy all src/ code to build folder. */
+/** Transpile or copy all src/ files to build folder. */
 function build() {
   if (!fs.existsSync(BUILD_DIR)) {
     fs.mkdirSync(BUILD_DIR);
@@ -65,7 +64,7 @@ function build() {
   // copy all other files to their same relative location in the build dir
   const files = glob.sync(SRC_DIR.concat(path.sep, '**', path.sep, '*'));
   files.forEach((file) => {
-    if (['.css', '.html', '.png'].includes(path.extname(file))) {
+    if (!DEFAULT_EXTENSIONS.includes(path.extname(file))) {
       const dest = file.replace(SRC_DIR, BUILD_DIR);
       fs.copySync(file, dest);
     }

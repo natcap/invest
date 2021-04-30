@@ -40,10 +40,14 @@ afterAll(async () => {
 });
 
 describe('Various ways to open and close InVEST models', () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+  });
+  afterAll(async () => {
+    // await clearSettingsStore();
+    // TODO reset the beforeAll mocks?
   });
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore
@@ -118,6 +122,7 @@ describe('Various ways to open and close InVEST models', () => {
     );
 
     const openButton = await findByRole('button', { name: 'Open' });
+    expect(openButton).not.toBeDisabled();
     fireEvent.click(openButton);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
@@ -148,62 +153,80 @@ describe('Various ways to open and close InVEST models', () => {
     expect(getSpec).toHaveBeenCalledTimes(0);
   });
 
-  test('Opening and closing multiple InVEST models', async () => {
+  test('Open three tabs and close them', async () => {
     const {
-      findByTitle,
       findByRole,
-      findAllByText,
+      findAllByRole,
+      queryAllByRole,
     } = render(<App investExe="foo" />);
 
-    // Open first model
-    const modelA = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
-    fireEvent.click(modelA);
-    const tabPanelA = await findByTitle(MOCK_MODEL_LIST_KEY);
-    const setupTabA = await within(tabPanelA).findByText('Setup');
-    expect(setupTabA.classList.contains('active')).toBeTruthy();
-    expect(within(tabPanelA).queryByRole('button', { name: /Run/ }))
-      .toBeInTheDocument();
-    within(tabPanelA).queryAllByText(/Save to/).forEach((saveButton) => {
-      expect(saveButton).toBeInTheDocument();
-    });
-    expect(getSpec).toHaveBeenCalledTimes(1);
-
-    // Open another model (via Open button for convenience)
-    const mockDialogData = {
-      filePaths: ['foo.json'],
-    };
-    const mockDatastack = {
-      module_name: 'natcap.invest.party',
-      model_run_name: 'party',
-      model_human_name: 'Party Time',
-      args: {
-        carbon_pools_path: 'Carbon/carbon_pools_willamette.csv',
-      },
-    };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
-    const openButton = await findByRole('button', { name: 'Open' });
-    fireEvent.click(openButton);
-    const tabPanelB = await findByTitle(mockDatastack.model_human_name);
-    const setupTabB = await within(tabPanelB).findByText('Setup');
-    expect(setupTabB.classList.contains('active')).toBeTruthy();
-    expect(within(tabPanelB).queryByRole('button', { name: /Run/ }))
-      .toBeInTheDocument();
-    within(tabPanelB).queryAllByText(/Save to/).forEach((saveButton) => {
-      expect(saveButton).toBeInTheDocument();
-    });
-    expect(getSpec).toHaveBeenCalledTimes(2);
-
-    // Close one open model
-    const closeButtonArray = await findAllByText('x', { exact: true });
-    fireEvent.click(closeButtonArray[1]);
-    expect(setupTabB).not.toBeInTheDocument();
-    expect(setupTabA.classList.contains('active')).toBeTruthy();
-
-    // Close the other open model
-    fireEvent.click(closeButtonArray[0]);
-    expect(setupTabA).not.toBeInTheDocument();
+    const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
     const homeTab = await findByRole('tabpanel', { name: /Home/ });
+
+    // Open a model tab and expect that it's active
+    fireEvent.click(carbon);
+    let modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(1); // one carbon tab open
+    const tab1 = modelTabs[0];
+    const tab1EventKey = tab1.getAttribute('data-rb-event-key');
+    expect(tab1.classList.contains('active')).toBeTruthy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+
+    // Open a second model tab and expect that it's active
+    fireEvent.click(homeTab);
+    fireEvent.click(carbon);
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(2); // 2 carbon tabs open
+    const tab2 = modelTabs[1];
+    const tab2EventKey = tab2.getAttribute('data-rb-event-key');
+    expect(tab2.classList.contains('active')).toBeTruthy();
+    expect(tab1.classList.contains('active')).toBeFalsy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+    // make sure that we switched away from the first tab
+    expect(tab2EventKey).not.toEqual(tab1EventKey);
+
+    // Open a third model tab and expect that it's active
+    fireEvent.click(homeTab);
+    fireEvent.click(carbon);
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(3); // 3 carbon tabs open
+    const tab3 = modelTabs[2];
+    const tab3EventKey = tab3.getAttribute('data-rb-event-key');
+    expect(tab3.classList.contains('active')).toBeTruthy();
+    expect(tab2.classList.contains('active')).toBeFalsy();
+    expect(tab1.classList.contains('active')).toBeFalsy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+    // make sure that we switched away from the first model tabs
+    expect(tab3EventKey).not.toEqual(tab2EventKey);
+    expect(tab3EventKey).not.toEqual(tab1EventKey);
+
+    // Click the close button on the middle tab
+    const tab2CloseButton = await within(tab2).getByRole('button', { name: /x/ });
+    fireEvent.click(tab2CloseButton);
+    // Now there should only be 2 model tabs open
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(2);
+    // Should have switched to tab3, the next tab to the right
+    expect(tab3.classList.contains('active')).toBeTruthy();
+    expect(tab1.classList.contains('active')).toBeFalsy();
+
+    // Click the close button on the right tab
+    const tab3CloseButton = await within(tab3).getByRole('button', { name: /x/ });
+    fireEvent.click(tab3CloseButton);
+    // Now there should only be 1 model tab open
+    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(1);
+    // No model tabs to the right, so it should switch to the next tab to the left.
+    expect(tab1.classList.contains('active')).toBeTruthy();
+    expect(homeTab.classList.contains('active')).toBeFalsy();
+
+    // Click the close button on the last tab
+    const tab1CloseButton = await within(tab1).getByRole('button', { name: /x/ });
+    fireEvent.click(tab1CloseButton);
+    // Now there should be no model tabs open.
+    modelTabs = await queryAllByRole('tab', { name: /Carbon/ });
+    expect(modelTabs).toHaveLength(0);
+    // No more model tabs, so it should switch back to the home tab.
     expect(homeTab.classList.contains('active')).toBeTruthy();
   });
 });
@@ -285,25 +308,26 @@ describe('Display recently executed InVEST jobs', () => {
 });
 
 describe('InVEST global settings: dialog interactions', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
   });
-  afterEach(() => {
-    clearSettingsStore();
+  afterEach(async () => {
     jest.resetAllMocks();
   });
-  test('Global settings for cancel, save, and invalid nWorkers', async () => {
+  test('Invest settings: cancel, save, and invalid nWorkers', async () => {
     const nWorkers = '2';
     const loggingLevel = 'DEBUG';
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
     const loggingLabelText = 'Logging threshold';
     const badValue = 'a';
 
-    const { getByText, getByLabelText, getByTitle } = render(
+    const {
+      getByText, getByLabelText, getByTitle, findByTitle
+    } = render(
       <App investExe="foo" />
     );
 
-    fireEvent.click(getByTitle('settings'));
+    fireEvent.click(await findByTitle('settings'));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
@@ -311,8 +335,8 @@ describe('InVEST global settings: dialog interactions', () => {
     // loaded. I've found this helps allow componentDidMount processes to
     // finish
     await waitFor(() => {
-      expect(nWorkersInput).toHaveValue("-1");
-      expect(loggingInput).toHaveValue("INFO");
+      expect(nWorkersInput).toHaveValue('-1');
+      expect(loggingInput).toHaveValue('INFO');
     });
 
     // Change the select input and cancel -- expect default selected
@@ -325,8 +349,8 @@ describe('InVEST global settings: dialog interactions', () => {
     fireEvent.click(getByText('Cancel'));
     fireEvent.click(getByText('settings'));
     await waitFor(() => {
-      expect(nWorkersInput).toHaveValue("-1");
-      expect(loggingInput).toHaveValue("INFO");
+      expect(nWorkersInput).toHaveValue('-1');
+      expect(loggingInput).toHaveValue('INFO');
     });
 
     // Change the value for real and save
@@ -351,29 +375,29 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(getByText('Save Changes')).toBeDisabled();
   });
 
-  test('Load global settings from storage and test Reset', async () => {
+  test('Load invest settings from storage and test Reset', async () => {
     const defaultSettings = {
       nWorkers: '-1',
       loggingLevel: 'INFO',
-    }
+    };
     const expectedSettings = {
       nWorkers: '3',
-      loggingLevel: 'ERROR'
-    }
+      loggingLevel: 'ERROR',
+    };
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
     const loggingLabelText = 'Logging threshold';
 
     await saveSettingsStore(expectedSettings);
 
-    const { getByText, getByLabelText, getByTitle } = render(
+    const { getByText, getByLabelText, findByTitle } = render(
       <App investExe="foo" />
     );
 
-    fireEvent.click(getByTitle('settings'));
+    fireEvent.click(await findByTitle('settings'));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
-    // Test that the global-settings were loaded in from store.
+    // Test that the invest settings were loaded in from store.
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
       expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
@@ -393,6 +417,24 @@ describe('InVEST global settings: dialog interactions', () => {
       expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
       expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
     });
+  });
+
+  test('Access sampledata download Modal from settings', async () => {
+    const {
+      findByText, findByRole, findByTitle, queryByText
+    } = render(
+      <App investExe="foo" />
+    );
+
+    const settingsBtn = await findByTitle('settings');
+    fireEvent.click(settingsBtn);
+    fireEvent.click(
+      await findByRole('button', { name: 'Download Sample Data' })
+    );
+
+    expect(await findByText('Download InVEST sample data'))
+      .toBeInTheDocument();
+    expect(queryByText('Settings')).toBeNull();
   });
 });
 
@@ -671,96 +713,98 @@ describe('InVEST subprocess testing', () => {
   });
 });
 
-describe('Tab closing and switching', () => {
-  beforeAll(() => {
-    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
-    getSpec.mockResolvedValue(SAMPLE_SPEC);
-    fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
-    // mock out the whole UI config module
-    // brackets around spec.model_name turns it into a valid literal key
-    const mockUISpec = { [SAMPLE_SPEC.model_name]: { order: [Object.keys(SAMPLE_SPEC.args)] } };
-    jest.mock('../src/ui_config', () => mockUISpec);
+describe('Download Sample Data Modal', () => {
+  beforeEach(async () => {
+    getInvestModelNames.mockResolvedValue({});
   });
-
-  afterAll(async () => {
+  afterEach(async () => {
+    await clearSettingsStore();
     jest.resetAllMocks();
-    jest.resetModules();
   });
 
-  test('Open three tabs and close them', async () => {
+  test('Modal does not display when app has been run before', async () => {
+    const { queryByText } = render(
+      <App
+        investExe="foo"
+        isFirstRun={false}
+      />
+    );
+
+    const modalTitle = await queryByText('Download InVEST sample data');
+    expect(modalTitle).toBeNull();
+  });
+
+  test('Modal displays immediately on user`s first run', async () => {
+    const {
+      findByText,
+      getByText,
+    } = render(
+      <App
+        investExe="foo"
+        isFirstRun={true}
+      />
+    );
+
+    const modalTitle = await findByText('Download InVEST sample data');
+    expect(modalTitle).toBeInTheDocument();
+    fireEvent.click(getByText('Cancel'));
+    await waitFor(() => {
+      expect(modalTitle).not.toBeInTheDocument();
+    });
+  });
+
+  test('Download sends signal to main & stores location', async () => {
+    const dialogData = {
+      filePaths: ['foo/directory'],
+    };
+    ipcRenderer.invoke.mockResolvedValue(dialogData);
+
     const {
       findByRole,
       findAllByRole,
-      queryAllByRole,
-    } = render(<App investExe="foo" />);
+    } = render(
+      <App
+        investExe="foo"
+        isFirstRun={true}
+      />
+    );
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
-    const homeTab = await findByRole('tabpanel', { name: /Home/ });
+    const allCheckBoxes = await findAllByRole('checkbox');
+    const downloadButton = await findByRole('button', { name: 'Download' });
+    fireEvent.click(downloadButton);
 
-    // Open a model tab and expect that it's active
-    fireEvent.click(carbon);
-    let modelTabs = await findAllByRole('tab', { name: /Carbon/ });
-    expect(modelTabs).toHaveLength(1); // one carbon tab open
-    const tab1 = modelTabs[0];
-    const tab1EventKey = tab1.getAttribute('data-rb-event-key');
-    expect(tab1.classList.contains('active')).toBeTruthy();
-    expect(homeTab.classList.contains('active')).toBeFalsy();
+    // Many datasets selected - ipcRenderer.send should be called with
+    // 2nd parameter as an array of length:
+    const nURLs = allCheckBoxes.length - 1; // all except Select All
+    await waitFor(() => {
+      // first call and second parameter
+      expect(ipcRenderer.send.mock.calls[0][1])
+        .toHaveLength(nURLs);
+    });
+    await waitFor(async () => {
+      expect(await getSettingsValue('sampleDataDir'))
+        .toBe(dialogData.filePaths[0]);
+    });
+  });
 
-    // Open a second model tab and expect that it's active
-    fireEvent.click(homeTab);
-    fireEvent.click(carbon);
-    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
-    expect(modelTabs).toHaveLength(2); // 2 carbon tabs open
-    const tab2 = modelTabs[1];
-    const tab2EventKey = tab2.getAttribute('data-rb-event-key');
-    expect(tab2.classList.contains('active')).toBeTruthy();
-    expect(tab1.classList.contains('active')).toBeFalsy();
-    expect(homeTab.classList.contains('active')).toBeFalsy();
-    // make sure that we switched away from the first tab
-    expect(tab2EventKey).not.toEqual(tab1EventKey);
+  test('Cancel does not store a sampleDataDir value', async () => {
+    const { findByRole } = render(
+      <App
+        investExe="foo"
+        isFirstRun={true}
+      />
+    );
 
-    // Open a third model tab and expect that it's active
-    fireEvent.click(homeTab);
-    fireEvent.click(carbon);
-    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
-    expect(modelTabs).toHaveLength(3); // 3 carbon tabs open
-    const tab3 = modelTabs[2];
-    const tab3EventKey = tab3.getAttribute('data-rb-event-key');
-    expect(tab3.classList.contains('active')).toBeTruthy();
-    expect(tab2.classList.contains('active')).toBeFalsy();
-    expect(tab1.classList.contains('active')).toBeFalsy();
-    expect(homeTab.classList.contains('active')).toBeFalsy();
-    // make sure that we switched away from the first model tabs
-    expect(tab3EventKey).not.toEqual(tab2EventKey);
-    expect(tab3EventKey).not.toEqual(tab1EventKey);
+    const existingValue = await getSettingsValue('sampleDataDir');
+    const cancelButton = await findByRole('button', { name: 'Cancel' });
+    fireEvent.click(cancelButton);
 
-    // Click the close button on the middle tab
-    const tab2CloseButton = await within(tab2).getByRole('button', { name: /x/ });
-    fireEvent.click(tab2CloseButton);
-    // Now there should only be 2 model tabs open
-    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
-    expect(modelTabs).toHaveLength(2);
-    // Should have switched to tab3, the next tab to the right
-    expect(tab3.classList.contains('active')).toBeTruthy();
-    expect(tab1.classList.contains('active')).toBeFalsy();
-
-    // Click the close button on the right tab
-    const tab3CloseButton = await within(tab3).getByRole('button', { name: /x/ });
-    fireEvent.click(tab3CloseButton);
-    // Now there should only be 1 model tab open
-    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
-    expect(modelTabs).toHaveLength(1);
-    // No model tabs to the right, so it should switch to the next tab to the left.
-    expect(tab1.classList.contains('active')).toBeTruthy();
-    expect(homeTab.classList.contains('active')).toBeFalsy();
-
-    // Click the close button on the last tab
-    const tab1CloseButton = await within(tab1).getByRole('button', { name: /x/ });
-    fireEvent.click(tab1CloseButton);
-    // Now there should be no model tabs open.
-    modelTabs = await queryAllByRole('tab', { name: /Carbon/ });
-    expect(modelTabs).toHaveLength(0);
-    // No more model tabs, so it should switch back to the home tab.
-    expect(homeTab.classList.contains('active')).toBeTruthy();
+    await waitFor(() => {
+      expect(ipcRenderer.send).toHaveBeenCalledTimes(0);
+    });
+    await waitFor(async () => {
+      const value = await getSettingsValue('sampleDataDir');
+      expect(value).toBe(existingValue);
+    });
   });
 });

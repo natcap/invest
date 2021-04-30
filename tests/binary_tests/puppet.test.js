@@ -119,13 +119,37 @@ test('Run a real invest model', async () => {
   );
   const page = await target.page();
   const doc = await getDocument(page);
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
+
+  const extraTime = 5000; // long timeouts finding the first elements, just in case
+  try {
+    // On a fresh install, we'll encounter this Modal.
+    // But on a machine that has run this app before, we may not.
+    // Even in GHA, sometimes we encounter this and sometimes we don't.
+    const downloadModalCancel = await findByRole(
+      doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
+    );
+    await downloadModalCancel.click();
+  } catch (error) {
+    if (!error.message.startsWith(
+      'Evaluation failed: Error: Unable to find'
+    )) {
+      throw error;
+    }
+  }
+  // Resorting to a class selector because we have two tables to differentiate
+  // Also, need to get the modelButton from w/in this table because there are
+  // buttons with the same name in the Recent Jobs container.
+  const investTable = await page.$('.invest-list-table');
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}2-models-list.png` });
 
   // Setting up Recreation model because it has very few data requirements
-  const investTable = await findByRole(doc, 'table');
-  const button = await findByRole(investTable, 'button', { name: /Visitation/ });
-  button.click();
+  const modelButton = await findByRole(
+    investTable, 'button', { name: /Visitation/ }
+  );
+  await modelButton.click();
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });
 
-  const runButton = await findByRole(doc, 'button', { name: 'Run' });
   const typeDelay = 10;
   const workspace = await findByLabelText(doc, /Workspace/);
   await workspace.type(TMP_DIR, { delay: typeDelay });
@@ -135,8 +159,10 @@ test('Run a real invest model', async () => {
   await startYear.type('2008', { delay: typeDelay });
   const endYear = await findByLabelText(doc, /end year/);
   await endYear.type('2012', { delay: typeDelay });
-  
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
+
   // Button is disabled until validation completes
+  const runButton = await findByRole(doc, 'button', { name: 'Run' });
   await waitFor(async () => {
     const isEnabled = await page.evaluate(
       (btn) => !btn.disabled,
@@ -144,8 +170,8 @@ test('Run a real invest model', async () => {
     );
     expect(isEnabled).toBe(true);
   });
-  page.screenshot({ path: `${SCREENSHOT_PREFIX}before-run-click.png` });
   await runButton.click();
+
   const logTab = await findByText(doc, 'Log');
   // Log tab is not active until after the invest logfile is opened
   await waitFor(async () => {
@@ -153,6 +179,7 @@ test('Run a real invest model', async () => {
     const vals = await prop.jsonValue();
     expect(vals.includes('active')).toBeTruthy();
   });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}5-active-log-tab.png` });
 
   const cancelButton = await findByText(doc, 'Cancel Run');
   await cancelButton.click();
@@ -160,6 +187,7 @@ test('Run a real invest model', async () => {
     expect(await findByText(doc, 'Run Canceled'));
     expect(await findByText(doc, 'Open Workspace'));
   });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
 }, 50000); // 10x default timeout: sometimes expires in GHA
 
 // Test for duplicate application launch.

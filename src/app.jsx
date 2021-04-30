@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import React from 'react';
 import PropTypes from 'prop-types';
+import { ipcRenderer } from 'electron';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -13,16 +14,18 @@ import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
 import LoadButton from './components/LoadButton';
 import SettingsModal from './components/SettingsModal';
+import {
+  DataDownloadModal, DownloadProgressBar
+} from './components/DataDownloadModal';
+import {
+  saveSettingsStore, getAllSettings,
+} from './components/SettingsModal/SettingsStorage';
 import { getInvestModelNames } from './server_requests';
 import { getLogger } from './logger';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
-import {
-  getDefaultSettings, saveSettingsStore, getSettingsValue
-} from './components/SettingsModal/SettingsStorage';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -36,7 +39,9 @@ export default class App extends React.Component {
       openJobs: [],
       investList: {},
       recentJobs: [],
-      investSettings: {},
+      investSettings: null,
+      showDownloadModal: false,
+      downloadedNofN: null,
     };
     this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
@@ -44,33 +49,27 @@ export default class App extends React.Component {
     this.closeInvestModel = this.closeInvestModel.bind(this);
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
+    this.storeDownloadDir = this.storeDownloadDir.bind(this);
+    this.showDownloadModal = this.showDownloadModal.bind(this);
   }
 
-  /** Initialize the list of available invest models and recent invest jobs. */
+  /** Initialize the list of invest models, recent invest jobs, etc. */
   async componentDidMount() {
     const investList = await getInvestModelNames();
     const recentJobs = await InvestJob.getJobStore();
-    // Placeholder for instantiating global settings.
-    let investSettings = {};
-    const globalDefaultSettings = getDefaultSettings();
-
-    try {
-      for (const settingKey of Object.keys(globalDefaultSettings)) {
-        const value = await getSettingsValue(settingKey);
-        if (!value) {
-          throw new Error('Value not defined or null, use defaults.');
-        }
-        investSettings[settingKey] = value;
-      }
-    } catch (err) {
-      // This code runs if there were any errors.
-      investSettings = globalDefaultSettings;
-    }
+    const investSettings = await getAllSettings();
 
     this.setState({
       investList: investList,
       recentJobs: recentJobs,
       investSettings: investSettings,
+      showDownloadModal: this.props.isFirstRun,
+    });
+
+    ipcRenderer.on('download-status', (event, downloadedNofN) => {
+      this.setState({
+        downloadedNofN: downloadedNofN
+      });
     });
   }
 
@@ -90,6 +89,22 @@ export default class App extends React.Component {
     });
 
     saveSettingsStore(settings);
+  }
+
+  /** Store a sampledata filepath in localforage.
+   *
+   * @param {String} dir - the path to the user-selected dir
+   */
+  storeDownloadDir(dir) {
+    const { investSettings } = this.state;
+    investSettings.sampleDataDir = dir;
+    this.saveSettings(investSettings);
+  }
+
+  showDownloadModal(shouldShow) {
+    this.setState({
+      showDownloadModal: shouldShow,
+    });
   }
 
   /** Push data for a new InvestTab component to an array.
@@ -158,6 +173,8 @@ export default class App extends React.Component {
       recentJobs,
       openJobs,
       activeTab,
+      showDownloadModal,
+      downloadedNofN,
     } = this.state;
 
     const investNavItems = [];
@@ -198,53 +215,85 @@ export default class App extends React.Component {
     });
 
     return (
-      <TabContainer activeKey={activeTab}>
-        <Navbar onDragOver={dragOverHandlerNone}>
-          <Navbar.Brand onDragOver={dragOverHandlerNone}>
-            <Nav.Link
+      <React.Fragment>
+        <DataDownloadModal
+          show={showDownloadModal}
+          closeModal={() => this.showDownloadModal(false)}
+          storeDownloadDir={this.storeDownloadDir}
+        />
+        <TabContainer activeKey={activeTab}>
+          <Navbar onDragOver={dragOverHandlerNone}>
+            <Navbar.Brand onDragOver={dragOverHandlerNone}>
+              <Nav.Link
+                onSelect={this.switchTabs}
+                eventKey="home"
+                onDragOver={dragOverHandlerNone}
+              >
+                InVEST
+              </Nav.Link>
+            </Navbar.Brand>
+            <Nav
+              variant="pills"
+              className="mr-auto horizontal-scroll"
+              activeKey={activeTab}
               onSelect={this.switchTabs}
-              eventKey="home"
               onDragOver={dragOverHandlerNone}
             >
-              InVEST
-            </Nav.Link>
-          </Navbar.Brand>
-          <Nav
-            variant="pills"
-            className="mr-auto horizontal-scroll"
-            activeKey={activeTab}
-            onSelect={this.switchTabs}
-            onDragOver={dragOverHandlerNone}
-          >
-            {investNavItems}
-          </Nav>
-          <LoadButton
-            openInvestModel={this.openInvestModel}
-            batchUpdateArgs={this.batchUpdateArgs}
-          />
-          <SettingsModal
-            className="mx-3"
-            saveSettings={this.saveSettings}
-            investSettings={investSettings}
-            clearJobsStorage={this.clearRecentJobs}
-          />
-        </Navbar>
-
-        <TabContent id="top-tab-content">
-          <TabPane eventKey="home" title="Home">
-            <HomeTab
-              investList={investList}
+              {investNavItems}
+            </Nav>
+            {
+              (downloadedNofN)
+                ? (
+                  <DownloadProgressBar
+                    downloadedNofN={downloadedNofN}
+                    expireAfter={5000} // milliseconds
+                  />
+                )
+                : <div />
+            }
+            <LoadButton
               openInvestModel={this.openInvestModel}
-              recentJobs={recentJobs}
+              batchUpdateArgs={this.batchUpdateArgs}
             />
-          </TabPane>
-          {investTabPanes}
-        </TabContent>
-      </TabContainer>
+            {
+              // don't render until after we fetched the data
+              (investSettings)
+                ? (
+                  <SettingsModal
+                    className="mx-3"
+                    saveSettings={this.saveSettings}
+                    investSettings={investSettings}
+                    clearJobsStorage={this.clearRecentJobs}
+                    showDownloadModal={() => this.showDownloadModal(true)}
+                  />
+                )
+                : <div />
+            }
+          </Navbar>
+
+          <TabContent id="top-tab-content">
+            <TabPane eventKey="home" title="Home">
+              <HomeTab
+                investList={investList}
+                openInvestModel={this.openInvestModel}
+                recentJobs={recentJobs}
+              />
+            </TabPane>
+            {investTabPanes}
+          </TabContent>
+        </TabContainer>
+      </React.Fragment>
     );
   }
 }
 
 App.propTypes = {
   investExe: PropTypes.string.isRequired,
+  isFirstRun: PropTypes.bool,
+};
+
+// Setting a default here mainly to make testing easy, so this prop
+// can be undefined for unrelated tests.
+App.defaultProps = {
+  isFirstRun: false,
 };

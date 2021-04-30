@@ -1,0 +1,133 @@
+{
+  "Carbon Model": {
+    "filename": "Carbon.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FCarbon.zip?generation=1614051202294534&alt=media",
+    "filesize": "1900216"
+  },
+  "Coastal Blue Carbon": {
+    "filename": "CoastalBlueCarbon.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FCoastalBlueCarbon.zip?generation=1614051202244656&alt=media",
+    "filesize": "78780"
+  },
+  "Coastal Vulnerability": {
+    "filename": "CoastalVulnerability.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FCoastalVulnerability.zip?generation=1614051203504275&alt=media",
+    "filesize": "39929828",
+    "labelSuffix": "(recommended to run model)"
+  },
+  "Crop Production": {
+    "filename": "CropProduction.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FCropProduction.zip?generation=1614051204575655&alt=media",
+    "filesize": "86383205",
+    "labelSuffix": "(required to run model)"
+  },
+  "DelineateIt: Watershed Delineation": {
+    "filename": "DelineateIt.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FDelineateIt.zip?generation=1614051202258085&alt=media",
+    "filesize": "529084"
+  },
+  "Finfish Aquaculture": {
+    "filename": "Aquaculture.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FAquaculture.zip?generation=1614051202152945&alt=media",
+    "filesize": "34097"
+  },
+  "Fisheries": {
+    "filename": "Fisheries.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FFisheries.zip?generation=1614051202211610&alt=media",
+    "filesize": "271581"
+  },
+  "Forest Carbon Edge Effect Model": {
+    "filename": "forest_carbon_edge_effect.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2Fforest_carbon_edge_effect.zip?generation=1614051203327156&alt=media",
+    "filesize": "1036009",
+    "labelSuffix": "(required to run model)"
+  },
+  "GLOBIO": {
+    "filename": "globio.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2Fglobio.zip?generation=1614051203419943&alt=media",
+    "filesize": "2082379"
+  },
+  "Habitat Quality": {
+    "filename": "HabitatQuality.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FHabitatQuality.zip?generation=1614051202509654&alt=media",
+    "filesize": "1739549"
+  },
+  "Habitat Risk Assessment": {
+    "filename": "HabitatRiskAssess.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FHabitatRiskAssess.zip?generation=1614051202762227&alt=media",
+    "filesize": "3268079"
+  },
+  "Hydropower Water Yield": {
+    "filename": "Annual_Water_Yield.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FAnnual_Water_Yield.zip?generation=1614051202203513&alt=media",
+    "filesize": "243926"
+  },
+  "Nutrient Delivery Ratio Model (NDR)": {
+    "filename": "NDR.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FNDR.zip?generation=1614051202641258&alt=media",
+    "filesize": "701575"
+  },
+  "Crop Pollination": {
+    "filename": "pollination.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2Fpollination.zip?generation=1614051203274315&alt=media",
+    "filesize": "634139"
+  },
+  "Recreation Model": {
+    "filename": "recreation.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2Frecreation.zip?generation=1614051203671248&alt=media",
+    "filesize": "3694818"
+  },
+  "RouteDEM": {
+    "filename": "RouteDEM.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FRouteDEM.zip?generation=1614051202551213&alt=media",
+    "filesize": "525924"
+  },
+  "Scenario Generator: Proximity Based": {
+    "filename": "scenario_proximity.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2Fscenario_proximity.zip?generation=1614051203745514&alt=media",
+    "filesize": "927314"
+  },
+  "Unobstructed Views: Scenic Quality Provision": {
+    "filename": "ScenicQuality.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FScenicQuality.zip?generation=1614051203602084&alt=media",
+    "filesize": "25072497"
+  },
+  "Sediment Delivery Ratio Model (SDR)": {
+    "filename": "SDR.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FSDR.zip?generation=1614051202592797&alt=media",
+    "filesize": "725887"
+  },
+  "Seasonal Water Yield": {
+    "filename": "Seasonal_Water_Yield.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FSeasonal_Water_Yield.zip?generation=1614051202755715&alt=media",
+    "filesize": "703124"
+  },
+  "Urban Cooling Model": {
+    "filename": "UrbanCoolingModel.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FUrbanCoolingModel.zip?generation=1614051202922568&alt=media",
+    "filesize": "1131915"
+  },
+  "Urban Flood Risk Mitigation": {
+    "filename": "UrbanFloodMitigation.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FUrbanFloodMitigation.zip?generation=1614051202881765&alt=media",
+    "filesize": "187404"
+  },
+  "Wave Energy": {
+    "filename": "WaveEnergy.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FWaveEnergy.zip?generation=1614051204577652&alt=media",
+    "filesize": "77716454",
+    "labelSuffix": "(required to run model)"
+  },
+  "Wind Energy": {
+    "filename": "WindEnergy.zip",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FWindEnergy.zip?generation=1614051203573001&alt=media",
+    "filesize": "5442492",
+    "labelSuffix": "(required to run model)"
+  },
+  "Global DEM & Landmass Polygon": {
+    "filename": "Base_Data.zip",
+    "labelSuffix": "(required for Wind & Wave Energy)",
+    "url": "https://www.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.9.0.post285%2Bgf68dd440%2Fdata%2FBase_Data.zip?generation=1614051204819529&alt=media",
+    "filesize": "151372182"
+  }
+}

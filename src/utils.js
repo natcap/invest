@@ -93,4 +93,3 @@ export function dragOverHandlerNone(event) {
   event.stopPropagation();
   event.dataTransfer.dropEffect = 'none';
 }
-

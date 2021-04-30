@@ -8,9 +8,9 @@ let isDevMode;
 if (ipcRenderer) {
   // When this module is imported from render process, access via ipcRenderer
   ipcRenderer.invoke('user-data')
-  .then(response => {
-    userDataPath = response;
-  });
+    .then(response => {
+      userDataPath = response;
+    });
 
   ipcRenderer.invoke('is-dev-mode').then((result) => {
     isDevMode = result;
@@ -41,7 +41,7 @@ function getLogger(label) {
       datePattern: 'YYYY-MM-DD',
       maxSize: '20m',
       maxFiles: '3d', // days
-      handleExceptions: true,
+      handleExceptions: false, // true suppresses console and still doesn't even log it to File
     });
 
     const transportArray = [transport];
@@ -49,7 +49,7 @@ function getLogger(label) {
       transportArray.push(
         new winston.transports.Console({
           level: 'debug',
-          handleExceptions: true,
+          handleExceptions: false, // exceptions go to console w/o help from winston
         })
       );
     }
@@ -62,7 +62,9 @@ function getLogger(label) {
       transports: transportArray,
     });
   }
-  return winston.loggers.get(label);
+  const logger = winston.loggers.get(label);
+  logger.exitOnError = false; // don't authorize winston to kill the renderer process
+  return logger;
 }
 
 module.exports.getLogger = getLogger;
