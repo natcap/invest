@@ -69,6 +69,8 @@ Unreleased Changes (3.9.1)
     * Fixed a bug where, if rate change and discount rate were set to 0, the
       valuation results were in $/year rather than $, too small by a factor of
       ``lulc_fut_year - lulc_cur_year``.
+    * Improved UI to indicate that Calendar Year inputs are only required for
+      valuation, not also for sequestration.
 * DelineateIt:
     * The DelineateIt UI has been updated so that the point-snapping options
       will always be interactive.
