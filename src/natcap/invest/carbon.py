@@ -91,10 +91,14 @@ ARGS_SPEC = {
             "type": "csv",
             "required": True,
             "about": (
-                "A table that maps the land-cover IDs to carbon pools.  "
-                "The table must contain columns of 'LULC', 'C_above', "
-                "'C_Below', 'C_Soil', 'C_Dead' as described in the User's "
-                "Guide.  The LULC column must include all the pixel values "
+                "A table that maps each land cover class to its respective carbon pools.  "
+
+                "The table must contain columns of 'lucode', 'C_above', "
+
+                "'C_below', 'C_soil', 'C_dead' as described in the User's "
+
+                "Guide. The 'lucode' column must include all the pixel values "
+
                 "present in the land cover maps."),
             "name": "Carbon Pools"
         },
@@ -105,7 +109,8 @@ ARGS_SPEC = {
             "type": "number",
             "required": "do_valuation",
             "about": "The calendar year of the current scenario.",
-            "name": "Current Landcover Calendar Year"
+            "name": "Current Land Cover Calendar Year"
+
         },
         "lulc_fut_year": {
             "validation_options": {
@@ -114,13 +119,15 @@ ARGS_SPEC = {
             "type": "number",
             "required": "do_valuation",
             "about": "The calendar year of the future scenario.",
-            "name": "Future Landcover Calendar Year"
+            "name": "Future Land Cover Calendar Year"
+
         },
         "do_valuation": {
             "type": "boolean",
             "required": False,
             "about": (
-                "Calculate NPV for a future scenario or a REDD scenario "
+                "Calculate NPV for a future or REDD scenario "
+
                 "and report in final HTML document."),
             "name": "Run Valuation Model"
         },
