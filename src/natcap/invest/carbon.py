@@ -94,7 +94,7 @@ ARGS_SPEC = {
                 "A table that maps each land cover class to its respective "
                 "carbon pools. The table must contain columns of 'lucode', "
                 "'C_above', 'C_below', 'C_soil', 'C_dead' as described in the "
-                "User's Guide. The 'lucode' column must include all the pixel
+                "User's Guide. The 'lucode' column must include all the pixel "
                 "values present in the land cover maps."),
             "name": "Carbon Pools"
         },
