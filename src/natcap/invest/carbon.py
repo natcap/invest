@@ -85,21 +85,17 @@ ARGS_SPEC = {
         },
         "carbon_pools_path": {
             "validation_options": {
-                "required_fields": ["LUCODE", "C_above", "C_below", "C_soil",
+                "required_fields": ["lucode", "C_above", "C_below", "C_soil",
                                     "C_dead"],
             },
             "type": "csv",
             "required": True,
             "about": (
-                "A table that maps each land cover class to its respective carbon pools.  "
-
-                "The table must contain columns of 'lucode', 'C_above', "
-
-                "'C_below', 'C_soil', 'C_dead' as described in the User's "
-
-                "Guide. The 'lucode' column must include all the pixel values "
-
-                "present in the land cover maps."),
+                "A table that maps each land cover class to its respective "
+                "carbon pools. The table must contain columns of 'lucode', "
+                "'C_above', 'C_below', 'C_soil', 'C_dead' as described in the "
+                "User's Guide. The 'lucode' column must include all the pixel
+                "values present in the land cover maps."),
             "name": "Carbon Pools"
         },
         "lulc_cur_year": {
@@ -110,7 +106,6 @@ ARGS_SPEC = {
             "required": "do_valuation",
             "about": "The calendar year of the current scenario.",
             "name": "Current Land Cover Calendar Year"
-
         },
         "lulc_fut_year": {
             "validation_options": {
@@ -120,22 +115,19 @@ ARGS_SPEC = {
             "required": "do_valuation",
             "about": "The calendar year of the future scenario.",
             "name": "Future Land Cover Calendar Year"
-
         },
         "do_valuation": {
             "type": "boolean",
             "required": False,
             "about": (
                 "Calculate NPV for a future or REDD scenario "
-
                 "and report in final HTML document."),
             "name": "Run Valuation Model"
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
             "required": "do_valuation",
-            "about": (
-                "The present value of carbon per metric ton."),
+            "about": "The present value of carbon per metric ton.",
             "name": "Price/Metric ton of carbon"
         },
         "discount_rate": {
