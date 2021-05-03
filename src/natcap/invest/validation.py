@@ -1,5 +1,6 @@
 """Common validation utilities for InVEST models."""
 import ast
+import copy
 import inspect
 import logging
 import pprint
@@ -259,6 +260,7 @@ def _check_projection(srs, projected, projection_units):
         A string error message if an error was found. ``None`` otherwise.
 
     """
+    print('checking projection')
     if srs is None:
         return "Dataset must have a valid projection."
 
@@ -266,13 +268,16 @@ def _check_projection(srs, projected, projection_units):
         if not srs.IsProjected():
             return "Dataset must be projected in linear units."
 
+    print('units:', projection_units)
     if projection_units:
         # pint uses underscores in multi-word units e.g. 'survey_foot'
         # it is case-sensitive
         layer_units_name = srs.GetLinearUnitsName().lower().replace(' ', '_')
         try:
+            print(projection_units)
             # this will parse common synonyms: m, meter, meters, metre, metres
             layer_units = utils.u.Unit(layer_units_name)
+            print(layer_units)
             # Compare pint Unit objects
             if projection_units != layer_units:
                 return ("Layer must be projected in this unit: "
@@ -371,6 +376,7 @@ def check_vector(filepath, required_fields=None, projected=False,
         A string error message if an error was found.  ``None`` otherwise.
 
     """
+    print('checking vector')
     file_warning = check_file(filepath, permissions='r')
     if file_warning:
         return file_warning
@@ -595,7 +601,8 @@ def check_csv(filepath, header_patterns=None, axis=1, excel_ok=False):
         # replacement character, instead of raising an error
         # use sep=None, engine='python' to infer what the separator is
         dataframe = pandas.read_csv(
-            filepath, sep=None, engine='python', encoding=encoding)
+            filepath, sep=None, engine='python', encoding=encoding,
+            header=None)
     except Exception:
         if excel_ok:
             try:
@@ -608,9 +615,11 @@ def check_csv(filepath, header_patterns=None, axis=1, excel_ok=False):
 
     if header_patterns:
         if axis == 1:
-            headers = list(dataframe.columns.str.strip())
+            headers = [str(name).strip() for name in dataframe.iloc[0]]
         elif axis == 0:
-            headers = list(dataframe.iloc[:, 0])
+            headers = [str(name).strip() for name in dataframe.iloc[:, 0]]
+            print(dataframe)
+            print('headers:', headers)
         return check_headers(header_patterns, headers)
 
 
@@ -923,30 +932,32 @@ def validate(args, spec, spatial_overlap_opts=None):
             LOGGER.debug(f'Provided key {key} does not exist in ARGS_SPEC')
             continue
 
+        try:
+            validation_options = copy.deepcopy(
+                parameter_spec['validation_options'])
+        except KeyError:
+            # If no validation options specified, assume defaults.
+            validation_options = {}
+
         if parameter_spec['type'] == 'csv':
             # assuming that the spec won't have both 'rows' and 'columns'
             # this is verified in test_args_specs.py
             if 'columns' in parameter_spec:
-                validation_options = {
+                validation_options.update({
                     'header_patterns': list(parameter_spec['columns'].keys()),
                     'axis': 1
-                }
+                })
             elif 'rows' in parameter_spec:
-                validation_options = {
+                validation_options.update({
                     'header_patterns': list(parameter_spec['rows'].keys()),
-                    'axis': 1
-                }
+                    'axis': 0
+                })
+
         elif parameter_spec['type'] == 'vector':
             # assuming the spec must have a 'fields' property
-            validation_options = {
+            validation_options.update({
                 'required_fields': list(parameter_spec['fields'].keys())
-            }
-        else:
-            try:
-                validation_options = parameter_spec['validation_options']
-            except KeyError:
-                # If no validation options specified, assume defaults.
-                validation_options = {}
+            })
 
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
         if type_validation_func is None:
@@ -1102,7 +1113,7 @@ def invest_validator(validate_func):
                         elif 'rows' in args_key_spec:
                             validation_options = {
                                 'header_patterns': list(args_key_spec['rows'].keys()),
-                                'axis': 1
+                                'axis': 0
                             }
                     elif args_key_spec['type'] == 'vector':
                         # assuming the spec must have a 'fields' property

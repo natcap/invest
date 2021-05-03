@@ -46,25 +46,25 @@ ARGS_SPEC = {
         "wind_data_path": {
             "type": "csv",
             "columns": {
-                "LONG": {
+                "long": {
                     "type": "number",
                     "units": u.degree
                 },
-                "LATI": {
+                "lati": {
                     "type": "number",
                     "units": u.degree
                 },
-                "LAM": {
+                "lam": {
                     "type": "number",
                     "units": None,
                     "about": "Weibull scale factor at the reference hub height"
                 },
-                "K": {
+                "k": {
                     "type": "number",
                     "units": None,
                     "about": "Weibull shape factor"
                 },
-                "REF": {
+                "ref": {
                     "type": "number",
                     "units": u.meter,
                     "about": ("The reference height at which wind speed data "
@@ -177,7 +177,7 @@ ARGS_SPEC = {
         "turbine_parameters_path": {
             "type": "csv",
             "required": True,
-            "columns": {
+            "rows": {
                 "hub_height": {
                     "type": "number",
                     "units": u.meter,
