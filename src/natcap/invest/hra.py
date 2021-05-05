@@ -82,15 +82,15 @@ ARGS_SPEC = {
                 "if the `TYPE` column is a stressor."),
             "type": "csv",
             "columns": {
-                "NAME": {
+                "name": {
                     "type": "freestyle_string",
                     "about": "A unique name for each habitat/stressor input"
                 },
-                "PATH": {
+                "path": {
                     "type": {"vector", "raster"},
                     "bands": {1: {
                         "type": "number",
-                        "units": None, 
+                        "units": None,
                         "about": ("Pixel values are 1, indicating presence of "
                             "the habitat/stressor, or 0 indicating absence. "
                             "Any values besides 0 or 1 will be treated as 0.")
@@ -99,11 +99,11 @@ ARGS_SPEC = {
                     "fields": {},
                     "geometries": utils.POLYGONS
                 },
-                "TYPE": {
+                "type": {
                     "type": "option_string",
                     "options": ["habitat", "stressor"]
                 },
-                "STRESSOR BUFFER (METERS)": {
+                "stressor buffer \(meters\)": {
                     "type": "number",
                     "units": u.meter,
                     "about": ("The desired buffer distance used to expand a "
@@ -128,7 +128,6 @@ ARGS_SPEC = {
                 "ranking  (rating, DQ and weight) of each stressor on each "
                 "habitat, as well as the habitat resilience attributes."),
             "type": "csv",
-            "columns": None,
             "validation_options": {
                 "excel_ok": True,
             },
@@ -184,12 +183,12 @@ ARGS_SPEC = {
             **utils.AOI_ARG,
             **utils.METER_PROJECTED,
             "fields": {
-                "name": {
-                    "required": False,
-                    "type": "freestyle_string",
-                    "about": ("Uniquely identifies each feature. Required if "
-                        "the vector contains more than one feature.")
-                }
+                # "name": {
+                #     "required": False,
+                #     "type": "freestyle_string",
+                #     "about": ("Uniquely identifies each feature. Required if "
+                #         "the vector contains more than one feature.")
+                # }
             },
             "about": ("A GDAL-supported vector file containing feature "
                 "containing one or more planning regions or subregions."),
@@ -2425,7 +2424,7 @@ def _label_linear_unit(row):
             to transform them to meters
 
     Raises:
-        ValueError if any of the file's spatial reference is missing or if 
+        ValueError if any of the file's spatial reference is missing or if
             any of the file's are not linearly projected.
 
     """
@@ -2491,7 +2490,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     file_ext = os.path.splitext(base_info_table_path)[1].lower()
     if file_ext == '.csv':
         # use sep=None, engine='python' to infer what the separator is
-        info_df = pandas.read_csv(base_info_table_path, sep=None, 
+        info_df = pandas.read_csv(base_info_table_path, sep=None,
             engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         info_df = pandas.read_excel(base_info_table_path)
@@ -2615,10 +2614,10 @@ def _get_criteria_dataframe(base_criteria_table_path):
     file_ext = os.path.splitext(base_criteria_table_path)[1].lower()
     if file_ext == '.csv':
         # use sep=None, engine='python' to infer what the separator is
-        criteria_df = pandas.read_csv(base_criteria_table_path, 
+        criteria_df = pandas.read_csv(base_criteria_table_path,
             index_col=0, header=None, sep=None, engine='python')
     elif file_ext in ['.xlsx', '.xls']:
-        criteria_df = pandas.read_excel(base_criteria_table_path, 
+        criteria_df = pandas.read_excel(base_criteria_table_path,
             index_col=0, header=None)
     else:
         raise ValueError('Criteria table %s is not a CSV or an Excel file.' %

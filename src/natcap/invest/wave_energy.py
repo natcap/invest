@@ -161,13 +161,13 @@ ARGS_SPEC = {
         "machine_perf_path": {
             "type": "csv",
             "columns": {
-                "height": {
+                "hs\(m\)/tp\(sec\)": {
                     "type": "number",
                     "units": u.meter,
                     "about": ("user-defined wave height bins from smallest to "
                         "largest")
                 },
-                "[WAVE_PERIOD]": {
+                "([\.\d]+)": {
                     "names": ("user-defined wave period bins from smallest to "
                         "largest"),
                     "type": "number",
@@ -250,47 +250,47 @@ ARGS_SPEC = {
         "machine_econ_path": {
             "type": "csv",
             "rows": {
-                "CapMax": {
+                "capmax": {
                     "type": "number",
                     "units": u.kilowatt,
                     "about": "maximum capacity of the device"
                 },
-                "Cc": {
+                "cc": {
                     "type": "number",
                     "units": u.currency/(u.count * u.kilowatt),
                     "about": ("capital cost per kilowatt of capacity per "
                         "device installed")
                 },
-                "Cml": {
+                "cml": {
                     "type": "number",
                     "units": u.currency/u.meter,
                     "about": "cost of mooring lines"
                 },
-                "Cul": {
+                "cul": {
                     "type": "number",
                     "units": u.currency/u.kilometer,
                     "about": "cost of mooring lines"
                 },
-                "Col": {
+                "col": {
                     "type": "number",
                     "units": u.currency/u.kilometer,
                     "about": "cost of overland transmission lines"
                 },
-                "Omc": {
+                "omc": {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
                     "about": "operating and maintenance cost"
                 },
-                "P": {
+                "p": {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
                     "about": "price of electricity"
                 },
-                "R": {
+                "r": {
                     "type": "ratio",
                     "about": "discount rate"
                 },
-                "Smlpm": {
+                "smlpm": {
                     "type": "number",
                     "units": u.count,
                     "about": "number of slack lines required per machine"

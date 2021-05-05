@@ -66,23 +66,23 @@ ARGS_SPEC = {
                         "LULC is counted as a green area (green areas larger "
                         "than 2ha have an additional cooling effect), and 0 "
                         "meaning that the LULC is not counted as a green area.")},
-                "shade":  {
-                    "type": "ratio",
-                    "required": "cc_method == factors",
-                    "about": ("The proportion of tree cover (0 for no tree; 1 "
-                        "for full tree cover; with trees>2m).")},
-                "albedo": {
-                    "type": "ratio",
-                    "required": "cc_method == factors",
-                    "about": ("The proportion of solar radiation directly "
-                        "reflected by the LULC type. Required if using the "
-                        "weighted factor approach to Cooling Coefficient "
-                        "calculations.")},
-                "building_intensity": {
-                    "type": "ratio",
-                    "required": "cc_method == intensity",
-                    "about": ("The ratio of building floor area to footprint "
-                        "area, normalized between 0 and 1.")}
+                # "shade":  {
+                #     "type": "ratio",
+                #     "required": "cc_method == factors",
+                #     "about": ("The proportion of tree cover (0 for no tree; 1 "
+                #         "for full tree cover; with trees>2m).")},
+                # "albedo": {
+                #     "type": "ratio",
+                #     "required": "cc_method == factors",
+                #     "about": ("The proportion of solar radiation directly "
+                #         "reflected by the LULC type. Required if using the "
+                #         "weighted factor approach to Cooling Coefficient "
+                #         "calculations.")},
+                # "building_intensity": {
+                #     "type": "ratio",
+                #     "required": "cc_method == intensity",
+                #     "about": ("The ratio of building floor area to footprint "
+                #         "area, normalized between 0 and 1.")}
             },
             "about": ("A CSV table containing model information corresponding "
                 "to each of the land use classes in the LULC.  All classes in "
@@ -139,9 +139,6 @@ ARGS_SPEC = {
             "name": "Average relative humidity",
             "type": "percent",
             "required": "do_productivity_valuation",
-            "validation_options": {
-                "expression": "(value >= 0) and (value <= 100)",
-            },
             "about": ("The average relative humidity (0-100%) over the time "
                 "period of interest."),
         },
@@ -174,24 +171,24 @@ ARGS_SPEC = {
                         "for the average number of stories that structures of "
                         "this type will have.")
                 },
-                "RH": {
-                    "type": "percent",
-                    "required": False,
-                    "about": ("Average relative humidity during the period of "
-                        "interest, which is used to calculate the wet bulb "
-                        "globe temperature for the work productivity module.")
-                },
-                "cost": {
-                    "type": "number",
-                    "units": u.currency/u.kilowatt_hour,
-                    "required": False,
-                    "about": ("The cost of electricity for each building type. "
-                        "If this column is provided in the Energy Consumption "
-                        "table, the energy_sav field in the output vector "
-                        "buildings_with_stats.shp will be in monetary units "
-                        "rather than kWh. This column is very likely to be the "
-                        "same for all building types.")
-                }
+                # "rh": {
+                #     "type": "percent",
+                #     "required": False,
+                #     "about": ("Average relative humidity during the period of "
+                #         "interest, which is used to calculate the wet bulb "
+                #         "globe temperature for the work productivity module.")
+                # },
+                # "cost": {
+                #     "type": "number",
+                #     "units": u.currency/u.kilowatt_hour,
+                #     "required": False,
+                #     "about": ("The cost of electricity for each building type. "
+                #         "If this column is provided in the Energy Consumption "
+                #         "table, the energy_sav field in the output vector "
+                #         "buildings_with_stats.shp will be in monetary units "
+                #         "rather than kWh. This column is very likely to be the "
+                #         "same for all building types.")
+                # }
             },
             "required": "do_energy_valuation",
             "about": ("A CSV table containing information on energy "
@@ -217,7 +214,6 @@ ARGS_SPEC = {
             "name": "Cooling capacity: adjust shade weight",
             "type": "ratio",
             "required": False,
-            **utils.GT_0,
             "about": ("The relative weight to apply to shade when calculating "
                 "the cooling index.  Default: 0.6"),
         },
@@ -225,7 +221,6 @@ ARGS_SPEC = {
             "name": "Cooling capacity: adjust albedo weight",
             "type": "ratio",
             "required": False,
-            **utils.GT_0,
             "about": ("The relative weight to apply to albedo when calculating "
                 "the cooling index.  Default: 0.2"),
         },
@@ -233,7 +228,6 @@ ARGS_SPEC = {
             "name": "Cooling capacity: adjust evapotranspiration weight",
             "type": "ratio",
             "required": False,
-            **utils.GT_0,
             "about": ("The relative weight to apply to ETI when calculating "
                 "the cooling index.  Default: 0.2")
         },
@@ -1441,12 +1435,9 @@ def validate(args, limit_to=None):
             # ARGS_SPEC.
             extra_biophysical_keys = ['building_intensity']
 
-        required_keys = (
-            extra_biophysical_keys +
-            list(ARGS_SPEC['args']['biophysical_table_path']['columns']))
         error_msg = validation.check_csv(
             args['biophysical_table_path'],
-            header_patterns=required_keys,
+            header_patterns=extra_biophysical_keys,
             axis=1)
         if error_msg:
             validation_warnings.append((['biophysical_table_path'], error_msg))

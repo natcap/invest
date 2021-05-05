@@ -50,8 +50,17 @@ ARGS_SPEC = {
             "name": "Depth To Root Restricting Layer"
         },
         "precipitation_path": {
-            **utils.PRECIP_ARG,
-            **utils.PROJECTED
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file containing non-zero, average "
+                "annual precipitation values for each cell. The "
+                "precipitation values should be in millimeters "
+                "(mm)."),
+            "name": "Precipitation"
         },
         "pawc_path": {
             "type": "raster",
@@ -97,7 +106,7 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {"type": "code"},
                 "root_depth": {"type": "number", "units": u.millimeter},
-                "Kc": {"type": "number", "units": None}
+                "kc": {"type": "number", "units": None}
             },
             "required": True,
             "about": ("A CSV table of land use/land cover (LULC) classes, "

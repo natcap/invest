@@ -147,8 +147,10 @@ class SDRTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             'expected a validation error but didn\'t get one')
-        self.assertTrue(
-            'Fields are missing from the first layer' in validate_result[0][1])
+        expected = [(
+            ['watersheds_path'],
+            'ws_id matched 0 headers, expected at least one')]
+        self.assertEqual(validate_result, expected)
 
     def test_sdr_validation_watershed_missing_ws_id_value(self):
         """SDR test validation notices bad value in `ws_id` watershed."""

@@ -1248,7 +1248,9 @@ class RecreationValidationTests(unittest.TestCase):
             file.write('foo,bar,baz\n')
             file.write('a,b,c\n')
 
-        expected_message = "Fields are missing from this table: ['ID', 'PATH', 'TYPE']"
+        expected_message = [(
+            ['predictor_table_path'],
+            'id matched 0 headers, expected at least one')]
         validation_warnings = recmodel_client.validate({
             'compute_regression': True,
             'predictor_table_path': table_path,
@@ -1256,9 +1258,9 @@ class RecreationValidationTests(unittest.TestCase):
             'end_year': '2016',
             'workspace_dir': self.workspace_dir,
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
+        print(validation_warnings)
 
-        self.assertEqual(validation_warnings, [(['predictor_table_path'], 
-                                                 expected_message)])
+        self.assertEqual(validation_warnings, expected_message)
 
         validation_warnings = recmodel_client.validate({
             'compute_regression': True,
@@ -1268,11 +1270,13 @@ class RecreationValidationTests(unittest.TestCase):
             'end_year': '2016',
             'workspace_dir': self.workspace_dir,
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
-        
-        self.assertEqual(validation_warnings, [(['predictor_table_path'], 
-                                                 expected_message), 
-                                               (['scenario_predictor_table_path'], 
-                                                 expected_message)])
+        print(validation_warnings)
+        expected_message = [
+            (['predictor_table_path'],
+             'id matched 0 headers, expected at least one'),
+            (['scenario_predictor_table_path'],
+             'id matched 0 headers, expected at least one')]
+        self.assertEqual(validation_warnings, expected_message)
 
     def test_validate_predictor_types_whitespace(self):
         """Recreation Validate: assert type validation ignores whitespace"""
@@ -1331,7 +1335,7 @@ class RecreationValidationTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             recmodel_client.execute(args)
-        self.assertTrue('The table contains invalid type value(s)' in 
+        self.assertTrue('The table contains invalid type value(s)' in
                         str(cm.exception))
 
 

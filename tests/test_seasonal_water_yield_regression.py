@@ -1142,6 +1142,7 @@ class SWYValidationTests(unittest.TestCase):
 
         validation_errors = seasonal_water_yield.validate(
             {'monthly_alpha': True})
+        print(validation_errors)
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys + ['monthly_alpha_path'])

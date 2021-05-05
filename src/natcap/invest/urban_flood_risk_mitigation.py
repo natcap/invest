@@ -54,7 +54,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
-                "CN_[SOIL_GROUP]": {
+                "cn_([abcd])": {
                     "names": "For each soil group A, B, C, D",
                     "type": "number",
                     "units": None,

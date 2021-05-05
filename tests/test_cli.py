@@ -235,6 +235,8 @@ class CLIHeadlessTests(unittest.TestCase):
         for warning in expected_warnings:
             self.assertTrue(warning in validation_output)
         # 3 lines = 3 warning messages
+        print('output:', validation_output)
+        print('split output:', validation_output.split('\n'))
         self.assertEqual(len(validation_output.split('\n')), 3)
         self.assertEqual(exit_cm.exception.code, 0)
 

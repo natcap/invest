@@ -43,7 +43,10 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
-        "threshold_flow_accumulation": utils.THRESHOLD_FLOW_ACCUMULATION_ARG,
+        "threshold_flow_accumulation": {
+            **utils.THRESHOLD_FLOW_ACCUMULATION_ARG,
+            "required": True
+        },
         "et0_dir": {
             "validation_options": {
                 "exists": True,
@@ -97,7 +100,8 @@ ARGS_SPEC = {
         },
         "aoi_path": {
             **utils.AOI_ARG,
-            **utils.PROJECTED
+            **utils.PROJECTED,
+            "required": True
         },
         "biophysical_table_path": {
             "type": "csv",

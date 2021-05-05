@@ -57,13 +57,16 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
-        "aoi_path": utils.AOI_ARG,
+        "aoi_path": {
+            **utils.AOI_ARG,
+            "required": True
+        },
         "structure_path": {
             "name": "Features Impacting Scenic Quality",
             "type": "vector",
             "geometries": {"POINT"},
             "fields": {
-                "RADIUS": {
+                "radius": {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
@@ -75,7 +78,7 @@ ARGS_SPEC = {
                         "converted to a positive number. If the field doesn’t "
                         "exist, the model will include all pixels in the DEM "
                         "in the visibility analysis.")},
-                "WEIGHT": {
+                "weight": {
                     "type": "number",
                     "units": None,
                     "required": False,
@@ -84,7 +87,7 @@ ARGS_SPEC = {
                         "with a real number (either positive or negative) "
                         "stored in the field “WEIGHT”. The model assumes a "
                         "weight of 1.0 if the field doesn’t exist.")},
-                "HEIGHT": {
+                "height": {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
@@ -114,7 +117,6 @@ ARGS_SPEC = {
             "name": "Refractivity Coefficient",
             "type": "ratio",
             "required": True,
-            **utils.BETWEEN_0_AND_1,
             "about": ("The earth curvature correction option corrects for the "
                 "curvature of the earth and refraction of visible light in "
                 "air.  Changes in air density curve the light downward causing "
