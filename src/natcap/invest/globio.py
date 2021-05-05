@@ -64,7 +64,7 @@ ARGS_SPEC = {
             },
             "type": "directory",
             "contents": {
-                "[INFRASTRUCTURE_MAP]": {
+                "(\w+)": {
                     "names": ("Raster(s) and/or vector(s) of any forms of "
                         "infrastructure you want to consider in the MSA "
                         "calculation."),
@@ -130,21 +130,21 @@ ARGS_SPEC = {
         "msa_parameters_path": {
             "type": "csv",
             "columns": {
-                "MSA_type": {
+                "msa_type": {
                     "type": "option_string",
                     "options": [
                         "msa_i_primary", "msa_i_other", "msa_f", "msa_lu"]
                 },
-                "Measurement": {"type": "freestyle_string"},
-                "Value": {
+                "measurement": {"type": "freestyle_string"},
+                "value": {
                     "type": "freestyle_string",
                     "about": ("Indicates a number or range of a bin. This may "
                         "be a single number e.g. 1000, a range (two numbers "
                         "separated by a hyphen e.g. 1000-2000), or an upper or "
                         "lower bound (a number preceded by > or < e.g. <5")
                 },
-                "MSA_x": {"type": "number", "units": "?"},
-                "SE": {"type": "number", "units": "?"}
+                "msa_x": {"type": "number", "units": "?"},
+                "se": {"type": "number", "units": "?"}
             },
             "required": True,
             "about": ("A CSV table containing MSA threshold values as defined "
@@ -739,7 +739,7 @@ def load_msa_parameter_table(
                 valueb: ...
                 '<': (bound, msa_lu_value),
                 '>': (bound, msa_lu_value)
-                12: (msa_lu_8 * (1.0 - intensification_fraction) + 
+                12: (msa_lu_8 * (1.0 - intensification_fraction) +
                 msa_lu_9 * intensification_fraction}}
 
     """

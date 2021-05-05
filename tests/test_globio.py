@@ -451,10 +451,7 @@ class GlobioValidationTests(unittest.TestCase):
             file.write('1,2\n')
         validation_warnings = globio.validate(
             {'msa_parameters_path': msa_parameters_path})
-        expected_message = ("Fields are missing from this table: "
-                            "['MEASUREMENT', 'MSA_TYPE', 'MSA_X', 'SE', "
-                            "'VALUE']")
-        actual_messages = set()
-        for keys, error_strings in validation_warnings:
-            actual_messages.add(error_strings)
-        self.assertTrue(expected_message in actual_messages)
+        expected_warning = (
+            ['msa_parameters_path'],
+            'msa_type matched 0 headers, expected at least one')
+        self.assertTrue(expected_warning in validation_warnings)

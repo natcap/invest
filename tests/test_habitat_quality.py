@@ -230,7 +230,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
                 'deg_sum_c_regression.tif': 18.91135,
-                'deg_sum_f_regression.tif': 33.931896, 
+                'deg_sum_f_regression.tif': 33.931896,
                 'quality_c_regression.tif': 7499.983,
                 'quality_f_regression.tif': 4999.9893,
                 'rarity_c_regression.tif': 2500.0000000,
@@ -294,7 +294,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
                 'deg_sum_c_regression.tif': 27.153614,
-                'deg_sum_f_regression.tif': 46.279358, 
+                'deg_sum_f_regression.tif': 46.279358,
                 'quality_c_regression.tif': 7499.9414,
                 'quality_f_regression.tif': 4999.955,
                 'rarity_c_regression.tif': 2500.0000000,
@@ -355,7 +355,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
                 'deg_sum_c_regression.tif': 27.153614,
-                'deg_sum_f_regression.tif': 46.279358, 
+                'deg_sum_f_regression.tif': 46.279358,
                 'quality_c_regression.tif': 7499.9414,
                 'quality_f_regression.tif': 4999.955,
                 'rarity_c_regression.tif': 2500.0000000,
@@ -417,7 +417,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
                 'deg_sum_c_regression.tif': 27.153614,
-                'deg_sum_f_regression.tif': 46.279358, 
+                'deg_sum_f_regression.tif': 46.279358,
                 'quality_c_regression.tif': 7499.9414,
                 'quality_f_regression.tif': 4999.955,
                 'rarity_c_regression.tif': 2500.0000000,
@@ -560,7 +560,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
                 'deg_sum_c_regression.tif': 27.153614,
-                'deg_sum_f_regression.tif': 46.279358, 
+                'deg_sum_f_regression.tif': 46.279358,
                 'quality_c_regression.tif': 7499.9414,
                 'quality_f_regression.tif': 4999.955,
                 'rarity_c_regression.tif': 2500.0000000,
@@ -1262,7 +1262,6 @@ class HabitatQualityTests(unittest.TestCase):
             args['access_vector_path'], args['lulc_cur_path'])
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        print(validate_result)
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any")
@@ -1316,12 +1315,12 @@ class HabitatQualityTests(unittest.TestCase):
                 '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
+        # At least one threat header is expected, so there should be a message
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            'any column in the sensitivity table' in validate_result[0][1])
+        expected = [(
+            ['sensitivity_table_path'],
+            '(?!lulc|habitat|name)(^.+$) matched 0 headers, expected at least one')]
+        self.assertEqual(validate_result, expected)
 
     def test_habtitat_quality_validation_bad_threat_path(self):
         """Habitat Quality: test validation for bad threat paths."""
@@ -2045,12 +2044,10 @@ class HabitatQualityTests(unittest.TestCase):
                 '0.07,1.0,threat_2,threat_2_c.tif,threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "Fields are missing from this table: ['DECAY']" in
-            validate_result[0][1], validate_result[0][1])
+        expected = [(
+            ['threats_table_path'],
+            'decay matched 0 headers, expected at least one')]
+        self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_validate_missing_base_column(self):
         """Habitat Quality: test validate for a missing base column."""
@@ -2097,12 +2094,10 @@ class HabitatQualityTests(unittest.TestCase):
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "The column 'base_path' was not found" in
-            validate_result[0][1], validate_result[0][1])
+        expected = [(
+            ['threats_table_path'],
+            'base_path matched 0 headers, expected at least one')]
+        self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_validate_missing_fut_column(self):
         """Habitat Quality: test validate for a missing fut column."""
@@ -2148,9 +2143,7 @@ class HabitatQualityTests(unittest.TestCase):
                 '0.07,1.0,threat_2,exponential,,threat_2_c.tif')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "The column 'fut_path' was not found" in
-            validate_result[0][1], validate_result[0][1])
+        expected = [(
+            ['threats_table_path'],
+            'fut_path matched 0 headers, expected at least one')]
+        self.assertEqual(validate_result, expected)

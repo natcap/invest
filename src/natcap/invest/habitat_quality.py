@@ -80,8 +80,8 @@ ARGS_SPEC = {
         "threats_table_path": {
             "type": "csv",
             "columns": {
-                "THREAT": {"type": "freestyle_string"},
-                "MAX_DIST": {
+                "threat": {"type": "freestyle_string"},
+                "max_dist": {
                     "type": "number",
                     "units": u.kilometer,
                     "about": ("The maximum distance over which each threat "
@@ -89,26 +89,26 @@ ARGS_SPEC = {
                         "degradation source will decline to zero at this "
                         "maximum distance.")
                 },
-                "WEIGHT": {
+                "weight": {
                     "type": "ratio",
                     "about": ("The impact of each threat on habitat quality, "
                         "relative to other threats.")
                 },
-                "DECAY": {
+                "decay": {
                     "type": "option_string",
                     "options": ["linear", "exponential"],
                     "about": "The type of decay over space for each threat."
                 },
-                "CUR_PATH": {
+                "cur_path": {
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}}
                 },
-                "BASE_PATH": {
+                "base_path": {
                     "required": "lulc_bas_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                 },
-                "FUT_PATH": {
+                "fut_path": {
                     "required": "lulc_fut_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
@@ -139,10 +139,10 @@ ARGS_SPEC = {
         "sensitivity_table_path": {
             "type": "csv",
             "columns": {
-                "LULC": {"type": "code"},
-                "NAME": {"type": "freestyle_string"},
-                "HABITAT": {"type": "ratio"},
-                "[THREAT]": {
+                "lulc": {"type": "code"},
+                "name": {"type": "freestyle_string"},
+                "habitat": {"type": "ratio"},
+                "(?!lulc|habitat|name)(^.+$)": {
                     "names": "One for each threat in the threats table",
                     "type": "ratio",
                     "about": ("The relative sensitivity of each LULC class to "
