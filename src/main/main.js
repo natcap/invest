@@ -20,6 +20,8 @@ import {
   checkFirstRun,
 } from './main_helpers';
 import setupIpcMainHandlers from './main/ipcMainHandlers';
+import setupDialogs from './main/setupDialogs';
+import setupContextMenu from './main/setupContextMenu';
 import { getLogger } from './logger';
 import { menuTemplate } from './menubar';
 import pkg from '../package.json';
@@ -54,6 +56,8 @@ const createWindow = async () => {
   );
   createPythonFlaskProcess(investExe);
   logger.info(`Running invest-workbench version ${pkg.version}`);
+  setupDialogs();
+  setupContextMenu();
   setupIpcMainHandlers();
 
   // Wait for a response from the server before loading the app
