@@ -1,39 +1,32 @@
-const ELECTRON_DEV_MODE = process.argv[2] === '--dev';
-if (ELECTRON_DEV_MODE) {
-  // in dev mode we can have babel transpile modules on import
-  require("@babel/register");
-  // load the '.env' file from the project root
-  const dotenv = require('dotenv');
-  dotenv.config();
-}
+import fs from 'fs';
+import path from 'path';
 
-const fs = require('fs');
-const path = require('path');
-
-const {
+import {
   app,
   BrowserWindow,
   ipcMain,
   screen,
   nativeTheme,
   Menu,
-  dialog,
-} = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
+} from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
-const {
+import {
   getFlaskIsReady, shutdownPythonProcess
-} = require('./server_requests');
-const {
+} from './server_requests';
+import {
   findInvestBinaries,
   createPythonFlaskProcess,
   extractZipInplace,
   checkFirstRun,
-} = require('./main_helpers');
-const { getLogger } = require('./logger');
-const { menuTemplate } = require('./menubar');
-const pkg = require('../package.json');
+} from './main_helpers';
+// import setupIpcMainHandlers from './main/ipcMainHandlers';
+import { getLogger } from './logger';
+import { menuTemplate } from './menubar';
+import pkg from '../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
+
+const ELECTRON_DEV_MODE = !!process.defaultApp; // a property added by electron.
 
 // This could be optionally configured already in '.env'
 if (!process.env.PORT) {
@@ -61,6 +54,7 @@ const createWindow = async () => {
   );
   createPythonFlaskProcess(investExe);
   logger.info(`Running invest-workbench version ${pkg.version}`);
+  // setupIpcMainHandlers();
   const mainProcessVars = {
     investExe: investExe,
     investVersion: investVersion,
