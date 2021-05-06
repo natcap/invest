@@ -12,19 +12,19 @@ import {
 
 import {
   getFlaskIsReady, shutdownPythonProcess
-} from './server_requests';
+} from '../server_requests';
 import {
   findInvestBinaries,
   createPythonFlaskProcess,
   extractZipInplace,
   checkFirstRun,
 } from './main_helpers';
-import setupIpcMainHandlers from './main/ipcMainHandlers';
-import setupDialogs from './main/setupDialogs';
-import setupContextMenu from './main/setupContextMenu';
-import { getLogger } from './logger';
+import setupIpcMainHandlers from './ipcMainHandlers';
+import setupDialogs from './setupDialogs';
+import setupContextMenu from './setupContextMenu';
+import { getLogger } from '../logger';
 import { menuTemplate } from './menubar';
-import pkg from '../package.json';
+import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -49,7 +49,7 @@ const createWindow = async () => {
     frame: false,
     alwaysOnTop: true,
   });
-  splashScreen.loadURL(`file://${__dirname}/static/splash.html`);
+  splashScreen.loadURL(`file://${__dirname}/../static/splash.html`);
 
   const [investExe, investVersion] = await findInvestBinaries(
     ELECTRON_DEV_MODE
@@ -87,7 +87,7 @@ const createWindow = async () => {
     menuTemplate(mainWindow, ELECTRON_DEV_MODE)
   );
   Menu.setApplicationMenu(menubar);
-  mainWindow.loadURL(`file://${__dirname}/index.html`);
+  mainWindow.loadURL(`file://${__dirname}/../index.html`);
 
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();

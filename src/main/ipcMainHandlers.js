@@ -1,12 +1,9 @@
 import {
   ipcMain,
-  BrowserWindow,
-  Menu,
-  dialog,
   app
 } from 'electron';
 
-import { checkFirstRun } from '../main_helpers';
+import { checkFirstRun } from './main_helpers';
 import pkg from '../../package.json';
 
 const ELECTRON_DEV_MODE = !!process.defaultApp;

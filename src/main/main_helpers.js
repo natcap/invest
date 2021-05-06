@@ -5,7 +5,7 @@ const { spawn, execFileSync } = require('child_process');
 const { app } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const yauzl = require('yauzl');
 
-const { getLogger } = require('./logger');
+const { getLogger } = require('../logger');
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 /**
