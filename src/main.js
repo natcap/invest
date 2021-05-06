@@ -19,7 +19,7 @@ import {
   extractZipInplace,
   checkFirstRun,
 } from './main_helpers';
-// import setupIpcMainHandlers from './main/ipcMainHandlers';
+import setupIpcMainHandlers from './main/ipcMainHandlers';
 import { getLogger } from './logger';
 import { menuTemplate } from './menubar';
 import pkg from '../package.json';
@@ -54,46 +54,7 @@ const createWindow = async () => {
   );
   createPythonFlaskProcess(investExe);
   logger.info(`Running invest-workbench version ${pkg.version}`);
-  // setupIpcMainHandlers();
-  const mainProcessVars = {
-    investExe: investExe,
-    investVersion: investVersion,
-    workbenchVersion: pkg.version,
-    userDataPath: app.getPath('userData'),
-    isFirstRun: checkFirstRun(),
-  };
-  ipcMain.handle('show-context-menu', (event, rightClickPos) => {
-    const template = [
-      {
-        label: 'Inspect Element',
-        click: () => {
-          BrowserWindow.fromWebContents(event.sender)
-            .inspectElement(rightClickPos.x, rightClickPos.y);
-        }
-      },
-    ];
-    const menu = Menu.buildFromTemplate(template);
-    menu.popup(BrowserWindow.fromWebContents(event.sender));
-  });
-  ipcMain.handle('variable-request', async (event) => {
-    return mainProcessVars;
-  });
-  ipcMain.handle('show-open-dialog', async (event, options) => {
-    const result = await dialog.showOpenDialog(options);
-    return result;
-  });
-  ipcMain.handle('show-save-dialog', async (event, options) => {
-    const result = await dialog.showSaveDialog(options);
-    return result;
-  });
-  ipcMain.handle('is-dev-mode', async (event) => {
-    const result = ELECTRON_DEV_MODE;
-    return result;
-  });
-  ipcMain.handle('user-data', async (event) => {
-    const result = await mainProcessVars.userDataPath;
-    return result;
-  });
+  setupIpcMainHandlers();
 
   // Wait for a response from the server before loading the app
   await getFlaskIsReady();
