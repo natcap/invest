@@ -76,19 +76,6 @@ jobs:
                   $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
                   ./ci/windows-ci-binary-install.ps1
 
-            - name: Clone sample data repo (non-lfs)
-              shell: bash -l {0}
-              run: |
-                  GIT_URL=$(make jprint-GIT_SAMPLE_DATA_REPO)
-                  LOCALPATH=$(make jprint-GIT_SAMPLE_DATA_REPO_PATH)
-                  GIT_REV=$(make jprint-GIT_SAMPLE_DATA_REPO_REV)
-
-                  # Only clone the files ... deliberately not cloning LFS data
-                  # Installer needs .invest.json files only, and these are not
-                  # stored in LFS.
-                  GIT_LFS_SKIP_SMUDGE=1 git clone $GIT_URL $LOCALPATH
-                  git -C $LOCALPATH checkout $GIT_REV
-
             - name: Build userguide, binaries, installer
               shell: bash -l {0}
               run: |
