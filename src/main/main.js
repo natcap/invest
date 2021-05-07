@@ -112,11 +112,7 @@ const createWindow = async () => {
     }
   });
 
-  // Emitted when the window is closed.
   mainWindow.on('closed', async () => {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
     mainWindow = null;
     // We shouldn't need to shutdown flask here, as it will be
     // shutdown on the window-all-closed listener, but that one
@@ -157,20 +153,12 @@ function main(argv) {
     }
   }
 
-  // This method will be called when Electron has finished
-  // initialization and is ready to create browser windows.
-  // Some APIs can only be used after this event occurs.
   app.on('ready', createWindow);
-
   app.on('activate', () => {
-    // On OS X it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
     if (mainWindow === null) {
       createWindow();
     }
   });
-
-  // Quit when all windows are closed.
   app.on('window-all-closed', async () => {
     // On OS X it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
@@ -179,8 +167,6 @@ function main(argv) {
       app.quit();
     }
   });
-
-  // TODO: I haven't actually tested this yet on MacOS
   app.on('will-quit', async () => {
     if (process.platform === 'darwin') {
       await shutdownPythonProcess();
