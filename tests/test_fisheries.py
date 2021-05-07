@@ -179,9 +179,10 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
         validation_warnings = fisheries.validate(
             args, limit_to='aoi_vector_path')
-        self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('Fields are missing from the first layer' in
-                        validation_warnings[0][1])
+        expected = [(
+            ['aoi_vector_path'],
+            'name matched 0 headers, expected at least one')]
+        self.assertEqual(validation_warnings, expected)
 
     def test_validation_invalid_init_recruits(self):
         """Fisheries: Validate negative initial recruits value."""

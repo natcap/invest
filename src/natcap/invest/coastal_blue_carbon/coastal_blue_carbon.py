@@ -162,7 +162,7 @@ ARGS_SPEC = {
             "columns": {
                 "snapshot_year": {"type": "number", "units": u.year},
                 "raster_path": {
-                    "type": "raster", 
+                    "type": "raster",
                     "bands": {1: {"type": "code"}}
                 }
             },
@@ -274,7 +274,7 @@ ARGS_SPEC = {
                     "type": "code",
                     "description": ("LULC codes matching the codes in the "
                         "biophysical table")},
-                '[CLASS_NAME]': {
+                '(?!lulc-class)(^.+$)': {
                     "type": "option_string",
                     "options": [
                         'accum',
@@ -335,11 +335,11 @@ ARGS_SPEC = {
             "required": "use_price_table",
             "columns": {
                 "year": {
-                    "type": "number", 
+                    "type": "number",
                     "units": u.year,
                     "about": "Each year from the snapshot year to analysis year"},
                 "price": {
-                    "type": "number", 
+                    "type": "number",
                     "units": u.currency/u.megatonne,
                     "about": "Price of CO2E in that year"}
             },

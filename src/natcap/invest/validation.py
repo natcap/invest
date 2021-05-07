@@ -74,6 +74,9 @@ N_WORKERS_SPEC = {
     }
 }
 
+MATCHED_NO_HEADERS_MSG = '%s matched 0 headers, expected at least one'
+NOT_A_NUMBER_MSG = 'Value "%s" could not be interpreted as a number'
+
 
 def _evaluate_expression(expression, variable_map):
     """Evaluate a python expression.
@@ -459,7 +462,7 @@ def check_number(value, expression=None):
     try:
         float(value)
     except (TypeError, ValueError):
-        return f'Value "{value}" could not be interpreted as a number'
+        return NOT_A_NUMBER_MSG % value
 
     if expression:
         # Check to make sure that 'value' is in the expression.
@@ -491,7 +494,7 @@ def check_ratio(value):
     try:
         as_float = float(value)
     except (TypeError, ValueError):
-        return f'Value "{value}" could not be interpreted as a number'
+        return NOT_A_NUMBER_MSG % value
 
     if as_float < 0 or as_float > 1:
         return f'Value {as_float} is not in the range [0, 1]'
@@ -512,7 +515,7 @@ def check_percent(value):
     try:
         as_float = float(value)
     except (TypeError, ValueError):
-        return f'Value "{value}" could not be interpreted as a number'
+        return NOT_A_NUMBER_MSG % value
 
     if as_float < 0 or as_float > 100:
         return f'Value {as_float} is not in the range [0, 100]'
@@ -536,7 +539,7 @@ def check_code(value):
         if not as_float.is_integer():
             return f'Value "{value}" does not represent an integer'
     except (TypeError, ValueError):
-        return f'Value "{value}" could not be interpreted as a number'
+        return NOT_A_NUMBER_MSG % value
 
     if as_float < 0:
         return f'Value "{value}" is less than zero'
@@ -656,8 +659,7 @@ def check_headers(patterns, headers):
     for pattern_index, matching_headers in enumerate(pattern_to_headers):
         # each pattern should match at least one header
         if len(matching_headers) == 0:
-            return (f'{patterns[pattern_index]} matched 0 headers, expected '
-                    'at least one')
+            return MATCHED_NO_HEADERS_MSG % patterns[pattern_index]
 
     for header_index, matching_patterns in enumerate(header_to_patterns):
         # no header should be matched by more than one pattern
