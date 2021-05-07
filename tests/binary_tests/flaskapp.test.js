@@ -1,7 +1,10 @@
 import fs from 'fs';
 import readline from 'readline';
 import * as server_requests from '../../src/server_requests';
-import { findInvestBinaries, createPythonFlaskProcess } from '../../src/main_helpers';
+import {
+  findInvestBinaries,
+  createPythonFlaskProcess
+} from '../../src/main/main_helpers';
 import { argsDictFromObject } from '../../src/utils';
 
 const dotenv = require('dotenv');
