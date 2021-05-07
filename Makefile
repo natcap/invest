@@ -6,13 +6,13 @@ GIT_SAMPLE_DATA_REPO_REV    := b7a51f189315e08484b5ba997a5c1de88ab7f06d
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 6fd5fa39cd9d81080caa7581f9acca7b9fadb7c8
+GIT_TEST_DATA_REPO_REV      := 0057a412104fbf97d1777bfffa3ad725485b9e02
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := bbfa26dc0c9158d13d209c1bc61448a9166708da
+GIT_UG_REPO_REV              := 69993168d50422593a39ea5b47cc87e8b94122a1
 
-ENV = env
+ENV = "./env"
 ifeq ($(OS),Windows_NT)
 	# Double $$ indicates windows environment variable
 	NULL := $$null
@@ -110,10 +110,15 @@ TEST_DATAVALIDATOR := $(PYTHON) -m pytest -vs scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
-APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
+
+APIDOCS_BUILD_DIR := $(BUILD_DIR)/sphinx/apidocs
+APIDOCS_TARGET_DIR := $(DIST_DIR)/apidocs
 APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
-USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
+
+USERGUIDE_BUILD_DIR := $(BUILD_DIR)/sphinx/userguide
+USERGUIDE_TARGET_DIR := $(DIST_DIR)/userguide
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
+
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
@@ -156,16 +161,10 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --omit='*/invest/ui/*' $(TESTRUNNER) tests
-	coverage report
-	coverage html
-	coverage xml
+	$(TESTRUNNER) tests
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
-	coverage run -m --include='*/invest/ui/*' $(TESTRUNNER) ui_tests
-	coverage report
-	coverage html
-	coverage xml
+	$(TESTRUNNER) ui_tests
 
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
@@ -216,13 +215,14 @@ fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PAT
 
 # Python conda environment management
 env:
-		$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
-		$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
-		$(CONDA) env update -p $(ENV) --file requirements-all.yml
-		@echo "----------------------------"
-		@echo "To finish the conda env install:"
-		@echo ">> conda activate ./$(ENV)"
-		@echo ">> make install"
+	@echo "NOTE: requires 'requests' be installed in base Python"
+	$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+	$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
+	$(CONDA) env update -p $(ENV) --file requirements-all.yml
+	@echo "----------------------------"
+	@echo "To activate the new conda environment and install natcap.invest:"
+	@echo ">> conda activate $(ENV)"
+	@echo ">> make install"
 
 
 # compatible with pip>=7.0.0
@@ -255,25 +255,25 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	$(INVEST_BINARIES_DIR)/invest list
 
 # Documentation.
-# API docs are copied to dist/apidocs
+# API docs are built in build/sphinx and copied to dist/apidocs
+apidocs: $(APIDOCS_TARGET_DIR) $(APIDOCS_ZIP_FILE)
+$(APIDOCS_TARGET_DIR): | $(DIST_DIR)
+	# -a: always build all files
+	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs --build-dir $(APIDOCS_BUILD_DIR)
+	# only copy over the built html files, not the doctrees
+	$(COPYDIR) $(APIDOCS_BUILD_DIR)/html $(APIDOCS_TARGET_DIR)
+
+$(APIDOCS_ZIP_FILE): $(APIDOCS_TARGET_DIR)
+	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_TARGET_DIR))"
+
 # Userguide HTML docs are copied to dist/userguide
-# Userguide PDF file is copied to dist/InVEST_<version>_.pdf
-apidocs: $(APIDOCS_HTML_DIR) $(APIDOCS_ZIP_FILE)
-$(APIDOCS_HTML_DIR): | $(DIST_DIR)
-	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
-	$(COPYDIR) build/sphinx/html $(APIDOCS_HTML_DIR)
+userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
+$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
+	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
+	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
 
-$(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
-	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_HTML_DIR))"
-
-userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
-$(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
-	-$(RMDIR) $(USERGUIDE_HTML_DIR)
-	$(COPYDIR) build/userguide/html dist/userguide
-
-$(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
-	cd $(DIST_DIR) && $(ZIP) -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))
+$(USERGUIDE_ZIP_FILE): $(USERGUIDE_TARGET_DIR)
+	cd $(DIST_DIR) && $(ZIP) -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_TARGET_DIR))
 
 # Tracking the expected zipfiles here avoids a race condition where we can't
 # know which data zipfiles to create until the data repo is cloned.
@@ -331,23 +331,23 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vc
 
 DMG_CONFIG_FILE := installer/darwin/dmgconf.py
 mac_dmg: $(MAC_DISK_IMAGE_FILE)
-$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
+$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
 	dmgbuild -Dinvestdir=$(MAC_APPLICATION_BUNDLE) -s $(DMG_CONFIG_FILE) "InVEST $(VERSION)" $(MAC_DISK_IMAGE_FILE)
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
-$(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
-	./installer/darwin/build_app_bundle.sh $(VERSION) $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) $(MAC_APPLICATION_BUNDLE)
+$(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR)
+	./installer/darwin/build_app_bundle.sh $(VERSION) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR) $(MAC_APPLICATION_BUNDLE)
 
 mac_zipfile: $(MAC_BINARIES_ZIP_FILE)
-$(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
-	./installer/darwin/build_zip.sh $(VERSION) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
+$(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
+	./installer/darwin/build_zip.sh $(VERSION) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
 
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
-CERT_FILE := StanfordUniversity.crt
-KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
-P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
+CERT_FILE := codesigning-2021.crt
+KEY_FILE := Stanford-natcap-code-signing-cert-expires-2024-01-26.key.pem
+P12_FILE := Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
 KEYCHAIN_NAME := codesign_keychain
 codesign_mac:
 	# download the p12 certificate file from google cloud
@@ -365,7 +365,7 @@ codesign_mac:
 	# this is essential to avoid the UI password prompt
 	security set-key-partition-list -S apple-tool:,apple: -s -k '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
-	codesign --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
+	codesign --timestamp --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
 	# relock the keychain (not sure if this is important?)
 	security lock-keychain '$(KEYCHAIN_NAME)'
 
@@ -382,6 +382,7 @@ signcode:
 signcode_windows:
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
+	powershell.exe "& '$(SIGNTOOL)' timestamp -t http://timestamp.sectigo.com '$(BIN_TO_SIGN)'"
 	-$(RM) $(BUILD_DIR)/$(P12_FILE)
 	@echo "Installer was signed with signtool"
 

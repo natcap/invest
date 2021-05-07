@@ -774,7 +774,7 @@ def _convert_by_score(
 
     row_array = numpy.empty((_BLOCK_SIZE,), dtype=numpy.uint32)
     col_array = numpy.empty((_BLOCK_SIZE,), dtype=numpy.uint32)
-    data_array = numpy.empty((_BLOCK_SIZE,), dtype=numpy.bool)
+    data_array = numpy.empty((_BLOCK_SIZE,), dtype=bool)
     next_index = 0
     dirty_blocks = set()
 

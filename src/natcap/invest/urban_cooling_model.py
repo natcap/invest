@@ -245,7 +245,7 @@ ARGS_SPEC = {
 
 
 def execute(args):
-    """Urban Cooling Model.
+    """Urban Cooling.
 
     Args:
         args['workspace_dir'] (str): path to target output directory.
@@ -763,6 +763,7 @@ def calculate_uhi_result_vector(
             if no valuation occurred.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
+            
                 * avg_cc
                 * avg_tmp_an
                 * avd_eng_cn
@@ -1260,10 +1261,10 @@ def flat_disk_kernel(max_distance, kernel_filepath):
             # matrices to float64 matrices.
             row_indices, col_indices = numpy.indices((row_block_width,
                                                       col_block_width),
-                                                     dtype=numpy.float)
+                                                     dtype=float)
 
-            row_indices += numpy.float(row_offset - max_distance)
-            col_indices += numpy.float(col_offset - max_distance)
+            row_indices += float(row_offset - max_distance)
+            col_indices += float(col_offset - max_distance)
 
             kernel_index_distances = numpy.hypot(
                 row_indices, col_indices)

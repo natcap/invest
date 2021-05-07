@@ -885,6 +885,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                 bar
                 """
             ).strip())
+
         df = utils.read_csv_to_dataframe(csv_file)
         # the default engine='python' should replace the unknown characters
         # different encodings of replacement character depending on the system

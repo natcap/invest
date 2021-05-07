@@ -696,10 +696,10 @@ def route_baseflow_sum(
         target_b_sum_path (string): path to created raster for per-pixel
             upstream sum of baseflow.
 
-`    Returns:
+    Returns:
         None.
-
     """
+
     # used for time-delayed logging
     cdef time_t last_log_time
     last_log_time = ctime(NULL)

@@ -31,22 +31,14 @@ Getting Started
 
     installing
     cli
-    changelog
     scripting
 
-API Reference
+Resources
 -------------
 
 .. toctree::
     :maxdepth: 1
 
-    InVEST Model Entry Points <models>
+    Model Entry Points <models>
     Full API Reference <api>
-    ecosystem_service_analysis_tools
-    final_ecosystem_services
-    supporting_ecosystem_services
-    testing
-    utilities
-
-
-.. End of file
+    Changelog <changelog>

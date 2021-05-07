@@ -13,7 +13,6 @@ import logging
 import json
 import queue
 import multiprocessing
-import warnings
 
 import Pyro4
 import numpy
@@ -22,6 +21,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 import taskgraph
+import warnings
 
 from natcap.invest import utils
 
@@ -511,7 +511,6 @@ class TestRecServer(unittest.TestCase):
             numpy.save(os.path.join(self.workspace_dir, 'out'), out_array)
             # assert that no warning was raised
             self.assertTrue(len(ws) == 0)
-
 
     @_timeout(30.0)
     def test_regression_local_server(self):

@@ -13,7 +13,6 @@ import warnings
 
 import pygeoprocessing
 import pandas
-import xlrd
 from osgeo import gdal, osr
 import numpy
 
@@ -307,6 +306,9 @@ def check_raster(filepath, projected=False, projection_units=None):
 
     if gdal_dataset is None:
         return "File could not be opened as a GDAL raster"
+    # Check that an overview .ovr file wasn't opened.
+    if os.path.splitext(filepath)[1] == '.ovr':
+        return "File found to be an overview '.ovr' file."
 
     srs = osr.SpatialReference()
     srs.ImportFromWkt(gdal_dataset.GetProjection())
@@ -529,7 +531,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         if excel_ok:
             try:
                 dataframe = pandas.read_excel(filepath)
-            except xlrd.biffh.XLRDError:
+            except ValueError:
                 return "File could not be opened as a CSV or Excel file."
         else:
             return ("File could not be opened as a CSV. "
@@ -870,7 +872,8 @@ def invest_validator(validate_func):
     Raises:
         AssertionError when an invalid format is found.
 
-    Example:
+    Example::
+    
         from natcap.invest import validation
         @validation.invest_validator
         def validate(args, limit_to=None):

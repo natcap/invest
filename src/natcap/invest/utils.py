@@ -20,6 +20,7 @@ import pygeoprocessing
 LOGGER = logging.getLogger(__name__)
 LOG_FMT = (
     "%(asctime)s "
+    "(%(name)s) "
     "%(module)s.%(funcName)s(%(lineno)d) "
     "%(levelname)s %(message)s")
 
@@ -345,10 +346,10 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
             # matrices to float64 matrices.
             row_indices, col_indices = numpy.indices((row_block_width,
                                                       col_block_width),
-                                                     dtype=numpy.float)
+                                                     dtype=float)
 
-            row_indices += numpy.float(row_offset - max_distance)
-            col_indices += numpy.float(col_offset - max_distance)
+            row_indices += float(row_offset - max_distance)
+            col_indices += float(col_offset - max_distance)
 
             kernel_index_distances = numpy.hypot(
                 row_indices, col_indices)
@@ -469,10 +470,9 @@ def build_lookup_from_csv(
             string values. default=True.
 
     Returns:
-        lookup_dict (dict): a dictionary of the form {
-                key_field_0: {csv_header_0: value0, csv_header_1: value1...},
-                key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}
-            }
+        lookup_dict (dict): a dictionary of the form 
+        {key_field_0: {csv_header_0: value0, csv_header_1: value1...},
+        key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}}
 
         if ``to_lower`` all strings including key_fields and values are
         converted to lowercase unicode.
@@ -598,6 +598,7 @@ def read_csv_to_dataframe(
         encoding = 'utf-8-sig'
     dataframe = pandas.read_csv(path, engine=engine, encoding=encoding,
                                 sep=sep, **kwargs)
+
     # this won't work on integer types, which happens if you set header=None
     # however, there's little reason to use this function if there's no header
     dataframe.columns = dataframe.columns.str.strip()
@@ -786,11 +787,18 @@ def _assert_vectors_equal(
             actual_geom_wkt = actual_geom.ExportToWkt()
             expected_geom_shapely = loads(expected_geom_wkt)
             actual_geom_shapely = loads(actual_geom_wkt)
-            if not expected_geom_shapely.almost_equals(actual_geom_shapely):
-                raise AssertionError(
-                    "Vector geometry assertion fail. \n"
-                    f"Expected geometry: {expected_geom_wkt}. \n"
-                    f"Actual geometry: {actual_geom_wkt}. ")
+            # Try comparing geoms exactly equal allowing for different
+            # geometry ordering
+            geoms_equal = expected_geom_shapely.equals(actual_geom_shapely)
+            if not geoms_equal:
+                # Try almost_equal allowing for precision differences
+                geoms_almost_eq = expected_geom_shapely.almost_equals(
+                    actual_geom_shapely)
+                if not geoms_almost_eq:
+                    raise AssertionError(
+                        "Vector geometry assertion fail. \n"
+                        f"Expected geometry: {expected_geom_wkt}. \n"
+                        f"Actual geometry: {actual_geom_wkt}. ")
 
             expected_feature = None
             actual_feature = None
@@ -845,9 +853,10 @@ def reclassify_raster(
             ``pygeoprocessing.ReclassificationMissingValuesError``.
             keys must be {'raster_name', 'column_name', 'table_name'}. Values
             each key represent:
+
                 'raster_name' - string for the raster name being reclassified
-                'column_name' - name of the table column that ``value_map``
-                    dictionary keys came from.
+                'column_name' - name of the table column that ``value_map`` 
+                dictionary keys came from.
                 'table_name' - table name that ``value_map`` came from.
 
     Returns:
