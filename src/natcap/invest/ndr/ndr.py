@@ -922,7 +922,7 @@ def _calculate_load(
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
     nodata_landuse = lulc_raster_info['nodata'][0]
     cell_area_ha = abs(numpy.prod(lulc_raster_info['pixel_size'])) * 0.0001
-    LOGGER.info('Cell area:', cell_area_ha, type(cell_area_ha))
+    LOGGER.info('Cell area: ' + str(cell_area_ha) + str(type(cell_area_ha)))
 
     def _map_load_op(lucode_array):
         """Convert unit load to total load & handle nodata."""
@@ -932,8 +932,8 @@ def _calculate_load(
             if lucode != nodata_landuse:
                 try:
                     LOGGER.info(
-                        'Load:', lucode_to_parameters[lucode][load_type],
-                        type(lucode_to_parameters[lucode][load_type]))
+                        f'Load: {str(lucode_to_parameters[lucode][load_type])}'
+                    )
                     result[lucode_array == lucode] = (
                         lucode_to_parameters[lucode][load_type] *
                         cell_area_ha)
