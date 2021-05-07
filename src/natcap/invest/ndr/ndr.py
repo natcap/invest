@@ -922,6 +922,7 @@ def _calculate_load(
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
     nodata_landuse = lulc_raster_info['nodata'][0]
     cell_area_ha = abs(numpy.prod(lulc_raster_info['pixel_size'])) * 0.0001
+    LOGGER.info('Cell area:', cell_area_ha, type(cell_area_ha))
 
     def _map_load_op(lucode_array):
         """Convert unit load to total load & handle nodata."""
@@ -930,6 +931,9 @@ def _calculate_load(
         for lucode in numpy.unique(lucode_array):
             if lucode != nodata_landuse:
                 try:
+                    LOGGER.info(
+                        'Load:', lucode_to_parameters[lucode][load_type],
+                        type(lucode_to_parameters[lucode][load_type]))
                     result[lucode_array == lucode] = (
                         lucode_to_parameters[lucode][load_type] *
                         cell_area_ha)
@@ -1270,7 +1274,7 @@ def _calculate_sub_ndr(
 
     def _sub_ndr_op(dist_to_channel_array):
         """Calculate subsurface NDR."""
-        # nodata value from this ntermediate output should always be 
+        # nodata value from this ntermediate output should always be
         # defined by pygeoprocessing, not None
         valid_mask = ~numpy.isclose(
             dist_to_channel_array, dist_to_channel_nodata)

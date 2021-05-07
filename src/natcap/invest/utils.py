@@ -483,6 +483,7 @@ def build_lookup_from_csv(
         KeyError
             If ``key_field`` is not present during ``set_index`` call.
     """
+    LOGGER.info(f'Building lookup for {table_path}')
     # Reassign to avoid mutation
     col_list = column_list
     # if a list of columns are provided to use and return, make sure
@@ -490,9 +491,16 @@ def build_lookup_from_csv(
     if col_list and key_field not in col_list:
         col_list.append(key_field)
 
+    LOGGER.info('Contents of table file:')
+    with open(table_path) as file:
+        for line in file:
+            LOGGER.info(line)
+
     table = read_csv_to_dataframe(
         table_path, to_lower=to_lower, sep=None, index_col=False,
         engine='python')
+
+    LOGGER.info('\nTable as dataframe:', table)
 
     # if 'to_lower`, case handling is done before trying to access the data.
     # the columns are stripped of leading/trailing whitespace in
@@ -507,6 +515,8 @@ def build_lookup_from_csv(
         table = table.applymap(
             lambda x: x.lower() if isinstance(x, str) else x)
 
+    LOGGER.info('\nTable after to_lower:', table)
+
     # Set 'key_field' as the index of the dataframe
     try:
         table.set_index(key_field, drop=False, inplace=True)
@@ -517,12 +527,15 @@ def build_lookup_from_csv(
                      f" column in the table. Table path: {table_path}.")
         raise
 
+    LOGGER.info('\nTable after set_index:', table)
+
     # Subset dataframe by columns if desired
     if col_list:
         table = table.loc[:, col_list]
 
     # look for NaN values and warn if any are found.
     table_na = table.isna()
+    LOGGER.info('\nTable NA:', table_na)
     if table_na.values.any():
         LOGGER.warning(
             f"Empty or NaN values were found in the table: {table_path}.")
@@ -537,6 +550,7 @@ def build_lookup_from_csv(
         table.dropna(how="all", inplace=True)
     # fill the rest of empty or NaN values with empty string
     table.fillna(value="", inplace=True)
+    LOGGER.info('\nTable after filling NA:', table)
     try:
         lookup_dict = table.to_dict(orient='index')
     except ValueError:
@@ -544,7 +558,7 @@ def build_lookup_from_csv(
         LOGGER.error(f"The 'key_field' : '{key_field}' column values are not"
                      f" unique: {table.index.tolist()}")
         raise
-
+    LOGGER.info('\nFinal lookup dict:', lookup_dict)
     return lookup_dict
 
 
