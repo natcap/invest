@@ -3,32 +3,16 @@ import {
   app
 } from 'electron';
 
-import { checkFirstRun } from './main_helpers';
-import pkg from '../../package.json';
-
 const ELECTRON_DEV_MODE = !!process.defaultApp;
 
-// TODO: move this to a preload script and make global vars?
-const mainProcessVars = {
-  investVersion: pkg.invest.version,
-  workbenchVersion: pkg.version,
-  userDataPath: app.getPath('userData'),
-  isFirstRun: checkFirstRun(),
-};
-
 export default function setupIpcMainHandlers() {
-
-  ipcMain.handle('variable-request', async (event) => {
-    return mainProcessVars;
-  });
-
   ipcMain.handle('is-dev-mode', async (event) => {
     const result = ELECTRON_DEV_MODE;
     return result;
   });
 
   ipcMain.handle('user-data', async (event) => {
-    const result = await mainProcessVars.userDataPath;
+    const result = app.getPath('userData');
     return result;
   });
 }

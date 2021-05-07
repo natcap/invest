@@ -17,11 +17,11 @@ import {
   findInvestBinaries,
   createPythonFlaskProcess,
   extractZipInplace,
-  checkFirstRun,
 } from './main_helpers';
 import setupIpcMainHandlers from './ipcMainHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
+import { setupCheckFirstRun } from './setupCheckFirstRun';
 import { getLogger } from '../logger';
 import { menuTemplate } from './menubar';
 import pkg from '../../package.json';
@@ -59,6 +59,7 @@ const createWindow = async () => {
   setupDialogs();
   setupContextMenu();
   setupIpcMainHandlers();
+  setupCheckFirstRun();
 
   // Wait for a response from the server before loading the app
   await getFlaskIsReady();

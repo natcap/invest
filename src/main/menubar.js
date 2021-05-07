@@ -112,13 +112,14 @@ function openAboutWindow(parentWindow, isDevMode) {
     height: 800,
     frame: true,
     webPreferences: {
+      contextIsolation: false,
       enableRemoteModule: false,
       nodeIntegration: true,
       minimumFontSize: 18,
     },
   });
   child.setMenu(null);
-  child.loadURL(`file://${__dirname}/static/about.html`);
+  child.loadURL(`file://${__dirname}/../static/about.html`);
   if (isDevMode) {
     child.webContents.openDevTools();
   }
@@ -131,13 +132,14 @@ function openReportWindow(parentWindow, isDevMode) {
     height: 800,
     frame: true,
     webPreferences: {
-      enableRemoteModule: true,
+      contextIsolation: false,
+      enableRemoteModule: false,
       nodeIntegration: true,
       minimumFontSize: 18,
     },
   });
   child.setMenu(null);
-  child.loadURL(`file://${__dirname}/static/report_a_problem.html`);
+  child.loadURL(`file://${__dirname}/../static/report_a_problem.html`);
   if (isDevMode) {
     child.webContents.openDevTools();
   }

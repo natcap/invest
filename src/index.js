@@ -32,7 +32,6 @@ const render = async function render(investExe, isFirstRun) {
   reactDom.default.render(
     react.default.createElement(
       app.default, {
-        investExe: investExe,
         isFirstRun: isFirstRun,
       }
     ),
@@ -40,9 +39,7 @@ const render = async function render(investExe, isFirstRun) {
   );
 };
 
-ipcRenderer.invoke('variable-request')
-  // render the App after receiving any critical data
-  // from the main process
+ipcRenderer.invoke('is-first-run')
   .then((response) => {
-    render(response.investExe, response.isFirstRun);
+    render(response.isFirstRun);
   });
