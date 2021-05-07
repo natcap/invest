@@ -470,7 +470,7 @@ def build_lookup_from_csv(
             string values. default=True.
 
     Returns:
-        lookup_dict (dict): a dictionary of the form 
+        lookup_dict (dict): a dictionary of the form
         {key_field_0: {csv_header_0: value0, csv_header_1: value1...},
         key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}}
 
@@ -483,6 +483,8 @@ def build_lookup_from_csv(
         KeyError
             If ``key_field`` is not present during ``set_index`` call.
     """
+    LOGGER.info(f'Building lookup for {table_path}')
+    pandas.set_option("display.max_rows", None, "display.max_columns", None)
     # Reassign to avoid mutation
     col_list = column_list
     # if a list of columns are provided to use and return, make sure
@@ -490,9 +492,16 @@ def build_lookup_from_csv(
     if col_list and key_field not in col_list:
         col_list.append(key_field)
 
+    LOGGER.info('Contents of table file:')
+    with open(table_path) as file:
+        for line in file:
+            LOGGER.info(line)
+
     table = read_csv_to_dataframe(
         table_path, to_lower=to_lower, sep=None, index_col=False,
         engine='python')
+
+    LOGGER.info('Table as dataframe:\n' + str(table))
 
     # if 'to_lower`, case handling is done before trying to access the data.
     # the columns are stripped of leading/trailing whitespace in
@@ -507,6 +516,8 @@ def build_lookup_from_csv(
         table = table.applymap(
             lambda x: x.lower() if isinstance(x, str) else x)
 
+    LOGGER.info('Table after to_lower:\n' + str(table))
+
     # Set 'key_field' as the index of the dataframe
     try:
         table.set_index(key_field, drop=False, inplace=True)
@@ -517,12 +528,15 @@ def build_lookup_from_csv(
                      f" column in the table. Table path: {table_path}.")
         raise
 
+    LOGGER.info('Table after set_index:\n' + str(table))
+
     # Subset dataframe by columns if desired
     if col_list:
         table = table.loc[:, col_list]
 
     # look for NaN values and warn if any are found.
     table_na = table.isna()
+    LOGGER.info('Table NA:\n' + str(table_na))
     if table_na.values.any():
         LOGGER.warning(
             f"Empty or NaN values were found in the table: {table_path}.")
@@ -537,6 +551,7 @@ def build_lookup_from_csv(
         table.dropna(how="all", inplace=True)
     # fill the rest of empty or NaN values with empty string
     table.fillna(value="", inplace=True)
+    LOGGER.info('Table after filling NA:\n' + str(table))
     try:
         lookup_dict = table.to_dict(orient='index')
     except ValueError:
@@ -544,7 +559,7 @@ def build_lookup_from_csv(
         LOGGER.error(f"The 'key_field' : '{key_field}' column values are not"
                      f" unique: {table.index.tolist()}")
         raise
-
+    LOGGER.info('Final lookup dict:\n' + str(lookup_dict))
     return lookup_dict
 
 
@@ -841,7 +856,7 @@ def reclassify_raster(
             each key represent:
 
                 'raster_name' - string for the raster name being reclassified
-                'column_name' - name of the table column that ``value_map`` 
+                'column_name' - name of the table column that ``value_map``
                 dictionary keys came from.
                 'table_name' - table name that ``value_map`` came from.
 
