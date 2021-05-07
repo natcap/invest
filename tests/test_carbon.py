@@ -301,9 +301,7 @@ class CarbonValidationTests(unittest.TestCase):
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys +
-            ['lulc_cur_year',
-             'lulc_fut_year',
-             'lulc_fut_path'])
+            ['lulc_fut_path'])
         self.assertEqual(invalid_keys, expected_missing_keys)
 
     def test_missing_keys_redd(self):
@@ -333,5 +331,7 @@ class CarbonValidationTests(unittest.TestCase):
             ['calc_sequestration',
              'price_per_metric_ton_of_c',
              'discount_rate',
-             'rate_change'])
+             'rate_change',
+             'lulc_cur_year',
+             'lulc_fut_year'])
         self.assertEqual(invalid_keys, expected_missing_keys)
