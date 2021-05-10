@@ -45,7 +45,8 @@ ARGS_SPEC = {
             }},
             "required": True,
             **utils.PROJECTED,
-            "about": ("A GDAL-supported raster file containing an average root "
+            "about": (
+                "A GDAL-supported raster file containing an average root "
                 "restricting layer depth value for each cell."),
             "name": "Depth To Root Restricting Layer"
         },
@@ -57,9 +58,8 @@ ARGS_SPEC = {
             },
             "about": (
                 "A GDAL-supported raster file containing non-zero, average "
-                "annual precipitation values for each cell. The "
-                "precipitation values should be in millimeters "
-                "(mm)."),
+                "annual precipitation values for each cell. The precipitation "
+                "values should be in millimeters (mm)."),
             "name": "Precipitation"
         },
         "pawc_path": {
@@ -67,7 +67,8 @@ ARGS_SPEC = {
             "bands": {1: {"type": "ratio"}},
             "required": True,
             **utils.PROJECTED,
-            "about": ("A GDAL-supported raster file containing plant available "
+            "about": (
+                "A GDAL-supported raster file containing plant available "
                 "water content values for each cell.  The plant available "
                 "water content fraction should be a value between 0 and 1."),
             "name": "Plant Available Water Fraction"
@@ -82,7 +83,8 @@ ARGS_SPEC = {
             "fields": {"ws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
             "required": True,
-            "about": ("A GDAL-supported vector file containing one polygon per "
+            "about": (
+                "A GDAL-supported vector file containing one polygon per "
                 "watershed.  Each polygon that represents a watershed is "
                 "required to have a field 'ws_id' that is a unique integer "
                 "which identifies that watershed."),
@@ -94,7 +96,8 @@ ARGS_SPEC = {
             "fields": {"subws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
             "required": False,
-            "about": ("A GDAL-supported vector file with one polygon per sub- "
+            "about": (
+                "A GDAL-supported vector file with one polygon per sub- "
                 "watershed within the main watersheds specified in the "
                 "Watersheds shapefile.  Each polygon that represents a sub- "
                 "watershed is required to have a field 'subws_id' that is a "
@@ -109,7 +112,8 @@ ARGS_SPEC = {
                 "kc": {"type": "number", "units": None}
             },
             "required": True,
-            "about": ("A CSV table of land use/land cover (LULC) classes, "
+            "about": (
+                "A CSV table of land use/land cover (LULC) classes, "
                 "containing data on biophysical coefficients used in this "
                 "model.  The following columns are required: 'lucode' "
                 "(integer), 'root_depth' (mm), 'Kc' (coefficient)."),
@@ -120,8 +124,9 @@ ARGS_SPEC = {
             "type": "number",
             "units": None,
             "required": True,
-            "about": ("Floating point value on the order of 1 to 30 "
-                "corresponding to the seasonal distribution of precipitation."),
+            "about": (
+                "Floating point value on the order of 1 to 30 corresponding "
+                "to the seasonal distribution of precipitation."),
             "name": "Z parameter"
         },
         "demand_table_path": {
@@ -133,10 +138,11 @@ ARGS_SPEC = {
                     "units": u.meter**3/u.year/u.pixel}
             },
             "required": False,
-            "about": ("A table mapping each LULC class to the estimated "
-                "average consumptive water use for that class. NOTE: the "
-                "accounting for pixel area is important since larger areas "
-                "will consume more water for the same land-cover type."),
+            "about": (
+                "A table mapping each LULC class to the estimated average "
+                "consumptive water use for that class. NOTE: the accounting "
+                "for pixel area is important since larger areas will consume "
+                "more water for the same land-cover type."),
             "name": "Water Demand Table"
         },
         "valuation_table_path": {
@@ -144,59 +150,68 @@ ARGS_SPEC = {
             "columns": {
                 "ws_id": {
                     "type": "code",
-                    "about": ("Watershed ID corresponding to a watershed in "
-                        "the watersheds vector file")
+                    "about": (
+                        "Watershed ID corresponding to a watershed in the "
+                        "watersheds vector file")
                 },
                 "efficiency": {
                     "type": "ratio",
-                    "about": ("Turbine efficiency, the proportion of potential "
+                    "about": (
+                        "Turbine efficiency, the proportion of potential "
                         "energy captured by the turbine. May be obtained from "
                         "the hydropower plant manager. Generally 0.7 to 0.9.")
                 },
                 "fraction": {
                     "type": "ratio",
-                    "about": ("The fraction of inflow water volume that is "
-                        "used to generate energy, obtained from the hydropower "
-                        "plant manager. Managers can release water without "
+                    "about": (
+                        "The fraction of inflow water volume that is used to "
+                        "generate energy, obtained from the hydropower plant "
+                        "manager. Managers can release water without "
                         "generating electricity to satisfy irrigation, "
                         "drinking water or environmental demands.")
                 },
                 "height": {
                     "type": "number",
                     "units": u.meter,
-                    "about": ("The head, measured as the average annual "
-                        "effective height of water behind each dam at the "
-                        "turbine intake.")
+                    "about": (
+                        "The head, measured as the average annual effective "
+                        "height of water behind each dam at the turbine "
+                        "intake.")
                 },
                 "kw_price": {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
-                    "about": ("The price of power produced by the station, in "
-                        "the same currency used for the cost column.")
+                    "about": (
+                        "The price of power produced by the station, in the "
+                        "same currency used for the cost column.")
                 },
                 "cost": {
                     "type": "number",
                     "units": u.currency/u.year,
-                    "about": ("Annual cost of running the hydropower station "
+                    "about": (
+                        "Annual cost of running the hydropower station "
                         "(maintenance and operations costs), in the same "
                         "currency used for the kw_price column.")
                 },
                 "time_span": {
                     "type": "number",
                     "units": u.year,
-                    "about": ("Either the expected lifespan of the hydropower "
+                    "about": (
+                        "Either the expected lifespan of the hydropower "
                         "station or the duration of the land use scenario of "
                         "interest. Used in net present value calculations.")
                 },
                 "discount": {
                     "type": "percent",
-                    "about": ("The discount rate over the time span, used in "
-                        "net present value calculations.")
+                    "about": (
+                        "The discount rate over the time span, used in net "
+                        "present value calculations.")
                 }
             },
             "required": False,
-            "about": ("A table mapping each watershed's hydropower station to "
-                "its associated valuation parameters"),
+            "about": (
+                "A table mapping each watershed's hydropower station to its "
+                "associated valuation parameters"),
             "name": "Hydropower Valuation Table"
         }
     }

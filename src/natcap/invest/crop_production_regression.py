@@ -16,6 +16,7 @@ from . import validation
 
 LOGGER = logging.getLogger(__name__)
 
+
 ARGS_SPEC = {
     "model_name": "Crop Production Regression Model",
     "module": __name__,
@@ -31,8 +32,9 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **utils.LULC_ARG,
             **utils.METER_PROJECTED,
-            "about": ("A raster file, representing integer land use/land code "
-                "covers for each cell. This raster should have a projected "
+            "about": (
+                "A raster file, representing integer land use/land code "
+                "covers for each cell. This rastershould have a projected "
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
                 "results in hectares."),
@@ -43,7 +45,7 @@ ARGS_SPEC = {
                 "crop_name": {
                     "type": "option_string",
                     "options": [
-                        "barley", "maize", "oilpalm", "potato", "rice", 
+                        "barley", "maize", "oilpalm", "potato", "rice",
                         "soybean", "sugarbeet", "sugarcane", "sunflower",
                         "wheat"
                     ]
@@ -51,21 +53,32 @@ ARGS_SPEC = {
                 "lucode": {"type": "code"}
             },
             "required": True,
-            "about": ("A CSV table mapping canonical crop names to land use "
-                "codes contained in the landcover/use raster."),
+            "about": (
+                "A CSV table mapping canonical crop names to land use codes "
+                "contained in the landcover/use raster."),
             "name": "Landcover to Crop Table"
         },
         "fertilization_rate_table_path": {
             "type": "csv",
             "columns": {
                 "crop_name": {"type": "freestyle_string"},
-                "nitrogen_rate": {"type": "number", "units": u.kilogram/u.hectare},
-                "phosphorus_rate": {"type": "number", "units": u.kilogram/u.hectare},
-                "potassium_rate": {"type": "number", "units": u.kilogram/u.hectare}
+                "nitrogen_rate": {
+                    "type": "number",
+                    "units": u.kilogram / u.hectare
+                },
+                "phosphorus_rate": {
+                    "type": "number",
+                    "units": u.kilogram / u.hectare
+                },
+                "potassium_rate": {
+                    "type": "number",
+                    "units": u.kilogram / u.hectare
+                }
             },
             "required": True,
-            "about": ("A table that maps crops to fertilization rates for "
-                "nitrogen, phosphorus, and potassium."),
+            "about": (
+                "A table that maps crops to fertilization rates for nitrogen, "
+                "phosphorus, and potassium."),
             "name": "Fertilization Rate Table Path"
         },
         "aggregate_polygon_path": {
@@ -81,17 +94,19 @@ ARGS_SPEC = {
                 "climate_regression_yield_tables": {
                     "type": "directory",
                     "contents": {
-                        "[CROP]_regression_yield_table.csv": {
+                        "(\\w+)_regression_yield_table.csv": {
                             "type": "csv",
                             "columns": {
                                 'climate_bin': {"type": "code"},
-                                'yield_ceiling': {"type": "number", "units": "?"}, 
-                                'b_nut': {"type": "number", "units": "?"}, 
-                                'b_k2o': {"type": "number", "units": "?"}, 
-                                'c_n': {"type": "number", "units": "?"}, 
-                                'c_p2o5': {"type": "number", "units": "?"}, 
-                                'c_k2o': {"type": "number", "units": "?"}, 
-                                'yield_ceiling_rf': {"type": "number", "units": ("?")}
+                                'yield_ceiling': {
+                                    "type": "number",
+                                    "units": u.metric_ton / u.hectare
+                                },
+                                'b_nut': {"type": "number", "units": "?"},
+                                'b_k2o': {"type": "number", "units": "?"},
+                                'c_n': {"type": "number", "units": "?"},
+                                'c_p2o5': {"type": "number", "units": "?"},
+                                'c_k2o': {"type": "number", "units": "?"}
                             }
                         }
                     }
@@ -100,22 +115,51 @@ ARGS_SPEC = {
                     "type": "csv",
                     "columns": {
                         nutrient: {
-                            "type": "number", "units": "?"
-                        } for nutrient in [
-                            'Protein', 'Lipid', 'Energy', 'Ca', 'Fe', 'Mg', 'Ph', 
-                            'K', 'Na', 'Zn', 'Cu', 'Fl', 'Mn', 
-                            'Se', 'VitA', 'betaC', 'alphaC', 'VitE', 'Crypto',
-                            'Lycopene', 'Lutein', 'betaT', 'gammaT', 'deltaT', 'VitC', 'Thiamin',
-                            'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
-                            'VitK'
-                        ]
+                            "type": "number",
+                            "units": units
+                        } for nutrient, units in {
+                            "protein": u.gram / u.hectogram,
+                            "lipid": u.gram / u.hectogram,       # total lipid
+                            "energy": u.kilojoule / u.hectogram,
+                            "ca": u.milligram / u.hectogram,  # calcium
+                            "fe": u.milligram / u.hectogram,  # iron
+                            "mg": u.milligram / u.hectogram,  # magnesium
+                            "ph": u.milligram / u.hectogram,  # phosphorus
+                            "k": u.milligram / u.hectogram,  # potassium
+                            "na": u.milligram / u.hectogram,  # sodium
+                            "zn": u.milligram / u.hectogram,  # zinc
+                            "cu": u.milligram / u.hectogram,  # copper
+                            "fl": u.microgram / u.hectogram,  # fluoride
+                            "mn": u.milligram / u.hectogram,  # manganese
+                            "se": u.microgram / u.hectogram,  # selenium
+                            "vita": u.IU / u.hectogram,         # vitamin A
+                            "betac": u.microgram / u.hectogram,  # beta carotene
+                            "alphac": u.microgram / u.hectogram,  # alpha carotene
+                            "vite": u.milligram / u.hectogram,  # vitamin e
+                            "crypto": u.microgram / u.hectogram,  # cryptoxanthin
+                            "lycopene": u.microgram / u.hectogram,  # lycopene
+                            "lutein": u.microgram / u.hectogram,  # lutein + zeaxanthin
+                            "betaT": u.milligram / u.hectogram,  # beta tocopherol
+                            "gammaT": u.milligram / u.hectogram,  # gamma tocopherol
+                            "deltaT": u.milligram / u.hectogram,  # delta tocopherol
+                            "vitc": u.milligram / u.hectogram,  # vitamin C
+                            "thiamin": u.milligram / u.hectogram,
+                            "riboflavin": u.milligram / u.hectogram,
+                            "niacin": u.milligram / u.hectogram,
+                            "pantothenic": u.milligram / u.hectogram,  # pantothenic acid
+                            "vitb6": u.milligram / u.hectogram,  # vitamin B6
+                            "folate": u.microgram / u.hectogram,
+                            "vitb12": u.microgram / u.hectogram,  # vitamin B12
+                            "vitk": u.microgram / u.hectogram,  # vitamin K
+                        }.items()
                     }
                 }
             },
             "required": True,
-            "about": ("A path to the InVEST Crop Production Data directory. "
-                "These data would have been included with the InVEST installer "
-                "if selected, or can be manually downloaded from "
+            "about": (
+                "A path to the InVEST Crop Production Data directory. These "
+                "data would have been included with the InVEST installer if "
+                "selected, or can be manually downloaded from "
                 "http://releases.naturalcapitalproject.org/invest. If "
                 "downloaded with InVEST, the default value should be used."),
             "name": "Directory to model data"
@@ -129,8 +173,7 @@ _REGRESSION_TABLE_PATTERN = os.path.join(
     'climate_regression_yield_tables', '%s_regression_yield_table.csv')
 
 _EXPECTED_REGRESSION_TABLE_HEADERS = [
-    'climate_bin', 'yield_ceiling', 'b_nut', 'b_k2o', 'c_n', 'c_p2o5',
-    'c_k2o', 'yield_ceiling_rf']
+    'climate_bin', 'yield_ceiling', 'b_nut', 'b_k2o', 'c_n', 'c_p2o5', 'c_k2o']
 
 # crop_name, yield_regression_id, file_suffix
 _COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN = os.path.join(
@@ -267,7 +310,7 @@ def execute(args):
             * climate_bin_maps (contains [cropname]_climate_bin.tif files)
             * climate_percentile_yield (contains
               [cropname]_percentile_yield_table.csv files)
-              
+
             Please see the InVEST user's guide chapter on crop production for
             details about how to download these data.
 
@@ -436,17 +479,20 @@ def execute(args):
                 crop_name, yield_regression_id)
             create_interpolated_parameter_task = task_graph.add_task(
                 func=pygeoprocessing.warp_raster,
-                args=(coarse_regression_parameter_raster_path,
-                      landcover_raster_info['pixel_size'],
-                      regression_parameter_raster_path_lookup[yield_regression_id],
-                      'cubicspline'),
-                kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
-                        'target_bb': landcover_raster_info['bounding_box']},
+                args=(
+                    coarse_regression_parameter_raster_path,
+                    landcover_raster_info['pixel_size'],
+                    regression_parameter_raster_path_lookup[yield_regression_id],
+                    'cubicspline'),
+                kwargs={
+                    'target_projection_wkt': landcover_raster_info['projection_wkt'],
+                    'target_bb': landcover_raster_info['bounding_box']},
                 target_path_list=[
                     regression_parameter_raster_path_lookup[yield_regression_id]],
                 dependent_task_list=[create_coarse_regression_parameter_task],
-                task_name='create_interpolated_parameter_%s_%s' % (
-                    crop_name, yield_regression_id))
+                task_name='create_interpolated_parameter_%s_%s' %
+                (crop_name,
+                 yield_regression_id))
             dependent_task_list.append(create_interpolated_parameter_task)
 
         LOGGER.info('Calc nitrogen yield')
@@ -459,7 +505,8 @@ def execute(args):
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
                    (regression_parameter_raster_path_lookup['c_n'], 1),
                    (args['landcover_raster_path'], 1),
-                   (crop_to_fertlization_rate_table[crop_name]['nitrogen_rate'], 'raw'),
+                   (crop_to_fertlization_rate_table[crop_name]
+                    ['nitrogen_rate'], 'raw'),
                    (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
                   _x_yield_op,
                   nitrogen_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
@@ -477,7 +524,8 @@ def execute(args):
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
                    (regression_parameter_raster_path_lookup['c_p2o5'], 1),
                    (args['landcover_raster_path'], 1),
-                   (crop_to_fertlization_rate_table[crop_name]['phosphorous_rate'], 'raw'),
+                   (crop_to_fertlization_rate_table[crop_name]
+                    ['phosphorous_rate'], 'raw'),
                    (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
                   _x_yield_op,
                   phosphorous_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
@@ -495,7 +543,8 @@ def execute(args):
                    (regression_parameter_raster_path_lookup['b_k2o'], 1),
                    (regression_parameter_raster_path_lookup['c_k2o'], 1),
                    (args['landcover_raster_path'], 1),
-                   (crop_to_fertlization_rate_table[crop_name]['potassium_rate'], 'raw'),
+                   (crop_to_fertlization_rate_table[crop_name]
+                    ['potassium_rate'], 'raw'),
                    (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
                   _x_yield_op,
                   potassium_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
@@ -571,14 +620,18 @@ def execute(args):
             "Interpolating observed %s raster to landcover.", crop_name)
         interpolate_observed_yield_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
-            args=(zeroed_observed_yield_raster_path,
-                  landcover_raster_info['pixel_size'],
-                  interpolated_observed_yield_raster_path, 'cubicspline'),
-            kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
-                    'target_bb': landcover_raster_info['bounding_box']},
+            args=(
+                zeroed_observed_yield_raster_path,
+                landcover_raster_info['pixel_size'],
+                interpolated_observed_yield_raster_path,
+                'cubicspline'),
+            kwargs={
+                'target_projection_wkt': landcover_raster_info['projection_wkt'],
+                'target_bb': landcover_raster_info['bounding_box']},
             target_path_list=[interpolated_observed_yield_raster_path],
             dependent_task_list=[nodata_to_zero_for_observed_yield_task],
-            task_name='interpolate_observed_yield_to_lulc_%s' % crop_name)
+            task_name='interpolate_observed_yield_to_lulc_%s' %
+            crop_name)
         dependent_task_list.append(interpolate_observed_yield_task)
 
         observed_production_raster_path = os.path.join(
@@ -783,7 +836,7 @@ def tabulate_regression_results(
                     valid_mask = ~numpy.isclose(
                         yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
-                                          valid_mask & (yield_block > 0.0))
+                    valid_mask & (yield_block > 0.0))
                 yield_sum += numpy.sum(yield_block[valid_mask])
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
@@ -942,7 +995,7 @@ def aggregate_regression_results_to_polygons(
             aggregate_table.write('\n')
 
 
-@validation.invest_validator
+@ validation.invest_validator
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 

@@ -54,8 +54,9 @@ ARGS_SPEC = {
                 "globio_lucode": {"type": "code"}
             },
             "required": "not predefined_globio",
-            "about": ("A table mapping each LULC code in the LULC raster input "
-                "to the corresponding GLOBIO LULC code."),
+            "about": (
+                "A table mapping each LULC code in the LULC raster input to "
+                "the corresponding GLOBIO LULC code."),
             "name": "Landcover to GLOBIO Landcover Table"
         },
         "infrastructure_dir": {
@@ -65,7 +66,8 @@ ARGS_SPEC = {
             "type": "directory",
             "contents": {
                 "(\w+)": {
-                    "names": ("Raster(s) and/or vector(s) of any forms of "
+                    "names": (
+                        "Raster(s) and/or vector(s) of any forms of "
                         "infrastructure you want to consider in the MSA "
                         "calculation."),
                     "type": {"raster", "vector"},
@@ -75,10 +77,10 @@ ARGS_SPEC = {
                 }
             },
             "required": True,
-            "about": ("Used in mode (a) and (b) a path to a folder "
-                "containing maps of either GDAL compatible rasters or vectors. "
-                "These data will be used in the infrastructure to calculation "
-                "of MSA."),
+            "about": (
+                "Used in mode (a) and (b) a path to a folder containing maps "
+                "of either GDAL compatible rasters or vectors. These data "
+                "will be used in the infrastructure to calculation of MSA."),
             "name": "Infrastructure Directory"
         },
         "pasture_path": {
@@ -95,16 +97,18 @@ ARGS_SPEC = {
             "bands": {1: {"type": "code"}},
             **utils.PROJECTED,
             "required": "not predefined_globio",
-            "about": ("This should be the potential vegetation map from "
-                "Ramankutty and Foley (1999), or if a different map, it must "
-                "have the same LULC codes.")
+            "about": (
+                "This should be the potential vegetation map from Ramankutty "
+                "and Foley (1999), or if a different map, it must have the "
+                "same LULC codes.")
         },
         "pasture_threshold": {
             **utils.BETWEEN_0_AND_1,
             "type": "ratio",
             "required": "not predefined_globio",
-            "about": ("Areas with a pasture proportion greater than or equal "
-                "to this threshold are considered grassland or livestock "
+            "about": (
+                "Areas with a pasture proportion greater than or equal to "
+                "this threshold are considered grassland or livestock "
                 "grazing. Can be adjusted such that the aggregate land-use "
                 "matches regional statistics."),
             "name": "Pasture Threshold"
@@ -113,7 +117,8 @@ ARGS_SPEC = {
             **utils.BETWEEN_0_AND_1,
             "type": "ratio",
             "required": True,
-            "about": ("A value between 0 and 1 denoting proportion of total "
+            "about": (
+                "A value between 0 and 1 denoting proportion of total "
                 "agriculture that should be classified as 'high input'."),
             "name": "Proportion of of Agriculture Intensified"
         },
@@ -121,10 +126,11 @@ ARGS_SPEC = {
             **utils.BETWEEN_0_AND_1,
             "type": "ratio",
             "required": "not predefined_globio",
-            "about": ("Areas with FFQI (forest fragmentation quality index) "
-                "greater than or equal to this threshold are classified as "
-                "primary forest. The rest is classified as secondary forest. "
-                "Can be adjusted to match regional statistics."),
+            "about": (
+                "Areas with FFQI (forest fragmentation quality index) greater "
+                "than or equal to this threshold are classified as primary "
+                "forest. The rest is classified as secondary forest. Can be "
+                "adjusted to match regional statistics."),
             "name": "Primary Threshold"
         },
         "msa_parameters_path": {
@@ -138,18 +144,20 @@ ARGS_SPEC = {
                 "measurement": {"type": "freestyle_string"},
                 "value": {
                     "type": "freestyle_string",
-                    "about": ("Indicates a number or range of a bin. This may "
-                        "be a single number e.g. 1000, a range (two numbers "
-                        "separated by a hyphen e.g. 1000-2000), or an upper or "
-                        "lower bound (a number preceded by > or < e.g. <5")
+                    "about": (
+                        "Indicates a number or range of a bin. This may be a "
+                        "single number e.g. 1000, a range (two numbers "
+                        "separated by a hyphen e.g. 1000-2000), or an upper "
+                        "or lower bound (a number preceded by > or < e.g. <5")
                 },
                 "msa_x": {"type": "number", "units": "?"},
                 "se": {"type": "number", "units": "?"}
             },
             "required": True,
-            "about": ("A CSV table containing MSA threshold values as defined "
-                "in the user's guide.  Provided for advanced users that may "
-                "wish to change those values."),
+            "about": (
+                "A CSV table containing MSA threshold values as defined in "
+                "the user's guide.  Provided for advanced users that may wish "
+                "to change those values."),
             "name": "MSA Parameter Table"
         },
         "aoi_path": {

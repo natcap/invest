@@ -166,8 +166,9 @@ ARGS_SPEC = {
                     "bands": {1: {"type": "code"}}
                 }
             },
-            "about": ("A CSV table where each row represents the year and path "
-                "to a raster file on disk representing the landcover raster "
+            "about": (
+                "A CSV table where each row represents the year and path to a "
+                "raster file on disk representing the landcover raster "
                 "representing the state of the landscape in that year. "
                 "Landcover codes match those in the biophysical table and in "
                 "the landcover transitions table."),
@@ -178,9 +179,10 @@ ARGS_SPEC = {
             "units": u.year,
             "required": False,
             "name": "Analysis Year",
-            "about": ("An analysis year extends the transient analysis beyond "
-                "the transition years. If not provided, the analysis will halt "
-                "at the final transition year."),
+            "about": (
+                "An analysis year extends the transient analysis beyond the "
+                "transition years. If not provided, the analysis will halt at "
+                "the final transition year."),
         },
         "biophysical_table_path": {
             "name": "Biophysical Table",
@@ -192,76 +194,87 @@ ARGS_SPEC = {
                     "about": "Textual description of the landcover class."},
                 "lulc-class": {
                     "type": "code",
-                    "about": ("The landcover code used in the LULC snapshot "
-                        "rasters to represent this landcover class.")},
+                    "about": (
+                        "The landcover code used in the LULC snapshot rasters "
+                        "to represent this landcover class.")},
                 "biomass-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
-                    "about": ("the initial carbon stocks in the biomass pool "
-                        "for this landcover classification")},
+                    "about": (
+                        "the initial carbon stocks in the biomass pool for "
+                        "this landcover classification")},
                 "soil-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
-                    "about": ("the initial carbon stocks in the soil pool for "
-                        "this landcover classification")},
+                    "about": (
+                        "the initial carbon stocks in the soil pool for this "
+                        "landcover classification")},
                 "litter-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
-                    "about": ("the initial carbon stocks in the litter pool "
-                        "for this landcover classification")},
+                    "about": (
+                        "the initial carbon stocks in the litter pool for "
+                        "this landcover classification")},
                 "biomass-half-life": {
                     "type": "number",
                     "units": u.year,
                     "about": "the half-life of carbon in the biomass pool."},
                 "biomass-low-impact-disturb": {
                     "type": "ratio",
-                    "about": ("ratio of carbon stock in the biomass pool that "
-                        "is disturbed when a cell transitions away from this "
+                    "about": (
+                        "ratio of carbon stock in the biomass pool that is "
+                        "disturbed when a cell transitions away from this "
                         "landcover class in a low-impact disturbance.")},
                 "biomass-med-impact-disturb": {
                     "type": "ratio",
-                    "about": ("ratio of carbon stock in the biomass pool that "
-                        "is disturbed when a cell transitions away from this "
+                    "about": (
+                        "ratio of carbon stock in the biomass pool that is "
+                        "disturbed when a cell transitions away from this "
                         "landcover class in a medium-impact disturbance.")},
                 "biomass-high-impact-disturb": {
                     "type": "ratio",
-                    "about": ("ratio of carbon stock in the biomass pool that "
-                        "is disturbed when a cell transitions away from this "
+                    "about": (
+                        "ratio of carbon stock in the biomass pool that is "
+                        "disturbed when a cell transitions away from this "
                         "landcover class in a high-impact disturbance.")},
                 "biomass-yearly-accumulation": {
                     "type": "number",
                     "units": u.megatonne/u.hectare/u.year,
-                    "about": ("the annual rate of CO2E accumulation in the "
-                        "biomass pool.")},
+                    "about": (
+                        "the annual rate of CO2E accumulation in the biomass "
+                        "pool.")},
                 "soil-half-life": {
                     "type": "number",
                     "units": u.year,
                     "about": "the half-life of carbon in the soil pool."},
                 "soil-low-impact-disturb": {
                     "type": "ratio",
-                    "about": ("ratio of carbon stock in the soil pool that is "
+                    "about": (
+                        "ratio of carbon stock in the soil pool that is "
                         "disturbed when a cell transitions away from this "
                         "landcover class in a low-impact disturbance.")},
                 "soil-med-impact-disturb": {
                     "type": "ratio",
-                    "about": ("ratio of carbon stock in the soil pool that is "
+                    "about": (
+                        "ratio of carbon stock in the soil pool that is "
                         "disturbed when a cell transitions away from this "
                         "landcover class in a medium-impact disturbance.")},
                 "soil-high-impact-disturb": {
                     "type": "ratio",
-                    "about": ("ratio of carbon stock in the soil pool that is "
+                    "about": (
+                        "ratio of carbon stock in the soil pool that is "
                         "disturbed when a cell transitions away from this "
                         "landcover class in a high-impact disturbance.")},
                 "soil-yearly-accumulation": {
                     "type": "number",
                     "units": u.megatonne/u.hectare/u.year,
-                    "about": ("Annual rate of CO2E accumulation in the soil "
-                        "pool.")},
+                    "about": (
+                        "Annual rate of CO2E accumulation in the soil pool.")},
                 "litter-yearly-accumulation": {
                     "type": "number",
                     "units": u.megatonne/u.hectare/u.year,
-                    "about": ("Annual rate of CO2E accumulation in the litter "
-                        "pool.")}
+                    "about": (
+                        "Annual rate of CO2E accumulation in the litter pool.")}
             },
             "about": "Table of biophysical properties for each LULC class"
         },
@@ -272,8 +285,9 @@ ARGS_SPEC = {
             "columns": {
                 'lulc-class': {
                     "type": "code",
-                    "description": ("LULC codes matching the codes in the "
-                        "biophysical table")},
+                    "description": (
+                        "LULC codes matching the codes in the biophysical "
+                        "table")},
                 '(?!lulc-class)(^.+$)': {
                     "type": "option_string",
                     "options": [
@@ -283,38 +297,42 @@ ARGS_SPEC = {
                         'low-impact-disturb',
                         'NCC',
                         ''],
-                    "description": ("One column header for each LULC code in "
-                        "the biophysical table. Field values within the "
+                    "description": (
+                        "One column header for each LULC code in the "
+                        "biophysical table. Field values within the "
                         "transition matrix describe the change in carbon when "
-                        "transitioning from the LULC class along the x axis to "
-                        "theLULC class along the y axis, and must have one of "
-                        "the following values: 'accum', representing a state "
-                        "of carbon accumulation, 'high-impact-disturb', 'med- "
-                        "impact-disturb', 'low_impact_disturb', representing "
-                        "appropriate states of carbon disturbance rates, or "
-                        "'NCC', representing no change to carbon.  Cells may "
-                        "also be empty, but only if this transition never "
-                        "takes place.")}
+                        "transitioning from the LULC class along the x axis "
+                        "to theLULC class along the y axis, and must have one "
+                        "of the following values: 'accum', representing a "
+                        "state of carbon accumulation, 'high-impact-disturb', "
+                        "'med- impact-disturb', 'low_impact_disturb', "
+                        "representing appropriate states of carbon "
+                        "disturbance rates, or 'NCC', representing no change "
+                        "to carbon.  Cells may also be empty, but only if "
+                        "this transition never takes place.")}
             },
-            "about": ("A transition matrix mapping the type of carbon action "
-                "undergone when one landcover type transitions to another. The "
-                "Coastal Blue Carbon preprocessor exists to help create this "
-                "table for you."),
+            "about": (
+                "A transition matrix mapping the type of carbon action "
+                "undergone when one landcover type transitions to another. "
+                "The Coastal Blue Carbon preprocessor exists to help create "
+                "this table for you."),
         },
         "do_economic_analysis": {
             "name": "Calculate Net Present Value of Sequestered Carbon",
             "type": "boolean",
             "required": False,
-            "about": ("A boolean value indicating whether the model should run "
-                "an economic analysis."),
+            "about": (
+                "A boolean value indicating whether the model should run an "
+                "economic analysis."),
         },
         "use_price_table": {
             "name": "Use Price Table",
             "type": "boolean",
             "required": False,
-            "about": ("boolean value indicating whether a price table is "
-                "included in the arguments and to be used or a price and "
-                "interest rate is provided and to be used instead."),
+            "about": (
+                "boolean value indicating whether a price table is included "
+                "in the arguments and to be used or a price and interest rate "
+                "is provided and to be used instead."),
         },
         "price": {
             "name": "Price",
@@ -337,20 +355,23 @@ ARGS_SPEC = {
                 "year": {
                     "type": "number",
                     "units": u.year,
-                    "about": "Each year from the snapshot year to analysis year"},
+                    "about": (
+                        "Each year from the snapshot year to analysis year")},
                 "price": {
                     "type": "number",
                     "units": u.currency/u.megatonne,
                     "about": "Price of CO2E in that year"}
             },
-            "about": ("Table of annual CO2E prices. Can be used in place of "
-                "price and interest rate inputs."),
+            "about": (
+                "Table of annual CO2E prices. Can be used in place of price "
+                "and interest rate inputs."),
         },
         "discount_rate": {
             "name": "Discount Rate",
             "type": "percent",
             "required": "do_economic_analysis",
-            "about": ("The discount rate on future valuations of sequestered "
+            "about": (
+                "The discount rate on future valuations of sequestered "
                 "carbon, compounded yearly."),
         },
     }

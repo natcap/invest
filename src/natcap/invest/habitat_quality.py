@@ -32,24 +32,26 @@ ARGS_SPEC = {
         "lulc_cur_path": {
             **utils.LULC_ARG,
             **utils.PROJECTED,
-            "about": ("A GDAL-supported raster file.  The current LULC must "
-                "have its' own threat rasters, where each threat raster file "
-                "path is defined in the <b>Threats Data</b> CSV.<br/><br/> "
-                "Each cell should represent a LULC code as an Integer. The "
-                "dataset should be in a projection where the units are in "
-                "meters and the projection used should be defined.  The LULC "
-                "codes must match the codes in the Sensitivity table."),
+            "about": (
+                "A GDAL-supported raster file.  The current LULC must have "
+                "its' own threat rasters, where each threat raster file path "
+                "is defined in the <b>Threats Data</b> CSV.<br/><br/> Each "
+                "cell should represent a LULC code as an Integer. The dataset "
+                "should be in a projection where the units are in meters and "
+                "the projection used should be defined.  The LULC codes must "
+                "match the codes in the Sensitivity table."),
             "name": "Current Land Cover"
         },
         "lulc_fut_path": {
             **utils.LULC_ARG,
             **utils.PROJECTED,
             "required": False,
-            "about": ("Optional.  A GDAL-supported raster file.  Inputting a "
-                "future LULC will generate degradation, habitat quality, and "
-                "habitat rarity (If baseline is input) outputs.  The future "
-                "LULC must have it's own threat rasters, where each threat "
-                "raster file path is defined in the <b>Threats Data</b> CSV. "
+            "about": (
+                "Optional.  A GDAL-supported raster file.  Inputting a future "
+                "LULC will generate degradation, habitat quality, and habitat "
+                "rarity (If baseline is input) outputs.  The future LULC must "
+                "have it's own threat rasters, where each threat raster file "
+                "path is defined in the <b>Threats Data</b> CSV. "
                 "<br/><br/>Each cell should represent a LULC code as an "
                 "Integer.  The dataset should be in a projection where the "
                 "units are in meters and the projection used should be "
@@ -61,10 +63,11 @@ ARGS_SPEC = {
             **utils.LULC_ARG,
             **utils.PROJECTED,
             "required": False,
-            "about": ("Optional.  A GDAL-supported raster file.  If the "
-                "baseline LULC is provided, rarity outputs will be created for "
-                "the current and future LULC. The baseline LULC can have it's "
-                "own threat rasters (optional), where each threat raster file "
+            "about": (
+                "Optional.  A GDAL-supported raster file.  If the baseline "
+                "LULC is provided, rarity outputs will be created for the "
+                "current and future LULC. The baseline LULC can have it's own "
+                "threat rasters (optional), where each threat raster file "
                 "path is defined in the <b>Threats Data</b> CSV. If there are "
                 "no threat rasters and the threat paths are left blank in the "
                 "CSV column, degradation and habitat quality outputs will not "
@@ -73,8 +76,8 @@ ARGS_SPEC = {
                 "should be in a projection where the units are in meters and "
                 "the projection used should be defined. The LULC codes must "
                 "match the codes in the Sensitivity table.  If possible the "
-                "baseline map should refer to a time when intensive management "
-                "of the landscape was relatively rare."),
+                "baseline map should refer to a time when intensive "
+                "management of the landscape was relatively rare."),
             "name": "Baseline Land Cover"
         },
         "threats_table_path": {
@@ -84,14 +87,16 @@ ARGS_SPEC = {
                 "max_dist": {
                     "type": "number",
                     "units": u.kilometer,
-                    "about": ("The maximum distance over which each threat "
-                        "affects habitat quality. The impact of each "
-                        "degradation source will decline to zero at this "
-                        "maximum distance.")
+                    "about": (
+                        "The maximum distance over which each threat affects "
+                        "habitat quality. The impact of each degradation "
+                        "source will decline to zero at this maximum "
+                        "distance.")
                 },
                 "weight": {
                     "type": "ratio",
-                    "about": ("The impact of each threat on habitat quality, "
+                    "about": (
+                        "The impact of each threat on habitat quality, "
                         "relative to other threats.")
                 },
                 "decay": {
@@ -115,11 +120,11 @@ ARGS_SPEC = {
                 }
             },
             "required": True,
-            "about": ("Table mapping each threat of interest to its properties "
-                "and maps of its distribution. The raster columns give "
-                "filepaths to maps of the relative intensity of each threat, "
-                "ranging from 0 to 1. Paths are relative to the threats table "
-                "path."),
+            "about": (
+                "Table mapping each threat of interest to its properties and "
+                "maps of its distribution. The raster columns give filepaths "
+                "to maps of the relative intensity of each threat, ranging "
+                "from 0 to 1. Paths are relative to the threats table path."),
             "name": "Threats Table"
         },
         "access_vector_path": {
@@ -131,9 +136,10 @@ ARGS_SPEC = {
             "fields": {"access": {"type": "ratio"}},
             "geometries": utils.POLYGONS,
             "required": False,
-            "about": ("Map of the relative protection that legal, "
-                "institutional, social, and physical barriers provide against "
-                "threats. Any cells not covered by a polygon will be set to 1."),
+            "about": (
+                "Map of the relative protection that legal, institutional, "
+                "social, and physical barriers provide against threats. Any "
+                "cells not covered by a polygon will be set to 1."),
             "name": "Accessibility to Threats"
         },
         "sensitivity_table_path": {
@@ -145,14 +151,16 @@ ARGS_SPEC = {
                 "(?!lulc|habitat|name)(^.+$)": {
                     "names": "One for each threat in the threats table",
                     "type": "ratio",
-                    "about": ("The relative sensitivity of each LULC class to "
-                        "each type of threat.")
+                    "about": (
+                        "The relative sensitivity of each LULC class to each "
+                        "type of threat.")
                 }
             },
             "required": True,
-            "about": ("Table mapping each LULC class to data about the "
-                "species' habitat preference and threat sensitivity in areas "
-                "with that LULC."),
+            "about": (
+                "Table mapping each LULC class to data about the species' "
+                "habitat preference and threat sensitivity in areas with that "
+                "LULC."),
             "name": "Sensitivity of Land Cover Types to Each Threat"
         },
         "half_saturation_constant": {
@@ -160,15 +168,16 @@ ARGS_SPEC = {
             "type": "number",
             "units": None,
             "required": True,
-            "about": ("A positive floating point value that is defaulted at "
-                "0.05. This is the value of the parameter k in equation (4). "
-                "In general, set k to half of the highest grid cell "
-                "degradation value on the landscape.  To perform this model "
-                "calibration the model must be run once in order to find the "
-                "highest degradation value and set k for the provided "
-                "landscape.  Note that the choice of k only determines the "
-                "spread and central tendency of habitat quality cores and does "
-                "not affect the rank."),
+            "about": (
+                "A positive floating point value that is defaulted at 0.05. "
+                "This is the value of the parameter k in equation (4). In "
+                "general, set k to half of the highest grid cell degradation "
+                "value on the landscape.  To perform this model calibration "
+                "the model must be run once in order to find the highest "
+                "degradation value and set k for the provided landscape. "
+                "Note that the choice of k only determines the spread and "
+                "central tendency of habitat quality cores and does not "
+                "affect the rank."),
             "name": "Half-Saturation Constant"
         },
     }

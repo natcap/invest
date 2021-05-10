@@ -98,15 +98,17 @@ ARGS_SPEC = {
         "aoi_path": {
             **utils.AREA,
             "required": True,
-            "about": ("A GDAL-supported vector file representing the area of "
+            "about": (
+                "A GDAL-supported vector file representing the area of "
                 "interest where the model will run the analysis."),
             "name": "Area of Interest (Vector)"
         },
         "hostname": {
             "type": "freestyle_string",
             "required": False,
-            "about": ("FQDN to a recreation server.  If not provided, a "
-                "default is assumed."),
+            "about": (
+                "FQDN to a recreation server.  If not provided, a default is "
+                "assumed."),
             "name": "hostname"
         },
         "port": {
@@ -116,7 +118,8 @@ ARGS_SPEC = {
             "type": "number",
             "units": None,
             "required": False,
-            "about": ("the port on ``hostname`` to use for contacting the "
+            "about": (
+                "the port on ``hostname`` to use for contacting the "
                 "recreation server."),
             "name": "port"
         },
@@ -137,16 +140,18 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.year,
             "required": True,
-            "about": ("Year to end PUD calculations, date ends and includes "
-                "Dec 31st."),
+            "about": (
+                "Year to end PUD calculations, date ends and includes Dec "
+                "31st."),
             "name": "End Year (inclusive, must be <= 2017)"
         },
         "grid_aoi": {
             "type": "boolean",
             "required": False,
-            "about": ("If true the polygon vector in ``args['aoi_path']`` "
-                "should be gridded into a new vector and the recreation model "
-                "should be executed on that"),
+            "about": (
+                "If true the polygon vector in ``args['aoi_path']`` should be "
+                "gridded into a new vector and the recreation model should be "
+                "executed on that"),
             "name": "Grid the AOI"
         },
         "grid_type": {
@@ -158,8 +163,9 @@ ARGS_SPEC = {
             },
             "type": "option_string",
             "required": "grid_aoi",
-            "about": ("Optional, but must exist if args['grid_aoi'] is True. "
-                "Is one of 'hexagon' or 'square' and indicates the style of "
+            "about": (
+                "Optional, but must exist if args['grid_aoi'] is True. Is one "
+                "of 'hexagon' or 'square' and indicates the style of "
                 "gridding."),
             "name": "Grid Type"
         },
@@ -170,33 +176,37 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.projection_unit,
             "required": "grid_aoi",
-            "about": ("The size of the grid units measured in the projection "
-                "units of the AOI. For example, UTM projections use meters."),
+            "about": (
+                "The size of the grid units measured in the projection units "
+                "of the AOI. For example, UTM projections use meters."),
             "name": "Cell Size"
         },
         "compute_regression": {
             "type": "boolean",
             "required": False,
-            "about": ("If True, then process the predictor table and scenario "
-                "table (if present)."),
+            "about": (
+                "If True, then process the predictor table and scenario table "
+                "(if present)."),
             "name": "Compute Regression"
         },
         "predictor_table_path": {
             "type": "csv",
             "columns": predictor_table_columns,
             "required": "compute_regression",
-            "about": ("A table that maps predictor IDs to spatial files and "
-                "their predictor metric types. The file paths can be absolute "
-                "or relative to the table."),
+            "about": (
+                "A table that maps predictor IDs to spatial files and their "
+                "predictor metric types. The file paths can be absolute or "
+                "relative to the table."),
             "name": "Predictor Table"
         },
         "scenario_predictor_table_path": {
             "type": "csv",
             "columns": predictor_table_columns,
             "required": False,
-            "about": ("A table of future or alternative scenario predictors. "
-                "Maps IDs to files and their types. The file paths can be "
-                "absolute or relative to the table."),
+            "about": (
+                "A table of future or alternative scenario predictors. Maps "
+                "IDs to files and their types. The file paths can be absolute "
+                "or relative to the table."),
             "name": "Scenario Predictor Table"
         }
     }

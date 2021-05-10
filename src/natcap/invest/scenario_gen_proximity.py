@@ -58,9 +58,10 @@ ARGS_SPEC = {
             },
             "type": "freestyle_string",
             "required": True,
-            "about": ("A space separated string of landcover codes that are "
-                "used to determine the proximity when referring to 'towards' "
-                "or 'away' from the base landcover codes"),
+            "about": (
+                "A space separated string of landcover codes that are used to "
+                "determine the proximity when referring to 'towards' or "
+                "'away' from the base landcover codes"),
             "name": "Focal Landcover Codes"
         },
         "convertible_landcover_codes": {
@@ -71,7 +72,8 @@ ARGS_SPEC = {
             },
             "type": "freestyle_string",
             "required": True,
-            "about": ("A space separated string of landcover codes that can be "
+            "about": (
+                "A space separated string of landcover codes that can be "
                 "converted in the generation phase found in "
                 "`args['base_lulc_path']`."),
             "name": "Convertible Landcover Codes"
@@ -81,24 +83,27 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.count,
             "required": True,
-            "about": ("This parameter is used to divide the conversion "
-                "simulation into equal subareas of the requested max area. "
-                "During each sub-step the distance transform is recalculated "
-                "from the base landcover codes.  This can affect the final "
-                "result if the base types are also convertible types."),
+            "about": (
+                "This parameter is used to divide the conversion simulation "
+                "into equal subareas of the requested max area. During each "
+                "sub-step the distance transform is recalculated from the "
+                "base landcover codes.  This can affect the final result if "
+                "the base types are also convertible types."),
             "name": "Number of Steps in Conversion"
         },
         "aoi_path": {
             **utils.AOI_ARG,
             **utils.PROJECTED,
             "required": False,
-            "about": ("This is a set of polygons that will be used to "
-                "aggregate carbon values at the end of the run if provided."),
+            "about": (
+                "This is a set of polygons that will be used to aggregate "
+                "carbon values at the end of the run if provided."),
         },
         "convert_farthest_from_edge": {
             "type": "boolean",
             "required": True,
-            "about": ("This scenario converts the convertible landcover codes "
+            "about": (
+                "This scenario converts the convertible landcover codes "
                 "starting at the furthest pixel from the closest base "
                 "landcover codes and moves inward."),
             "name": "Convert farthest from edge"
@@ -106,9 +111,10 @@ ARGS_SPEC = {
         "convert_nearest_to_edge": {
             "type": "boolean",
             "required": True,
-            "about": ("This scenario converts the convertible landcover codes "
-                "starting at the closest pixel in the base landcover codes and "
-                "moves outward."),
+            "about": (
+                "This scenario converts the convertible landcover codes "
+                "starting at the closest pixel in the base landcover codes "
+                "and moves outward."),
             "name": "Convert nearest to edge"
         }
     }

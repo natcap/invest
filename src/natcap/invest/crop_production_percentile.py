@@ -35,7 +35,8 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **utils.LULC_ARG,
             **utils.METER_PROJECTED,
-            "about": ("A raster file, representing integer land use/land code "
+            "about": (
+                "A raster file, representing integer land use/land code "
                 "covers for each cell. This raster should have a projected "
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
@@ -48,14 +49,14 @@ ARGS_SPEC = {
                 "crop_name": {
                     "type": "option_string",
                     "options": [
-                        "abaca", "agave", "alfalfa", "almond", "aniseetc", 
-                        "apple", "apricot", "areca", "artichoke", "asparagus", 
-                        "avocado", "bambara", "banana", "barley", "bean", 
-                        "beetfor", "berrynes", "blueberry", "brazil", 
-                        "broadbean", "buckwheat", "cabbage", "cabbagefor", 
-                        "canaryseed", "carob", "carrot", "carrotfor", "cashew", 
-                        "cashewapple", "cassava", "castor", "cauliflower", 
-                        "cerealnes", "cherry", "chestnut", "chickpea", "chicory", 
+                        "abaca", "agave", "alfalfa", "almond", "aniseetc",
+                        "apple", "apricot", "areca", "artichoke", "asparagus",
+                        "avocado", "bambara", "banana", "barley", "bean",
+                        "beetfor", "berrynes", "blueberry", "brazil", "canaryseed", "carob", "carrot", "carrotfor", "cashew",
+                        "broadbean", "buckwheat", "cabbage", "cabbagefor",
+
+                        "cashewapple", "cassava", "castor", "cauliflower",
+                        "cerealnes", "cherry", "chestnut", "chickpea", "chicory",
                         "chilleetc", "cinnamon", "citrusnes", "clove", "clover",
                         "cocoa", "coconut", "coffee", "cotton", "cowpea", "cranberry",
                         "cucumberetc", "currant", "date", "eggplant", "fibrenes", "fig", "flax",
@@ -83,8 +84,9 @@ ARGS_SPEC = {
                 }
             },
             "required": True,
-            "about": ("A CSV table mapping canonical crop names to the land "
-                "use codes in the landcover/use raster."),
+            "about": (
+                "A CSV table mapping canonical crop names to the land use "
+                "codes in the landcover/use raster."),
             "name": "Landcover to Crop Table"
         },
         "aggregate_polygon_path": {
@@ -97,18 +99,31 @@ ARGS_SPEC = {
             "contents": {
                 "climate_percentile_yield_tables": {
                     "type": "directory",
-                    "about": ("Table mapping each climate bin to yield "
-                        "percentiles for each crop"),
+                    "about": (
+                        "Table mapping each climate bin to yield percentiles "
+                        "for each crop"),
                     "contents": {
                         "[CROP]_percentile_yield_table.csv": {
                             "names": "One for each of the 175 supported crops",
                             "type": "csv",
                             "columns": {
                                 "climate_bin": {"type": "code"},
-                                "yield_25th": {"type": "number", "units": u.metric_ton/u.hectare},
-                                "yield_50th": {"type": "number", "units": u.metric_ton/u.hectare},
-                                "yield_75th": {"type": "number", "units": u.metric_ton/u.hectare},
-                                "yield_95th": {"type": "number", "units": u.metric_ton/u.hectare}
+                                "yield_25th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                },
+                                "yield_50th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                },
+                                "yield_75th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                },
+                                "yield_95th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                }
                             }
                         },
                     }
@@ -117,7 +132,7 @@ ARGS_SPEC = {
                     "type": "directory",
                     "about": "Maps of climate bins for each crop",
                     "contents": {
-                        "extendedclimatebins[CROP]": {
+                        "extendedclimatebins(\\w+)": {
                             "names": "One for each of the 175 supported crops",
                             "type": "raster",
                             "bands": {1: {"type": "code"}},
@@ -128,28 +143,58 @@ ARGS_SPEC = {
                     "type": "directory",
                     "about": "Maps of actual observed yield for each crop",
                     "contents": {
-                        "[CROP]_observed_yield.tif": {
+                        "(\\w+)_observed_yield.tif": {
                             "type": "raster",
-                            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
+                            "bands": {1: {
+                                "type": "number",
+                                "units": u.metric_ton/u.hectare
+                            }}
                         }
                     }
                 },
                 "crop_nutrient.csv": {
                     "type": "csv",
-                    "about": "Nutritional data for each crop",
                     "columns": {
                         nutrient: {
-                        "type": "number", "units": "?"
-                        } for nutrient in [
-                            'Protein', 'Lipid', 'Energy', 'Ca', 'Fe', 'Mg', 'Ph', 
-                            'K', 'Na', 'Zn', 'Cu', 'Fl', 'Mn', 
-                            'Se', 'VitA', 'betaC', 'alphaC', 'VitE', 'Crypto',
-                            'Lycopene', 'Lutein', 'betaT', 'gammaT', 'deltaT', 'VitC', 'Thiamin',
-                            'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
-                            'VitK'
-                        ]
+                            "type": "number",
+                            "units": units
+                        } for nutrient, units in {
+                            "protein":     u.gram/u.hectogram,
+                            "lipid":       u.gram/u.hectogram,       # total lipid
+                            "energy":      u.kilojoule/u.hectogram,
+                            "ca":          u.milligram/u.hectogram,  # calcium
+                            "fe":          u.milligram/u.hectogram,  # iron
+                            "mg":          u.milligram/u.hectogram,  # magnesium
+                            "ph":          u.milligram/u.hectogram,  # phosphorus
+                            "k":           u.milligram/u.hectogram,  # potassium
+                            "na":          u.milligram/u.hectogram,  # sodium
+                            "zn":          u.milligram/u.hectogram,  # zinc
+                            "cu":          u.milligram/u.hectogram,  # copper
+                            "fl":          u.microgram/u.hectogram,  # fluoride
+                            "mn":          u.milligram/u.hectogram,  # manganese
+                            "se":          u.microgram/u.hectogram,  # selenium
+                            "vita":        u.IU/u.hectogram,         # vitamin A
+                            "betac":       u.microgram/u.hectogram,  # beta carotene
+                            "alphac":      u.microgram/u.hectogram,  # alpha carotene
+                            "vite":        u.milligram/u.hectogram,  # vitamin e
+                            "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
+                            "lycopene":    u.microgram/u.hectogram,  # lycopene
+                            "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
+                            "betaT":       u.milligram/u.hectogram,  # beta tocopherol
+                            "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
+                            "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
+                            "vitc":        u.milligram/u.hectogram,  # vitamin C
+                            "thiamin":     u.milligram/u.hectogram,
+                            "riboflavin":  u.milligram/u.hectogram,
+                            "niacin":      u.milligram/u.hectogram,
+                            "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
+                            "vitb6":       u.milligram/u.hectogram,  # vitamin B6
+                            "folate":      u.microgram/u.hectogram,
+                            "vitb12":      u.microgram/u.hectogram,  # vitamin B12
+                            "vitk":        u.microgram/u.hectogram,  # vitamin K
+                        }.items()
                     }
-                }  
+                }
             },
             "required": True,
             "validation_options": {
@@ -255,7 +300,7 @@ def execute(args):
             * climate_bin_maps (contains [cropname]_climate_bin.tif files)
             * climate_percentile_yield (contains
               [cropname]_percentile_yield_table.csv files)
-              
+
             Please see the InVEST user's guide chapter on crop production for
             details about how to download these data.
         args['n_workers'] (int): (optional) The number of worker processes to

@@ -54,16 +54,18 @@ ARGS_SPEC = {
             "type": "directory",
             "contents": {
                 "[ET0_MONTH]": {
-                    "names": ("Twelve files, one for each month. File names "
-                        "mustend with the month number (1-12)."),
+                    "names": (
+                        "Twelve files, one for each month. File names mustend "
+                        "with the month number (1-12)."),
                     "type": "raster",
                     "bands": {1: {"type": "number", "units": u.millimeter}}
                 }
             },
             "required": "not user_defined_local_recharge",
-            "about": ("The selected folder has a list of ET0 files with a "
-                "specified format. Only .tif files should be in this folder "
-                "(no .tfw, .xml, etc files)."),
+            "about": (
+                "The selected folder has a list of ET0 files with a specified "
+                "format. Only .tif files should be in this folder (no .tfw, "
+                ".xml, etc files)."),
             "name": "ET0 Directory"
         },
         "precip_dir": {
@@ -73,14 +75,16 @@ ARGS_SPEC = {
             "type": "directory",
             "contents": {
                 "[PRECIP_MONTH]": {
-                    "names": ("Twelve files, one for each month. File names "
-                        "mustend with the month number (1-12)."),
+                    "names": (
+                        "Twelve files, one for each month. File names mustend "
+                        "with the month number (1-12)."),
                     "type": "raster",
                     "bands": {1: {"type": "number", "units": u.millimeter}}
                 }
             },
             "required": "not user_defined_local_recharge",
-            "about": ("The selected folder has a list of monthly precipitation "
+            "about": (
+                "The selected folder has a list of monthly precipitation "
                 "files with a specified format. Only .tif files should be in "
                 "this folder (no .tfw, .xml, etc files)"),
             "name": "Precipitation Directory"
@@ -111,20 +115,23 @@ ARGS_SPEC = {
                     "names": "One for each soil group in A, B, C, D",
                     "type": "number",
                     "units": None,
-                    "about": ("Curve number values for each combination of "
-                        "soil type and LULC class. No 0s are allowed.")
+                    "about": (
+                        "Curve number values for each combination of soil "
+                        "type and LULC class. No 0s are allowed.")
                 },
                 "kc_[MONTH]": {
                     "names": "One for each month numbered 1-12",
                     "type": "number",
                     "units": None,
-                    "about": ("Monthly crop/vegetation coefficient (Kc) values "
-                        "for each LULC class.")
+                    "about": (
+                        "Monthly crop/vegetation coefficient (Kc) values for "
+                        "each LULC class.")
                 }
             },
             "required": True,
-            "about": ("A CSV table containing model information corresponding "
-                "to each of the land use classes in the LULC raster input."),
+            "about": (
+                "A CSV table containing model information corresponding to "
+                "each of the land use classes in the LULC raster input."),
             "name": "Biophysical Table"
         },
         "rain_events_table_path": {
@@ -133,8 +140,9 @@ ARGS_SPEC = {
                 "month": {
                     "type": "number",
                     "units": None,
-                    "about": ("Values are the numbers 1-12 corresponding to "
-                        "each month.")
+                    "about": (
+                        "Values are the numbers 1-12 corresponding to each "
+                        "month.")
                 },
                 "events": {
                     "type": "number",
@@ -142,39 +150,45 @@ ARGS_SPEC = {
                     "about": "The number of rain events in that month"
                 }
             },
-            "required": ("(not user_defined_local_recharge) & (not "
+            "required": (
+                "(not user_defined_local_recharge) & (not "
                 "user_defined_climate_zones)"),
-            "about": ("Not required if args['user_defined_local_recharge'] is "
-                "True or args['user_defined_climate_zones'] is True."),
+            "about": (
+                "Not required if args['user_defined_local_recharge'] is True "
+                "or args['user_defined_climate_zones'] is True."),
             "name": "Rain Events Table"
         },
         "alpha_m": {
             "type": "freestyle_string",
             "units": None,
             "required": "not monthly_alpha",
-            "about": ("Required if args['monthly_alpha'] is false.  Is the "
-                "proportion of upslope annual available local recharge that is "
-                "available in month m."),
+            "about": (
+                "Required if args['monthly_alpha'] is false.  Is the "
+                "proportion of upslope annual available local recharge that "
+                "is available in month m."),
             "name": "alpha_m Parameter"
         },
         "beta_i": {
             "type": "ratio",
             "required": True,
-            "about": ("Is the fraction of the upgradient subsidy that is "
-                "available for downgradient evapotranspiration."),
+            "about": (
+                "Is the fraction of the upgradient subsidy that is available "
+                "for downgradient evapotranspiration."),
             "name": "beta_i Parameter"
         },
         "gamma": {
             "type": "ratio",
             "required": True,
-            "about": ("The fraction of pixel local recharge that is available "
-                "to downgradient pixels."),
+            "about": (
+                "The fraction of pixel local recharge that is available to "
+                "downgradient pixels."),
             "name": "gamma Parameter"
         },
         "user_defined_local_recharge": {
             "type": "boolean",
             "required": True,
-            "about": ("If True, indicates user will provide pre-defined local "
+            "about": (
+                "If True, indicates user will provide pre-defined local "
                 "recharge raster layer"),
             "name": "User Defined Recharge Layer (Advanced)"
         },
@@ -186,16 +200,18 @@ ARGS_SPEC = {
             }},
             "required": "user_defined_local_recharge",
             **utils.PROJECTED,
-            "about": ("A path to a GDAL-compatible raster map of local "
-                "recharge values. Required if "
-                "args['user_defined_local_recharge'] is True."),
+            "about": (
+                "A path to a GDAL-compatible raster map of local recharge "
+                "values. Required if args['user_defined_local_recharge'] is "
+                "True."),
             "name": "Local Recharge ("
         },
         "user_defined_climate_zones": {
             "type": "boolean",
             "required": True,
-            "about": ("If True, user provides a climate zone rain events table "
-                "and a climate zone raster map in lieu of a global rain events "
+            "about": (
+                "If True, user provides a climate zone rain events table and "
+                "a climate zone raster map in lieu of a global rain events "
                 "table."),
             "name": "Climate Zones (Advanced)"
         },
@@ -204,17 +220,20 @@ ARGS_SPEC = {
             "columns": {
                 "cz_id": {
                     "type": "code",
-                    "about": ("Climate zone numbers, integers which correspond "
-                        "to values found in the Climate zone raster")},
+                    "about": (
+                        "Climate zone numbers, integers which correspond to "
+                        "values found in the Climate zone raster")},
                 "[MONTH]": {
                     "names": f"One for each month in {MONTH_ID_TO_LABEL}",
                     "type": "number",
                     "units": None,
-                    "about": ("The number of rain events that occur in that "
-                        "month in that climate zone")}
+                    "about": (
+                        "The number of rain events that occur in that month "
+                        "in that climate zone")}
             },
             "required": "user_defined_climate_zones",
-            "about": ("Required if args['user_defined_climate_zones'] is True. "
+            "about": (
+                "Required if args['user_defined_climate_zones'] is True. "
                 "Contains monthly precipitation events per climate zone."),
             "name": "Climate Zone Table"
         },
@@ -223,7 +242,8 @@ ARGS_SPEC = {
             "bands": {1: {"type": "code"}},
             "required": "user_defined_climate_zones",
             **utils.PROJECTED,
-            "about": ("Map of climate zones that are found in the Climate Zone "
+            "about": (
+                "Map of climate zones that are found in the Climate Zone "
                 "Table input.  Pixel values correspond to values in the cz_id "
                 "column."),
             "name": "Climate Zone"
@@ -240,8 +260,9 @@ ARGS_SPEC = {
                 "month": {
                     "type": "number",
                     "units": None,
-                    "about": ("Values are the numbers 1-12 corresponding to "
-                        "each month.")
+                    "about": (
+                        "Values are the numbers 1-12 corresponding to each "
+                        "month.")
                 },
                 "events": {
                     "type": "number",

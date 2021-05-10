@@ -26,9 +26,10 @@ ARGS_SPEC = {
         "lulc_lookup_table_path": {
             "name": "LULC Lookup Table",
             "type": "csv",
-            "about": ("A CSV table used to map lulc classes to their values in "
-                "a raster, as well as to indicate whether or not the lulc "
-                "class is a coastal blue carbon habitat."),
+            "about": (
+                "A CSV table used to map lulc classes to their values in a "
+                "raster, as well as to indicate whether or not the lulc class "
+                "is a coastal blue carbon habitat."),
             "required": True,
             "columns": {
                 "code": {
@@ -39,7 +40,8 @@ ARGS_SPEC = {
                     "about": "Text description of the LULC class"},
                 "is_coastal_blue_carbon_habitat": {
                     "type": "boolean",
-                    "about": ("Enter TRUE if this LULC class is a coastal blue "
+                    "about": (
+                        "Enter TRUE if this LULC class is a coastal blue "
                         "carbon habitat, FALSE if not")}
             }
         },
@@ -61,8 +63,9 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "about": ("A CSV table where each row represents the year and path "
-                "to a raster file on disk representing the landcover raster "
+            "about": (
+                "A CSV table where each row represents the year and path to a "
+                "raster file on disk representing the landcover raster "
                 "representing the state of the landscape in that year. "
                 "Landcover codes match those in the LULC lookup table."),
             "name": "LULC Snapshots Table",

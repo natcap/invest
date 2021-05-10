@@ -74,12 +74,13 @@ ARGS_SPEC = {
         "n_workers": validation.N_WORKERS_SPEC,
         "info_table_path": {
             "name": "Habitat Stressor Information CSV or Excel File",
-            "about": ("A CSV or Excel file that contains the name of the "
-                "habitat (H) or stressor (s) on the `NAME` column that matches "
-                "the names in `criteria_table_path`. Each H/S has its "
-                "corresponding vector or raster path on the `PATH` column. The "
-                "`STRESSOR BUFFER (meters)` column should have a buffer value "
-                "if the `TYPE` column is a stressor."),
+            "about": (
+                "A CSV or Excel file that contains the name of the habitat "
+                "(H) or stressor (s) on the `NAME` column that matches the "
+                "names in `criteria_table_path`. Each H/S has its "
+                "corresponding vector or raster path on the `PATH` column. "
+                "The `STRESSOR BUFFER (meters)` column should have a buffer "
+                "value if the `TYPE` column is a stressor."),
             "type": "csv",
             "columns": {
                 "name": {
@@ -91,9 +92,10 @@ ARGS_SPEC = {
                     "bands": {1: {
                         "type": "number",
                         "units": None,
-                        "about": ("Pixel values are 1, indicating presence of "
-                            "the habitat/stressor, or 0 indicating absence. "
-                            "Any values besides 0 or 1 will be treated as 0.")
+                        "about": (
+                            "Pixel values are 1, indicating presence of the "
+                            "habitat/stressor, or 0 indicating absence. Any "
+                            "values besides 0 or 1 will be treated as 0.")
                         }
                     },
                     "fields": {},
@@ -106,15 +108,16 @@ ARGS_SPEC = {
                 "stressor buffer \(meters\)": {
                     "type": "number",
                     "units": u.meter,
-                    "about": ("The desired buffer distance used to expand a "
-                        "given stressor’s influence or footprint. This should "
-                        "be left blank for habitats, but must not be blank for "
+                    "about": (
+                        "The desired buffer distance used to expand a given "
+                        "stressor’s influence or footprint. This should be "
+                        "left blank for habitats, but must not be blank for "
                         "stressors. Enter 0 if no buffering is desired for a "
-                        "given stressor. The model will round down this buffer "
-                        "distance to the nearest cell unit. e.g., a buffer "
-                        "distance of 600m will buffer a stressor’s footprint "
-                        "by two grid cells if the resolution of analysis is "
-                        "250m.")
+                        "given stressor. The model will round down this "
+                        "buffer distance to the nearest cell unit. e.g., a "
+                        "buffer distance of 600m will buffer a stressor’s "
+                        "footprint by two grid cells if the resolution of "
+                        "analysis is 250m.")
                 }
             },
             "required": True,
@@ -124,7 +127,8 @@ ARGS_SPEC = {
         },
         "criteria_table_path": {
             "name": "Criteria Scores Table",
-            "about": ("A CSV or Excel file that contains the set of criteria "
+            "about": (
+                "A CSV or Excel file that contains the set of criteria "
                 "ranking  (rating, DQ and weight) of each stressor on each "
                 "habitat, as well as the habitat resilience attributes."),
             "type": "csv",
@@ -135,8 +139,9 @@ ARGS_SPEC = {
         },
         "resolution": {
             "name": "Resolution of Analysis (meters)",
-            "about": ("The size that should be used to grid the given habitat "
-                "and stressor files into rasters. This value will be the pixel "
+            "about": (
+                "The size that should be used to grid the given habitat and "
+                "stressor files into rasters. This value will be the pixel "
                 "size of the completed raster files."),
             "type": "number",
             "units": u.meter,
@@ -147,10 +152,11 @@ ARGS_SPEC = {
         },
         "max_rating": {
             "name": "Maximum Criteria Score",
-            "about": ("This is the highest score that is used to rate a "
-                "criteria within this model run. This value would be used to "
-                "compare with the values within Rating column of the Criteria "
-                "Scores table."),
+            "about": (
+                "This is the highest score that is used to rate a criteria "
+                "within this model run. This value would be used to compare "
+                "with the values within Rating column of the Criteria Scores "
+                "table."),
             "type": "number",
             "units": None,
             "required": True,
@@ -158,9 +164,10 @@ ARGS_SPEC = {
         },
         "risk_eq": {
             "name": "Risk Equation",
-            "about": ("Each of these represents an option of a risk "
-                "calculation equation. This will determine the numeric output "
-                "of risk for every habitat and stressor overlap area."),
+            "about": (
+                "Each of these represents an option of a risk calculation "
+                "equation. This will determine the numeric output of risk for "
+                "every habitat and stressor overlap area."),
             "type": "option_string",
             "required": True,
             "validation_options": {
@@ -169,8 +176,9 @@ ARGS_SPEC = {
         },
         "decay_eq": {
             "name": "Decay Equation",
-            "about": ("Each of these represents an option of a decay equation "
-                "for the buffered stressors. If stressor buffering is desired, "
+            "about": (
+                "Each of these represents an option of a decay equation for "
+                "the buffered stressors. If stressor buffering is desired, "
                 "this equation will determine the rate at which stressor data "
                 "is reduced."),
             "type": "option_string",
@@ -190,13 +198,15 @@ ARGS_SPEC = {
                 #         "the vector contains more than one feature.")
                 # }
             },
-            "about": ("A GDAL-supported vector file containing feature "
-                "containing one or more planning regions or subregions."),
+            "about": (
+                "A GDAL-supported vector file containing feature containing "
+                "one or more planning regions or subregions."),
             "required": True
         },
         "visualize_outputs": {
             "name": "Generate GeoJSONs for Web Visualization",
-            "about": ("Check to enable the generation of GeoJSON outputs. This "
+            "about": (
+                "Check to enable the generation of GeoJSON outputs. This "
                 "could be used to visualize the risk scores on a map in the "
                 "HRA visualization web application."),
             "type": "boolean",

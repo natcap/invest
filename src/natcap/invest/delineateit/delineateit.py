@@ -41,8 +41,9 @@ ARGS_SPEC = {
         "detect_pour_points": {
             "type": "boolean",
             "required": False,
-            "about": ("If ``True``, the pour point detection algorithm will "
-                "run, creating a point vector file pour_points.gpkg."),
+            "about": (
+                "If ``True``, the pour point detection algorithm will run, "
+                "creating a point vector file pour_points.gpkg."),
             "name": "Detect pour points"
         },
         "outlet_vector_path": {
@@ -50,14 +51,16 @@ ARGS_SPEC = {
             "fields": {},
             "geometries": utils.ALL_GEOMS,
             "required": "not detect_pour_points",
-            "about": ("This is a layer of geometries representing watershed "
-                "outlets such as municipal water intakes or lakes."),
+            "about": (
+                "This is a layer of geometries representing watershed outlets "
+                "such as municipal water intakes or lakes."),
             "name": "Outlet Features"
         },
         "snap_points": {
             "type": "boolean",
             "required": False,
-            "about": ("Whether to snap point geometries to the nearest stream "
+            "about": (
+                "Whether to snap point geometries to the nearest stream "
                 "pixel.  If ``True``, ``args['flow_threshold']`` and "
                 "``args['snap_distance']`` must also be defined."),
             "name": "Snap points to the nearest stream"
@@ -67,7 +70,8 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.pixel,
             "required": "snap_points",
-            "about": ("The number of upstream cells that must flow into a cell "
+            "about": (
+                "The number of upstream cells that must flow into a cell "
                 "before it's considered part of a stream such that retention "
                 "stops and the remaining export is exported to the stream. "
                 "Used to define streams from the DEM."),
@@ -78,18 +82,20 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.pixels,
             "required": "snap_points",
-            "about": ("If provided, the maximum search radius in pixels to "
-                "look for stream pixels.  If a stream pixel is found within "
-                "the snap distance, the outflow point will be snapped to the "
-                "center of the nearest stream pixel.  Geometries that are not "
-                "points (such as Lines and Polygons) will not be snapped. "
-                "MultiPoint geoemtries will also not be snapped."),
+            "about": (
+                "If provided, the maximum search radius in pixels to look for "
+                "stream pixels.  If a stream pixel is found within the snap "
+                "distance, the outflow point will be snapped to the center of "
+                "the nearest stream pixel.  Geometries that are not points "
+                "(such as Lines and Polygons) will not be snapped. MultiPoint "
+                "geoemtries will also not be snapped."),
             "name": "Pixel Distance to Snap Outlet Points"
         },
         "skip_invalid_geometry": {
             "type": "boolean",
             "required": False,
-            "about": ("If ``True``, any invalid geometries encountered in the "
+            "about": (
+                "If ``True``, any invalid geometries encountered in the "
                 "outlet vector will not be included in the delineation.  If "
                 "``False``, an invalid geometry will cause DelineateIt to "
                 "crash."),

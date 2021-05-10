@@ -53,6 +53,11 @@ u.define('projection_unit = [length_projection_unit]')
 u.define('million_dollars = 1000000 * dollar')
 # add "us_survey_foot" on to the aliases
 u.define('survey_foot = 1200 / 3937 * meter = sft = us_survey_foot')
+# Vitamin A in the crop production nutrient table is measured in IUs
+# A special unit in pharmacology that measures biologically active substances
+# May be converted to weight or volume, but conversion factors are specific
+# to the substance. I couldn't find a definition of its dimensionality.
+u.define('international_unit = [biologic_amount] = iu = IU')
 
 AREA = {
     "type": "vector",
