@@ -1,10 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-
 import {
   app,
   BrowserWindow,
-  ipcMain,
   screen,
   nativeTheme,
   Menu,
@@ -16,7 +12,6 @@ import {
 import {
   findInvestBinaries,
   createPythonFlaskProcess,
-  // extractZipInplace,
 } from './main_helpers';
 import setupIpcMainHandlers from './ipcMainHandlers';
 import setupDownloadHandlers from './setupDownloadHandlers';
@@ -35,6 +30,9 @@ const ELECTRON_DEV_MODE = !!process.defaultApp; // a property added by electron.
 if (!process.env.PORT) {
   process.env.PORT = '56789';
 }
+
+// always use light mode regardless of the OS/browser setting
+nativeTheme.themeSource = 'light';
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -64,10 +62,6 @@ const createWindow = async () => {
 
   // Wait for a response from the server before loading the app
   await getFlaskIsReady();
-
-  // always use light mode regardless of the OS/browser setting
-  // in the future we can add a dark theme
-  nativeTheme.themeSource = 'light';
 
   // Create the browser window.
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;

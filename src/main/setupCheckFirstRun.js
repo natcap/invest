@@ -9,13 +9,15 @@ import { getLogger } from '../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
+export const APP_HAS_RUN_TOKEN = 'app-has-run-token';
+
 /** Check if the user has run this application before.
  *
  * @returns {boolean}
  */
 export function checkFirstRun() {
   const userDataPath = app.getPath('userData');
-  const hasRunTokenPath = path.join(userDataPath, 'app-has-run-token');
+  const hasRunTokenPath = path.join(userDataPath, APP_HAS_RUN_TOKEN);
   try {
     if (fs.existsSync(hasRunTokenPath)) {
       return false;
@@ -28,5 +30,5 @@ export function checkFirstRun() {
 }
 
 export function setupCheckFirstRun() {
-  ipcMain.handle('is-first-run', (event) => checkFirstRun());
+  ipcMain.handleOnce('is-first-run', (event) => checkFirstRun());
 }

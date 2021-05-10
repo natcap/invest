@@ -8,6 +8,7 @@
     "start": "electron -r @babel/register .",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest --runInBand --testMatch **/tests/*.test.js",
+    "test-main": "jest --runInBand --testMatch **/tests/main/*.test.js",
     "test-flask-app": "jest --runInBand --testMatch **/tests/binary_tests/flaskapp.test.js",
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
     "postinstall": "electron-builder install-app-deps",
