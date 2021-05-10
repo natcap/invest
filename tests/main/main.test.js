@@ -1,11 +1,18 @@
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
+import { app, ipcMain } from 'electron';
 
+import { createWindow, destroyWindow } from '../../src/main/main';
 import {
   checkFirstRun,
   APP_HAS_RUN_TOKEN
 } from '../../src/main/setupCheckFirstRun';
+import setupContextMenu from '../../src/main/setupContextMenu';
+
+import { findInvestBinaries } from '../../src/main/main_helpers';
+
+jest.mock('../../src/main/main_helpers');
+findInvestBinaries.mockResolvedValue(['', '']);
 
 describe('checkFirstRun', () => {
   const tokenPath = path.join(app.getPath(), APP_HAS_RUN_TOKEN);
@@ -30,5 +37,52 @@ describe('checkFirstRun', () => {
   it('should return false if token already exists', () => {
     fs.writeFileSync(tokenPath, '');
     expect(checkFirstRun()).toBe(false);
+  });
+});
+
+describe('createWindow', () => {
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    await createWindow();
+  });
+  afterEach(() => {
+    destroyWindow();
+  });
+  it('should register various ipcMain listeners', () => {
+    const expectedHandleChannels = [
+      'show-context-menu',
+      'show-open-dialog',
+      'show-save-dialog',
+      'is-dev-mode',
+      'user-data',
+    ];
+    const expectedHandleOnceChannels = ['is-first-run'];
+    const expectedOnChannels = ['download-url'];
+    const receivedHandleChannels = ipcMain.handle.mock.calls.map(
+      (item) => item[0]
+    );
+    const receivedHandleOnceChannels = ipcMain.handleOnce.mock.calls.map(
+      (item) => item[0]
+    );
+    const receivedOnChannels = ipcMain.on.mock.calls.map(
+      (item) => item[0]
+    );
+    expect(receivedHandleChannels.sort()).toEqual(expectedHandleChannels.sort());
+    expect(receivedHandleOnceChannels.sort()).toEqual(expectedHandleOnceChannels.sort());
+    expect(receivedOnChannels.sort()).toEqual(expectedOnChannels.sort());
+  });
+});
+
+// TODO: this doesn't test much. It tests that setupContextMenu()
+// calls ipcMain.handle with 'show-context-menu'.
+// Might be better to call createWindow and then expect ALL the handlers
+// to be registered.g
+describe('setupContextMenu', () => {
+  beforeAll(() => {
+    jest.clearAllMocks();
+    setupContextMenu();
+  });
+  it('should be listening on ipcMain', () => {
+    expect(ipcMain.handle.mock.calls[0][0]).toEqual('show-context-menu');
   });
 });

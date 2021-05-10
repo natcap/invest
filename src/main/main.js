@@ -31,16 +31,17 @@ if (!process.env.PORT) {
   process.env.PORT = '56789';
 }
 
-// always use light mode regardless of the OS/browser setting
-nativeTheme.themeSource = 'light';
-
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 let splashScreen;
 
+export function destroyWindow() {
+  mainWindow = null;
+}
+
 /** Create an Electron browser window and start the flask application. */
-const createWindow = async () => {
+export const createWindow = async () => {
   splashScreen = new BrowserWindow({
     width: 574, // dims set to match the image in splash.html
     height: 500,
@@ -60,6 +61,8 @@ const createWindow = async () => {
   setupIpcMainHandlers();
   setupCheckFirstRun();
 
+  // always use light mode regardless of the OS/browser setting
+  nativeTheme.themeSource = 'light';
   // Wait for a response from the server before loading the app
   await getFlaskIsReady();
 
@@ -120,7 +123,7 @@ const createWindow = async () => {
   setupDownloadHandlers(mainWindow);
 };
 
-function main(argv) {
+export function main(argv) {
   // calling requestSingleInstanceLock on mac causes a crash
   if (process.platform.startsWith('win')) {
     logger.info('Windows detected, requesting single instance lock');
@@ -172,4 +175,5 @@ if (typeof require !== 'undefined' && require.main === module) {
   main(process.argv);
 }
 
-module.exports = main;
+// module.exports = main;
+
