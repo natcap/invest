@@ -86,10 +86,14 @@ Unreleased Changes (3.9.1)
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
 * HRA
-    * Fixed bugs that allowed zeros in DQ & Weight columns of criteria 
+    * Fixed bugs that allowed zeros in DQ & Weight columns of criteria
       table to raise DivideByZero errors.
+* Pollination
+    * Updated so that the ``total_pollinator_abundance_[season].tif`` outputs
+      are always created. Before, they weren't created if a farm vector was
+      not supplied, even though they are independent.
 * Seasonal Water Yield
-    * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata 
+    * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata
       values and could show negative numbers.
 * SDR
     * Fixed a bug in validation that did not warn against different coordinate

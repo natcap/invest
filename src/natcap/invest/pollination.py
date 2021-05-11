@@ -199,7 +199,7 @@ _WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'y_wild'
 # dependent part of the yield
 _POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID = 'pdep_y_w'
 # output field for pollinator abundance on farm for the season of pollination
-_POLLINATOR_ABUDNANCE_FARM_FIELD_ID = 'p_abund'
+_POLLINATOR_ABUNDANCE_FARM_FIELD_ID = 'p_abund'
 # expected pattern for seasonal floral resources in input shapefile (season)
 _FARM_FLORAL_RESOURCES_HEADER_PATTERN = 'fr_%s'
 # regular expression version of _FARM_FLORAL_RESOURCES_PATTERN
@@ -233,7 +233,7 @@ def execute(args):
         args['guild_table_path'] (string): file path to a table indicating
             the bee species to analyze in this model run.  Table headers
             must include:
-            
+
                 * 'species': a bee species whose column string names will
                     be referred to in other tables and the model will output
                     analyses per species.
@@ -661,6 +661,30 @@ def execute(args):
             pollinator_abundance_path_map[(species, season)] = (
                 pollinator_abundance_path)
 
+    # calculate total abundance of all pollinators for each season
+    total_pollinator_abundance_task = {}
+    for season in scenario_variables['season_list']:
+        # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
+        total_pollinator_abundance_index_path = os.path.join(
+            output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
+                season, file_suffix))
+
+        pollinator_abundance_season_path_band_list = [
+            (pollinator_abundance_path_map[(species, season)], 1)
+            for species in scenario_variables['species_list']]
+
+        total_pollinator_abundance_task[season] = task_graph.add_task(
+            task_name='calculate_poll_abudnce_%s_%s' % (species, season),
+            func=pygeoprocessing.raster_calculator,
+            args=(
+                pollinator_abundance_season_path_band_list, _SumRasters(),
+                total_pollinator_abundance_index_path, gdal.GDT_Float32,
+                _INDEX_NODATA),
+            dependent_task_list=[
+                pollinator_abundance_task_map[(species, season)]
+                for species in scenario_variables['species_list']],
+            target_path_list=[total_pollinator_abundance_index_path])
+
     # next step is farm vector calculation, if no farms then okay to quit
     if farm_vector_path is None:
         task_graph.close()
@@ -681,28 +705,7 @@ def execute(args):
 
     farm_pollinator_season_path_list = []
     farm_pollinator_season_task_list = []
-    total_pollinator_abundance_task = {}
     for season in scenario_variables['season_list']:
-        # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
-        total_pollinator_abundance_index_path = os.path.join(
-            output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
-                season, file_suffix))
-
-        pollinator_abudnance_season_path_band_list = [
-            (pollinator_abundance_path_map[(species, season)], 1)
-            for species in scenario_variables['species_list']]
-
-        total_pollinator_abundance_task[season] = task_graph.add_task(
-            task_name='calculate_poll_abudnce_%s_%s' % (species, season),
-            func=pygeoprocessing.raster_calculator,
-            args=(
-                pollinator_abudnance_season_path_band_list, _SumRasters(),
-                total_pollinator_abundance_index_path, gdal.GDT_Float32,
-                _INDEX_NODATA),
-            dependent_task_list=[
-                pollinator_abundance_task_map[(species, season)]
-                for species in scenario_variables['species_list']],
-            target_path_list=[total_pollinator_abundance_index_path])
 
         half_saturation_raster_path = os.path.join(
             intermediate_output_dir, _HALF_SATURATION_FILE_PATTERN % (
@@ -848,7 +851,7 @@ def execute(args):
             # this is PAT ('p_abund')
             farm_season = farm_feature.GetField(_FARM_SEASON_FIELD)
             farm_feature.SetField(
-                _POLLINATOR_ABUDNANCE_FARM_FIELD_ID,
+                _POLLINATOR_ABUNDANCE_FARM_FIELD_ID,
                 pollinator_abundance_results[farm_season][fid]['sum'] /
                 float(pollinator_abundance_results[farm_season][fid]['count']))
 
@@ -920,7 +923,7 @@ def _create_farm_result_vector(
     target_layer = target_vector.GetLayer()
 
     farm_pollinator_abundance_defn = ogr.FieldDefn(
-        _POLLINATOR_ABUDNANCE_FARM_FIELD_ID, ogr.OFTReal)
+        _POLLINATOR_ABUNDANCE_FARM_FIELD_ID, ogr.OFTReal)
     farm_pollinator_abundance_defn.SetWidth(25)
     farm_pollinator_abundance_defn.SetPrecision(11)
     target_layer.CreateField(farm_pollinator_abundance_defn)
