@@ -536,6 +536,19 @@ class FreestyleStringValidation(unittest.TestCase):
                                 'case_sensitive': True})
         self.assertTrue('did not match expected pattern' in error_msg)
 
+    def test_case_sensitive(self):
+        """Validation: test that case sensitivity works."""
+        from natcap.invest import validation
+        pattern = '^[A-Z]+$'
+        message = validation.check_freestyle_string(
+            'asdf', regexp={'pattern': pattern, 'case_sensitive': True})
+        self.assertEqual(
+            message, f'Value did not match expected pattern {pattern}')
+
+        message = validation.check_freestyle_string(
+            'asdf', regexp={'pattern': '^[A-Z]+$', 'case_sensitive': False})
+        self.assertEqual(message, None)
+
 
 class OptionStringValidation(unittest.TestCase):
     """Test Option String Validation."""

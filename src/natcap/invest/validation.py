@@ -418,7 +418,7 @@ def check_freestyle_string(value, regexp=None):
     if regexp:
         flags = 0
         if 'case_sensitive' in regexp:
-            if regexp['case_sensitive']:
+            if regexp['case_sensitive'] is False:
                 flags = re.IGNORECASE
         matches = re.findall(regexp['pattern'], str(value), flags)
         if not matches:
@@ -824,10 +824,11 @@ def validate(args, spec, spatial_overlap_opts=None):
     keys_with_no_value = set()
     conditionally_required_keys = set()
     for key, parameter_spec in spec.items():
+        # Default required to True since this is the most common
         try:
             required = parameter_spec['required']
         except KeyError:
-            required = False
+            required = True
         if required is True:  # Might be an args key, can't rely on truthiness
             if key not in args:
                 missing_keys.add(key)
