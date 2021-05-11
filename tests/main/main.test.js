@@ -79,17 +79,3 @@ describe('createWindow', () => {
     expect(receivedOnChannels.sort()).toEqual(expectedOnChannels.sort());
   });
 });
-
-// TODO: this doesn't test much. It tests that setupContextMenu()
-// calls ipcMain.handle with 'show-context-menu'.
-// Might be better to call createWindow and then expect ALL the handlers
-// to be registered.g
-describe('setupContextMenu', () => {
-  beforeAll(() => {
-    jest.clearAllMocks();
-    setupContextMenu();
-  });
-  it('should be listening on ipcMain', () => {
-    expect(ipcMain.handle.mock.calls[0][0]).toEqual('show-context-menu');
-  });
-});
