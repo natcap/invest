@@ -9,10 +9,17 @@ import {
 } from '../../src/main/setupCheckFirstRun';
 import setupContextMenu from '../../src/main/setupContextMenu';
 
-import { findInvestBinaries } from '../../src/main/main_helpers';
+import {
+  createPythonFlaskProcess,
+  findInvestBinaries
+} from '../../src/main/main_helpers';
+import { getFlaskIsReady } from '../../src/server_requests';
 
 jest.mock('../../src/main/main_helpers');
 findInvestBinaries.mockResolvedValue(['', '']);
+createPythonFlaskProcess.mockImplementation(() => {});
+jest.mock('../../src/server_requests');
+getFlaskIsReady.mockResolvedValue(true);
 
 describe('checkFirstRun', () => {
   const tokenPath = path.join(app.getPath(), APP_HAS_RUN_TOKEN);

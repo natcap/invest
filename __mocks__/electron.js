@@ -17,6 +17,7 @@ export const dialog = {
   showSaveDialog: jest.fn(),
 };
 
+// TODO - is ReturnThis necessary? What are the implications?
 export const ipcMain = {
   on: jest.fn().mockReturnThis(),
   handle: jest.fn().mockReturnThis(),
@@ -33,7 +34,6 @@ export const nativeTheme = {};
 
 export const screen = {
   getPrimaryDisplay: jest.fn().mockReturnValue({
-    workAreaSize: { width: 800, height: 800}
+    workAreaSize: { width: 800, height: 800 }
   })
 };
-

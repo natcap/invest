@@ -2,7 +2,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
-const { app } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 const yauzl = require('yauzl');
 
 const { getLogger } = require('../logger');
