@@ -96,9 +96,9 @@ ARGS_SPEC = {
             },
             "type": "number",
             "units": u.year,
-            "required": "calc_sequestration",
+            "required": "do_valuation",
             "about": "The calendar year of the current scenario.",
-            "name": "Current Landcover Calendar Year"
+            "name": "Current Land Cover Calendar Year"
         },
         "lulc_fut_year": {
             "validation_options": {
@@ -106,27 +106,23 @@ ARGS_SPEC = {
             },
             "type": "number",
             "units": u.year,
-            "required": "calc_sequestration",
+            "required": "do_valuation",
             "about": "The calendar year of the future scenario.",
-            "name": "Future Landcover Calendar Year"
+            "name": "Future Land Cover Calendar Year"
         },
         "do_valuation": {
             "type": "boolean",
             "required": False,
             "about": (
-                "if true then run the valuation model on available outputs. "
-                "At a minimum will run on carbon stocks, if sequestration "
-                "with a future scenario is done and/or a REDD scenario "
-                "calculate NPV for either and report in final HTML document."),
+                "Calculate NPV for a future or REDD scenario "
+                "and report in final HTML document."),
             "name": "Run Valuation Model"
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
             "units": u.currency/u.ton,
             "required": "do_valuation",
-            "about": (
-                "Is the present value of carbon per metric ton. Used if "
-                "``args['do_valuation']`` is present and True."),
+            "about": "The present value of carbon per metric ton.",
             "name": "price of carbon"
         },
         "discount_rate": {
@@ -214,17 +210,15 @@ def execute(args):
             storage density to lulc codes. (required if 'do_uncertainty' is
             false)
         args['lulc_cur_year'] (int/string): an integer representing the year
-            of `args['lulc_cur_path']` used if `args['calc_sequestration']`
+            of `args['lulc_cur_path']` used if `args['do_valuation']`
             is True.
         args['lulc_fut_year'](int/string): an integer representing the year
             of `args['lulc_fut_path']` used in valuation if it exists.
             Required if  `args['do_valuation']` is True and
             `args['lulc_fut_path']` is present and well defined.
         args['do_valuation'] (bool): if true then run the valuation model on
-            available outputs.  At a minimum will run on carbon stocks, if
-            sequestration with a future scenario is done and/or a REDD
-            scenario calculate NPV for either and report in final HTML
-            document.
+            available outputs. Calculate NPV for a future scenario or a REDD
+            scenario and report in final HTML document.
         args['price_per_metric_ton_of_c'] (float): Is the present value of
             carbon per metric ton. Used if `args['do_valuation']` is present
             and True.

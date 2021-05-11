@@ -31,16 +31,9 @@ class Carbon(model.InVESTModel):
             label='Carbon Pools',
             validator=self.validator)
         self.add_input(self.carbon_pools_path)
-        self.cur_lulc_year = inputs.Text(
-            args_key='lulc_cur_year',
-            helptext='The calendar year of the current scenario.',
-            interactive=False,
-            label='Current Landcover Calendar Year',
-            validator=self.validator)
-        self.add_input(self.cur_lulc_year)
         self.calc_sequestration = inputs.Checkbox(
             helptext=(
-                "Check to enable sequestration analysis.  This "
+                "Check to enable sequestration analysis. This "
                 "requires inputs of Land Use/Land Cover maps for both "
                 "current and future scenarios."),
             args_key='calc_sequestration',
@@ -55,16 +48,9 @@ class Carbon(model.InVESTModel):
                 "baseline, future scenario against which to compare "
                 "the REDD policy scenario."),
             interactive=False,
-            label='Future Landcover (Raster)',
+            label='Future Land Cover (Raster)',
             validator=self.validator)
         self.add_input(self.fut_lulc_raster)
-        self.fut_lulc_year = inputs.Text(
-            args_key='lulc_fut_year',
-            helptext='The calendar year of the future scenario.',
-            interactive=False,
-            label='Future Landcover Calendar Year',
-            validator=self.validator)
-        self.add_input(self.fut_lulc_year)
         self.redd = inputs.Checkbox(
             helptext=(
                 "Check to enable REDD scenario analysis.  This "
@@ -93,9 +79,23 @@ class Carbon(model.InVESTModel):
             interactive=False,
             label='Run Valuation Model')
         self.add_input(self.valuation_container)
+        self.cur_lulc_year = inputs.Text(
+            args_key='lulc_cur_year',
+            helptext='The calendar year of the current scenario.',
+            interactive=False,
+            label='Current Land Cover Calendar Year',
+            validator=self.validator)
+        self.valuation_container.add_input(self.cur_lulc_year)
+        self.fut_lulc_year = inputs.Text(
+            args_key='lulc_fut_year',
+            helptext='The calendar year of the future scenario.',
+            interactive=False,
+            label='Future Land Cover Calendar Year',
+            validator=self.validator)
+        self.valuation_container.add_input(self.fut_lulc_year)
         self.price_per_metric_ton_of_c = inputs.Text(
             args_key='price_per_metric_ton_of_c',
-            label='Price/Metric ton of carbon',
+            label='Price/Metric Ton of Carbon',
             validator=self.validator)
         self.valuation_container.add_input(self.price_per_metric_ton_of_c)
         self.discount_rate = inputs.Text(
@@ -115,11 +115,7 @@ class Carbon(model.InVESTModel):
 
         # Set interactivity, requirement as input sufficiency changes
         self.calc_sequestration.sufficiency_changed.connect(
-            self.cur_lulc_year.set_interactive)
-        self.calc_sequestration.sufficiency_changed.connect(
             self.fut_lulc_raster.set_interactive)
-        self.calc_sequestration.sufficiency_changed.connect(
-            self.fut_lulc_year.set_interactive)
         self.calc_sequestration.sufficiency_changed.connect(
             self.redd.set_interactive)
         self.redd.sufficiency_changed.connect(
