@@ -79,13 +79,12 @@ ARGS_SPEC = {
         "carbon_pools_path": {
             "type": "csv",
             "columns": {
-                "LUCODE": {"type": "number", "units": None},
+                "LUCODE": {"type": "code"},
                 "C_above": {"type": "number", "units": u.metric_ton/u.hectare},
                 "C_below": {"type": "number", "units": u.metric_ton/u.hectare},
                 "C_soil": {"type": "number", "units": u.metric_ton/u.hectare},
                 "C_dead": {"type": "number", "units": u.metric_ton/u.hectare}
             },
-            "required": True,
             "about": (
                 "A table that maps the each LULC class from the LULC map(s)to "
                 "the amount of carbon in their carbon pools."),
@@ -93,7 +92,7 @@ ARGS_SPEC = {
         },
         "lulc_cur_year": {
             "validation_options": {
-                "expression": "int(value)"
+                "expression": "float(value).is_integer()"
             },
             "type": "number",
             "units": u.year,
@@ -103,7 +102,7 @@ ARGS_SPEC = {
         },
         "lulc_fut_year": {
             "validation_options": {
-                "expression": "int(value)"
+                "expression": "float(value).is_integer()"
             },
             "type": "number",
             "units": u.year,
@@ -494,7 +493,7 @@ def _calculate_valuation_constant(
     """
     n_years = lulc_fut_year - lulc_cur_year
     ratio = (
-        1 / ((1 + discount_rate / 100) * 
+        1 / ((1 + discount_rate / 100) *
              (1 + rate_change / 100)))
     valuation_constant = (price_per_metric_ton_of_c / n_years)
     # note: the valuation formula in the user's guide uses sum notation.

@@ -53,7 +53,6 @@ ARGS_SPEC = {
             "bands": {1: {
                 "type": "number",
                 "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
-            "required": True,
             **utils.PROJECTED,
             "about": (
                 "A GDAL-supported raster file, with an erosivity index value "
@@ -70,7 +69,6 @@ ARGS_SPEC = {
             "bands": {1: {
                 "type": "number",
                 "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
-            "required": True,
             **utils.PROJECTED,
             "about": (
                 "A GDAL-supported raster file, with a soil erodibility value "
@@ -90,7 +88,6 @@ ARGS_SPEC = {
             },
             "geometries": utils.POLYGONS,
             **utils.PROJECTED,
-            "required": True,
             "about": (
                 "This is a layer of polygons representing watersheds such "
                 "that each watershed contributes to a point of interest where "
@@ -110,7 +107,6 @@ ARGS_SPEC = {
                     "type": "ratio",
                     "about": "Support practice factor for the USLE"}
             },
-            "required": True,
             "about": (
                 "A CSV table containing model information corresponding to "
                 "each of the land use classes in the LULC raster input."),
@@ -120,7 +116,6 @@ ARGS_SPEC = {
             **utils.GT_0,
             "type": "number",
             "units": u.pixel,
-            "required": True,
             "about": (
                 "The number of upstream cells that must flow into a cell "
                 "before it's considered part of a stream such that retention "
@@ -130,27 +125,24 @@ ARGS_SPEC = {
         },
         "k_param": {
             "type": "number",
-            "units": None,
-            "required": True,
+            "units": u.none,
             "about": "Borselli k parameter.",
             "name": "Borselli k Parameter"
         },
         "sdr_max": {
             "type": "ratio",
-            "required": True,
             "about": "Maximum SDR value.",
             "name": "Max SDR Value"
         },
         "ic_0_param": {
             "type": "number",
-            "units": None,
-            "required": True,
+            "units": u.none,
             "about": "Borselli IC0 parameter.",
             "name": "Borselli IC0 Parameter"
         },
         "drainage_path": {
             "type": "raster",
-            "bands": {1: {"type": "number", "units": None}},
+            "bands": {1: {"type": "number", "units": u.none}},
             "required": False,
             "about": (
                 "An optional GDAL-supported raster file mask, that indicates "

@@ -136,7 +136,6 @@ ARGS_SPEC = {
                     "type": "file",
                     "about": "Global WaveWatchIII data"}
             },
-            "required": True,
             "about": (
                 "Select the folder that has the packaged Wave Energy Data."),
             "name": "Wave Base Data Folder"
@@ -153,7 +152,6 @@ ARGS_SPEC = {
                 ]
             },
             "type": "option_string",
-            "required": True,
             "about": (
                 "A list of analysis areas for which the model can currently "
                 "be run.  All the wave energy data needed for these areas are "
@@ -188,7 +186,6 @@ ARGS_SPEC = {
                     "units": u.second
                 }
             },
-            "required": True,
             "about": (
                 "A CSV Table that has the performance of a particular wave "
                 "energy machine at certain sea state conditions."),
@@ -196,24 +193,27 @@ ARGS_SPEC = {
         },
         "machine_param_path": {
             "type": "csv",
-            "columns": {
-                "name": {
-                    "type": "option_string",
-                    "about": (
-                        "Contains the values CapMax (maximum capacity of "
-                        "device), HsMax (upper limit of wave height for "
-                        "device operation (the deviceshuts down when waves "
-                        "are higher than this limit), and TpMax (upper limit "
-                        "of wave period for device operation (the device "
-                        "shuts down when wave period is longer than this).")},
-                "value": {
+            "rows": {
+                "capmax": {
+                    "about": "maximum capacity for device",
                     "type": "number",
-                    "units": None,
+                    "units": u.kilowatt
+                },
+                "hsmax": {
                     "about": (
-                        "Values for CapMax (in kilowatts), HsMax (in meters), "
-                        "and TpMax (in seconds).")},
+                        "Upper limit of wave height for device operation. The "
+                        "device shuts down when waves are higher than this."),
+                    "type": "number",
+                    "units": u.meter
+                },
+                "tpmax": {
+                    "about": (
+                        "Upper limit of wave period for device operation. The "
+                        "device shuts down when wave period is longer than this."),
+                    "type": "number",
+                    "units": u.second
+                }
             },
-            "required": True,
             "about": (
                 "A CSV Table that has parameter values for a wave energy "
                 "machine.  This includes information on the maximum capacity "

@@ -28,7 +28,7 @@ ARGS_SPEC = {
                 "expression": "value >= 1",
             },
             "type": "number",
-            "units": None,
+            "units": u.none,
             "required": False,
             "about": (
                 "The band index to use from the raster. This positive integer "
@@ -40,7 +40,6 @@ ARGS_SPEC = {
                 "options": ["D8", "MFD"],
             },
             "type": "option_string",
-            "required": True,
             "about": (
                 "The routing algorithm to use. <ul><li>D8: all water flows "
                 "directly into the most downhill of each of the 8 neighbors "
@@ -137,7 +136,7 @@ def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
     valid_mask = slice(None)
     if in_nodata is not None:
         valid_mask = ~numpy.isclose(flow_accum_pixels, in_nodata)
-    
+
     out_matrix[valid_mask & stream_mask] = 1
     out_matrix[valid_mask & ~stream_mask] = 0
     return out_matrix

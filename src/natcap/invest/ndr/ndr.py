@@ -39,10 +39,9 @@ ARGS_SPEC = {
         },
         "runoff_proxy_path": {
             "type": "raster",
-            "required": True,
             "bands": {1: {
                 "type": "number",
-                "units": None
+                "units": u.none
             }},
             "about": (
                 "Map representing the spatial variability in runoff "
@@ -56,7 +55,6 @@ ARGS_SPEC = {
         },
         "watersheds_path": {
             "type": "vector",
-            "required": True,
             **utils.PROJECTED,
             "fields": {"ws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
@@ -109,7 +107,6 @@ ARGS_SPEC = {
                         "nutrients are delivered via surface flow. There is "
                         "no equivalent of this for phosphorus.")}
             },
-            "required": True,
             "about": (
                 "A table mapping each LULC class to its biophysical "
                 "properties related to nutrient load and retention. The three "
@@ -119,13 +116,11 @@ ARGS_SPEC = {
         },
         "calc_p": {
             "type": "boolean",
-            "required": True,
             "about": "Select to calculate phosphorous export.",
             "name": "Calculate phosphorous retention"
         },
         "calc_n": {
             "type": "boolean",
-            "required": True,
             "about": "Select to calculate nitrogen export.",
             "name": "Calculate Nitrogen Retention"
         },
@@ -133,7 +128,6 @@ ARGS_SPEC = {
             **utils.GT_0,
             "type": "number",
             "units": u.pixel,
-            "required": True,
             "about": (
                 "The number of upstream cells that must flow into a cell "
                 "before it's considered part of a stream such that retention "
@@ -143,8 +137,7 @@ ARGS_SPEC = {
         },
         "k_param": {
             "type": "number",
-            "units": None,
-            "required": True,
+            "units": u.none,
             "about": (
                 "Calibration parameter that determines the shape of the "
                 "relationship between hydrologic connectivity (the degree of "

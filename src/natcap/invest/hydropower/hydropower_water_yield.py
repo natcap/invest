@@ -43,7 +43,6 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.millimeter
             }},
-            "required": True,
             **utils.PROJECTED,
             "about": (
                 "A GDAL-supported raster file containing an average root "
@@ -51,21 +50,12 @@ ARGS_SPEC = {
             "name": "Depth To Root Restricting Layer"
         },
         "precipitation_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing non-zero, average "
-                "annual precipitation values for each cell. The precipitation "
-                "values should be in millimeters (mm)."),
-            "name": "Precipitation"
+            **utils.PRECIP_ARG,
+            **utils.PROJECTED
         },
         "pawc_path": {
             "type": "raster",
             "bands": {1: {"type": "ratio"}},
-            "required": True,
             **utils.PROJECTED,
             "about": (
                 "A GDAL-supported raster file containing plant available "
@@ -82,7 +72,6 @@ ARGS_SPEC = {
             "type": "vector",
             "fields": {"ws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
-            "required": True,
             "about": (
                 "A GDAL-supported vector file containing one polygon per "
                 "watershed.  Each polygon that represents a watershed is "
@@ -109,9 +98,8 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {"type": "code"},
                 "root_depth": {"type": "number", "units": u.millimeter},
-                "kc": {"type": "number", "units": None}
+                "kc": {"type": "number", "units": u.none}
             },
-            "required": True,
             "about": (
                 "A CSV table of land use/land cover (LULC) classes, "
                 "containing data on biophysical coefficients used in this "
@@ -122,8 +110,7 @@ ARGS_SPEC = {
         "seasonality_constant": {
             **utils.GT_0,
             "type": "number",
-            "units": None,
-            "required": True,
+            "units": u.none,
             "about": (
                 "Floating point value on the order of 1 to 30 corresponding "
                 "to the seasonal distribution of precipitation."),

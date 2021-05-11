@@ -91,7 +91,7 @@ ARGS_SPEC = {
                     "type": {"vector", "raster"},
                     "bands": {1: {
                         "type": "number",
-                        "units": None,
+                        "units": u.none,
                         "about": (
                             "Pixel values are 1, indicating presence of the "
                             "habitat/stressor, or 0 indicating absence. Any "
@@ -120,7 +120,6 @@ ARGS_SPEC = {
                         "analysis is 250m.")
                 }
             },
-            "required": True,
             "validation_options": {
                 "excel_ok": True
             }
@@ -135,7 +134,6 @@ ARGS_SPEC = {
             "validation_options": {
                 "excel_ok": True,
             },
-            "required": True,
         },
         "resolution": {
             "name": "Resolution of Analysis (meters)",
@@ -145,7 +143,6 @@ ARGS_SPEC = {
                 "size of the completed raster files."),
             "type": "number",
             "units": u.meter,
-            "required": True,
             "validation_options": {
                 "expression": "value > 0",
             }
@@ -158,8 +155,7 @@ ARGS_SPEC = {
                 "with the values within Rating column of the Criteria Scores "
                 "table."),
             "type": "number",
-            "units": None,
-            "required": True,
+            "units": u.none,
             **utils.GT_0
         },
         "risk_eq": {
@@ -169,7 +165,6 @@ ARGS_SPEC = {
                 "equation. This will determine the numeric output of risk for "
                 "every habitat and stressor overlap area."),
             "type": "option_string",
-            "required": True,
             "validation_options": {
                 "options": ["Multiplicative", "Euclidean"],
             }
@@ -182,7 +177,6 @@ ARGS_SPEC = {
                 "this equation will determine the rate at which stressor data "
                 "is reduced."),
             "type": "option_string",
-            "required": True,
             "validation_options": {
                 "options": ["None", "Linear", "Exponential"],
             }
@@ -201,7 +195,6 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported vector file containing feature containing "
                 "one or more planning regions or subregions."),
-            "required": True
         },
         "visualize_outputs": {
             "name": "Generate GeoJSONs for Web Visualization",
@@ -210,7 +203,6 @@ ARGS_SPEC = {
                 "could be used to visualize the risk scores on a map in the "
                 "HRA visualization web application."),
             "type": "boolean",
-            "required": True,
         }
     }
 }

@@ -71,12 +71,11 @@ ARGS_SPEC = {
                         "infrastructure you want to consider in the MSA "
                         "calculation."),
                     "type": {"raster", "vector"},
-                    "bands": {1: {"type": "number", "units": None}},
+                    "bands": {1: {"type": "number", "units": u.none}},
                     "fields": {},
                     "geometries": utils.ALL_GEOMS
                 }
             },
-            "required": True,
             "about": (
                 "Used in mode (a) and (b) a path to a folder containing maps "
                 "of either GDAL compatible rasters or vectors. These data "
@@ -103,7 +102,6 @@ ARGS_SPEC = {
                 "same LULC codes.")
         },
         "pasture_threshold": {
-            **utils.BETWEEN_0_AND_1,
             "type": "ratio",
             "required": "not predefined_globio",
             "about": (
@@ -114,16 +112,13 @@ ARGS_SPEC = {
             "name": "Pasture Threshold"
         },
         "intensification_fraction": {
-            **utils.BETWEEN_0_AND_1,
             "type": "ratio",
-            "required": True,
             "about": (
                 "A value between 0 and 1 denoting proportion of total "
                 "agriculture that should be classified as 'high input'."),
             "name": "Proportion of of Agriculture Intensified"
         },
         "primary_threshold": {
-            **utils.BETWEEN_0_AND_1,
             "type": "ratio",
             "required": "not predefined_globio",
             "about": (
@@ -150,10 +145,9 @@ ARGS_SPEC = {
                         "separated by a hyphen e.g. 1000-2000), or an upper "
                         "or lower bound (a number preceded by > or < e.g. <5")
                 },
-                "msa_x": {"type": "number", "units": "?"},
-                "se": {"type": "number", "units": "?"}
+                "msa_x": {"type": "ratio"},
+                "se": {"type": "number", "units": u.none}
             },
-            "required": True,
             "about": (
                 "A CSV table containing MSA threshold values as defined in "
                 "the user's guide.  Provided for advanced users that may wish "

@@ -56,12 +56,12 @@ ARGS_SPEC = {
                 },
                 "lam": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": "Weibull scale factor at the reference hub height"
                 },
                 "k": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": "Weibull shape factor"
                 },
                 "ref": {
@@ -72,7 +72,6 @@ ARGS_SPEC = {
                         "collected and LAM was estimated")
                 }
             },
-            "required": True,
             "about": (
                 "A CSV file that represents the wind input data (Weibull "
                 "parameters). Please see the User's Guide for a more detailed "
@@ -97,7 +96,6 @@ ARGS_SPEC = {
         "bathymetry_path": {
             "type": "raster",
             "bands": {1: {"type": "number", "units": u.meter}},
-            "required": True,
             "about": (
                 "A GDAL-supported raster file containing elevation values "
                 "represented in meters for the area of interest.  The DEM "
@@ -122,7 +120,6 @@ ARGS_SPEC = {
         },
         "global_wind_parameters_path": {
             "type": "csv",
-            "required": True,
             "rows": {
                 "air_density": {
                     "type": "number",
@@ -130,7 +127,7 @@ ARGS_SPEC = {
                     "about": "standard atmosphere air density"},
                 "exponent_power_curve": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": "exponent to use in the power curve function"},
                 "decommission_cost": {
                     "type": "ratio",
@@ -160,7 +157,12 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.year,
                     "about": "The expected lifetime of the facility"},
-                "carbon_coefficient": {"type": "number", "units": "?"},
+                "carbon_coefficient": {
+                    "type": "number",
+                    "units": u.metric_ton/u.kilowatt_hour,
+                    "about": (
+                        "Factor that translates carbon-free wind power to a "
+                        "corresponding amount of avoided CO2 emissions")},
                 "air_density_coefficient": {
                     "type": "number",
                     "units": u.kilogram/(u.meter**3 * u.meter),
@@ -171,7 +173,7 @@ ARGS_SPEC = {
                     "type": "ratio",
                     "about": (
                         "The fraction of energy lost due to downtime, power "
-                        "conversioninefficiency, and electrical grid losses")}
+                        "conversion inefficiency, and electrical grid losses")}
             },
             "about": (
                 "A CSV file that holds wind energy model parameters for both "
@@ -184,7 +186,6 @@ ARGS_SPEC = {
         },
         "turbine_parameters_path": {
             "type": "csv",
-            "required": True,
             "rows": {
                 "hub_height": {
                     "type": "number",
@@ -232,7 +233,6 @@ ARGS_SPEC = {
             **utils.GT_0,
             "type": "number",
             "units": u.count,
-            "required": True,
             "about": (
                 "An integer value indicating the number of wind turbines per "
                 "wind farm."),
@@ -241,7 +241,6 @@ ARGS_SPEC = {
         "min_depth": {
             "type": "number",
             "units": u.meter,
-            "required": True,
             "about": (
                 "A floating point value in meters for the minimum depth of "
                 "the offshore wind farm installation."),
@@ -250,7 +249,6 @@ ARGS_SPEC = {
         "max_depth": {
             "type": "number",
             "units": u.meter,
-            "required": True,
             "about": (
                 "A floating point value in meters for the maximum depth of "
                 "the offshore wind farm installation."),

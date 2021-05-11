@@ -59,7 +59,6 @@ ARGS_SPEC = {
         "n_workers": validation.N_WORKERS_SPEC,
         "aoi_path": {
             **utils.AOI_ARG,
-            "required": True
         },
         "structure_path": {
             "name": "Features Impacting Scenic Quality",
@@ -81,14 +80,14 @@ ARGS_SPEC = {
                         "visibility analysis.")},
                 "weight": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "required": False,
                     "about": (
                         "Viewshed importance coefficient: The user can assign "
                         "an importance to each viewshed by scaling them with "
                         "a real number (either positive or negative) stored "
                         "in the field “WEIGHT”. The model assumes a weight of "
-                        "1.0 if the field doesn’t exist."),
+                        "1.0 if the field doesn’t exist.")},
                 "height": {
                     "type": "number",
                     "units": u.meter,
@@ -98,7 +97,6 @@ ARGS_SPEC = {
                         "ground can be specified as a positive real number. "
                         "The default value is 0 if the field doesn’t exist.")}
             },
-            "required": True,
             "about": (
                 "A GDAL-supported vector file.  The user must specify a point "
                 "feature layer that indicates locations of objects that "
@@ -121,7 +119,6 @@ ARGS_SPEC = {
         "refraction": {
             "name": "Refractivity Coefficient",
             "type": "ratio",
-            "required": True,
             "about": (
                 "The earth curvature correction option corrects for the "
                 "curvature of the earth and refraction of visible light in "
@@ -157,14 +154,14 @@ ARGS_SPEC = {
         "a_coef": {
             "name": "'a' Coefficient",
             "type": "number",
-            "units": None,
+            "units": u.none,
             "required": "do_valuation",
             "about": "First coefficient used by the valuation function",
         },
         "b_coef": {
             "name": "'a' Coefficient",
             "type": "number",
-            "units": None,
+            "units": u.none,
             "required": "do_valuation",
             "about": "Second coefficient used by the valuation function",
         },

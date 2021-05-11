@@ -43,10 +43,7 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
-        "threshold_flow_accumulation": {
-            **utils.THRESHOLD_FLOW_ACCUMULATION_ARG,
-            "required": True
-        },
+        "threshold_flow_accumulation": utils.THRESHOLD_FLOW_ACCUMULATION_ARG,
         "et0_dir": {
             "validation_options": {
                 "exists": True,
@@ -78,8 +75,7 @@ ARGS_SPEC = {
                     "names": (
                         "Twelve files, one for each month. File names mustend "
                         "with the month number (1-12)."),
-                    "type": "raster",
-                    "bands": {1: {"type": "number", "units": u.millimeter}}
+                    **utils.PRECIP_ARG
                 }
             },
             "required": "not user_defined_local_recharge",
@@ -104,8 +100,7 @@ ARGS_SPEC = {
         },
         "aoi_path": {
             **utils.AOI_ARG,
-            **utils.PROJECTED,
-            "required": True
+            **utils.PROJECTED
         },
         "biophysical_table_path": {
             "type": "csv",
@@ -114,7 +109,7 @@ ARGS_SPEC = {
                 "cn_[SOIL_GROUP]": {
                     "names": "One for each soil group in A, B, C, D",
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": (
                         "Curve number values for each combination of soil "
                         "type and LULC class. No 0s are allowed.")
@@ -122,13 +117,12 @@ ARGS_SPEC = {
                 "kc_[MONTH]": {
                     "names": "One for each month numbered 1-12",
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": (
                         "Monthly crop/vegetation coefficient (Kc) values for "
                         "each LULC class.")
                 }
             },
-            "required": True,
             "about": (
                 "A CSV table containing model information corresponding to "
                 "each of the land use classes in the LULC raster input."),
@@ -139,7 +133,7 @@ ARGS_SPEC = {
             "columns": {
                 "month": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": (
                         "Values are the numbers 1-12 corresponding to each "
                         "month.")
@@ -160,7 +154,7 @@ ARGS_SPEC = {
         },
         "alpha_m": {
             "type": "freestyle_string",
-            "units": None,
+            "units": u.none,
             "required": "not monthly_alpha",
             "about": (
                 "Required if args['monthly_alpha'] is false.  Is the "
@@ -170,7 +164,6 @@ ARGS_SPEC = {
         },
         "beta_i": {
             "type": "ratio",
-            "required": True,
             "about": (
                 "Is the fraction of the upgradient subsidy that is available "
                 "for downgradient evapotranspiration."),
@@ -178,7 +171,6 @@ ARGS_SPEC = {
         },
         "gamma": {
             "type": "ratio",
-            "required": True,
             "about": (
                 "The fraction of pixel local recharge that is available to "
                 "downgradient pixels."),
@@ -186,7 +178,6 @@ ARGS_SPEC = {
         },
         "user_defined_local_recharge": {
             "type": "boolean",
-            "required": True,
             "about": (
                 "If True, indicates user will provide pre-defined local "
                 "recharge raster layer"),
@@ -208,7 +199,6 @@ ARGS_SPEC = {
         },
         "user_defined_climate_zones": {
             "type": "boolean",
-            "required": True,
             "about": (
                 "If True, user provides a climate zone rain events table and "
                 "a climate zone raster map in lieu of a global rain events "
@@ -226,7 +216,7 @@ ARGS_SPEC = {
                 "[MONTH]": {
                     "names": f"One for each month in {MONTH_ID_TO_LABEL}",
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": (
                         "The number of rain events that occur in that month "
                         "in that climate zone")}
@@ -250,7 +240,6 @@ ARGS_SPEC = {
         },
         "monthly_alpha": {
             "type": "boolean",
-            "required": True,
             "about": "If True, use the monthly alpha table.",
             "name": "Use Monthly Alpha Table (Advanced)"
         },
@@ -259,14 +248,14 @@ ARGS_SPEC = {
             "columns": {
                 "month": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": (
                         "Values are the numbers 1-12 corresponding to each "
                         "month.")
                 },
                 "events": {
                     "type": "number",
-                    "units": "None",
+                    "units": u.none,
                     "about": "The alpha value for that month"
                 }
             },

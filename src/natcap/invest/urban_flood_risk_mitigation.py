@@ -38,7 +38,6 @@ ARGS_SPEC = {
             **utils.GT_0,
             "type": "number",
             "units": u.millimeter,
-            "required": True,
             "about": "Depth of rainfall",
             "name": "Depth of rainfall"
         },
@@ -57,13 +56,12 @@ ARGS_SPEC = {
                 "cn_([abcd])": {
                     "names": "For each soil group A, B, C, D",
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": (
                         "Curve number values for each LULC type and each "
                         "hydrologic soil group.")
                 }
             },
-            "required": True,
             "about": (
                 "Path to a CSV table that to map landcover codes to curve "
                 "numbers"),

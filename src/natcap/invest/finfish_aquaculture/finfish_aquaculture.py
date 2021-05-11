@@ -35,7 +35,6 @@ ARGS_SPEC = {
                 }
             },
             "geometries": {'POLYGON', 'POINT'},
-            "required": True,
         },
         "farm_ID": {
             "name": "Farm Identifier Name",
@@ -47,7 +46,6 @@ ARGS_SPEC = {
                 "farm identifier name must be unique integers for all the "
                 "inputs."),
             "type": "freestyle_string",
-            "required": True,
         },
         "g_param_a": {
             "name": "Fish Growth Parameter (a)",
@@ -59,7 +57,6 @@ ARGS_SPEC = {
                 "interest is accurate."),
             "type": "number",
             "units": u.gram/u.day,
-            "required": True,
         },
         "g_param_b": {
             "name": "Fish Growth Parameter (b)",
@@ -71,7 +68,6 @@ ARGS_SPEC = {
                 "interest is accurate."),
             "type": "number",
             "units": u.gram/u.day,
-            "required": True,
         },
         "g_param_tau": {
             "name": "Fish Growth Parameter (tau)",
@@ -83,14 +79,12 @@ ARGS_SPEC = {
                 "reach a target harvest weight typical for the region of "
                 "interest is accurate."),
             "type": "number",
-            "units": 1/u.degree_Celsius,
-            "required": True,
+            "units": u.degree_Celsius**-1,
         },
         "use_uncertainty": {
             "name": "Enable uncertainty analysis",
             "about": "Enable uncertainty analysis.",
             "type": "boolean",
-            "required": True,
         },
         "g_param_a_sd": {
             "name": "Standard Deviation for Parameter (a)",
@@ -126,8 +120,6 @@ ARGS_SPEC = {
         "water_temp_tbl": {
             "name": "Table of Daily Water Temperature at Farm",
             "type": "csv",
-            "required": True,
-            "columns": None,
             "about": (
                 "Users must provide a time series of daily water temperature "
                 "(C) for each farm in the vector.  When daily temperatures "
@@ -144,8 +136,6 @@ ARGS_SPEC = {
         "farm_op_tbl": {
             "name": "Farm Operations Table",
             "type": "csv",
-            "columns": None,
-            "required": True,
             "about": (
                 "A table of general and farm-specific operations parameters. "
                 "Please refer to the sample data table for reference to "
@@ -164,7 +154,6 @@ ARGS_SPEC = {
             "name": "Outplant Date Buffer",
             "type": "number",
             "units": u.day,
-            "required": True,
             "about": (
                 "This value will allow the outplant start day to start plus "
                 "or minus the number of days specified here."),
@@ -173,7 +162,6 @@ ARGS_SPEC = {
             "name": "Run valuation model",
             "about": "Run valuation model",
             "type": "boolean",
-            "required": True,
         },
         "p_per_kg": {
             "name": "Market Price of Processed Fish",
@@ -190,10 +178,7 @@ ARGS_SPEC = {
                 "Fraction of market price that accounts for costs rather than "
                 "profit.  Default value is 0.3 (30%)."),
             "required": "do_valuation",
-            "type": "ratio",
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            }
+            "type": "ratio"
         },
         "discount": {
             "name": "Daily Market Discount Rate",
@@ -201,10 +186,7 @@ ARGS_SPEC = {
                 "We use a 7% annual discount rate, adjusted to a daily rate "
                 "of 0.000192 for 0.0192% (7%/365 days)."),
             "required": "do_valuation",
-            "type": "ratio",
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            }
+            "type": "ratio"
         }
     }
 }

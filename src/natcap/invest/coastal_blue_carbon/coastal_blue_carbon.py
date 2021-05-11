@@ -187,7 +187,6 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "name": "Biophysical Table",
             "type": "csv",
-            "required": True,
             "columns": {
                 "code": {
                     "type": "freestyle_string",
@@ -281,7 +280,6 @@ ARGS_SPEC = {
         "landcover_transitions_table": {
             "name": "Landcover Transitions Table",
             "type": "csv",
-            "required": True,
             "columns": {
                 'lulc-class': {
                     "type": "code",

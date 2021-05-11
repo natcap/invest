@@ -52,7 +52,6 @@ ARGS_SPEC = {
                 },
                 "lucode": {"type": "code"}
             },
-            "required": True,
             "about": (
                 "A CSV table mapping canonical crop names to land use codes "
                 "contained in the landcover/use raster."),
@@ -64,18 +63,17 @@ ARGS_SPEC = {
                 "crop_name": {"type": "freestyle_string"},
                 "nitrogen_rate": {
                     "type": "number",
-                    "units": u.kilogram / u.hectare
+                    "units": u.kilogram/u.hectare
                 },
                 "phosphorus_rate": {
                     "type": "number",
-                    "units": u.kilogram / u.hectare
+                    "units": u.kilogram/u.hectare
                 },
                 "potassium_rate": {
                     "type": "number",
-                    "units": u.kilogram / u.hectare
+                    "units": u.kilogram/u.hectare
                 }
             },
-            "required": True,
             "about": (
                 "A table that maps crops to fertilization rates for nitrogen, "
                 "phosphorus, and potassium."),
@@ -100,13 +98,13 @@ ARGS_SPEC = {
                                 'climate_bin': {"type": "code"},
                                 'yield_ceiling': {
                                     "type": "number",
-                                    "units": u.metric_ton / u.hectare
+                                    "units": u.metric_ton/u.hectare
                                 },
-                                'b_nut': {"type": "number", "units": "?"},
-                                'b_k2o': {"type": "number", "units": "?"},
-                                'c_n': {"type": "number", "units": "?"},
-                                'c_p2o5': {"type": "number", "units": "?"},
-                                'c_k2o': {"type": "number", "units": "?"}
+                                'b_nut':  {"type": "number", "units": u.none},
+                                'b_k2o':  {"type": "number", "units": u.none},
+                                'c_n':    {"type": "number", "units": u.none},
+                                'c_p2o5': {"type": "number", "units": u.none},
+                                'c_k2o':  {"type": "number", "units": u.none}
                             }
                         }
                     }
@@ -118,44 +116,43 @@ ARGS_SPEC = {
                             "type": "number",
                             "units": units
                         } for nutrient, units in {
-                            "protein": u.gram / u.hectogram,
-                            "lipid": u.gram / u.hectogram,       # total lipid
-                            "energy": u.kilojoule / u.hectogram,
-                            "ca": u.milligram / u.hectogram,  # calcium
-                            "fe": u.milligram / u.hectogram,  # iron
-                            "mg": u.milligram / u.hectogram,  # magnesium
-                            "ph": u.milligram / u.hectogram,  # phosphorus
-                            "k": u.milligram / u.hectogram,  # potassium
-                            "na": u.milligram / u.hectogram,  # sodium
-                            "zn": u.milligram / u.hectogram,  # zinc
-                            "cu": u.milligram / u.hectogram,  # copper
-                            "fl": u.microgram / u.hectogram,  # fluoride
-                            "mn": u.milligram / u.hectogram,  # manganese
-                            "se": u.microgram / u.hectogram,  # selenium
-                            "vita": u.IU / u.hectogram,         # vitamin A
-                            "betac": u.microgram / u.hectogram,  # beta carotene
-                            "alphac": u.microgram / u.hectogram,  # alpha carotene
-                            "vite": u.milligram / u.hectogram,  # vitamin e
-                            "crypto": u.microgram / u.hectogram,  # cryptoxanthin
-                            "lycopene": u.microgram / u.hectogram,  # lycopene
-                            "lutein": u.microgram / u.hectogram,  # lutein + zeaxanthin
-                            "betaT": u.milligram / u.hectogram,  # beta tocopherol
-                            "gammaT": u.milligram / u.hectogram,  # gamma tocopherol
-                            "deltaT": u.milligram / u.hectogram,  # delta tocopherol
-                            "vitc": u.milligram / u.hectogram,  # vitamin C
-                            "thiamin": u.milligram / u.hectogram,
-                            "riboflavin": u.milligram / u.hectogram,
-                            "niacin": u.milligram / u.hectogram,
-                            "pantothenic": u.milligram / u.hectogram,  # pantothenic acid
-                            "vitb6": u.milligram / u.hectogram,  # vitamin B6
-                            "folate": u.microgram / u.hectogram,
-                            "vitb12": u.microgram / u.hectogram,  # vitamin B12
-                            "vitk": u.microgram / u.hectogram,  # vitamin K
+                            "protein":     u.gram/u.hectogram,
+                            "lipid":       u.gram/u.hectogram,       # total lipid
+                            "energy":      u.kilojoule/u.hectogram,
+                            "ca":          u.milligram/u.hectogram,  # calcium
+                            "fe":          u.milligram/u.hectogram,  # iron
+                            "mg":          u.milligram/u.hectogram,  # magnesium
+                            "ph":          u.milligram/u.hectogram,  # phosphorus
+                            "k":           u.milligram/u.hectogram,  # potassium
+                            "na":          u.milligram/u.hectogram,  # sodium
+                            "zn":          u.milligram/u.hectogram,  # zinc
+                            "cu":          u.milligram/u.hectogram,  # copper
+                            "fl":          u.microgram/u.hectogram,  # fluoride
+                            "mn":          u.milligram/u.hectogram,  # manganese
+                            "se":          u.microgram/u.hectogram,  # selenium
+                            "vita":        u.IU/u.hectogram,         # vitamin A
+                            "betac":       u.microgram/u.hectogram,  # beta carotene
+                            "alphac":      u.microgram/u.hectogram,  # alpha carotene
+                            "vite":        u.milligram/u.hectogram,  # vitamin e
+                            "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
+                            "lycopene":    u.microgram/u.hectogram,  # lycopene
+                            "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
+                            "betaT":       u.milligram/u.hectogram,  # beta tocopherol
+                            "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
+                            "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
+                            "vitc":        u.milligram/u.hectogram,  # vitamin C
+                            "thiamin":     u.milligram/u.hectogram,
+                            "riboflavin":  u.milligram/u.hectogram,
+                            "niacin":      u.milligram/u.hectogram,
+                            "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
+                            "vitb6":       u.milligram/u.hectogram,  # vitamin B6
+                            "folate":      u.microgram/u.hectogram,
+                            "vitb12":      u.microgram/u.hectogram,  # vitamin B12
+                            "vitk":        u.microgram/u.hectogram,  # vitamin K
                         }.items()
                     }
                 }
             },
-            "required": True,
             "about": (
                 "A path to the InVEST Crop Production Data directory. These "
                 "data would have been included with the InVEST installer if "
@@ -479,20 +476,18 @@ def execute(args):
                 crop_name, yield_regression_id)
             create_interpolated_parameter_task = task_graph.add_task(
                 func=pygeoprocessing.warp_raster,
-                args=(
-                    coarse_regression_parameter_raster_path,
-                    landcover_raster_info['pixel_size'],
-                    regression_parameter_raster_path_lookup[yield_regression_id],
-                    'cubicspline'),
-                kwargs={
-                    'target_projection_wkt': landcover_raster_info['projection_wkt'],
-                    'target_bb': landcover_raster_info['bounding_box']},
+                args=(coarse_regression_parameter_raster_path,
+                      landcover_raster_info['pixel_size'],
+                      regression_parameter_raster_path_lookup[yield_regression_id],
+                      'cubicspline'),
+                kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
+                        'target_bb': landcover_raster_info['bounding_box']},
                 target_path_list=[
                     regression_parameter_raster_path_lookup[yield_regression_id]],
-                dependent_task_list=[create_coarse_regression_parameter_task],
-                task_name='create_interpolated_parameter_%s_%s' %
-                (crop_name,
-                 yield_regression_id))
+                dependent_task_list=[
+                    create_coarse_regression_parameter_task],
+                task_name='create_interpolated_parameter_%s_%s' % (
+                    crop_name, yield_regression_id))
             dependent_task_list.append(create_interpolated_parameter_task)
 
         LOGGER.info('Calc nitrogen yield')
@@ -620,18 +615,14 @@ def execute(args):
             "Interpolating observed %s raster to landcover.", crop_name)
         interpolate_observed_yield_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
-            args=(
-                zeroed_observed_yield_raster_path,
-                landcover_raster_info['pixel_size'],
-                interpolated_observed_yield_raster_path,
-                'cubicspline'),
-            kwargs={
-                'target_projection_wkt': landcover_raster_info['projection_wkt'],
-                'target_bb': landcover_raster_info['bounding_box']},
+            args=(zeroed_observed_yield_raster_path,
+                  landcover_raster_info['pixel_size'],
+                  interpolated_observed_yield_raster_path, 'cubicspline'),
+            kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
+                    'target_bb': landcover_raster_info['bounding_box']},
             target_path_list=[interpolated_observed_yield_raster_path],
             dependent_task_list=[nodata_to_zero_for_observed_yield_task],
-            task_name='interpolate_observed_yield_to_lulc_%s' %
-            crop_name)
+            task_name='interpolate_observed_yield_to_lulc_%s' % crop_name)
         dependent_task_list.append(interpolate_observed_yield_task)
 
         observed_production_raster_path = os.path.join(

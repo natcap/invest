@@ -58,6 +58,8 @@ u.define('survey_foot = 1200 / 3937 * meter = sft = us_survey_foot')
 # May be converted to weight or volume, but conversion factors are specific
 # to the substance. I couldn't find a definition of its dimensionality.
 u.define('international_unit = [biologic_amount] = iu = IU')
+# Use u.none for unitless measurements
+u.define('none = []')
 
 AREA = {
     "type": "vector",
@@ -135,7 +137,6 @@ AOI_ARG = {
 LULC_ARG = {
     "type": "raster",
     "bands": {1: {"type": "code"}},
-    "required": True,
     "about": (
         "A GDAL-supported raster file containing LULC code "
         "(expressed as integers) for each cell."),
@@ -149,7 +150,6 @@ DEM_ARG = {
             "units": u.meter
         }
     },
-    "required": True,
     "about": (
         "A GDAL-supported raster file containing elevation values for "
         "each cell.  Make sure the DEM is corrected by filling in "
@@ -158,6 +158,19 @@ DEM_ARG = {
         "observed.) See the Working with the DEM section of the "
         "InVEST User's Guide for more information."),
     "name": "digital elevation model"
+}
+PRECIP_ARG = {
+    "type": "raster",
+    "bands": {
+        1: {
+            "type": "number",
+            "units": u.millimeter
+        }
+    },
+    "about": (
+        "A GDAL-supported raster file containing non-zero, average "
+        "annual precipitation values for each cell."),
+    "name": "Precipitation"
 }
 ETO_ARG = {
     "name": "Evapotranspiration Raster",
@@ -168,13 +181,11 @@ ETO_ARG = {
             "units": u.millimeter
         }
     },
-    "required": True,
     "about": "A map of evapotranspiration values"
 }
 SOIL_GROUP_ARG = {
     "type": "raster",
     "bands": {1: {"type": "code"}},
-    "required": True,
     "about": (
         "Raster with values equal to 1, 2, 3, 4, corresponding to "
         "soil hydrologic group A, B, C, or D, respectively"),

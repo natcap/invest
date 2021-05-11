@@ -52,7 +52,7 @@ predictor_table_columns = {
     "path": {
         "type": {"raster", "vector"},
         "about": "A spatial file to use as a predictor",
-        "bands": {1: {"type": "number", "units": None}},
+        "bands": {1: {"type": "number", "units": u.none}},
         "fields": {},
         "geometries": {'POINT', 'LINE', 'POLYGON'}
     },
@@ -97,7 +97,6 @@ ARGS_SPEC = {
         "n_workers": validation.N_WORKERS_SPEC,
         "aoi_path": {
             **utils.AREA,
-            "required": True,
             "about": (
                 "A GDAL-supported vector file representing the area of "
                 "interest where the model will run the analysis."),
@@ -116,7 +115,7 @@ ARGS_SPEC = {
                 "expression": "value >= 0",
             },
             "type": "number",
-            "units": None,
+            "units": u.none,
             "required": False,
             "about": (
                 "the port on ``hostname`` to use for contacting the "
@@ -129,7 +128,6 @@ ARGS_SPEC = {
             },
             "type": "number",
             "units": u.year,
-            "required": True,
             "about": "Year to start PUD calculations, date starts on Jan 1st.",
             "name": "Start Year (inclusive, must be >= 2005)"
         },
@@ -139,7 +137,6 @@ ARGS_SPEC = {
             },
             "type": "number",
             "units": u.year,
-            "required": True,
             "about": (
                 "Year to end PUD calculations, date ends and includes Dec "
                 "31st."),

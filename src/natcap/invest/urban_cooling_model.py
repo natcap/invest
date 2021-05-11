@@ -56,10 +56,9 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "name": "Biophysical Table",
             "type": "csv",
-            "required": True,
             "columns": {
                 "lucode": {"type": "code"},
-                "kc": {"type": "number", "units": None, "about": (
+                "kc": {"type": "number", "units": u.none, "about": (
                     "Crop coefficient")},
                 "green_area": {
                     "type": "boolean",
@@ -95,7 +94,6 @@ ARGS_SPEC = {
         "green_area_cooling_distance": {
             **utils.DISTANCE,
             "name": "Green area max cooling distance effect",
-            "required": True,
             "about": (
                 "Distance over which green areas larger than 2 hectares will "
                 "have a cooling effect."),
@@ -103,7 +101,6 @@ ARGS_SPEC = {
         "t_air_average_radius": {
             **utils.DISTANCE,
             "name": "T_air moving average radius",
-            "required": True,
             "about": (
                 "Radius of the averaging filter for turning T_air_nomix into "
                 "T_air")
@@ -112,7 +109,6 @@ ARGS_SPEC = {
             "name": "Reference Air Temperature",
             "type": "number",
             "units": u.degree_Celsius,
-            "required": True,
             "about": (
                 "Rural reference temperature (where the urban heat "
                 "islandeffect is not observed) for the period of interest. "
@@ -124,7 +120,6 @@ ARGS_SPEC = {
             "name": "Magnitude of the UHI effect",
             "type": "number",
             "units": u.degree_Celsius,
-            "required": True,
             "about": (
                 "The magnitude of the urban heat island effect, Example: the "
                 "difference between the rural reference temperature and the "
@@ -133,13 +128,11 @@ ARGS_SPEC = {
         "do_energy_valuation": {
             "name": "Run Energy Savings Valuation Model",
             "type": "boolean",
-            "required": True,
             "about": "Select to run the energy savings valuation model."
         },
         "do_productivity_valuation": {
             "name": "Run Work Productivity Valuation Model",
             "type": "boolean",
-            "required": True,
             "about": "Select to run the work productivity valuation model."
         },
         "avg_rel_humidity": {
@@ -209,7 +202,6 @@ ARGS_SPEC = {
         "cc_method": {
             "name": "Cooling capacity calculation method",
             "type": "option_string",
-            "required": True,
             "validation_options": {
                 "options": ['factors', 'intensity'],
             },

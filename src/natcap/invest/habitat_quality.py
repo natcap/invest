@@ -119,7 +119,6 @@ ARGS_SPEC = {
                     "bands": {1: {"type": "ratio"}},
                 }
             },
-            "required": True,
             "about": (
                 "Table mapping each threat of interest to its properties and "
                 "maps of its distribution. The raster columns give filepaths "
@@ -128,11 +127,8 @@ ARGS_SPEC = {
             "name": "Threats Table"
         },
         "access_vector_path": {
-            "validation_options": {
-                "required_fields": ["access"],
-                "projected": True,
-            },
             "type": "vector",
+            **utils.PROJECTED,
             "fields": {"access": {"type": "ratio"}},
             "geometries": utils.POLYGONS,
             "required": False,
@@ -156,7 +152,6 @@ ARGS_SPEC = {
                         "type of threat.")
                 }
             },
-            "required": True,
             "about": (
                 "Table mapping each LULC class to data about the species' "
                 "habitat preference and threat sensitivity in areas with that "
@@ -166,8 +161,7 @@ ARGS_SPEC = {
         "half_saturation_constant": {
             **utils.GT_0,
             "type": "number",
-            "units": None,
-            "required": True,
+            "units": u.none,
             "about": (
                 "A positive floating point value that is defaulted at 0.05. "
                 "This is the value of the parameter k in equation (4). In "

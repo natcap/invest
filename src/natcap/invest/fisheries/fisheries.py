@@ -35,7 +35,6 @@ ARGS_SPEC = {
             **utils.GT_0,
             "type": "number",
             "units": u.count,
-            "required": True,
             "about": (
                 "The number of time steps the simulation shall execute before "
                 "completion. Must be a positive integer."),
@@ -46,7 +45,6 @@ ARGS_SPEC = {
                 "options": ["Age-Based", "Stage-Based"],
             },
             "type": "option_string",
-            "required": True,
             "about": (
                 "Specifies whether the lifecycle classes provided in the "
                 "Population Parameters CSV file represent ages (uniform "
@@ -66,7 +64,6 @@ ARGS_SPEC = {
                 "options": ["No", "Yes"]
             },
             "type": "option_string",
-            "required": True,
             "about": (
                 "Specifies whether or not the lifecycle classes provided in "
                 "the Population Parameters CSV file are distinguished by sex."),
@@ -77,7 +74,6 @@ ARGS_SPEC = {
                 "options": ["Individuals", "Weight"],
             },
             "type": "option_string",
-            "required": True,
             "about": (
                 "Specifies whether the harvest output values are calculated "
                 "in terms of number of individuals or in terms of biomass "
@@ -137,7 +133,6 @@ ARGS_SPEC = {
                 "options": ["Weight", "Individuals"],
             },
             "type": "option_string",
-            "required": True,
             "about": (
                 "Specifies whether the spawner abundance used in the "
                 "recruitment function should be calculated in terms of number "
@@ -154,7 +149,6 @@ ARGS_SPEC = {
             **utils.GT_0,
             "type": "number",
             "units": u.count,
-            "required": True,
             "about": (
                 "The initial number of recruits in the population model at "
                 "time equal to zero.<br><br>If the model contains multiple "
@@ -168,7 +162,6 @@ ARGS_SPEC = {
                 "options": ["Beverton-Holt", "Ricker", "Fecundity", "Fixed"],
             },
             "type": "option_string",
-            "required": True,
             "about": (
                 "The selected equation is used to calculate recruitment into "
                 "the subregions at the beginning of each time step. "
@@ -186,7 +179,7 @@ ARGS_SPEC = {
         },
         "alpha": {
             "type": "number",
-            "units": None,
+            "units": u.none,
             "required": False,
             "about": (
                 "Specifies the shape of the stock-recruit curve. Used only "
@@ -196,7 +189,7 @@ ARGS_SPEC = {
         },
         "beta": {
             "type": "number",
-            "units": None,
+            "units": u.none,
             "required": False,
             "about": (
                 "Specifies the shape of the stock-recruit curve. Used only "
@@ -215,7 +208,6 @@ ARGS_SPEC = {
         },
         "migr_cont": {
             "type": "boolean",
-            "required": True,
             "about": "if True, model uses migration.",
             "name": "Migration Parameters"
         },
@@ -252,12 +244,10 @@ ARGS_SPEC = {
         },
         "val_cont": {
             "type": "boolean",
-            "required": True,
             "about": "if True, model computes valuation.",
             "name": "Valuation Parameters"
         },
         "frac_post_process": {
-            "validation_options": {},
             "type": "ratio",
             "required": "val_cont",
             "about": (
@@ -267,7 +257,7 @@ ARGS_SPEC = {
         },
         "unit_price": {
             "type": "number",
-            "units": None,
+            "units": u.none,
             "required": "val_cont",
             "about": (
                 "Specifies the price per harvest unit. If 'Harvest by "

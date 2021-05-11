@@ -36,7 +36,6 @@ WORKSPACE_SPEC = {
         "created."),
     "type": "directory",
     "contents": {},
-    "required": True,
     "validation_options": {
         "exists": False,
         "permissions": "rwx",
@@ -52,8 +51,7 @@ SUFFIX_SPEC = {
     "required": False,
     "validation_options": {
         "regexp": {
-            "pattern": "[a-zA-Z0-9_-]*",
-            "case_sensitive": False,
+            "pattern": "[a-zA-Z0-9_-]*"
         }
     }
 }
@@ -67,7 +65,7 @@ N_WORKERS_SPEC = {
         "place asynchronously. Any other positive integer will cause that "
         "many processes to be spawned to execute tasks."),
     "type": "number",
-    "units": None,
+    "units": utils.u.none,
     "required": False,
     "validation_options": {
         "expression": "value >= -1"

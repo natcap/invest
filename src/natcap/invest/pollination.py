@@ -90,7 +90,6 @@ ARGS_SPEC = {
                         "weighted equally.")
                 }
             },
-            "required": True,
             "about": (
                 "A table mapping each pollinator species/guild of interest to "
                 "its pollination-related parameters."),
@@ -115,7 +114,6 @@ ARGS_SPEC = {
                         "given season (floral coverage x proportion of the "
                         "season for which there is that coverage).")}
             },
-            "required": True,
             "about": (
                 "A table mapping each LULC class to nesting availability and "
                 "floral abundance data for each substrate and season in that "
@@ -302,7 +300,7 @@ def execute(args):
         args['guild_table_path'] (string): file path to a table indicating
             the bee species to analyze in this model run.  Table headers
             must include:
-            
+
                 * 'species': a bee species whose column string names will
                     be referred to in other tables and the model will output
                     analyses per species.

@@ -42,7 +42,7 @@ ARGS_SPEC = {
         "n_nearest_model_points": {
             **utils.GT_0,
             "type": "number",
-            "units": None,
+            "units": u.none,
             "required": "compute_forest_edge_effects",
             "about": (
                 "Used when calculating the biomass in a pixel.  This number "
@@ -60,7 +60,6 @@ ARGS_SPEC = {
         },
         "biophysical_table_path": {
             "type": "csv",
-            "required": True,
             "columns": {
                 "lucode": {"type": "code"},
                 "is_tropical_forest": {"type": "boolean"},
@@ -110,7 +109,6 @@ ARGS_SPEC = {
                 "options": ["all", "above_ground"]
             },
             "type": "option_string",
-            "required": True,
             "about": (
                 "If 'all carbon pools' is selected then the headers "
                 "'c_above', 'c_below', 'c_dead', 'c_soil' are used in the "
@@ -120,7 +118,6 @@ ARGS_SPEC = {
         },
         "compute_forest_edge_effects": {
             "type": "boolean",
-            "required": True,
             "about": (
                 "If selected, will use the Chaplin-Kramer, et. al method to "
                 "account for above ground carbon stocks in tropical forest "
@@ -133,14 +130,14 @@ ARGS_SPEC = {
             "fields": {
                 "method": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "validation_options": {
                         "expression": "value in {1, 2, 3}"
                     }
                 },
-                "theta1": {"type": "number", "units": None},
-                "theta2": {"type": "number", "units": None},
-                "theta3": {"type": "number", "units": None}
+                "theta1": {"type": "number", "units": u.none},
+                "theta2": {"type": "number", "units": u.none},
+                "theta3": {"type": "number", "units": u.none}
             },
             "geometries": utils.POLYGONS,
             "required": "compute_forest_edge_effects",

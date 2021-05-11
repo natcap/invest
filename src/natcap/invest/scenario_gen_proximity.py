@@ -38,7 +38,6 @@ ARGS_SPEC = {
         },
         "replacment_lucode": {
             "type": "code",
-            "required": True,
             "about": "Code to replace when converting pixels",
             "name": "Replacement Landcover Code"
         },
@@ -46,7 +45,6 @@ ARGS_SPEC = {
             **utils.GT_0,
             "type": "number",
             "units": u.hectare,
-            "required": True,
             "about": "Max area to convert",
             "name": "Max area to convert"
         },
@@ -57,7 +55,6 @@ ARGS_SPEC = {
                 },
             },
             "type": "freestyle_string",
-            "required": True,
             "about": (
                 "A space separated string of landcover codes that are used to "
                 "determine the proximity when referring to 'towards' or "
@@ -71,7 +68,6 @@ ARGS_SPEC = {
                 },
             },
             "type": "freestyle_string",
-            "required": True,
             "about": (
                 "A space separated string of landcover codes that can be "
                 "converted in the generation phase found in "
@@ -82,7 +78,6 @@ ARGS_SPEC = {
             **utils.GT_0,
             "type": "number",
             "units": u.count,
-            "required": True,
             "about": (
                 "This parameter is used to divide the conversion simulation "
                 "into equal subareas of the requested max area. During each "
@@ -101,7 +96,6 @@ ARGS_SPEC = {
         },
         "convert_farthest_from_edge": {
             "type": "boolean",
-            "required": True,
             "about": (
                 "This scenario converts the convertible landcover codes "
                 "starting at the furthest pixel from the closest base "
@@ -110,7 +104,6 @@ ARGS_SPEC = {
         },
         "convert_nearest_to_edge": {
             "type": "boolean",
-            "required": True,
             "about": (
                 "This scenario converts the convertible landcover codes "
                 "starting at the closest pixel in the base landcover codes "

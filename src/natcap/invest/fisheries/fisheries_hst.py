@@ -25,7 +25,6 @@ ARGS_SPEC = {
         "sexsp": {
             "name": "Population Classes are Sex-Specific",
             "type": "option_string",
-            "required": True,
             "validation_options": {
                 "options": ["No", "Yes"],
             },
@@ -36,8 +35,6 @@ ARGS_SPEC = {
         "population_csv_path": {
             "name": "Population Parameters File",
             "type": "csv",
-            "columns": None,
-            "required": True,
             "about": (
                 "A CSV file containing all necessary attributes for "
                 "population classes based on age/stage, sex, and area - "
@@ -58,7 +55,6 @@ ARGS_SPEC = {
                         "change CSV")
                 }
             },
-            "required": True,
             "about": (
                 "A CSV file containing the habitat dependencies (0-1) for "
                 "each life stage or age and for each habitat type included in "
@@ -76,7 +72,6 @@ ARGS_SPEC = {
                         "gain/loss of each habitat")
                 }
             },
-            "required": True,
             "about": (
                 "A CSV file containing the percent changes in habitat area by "
                 "subregion (if applicable). The habitats included should be "
@@ -85,8 +80,6 @@ ARGS_SPEC = {
         "gamma": {
             "name": "Gamma",
             "type": "ratio",
-            "required": True,
-            **utils.BETWEEN_0_AND_1,
             "about": (
                 "Gamma describes the relationship between a change in habitat "
                 "area and a change in survival of life stages dependent on "
@@ -223,7 +216,7 @@ def convert_survival_matrix(vars_dict):
     # Divide by number of habitats and cancel non-class-transition elements
     # numpy.where may do the math on all elements regardless of the condition
     # replace 0s with -1s so that we don't divide by zero
-    n_a[n_a == 0] = -1  
+    n_a[n_a == 0] = -1
     H_xa_weighted = np.where(n_a < 0, 0, (H_xa * t_a) / n_a)
 
     # Add unchanged elements back in to matrix

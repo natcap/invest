@@ -30,7 +30,6 @@ ARGS_SPEC = {
                 "A CSV table used to map lulc classes to their values in a "
                 "raster, as well as to indicate whether or not the lulc class "
                 "is a coastal blue carbon habitat."),
-            "required": True,
             "columns": {
                 "code": {
                     "type": "code",
@@ -47,7 +46,6 @@ ARGS_SPEC = {
         },
         "landcover_snapshot_csv": {
             "type": "csv",
-            "required": True,
             "columns": {
                 "snapshot_year": {
                     "type": "number",
