@@ -202,9 +202,7 @@ ARGS_SPEC = {
         "cc_method": {
             "name": "Cooling capacity calculation method",
             "type": "option_string",
-            "validation_options": {
-                "options": ['factors', 'intensity'],
-            },
+            "options": ['factors', 'intensity'],
             "about": (
                 "The method selected here determines the predictor used for "
                 "air temperature.  If 'Weighted Factors' is selected, the "

@@ -25,9 +25,7 @@ ARGS_SPEC = {
         "sexsp": {
             "name": "Population Classes are Sex-Specific",
             "type": "option_string",
-            "validation_options": {
-                "options": ["No", "Yes"],
-            },
+            "options": ["No", "Yes"],
             "about": (
                 "Specifies whether or not the population classes provided in "
                 "the Population Parameters CSV file are distinguished by sex."),

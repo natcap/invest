@@ -105,10 +105,8 @@ ARGS_SPEC = {
             **utils.PROJECTED
         },
         "pools_to_calculate": {
-            "validation_options": {
-                "options": ["all", "above_ground"]
-            },
             "type": "option_string",
+            "options": ["all", "above_ground"],
             "about": (
                 "If 'all carbon pools' is selected then the headers "
                 "'c_above', 'c_below', 'c_dead', 'c_soil' are used in the "

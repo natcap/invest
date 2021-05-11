@@ -36,10 +36,8 @@ ARGS_SPEC = {
             "name": "Band Index"
         },
         "algorithm": {
-            "validation_options": {
-                "options": ["D8", "MFD"],
-            },
             "type": "option_string",
+            "options": ["D8", "MFD"],
             "about": (
                 "The routing algorithm to use. <ul><li>D8: all water flows "
                 "directly into the most downhill of each of the 8 neighbors "

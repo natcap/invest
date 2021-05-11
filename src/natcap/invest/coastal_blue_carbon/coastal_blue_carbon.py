@@ -283,7 +283,7 @@ ARGS_SPEC = {
             "columns": {
                 'lulc-class': {
                     "type": "code",
-                    "description": (
+                    "about": (
                         "LULC codes matching the codes in the biophysical "
                         "table")},
                 '(?!lulc-class)(^.+$)': {
@@ -295,7 +295,7 @@ ARGS_SPEC = {
                         'low-impact-disturb',
                         'NCC',
                         ''],
-                    "description": (
+                    "about": (
                         "One column header for each LULC code in the "
                         "biophysical table. Field values within the "
                         "transition matrix describe the change in carbon when "

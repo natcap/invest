@@ -110,13 +110,31 @@ class ValidateArgsSpecs(unittest.TestCase):
         for t in types:
             self.assertTrue(t in valid_types, f'{t} is an invalid type\n{arg}')
 
-            if t == 'number':
+            if arg['type'] == 'option_string':
+                # option_string type should have an options property that
+                # describes the valid options
+                self.assertTrue('options' in arg)
+                # May be a list or dict because some option sets are self
+                # explanatory and others need a description
+                if isinstance(arg['options'], list):
+                    for item in arg['options']:
+                        self.assertTrue(isinstance(item, str))
+                elif isinstance(arg['options'], dict):
+                    for key, val in arg['options'].items():
+                        self.assertTrue(isinstance(key, str))
+                        self.assertTrue(isinstance(val, str))
+                attrs.remove('options')
+
+            elif t == 'number':
+                # number type should have a units property
                 self.assertTrue('units' in arg)
                 # Undefined units should use the custom u.none unit
                 self.assertTrue(isinstance(arg['units'], pint.Unit))
                 attrs.remove('units')
 
             elif t == 'raster':
+                # raster type should have a bands property that maps each band
+                # index to a nested type dictionary describing the band's data
                 self.assertTrue('bands' in arg)
                 self.assertTrue(isinstance(arg['bands'], dict))
                 for band in arg['bands']:
@@ -127,6 +145,10 @@ class ValidateArgsSpecs(unittest.TestCase):
                 attrs.remove('bands')
 
             elif t == 'vector':
+                # vector type should have:
+                # - a fields property that maps each field header to a nested
+                #   type dictionary describing the data in that field
+                # - a geometries property: the set of valid geometry types
                 self.assertTrue('fields' in arg)
                 self.assertTrue(isinstance(arg['fields'], dict))
                 for field in arg['fields']:
@@ -142,9 +164,14 @@ class ValidateArgsSpecs(unittest.TestCase):
                 attrs.remove('geometries')
 
             elif t == 'csv':
+                # csv type should have a rows property, columns property, or
+                # neither. rows or columns properties map each expected header
+                # name/pattern to a nested type dictionary describing the data
+                # in that row/column. may have neither if the table structure
+                # is too complex to describe this way.
                 has_rows = 'rows' in arg
                 has_cols = 'columns' in arg
-                # may have neither if table is too complex to define this way
+                # should not have both
                 self.assertTrue(not (has_rows and has_cols), arg)
 
                 if has_cols or has_rows:
@@ -161,7 +188,9 @@ class ValidateArgsSpecs(unittest.TestCase):
                     attrs.discard('columns')
 
             elif t == 'directory':
-                print(arg)
+                # directory type should have a contents property that maps each
+                # expected path name/pattern within the directory to a nested
+                # type dictionary describing the data at that filepath
                 self.assertTrue('contents' in arg)
                 self.assertTrue(isinstance(arg['contents'], dict))
                 for path in arg['contents']:
@@ -171,8 +200,9 @@ class ValidateArgsSpecs(unittest.TestCase):
                         valid_types=valid_nested_types['directory'])
                 attrs.remove('contents')
 
+        # iterate over the remaining attributes
+        # type-specific ones have been removed by this point
         for attr in attrs:
-            print(attr)
             if attr in {'name', 'about'}:
                 self.assertTrue(isinstance(arg[attr], str))
             elif attr == 'required':
@@ -186,17 +216,13 @@ class ValidateArgsSpecs(unittest.TestCase):
                     isinstance(arg[attr], str) or
                     isinstance(arg[attr], set))
             elif attr == 'validation_options':
+                # the allowed validation_options properties are type-specific
                 if arg['type'] == 'csv':
                     self.assertTrue(list(arg[attr].keys()) == ['excel_ok'])
                     self.assertTrue(isinstance(arg[attr]['excel_ok'], bool))
                 elif arg['type'] == 'number':
                     self.assertTrue(list(arg[attr].keys()) == ['expression'])
                     self.assertTrue(isinstance(arg[attr]['expression'], str))
-                elif arg['type'] == 'option_string':
-                    self.assertTrue(list(arg[attr].keys()) == ['options'])
-                    self.assertTrue(isinstance(arg[attr]['options'], list))
-                    for item in arg[attr]['options']:
-                        self.assertTrue(isinstance(item, str))
                 elif arg['type'] == 'freestyle_string':
                     self.assertEqual(list(arg[attr].keys()), ['regexp'])
                     self.assertTrue(isinstance(arg[attr]['regexp'], dict))
@@ -204,40 +230,43 @@ class ValidateArgsSpecs(unittest.TestCase):
                         list(arg[attr]['regexp'].keys()), ['pattern'])
                     self.assertTrue(isinstance(
                         arg[attr]['regexp']['pattern'], str))
-
-
                 elif arg['type'] in {'raster', 'vector'}:
                     keys = set(arg[attr].keys())
-                    self.assertTrue(len(keys) > 0)
-                    for key in keys:
-                        if key == 'projected':
-                            self.assertTrue(isinstance(
-                                arg[attr]['projected'],
-                                bool))
-                        elif key == 'projection_units':
-                            self.assertTrue(isinstance(
-                                arg[attr]['projection_units'],
-                                pint.Unit))
-                        else:
-                            raise ValueError(
-                                f'Invalid key in validation_options: {key}')
+                    # should have at least one key; shouldn't have
+                    # projection_units without projected
+                    self.assertTrue(
+                        (keys == {'projected'}) or
+                        (keys == {'projected', 'projection_units'}))
+                    self.assertTrue(isinstance(
+                        arg[attr]['projected'], bool))
+                    if 'projection_units' in keys:
+                        # doesn't make sense to have projection units unless
+                        # projected is True
+                        self.assertEqual(arg[attr]['projected'], True)
+                        self.assertTrue(isinstance(
+                                arg[attr]['projection_units'], pint.Unit))
                 elif arg['type'] == 'file':
                     self.assertTrue(list(arg[attr].keys()) == ['permissions'])
                     self.validate_permissions_value(arg[attr]['permissions'])
-
                 elif arg['type'] == 'directory':
                     keys = set(arg[attr].keys())
+                    # should have at least one of 'permissions', 'exists'
                     self.assertTrue(len(keys) > 0)
-                    for key in keys:
-                        if key == 'permissions':
-                            self.validate_permissions_value(arg[attr]['permissions'])
-                        elif key == 'exists':
-                            self.assertTrue(isinstance(arg[attr]['exists'], bool))
+                    self.assertTrue(keys.issubset({'permissions', 'exists'}))
+                    if 'permissions' in keys:
+                        self.validate_permissions_value(arg[attr]['permissions'])
+                    if 'exists' in keys:
+                        self.assertTrue(isinstance(arg[attr]['exists'], bool))
 
+                # validation options should not exist for any other types
                 else:
-                    raise ValueError(
-                        f'{arg} has a validation_options key that is not '
-                        'allowed for its type')
+                    raise ValueError("This arg's type does not allow the "
+                                     "validation_options attribute")
+
+            # args should not have any unexpected properties
+            else:
+                raise ValueError(f'Arg has a key ({attr}) that is not '
+                                 'expected for its type')
 
 
 if __name__ == '__main__':

@@ -41,10 +41,8 @@ ARGS_SPEC = {
             "name": "Number of Time Steps for Model Run"
         },
         "population_type": {
-            "validation_options": {
-                "options": ["Age-Based", "Stage-Based"],
-            },
             "type": "option_string",
+            "options": ["Age-Based", "Stage-Based"],
             "about": (
                 "Specifies whether the lifecycle classes provided in the "
                 "Population Parameters CSV file represent ages (uniform "
@@ -60,20 +58,16 @@ ARGS_SPEC = {
             "name": "Population Model Type"
         },
         "sexsp": {
-            "validation_options": {
-                "options": ["No", "Yes"]
-            },
             "type": "option_string",
+            "options": ["No", "Yes"],
             "about": (
                 "Specifies whether or not the lifecycle classes provided in "
                 "the Population Parameters CSV file are distinguished by sex."),
             "name": "Population Classes are Sex-Specific"
         },
         "harvest_units": {
-            "validation_options": {
-                "options": ["Individuals", "Weight"],
-            },
             "type": "option_string",
+            "options": ["Individuals", "Weight"],
             "about": (
                 "Specifies whether the harvest output values are calculated "
                 "in terms of number of individuals or in terms of biomass "
@@ -129,10 +123,8 @@ ARGS_SPEC = {
             "name": "Population Parameters CSV Folder"
         },
         "spawn_units": {
-            "validation_options": {
-                "options": ["Weight", "Individuals"],
-            },
             "type": "option_string",
+            "options": ["Weight", "Individuals"],
             "about": (
                 "Specifies whether the spawner abundance used in the "
                 "recruitment function should be calculated in terms of number "
@@ -158,10 +150,8 @@ ARGS_SPEC = {
             "name": "Total Initial Recruits"
         },
         "recruitment_type": {
-            "validation_options": {
-                "options": ["Beverton-Holt", "Ricker", "Fecundity", "Fixed"],
-            },
             "type": "option_string",
+            "options": ["Beverton-Holt", "Ricker", "Fecundity", "Fixed"],
             "about": (
                 "The selected equation is used to calculate recruitment into "
                 "the subregions at the beginning of each time step. "

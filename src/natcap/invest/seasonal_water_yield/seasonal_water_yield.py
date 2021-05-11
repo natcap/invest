@@ -154,12 +154,11 @@ ARGS_SPEC = {
         },
         "alpha_m": {
             "type": "freestyle_string",
-            "units": u.none,
             "required": "not monthly_alpha",
             "about": (
                 "Required if args['monthly_alpha'] is false.  Is the "
                 "proportion of upslope annual available local recharge that "
-                "is available in month m."),
+                "is available in month m. Units: unitless"),
             "name": "alpha_m Parameter"
         },
         "beta_i": {
