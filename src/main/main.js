@@ -10,9 +10,9 @@ import {
   getFlaskIsReady, shutdownPythonProcess
 } from '../server_requests';
 import {
-  findInvestBinaries,
   createPythonFlaskProcess,
 } from './main_helpers';
+import findInvestBinaries from './findInvestBinaries';
 import setupIpcMainHandlers from './ipcMainHandlers';
 import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
@@ -51,9 +51,7 @@ export const createWindow = async () => {
   });
   splashScreen.loadURL(`file://${__dirname}/../static/splash.html`);
 
-  const [investExe, investVersion] = await findInvestBinaries(
-    ELECTRON_DEV_MODE
-  );
+  const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   createPythonFlaskProcess(investExe);
   logger.info(`Running invest-workbench version ${pkg.version}`);
   setupDialogs();
