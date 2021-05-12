@@ -1,4 +1,3 @@
-const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
