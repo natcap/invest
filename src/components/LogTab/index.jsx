@@ -115,6 +115,10 @@ export default class LogTab extends React.Component {
     this.unwatchLogfile();
   }
 
+  handleOpenWorkspace() {
+    shell.showItemInFolder(this.props.logfile);
+  }
+
   tailLogfile(logfile) {
     try {
       if (process.platform === 'win32') {
@@ -163,10 +167,6 @@ export default class LogTab extends React.Component {
     }
   }
 
-  handleOpenWorkspace() {
-    shell.showItemInFolder(this.props.logfile);
-  }
-
   unwatchLogfile() {
     if (this.tail) {
       try {
@@ -182,7 +182,6 @@ export default class LogTab extends React.Component {
     const {
       jobStatus,
       logStdErr,
-      procID,
       terminateInvestProcess,
       sidebarFooterElementId,
     } = this.props;
@@ -201,7 +200,6 @@ export default class LogTab extends React.Component {
       <Button
         variant="outline-dark"
         onClick={terminateInvestProcess}
-        disabled={!procID}
       >
         Cancel Run
       </Button>
@@ -258,7 +256,6 @@ LogTab.propTypes = {
   jobStatus: PropTypes.string,
   logfile: PropTypes.string,
   logStdErr: PropTypes.string,
-  procID: PropTypes.number,
   pyModuleName: PropTypes.string.isRequired,
   terminateInvestProcess: PropTypes.func.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,

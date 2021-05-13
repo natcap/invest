@@ -124,7 +124,7 @@ export const createWindow = async () => {
 
   setupDownloadHandlers(mainWindow);
   setupInvestArgsToJsonHandler();
-  setupInvestRunHandlers();
+  setupInvestRunHandlers(investExe);
 };
 
 export function main(argv) {

@@ -160,13 +160,6 @@ export default class App extends React.Component {
     });
   }
 
-  // async updateOpenJob() {
-  //   const recentJobs = await InvestJob.getJobStore();
-  //   this.setState({
-  //     recentJobs: recentJobs
-  //   });
-  // }
-
   async clearRecentJobs() {
     const recentJobs = await InvestJob.clearStore();
     this.setState({
@@ -175,7 +168,6 @@ export default class App extends React.Component {
   }
 
   render() {
-    const { investExe } = this.props;
     const {
       investList,
       investSettings,
@@ -215,7 +207,6 @@ export default class App extends React.Component {
         >
           <InvestTab
             job={job}
-            investExe={investExe}
             investSettings={investSettings}
             saveJob={this.saveJob}
           />
@@ -297,7 +288,6 @@ export default class App extends React.Component {
 }
 
 App.propTypes = {
-  investExe: PropTypes.string.isRequired,
   isFirstRun: PropTypes.bool,
 };
 

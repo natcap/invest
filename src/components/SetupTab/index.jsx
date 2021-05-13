@@ -53,8 +53,8 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
       touched: !initIsEmpty, // touch them only if initializing with values
     };
   });
-  return ({ 
-    argsValues: argsValues, 
+  return ({
+    argsValues: argsValues,
     argsDropdownOptions: argsDropdownOptions,
   });
 }
@@ -93,7 +93,7 @@ export default class SetupTab extends React.Component {
     const { argsInitValues, argsSpec, uiSpec } = this.props;
 
     const {
-      argsValues, 
+      argsValues,
       argsDropdownOptions,
     } = initializeArgValues(argsSpec, uiSpec, argsInitValues || {});
 
@@ -104,13 +104,13 @@ export default class SetupTab extends React.Component {
       acc[argkey] = {};
       return acc;
     }, {});
-    // here we only use the keys in uiSpec.order because args that 
+    // here we only use the keys in uiSpec.order because args that
     // aren't displayed in the form don't need an enabled/disabled state.
     // all args default to being enabled
     const argsEnabled = uiSpec.order.flat().reduce((acc, argkey) => {
       acc[argkey] = true;
       return acc;
-    }, {})
+    }, {});
 
     this.setState({
       argsValues: argsValues,
@@ -126,7 +126,7 @@ export default class SetupTab extends React.Component {
   /**
    * Call functions from the UI spec to determine the enabled/disabled 
    * state and dropdown options for each input, if applicable.
-   * 
+   *
    * @returns {undefined}
    */
   async callUISpecFunctions() {
@@ -134,17 +134,17 @@ export default class SetupTab extends React.Component {
 
     if (enabledFunctions) {
       // this model has some fields that are conditionally enabled
-      const argsEnabled = this.state.argsEnabled;
+      const { argsEnabled } = this.state;
       for (const key in enabledFunctions) {
         // evaluate the function to determine if it should be enabled
         argsEnabled[key] = await enabledFunctions[key](this.state);
       }
-      this.setState({argsEnabled: argsEnabled});
+      this.setState({ argsEnabled: argsEnabled });
     }
-    
+
     if (dropdownFunctions) {
       // this model has a dropdown that's dynamically populated
-      const argsDropdownOptions = this.state.argsDropdownOptions;
+      const { argsDropdownOptions } = this.state;
       for (const key in dropdownFunctions) {
         // evaluate the function to get a list of dropdown options
         argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
@@ -186,9 +186,6 @@ export default class SetupTab extends React.Component {
 
   wrapArgsToJsonFile(datastackPath) {
     const argsValues = this.insertNWorkers(this.state.argsValues);
-    // this.props.argsToJsonFile(
-    //   datastackPath, argsDictFromObject(argsValues)
-    // );
     const args = argsDictFromObject(argsValues);
     ipcRenderer.invoke('invest-args-to-json', datastackPath, args);
   }
@@ -210,26 +207,26 @@ export default class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
-    let { argsValues } = this.state;
+    const { argsValues } = this.state;
     argsValues[key].value = value;
     argsValues[key].touched = true;
 
-    this.setState({ 
-      argsValues: argsValues 
+    this.setState({
+      argsValues: argsValues
     }, () => {
-        this.investValidate();
-        this.callUISpecFunctions();
-      });
+      this.investValidate();
+      this.callUISpecFunctions();
+    });
   }
 
+  /** Update state with values and validate a batch of InVEST arguments.
+   *
+   * @params {object} argsDict - key: value pairs of InVEST arguments.
+   */
   batchUpdateArgs(argsDict) {
-    /** Update state with values and validate a batch of InVEST arguments.
-    *
-    * @params {object} argsDict - key: value pairs of InVEST arguments.
-    */
     const { argsSpec, uiSpec } = this.props;
-    let { 
-      argsValues, 
+    let {
+      argsValues,
       argsDropdownOptions,
     } = initializeArgValues(argsSpec, uiSpec, argsDict);
 
@@ -377,7 +374,6 @@ SetupTab.propTypes = {
   ).isRequired,
   uiSpec: PropTypes.object,
   argsInitValues: PropTypes.object,
-  argsToJsonFile: PropTypes.func.isRequired,
   investExecute: PropTypes.func.isRequired,
   nWorkers: PropTypes.string.isRequired,
   sidebarSetupElementId: PropTypes.string.isRequired,

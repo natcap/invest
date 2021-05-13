@@ -62,6 +62,7 @@ export function setupInvestRunHandlers(investExe) {
 
   ipcMain.on('invest-run', async (event, modelRunName, args, loggingLevel) => {
     // Write a temporary datastack json for passing to invest CLI
+    fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
     const tempDir = fs.mkdtempSync(path.join(
       fileRegistry.TEMP_DIR, 'data-'
     ));
