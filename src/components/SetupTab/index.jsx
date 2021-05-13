@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { ipcRenderer } from 'electron';
 
 import Container from 'react-bootstrap/Container';
 import Spinner from 'react-bootstrap/Spinner';
@@ -185,9 +186,11 @@ export default class SetupTab extends React.Component {
 
   wrapArgsToJsonFile(datastackPath) {
     const argsValues = this.insertNWorkers(this.state.argsValues);
-    this.props.argsToJsonFile(
-      datastackPath, argsDictFromObject(argsValues)
-    );
+    // this.props.argsToJsonFile(
+    //   datastackPath, argsDictFromObject(argsValues)
+    // );
+    const args = argsDictFromObject(argsValues);
+    ipcRenderer.invoke('invest-args-to-json', datastackPath, args);
   }
 
   wrapInvestExecute() {

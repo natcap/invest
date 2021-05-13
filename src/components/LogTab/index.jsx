@@ -200,7 +200,7 @@ export default class LogTab extends React.Component {
     const CancelButton = (
       <Button
         variant="outline-dark"
-        onClick={() => terminateInvestProcess(procID)}
+        onClick={terminateInvestProcess}
         disabled={!procID}
       >
         Cancel Run

@@ -152,11 +152,20 @@ export default class App extends React.Component {
    * @param {object} job - as constructed by new InvestJob()
    */
   async saveJob(job) {
+    // TODO: make job.save send an ipcMain to update recentJobs?
+    // and then remove the need for this saveJob wrapper.
     const recentJobs = await job.save();
     this.setState({
       recentJobs: recentJobs,
     });
   }
+
+  // async updateOpenJob() {
+  //   const recentJobs = await InvestJob.getJobStore();
+  //   this.setState({
+  //     recentJobs: recentJobs
+  //   });
+  // }
 
   async clearRecentJobs() {
     const recentJobs = await InvestJob.clearStore();

@@ -18,6 +18,10 @@ import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
+import {
+  setupInvestArgsToJsonHandler,
+  setupInvestRunHandlers
+} from './setupInvestHandlers';
 import { getLogger } from '../logger';
 import { menuTemplate } from './menubar';
 import pkg from '../../package.json';
@@ -119,6 +123,8 @@ export const createWindow = async () => {
   });
 
   setupDownloadHandlers(mainWindow);
+  setupInvestArgsToJsonHandler();
+  setupInvestRunHandlers();
 };
 
 export function main(argv) {
@@ -134,6 +140,9 @@ export function main(argv) {
       logger.info('Another instance already has the application lock; exiting');
       app.exit(1);
     } else {
+      // TODO: it doesn't make sense to do mac stuff here, we know we're on windows
+      // But does it make sense to do the 'second-instance' stuff when !gotTheLock?
+      // https://www.electronjs.org/docs/api/app#event-second-instance
       // On mac, it's possible to bypass above single instance constraint by
       // launching the app through the CLI.  If this happens, focus on the main
       // window.
