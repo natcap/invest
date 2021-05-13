@@ -107,7 +107,9 @@ ARGS_SPEC = {
                 "exists": True,
             },
             "contents": {
-                "[POP_PARAM_TABLE]": {
+                "pop_param_tables": {
+                    "regexp": "(\\w+)",
+                    "items": "One for each population",
                     "type": "csv",
                 }
             },
@@ -208,11 +210,17 @@ ARGS_SPEC = {
             "type": "directory",
             "required": "migr_cont",
             "contents": {
-                "[MIGRATION_TABLE]": {
+                "migration_table": {
+                    "regexp": "(\\w+)",
+                    "items": "One for each lifecycle class",
                     "type": "csv",
                     "columns": {
-                        "Migration": {"type": "freestyle_string"},
-                        "[SOURCE_REGION]": {"type": "freestyle_string"}
+                        "migration": {"type": "freestyle_string"},
+                        "source_region": {
+                            "regexp": "(?!migration)(^\\w+$)",
+                            "items": ("One for each region from which "
+                                      "migration occurs"),
+                            "type": "freestyle_string"}
                     }
                 }
             },

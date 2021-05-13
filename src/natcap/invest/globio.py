@@ -65,8 +65,9 @@ ARGS_SPEC = {
             },
             "type": "directory",
             "contents": {
-                "(\w+)": {
-                    "names": (
+                "infrastructure_maps": {
+                    "regexp": "(\\w+)",
+                    "items": (
                         "Raster(s) and/or vector(s) of any forms of "
                         "infrastructure you want to consider in the MSA "
                         "calculation."),

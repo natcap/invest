@@ -281,33 +281,30 @@ ARGS_SPEC = {
             "name": "Landcover Transitions Table",
             "type": "csv",
             "columns": {
-                'lulc-class': {
+                "lulc-class": {
                     "type": "code",
                     "about": (
                         "LULC codes matching the codes in the biophysical "
                         "table")},
-                '(?!lulc-class)(^.+$)': {
-                    "type": "option_string",
-                    "options": [
-                        'accum',
-                        'high-impact-disturb',
-                        'med-impact-disturb',
-                        'low-impact-disturb',
-                        'NCC',
-                        ''],
-                    "about": (
+                "sink_lulc_classes": {
+                    "regexp": "(?!lulc-class)(^.+$)",
+                    "items": (
                         "One column header for each LULC code in the "
-                        "biophysical table. Field values within the "
+                        "biophysical table"),
+                    "type": "option_string",
+                    "options": {
+                        "accum": "a state of carbon accumulation",
+                        "high-impact-disturb": "high carbon disturbance rate",
+                        "med-impact-disturb": "medium carbon disturbance rate",
+                        "low-impact-disturb": "low carbon disturbance rate",
+                        "NCC": "no change in carbon",
+                        "": "cell may be empty if the transition never occurs"
+                    },
+                    "about": (
+                        "Field values within the "
                         "transition matrix describe the change in carbon when "
                         "transitioning from the LULC class along the x axis "
-                        "to theLULC class along the y axis, and must have one "
-                        "of the following values: 'accum', representing a "
-                        "state of carbon accumulation, 'high-impact-disturb', "
-                        "'med- impact-disturb', 'low_impact_disturb', "
-                        "representing appropriate states of carbon "
-                        "disturbance rates, or 'NCC', representing no change "
-                        "to carbon.  Cells may also be empty, but only if "
-                        "this transition never takes place.")}
+                        "to the LULC class along the y axis")}
             },
             "about": (
                 "A transition matrix mapping the type of carbon action "

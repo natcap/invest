@@ -169,19 +169,25 @@ ARGS_SPEC = {
         "machine_perf_path": {
             "type": "csv",
             "columns": {
-                "hs\(m\)/tp\(sec\)": {
+                "hs(m)/tp(sec)": {
                     "type": "number",
                     "units": u.meter,
                     "about": (
                         "user-defined wave height bins from smallest to "
                         "largest")
                 },
-                "([\.\d]+)": {
-                    "names": (
-                        "user-defined wave period bins from smallest to "
-                        "largest"),
+                "wave_period_bins": {
+                    # match decimal formatted numbers: 1, 1.1, .1
+                    "regexp": "(\\d+|\\d*\\.\\d+)",
+                    "items": (
+                        "user-defined wave period bins (measured in seconds) "
+                        "from smallest to largest"),
+                    "about": (
+                        "Captured wave energy for the given seastate "
+                        "conditions described by the wave height (row) "
+                        "and wave period (column)"),
                     "type": "number",
-                    "units": u.second
+                    "units": u.kilowatt
                 }
             },
             "about": (

@@ -27,7 +27,9 @@ ARGS_SPEC = {
                 "anything, but no spaces in the name."),
             "type": "vector",
             "fields": {
-                "(\w+)": {
+                "id_field": {
+                    "regexp": "(\\w+)",
+                    "items": "one",
                     "type": "code",
                     "about": (
                         "A user-defined ID field with a unique integer code "

@@ -45,10 +45,11 @@ ARGS_SPEC = {
                 "crop_name": {
                     "type": "option_string",
                     "options": [
-                        "barley", "maize", "oilpalm", "potato", "rice",
+                        "barley", "maize", "oilpalm", "potato", "rice", "rye"
                         "soybean", "sugarbeet", "sugarcane", "sunflower",
                         "wheat"
                     ]
+
                 },
                 "lucode": {"type": "code"}
             },
@@ -92,7 +93,9 @@ ARGS_SPEC = {
                 "climate_regression_yield_tables": {
                     "type": "directory",
                     "contents": {
-                        "(\\w+)_regression_yield_table.csv": {
+                        "crop_regression_yield_tables": {
+                            "regexp": "(\\w+)_regression_yield_table.csv",
+                            "items": "One for each crop",
                             "type": "csv",
                             "columns": {
                                 'climate_bin': {"type": "code"},

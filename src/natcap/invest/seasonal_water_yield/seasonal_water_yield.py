@@ -50,12 +50,13 @@ ARGS_SPEC = {
             },
             "type": "directory",
             "contents": {
-                "[ET0_MONTH]": {
-                    "names": (
-                        "Twelve files, one for each month. File names mustend "
-                        "with the month number (1-12)."),
-                    "type": "raster",
-                    "bands": {1: {"type": "number", "units": u.millimeter}}
+                "et0_maps": {
+                    "regexp": "(\\w*?)(\\d+)",
+                    "items": "One for each month 1-12",
+                    "about": (
+                        "Twelve files, one for each month. File names must "
+                        "end with the month number (1-12)."),
+                    **utils.ETO_ARG
                 }
             },
             "required": "not user_defined_local_recharge",
@@ -71,9 +72,11 @@ ARGS_SPEC = {
             },
             "type": "directory",
             "contents": {
-                "[PRECIP_MONTH]": {
-                    "names": (
-                        "Twelve files, one for each month. File names mustend "
+                "precip_maps": {
+                    "regexp": "(\\w*?)(\\d+)",
+                    "items": "One for each month 1-12",
+                    "about": (
+                        "Twelve files, one for each month. File names must end "
                         "with the month number (1-12)."),
                     **utils.PRECIP_ARG
                 }
@@ -106,16 +109,18 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
-                "cn_[SOIL_GROUP]": {
-                    "names": "One for each soil group in A, B, C, D",
+                "curve_number_columns": {
+                    "regexp": "cn_([abcd])",
+                    "items": "One for each soil group A, B, C, D",
                     "type": "number",
                     "units": u.none,
                     "about": (
                         "Curve number values for each combination of soil "
                         "type and LULC class. No 0s are allowed.")
                 },
-                "kc_[MONTH]": {
-                    "names": "One for each month numbered 1-12",
+                "monthly_kc_columns": {
+                    "regexp": "kc_(\\d+)",
+                    "items": "One for each month 1-12",
                     "type": "number",
                     "units": u.none,
                     "about": (
@@ -212,12 +217,13 @@ ARGS_SPEC = {
                     "about": (
                         "Climate zone numbers, integers which correspond to "
                         "values found in the Climate zone raster")},
-                "[MONTH]": {
-                    "names": f"One for each month in {MONTH_ID_TO_LABEL}",
+                "monthly_rain_event_columns": {
+                    "regexp": "(\\w+)",
+                    "items": f"One for each month in {MONTH_ID_TO_LABEL}",
                     "type": "number",
                     "units": u.none,
                     "about": (
-                        "The number of rain events that occur in that month "
+                        "The number of rain events that occur in each month "
                         "in that climate zone")}
             },
             "required": "user_defined_climate_zones",

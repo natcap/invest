@@ -79,11 +79,11 @@ ARGS_SPEC = {
         "carbon_pools_path": {
             "type": "csv",
             "columns": {
-                "LUCODE": {"type": "code"},
-                "C_above": {"type": "number", "units": u.metric_ton/u.hectare},
-                "C_below": {"type": "number", "units": u.metric_ton/u.hectare},
-                "C_soil": {"type": "number", "units": u.metric_ton/u.hectare},
-                "C_dead": {"type": "number", "units": u.metric_ton/u.hectare}
+                "lucode": {"type": "code"},
+                "c_above": {"type": "number", "units": u.metric_ton/u.hectare},
+                "c_below": {"type": "number", "units": u.metric_ton/u.hectare},
+                "c_soil": {"type": "number", "units": u.metric_ton/u.hectare},
+                "c_dead": {"type": "number", "units": u.metric_ton/u.hectare}
             },
             "about": (
                 "A table that maps the each LULC class from the LULC map(s)to "

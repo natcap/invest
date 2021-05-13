@@ -105,7 +105,7 @@ ARGS_SPEC = {
                     "type": "option_string",
                     "options": ["habitat", "stressor"]
                 },
-                "stressor buffer \(meters\)": {
+                "stressor buffer (meters)": {
                     "type": "number",
                     "units": u.meter,
                     "about": (

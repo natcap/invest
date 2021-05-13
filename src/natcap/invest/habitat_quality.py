@@ -144,8 +144,9 @@ ARGS_SPEC = {
                 "lulc": {"type": "code"},
                 "name": {"type": "freestyle_string"},
                 "habitat": {"type": "ratio"},
-                "(?!lulc|habitat|name)(^.+$)": {
-                    "names": "One for each threat in the threats table",
+                "threats": {
+                    "regexp": "(?!lulc|habitat|name)(^.+$)",
+                    "items": "One for each threat in the threats table",
                     "type": "ratio",
                     "about": (
                         "The relative sensitivity of each LULC class to each "

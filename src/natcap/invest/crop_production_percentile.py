@@ -110,8 +110,9 @@ ARGS_SPEC = {
                         "Table mapping each climate bin to yield percentiles "
                         "for each crop"),
                     "contents": {
-                        "[CROP]_percentile_yield_table.csv": {
-                            "names": "One for each of the 175 supported crops",
+                        "crop_percentile_yield_tables": {
+                            "regexp": "(\\w+)_percentile_yield_table.csv",
+                            "items": "One for each of the 175 supported crops",
                             "type": "csv",
                             "columns": {
                                 "climate_bin": {"type": "code"},
@@ -139,8 +140,9 @@ ARGS_SPEC = {
                     "type": "directory",
                     "about": "Maps of climate bins for each crop",
                     "contents": {
-                        "extendedclimatebins(\\w+)": {
-                            "names": "One for each of the 175 supported crops",
+                        "crop_climate_bins": {
+                            "regexp": "extendedclimatebins(\\w+)",
+                            "items": "One for each of the 175 supported crops",
                             "type": "raster",
                             "bands": {1: {"type": "code"}},
                         }
@@ -150,7 +152,9 @@ ARGS_SPEC = {
                     "type": "directory",
                     "about": "Maps of actual observed yield for each crop",
                     "contents": {
-                        "(\\w+)_observed_yield.tif": {
+                        "crop_observed_yields": {
+                            "regexp": "(\\w+)_observed_yield.tif",
+                            "items": "One for each of the 175 supported crops",
                             "type": "raster",
                             "bands": {1: {
                                 "type": "number",

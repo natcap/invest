@@ -45,8 +45,10 @@ ARGS_SPEC = {
             "name": "Habitat Dependency Parameters File",
             "type": "csv",
             "columns": {
-                "Habitats": {"type": "freestyle_string"},
-                "[AGE_STAGE]": {
+                "habitats": {"type": "freestyle_string"},
+                "age_stages": {
+                    "regexp": "(?!habitats)(^\\w+$)",
+                    "items": "One for each life stage or age",
                     "type": "ratio",
                     "about": (
                         "One column for each life stage or age in the habitat "
@@ -62,8 +64,10 @@ ARGS_SPEC = {
             "name": "Habitat Area Change File",
             "type": "csv",
             "columns": {
-                "Habitats": {"type": "freestyle_string"},
-                "[SUBREGION]": {
+                "habitats": {"type": "freestyle_string"},
+                "subregions": {
+                    "regexp": "(?!habitats)(^\\w+$)",
+                    "items": "One for each subregion",
                     "type": "ratio",
                     "about": (
                         "For each subregion, the proportion of habitat area "
