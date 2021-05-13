@@ -701,7 +701,7 @@ class HraUnitTests(unittest.TestCase):
                  'stressor_1': ['criteria 5', 'criteria 6']},
                 3, self.workspace_dir, self.workspace_dir, '')
 
-        expected_message = 'rating 99999.0 larger than the maximum rating 3'
+        expected_message = 'rating 99999 larger than the maximum rating 3'
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
@@ -803,6 +803,46 @@ class HraUnitTests(unittest.TestCase):
 
         _assert_vectors_equal(
             target_simplified_vector_path, base_lines_path)
+
+    def test_validate_rating(self):
+        """HRA: test _validate_rating with various inputs"""
+        from natcap.invest.hra import _validate_rating
+        import numpy
+
+        criteria_name = 'foo'
+        habitat = 'bar'
+        max_rating = 3
+        valid_ratings = [1, '1', 'some/file/path.gpkg']
+        invalid_ratings_to_ignore = [0, '0']
+        invalid_ratings_to_raise = [
+            max_rating + 1,  str(max_rating + 1), numpy.nan]
+
+        for r in valid_ratings:
+            self.assertTrue(
+                _validate_rating(r, max_rating, criteria_name, habitat),
+                msg=f'for value: {r}')
+        for r in invalid_ratings_to_ignore:
+            self.assertFalse(
+                _validate_rating(r, 3, criteria_name, habitat),
+                msg=f'for value: {r}')
+        for r in invalid_ratings_to_raise:
+            with self.assertRaises(ValueError, msg=f'for value: {r}'):
+                _validate_rating(r, 3, criteria_name, habitat)
+
+    def test_validate_dq_weight(self):
+        """HRA: test _validate_dq_weight raises ValueErrors"""
+        from natcap.invest.hra import _validate_dq_weight
+        import numpy
+
+        habitat = 'bar'
+        invalid_vals = [0, '0', numpy.nan, 'foo']
+        for v in invalid_vals:
+            with self.assertRaises(ValueError, msg=f'for value: {v}'):
+                _validate_dq_weight(v, v, habitat)
+
+        valid_vals = [1, '1']
+        for v in valid_vals:
+            _validate_dq_weight(v, v, habitat)
 
 
 class HraRegressionTests(unittest.TestCase):
