@@ -33,7 +33,7 @@ def assert_expected_results_in_vector(expected_results, vector_path):
         try:
             numpy.testing.assert_allclose(
                 actual_results[key], expected_results[key],
-                rtol=0.000001, atol=0)
+                rtol=0.00001, atol=0)
         except AssertionError:
             incorrect_vals[key] = (actual_results[key], expected_results[key])
     if incorrect_vals:
@@ -204,12 +204,9 @@ class SDRTests(unittest.TestCase):
         from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(self.workspace_dir)
+        args = SDRTests.generate_base_args('sdr_test_workspace') #self.workspace_dir)
         # make args explicit that this is a base run of SWY
 
-        target_watersheds_path = os.path.join(
-            args['workspace_dir'], 'input_watersheds.gpkg')
-        args['watersheds_path'] = target_watersheds_path
         sdr.execute(args)
         expected_results = {
             'usle_tot': 14.25030517578,
@@ -312,7 +309,7 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_retent': 479055.09375,
+            'sed_retent': 479059.4375,
             'sed_export': 1.03590250015,
             'usle_tot': 12.97211265564,
         }
@@ -354,11 +351,6 @@ class SDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
-        # make args explicit that this is a base run of SWY
-
-        target_watersheds_path = os.path.join(
-            args['workspace_dir'], 'input_watersheds.gpkg')
-        args['watersheds_path'] = target_watersheds_path
 
         # remove a row from the biophysical table so that lulc value is missing
         bad_biophysical_path = os.path.join(
@@ -374,7 +366,8 @@ class SDRTests(unittest.TestCase):
             sdr.execute(args)
         self.assertTrue(
             "The missing values found in the LULC raster but not the table"
-            " are: [2.]" in str(context.exception))
+            " are: [2.]" in str(context.exception),
+            f'error does not match {str(context.exception)}')
 
     @staticmethod
     def _assert_regression_results_equal(

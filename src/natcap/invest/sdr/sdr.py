@@ -1310,9 +1310,13 @@ def _generate_report(
         sed_deposition_path, watershed_results_sdr_path):
     """Create shapefile with USLE, sed export, retention, and deposition."""
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
+    if os.path.exists(watershed_results_sdr_path):
+        LOGGER.warning(f'overwriting results at {watershed_results_sdr_path}')
+        os.remove(watershed_results_sdr_path)
     driver = gdal.GetDriverByName('ESRI Shapefile')
     target_vector = driver.CreateCopy(
         watershed_results_sdr_path, original_datasource)
+
     target_layer = target_vector.GetLayer()
     target_layer.SyncToDisk()
 
