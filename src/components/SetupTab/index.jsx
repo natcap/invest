@@ -187,7 +187,13 @@ export default class SetupTab extends React.Component {
   wrapArgsToJsonFile(datastackPath) {
     const argsValues = this.insertNWorkers(this.state.argsValues);
     const args = argsDictFromObject(argsValues);
-    ipcRenderer.invoke('invest-args-to-json', datastackPath, args);
+    // TODO: why did I change this to use IPC? why not call argsToJsonFile?
+    ipcRenderer.invoke(
+      'invest-args-to-json',
+      datastackPath,
+      this.props.pyModuleName,
+      args
+    );
   }
 
   wrapInvestExecute() {

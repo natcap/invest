@@ -1,5 +1,3 @@
-import path from 'path';
-import fs from 'fs';
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import { fireEvent, render, waitFor } from '@testing-library/react';
@@ -12,6 +10,7 @@ import {
 } from '../src/server_requests';
 import { fileRegistry } from '../src/constants';
 import InvestJob from '../src/InvestJob';
+import { argsToJsonFile } from '../src/main/setupInvestHandlers';
 
 jest.mock('../src/server_requests');
 
@@ -82,7 +81,13 @@ describe('Save InVEST Model Setup Buttons', () => {
     const mockDialogData = {
       filePath: 'foo.json'
     };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    const mockArgs = argsDictFromObject(spec.args);
+    const mockModuleName = 'natcap.invest.carbon';
+    ipcRenderer.invoke
+      .mockResolvedValueOnce(mockDialogData)
+      .mockImplementation(() => {
+        argsToJsonFile(mockDialogData.filePath, mockModuleName, mockArgs);
+      });
 
     const { findByText } = renderInvestTab();
 
@@ -150,7 +155,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     // Spy on this method so we can assert it was never called.
     // Don't forget to restore! Otherwise a 'resetAllMocks'
     // can silently turn this spy into a function that returns nothing.
-    const spy = jest.spyOn(InvestTab.prototype, 'argsToJsonFile');
+    const spy = jest.spyOn(SetupTab.prototype, 'wrapArgsToJsonFile');
 
     const { findByText } = renderInvestTab();
 

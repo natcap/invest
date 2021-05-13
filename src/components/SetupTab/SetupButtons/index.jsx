@@ -3,7 +3,7 @@ import React from 'react';
 import Button from 'react-bootstrap/Button';
 
 import SaveFileButton from '../../SaveFileButton';
-import { dragOverHandlerNone } from '../../../utils.js';
+import { dragOverHandlerNone } from '../../../utils';
 
 export function SaveParametersButtons(props) {
   return (

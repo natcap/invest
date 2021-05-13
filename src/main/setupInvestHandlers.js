@@ -28,10 +28,10 @@ const LOGLEVELMAP = {
  * @param {object} argsValues - the invest "args dictionary"
  *   as a javascript object
  */
-export async function argsToJsonFile(datastackPath, argsValues) {
+export async function argsToJsonFile(datastackPath, investModule, argsValues) {
   const payload = {
     parameterSetPath: datastackPath,
-    moduleName: this.state.modelSpec.module,
+    moduleName: investModule,
     relativePaths: false,
     args: JSON.stringify(argsValues),
   };
@@ -67,7 +67,9 @@ export function setupInvestRunHandlers(investExe) {
       fileRegistry.TEMP_DIR, 'data-'
     ));
     const datastackPath = path.join(tempDir, 'datastack.json');
-    await argsToJsonFile(datastackPath, args);
+    // For this temp datastack, the python module name is not required.
+    // We don't know the module name in this scope, pass an empty string.
+    await argsToJsonFile(datastackPath, '', args);
 
     const cmdArgs = [
       LOGLEVELMAP[loggingLevel],

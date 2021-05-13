@@ -94,9 +94,11 @@ describe('createWindow', () => {
       'show-save-dialog',
       'is-dev-mode',
       'user-data',
+      'invest-args-to-json',
+      'invest-kill',
     ];
     const expectedHandleOnceChannels = ['is-first-run'];
-    const expectedOnChannels = ['download-url'];
+    const expectedOnChannels = ['download-url', 'invest-run'];
     const receivedHandleChannels = ipcMain.handle.mock.calls.map(
       (item) => item[0]
     );
