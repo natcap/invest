@@ -160,7 +160,8 @@ ARGS_SPEC = {
             },
             "about": (
                 "L will not exceed this value. Ranges of 122-333m are found "
-                "in relevant literature."),
+                "in relevant literature such as Desmet and Govers, 1996; "
+                "Renard et al., 1997 (see user's guide)."),
             "name": "Max L Value",
         },
         "drainage_path": {
