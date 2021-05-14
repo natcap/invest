@@ -155,6 +155,9 @@ ARGS_SPEC = {
         "l_max": {
             "type": "number",
             "required": True,
+            "validation_options": {
+                "expression": "value > 0",
+            },
             "about": (
                 "L will not exceed this value. Ranges of 122-333m are found "
                 "in relevant literature."),
