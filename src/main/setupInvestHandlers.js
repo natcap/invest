@@ -2,11 +2,10 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { spawn, exec } from 'child_process';
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 
 import { findMostRecentLogfile } from '../utils';
 import { writeParametersToFile } from '../server_requests';
-import { fileRegistry } from '../constants';
 import { getLogger } from '../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -19,7 +18,9 @@ const LOGLEVELMAP = {
   ERROR: '-v',
 };
 
-export function setupInvestRunHandlers(investExe) {
+const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
+
+export default function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
 
   ipcMain.handle('invest-kill', (event, workspaceDir) => {
@@ -37,11 +38,11 @@ export function setupInvestRunHandlers(investExe) {
 
   ipcMain.on('invest-run', async (event, modelRunName, args, loggingLevel) => {
     // Write a temporary datastack json for passing to invest CLI
-    fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
-    const tempDir = fs.mkdtempSync(path.join(
-      fileRegistry.TEMP_DIR, 'data-'
-    ));
-    const datastackPath = path.join(tempDir, 'datastack.json');
+    fs.mkdir(TEMP_DIR, (err) => {});
+    const tempDatastackDir = fs.mkdtempSync(
+      path.join(TEMP_DIR, 'data-')
+    );
+    const datastackPath = path.join(tempDatastackDir, 'datastack.json');
     const payload = {
       parameterSetPath: datastackPath,
       moduleName: '', // not required & we don't know it in this scope
@@ -115,7 +116,7 @@ export function setupInvestRunHandlers(investExe) {
       logger.debug(code);
       fs.unlink(datastackPath, (err) => {
         if (err) { logger.error(err); }
-        fs.rmdir(tempDir, (e) => {
+        fs.rmdir(tempDatastackDir, (e) => {
           if (e) { logger.error(e); }
         });
       });
@@ -135,7 +136,7 @@ export function setupInvestRunHandlers(investExe) {
       //   saveJob(job);
       //   fs.unlink(datastackPath, (err) => {
       //     if (err) { logger.error(err); }
-      //     fs.rmdir(tempDir, (e) => {
+      //     fs.rmdir(tempDatastackDir, (e) => {
       //       if (e) { logger.error(e); }
       //     });
       //   });

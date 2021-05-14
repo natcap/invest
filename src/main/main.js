@@ -18,10 +18,7 @@ import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
-import {
-  setupInvestArgsToJsonHandler,
-  setupInvestRunHandlers
-} from './setupInvestHandlers';
+import setupInvestRunHandlers from './setupInvestHandlers';
 import { getLogger } from '../logger';
 import { menuTemplate } from './menubar';
 import pkg from '../../package.json';

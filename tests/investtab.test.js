@@ -8,9 +8,7 @@ import SetupTab from '../src/components/SetupTab';
 import {
   getSpec, saveToPython, writeParametersToFile, fetchValidation
 } from '../src/server_requests';
-import { fileRegistry } from '../src/constants';
 import InvestJob from '../src/InvestJob';
-import { argsToJsonFile } from '../src/main/setupInvestHandlers';
 
 jest.mock('../src/server_requests');
 
