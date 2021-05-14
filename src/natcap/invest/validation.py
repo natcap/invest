@@ -161,13 +161,15 @@ def get_sufficient_keys(args):
     return sufficient_keys
 
 
-def check_directory(dirpath, exists=False, permissions='rx'):
+def check_directory(dirpath, exists=False, path_patterns=[], permissions='rx'):
     """Validate a directory.
 
     Args:
         dirpath (string): The directory path to validate.
         exists=False (bool): If ``True``, the directory at ``dirpath``
             must already exist on the filesystem.
+        path_patterns=[] (list): A list of regex-compilable patterns that are
+            expected to exist in the directory (if ``exists=True``)
         permissions='rx' (string): A string that includes the lowercase
             characters ``r``, ``w`` and/or ``x`` indicating required
             permissions for this folder .  See ``check_permissions`` for
@@ -348,7 +350,7 @@ def load_fields_from_vector(filepath, layer_id=0):
     return fieldnames
 
 
-def check_vector(filepath, required_fields=None, projected=False,
+def check_vector(filepath, field_patterns=None, projected=False,
                  projection_units=None):
     """Validate a GDAL vector on disk.
 
@@ -359,11 +361,11 @@ def check_vector(filepath, required_fields=None, projected=False,
     Args:
         filepath (string): The path to the vector on disk.  The file must exist
             and be readable.
-        required_fields=None (list[str]): A list of regex-compilable patterns
+        field_patterns=None (list[str]): A list of regex-compilable patterns
             that are expected to match the vector fields. Patterns may be an
             ordinary string to match a header exactly, or use any valid regex
             syntax to match 1 or more headers. See the docstring of
-            ``check_headers`` for details on matching rules.
+            ``check_patterns`` for details on matching rules.
         projected=False (bool): Whether the spatial reference must be projected
             in linear units.  If None, the projection will not be checked.
         projection_units=None (pint.Units): The required linear units of the
@@ -387,9 +389,9 @@ def check_vector(filepath, required_fields=None, projected=False,
     layer = gdal_dataset.GetLayer()
     srs = layer.GetSpatialRef()
 
-    if required_fields:
+    if field_patterns:
         fieldnames = [defn.GetName() for defn in layer.schema]
-        required_field_warning = check_headers(required_fields, fieldnames)
+        required_field_warning = check_patterns(field_patterns, fieldnames)
         if required_field_warning:
             return required_field_warning
 
@@ -573,7 +575,7 @@ def check_csv(filepath, header_patterns=None, axis=1, excel_ok=False):
             are expected to match the table headers (as defined by ``axis``).
             Patterns may be an ordinary string to match a header exactly, or
             use any valid regex syntax to match 1 or more headers. See the
-            docstring of ``check_headers`` for details on matching rules.
+            docstring of ``check_patterns`` for details on matching rules.
         axis (int): The axis of the table to use as the header. If 0, the first
             column will be used. If 1, the first row will be used.
         excel_ok=False (boolean): Whether it's OK for the file to be an Excel
@@ -615,10 +617,10 @@ def check_csv(filepath, header_patterns=None, axis=1, excel_ok=False):
             headers = [str(name).strip() for name in dataframe.iloc[0]]
         elif axis == 0:
             headers = [str(name).strip() for name in dataframe.iloc[:, 0]]
-        return check_headers(header_patterns, headers)
+        return check_patterns(header_patterns, headers)
 
 
-def check_headers(patterns, headers):
+def check_patterns(patterns, headers):
     """Validate that table headers (rows/columns) match a list of patterns.
 
     - Each pattern should match at least one header.
@@ -767,6 +769,21 @@ def timeout(func, *args, timeout=5, **kwargs):
         LOGGER.debug('File checking thread completed.')
         # get any warning messages returned from the thread
         return message_queue.get()
+
+
+def get_header_patterns(spec):
+    """Get expected header patterns from an arg spec.
+
+    Args:
+        spec (dict):
+
+    Returns:
+        list of strings that are regex-compilable to match a pattern
+    """
+    patterns = []
+    for key, val in spec.items():
+        patterns.append(val['regexp'] if 'regexp' in val else re.escape(key))
+    return patterns
 
 
 # accessing a file could take a long time if it's in a file streaming service
@@ -939,19 +956,28 @@ def validate(args, spec, spatial_overlap_opts=None):
             # this is verified in test_args_specs.py
             if 'columns' in parameter_spec:
                 validation_options.update({
-                    'header_patterns': list(parameter_spec['columns'].keys()),
+                    'header_patterns': get_header_patterns(
+                        parameter_spec['columns']),
                     'axis': 1
                 })
             elif 'rows' in parameter_spec:
                 validation_options.update({
-                    'header_patterns': list(parameter_spec['rows'].keys()),
+                    'header_patterns': get_header_patterns(
+                        parameter_spec['rows']),
                     'axis': 0
                 })
 
         elif parameter_spec['type'] == 'vector':
             # assuming the spec must have a 'fields' property
             validation_options.update({
-                'required_fields': list(parameter_spec['fields'].keys())
+                'field_patterns': get_header_patterns(
+                    parameter_spec['fields'])
+            })
+
+        elif parameter_spec['type'] == 'option_string':
+            validation_options.update({
+                # this will work whether options is a dict or list
+                'options': list(parameter_spec['options'])
             })
 
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
@@ -966,12 +992,13 @@ def validate(args, spec, spatial_overlap_opts=None):
             if warning_msg:
                 validation_warnings.append(([key], warning_msg))
                 invalid_keys.add(key)
-        except Exception as ex:
+        except Exception:
             LOGGER.exception(
                 'Error when validating key %s with value %s',
                 key, args[key])
             validation_warnings.append(
                 ([key], 'An unexpected error occurred in validation'))
+
     # step 5: check spatial overlap if applicable
     if spatial_overlap_opts:
         spatial_keys = set(spatial_overlap_opts['spatial_keys'])
@@ -1105,23 +1132,32 @@ def invest_validator(validate_func):
                         validation_options = {}
 
                     if args_key_spec['type'] == 'csv':
-                        # assuming that the spec won't have both 'rows' and 'columns'
+                        # assuming the spec won't have both rows and columns
                         # this is verified in test_args_specs.py
                         if 'columns' in args_key_spec:
                             validation_options.update({
-                                'header_patterns': list(args_key_spec['columns'].keys()),
+                                'header_patterns': get_header_patterns(
+                                    args_key_spec['columns']),
                                 'axis': 1
                             })
                         elif 'rows' in args_key_spec:
                             validation_options.update({
-                                'header_patterns': list(args_key_spec['rows'].keys()),
+                                'header_patterns': get_header_patterns(
+                                    args_key_spec['rows']),
                                 'axis': 0
                             })
 
                     elif args_key_spec['type'] == 'vector':
                         # assuming the spec must have a 'fields' property
                         validation_options.update({
-                            'required_fields': list(args_key_spec['fields'].keys())
+                            'field_patterns': get_header_patterns(
+                                args_key_spec['fields'])
+                        })
+
+                    elif args_key_spec['type'] == 'option_string':
+                        validation_options.update({
+                            # this will work whether options is a dict or list
+                            'options': list(args_key_spec['options'])
                         })
 
                     error_msg = (

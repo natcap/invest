@@ -661,6 +661,7 @@ class WaveEnergyValidateTests(unittest.TestCase):
         actual_messages = ''
         for keys, error_strings in validation_error_list:
             actual_messages += error_strings
+        print(validation_error_list)
         self.assertTrue(expected_message in actual_messages)
 
     def test_validate_keys_missing_values(self):
@@ -702,6 +703,7 @@ class WaveEnergyValidateTests(unittest.TestCase):
             SAMPLE_DATA, 'bad_AOI_fake_unit.shp')
 
         validation_error_list = wave_energy.validate(args)
+        print(validation_error_list)
         expected_error = (
             ['aoi_path'], "SRS has unrecognized unit 'not_a_unit'")
         self.assertTrue(expected_error in validation_error_list)

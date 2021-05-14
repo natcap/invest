@@ -270,6 +270,7 @@ class DirectoryValidation(unittest.TestCase):
 
         validation_warning = validation.check_directory(
             filepath, exists=True)
+        print(validation_warning)
 
     def test_valid_permissions(self):
         """Validation: folder permissions."""
@@ -486,7 +487,7 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, required_fields=['col_a', 'COL_B', 'col_c'])
+            filepath, field_patterns=['col_a', 'COL_B', 'col_c'])
         self.assertTrue('matched 0 headers, expected at least one' in error_msg)
 
     def test_vector_projected_in_m(self):
@@ -791,23 +792,23 @@ class CSVValidation(unittest.TestCase):
                 self.assertTrue(len(ws) == 1)
                 self.assertTrue('timed out' in str(ws[0].message))
 
-    def test_check_headers(self):
+    def test_check_patterns(self):
         """Validation: check that CSV header validation works."""
         from natcap.invest import validation
         patterns = ['hello', r'\d+']
         headers = ['hello', '1', '2']
-        result = validation.check_headers(patterns, headers)
+        result = validation.check_patterns(patterns, headers)
         self.assertEqual(result, None)
 
         # each pattern should match at least one header
         headers = ['1', '2']
-        result = validation.check_headers(patterns, headers)
+        result = validation.check_patterns(patterns, headers)
         expected = 'hello matched 0 headers, expected at least one'
         self.assertEqual(result, expected)
 
         # duplicate headers that match a pattern are not allowed
         headers = ['hello', '1', '1']
-        result = validation.check_headers(patterns, headers)
+        result = validation.check_patterns(patterns, headers)
         expected = (
             r'Header 1 (matched pattern \d+) was found 2 times, expected '
             'only once')
@@ -815,7 +816,7 @@ class CSVValidation(unittest.TestCase):
 
         # duplicate headers that don't match a pattern are allowed
         headers = ['hello', '1', 'x', 'x']
-        result = validation.check_headers(patterns, headers)
+        result = validation.check_patterns(patterns, headers)
         self.assertEqual(result, None)
 
         # two patterns matching the same header is not allowed
@@ -824,7 +825,7 @@ class CSVValidation(unittest.TestCase):
         expected = (
             f'Header hello was matched by more than one pattern: {patterns}, '
             'expected exactly one')
-        result = validation.check_headers(patterns, headers)
+        result = validation.check_patterns(patterns, headers)
         self.assertEqual(result, expected)
 
 
@@ -1083,9 +1084,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 "about": "About the first parameter",
                 "type": "option_string",
                 "required": "number_a",
-                "validation_options": {
-                    "options": ['AAA', 'BBB']
-                }
+                "options": ['AAA', 'BBB']
             }
         }
 
@@ -1378,4 +1377,12 @@ class TestValidationFromSpec(unittest.TestCase):
         for warning in actual_warnings:
             self.assertTrue(warning in expected_warnings)
 
-
+    def test_get_header_patterns(self):
+        """Validation: test getting header patterns from a spec."""
+        from natcap.invest import validation
+        spec = {
+            'a': {'attr1': 1},
+            'b': {'regexp': '\\d+', 'attr1': 1}
+        }
+        patterns = validation.get_header_patterns(spec)
+        self.assertEqual(sorted(patterns), ['\\d+', 'a'])
