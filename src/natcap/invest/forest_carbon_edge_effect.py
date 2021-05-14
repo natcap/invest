@@ -970,8 +970,7 @@ def validate(args, limit_to=None):
             'biophysical_table_path' not in invalid_keys):
         if args['pools_to_calculate'] == 'all':
             required_fields = (
-                ARGS_SPEC['args']['biophysical_table_path'][
-                    'validation_options']['required_fields'] +
+                ARGS_SPEC['args']['biophysical_table_path']['columns'] +
                 ['c_below', 'c_soil', 'c_dead'])
             error_msg = validation.check_csv(
                 args['biophysical_table_path'],
