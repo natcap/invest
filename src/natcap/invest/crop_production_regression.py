@@ -188,8 +188,8 @@ _NITROGEN_YIELD_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, '%s_nitrogen_yield%s.tif')
 
 # crop_id, file_suffix
-_PHOSPHOROUS_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_phosphorous_yield%s.tif')
+_phosphorus_YIELD_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, '%s_phosphorus_yield%s.tif')
 
 # crop_id, file_suffix
 _POTASSIUM_YIELD_FILE_PATTERN = os.path.join(
@@ -200,8 +200,8 @@ _CLIPPED_NITROGEN_RATE_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, 'nitrogen_rate%s.tif')
 
 # file suffix
-_CLIPPED_PHOSPHOROUS_RATE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, 'phosphorous_rate%s.tif')
+_CLIPPED_phosphorus_RATE_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, 'phosphorus_rate%s.tif')
 
 # file suffix
 _CLIPPED_POTASSIUM_RATE_FILE_PATTERN = os.path.join(
@@ -297,7 +297,7 @@ def execute(args):
             that contains fertilization rates for the crops in the simulation,
             though it can contain additional crops not used in the simulation.
             The headers must be 'crop_name', 'nitrogen_rate',
-            'phosphorous_rate', and 'potassium_rate', where 'crop_name' is the
+            'phosphorus_rate', and 'potassium_rate', where 'crop_name' is the
             name string used to identify crops in the
             'landcover_to_crop_table_path', and rates are in units kg/Ha.
         args['aggregate_polygon_path'] (string): path to polygon vector
@@ -512,24 +512,24 @@ def execute(args):
             dependent_task_list=dependent_task_list,
             task_name='calculate_nitrogen_yield_%s' % crop_name)
 
-        LOGGER.info('Calc phosphorous yield')
-        phosphorous_yield_raster_path = os.path.join(
-            output_dir, _PHOSPHOROUS_YIELD_FILE_PATTERN % (
+        LOGGER.info('Calc phosphorus yield')
+        phosphorus_yield_raster_path = os.path.join(
+            output_dir, _phosphorus_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
-        calc_phosphorous_yield_task = task_graph.add_task(
+        calc_phosphorus_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
                    (regression_parameter_raster_path_lookup['c_p2o5'], 1),
                    (args['landcover_raster_path'], 1),
                    (crop_to_fertlization_rate_table[crop_name]
-                    ['phosphorous_rate'], 'raw'),
+                    ['phosphorus_rate'], 'raw'),
                    (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
                   _x_yield_op,
-                  phosphorous_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
-            target_path_list=[phosphorous_yield_raster_path],
+                  phosphorus_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
+            target_path_list=[phosphorus_yield_raster_path],
             dependent_task_list=dependent_task_list,
-            task_name='calculate_phosphorous_yield_%s' % crop_name)
+            task_name='calculate_phosphorus_yield_%s' % crop_name)
 
         LOGGER.info('Calc potassium yield')
         potassium_yield_raster_path = os.path.join(
@@ -552,7 +552,7 @@ def execute(args):
 
         dependent_task_list.extend((
             calc_nitrogen_yield_task,
-            calc_phosphorous_yield_task,
+            calc_phosphorus_yield_task,
             calc_potassium_yield_task))
 
         LOGGER.info('Calc the min of N, K, and P')
@@ -563,7 +563,7 @@ def execute(args):
         calc_min_NKP_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(nitrogen_yield_raster_path, 1),
-                   (phosphorous_yield_raster_path, 1),
+                   (phosphorus_yield_raster_path, 1),
                    (potassium_yield_raster_path, 1)],
                   _min_op, crop_production_raster_path,
                   gdal.GDT_Float32, _NODATA_YIELD),
@@ -693,7 +693,7 @@ def _x_yield_op(
     """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC)).
 
     The regression model has identical mathematical equations for
-    the nitrogen, phosphorous, and potassium.  The only difference is
+    the nitrogen, phosphorus, and potassium.  The only difference is
     the scalars in the equation (fertilization rate and pixel area).
     """
     result = numpy.empty(b_x.shape, dtype=numpy.float32)

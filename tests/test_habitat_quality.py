@@ -2096,7 +2096,8 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            'base_path matched 0 headers, expected at least one')]
+            ("The column 'base_path' was not found in the Threat Data table "
+             "for the corresponding input LULC scenario."))]
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_validate_missing_fut_column(self):
@@ -2145,5 +2146,6 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            'fut_path matched 0 headers, expected at least one')]
+            ("The column 'fut_path' was not found in the Threat Data table "
+             "for the corresponding input LULC scenario."))]
         self.assertEqual(validate_result, expected)
