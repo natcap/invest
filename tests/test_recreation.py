@@ -1258,7 +1258,6 @@ class RecreationValidationTests(unittest.TestCase):
             'end_year': '2016',
             'workspace_dir': self.workspace_dir,
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
-        print(validation_warnings)
 
         self.assertEqual(validation_warnings, expected_message)
 
@@ -1270,7 +1269,6 @@ class RecreationValidationTests(unittest.TestCase):
             'end_year': '2016',
             'workspace_dir': self.workspace_dir,
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
-        print(validation_warnings)
         expected_message = [
             (['predictor_table_path'],
              'id matched 0 headers, expected at least one'),

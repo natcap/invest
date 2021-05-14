@@ -259,7 +259,6 @@ class NDRTests(unittest.TestCase):
 
         del args['workspace_dir']
         validation_errors = ndr.validate(args)
-        print(validation_errors)
         self.assertEqual(len(validation_errors), 1)
 
         args = NDRTests.generate_base_args(self.workspace_dir)

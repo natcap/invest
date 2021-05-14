@@ -366,7 +366,6 @@ class UCMTests(unittest.TestCase):
 
         del args['t_ref']
         warnings = natcap.invest.urban_cooling_model.validate(args)
-        print(warnings)
         expected_warning = (['t_ref'], 'Key is missing from the args dict')
         self.assertTrue(expected_warning in warnings)
 
