@@ -159,9 +159,11 @@ ARGS_SPEC = {
                 "expression": "value > 0",
             },
             "about": (
-                "L will not exceed this value. Ranges of 122-333 (unitless) "
-                " and ranges are are found in relevant literature such as "
-                "Desmet and Govers, 1996 and Renard et al., 1997 "
+                "Values of L (the slope length component of the LS "
+                "slope-length gradient factor) larger than this value will "
+                "be clamped to this value. Ranges of 122-333 (unitless) and "
+                "ranges are are found in relevant literature such as Desmet "
+                "and Govers, 1996 and Renard et al., 1997 "
                 "(see user's guide)."),
             "name": "Max L Value",
         },
