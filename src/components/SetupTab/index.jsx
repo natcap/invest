@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
 
 import Container from 'react-bootstrap/Container';
 import Spinner from 'react-bootstrap/Spinner';
@@ -11,7 +10,11 @@ import ArgsForm from './ArgsForm';
 import {
   RunButton, SaveParametersButtons
 } from './SetupButtons';
-import { fetchValidation, saveToPython } from '../../server_requests';
+import {
+  fetchValidation,
+  saveToPython,
+  writeParametersToFile
+} from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 
 /** Setup the objects that store InVEST argument values in SetupTab state.
@@ -73,7 +76,7 @@ export default class SetupTab extends React.Component {
     };
 
     this.savePythonScript = this.savePythonScript.bind(this);
-    this.wrapArgsToJsonFile = this.wrapArgsToJsonFile.bind(this);
+    this.saveJsonFile = this.saveJsonFile.bind(this);
     this.wrapInvestExecute = this.wrapInvestExecute.bind(this);
     this.investValidate = this.investValidate.bind(this);
     this.updateArgValues = this.updateArgValues.bind(this);
@@ -184,16 +187,16 @@ export default class SetupTab extends React.Component {
     saveToPython(payload);
   }
 
-  wrapArgsToJsonFile(datastackPath) {
+  saveJsonFile(datastackPath) {
     const argsValues = this.insertNWorkers(this.state.argsValues);
     const args = argsDictFromObject(argsValues);
-    // TODO: why did I change this to use IPC? why not call argsToJsonFile?
-    ipcRenderer.invoke(
-      'invest-args-to-json',
-      datastackPath,
-      this.props.pyModuleName,
-      args
-    );
+    const payload = {
+      parameterSetPath: datastackPath,
+      moduleName: this.props.pyModuleName,
+      relativePaths: false,
+      args: JSON.stringify(args),
+    };
+    writeParametersToFile(payload);
   }
 
   wrapInvestExecute() {
@@ -231,7 +234,7 @@ export default class SetupTab extends React.Component {
    */
   batchUpdateArgs(argsDict) {
     const { argsSpec, uiSpec } = this.props;
-    let {
+    const {
       argsValues,
       argsDropdownOptions,
     } = initializeArgValues(argsSpec, uiSpec, argsDict);
@@ -350,7 +353,7 @@ export default class SetupTab extends React.Component {
           <Portal elId={sidebarSetupElementId}>
             <SaveParametersButtons
               savePythonScript={this.savePythonScript}
-              wrapArgsToJsonFile={this.wrapArgsToJsonFile}
+              saveJsonFile={this.saveJsonFile}
             />
           </Portal>
           <Portal elId={sidebarFooterElementId}>

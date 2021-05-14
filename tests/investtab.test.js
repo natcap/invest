@@ -78,19 +78,10 @@ describe('Save InVEST Model Setup Buttons', () => {
     writeParametersToFile.mockImplementation(
       (payload) => payload
     );
-    const mockDialogData = {
-      filePath: 'foo.json'
-    };
-    const mockArgs = argsDictFromObject(spec.args);
-    const mockModuleName = 'natcap.invest.carbon';
-    ipcRenderer.invoke
-      .mockResolvedValueOnce(mockDialogData)
-      .mockImplementation(() => {
-        argsToJsonFile(mockDialogData.filePath, mockModuleName, mockArgs);
-      });
+    const mockDialogData = { filePath: 'foo.json' };
+    ipcRenderer.invoke.mockResolvedValueOnce(mockDialogData);
 
     const { findByText } = renderInvestTab();
-
     const saveButton = await findByText('Save to JSON');
     fireEvent.click(saveButton);
 
@@ -155,7 +146,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     // Spy on this method so we can assert it was never called.
     // Don't forget to restore! Otherwise a 'resetAllMocks'
     // can silently turn this spy into a function that returns nothing.
-    const spy = jest.spyOn(SetupTab.prototype, 'wrapArgsToJsonFile');
+    const spy = jest.spyOn(SetupTab.prototype, 'saveJsonFile');
 
     const { findByText } = renderInvestTab();
 

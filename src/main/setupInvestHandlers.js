@@ -19,31 +19,6 @@ const LOGLEVELMAP = {
   ERROR: '-v',
 };
 
-/** Write an invest args JSON file for passing to invest cli.
- *
- * Outsourcing this to natcap.invest.datastack via flask ensures
- * a compliant json with an invest version string.
- *
- * @param {string} datastackPath - path to a JSON file.
- * @param {object} argsValues - the invest "args dictionary"
- *   as a javascript object
- */
-export async function argsToJsonFile(datastackPath, investModule, argsValues) {
-  const payload = {
-    parameterSetPath: datastackPath,
-    moduleName: investModule,
-    relativePaths: false,
-    args: JSON.stringify(argsValues),
-  };
-  await writeParametersToFile(payload);
-}
-
-export function setupInvestArgsToJsonHandler() {
-  ipcMain.handle('invest-args-to-json', (event, datastackPath, args) => {
-    argsToJsonFile(datastackPath, args);
-  });
-}
-
 export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
 
@@ -67,9 +42,13 @@ export function setupInvestRunHandlers(investExe) {
       fileRegistry.TEMP_DIR, 'data-'
     ));
     const datastackPath = path.join(tempDir, 'datastack.json');
-    // For this temp datastack, the python module name is not required.
-    // We don't know the module name in this scope, pass an empty string.
-    await argsToJsonFile(datastackPath, '', args);
+    const payload = {
+      parameterSetPath: datastackPath,
+      moduleName: '', // not required & we don't know it in this scope
+      relativePaths: false,
+      args: JSON.stringify(args),
+    };
+    await writeParametersToFile(payload);
 
     const cmdArgs = [
       LOGLEVELMAP[loggingLevel],

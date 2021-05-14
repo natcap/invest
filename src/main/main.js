@@ -123,7 +123,6 @@ export const createWindow = async () => {
   });
 
   setupDownloadHandlers(mainWindow);
-  setupInvestArgsToJsonHandler();
   setupInvestRunHandlers(investExe);
 };
 

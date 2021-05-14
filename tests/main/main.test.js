@@ -94,7 +94,6 @@ describe('createWindow', () => {
       'show-save-dialog',
       'is-dev-mode',
       'user-data',
-      'invest-args-to-json',
       'invest-kill',
     ];
     const expectedHandleOnceChannels = ['is-first-run'];

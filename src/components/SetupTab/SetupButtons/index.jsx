@@ -11,7 +11,7 @@ export function SaveParametersButtons(props) {
       <SaveFileButton
         title="Save to JSON"
         defaultTargetPath="invest_args.json"
-        func={props.wrapArgsToJsonFile}
+        func={props.saveJsonFile}
       />
       <SaveFileButton
         title="Save to Python script"
