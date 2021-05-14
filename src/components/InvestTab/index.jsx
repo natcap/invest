@@ -58,6 +58,7 @@ export default class InvestTab extends React.Component {
       logStdErr: null, // stderr data from the invest subprocess
       jobStatus: null, // 'running', 'error', 'success'
       workspaceDir: null,
+      logfile: null,
     };
 
     this.investExecute = this.investExecute.bind(this);
@@ -75,6 +76,7 @@ export default class InvestTab extends React.Component {
       argsSpec: argsSpec,
       uiSpec: uiSpec,
       jobStatus: job.metadata.status,
+      logfile: job.metadata.logfile
     }, () => { this.switchTabs('setup'); });
   }
 
@@ -112,7 +114,11 @@ export default class InvestTab extends React.Component {
       workspaceDir: args.workspace_dir
     });
     ipcRenderer.on(`invest-logging-${this.state.workspaceDir}`, (event, logfile) => {
-      this.switchTabs('log');
+      this.setState({
+        logfile: logfile
+      }, () => {
+        this.switchTabs('log');
+      });
       job.setProperty('logfile', logfile);
       saveJob(job);
     });
@@ -140,7 +146,11 @@ export default class InvestTab extends React.Component {
     });
 
     ipcRenderer.send(
-      'invest-run', job.metadata.modelRunName, args, investSettings.loggingLevel
+      'invest-run',
+      job.metadata.modelRunName,
+      this.state.modelSpec.module,
+      args,
+      investSettings.loggingLevel
     );
   }
 
@@ -169,12 +179,13 @@ export default class InvestTab extends React.Component {
       uiSpec,
       jobStatus,
       logStdErr,
+      logfile,
     } = this.state;
     const {
       navID,
       modelRunName,
       argsValues,
-      logfile,
+      // logfile,
     } = this.props.job.metadata;
 
     // Don't render the model setup & log until data has been fetched.

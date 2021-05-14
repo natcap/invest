@@ -36,16 +36,19 @@ export default function setupInvestRunHandlers(investExe) {
     }
   });
 
-  ipcMain.on('invest-run', async (event, modelRunName, args, loggingLevel) => {
+  ipcMain.on('invest-run', async (event, modelRunName, pyModuleName, args, loggingLevel) => {
     // Write a temporary datastack json for passing to invest CLI
     fs.mkdir(TEMP_DIR, (err) => {});
     const tempDatastackDir = fs.mkdtempSync(
       path.join(TEMP_DIR, 'data-')
     );
     const datastackPath = path.join(tempDatastackDir, 'datastack.json');
+    // TODO: only need pyModuleName to make a compliant logfile name
+    // as the prepare_workspace call in cli.py takes it from the datastack.json
+    // It could get it elsewhere, like a lookup based on the run name.
     const payload = {
       parameterSetPath: datastackPath,
-      moduleName: '', // not required & we don't know it in this scope
+      moduleName: pyModuleName,
       relativePaths: false,
       args: JSON.stringify(args),
     };
@@ -58,6 +61,7 @@ export default function setupInvestRunHandlers(investExe) {
       '--headless',
       `-d "${datastackPath}"`,
     ];
+    logger.debug(`set to run ${cmdArgs}`);
     let investRun;
     if (process.platform !== 'win32') {
       investRun = spawn(path.basename(investExe), cmdArgs, {
@@ -75,14 +79,15 @@ export default function setupInvestRunHandlers(investExe) {
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
     investRun.stdout.once('data', async () => {
-      const logfile = await findMostRecentLogfile(args.workspaceDir);
+      logger.debug(`workspace_dir: ${args.workspace_dir}`);
+      const logfile = await findMostRecentLogfile(args.workspace_dir);
       // job.setProperty('logfile', logfile);
       // TODO: handle case when logfile is still undefined?
       // Could be if some stdout is emitted before a logfile exists.
-      // logger.debug(`invest logging to: ${job.metadata.logfile}`);
+      logger.debug(`invest logging to: ${logfile}`);
       // job.save();
-      runningJobs[args.workspaceDir] = investRun.pid;
-      event.reply(`invest-logging-${args.workspaceDir}`, logfile);
+      runningJobs[args.workspace_dir] = investRun.pid;
+      event.reply(`invest-logging-${args.workspace_dir}`, logfile);
       // this.setState(
       //   {
       //     procID: investRun.pid,
@@ -102,7 +107,7 @@ export default function setupInvestRunHandlers(investExe) {
     investRun.stderr.on('data', (data) => {
       logger.debug(`${data}`);
       // stderr += `${data}${os.EOL}`;
-      event.reply(`invest-stderr-${args.workspaceDir}`, `${data}${os.EOL}`);
+      event.reply(`invest-stderr-${args.workspace_dir}`, `${data}${os.EOL}`);
       // this.setState({
       //   logStdErr: stderr,
       // });
@@ -111,8 +116,8 @@ export default function setupInvestRunHandlers(investExe) {
     // Set some state when the invest process exits and update the app's
     // persistent database by calling saveJob.
     investRun.on('exit', (code) => {
-      delete runningJobs[args.workspaceDir];
-      event.reply(`invest-exit-${args.workspaceDir}`, code);
+      delete runningJobs[args.workspace_dir];
+      event.reply(`invest-exit-${args.workspace_dir}`, code);
       logger.debug(code);
       fs.unlink(datastackPath, (err) => {
         if (err) { logger.error(err); }
