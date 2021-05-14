@@ -782,7 +782,11 @@ def get_header_patterns(spec):
     """
     patterns = []
     for key, val in spec.items():
-        patterns.append(val['regexp'] if 'regexp' in val else re.escape(key))
+        # for now only check patterns for things that are always required
+        # we may implement conditionally required patterns in the future
+        if 'required' in val and val['required'] is True:
+            patterns.append(
+                val['regexp'] if 'regexp' in val else re.escape(key))
     return patterns
 
 

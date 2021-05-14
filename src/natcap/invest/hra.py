@@ -181,12 +181,13 @@ ARGS_SPEC = {
             **utils.AOI_ARG,
             **utils.METER_PROJECTED,
             "fields": {
-                # "name": {
-                #     "required": False,
-                #     "type": "freestyle_string",
-                #     "about": ("Uniquely identifies each feature. Required if "
-                #         "the vector contains more than one feature.")
-                # }
+                "name": {
+                    "required": False,
+                    "type": "freestyle_string",
+                    "about": (
+                        "Uniquely identifies each feature. Required if "
+                        "the vector contains more than one feature.")
+                }
             },
             "about": (
                 "A GDAL-supported vector file containing feature containing "

@@ -969,9 +969,8 @@ def validate(args, limit_to=None):
     if ('pools_to_calculate' not in invalid_keys and
             'biophysical_table_path' not in invalid_keys):
         if args['pools_to_calculate'] == 'all':
-            required_fields = (
-                ARGS_SPEC['args']['biophysical_table_path']['columns'] +
-                ['c_below', 'c_soil', 'c_dead'])
+            # other fields have already been checked by validate
+            required_fields = ['c_above', 'c_below', 'c_soil', 'c_dead']
             error_msg = validation.check_csv(
                 args['biophysical_table_path'],
                 header_patterns=required_fields,

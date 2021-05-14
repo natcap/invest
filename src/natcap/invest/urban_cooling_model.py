@@ -175,24 +175,26 @@ ARGS_SPEC = {
                         "adjusted for the average number of stories that "
                         "structures of this type will have.")
                 },
-                # "rh": {
-                #     "type": "percent",
-                #     "required": False,
-                #     "about": ("Average relative humidity during the period of "
-                #         "interest, which is used to calculate the wet bulb "
-                #         "globe temperature for the work productivity module.")
-                # },
-                # "cost": {
-                #     "type": "number",
-                #     "units": u.currency/u.kilowatt_hour,
-                #     "required": False,
-                #     "about": ("The cost of electricity for each building type. "
-                #         "If this column is provided in the Energy Consumption "
-                #         "table, the energy_sav field in the output vector "
-                #         "buildings_with_stats.shp will be in monetary units "
-                #         "rather than kWh. This column is very likely to be the "
-                #         "same for all building types.")
-                # }
+                "rh": {
+                    "type": "percent",
+                    "required": False,
+                    "about": (
+                        "Average relative humidity during the period of "
+                        "interest, which is used to calculate the wet bulb "
+                        "globe temperature for the work productivity module.")
+                },
+                "cost": {
+                    "type": "number",
+                    "units": u.currency/u.kilowatt_hour,
+                    "required": False,
+                    "about": (
+                        "The cost of electricity for each building type. "
+                        "If this column is provided in the Energy Consumption "
+                        "table, the energy_sav field in the output vector "
+                        "buildings_with_stats.shp will be in monetary units "
+                        "rather than kWh. This column is very likely to be the "
+                        "same for all building types.")
+                }
             },
             "required": "do_energy_valuation",
             "about": (

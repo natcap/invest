@@ -66,12 +66,15 @@ ARGS_SPEC = {
             "geometries": {"POINT"},
             "fields": {
                 "radius": {
+                    "regexp": "(radius|radius2)",
+                    "items": (
+                        "RADIUS preferred, but may also be called RADIUS2 for "
+                        "backwards compatibility."),
                     "type": "number",
                     "units": u.meter,
                     "required": False,
                     "about": (
-                        "RADIUS preferred, but may also be called RADIUS2 for "
-                        "backwards compatibility. Maximum length of the line "
+                        "Maximum length of the line "
                         "of sight originating from a viewpoint. The value can "
                         "either be positive (preferred) or negative (kept for "
                         "backwards compatibility), but is converted to a "
