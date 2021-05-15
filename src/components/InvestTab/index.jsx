@@ -113,7 +113,10 @@ export default class InvestTab extends React.Component {
       jobStatus: job.metadata.status,
       workspaceDir: args.workspace_dir
     });
-    ipcRenderer.on(`invest-logging-${this.state.workspaceDir}`, (event, logfile) => {
+    const channel = args.workspace_dir
+      .replaceAll(/(\/)|(:)|(\\)|( )/ig, '');
+    ipcRenderer.on(`invest-logging-${channel}`, (event, logfile) => {
+      logger.debug(`ipcRenderer.on ${logfile}`);
       this.setState({
         logfile: logfile
       }, () => {
@@ -122,14 +125,14 @@ export default class InvestTab extends React.Component {
       job.setProperty('logfile', logfile);
       saveJob(job);
     });
-    ipcRenderer.on(`invest-stderr-${this.state.workspaceDir}`, (event, data) => {
+    ipcRenderer.on(`invest-stderr-${channel}`, (event, data) => {
       let stderr = Object.assign('', this.state.logStdErr);
       stderr += data;
       this.setState({
         logStdErr: stderr,
       });
     });
-    ipcRenderer.on(`invest-exit-${this.state.workspaceDir}`, (event, code) => {
+    ipcRenderer.on(`invest-exit-${channel}`, (event, code) => {
       if (code === 0) {
         job.setProperty('status', 'success');
       } else {
@@ -150,7 +153,8 @@ export default class InvestTab extends React.Component {
       job.metadata.modelRunName,
       this.state.modelSpec.module,
       args,
-      investSettings.loggingLevel
+      investSettings.loggingLevel,
+      channel,
     );
   }
 

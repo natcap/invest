@@ -36,7 +36,9 @@ export default function setupInvestRunHandlers(investExe) {
     }
   });
 
-  ipcMain.on('invest-run', async (event, modelRunName, pyModuleName, args, loggingLevel) => {
+  ipcMain.on('invest-run', async (
+    event, modelRunName, pyModuleName, args, loggingLevel, channel
+  ) => {
     // Write a temporary datastack json for passing to invest CLI
     fs.mkdir(TEMP_DIR, (err) => {});
     const tempDatastackDir = fs.mkdtempSync(
@@ -87,7 +89,9 @@ export default function setupInvestRunHandlers(investExe) {
       logger.debug(`invest logging to: ${logfile}`);
       // job.save();
       runningJobs[args.workspace_dir] = investRun.pid;
-      event.reply(`invest-logging-${args.workspace_dir}`, logfile);
+      logger.debug(`invest-logging-${args.workspace_dir}`);
+      // event.reply(`invest-logging-${args.workspace_dir}`, logfile);
+      event.reply(`invest-logging-${channel}`, logfile);
       // this.setState(
       //   {
       //     procID: investRun.pid,
@@ -107,7 +111,7 @@ export default function setupInvestRunHandlers(investExe) {
     investRun.stderr.on('data', (data) => {
       logger.debug(`${data}`);
       // stderr += `${data}${os.EOL}`;
-      event.reply(`invest-stderr-${args.workspace_dir}`, `${data}${os.EOL}`);
+      event.reply(`invest-stderr-${channel}`, `${data}${os.EOL}`);
       // this.setState({
       //   logStdErr: stderr,
       // });
@@ -117,7 +121,7 @@ export default function setupInvestRunHandlers(investExe) {
     // persistent database by calling saveJob.
     investRun.on('exit', (code) => {
       delete runningJobs[args.workspace_dir];
-      event.reply(`invest-exit-${args.workspace_dir}`, code);
+      event.reply(`invest-exit-${channel}`, code);
       logger.debug(code);
       fs.unlink(datastackPath, (err) => {
         if (err) { logger.error(err); }
