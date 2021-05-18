@@ -34,7 +34,8 @@ ARGS_SPEC = {
         "lulc_path": {
             "type": "raster",
             "required": True,
-            "about": ("A map of land use/land cover classes in the area of "
+            "about": (
+                "A map of land use/land cover classes in the area of "
                 "interest"),
             "name": "Land use/land cover",
             "validation_options": {
@@ -231,7 +232,7 @@ def execute(args):
     # convert the nested dictionary in to a 2D array where rows are LULC codes
     # in sorted order and columns correspond to soil groups in order
     # this facilitates efficiently looking up the ratio values with numpy
-
+    #
     # Biophysical table has runoff coefficents so subtract
     # from 1 to get retention coefficient.
     # add a placeholder in column 0 so that the soil groups 1, 2, 3, 4 line
@@ -558,7 +559,7 @@ def lookup_ratios(lulc_path, lulc_nodata, soil_group_path, soil_group_nodata,
             corresponding ratio for that LULC code x soil group pair.
 
     Returns:
-        2D numpy array
+        None
     """
     # insert a column on the left side of the array so that the soil
     # group codes 1-4 line up with their indexes. this is faster than
@@ -882,14 +883,6 @@ def raster_average(raster_path, radius, kernel_path, out_path):
         (0, 0),
         projection_wkt,
         kernel_path)
-
-    # # create and open the output raster and save the kernel to it
-    # pygeoprocessing.new_raster_from_base(
-    #     raster_path, kernel_path, gdal.GDT_Byte, [UINT8_NODATA])
-    # kernel_raster = gdal.OpenEx(kernel_path, gdal.OF_UPDATE)
-    # kernel_band = kernel_raster.GetRasterBand(1)
-    # kernel_band.WriteArray(search_kernel)
-    # kernel_band, kernel_raster = None, None
 
     # convolve the signal (input raster) with the kernel and normalize
     # this is equivalent to taking an average of each pixel's neighborhood
