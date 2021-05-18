@@ -80,8 +80,31 @@ class StormwaterTests(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def basic_setup(self, ir=False):
-        """Set up for the full model run tests."""
+    @staticmethod
+    def basic_setup(workspace_dir, ir=False):
+        """
+        Set up for the full model run tests.
+
+        Args:
+            workspace_dir (str): path to a directory in which to create files
+            ir (bool): if True, include IR data in the biophysical table
+
+        Returns:
+            List of the data and files that were created, in this order:
+
+            0 (numpy.ndarray): array written to the biophysical table path
+            1 (str): path to the biophysical table csv
+            2 (numpy.ndarray): array of LULC values written to the LULC path
+            3 (str): path to the LULC raster
+            4 (numpy.ndarray): array of soil group values written to the soil
+                group raster path
+            5 (str): path to the soil group raster
+            6 (numpy.ndarray): array of precipitation values written to the
+                precipitation raster path
+            7 (str): path to the precipitation raster
+            8 (float): stormwater retention cost value per cubic meter
+            9 (float): pixel area for all the rasters created
+        """
         # In practice RC_X + IR_X <= 1, but they are independent in the model,
         # so ignoring that constraint for convenience.
         biophysical_dict = {
@@ -120,12 +143,10 @@ class StormwaterTests(unittest.TestCase):
             [0,    0,    0,    0],
             [12.5, 12.5, 12.5, 12.5],
             [12.5, 12.5, 12.5, 12.5]], dtype=numpy.float32)
-        lulc_path = os.path.join(self.workspace_dir, 'lulc.tif')
-        soil_group_path = os.path.join(self.workspace_dir, 'soil_group.tif')
-        precipitation_path = os.path.join(
-            self.workspace_dir, 'precipitation.tif')
-        biophysical_table_path = os.path.join(
-            self.workspace_dir, 'biophysical.csv')
+        lulc_path = os.path.join(workspace_dir, 'lulc.tif')
+        soil_group_path = os.path.join(workspace_dir, 'soil_group.tif')
+        precipitation_path = os.path.join(workspace_dir, 'precipitation.tif')
+        biophysical_table_path = os.path.join(workspace_dir, 'biophysical.csv')
 
         pixel_size = (20, -20)
         pixel_area = abs(pixel_size[0] * pixel_size[1])
