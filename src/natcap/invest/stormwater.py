@@ -869,6 +869,17 @@ def raster_average(raster_path, radius, kernel_path, out_path):
     have 9 valid pixels in their neighborhood, most edge pixels will have 6,
     and most corner pixels will have 4. Edge and nodata pixels in the
     neighborhood don't count towards the total (denominator in the average).
+
+    Args:
+        raster_path (str): path to the raster file to average
+        radius (float): distance to average around each pixel's centerpoint in
+            raster coordinate system units
+        kernel_path (str): path to write out the search kernel raster, an
+            intermediate output required by pygeoprocessing.convolve_2d
+        out_path (str): path to write out the averaged raster output
+
+    Returns:
+        None
     """
     search_kernel = make_search_kernel(raster_path, radius)
 
