@@ -20,4 +20,8 @@ if platform.system() == 'Windows':
     # PATH.  If gdalXXX.dll is in the PATH, then set the
     # USE_PATH_FOR_GDAL_PYTHON=YES environment variable to feed the PATH into
     # os.add_dll_directory().
-    os.environ['USE_PATH_FOR_GDAL_PYTHON'] = 'YES'
+    #
+    # Note that GDAL will try adding all sorts of directories to the PATH that
+    # might not exist, which will then raise FileNotFound.  Adding the DLL
+    # directory directly gets around this.
+    os.add_dll_directory(sys._MEIPASS)
