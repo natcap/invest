@@ -12,16 +12,3 @@ if platform.system() == 'Darwin':
     # See https://bugreports.qt.io/browse/QTBUG-87014
     # and https://github.com/natcap/invest/issues/384
     os.environ['QT_MAC_WANTS_LAYER'] = '1'
-
-if platform.system() == 'Windows':
-    # Encountered with the GDAL 3.3.0 release.  Specific exception below.
-    #
-    # On Windows, with Python >= 3.8, DLLs are no longer imported from the
-    # PATH.  If gdalXXX.dll is in the PATH, then set the
-    # USE_PATH_FOR_GDAL_PYTHON=YES environment variable to feed the PATH into
-    # os.add_dll_directory().
-    #
-    # Note that GDAL will try adding all sorts of directories to the PATH that
-    # might not exist, which will then raise FileNotFound.  Adding the DLL
-    # directory directly gets around this.
-    os.add_dll_directory(sys._MEIPASS)
