@@ -114,8 +114,9 @@ export default class InvestTab extends React.Component {
       workspaceDir: args.workspace_dir
     });
     const channel = args.workspace_dir
-      .replaceAll(/(\/)|(:)|(\\)|( )/ig, '');
+      .replace(/(\/)|(:)|(\\)|( )/ig, '');
     ipcRenderer.on(`invest-logging-${channel}`, (event, logfile) => {
+      console.log('from renderer on logging channel')
       logger.debug(`ipcRenderer.on ${logfile}`);
       this.setState({
         logfile: logfile
@@ -148,6 +149,8 @@ export default class InvestTab extends React.Component {
       saveJob(job);
     });
 
+    console.log('before invest-run send')
+    console.log(args);
     ipcRenderer.send(
       'invest-run',
       job.metadata.modelRunName,
@@ -156,6 +159,7 @@ export default class InvestTab extends React.Component {
       investSettings.loggingLevel,
       channel,
     );
+    console.log('after invest-run send')
   }
 
   terminateInvestProcess() {

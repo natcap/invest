@@ -5,7 +5,7 @@ import os from 'os';
 import { spawn } from 'child_process';
 import Stream from 'stream';
 import React from 'react';
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, ipcMain } from 'electron';
 import {
   fireEvent, render, waitFor, within
 } from '@testing-library/react';
@@ -21,6 +21,7 @@ import SAMPLE_SPEC from './data/carbon_args_spec.json';
 import {
   clearSettingsStore, getSettingsValue, saveSettingsStore
 } from '../src/components/SettingsModal/SettingsStorage';
+import setupInvestHandlers from '../src/main/setupInvestHandlers';
 
 jest.mock('child_process');
 jest.mock('../src/server_requests');
@@ -458,6 +459,7 @@ describe('InVEST subprocess testing', () => {
   let fakeWorkspace;
   let logfilePath;
   let mockInvestProc;
+  const investExe = 'foo';
 
   beforeEach(() => {
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
@@ -494,6 +496,9 @@ describe('InVEST subprocess testing', () => {
     // brackets around spec.model_name turns it into a valid literal key
     const mockUISpec = { [spec.model_name]: { order: [Object.keys(spec.args)] } };
     jest.mock('../src/ui_config', () => mockUISpec);
+
+    setupInvestHandlers(investExe);
+    console.log(ipcMain.listenerCount('invest-run'));
   });
 
   afterEach(async () => {
@@ -507,14 +512,14 @@ describe('InVEST subprocess testing', () => {
     jest.resetModules();
   });
 
-  test('exit without error - expect log display', async () => {
+  test.only('exit without error - expect log display', async () => {
     const {
       findByText,
       findByLabelText,
       findByRole,
       queryByText,
       unmount,
-    } = render(<App investExe="foo" />);
+    } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
     fireEvent.click(carbon);
@@ -531,7 +536,9 @@ describe('InVEST subprocess testing', () => {
     // stdout listener is how the app knows the process started
     mockInvestProc.stdout.push('hello from stdout');
     const logTab = await findByText('Log');
-    expect(logTab.classList.contains('active')).toBeTruthy();
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
     // some text from the logfile should be rendered:
     expect(await findByText(dummyTextToLog, { exact: false }))
       .toBeInTheDocument();
@@ -566,7 +573,7 @@ describe('InVEST subprocess testing', () => {
       findByLabelText,
       findByRole,
       unmount,
-    } = render(<App investExe="foo" />);
+    } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
     fireEvent.click(carbon);
@@ -618,7 +625,7 @@ describe('InVEST subprocess testing', () => {
       findByLabelText,
       findByRole,
       unmount,
-    } = render(<App investExe="foo" />);
+    } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
     fireEvent.click(carbon);
@@ -664,7 +671,7 @@ describe('InVEST subprocess testing', () => {
       findByLabelText,
       findByRole,
       unmount,
-    } = render(<App investExe="foo" />);
+    } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
     fireEvent.click(carbon);

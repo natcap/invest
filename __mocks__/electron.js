@@ -10,6 +10,7 @@ even for APIs that would otherwise seem okay to call during a test.
 */
 
 import path from 'path';
+import events from 'events';
 
 export const app = {
   getPath: jest.fn().mockImplementation(
@@ -37,17 +38,30 @@ export const dialog = {
 };
 
 // TODO - is ReturnThis necessary? What are the implications?
-export const ipcMain = {
-  on: jest.fn().mockReturnThis(),
-  handle: jest.fn().mockReturnThis(),
-  handleOnce: jest.fn().mockReturnThis(),
-};
+// export const ipcMain = {
+//   on: jest.fn().mockReturnThis(),
+//   handle: jest.fn().mockReturnThis(),
+//   handleOnce: jest.fn().mockReturnThis(),
+// };
 
-export const ipcRenderer = {
-  on: jest.fn(),
-  send: jest.fn(),
-  invoke: jest.fn().mockImplementation(() => Promise.resolve()),
+// export const ipcRenderer = {
+//   on: jest.fn(),
+//   send: jest.fn(),
+//   invoke: jest.fn().mockImplementation(() => Promise.resolve()),
+// };
+const mockIPC = new events.EventEmitter();
+mockIPC.handle = jest.fn().mockReturnThis();
+mockIPC.send = (channel, ...args) => {
+  const event = {
+    reply: (channel, response) => {
+      mockIPC.emit(channel, response);
+    }
+  };
+  mockIPC.emit(channel, event, ...args);
 };
+mockIPC.invoke = jest.fn().mockImplementation(() => Promise.resolve());
+export const ipcMain = mockIPC;
+export const ipcRenderer = mockIPC;
 
 export const Menu = {
   buildFromTemplate: jest.fn(),
