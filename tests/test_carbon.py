@@ -8,6 +8,9 @@ import os
 from osgeo import gdal
 from osgeo import osr
 import numpy
+import numpy.random
+import numpy.testing
+import pygeoprocessing
 
 
 def make_simple_raster(base_raster_path, fill_val, nodata_val):
@@ -163,11 +166,11 @@ class CarbonTests(unittest.TestCase):
         carbon.execute(args)
 
         # Add assertions for npv for future and REDD scenarios.
-        # carbon change from cur to fut: 
+        # carbon change from cur to fut:
         # -58 Mg/ha * .0001 ha/pixel * 43 $/Mg = -0.2494 $/pixel
         assert_raster_equal_value(
             os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.2494)
-        # carbon change from cur to redd: 
+        # carbon change from cur to redd:
         # -78 Mg/ha * .0001 ha/pixel * 43 $/Mg = -0.3354 $/pixel
         assert_raster_equal_value(
             os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.3354)
@@ -335,3 +338,25 @@ class CarbonValidationTests(unittest.TestCase):
              'lulc_cur_year',
              'lulc_fut_year'])
         self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_carbon_totals_precision(self):
+        """Carbon: check float64 precision in pixel value summation."""
+        from natcap.invest import carbon
+
+        big_float32_array = numpy.random.default_rng(seed=1).random(
+            (10000, 10000), dtype=numpy.float32)
+
+        nodata = numpy.finfo(numpy.float32).min
+        big_float32_array[1:15] = nodata
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
+        wkt = srs.ExportToWkt()
+        raster_path = os.path.join(self.workspace_dir, 'raster.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            big_float32_array, float(nodata), (2, -2), (2, -2), wkt,
+            raster_path)
+
+        numpy.testing.assert_allclose(
+            carbon._accumulate_totals(raster_path),
+            49935086.309929)
