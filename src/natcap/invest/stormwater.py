@@ -603,9 +603,9 @@ def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
     """
     volume_array = numpy.full(ratio_array.shape, FLOAT_NODATA,
                               dtype=numpy.float32)
-    valid_mask = (
-        ~numpy.isclose(ratio_array, FLOAT_NODATA) &
-        ~numpy.isclose(precip_array, precip_nodata))
+    valid_mask = ~numpy.isclose(ratio_array, FLOAT_NODATA)
+    if precip_nodata:
+        valid_mask &= ~numpy.isclose(precip_array, precip_nodata)
 
     # precipitation (mm/yr) * pixel area (m^2) *
     # 0.001 (m/mm) * ratio = volume (m^3/yr)
