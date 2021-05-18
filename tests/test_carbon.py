@@ -344,8 +344,9 @@ class CarbonValidationTests(unittest.TestCase):
         from natcap.invest import carbon
 
         big_float32_array = numpy.random.default_rng(seed=1).random(
-            (10000, 10000), dtype=numpy.float32)
+            (1000, 1000), dtype=numpy.float32)
 
+        # Throw in some nodata values for good measure.
         nodata = numpy.finfo(numpy.float32).min
         big_float32_array[1:15] = nodata
 
@@ -357,6 +358,9 @@ class CarbonValidationTests(unittest.TestCase):
             big_float32_array, float(nodata), (2, -2), (2, -2), wkt,
             raster_path)
 
+        # Verify better-than-float32 precision on raster summation.
+        # Using a numpy float32 in numpy.sum will pass up to rtol=1e-9.
         numpy.testing.assert_allclose(
             carbon._accumulate_totals(raster_path),
-            49935086.309929)
+            492919.73994,
+            rtol=1e-12)  # Note better precision
