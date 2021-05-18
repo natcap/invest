@@ -103,6 +103,7 @@ ARGS_SPEC = {
                         "eff_x, following an exponential decay.")},
                 "proportion_subsurface_n": {
                     "type": "ratio",
+                    "required": "calc_n",
                     "about": (
                         "The proportion of the total amount of nitrogen that "
                         "are dissolved into the subsurface. By default, this "
