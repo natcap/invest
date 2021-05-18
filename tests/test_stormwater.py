@@ -449,8 +449,7 @@ class StormwaterTests(unittest.TestCase):
         for feature in aggregate_layer:
             feature_id = feature.GetFID()
             for key, val in expected_feature_fields[feature_id].items():
-                field_index = feature.GetFieldIndex(key)
-                field_value = feature.GetField(field_index)
+                field_value = feature.GetField(key)
                 numpy.testing.assert_allclose(field_value, val)
 
     def test_lookup_ratios(self):
