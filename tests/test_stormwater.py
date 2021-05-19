@@ -188,6 +188,7 @@ class StormwaterTests(unittest.TestCase):
 
         args = {
             'workspace_dir': self.workspace_dir,
+            'results_suffix': 'suffix',
             'lulc_path': lulc_path,
             'soil_group_path': soil_group_path,
             'precipitation_path': precipitation_path,
@@ -204,12 +205,13 @@ class StormwaterTests(unittest.TestCase):
         stormwater.execute(args)
 
         retention_volume_path = os.path.join(
-            self.workspace_dir, 'retention_volume.tif')
+            self.workspace_dir, 'retention_volume_suffix.tif')
         infiltration_volume_path = os.path.join(
-            self.workspace_dir, 'infiltration_volume.tif')
+            self.workspace_dir, 'infiltration_volume_suffix.tif')
         pollutant_path = os.path.join(
-            self.workspace_dir, 'avoided_pollutant_load_pollutant1.tif')
-        value_path = os.path.join(self.workspace_dir, 'retention_value.tif')
+            self.workspace_dir, 'avoided_pollutant_load_pollutant1_suffix.tif')
+        value_path = os.path.join(
+            self.workspace_dir, 'retention_value_suffix.tif')
         # there should be no infiltration output because there's no
         # infiltration data in the biophysical table
         self.assertFalse(os.path.exists(infiltration_volume_path))
