@@ -395,7 +395,8 @@ class StormwaterTests(unittest.TestCase):
             gdal.OF_RASTER)
         retention_volume_raster = gdal.OpenEx(
             os.path.join(
-                self.workspace_dir, 'retention_volume.tif'),
+                self.workspace_dir,
+                stormwater.FINAL_OUTPUTS['retention_volume_path']),
             gdal.OF_RASTER)
         actual_adjusted_ratios = adjusted_ratio_raster.GetRasterBand(
             1).ReadAsArray()
