@@ -140,11 +140,11 @@ ARGS_SPEC = {
                 "miscellaneous_capex_cost": {"type": "ratio"},
                 "installation_cost": {"type": "ratio"},
                 "infield_cable_length": {"type": "number", "units": u.kilometer},
-                "infield_cable_cost": {"type": "number", "units": u.million_dollars},
-                "mw_coef_ac": {"type": "number", "units": "?"},
-                "mw_coef_dc": {"type": "number", "units": "?"},
-                "cable_coef_ac": {"type": "number", "units": "?"},
-                "cable_coef_dc": {"type": "number", "units": "?"},
+                "infield_cable_cost": {"type": "number", "units": u.megacurrency},
+                "mw_coef_ac": {"type": "number", "units": u.currency/u.megawatt},
+                "mw_coef_dc": {"type": "number", "units": u.currency/u.megawatt},
+                "cable_coef_ac": {"type": "number", "units": u.currency/u.kilometer},
+                "cable_coef_dc": {"type": "number", "units": u.currency/u.kilometer},
                 "ac_dc_distance_break": {
                     "type": "number",
                     "units": u.kilometer,
@@ -215,7 +215,7 @@ ARGS_SPEC = {
                     "about": "The turbine's rated power output"},
                 "turbine_cost": {
                     "type": "number",
-                    "units": u.million_dollars,
+                    "units": u.megacurrency,
                     "about": "The cost of one turbine"}
             },
             "about": (
@@ -282,14 +282,14 @@ ARGS_SPEC = {
         },
         "foundation_cost": {
             "type": "number",
-            "units": u.million_dollars,
+            "units": u.megacurrency,
             "required": "valuation_container",
             "about": (
                 "A floating point number for the unit cost of the foundation "
-                "type (in millions of dollars). The cost of a foundation will "
-                "depend on the type selected, which itself depends on a "
-                "variety of factors including depth and turbine choice. "
-                "Please see the User's Guide for guidance on properly "
+                "type (in millions of currency units). The cost of a "
+                "foundation will depend on the type selected, which itself "
+                "depends on a variety of factors including depth and turbine "
+                "choice. Please see the User's Guide for guidance on properly "
                 "selecting this value."),
             "name": "Cost of the Foundation Type"
         },
@@ -850,7 +850,8 @@ def execute(args):
             dependent_task_list=[compute_density_harvested_task])
 
         # Creating density and harvested rasters depends on the wind vector
-        density_harvest_rasters_dependent_task_list = [wind_data_to_vector_task]
+        density_harvest_rasters_dependent_task_list = [
+            wind_data_to_vector_task]
 
         # Set the bathymetry and points path to use in the rest of the model.
         # In this case these paths refer to the unprojected files. This may not
@@ -875,7 +876,7 @@ def execute(args):
     task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(final_bathy_raster_path, 1), (min_depth, 'raw'),
-              (max_depth, 'raw')], _depth_op, depth_mask_path,
+               (max_depth, 'raw')], _depth_op, depth_mask_path,
               _TARGET_DATA_TYPE, _TARGET_NODATA),
         target_path_list=[depth_mask_path],
         task_name='mask_depth_on_bathymetry',
@@ -1191,7 +1192,7 @@ def execute(args):
         final_dist_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(land_poly_dist_raster_path, 1), (mean_pixel_size, 'raw'),
-                  (avg_grid_distance, 'raw')], _add_avg_dist_op,
+                   (avg_grid_distance, 'raw')], _add_avg_dist_op,
                   final_dist_raster_path, _TARGET_DATA_TYPE, _TARGET_NODATA),
             target_path_list=[final_dist_raster_path],
             task_name='calculate_final_distance_in_meters',
@@ -1284,11 +1285,11 @@ def _calculate_npv_levelized_rasters(
     # Get constants from val_parameters_dict to make it more readable
     # The length of infield cable in km
     infield_length = float(val_parameters_dict['infield_cable_length'])
-    # The cost of infield cable in millions of dollars per km
+    # The cost of infield cable in millions of currency units per km
     infield_cost = float(val_parameters_dict['infield_cable_cost'])
-    # The cost of the foundation in millions of dollars
+    # The cost of the foundation in millions of currency units
     foundation_cost = float(args['foundation_cost'])
-    # The cost of each turbine unit in millions of dollars
+    # The cost of each turbine unit in millions of currency units
     unit_cost = float(val_parameters_dict['turbine_cost'])
     # The installation cost as a decimal
     install_cost = float(val_parameters_dict['installation_cost'])
@@ -1398,16 +1399,16 @@ def _calculate_npv_levelized_rasters(
         # Calculate the total NPV and the levelized cost over the lifespan of
         # the wind farm. Starting at year 1, because year 0 yields no revenue
         for year in range(1, len(price_list)):
-            # Dollar per kiloWatt hour of that year
-            dollar_per_kwh = float(price_list[year])
+            # currency units per kilowatt-hour of that year
+            currency_per_kwh = float(price_list[year])
 
             # The price per kWh for energy converted to units of millions of
-            # dollars to correspond to the units for valuation costs
-            mill_dollar_per_kwh = dollar_per_kwh / 1000000.0
+            # currency units to correspond to the units for valuation costs
+            mill_currency_per_kwh = currency_per_kwh / 1000000.0
 
-            # The revenue in millions of dollars for the wind farm. The
+            # The revenue in millions of currency units for the wind farm. The
             # energy_val_arr is in kWh/yr
-            rev_arr = energy_val_arr * mill_dollar_per_kwh
+            rev_arr = energy_val_arr * mill_currency_per_kwh
 
             # Calculate the net present value (NPV), the summation of the net
             # revenue from power generation, adjusted for discount rate
@@ -1430,7 +1431,7 @@ def _calculate_npv_levelized_rasters(
             capex_arr[~target_nodata_mask])
 
         # Calculate the levelized cost of energy, converting from millions of
-        # dollars to dollars
+        # currency units to currency units
         levelized_arr = (
             (levelized_num_arr + decommish_capex_arr + capex_arr) /
             levelized_denom_arr) * 1000000.0
@@ -2563,7 +2564,8 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     land_point_dist_raster_path_list = []
 
     # Get the mean pixel size to calculate minimum distance from land to grid
-    pixel_size = pygeoprocessing.get_raster_info(base_raster_path)['pixel_size']
+    pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
+        'pixel_size']
     mean_pixel_size, _ = utils.mean_pixel_size_and_area(pixel_size)
 
     # Get the original layer definition which holds needed attribute values

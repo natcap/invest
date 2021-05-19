@@ -387,8 +387,8 @@ _CAPWE_UNITS_SHORT = ' MWh/yr'
 _CAPWE_UNITS_LONG = 'megawatt hours per year'
 _WP_UNITS_SHORT = ' kW/m'
 _WP_UNITS_LONG = 'wave power per unit width of wave crest length'
-_NPV_UNITS_SHORT = ' US$'
-_NPV_UNITS_LONG = 'thousands of US dollars'
+_NPV_UNITS_SHORT = 'currency'
+_NPV_UNITS_LONG = 'thousands of currency units'
 _STARTING_PERC_RANGE = '1'
 
 # Driver name for creating vector and raster files
@@ -665,7 +665,7 @@ def execute(args):
         coord_trans = utils.create_coordinate_transformer(
             analysis_area_sr, aoi_sr)
         coord_trans_opposite = utils.create_coordinate_transformer(
-                aoi_sr, analysis_area_sr)
+            aoi_sr, analysis_area_sr)
         target_pixel_size = _pixel_size_helper(wave_vector_path, coord_trans,
                                                coord_trans_opposite, dem_path)
 
@@ -1023,7 +1023,8 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
     cml = float(machine_econ_dict['cml'])  # cost of mooring lines, $ per m
     cul = float(machine_econ_dict['cul'])  # cost of underwater cable, $ per km
     col = float(machine_econ_dict['col'])  # cost of overland cable, $ per km
-    omc = float(machine_econ_dict['omc'])  # operating & maintenance cost, $ per kWh
+    # operating & maintenance cost, $ per kWh
+    omc = float(machine_econ_dict['omc'])
     price = float(machine_econ_dict['p'])  # price of electricity, $ per kWh
     smlpm = float(machine_econ_dict['smlpm'])  # slack-moored
     d_rate = float(machine_econ_dict['r'])  # discount rate
@@ -1055,7 +1056,8 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
     rho = 1.0 / (1.0 + d_rate)
     npv = numpy.power(rho, numpy.arange(_LIFE_SPAN)) * (
         annual_revenue - annual_cost)
-    npv_result = numpy.sum(npv) / 1000.0  # Convert [$US] to [thousands of $US]
+
+    npv_result = numpy.sum(npv) / 1000.0
 
     return npv_result, capwe_all_result
 
@@ -1507,7 +1509,8 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     if start_value:
         value_ranges.append('%s to %s' % (start_value, rounded_percentiles[0]))
     else:
-        value_ranges.append('Less than or equal to %s' % rounded_percentiles[0])
+        value_ranges.append('Less than or equal to %s' %
+                            rounded_percentiles[0])
     value_ranges += ['%s to %s' % (p, q) for (p, q) in
                      zip(rounded_percentiles[:-1], rounded_percentiles[1:])]
     # Add the last range to the range of values list
@@ -1856,7 +1859,8 @@ def _index_raster_value_to_point_vector(
     vector_sr.ImportFromWkt(
         pygeoprocessing.get_vector_info(target_point_vector_path)[
             'projection_wkt'])
-    vector_coord_trans = utils.create_coordinate_transformer(vector_sr, raster_sr)
+    vector_coord_trans = utils.create_coordinate_transformer(
+        vector_sr, raster_sr)
 
     # Initialize an R-Tree indexing object with point geom from base_vector
     def generator_function():
