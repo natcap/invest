@@ -197,7 +197,7 @@ def execute(args):
     pixel_size = source_lulc_raster_info['pixel_size']
     # in case the input raster doesn't have square pixels, take the average
     # all the rasters are warped to this square pixel size in the align task
-    avg_pixel_size = abs(pixel_size[0] + pixel_size[1] / 2)
+    avg_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2
     pixel_area = abs(pixel_size[0] * pixel_size[1])
 
     lulc_nodata = source_lulc_raster_info['nodata'][0]
@@ -515,7 +515,6 @@ def execute(args):
 
     # (Optional) Aggregate to watersheds if an aggregate vector is defined
     if 'aggregate_areas_path' in args and args['aggregate_areas_path']:
-        aggregation_task_dependencies.append(reproject_aggregate_areas_task)
         _ = task_graph.add_task(
             func=aggregate_results,
             args=(

@@ -184,7 +184,7 @@ class StormwaterTests(unittest.TestCase):
          precipitation_array,
          precipitation_path,
          retention_cost,
-         pixel_area) = self.basic_setup()
+         pixel_area) = self.basic_setup(self.workspace_dir)
 
         args = {
             'workspace_dir': self.workspace_dir,
@@ -275,7 +275,7 @@ class StormwaterTests(unittest.TestCase):
          precipitation_array,
          precipitation_path,
          retention_cost,
-         pixel_area) = self.basic_setup(ir=True)
+         pixel_area) = self.basic_setup(self.workspace_dir, ir=True)
 
         args = {
             'workspace_dir': self.workspace_dir,
@@ -368,7 +368,7 @@ class StormwaterTests(unittest.TestCase):
          precipitation_array,
          precipitation_path,
          retention_cost,
-         pixel_area) = self.basic_setup()
+         pixel_area) = self.basic_setup(self.workspace_dir)
 
         args = {
             'workspace_dir': self.workspace_dir,
@@ -425,7 +425,7 @@ class StormwaterTests(unittest.TestCase):
          precipitation_array,
          precipitation_path,
          retention_cost,
-         pixel_area) = self.basic_setup()
+         pixel_area) = self.basic_setup(self.workspace_dir)
 
         args = {
             'workspace_dir': self.workspace_dir,
