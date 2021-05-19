@@ -133,7 +133,7 @@ ARGS_SPEC = {
                     "type": "ratio",
                     "about": (
                         "cost to decommission a turbine as a proportion of "
-                        "the totalupfront costs (cables, foundations, "
+                        "the total upfront costs (cables, foundations, "
                         "installation?")
                 },
                 "operation_maintenance_cost": {"type": "ratio"},
