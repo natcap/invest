@@ -73,7 +73,7 @@ class ValidateArgsSpecs(unittest.TestCase):
             'urban_cooling_model',
             'urban_flood_risk_mitigation',
             'wave_energy',
-            # 'wind_energy'
+            'wind_energy'
         ]
 
         for model_name in model_names:
@@ -118,7 +118,8 @@ class ValidateArgsSpecs(unittest.TestCase):
                 self.assertTrue(attr in arg)
 
             # arg['type'] can be either a string or a set of strings
-            types = arg['type'] if isinstance(arg['type'], set) else [arg['type']]
+            types = arg['type'] if isinstance(
+                arg['type'], set) else [arg['type']]
             attrs = set(arg.keys())
             for t in types:
                 self.assertTrue(t in valid_types)
