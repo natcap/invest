@@ -153,9 +153,9 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "coastal_blue_carbon.html",
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": utils.WORKSPACE_SPEC,
+        "results_suffix": utils.SUFFIX_SPEC,
+        "n_workers": utils.N_WORKERS_SPEC,
         "landcover_snapshot_csv": {
             "type": "csv",
             "required": False,

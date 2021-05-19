@@ -19,8 +19,8 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "fisheries.html",
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
+        "workspace_dir": utils.WORKSPACE_SPEC,
+        "results_suffix": utils.SUFFIX_SPEC,
         "aoi_vector_path": {
             **utils.AOI_ARG,
             "fields": {

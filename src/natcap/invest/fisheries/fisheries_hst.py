@@ -20,8 +20,8 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "fisheries.html",
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
+        "workspace_dir": utils.WORKSPACE_SPEC,
+        "results_suffix": utils.SUFFIX_SPEC,
         "sexsp": {
             "name": "Population Classes are Sex-Specific",
             "type": "option_string",

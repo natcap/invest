@@ -30,9 +30,9 @@ ARGS_SPEC = {
         "different_projections_ok": False,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": utils.WORKSPACE_SPEC,
+        "results_suffix": utils.SUFFIX_SPEC,
+        "n_workers": utils.N_WORKERS_SPEC,
         "lulc_path": {
             **utils.LULC_ARG,
             **utils.PROJECTED
