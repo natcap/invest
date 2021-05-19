@@ -195,6 +195,9 @@ def execute(args):
     source_lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_path'])
     pixel_size = source_lulc_raster_info['pixel_size']
+    # in case the input raster doesn't have square pixels, take the average
+    # all the rasters are warped to this square pixel size in the align task
+    avg_pixel_size = abs(pixel_size[0] + pixel_size[1] / 2)
     pixel_area = abs(pixel_size[0] * pixel_size[1])
 
     lulc_nodata = source_lulc_raster_info['nodata'][0]
@@ -216,7 +219,7 @@ def execute(args):
             align_inputs,
             align_outputs,
             ['near' for _ in align_inputs],
-            pixel_size,
+            (avg_pixel_size, avg_pixel_size),
             'intersection'),
         kwargs={'raster_align_index': 0},
         target_path_list=align_outputs,
@@ -241,7 +244,7 @@ def execute(args):
     retention_ratio_array = numpy.array([
         [1 - biophysical_dict[lucode][f'rc_{soil_group}']
             for soil_group in ['a', 'b', 'c', 'd']
-        ] for lucode in sorted_lucodes
+         ] for lucode in sorted_lucodes
     ], dtype=numpy.float32)
 
     # Calculate stormwater retention ratio and volume from
@@ -309,7 +312,7 @@ def execute(args):
             func=is_near,
             args=(
                 files['rasterized_centerlines_path'],
-                radius / pixel_size[0],  # convert the radius to pixels
+                radius / avg_pixel_size,  # convert the radius to pixels
                 files['road_distance_path'],
                 files['near_road_path']),
             target_path_list=[
@@ -339,7 +342,7 @@ def execute(args):
             func=is_near,
             args=(
                 files['impervious_lulc_path'],
-                radius / pixel_size[0],  # convert the radius to pixels
+                radius / avg_pixel_size,  # convert the radius to pixels
                 files['impervious_lulc_distance_path'],
                 files['near_impervious_lulc_path']),
             target_path_list=[
@@ -539,7 +542,7 @@ def execute(args):
 
 
 def lookup_ratios(lulc_path, lulc_nodata, soil_group_path, soil_group_nodata,
-    ratio_lookup, sorted_lucodes, output_path):
+                  ratio_lookup, sorted_lucodes, output_path):
     """Look up retention/infiltration ratios from LULC codes and soil groups.
 
     Args:
@@ -565,18 +568,18 @@ def lookup_ratios(lulc_path, lulc_nodata, soil_group_path, soil_group_nodata,
     # group codes 1-4 line up with their indexes. this is faster than
     # decrementing every value in a large raster.
     ratio_lookup = numpy.insert(ratio_lookup, 0,
-        numpy.zeros(ratio_lookup.shape[0]), axis=1)
+                                numpy.zeros(ratio_lookup.shape[0]), axis=1)
 
     def ratio_op(lulc_array, soil_group_array):
         output_ratio_array = numpy.full(lulc_array.shape, FLOAT_NODATA,
-            dtype=numpy.float32)
+                                        dtype=numpy.float32)
         valid_mask = ((lulc_array != lulc_nodata) &
                       (soil_group_array != soil_group_nodata))
         # the index of each lucode in the sorted lucodes array
         lulc_index = numpy.digitize(lulc_array[valid_mask], sorted_lucodes,
                                     right=True)
         output_ratio_array[valid_mask] = ratio_lookup[lulc_index,
-            soil_group_array[valid_mask]]
+                                                      soil_group_array[valid_mask]]
         return output_ratio_array
 
     pygeoprocessing.raster_calculator(
@@ -617,7 +620,7 @@ def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
 
 
 def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array,
-    sorted_lucodes, emc_array):
+                              sorted_lucodes, emc_array):
     """Calculate avoided pollutant loads from LULC codes retention volumes.
 
     Args:
@@ -723,7 +726,7 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
 
     # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
     adjusted_ratio_array[valid_mask] = (ratio_array[valid_mask] +
-        (1 - ratio_array[valid_mask]) * adjustment_factor_array[valid_mask])
+                                        (1 - ratio_array[valid_mask]) * adjustment_factor_array[valid_mask])
     return adjusted_ratio_array
 
 
@@ -822,7 +825,8 @@ def make_search_kernel(raster_path, radius):
     """Make a search kernel for a raster that marks pixels within a radius.
 
     Args:
-        raster_path (str): path to a raster to make kernel for
+        raster_path (str): path to a raster to make kernel for. It is assumed
+            that the raster has square pixels.
         radius (float): distance around each pixel's centerpoint to search
             in raster coordinate system units
 
