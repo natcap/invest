@@ -219,7 +219,7 @@ def execute(args):
             align_inputs,
             align_outputs,
             ['near' for _ in align_inputs],
-            (avg_pixel_size, avg_pixel_size),
+            (avg_pixel_size, -avg_pixel_size),
             'intersection'),
         kwargs={'raster_align_index': 0},
         target_path_list=align_outputs,
@@ -837,7 +837,7 @@ def make_search_kernel(raster_path, radius):
         while still including the entire radius.
     """
     raster_info = pygeoprocessing.get_raster_info(raster_path)
-    pixel_radius = radius / raster_info['pixel_size'][0]
+    pixel_radius = radius / abs(raster_info['pixel_size'][0])
     pixel_margin = math.floor(pixel_radius)
     # the search kernel is just large enough to contain all pixels that
     # *could* be within the radius of the center pixel
