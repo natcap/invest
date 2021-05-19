@@ -77,20 +77,18 @@ class ValidateArgsSpecs(unittest.TestCase):
         ]
 
         for model_name in model_names:
-            with self.subTest(model_name=model_name):
-                model = importlib.import_module(f'natcap.invest.{model_name}')
+            model = importlib.import_module(f'natcap.invest.{model_name}')
 
-                # validate that each arg meets the expected pattern
-                # save up errors to report at the end
-                for key, arg in model.ARGS_SPEC['args'].items():
-                    with self.subTest(arg_name=f'{model_name}.{key}'):
-                        # the top level should have 'name' and 'about' attrs
-                        # but they aren't required at nested levels
-                        self.validate(
-                            arg,
-                            f'{model_name}.{key}',
-                            valid_types=valid_nested_types['all'],
-                            required_attrs=['name', 'about'])
+            # validate that each arg meets the expected pattern
+            # save up errors to report at the end
+            for key, arg in model.ARGS_SPEC['args'].items():
+                # the top level should have 'name' and 'about' attrs
+                # but they aren't required at nested levels
+                self.validate(
+                    arg,
+                    f'{model_name}.{key}',
+                    valid_types=valid_nested_types['all'],
+                    required_attrs=['name', 'about'])
 
     def validate(self, arg, name, valid_types, is_pattern=False, required_attrs=[]):
         """

@@ -99,7 +99,7 @@ N_WORKERS_SPEC = {
         "place asynchronously. Any other positive integer will cause that "
         "many processes to be spawned to execute tasks."),
     "type": "number",
-    "units": utils.u.none,
+    "units": u.none,
     "required": False,
     "validation_options": {
         "expression": "value >= -1"
