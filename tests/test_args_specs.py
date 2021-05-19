@@ -166,8 +166,6 @@ class ValidateArgsSpecs(unittest.TestCase):
                     self.assertTrue(isinstance(arg['fields'], dict))
                     for field in arg['fields']:
                         self.assertTrue(isinstance(field, str))
-                        if '(' in field or '[' in field:
-                            print(f"Warning: header {field} in {name}")
                         self.validate(
                             arg['fields'][field],
                             f'{name}.fields.{field}',
