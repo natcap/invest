@@ -515,22 +515,13 @@ def execute(args):
 
     # (Optional) Aggregate to watersheds if an aggregate vector is defined
     if 'aggregate_areas_path' in args and args['aggregate_areas_path']:
-        reproject_aggregate_areas_task = task_graph.add_task(
-            func=pygeoprocessing.reproject_vector,
-            args=(
-                args['aggregate_areas_path'],
-                source_lulc_raster_info['projection_wkt'],
-                files['reprojected_aggregate_areas_path']),
-            kwargs={'driver_name': 'GPKG'},
-            target_path_list=[files['reprojected_aggregate_areas_path']],
-            task_name='reproject aggregate areas vector to match rasters',
-            dependent_task_list=[]
-        )
         aggregation_task_dependencies.append(reproject_aggregate_areas_task)
         _ = task_graph.add_task(
             func=aggregate_results,
             args=(
+                args['aggregate_areas_path'],
                 files['reprojected_aggregate_areas_path'],
+                source_lulc_raster_info['projection_wkt'],
                 data_to_aggregate),
             target_path_list=[files['reprojected_aggregate_areas_path']],
             dependent_task_list=aggregation_task_dependencies,
@@ -730,12 +721,18 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
     return adjusted_ratio_array
 
 
-def aggregate_results(aggregate_areas_path, aggregations):
+def aggregate_results(base_aggregate_areas_path, target_path, wkt, aggregations):
     """Aggregate outputs into regions of interest.
 
     Args:
-        aggregate_areas_path (str): path to vector of polygon(s) to aggregate
-            over. This should be a copy that it's okay to modify.
+        base_aggregate_areas_path (str): path to vector of polygon(s) to
+            aggregate over. This is the original input.
+        target_path (str): path to write out the results. This will be a copy
+            of the base vector with added fields, reprojected to the target WKT
+            and saved in geopackage format.
+        wkt (str): a Well-Known Text representation of the target spatial
+            reference. The base vector is reprojected to this spatial reference
+            before aggregating the rasters over it.
         aggregations (list[tuple(str,str,str)]): list of tuples describing the
             datasets to aggregate. Each tuple has 3 items. The first is the
             path to a raster to aggregate. The second is the field name for
@@ -745,14 +742,16 @@ def aggregate_results(aggregate_areas_path, aggregations):
     Returns:
         None
     """
+    pygeoprocessing.reproject_vector(base_aggregate_areas_path, wkt,
+                                     target_path, driver_name='GPKG')
     # create a copy of the aggregate areas vector to write to
-    aggregate_vector = gdal.OpenEx(aggregate_areas_path, gdal.GA_Update)
+    aggregate_vector = gdal.OpenEx(target_path, gdal.GA_Update)
     aggregate_layer = aggregate_vector.GetLayer()
 
     for raster_path, field_id, op in aggregations:
         # aggregate the raster by the vector region(s)
         aggregate_stats = pygeoprocessing.zonal_statistics(
-            (raster_path, 1), aggregate_areas_path)
+            (raster_path, 1), target_path)
 
         # set up the field to hold the aggregate data
         aggregate_field = ogr.FieldDefn(field_id, ogr.OFTReal)
