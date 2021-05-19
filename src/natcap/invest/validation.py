@@ -116,15 +116,13 @@ def get_sufficient_keys(args):
     return sufficient_keys
 
 
-def check_directory(dirpath, exists=False, path_patterns=[], permissions='rx'):
+def check_directory(dirpath, exists=False, permissions='rx'):
     """Validate a directory.
 
     Args:
         dirpath (string): The directory path to validate.
         exists=False (bool): If ``True``, the directory at ``dirpath``
             must already exist on the filesystem.
-        path_patterns=[] (list): A list of regex-compilable patterns that are
-            expected to exist in the directory (if ``exists=True``)
         permissions='rx' (string): A string that includes the lowercase
             characters ``r``, ``w`` and/or ``x`` indicating required
             permissions for this folder .  See ``check_permissions`` for
