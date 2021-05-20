@@ -12,31 +12,6 @@ even for APIs that would otherwise seem okay to call during a test.
 import path from 'path';
 import events from 'events';
 
-export const app = {
-  getPath: jest.fn().mockImplementation(
-    () => path.resolve('tests/data')
-  )
-};
-
-export class BrowserWindow {
-  constructor() {
-    this.loadURL = jest.fn();
-    this.once = jest.fn();
-    this.on = jest.fn();
-    this.webContents = {
-      on: jest.fn(),
-      session: {
-        on: jest.fn()
-      }
-    };
-  }
-}
-
-export const dialog = {
-  showOpenDialog: jest.fn(),
-  showSaveDialog: jest.fn(),
-};
-
 // TODO - is ReturnThis necessary? What are the implications?
 // TODO: given this functional IPC, some tests can probably
 // mock return values/implementations at a lower-level
@@ -67,6 +42,35 @@ mockIPC.send = (channel, ...args) => {
 mockIPC.invoke = jest.fn().mockImplementation(() => Promise.resolve());
 export const ipcMain = mockIPC;
 export const ipcRenderer = mockIPC;
+
+export const app = {
+  getPath: jest.fn().mockImplementation(
+    () => path.resolve('tests/data')
+  )
+}
+
+export class BrowserWindow {
+  constructor() {
+    this.loadURL = jest.fn();
+    this.once = jest.fn();
+    this.on = jest.fn();
+    this.webContents = {
+      on: jest.fn(),
+      session: {
+        on: jest.fn(),
+      },
+      send: (channel, ...args) => {
+        mockIPC.emit(channel, {}, ...args);
+      },
+      downloadURL: jest.fn(),
+    };
+  }
+}
+
+export const dialog = {
+  showOpenDialog: jest.fn(),
+  showSaveDialog: jest.fn(),
+};
 
 export const Menu = {
   buildFromTemplate: jest.fn(),

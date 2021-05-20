@@ -24,7 +24,6 @@ export default function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
 
   ipcMain.on('invest-kill', (event, workspaceDir) => {
-    console.log('on invest-kill')
     if (runningJobs[workspaceDir]) {
       const pid = runningJobs[workspaceDir];
       if (process.platform !== 'win32') {

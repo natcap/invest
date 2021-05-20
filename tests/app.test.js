@@ -5,13 +5,12 @@ import os from 'os';
 import { spawn, exec } from 'child_process';
 import Stream from 'stream';
 import React from 'react';
-import { ipcRenderer, ipcMain } from 'electron';
+import { ipcRenderer } from 'electron';
 import {
   fireEvent, render, waitFor, within
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import InvestTab from '../src/components/InvestTab';
 import App from '../src/app';
 import {
   getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
@@ -19,7 +18,7 @@ import {
 import InvestJob from '../src/InvestJob';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 import {
-  clearSettingsStore, getSettingsValue, saveSettingsStore
+  getSettingsValue, saveSettingsStore
 } from '../src/components/SettingsModal/SettingsStorage';
 import setupInvestHandlers from '../src/main/setupInvestHandlers';
 
@@ -727,85 +726,5 @@ describe('InVEST subprocess testing', () => {
     // Give it time to run the listener before unmounting.
     await new Promise((resolve) => setTimeout(resolve, 300));
     unmount();
-  });
-});
-
-describe('Download Sample Data Modal', () => {
-  beforeEach(async () => {
-    getInvestModelNames.mockResolvedValue({});
-  });
-  afterEach(async () => {
-    await clearSettingsStore();
-    jest.resetAllMocks();
-  });
-
-  test('Modal does not display when app has been run before', async () => {
-    const { queryByText } = render(<App />);
-    const modalTitle = await queryByText('Download InVEST sample data');
-    expect(modalTitle).toBeNull();
-  });
-
-  test('Modal displays immediately on user`s first run', async () => {
-    const {
-      findByText,
-      getByText,
-    } = render(<App isFirstRun />);
-
-    const modalTitle = await findByText('Download InVEST sample data');
-    expect(modalTitle).toBeInTheDocument();
-    fireEvent.click(getByText('Cancel'));
-    await waitFor(() => {
-      expect(modalTitle).not.toBeInTheDocument();
-    });
-  });
-
-  test('Download sends signal to main & stores location', async () => {
-    const dialogData = {
-      filePaths: ['foo/directory'],
-    };
-    ipcRenderer.invoke.mockResolvedValue(dialogData);
-
-    const {
-      findByRole,
-      findAllByRole,
-    } = render(<App isFirstRun />);
-
-    const allCheckBoxes = await findAllByRole('checkbox');
-    const downloadButton = await findByRole('button', { name: 'Download' });
-    fireEvent.click(downloadButton);
-
-    // Many datasets selected - ipcRenderer.send should be called with
-    // 2nd parameter as an array of length:
-    const nURLs = allCheckBoxes.length - 1; // all except Select All
-    await waitFor(() => {
-      // first call and second parameter
-      expect(ipcRenderer.send.mock.calls[0][1])
-        .toHaveLength(nURLs);
-    });
-    await waitFor(async () => {
-      expect(await getSettingsValue('sampleDataDir'))
-        .toBe(dialogData.filePaths[0]);
-    });
-  });
-
-  test('Cancel does not store a sampleDataDir value', async () => {
-    const { findByRole } = render(
-      <App
-        investExe="foo"
-        isFirstRun={true}
-      />
-    );
-
-    const existingValue = await getSettingsValue('sampleDataDir');
-    const cancelButton = await findByRole('button', { name: 'Cancel' });
-    fireEvent.click(cancelButton);
-
-    await waitFor(() => {
-      expect(ipcRenderer.send).toHaveBeenCalledTimes(0);
-    });
-    await waitFor(async () => {
-      const value = await getSettingsValue('sampleDataDir');
-      expect(value).toBe(existingValue);
-    });
   });
 });

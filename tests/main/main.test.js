@@ -1,7 +1,18 @@
+/* Tests for main process code and integration tests for front-end
+features that depend on a BrowserWindow instance, since that is
+instantiated by main.
+*/
+
 import fs from 'fs';
 import path from 'path';
-import { app, ipcMain } from 'electron';
+import { app, ipcMain, ipcRenderer } from 'electron';
 import { execFileSync } from 'child_process';
+
+import React from 'react';
+import {
+  fireEvent, render, waitFor,
+} from '@testing-library/react';
+import '@testing-library/jest-dom';
 
 import { createWindow, destroyWindow } from '../../src/main/main';
 import {
@@ -12,7 +23,14 @@ import {
   createPythonFlaskProcess,
 } from '../../src/main/main_helpers';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
-import { getFlaskIsReady } from '../../src/server_requests';
+import {
+  getFlaskIsReady,
+  getInvestModelNames
+} from '../../src/server_requests';
+import App from '../../src/app';
+import {
+  clearSettingsStore, getSettingsValue
+} from '../../src/components/SettingsModal/SettingsStorage';
 
 jest.mock('child_process');
 execFileSync.mockReturnValue('foo');
@@ -89,26 +107,109 @@ describe('createWindow', () => {
   });
   it('should register various ipcMain listeners', () => {
     const expectedHandleChannels = [
-      'show-context-menu',
       'show-open-dialog',
       'show-save-dialog',
       'is-dev-mode',
       'user-data',
-      'invest-kill',
     ];
     const expectedHandleOnceChannels = ['is-first-run'];
-    const expectedOnChannels = ['download-url', 'invest-run'];
-    const receivedHandleChannels = ipcMain.handle.mock.calls.map(
+    const expectedOnChannels = [
+      'download-url',
+      'invest-run',
+      'invest-kill',
+      'show-context-menu'
+    ];
+    // the 'on' method is a real event handler, so we can get
+    // it's registered events from the EventEmitter.
+    const registeredOnChannels = ipcMain.eventNames();
+    // for 'handle' & 'handleOnce', we query the mock's calls.
+    const registeredHandleChannels = ipcMain.handle.mock.calls.map(
       (item) => item[0]
     );
-    const receivedHandleOnceChannels = ipcMain.handleOnce.mock.calls.map(
+    const registeredHandleOnceChannels = ipcMain.handleOnce.mock.calls.map(
       (item) => item[0]
     );
-    const receivedOnChannels = ipcMain.on.mock.calls.map(
-      (item) => item[0]
-    );
-    expect(receivedHandleChannels.sort()).toEqual(expectedHandleChannels.sort());
-    expect(receivedHandleOnceChannels.sort()).toEqual(expectedHandleOnceChannels.sort());
-    expect(receivedOnChannels.sort()).toEqual(expectedOnChannels.sort());
+    expect(registeredHandleChannels.sort()).toEqual(expectedHandleChannels.sort());
+    expect(registeredHandleOnceChannels.sort()).toEqual(expectedHandleOnceChannels.sort());
+    expect(registeredOnChannels.sort()).toEqual(expectedOnChannels.sort());
+  });
+});
+
+describe('Download Sample Data Modal', () => {
+  beforeAll(async () => {
+    await createWindow();
+  });
+  beforeEach(async () => {
+    getInvestModelNames.mockResolvedValue({});
+  });
+  afterAll(() => {
+    destroyWindow();
+  });
+  afterEach(async () => {
+    await clearSettingsStore();
+    jest.resetAllMocks();
+  });
+
+  test('Modal does not display when app has been run before', async () => {
+    const { queryByText } = render(<App />);
+    const modalTitle = await queryByText('Download InVEST sample data');
+    expect(modalTitle).toBeNull();
+  });
+
+  test('Modal displays immediately on user`s first run', async () => {
+    const {
+      findByText,
+      getByText,
+    } = render(<App isFirstRun />);
+
+    const modalTitle = await findByText('Download InVEST sample data');
+    expect(modalTitle).toBeInTheDocument();
+    fireEvent.click(getByText('Cancel'));
+    await waitFor(() => {
+      expect(modalTitle).not.toBeInTheDocument();
+    });
+  });
+
+  test('Download starts, updates progress, & stores location', async () => {
+    const dialogData = {
+      filePaths: ['foo/directory'],
+    };
+    ipcRenderer.invoke.mockResolvedValue(dialogData);
+
+    const {
+      findByRole,
+      findAllByRole,
+    } = render(<App isFirstRun />);
+
+    const allCheckBoxes = await findAllByRole('checkbox');
+    const downloadButton = await findByRole('button', { name: 'Download' });
+    fireEvent.click(downloadButton);
+    const nURLs = allCheckBoxes.length - 1; // all except Select All
+    await waitFor(async () => {
+      expect(await getSettingsValue('sampleDataDir'))
+        .toBe(dialogData.filePaths[0]);
+    });
+    const progressBar = await findByRole('progressbar');
+    expect(progressBar).toHaveTextContent(`Downloading 1 of ${nURLs}`);
+    // We don't have mocks that take us all the way through to a complete
+    // download, when the progress bar would become a 'Download Complete' alert
+  });
+
+  test('Cancel does not store a sampleDataDir value', async () => {
+    const spy = jest.spyOn(ipcRenderer, 'send');
+
+    const { findByRole } = render(<App isFirstRun />);
+
+    const existingValue = await getSettingsValue('sampleDataDir');
+    const cancelButton = await findByRole('button', { name: 'Cancel' });
+    fireEvent.click(cancelButton);
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledTimes(0);
+    });
+    await waitFor(async () => {
+      const value = await getSettingsValue('sampleDataDir');
+      expect(value).toBe(existingValue);
+    });
   });
 });
