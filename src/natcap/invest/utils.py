@@ -46,6 +46,10 @@ DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
 # the same unit registry instance should be shared across everything
 u = pint.UnitRegistry()
+# see https://pint.readthedocs.io/en/stable/defining.html
+# pint doesn't allow multiple base units for the same dimension
+# but you can define mutliple dimensionless units with []
+# https://github.com/hgrecco/pint/issues/1278
 u.define('currency = [value]')    # non-specific unit of value
 u.define('pixel = []')            # non-specific unit of area
 u.define('projection_unit = []')  # non-specific unit of length
@@ -173,18 +177,13 @@ AOI_ARG = {
     **AREA,
     "name": "area of interest",
     "about": (
-        "A GDAL-supported vector file.  This AOI instructs "
-        "the model where to clip the input data and the extent "
-        "of analysis.  Users will create a polygon feature "
-        "layer that defines their area of interest.  The AOI "
-        "must intersect the Digital Elevation Model (DEM)."),
+        "A polygon vector containing features over which to aggregate and "
+        "summarize the final results."),
 }
 LULC_ARG = {
     "type": "raster",
     "bands": {1: {"type": "code"}},
-    "about": (
-        "A GDAL-supported raster file containing LULC code "
-        "(expressed as integers) for each cell."),
+    "about": "A raster containing integer LULC codes for each cell.",
     "name": "land use/land cover"
 }
 DEM_ARG = {
@@ -195,13 +194,7 @@ DEM_ARG = {
             "units": u.meter
         }
     },
-    "about": (
-        "A GDAL-supported raster file containing elevation values for "
-        "each cell.  Make sure the DEM is corrected by filling in "
-        "sinks, and if necessary burning hydrographic features into "
-        "the elevation model (recommended when unusual streams are "
-        "observed.) See the Working with the DEM section of the "
-        "InVEST User's Guide for more information."),
+    "about": "A raster containing elevation values for each cell.",
     "name": "digital elevation model"
 }
 PRECIP_ARG = {
@@ -213,12 +206,12 @@ PRECIP_ARG = {
         }
     },
     "about": (
-        "A GDAL-supported raster file containing non-zero, average "
-        "annual precipitation values for each cell."),
+        "A raster containing average annual precipitation values for "
+        "each cell."),
     "name": "Precipitation"
 }
 ETO_ARG = {
-    "name": "Evapotranspiration Raster",
+    "name": "Evapotranspiration",
     "type": "raster",
     "bands": {
         1: {
