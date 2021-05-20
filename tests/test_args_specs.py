@@ -2,6 +2,7 @@ import importlib
 import re
 import unittest
 
+from natcap.invest import cli
 import pint
 
 
@@ -76,8 +77,8 @@ class ValidateArgsSpecs(unittest.TestCase):
             'wind_energy'
         ]
 
-        for model_name in model_names:
-            model = importlib.import_module(f'natcap.invest.{model_name}')
+        for model_name, val in cli._MODEL_UIS.items():
+            model = importlib.import_module(f'natcap.invest.{val["pyname"]}')
 
             # validate that each arg meets the expected pattern
             # save up errors to report at the end
@@ -122,7 +123,7 @@ class ValidateArgsSpecs(unittest.TestCase):
             for t in types:
                 self.assertTrue(t in valid_types)
 
-                if arg['type'] == 'option_string':
+                if t == 'option_string':
                     # option_string type should have an options property that
                     # describes the valid options
                     self.assertTrue('options' in arg)
@@ -197,8 +198,6 @@ class ValidateArgsSpecs(unittest.TestCase):
 
                         for header in headers:
                             self.assertTrue(isinstance(header, str))
-                            if '(' in header or '[' in header:
-                                print(f"Warning: header {header} in {name}")
                             self.validate(
                                 headers[header],
                                 f'{name}.{direction}.{header}',
@@ -215,8 +214,6 @@ class ValidateArgsSpecs(unittest.TestCase):
                     self.assertTrue(isinstance(arg['contents'], dict))
                     for path in arg['contents']:
                         self.assertTrue(isinstance(path, str))
-                        if '(' in path or '[' in path:
-                            print(f"Warning: header {path} in {name}")
                         self.validate(
                             arg['contents'][path],
                             f'{name}.contents.{path}',
