@@ -15,6 +15,7 @@ export default function setupDownloadHandlers(mainWindow) {
   let downloadLength;
   const downloadQueue = [];
   ipcMain.on('download-url', async (event, urlArray, directory) => {
+    console.log('main download-url')
     logger.debug(`${urlArray}`);
     downloadDir = directory;
     downloadQueue.push(...urlArray);
@@ -23,7 +24,9 @@ export default function setupDownloadHandlers(mainWindow) {
       'download-status',
       [(downloadLength - downloadQueue.length), downloadLength]
     );
+    console.log('main after webContents.send');
     urlArray.forEach((url) => mainWindow.webContents.downloadURL(url));
+    console.log('main after webContents.downloadURL');
   });
 
   mainWindow.webContents.session.on('will-download', (event, item) => {

@@ -23,7 +23,8 @@ const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 export default function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
 
-  ipcMain.handle('invest-kill', (event, workspaceDir) => {
+  ipcMain.on('invest-kill', (event, workspaceDir) => {
+    console.log('on invest-kill')
     if (runningJobs[workspaceDir]) {
       const pid = runningJobs[workspaceDir];
       if (process.platform !== 'win32') {
@@ -32,14 +33,12 @@ export default function setupInvestRunHandlers(investExe) {
       } else {
         exec(`taskkill /pid ${pid} /t /f`);
       }
-      return 'Run Canceled';
     }
   });
 
   ipcMain.on('invest-run', async (
     event, modelRunName, pyModuleName, args, loggingLevel, channel
   ) => {
-    console.log('from main on invest-run');
     // Write a temporary datastack json for passing to invest CLI
     fs.mkdir(TEMP_DIR, (err) => {});
     const tempDatastackDir = fs.mkdtempSync(
@@ -78,21 +77,16 @@ export default function setupInvestRunHandlers(investExe) {
         shell: true,
       });
     }
-    console.log('from main after spawn')
 
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
-    investRun.stdout.once('data', async () => {
-      console.log('from main stdout')
-      logger.debug(`workspace_dir: ${args.workspace_dir}`);
+    investRun.stdout.once('data', async (data) => {
       const logfile = await findMostRecentLogfile(args.workspace_dir);
       // TODO: handle case when logfile is still undefined?
       // Could be if some stdout is emitted before a logfile exists.
       logger.debug(`invest logging to: ${logfile}`);
       runningJobs[args.workspace_dir] = investRun.pid;
-      logger.debug(`invest-logging-${args.workspace_dir}`);
       event.reply(`invest-logging-${channel}`, logfile);
-      console.log('from main after reply')
     });
 
     // Capture stderr to a string separate from the invest log

@@ -38,27 +38,32 @@ export const dialog = {
 };
 
 // TODO - is ReturnThis necessary? What are the implications?
-// export const ipcMain = {
-//   on: jest.fn().mockReturnThis(),
-//   handle: jest.fn().mockReturnThis(),
-//   handleOnce: jest.fn().mockReturnThis(),
-// };
+// TODO: given this functional IPC, some tests can probably
+// mock return values/implementations at a lower-level
+// e.g. electron shell API, etc.
+// class mockIPC extends events.EventEmitter {
+//   invoke(channel, ...args) {
+//     return new Promise((resolve, reject) => {
+//       this.once('send-to-main')
 
-// export const ipcRenderer = {
-//   on: jest.fn(),
-//   send: jest.fn(),
-//   invoke: jest.fn().mockImplementation(() => Promise.resolve()),
-// };
+//       this.emit('send-to-main', channel, ...args)
+//     });
+//   }
+// }
 const mockIPC = new events.EventEmitter();
 mockIPC.handle = jest.fn().mockReturnThis();
+mockIPC.handleOnce = jest.fn().mockReturnThis();
 mockIPC.send = (channel, ...args) => {
   const event = {
     reply: (channel, response) => {
-      mockIPC.emit(channel, response);
+      mockIPC.emit(channel, {}, response);
     }
   };
   mockIPC.emit(channel, event, ...args);
 };
+// mockIPC.invoke = (channel, ...args) => {
+//   mockIPC.emit(channel, {}, ...args);
+// };
 mockIPC.invoke = jest.fn().mockImplementation(() => Promise.resolve());
 export const ipcMain = mockIPC;
 export const ipcRenderer = mockIPC;

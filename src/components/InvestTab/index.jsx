@@ -116,7 +116,6 @@ export default class InvestTab extends React.Component {
     const channel = args.workspace_dir
       .replace(/(\/)|(:)|(\\)|( )/ig, '');
     ipcRenderer.on(`invest-logging-${channel}`, (event, logfile) => {
-      console.log('from renderer on logging channel')
       logger.debug(`ipcRenderer.on ${logfile}`);
       this.setState({
         logfile: logfile
@@ -134,23 +133,18 @@ export default class InvestTab extends React.Component {
       });
     });
     ipcRenderer.on(`invest-exit-${channel}`, (event, code) => {
-      if (code === 0) {
-        job.setProperty('status', 'success');
-      } else {
-        // Invest CLI exits w/ code 1 when it catches errors,
-        // Models exit w/ code 255 (on all OS?) when errors raise from execute()
-        // Windows taskkill yields exit code 1
-        // Non-windows process.kill yields exit code null
-        job.setProperty('status', 'error');
-      }
+      // Invest CLI exits w/ code 1 when it catches errors,
+      // Models exit w/ code 255 (on all OS?) when errors raise from execute()
+      // Windows taskkill yields exit code 1
+      // Non-windows process.kill yields exit code null
+      const status = (code === 0) ? 'success' : 'error';
       this.setState({
-        jobStatus: job.metadata.status,
+        jobStatus: status
       });
+      job.setProperty('status', status);
       saveJob(job);
     });
 
-    console.log('before invest-run send')
-    console.log(args);
     ipcRenderer.send(
       'invest-run',
       job.metadata.modelRunName,
@@ -159,13 +153,12 @@ export default class InvestTab extends React.Component {
       investSettings.loggingLevel,
       channel,
     );
-    console.log('after invest-run send')
   }
 
   terminateInvestProcess() {
-    const message = ipcRenderer.invoke('invest-kill', this.state.workspaceDir);
+    ipcRenderer.send('invest-kill', this.state.workspaceDir);
     this.setState({
-      logStdErr: message
+      logStdErr: 'Run Canceled'
     });
   }
 

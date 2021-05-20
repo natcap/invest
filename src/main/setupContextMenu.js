@@ -5,7 +5,7 @@ import {
 } from 'electron';
 
 export default function setupContextMenu() {
-  ipcMain.handle('show-context-menu', (event, rightClickPos) => {
+  ipcMain.on('show-context-menu', (event, rightClickPos) => {
     const template = [
       {
         label: 'Inspect Element',

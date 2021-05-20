@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import events from 'events';
 import os from 'os';
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import Stream from 'stream';
 import React from 'react';
 import { ipcRenderer, ipcMain } from 'electron';
@@ -459,10 +459,21 @@ describe('InVEST subprocess testing', () => {
   let fakeWorkspace;
   let logfilePath;
   let mockInvestProc;
+  let spyKill;
   const investExe = 'foo';
+
+  beforeAll(() => {
+    setupInvestHandlers(investExe);
+  });
 
   beforeEach(() => {
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
+    getSpec.mockResolvedValue(spec);
+    fetchValidation.mockResolvedValue([]);
+    getInvestModelNames.mockResolvedValue(
+      { Carbon: { internal_name: 'carbon' } }
+    );
+
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
     mockInvestProc = new events.EventEmitter();
@@ -473,11 +484,6 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc.stderr = new Stream.Readable({
       read: () => {},
     });
-    getSpec.mockResolvedValue(spec);
-    fetchValidation.mockResolvedValue([]);
-    getInvestModelNames.mockResolvedValue(
-      { Carbon: { internal_name: 'carbon' } }
-    );
 
     spawn.mockImplementation(() => {
       // To simulate an invest model run, write a logfile to the workspace
@@ -492,13 +498,27 @@ describe('InVEST subprocess testing', () => {
       return mockInvestProc;
     });
 
+    if (process.platform !== 'win32') {
+      spyKill = jest.spyOn(process, 'kill')
+        .mockImplementation(() => {
+          mockInvestProc.emit('exit', null);
+        });
+    } else {
+      exec.mockImplementation(() => {
+        mockInvestProc.emit('exit', null);
+      });
+    }
+
     // mock out the whole UI config module
     // brackets around spec.model_name turns it into a valid literal key
     const mockUISpec = { [spec.model_name]: { order: [Object.keys(spec.args)] } };
     jest.mock('../src/ui_config', () => mockUISpec);
+  });
 
-    setupInvestHandlers(investExe);
-    console.log(ipcMain.listenerCount('invest-run'));
+  afterAll(() => {
+    if (spyKill) {
+      spyKill.mockRestore();
+    }
   });
 
   afterEach(async () => {
@@ -512,7 +532,7 @@ describe('InVEST subprocess testing', () => {
     jest.resetModules();
   });
 
-  test.only('exit without error - expect log display', async () => {
+  test('exit without error - expect log display', async () => {
     const {
       findByText,
       findByLabelText,
@@ -615,11 +635,6 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('user terminates process - expect log display', async () => {
-    const spy = jest.spyOn(InvestTab.prototype, 'terminateInvestProcess')
-      .mockImplementation(() => {
-        mockInvestProc.emit('exit', null);
-      });
-
     const {
       findByText,
       findByLabelText,
@@ -650,6 +665,8 @@ describe('InVEST subprocess testing', () => {
     fireEvent.click(cancelButton);
     expect(await findByText('Open Workspace'))
       .toBeEnabled();
+    expect(await findByText('Run Canceled'))
+      .toBeInTheDocument();
 
     // A recent job card should be rendered
     const cardText = await within(
@@ -657,15 +674,9 @@ describe('InVEST subprocess testing', () => {
     ).findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
     unmount();
-    spy.mockRestore();
   });
 
   test('re-run a job - expect new log display', async () => {
-    const spy = jest.spyOn(InvestTab.prototype, 'terminateInvestProcess')
-      .mockImplementation(() => {
-        mockInvestProc.emit('exit', null);
-      });
-
     const {
       findByText,
       findByLabelText,
@@ -716,7 +727,6 @@ describe('InVEST subprocess testing', () => {
     // Give it time to run the listener before unmounting.
     await new Promise((resolve) => setTimeout(resolve, 300));
     unmount();
-    spy.mockRestore();
   });
 });
 
@@ -730,13 +740,7 @@ describe('Download Sample Data Modal', () => {
   });
 
   test('Modal does not display when app has been run before', async () => {
-    const { queryByText } = render(
-      <App
-        investExe="foo"
-        isFirstRun={false}
-      />
-    );
-
+    const { queryByText } = render(<App />);
     const modalTitle = await queryByText('Download InVEST sample data');
     expect(modalTitle).toBeNull();
   });
@@ -745,12 +749,7 @@ describe('Download Sample Data Modal', () => {
     const {
       findByText,
       getByText,
-    } = render(
-      <App
-        investExe="foo"
-        isFirstRun={true}
-      />
-    );
+    } = render(<App isFirstRun />);
 
     const modalTitle = await findByText('Download InVEST sample data');
     expect(modalTitle).toBeInTheDocument();
@@ -769,12 +768,7 @@ describe('Download Sample Data Modal', () => {
     const {
       findByRole,
       findAllByRole,
-    } = render(
-      <App
-        investExe="foo"
-        isFirstRun={true}
-      />
-    );
+    } = render(<App isFirstRun />);
 
     const allCheckBoxes = await findAllByRole('checkbox');
     const downloadButton = await findByRole('button', { name: 'Download' });

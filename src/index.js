@@ -25,7 +25,7 @@ let rightClickPosition = null;
 window.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   rightClickPosition = { x: e.x, y: e.y };
-  ipcRenderer.invoke('show-context-menu', rightClickPosition);
+  ipcRenderer.send('show-context-menu', rightClickPosition);
 });
 
 const render = async function render(investExe, isFirstRun) {

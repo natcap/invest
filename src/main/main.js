@@ -121,6 +121,7 @@ export const createWindow = async () => {
 
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers(investExe);
+  // TODO: remove listeners on exit
 };
 
 export function main(argv) {
