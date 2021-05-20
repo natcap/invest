@@ -570,16 +570,21 @@ def check_spatial_overlap(spatial_filepaths_list,
 
     bounding_boxes = []
     checked_file_list = []
+    projections = set()
     for filepath in spatial_filepaths_list:
         try:
             info = pygeoprocessing.get_raster_info(filepath)
         except ValueError:
             info = pygeoprocessing.get_vector_info(filepath)
-        bounding_box = info['bounding_box']
+
+        if info['projection_wkt'] is None:
+            return f'Spatial file {filepath} has no projection'
 
         if different_projections_ok:
             bounding_box = pygeoprocessing.transform_bounding_box(
-                bounding_box, info['projection_wkt'], wgs84_wkt)
+                info['bounding_box'], info['projection_wkt'], wgs84_wkt)
+        else:
+            bounding_box = info['bounding_box']
 
         if all([numpy.isinf(coord) for coord in bounding_box]):
             LOGGER.warning(
@@ -588,6 +593,11 @@ def check_spatial_overlap(spatial_filepaths_list,
 
         bounding_boxes.append(bounding_box)
         checked_file_list.append(filepath)
+        projections.add(info['projection_wkt'])
+
+    if different_projections_ok is False and len(projections) > 1:
+        return (f'Spatial files {spatial_filepaths_list} do not all have the '
+                'same projection')
 
     try:
         pygeoprocessing.merge_bounding_box_list(bounding_boxes, 'intersection')
@@ -620,6 +630,7 @@ def timeout(func, *args, timeout=5, **kwargs):
     # use a queue to share the return value from the file checking thread
     # the target function puts the return value from `func` into shared memory
     message_queue = queue.Queue()
+
     def wrapper_func():
         message_queue.put(func(*args, **kwargs))
 
@@ -631,8 +642,8 @@ def timeout(func, *args, timeout=5, **kwargs):
     if thread.is_alive():
         # first arg to `check_csv`, `check_raster`, `check_vector` is the path
         warnings.warn(f'Validation of file {args[0]} timed out. If this file '
-            'is stored in a file streaming service, it may be taking a long '
-            'time to download. Try storing it locally instead.')
+                      'is stored in a file streaming service, it may be taking a long '
+                      'time to download. Try storing it locally instead.')
         return None
 
     else:
@@ -873,7 +884,7 @@ def invest_validator(validate_func):
         AssertionError when an invalid format is found.
 
     Example::
-    
+
         from natcap.invest import validation
         @validation.invest_validator
         def validate(args, limit_to=None):
@@ -906,7 +917,7 @@ def invest_validator(validate_func):
             model_module = importlib.import_module(validate_func.__module__)
         except:
             LOGGER.warning('Unable to import module %s: assuming no ARGS_SPEC.',
-                            validate_func.__module__)
+                           validate_func.__module__)
             model_module = None
 
         # If the module has an ARGS_SPEC defined, validate against that.
@@ -942,7 +953,6 @@ def invest_validator(validate_func):
                 if args_value not in ('', None):
                     input_type = args_key_spec['type']
                     validator_func = _VALIDATION_FUNCS[input_type]
-
 
                     try:
                         validation_options = (

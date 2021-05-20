@@ -16,6 +16,7 @@ import pandas
 
 class SpatialOverlapTest(unittest.TestCase):
     """Test Spatial Overlap."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -24,8 +25,8 @@ class SpatialOverlapTest(unittest.TestCase):
         """Remove the workspace created for this test."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_no_overlap_no_reference(self):
-        """Validation: verify lack of overlap without a reference."""
+    def test_no_overlap(self):
+        """Validation: verify lack of overlap."""
         from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GTiff')
@@ -45,8 +46,8 @@ class SpatialOverlapTest(unittest.TestCase):
         error_msg = validation.check_spatial_overlap([filepath_1, filepath_2])
         self.assertTrue('Bounding boxes do not intersect' in error_msg)
 
-    def test_overlap_no_reference(self):
-        """Validation: verify overlap without a reference."""
+    def test_overlap(self):
+        """Validation: verify overlap."""
         from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GTiff')
@@ -66,47 +67,59 @@ class SpatialOverlapTest(unittest.TestCase):
         self.assertEqual(
             None, validation.check_spatial_overlap([filepath_1, filepath_2]))
 
-    def test_no_overlap_with_reference(self):
-        """Validation: verify lack of overlap given reference projection."""
+    def test_check_overlap_undefined_projection(self):
+        """Validation: check overlap of raster with an undefined projection."""
         from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GTiff')
         filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
         filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
-        reference_filepath = os.path.join(self.workspace_dir, 'reference.gpkg')
 
-        # Filepaths 1 and 2 are obviously outside of UTM zone 31N.
-        for filepath, geotransform, epsg_code in (
+        raster_1 = driver.Create(filepath_1, 3, 3, 1, gdal.GDT_Int32)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        raster_1.SetProjection(wgs84_srs.ExportToWkt())
+        raster_1.SetGeoTransform([1, 1, 0, 1, 0, 1])
+        raster_1 = None
+
+        # set up a raster with an undefined projection
+        raster_2 = driver.Create(filepath_2, 3, 3, 1, gdal.GDT_Int32)
+        raster_2.SetGeoTransform([2, 1, 0, 2, 0, 1])
+        raster_2 = None
+
+        error_msg = validation.check_spatial_overlap(
+            [filepath_1, filepath_2], different_projections_ok=True)
+        expected = f'Spatial file {filepath_2} has no projection'
+        self.assertEqual(error_msg, expected)
+
+    def test_different_projections_not_ok(self):
+        """Validation: different projections not allowed by default."""
+        from natcap.invest import validation
+
+        driver = gdal.GetDriverByName('GTiff')
+        filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
+        filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
+
+        for filepath, geotransform, epsg in (
                 (filepath_1, [1, 1, 0, 1, 0, 1], 4326),
-                (filepath_2, [100, 1, 0, 100, 0, 1], 4326)):
+                (filepath_2, [2, 1, 0, 2, 0, 1], 2193)):
             raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
             wgs84_srs = osr.SpatialReference()
-            wgs84_srs.ImportFromEPSG(epsg_code)
+            wgs84_srs.ImportFromEPSG(epsg)
             raster.SetProjection(wgs84_srs.ExportToWkt())
             raster.SetGeoTransform(geotransform)
             raster = None
 
-        gpkg_driver = gdal.GetDriverByName('GPKG')
-        vector = gpkg_driver.Create(reference_filepath, 0, 0, 0,
-                                    gdal.GDT_Unknown)
-        vector_srs = osr.SpatialReference()
-        vector_srs.ImportFromEPSG(32731)  # UTM 31N
-        layer = vector.CreateLayer('layer', vector_srs, ogr.wkbPoint)
-        new_feature = ogr.Feature(layer.GetLayerDefn())
-        new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT 1 1'))
-
-        new_feature = None
-        layer = None
-        vector = None
-
-        error_msg = validation.check_spatial_overlap(
-            [filepath_1, filepath_2, reference_filepath],
-            vector_srs.ExportToWkt())
-        self.assertTrue('Bounding boxes do not intersect' in error_msg)
+        expected = (f'Spatial files {[filepath_1, filepath_2]} do not all '
+                    'have the same projection')
+        self.assertEqual(
+            validation.check_spatial_overlap([filepath_1, filepath_2]),
+            expected)
 
 
 class ValidatorTest(unittest.TestCase):
     """Test Validator."""
+
     def test_args_wrong_type(self):
         """Validation: check for error when args is the wrong type."""
         from natcap.invest import validation
@@ -236,6 +249,7 @@ class ValidatorTest(unittest.TestCase):
 
 class DirectoryValidation(unittest.TestCase):
     """Test Directory Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -291,6 +305,7 @@ class DirectoryValidation(unittest.TestCase):
 
 class FileValidation(unittest.TestCase):
     """Test File Validator."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -320,6 +335,7 @@ class FileValidation(unittest.TestCase):
 
 class RasterValidation(unittest.TestCase):
     """Test Raster Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -431,6 +447,7 @@ class RasterValidation(unittest.TestCase):
 
 class VectorValidation(unittest.TestCase):
     """Test Vector Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -511,6 +528,7 @@ class VectorValidation(unittest.TestCase):
 
 class FreestyleStringValidation(unittest.TestCase):
     """Test Freestyle String Validation."""
+
     def test_int(self):
         """Validation: test that an int can be a valid string."""
         from natcap.invest import validation
@@ -536,6 +554,7 @@ class FreestyleStringValidation(unittest.TestCase):
 
 class OptionStringValidation(unittest.TestCase):
     """Test Option String Validation."""
+
     def test_valid_option(self):
         """Validation: test that a string is a valid option."""
         from natcap.invest import validation
@@ -552,6 +571,7 @@ class OptionStringValidation(unittest.TestCase):
 
 class NumberValidation(unittest.TestCase):
     """Test Number Validation."""
+
     def test_string(self):
         """Validation: test when a string is not a number."""
         from natcap.invest import validation
@@ -588,6 +608,7 @@ class NumberValidation(unittest.TestCase):
 
 class BooleanValidation(unittest.TestCase):
     """Test Boolean Validation."""
+
     def test_actual_bool(self):
         """Validation: test when boolean type objects are passed."""
         from natcap.invest import validation
@@ -611,6 +632,7 @@ class BooleanValidation(unittest.TestCase):
 
 class CSVValidation(unittest.TestCase):
     """Test CSV Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -761,7 +783,8 @@ class CSVValidation(unittest.TestCase):
 
         # make a copy of the real _VALIDATION_FUNCS and override the CSV function
         mock_validation_funcs = validation._VALIDATION_FUNCS.copy()
-        mock_validation_funcs['csv'] = functools.partial(validation.timeout, delay)
+        mock_validation_funcs['csv'] = functools.partial(
+            validation.timeout, delay)
 
         # replace the validation.check_csv with the mock function, and try to validate
         with unittest.mock.patch('natcap.invest.validation._VALIDATION_FUNCS',
@@ -776,6 +799,7 @@ class CSVValidation(unittest.TestCase):
 
 class TestValidationFromSpec(unittest.TestCase):
     """Test Validation From Spec."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -887,7 +911,6 @@ class TestValidationFromSpec(unittest.TestCase):
             validation_warnings = validation.validate(args, spec)
         self.assertTrue('some_var_not_in_args' in str(cm.exception))
 
-
     def test_conditional_requirement_not_required(self):
         """Validation: unrequired conditional requirement should always pass"""
         from natcap.invest import validation
@@ -931,7 +954,6 @@ class TestValidationFromSpec(unittest.TestCase):
 
         validation_warnings = validation.validate(args, spec)
         self.assertEqual(validation_warnings, [])
-
 
     def test_requirement_missing(self):
         """Validation: verify absolute requirement on missing key."""
