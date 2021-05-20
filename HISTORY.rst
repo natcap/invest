@@ -73,6 +73,8 @@ Unreleased Changes (3.9.1)
       ``lulc_fut_year - lulc_cur_year``.
     * Improved UI to indicate that Calendar Year inputs are only required for
       valuation, not also for sequestration.
+    * Increasing the precision of ``numpy.sum`` from Float32 to Float64 when
+      aggregating raster values for the HTML report.
 * DelineateIt:
     * The DelineateIt UI has been updated so that the point-snapping options
       will always be interactive.
