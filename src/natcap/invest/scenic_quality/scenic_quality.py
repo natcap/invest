@@ -65,8 +65,7 @@ ARGS_SPEC = {
             "type": "vector",
             "geometries": {"POINT"},
             "fields": {
-                "radius": {
-                    "regexp": "(radius|radius2)",
+                "(radius|radius2)": {
                     "items": (
                         "RADIUS preferred, but may also be called RADIUS2 for "
                         "backwards compatibility."),
@@ -509,7 +508,7 @@ def _determine_valid_viewpoints(dem_path, structures_path):
                     ("Checking structures in layer %s, approx. "
                      "%.2f%%complete."), layer_name,
                     100.0 * (n_features_touched /
-                           structures_layer.GetFeatureCount()))
+                             structures_layer.GetFeatureCount()))
                 last_log_time = time.time()
 
             # Coordinates in map units to pass to viewshed algorithm

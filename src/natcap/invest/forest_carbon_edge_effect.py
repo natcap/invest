@@ -129,9 +129,7 @@ ARGS_SPEC = {
                 "method": {
                     "type": "number",
                     "units": u.none,
-                    "validation_options": {
-                        "expression": "value in {1, 2, 3}"
-                    }
+                    "expression": "value in {1, 2, 3}"
                 },
                 "theta1": {"type": "number", "units": u.none},
                 "theta2": {"type": "number", "units": u.none},
@@ -629,6 +627,7 @@ def _map_distance_from_tropical_forest_edge(
         base_lulc_raster_path)['nodata']
 
     forest_mask_nodata = 255
+
     def mask_non_forest_op(lulc_array):
         """Convert forest lulc codes to 0.
         Args:
@@ -884,7 +883,7 @@ def _calculate_tropical_forest_edge_carbon_map(
 
         # biomass shape: (x, k)
         biomass = numpy.zeros((indexes.shape[0], indexes.shape[1]),
-            dtype=numpy.float32)
+                              dtype=numpy.float32)
 
         # mask shapes: (x, k)
         mask_1 = model_index == 1
@@ -894,20 +893,20 @@ def _calculate_tropical_forest_edge_carbon_map(
         # exponential model
         # biomass_1 = t1 - t2 * exp(-t3 * edge_dist_km)
         biomass[mask_1] = (
-            thetas[mask_1][:,0] - thetas[mask_1][:,1] * numpy.exp(
-                -thetas[mask_1][:,2] * valid_edge_distances_km[mask_1])
-            ) * cell_area_ha
+            thetas[mask_1][:, 0] - thetas[mask_1][:, 1] * numpy.exp(
+                -thetas[mask_1][:, 2] * valid_edge_distances_km[mask_1])
+        ) * cell_area_ha
 
         # logarithmic model
         # biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
         biomass[mask_2] = (
-            thetas[mask_2][:,0] + thetas[mask_2][:,1] * numpy.log(
+            thetas[mask_2][:, 0] + thetas[mask_2][:, 1] * numpy.log(
                 valid_edge_distances_km[mask_2])) * cell_area_ha
 
         # linear regression
         # biomass_3 = t1 + t2 * edge_dist_km
         biomass[mask_3] = (
-            thetas[mask_3][:,0] + thetas[mask_3][:,1] *
+            thetas[mask_3][:, 0] + thetas[mask_3][:, 1] *
             valid_edge_distances_km[mask_3]) * cell_area_ha
 
         # reshape the array so that each set of points is in a separate
@@ -929,7 +928,7 @@ def _calculate_tropical_forest_edge_carbon_map(
 
         # Ensure the result has nodata everywhere the distance was invalid
         result = numpy.full(edge_distance_block.shape, NODATA_VALUE,
-            dtype=numpy.float32)
+                            dtype=numpy.float32)
         # convert biomass to carbon in this stage
         result[valid_edge_distance_mask] = (
             average_biomass * biomass_to_carbon_conversion_factor)

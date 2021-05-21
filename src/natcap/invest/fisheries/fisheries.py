@@ -103,12 +103,9 @@ ARGS_SPEC = {
         "population_csv_dir": {
             "type": "directory",
             "required": "do_batch",
-            "validation_options": {
-                "exists": True,
-            },
+            "exists": True,
             "contents": {
-                "pop_param_tables": {
-                    "regexp": "(\\w+)",
+                "(\\w+)": {  # population parameters table
                     "items": "One for each population",
                     "type": "csv",
                 }
@@ -204,20 +201,16 @@ ARGS_SPEC = {
             "name": "Migration Parameters"
         },
         "migration_dir": {
-            "validation_options": {
-                "exists": True,
-            },
             "type": "directory",
+            "exists": True,
             "required": "migr_cont",
             "contents": {
-                "migration_table": {
-                    "regexp": "(\\w+)",
+                "(\\w+)": {
                     "items": "One for each lifecycle class",
                     "type": "csv",
                     "columns": {
                         "migration": {"type": "freestyle_string"},
-                        "source_region": {
-                            "regexp": "(?!migration)(^\\w+$)",
+                        "(?!migration)(^\\w+$)": {
                             "items": ("One for each region from which "
                                       "migration occurs"),
                             "type": "freestyle_string"}

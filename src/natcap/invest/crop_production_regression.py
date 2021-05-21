@@ -85,16 +85,13 @@ ARGS_SPEC = {
             "required": False
         },
         "model_data_path": {
-            "validation_options": {
-                "exists": True,
-            },
             "type": "directory",
+            "exists": True,
             "contents": {
                 "climate_regression_yield_tables": {
                     "type": "directory",
                     "contents": {
-                        "crop_regression_yield_tables": {
-                            "regexp": "(\\w+)_regression_yield_table.csv",
+                        "(\\w+)_regression_yield_table.csv": {
                             "items": "One for each crop",
                             "type": "csv",
                             "columns": {

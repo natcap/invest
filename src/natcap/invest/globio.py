@@ -60,13 +60,10 @@ ARGS_SPEC = {
             "name": "Landcover to GLOBIO Landcover Table"
         },
         "infrastructure_dir": {
-            "validation_options": {
-                "exists": True,
-            },
             "type": "directory",
+            "exists": True,
             "contents": {
-                "infrastructure_maps": {
-                    "regexp": "(\\w+)",
+                "(\\w+)": {  # may be named anything
                     "items": (
                         "Raster(s) and/or vector(s) of any forms of "
                         "infrastructure you want to consider in the MSA "
@@ -307,7 +304,7 @@ def execute(args):
     mask_primary_veg_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(globio_lulc_path, 1), (globio_nodata, 'raw'),
-              (primary_veg_mask_nodata, 'raw')], _primary_veg_mask_op,
+               (primary_veg_mask_nodata, 'raw')], _primary_veg_mask_op,
               primary_veg_mask_path, gdal.GDT_Int16, primary_veg_mask_nodata),
         target_path_list=[primary_veg_mask_path],
         dependent_task_list=calculate_globio_task_list,
@@ -526,7 +523,7 @@ def _msa_f_calculation(
 
         if greater_than:
             msa_f[primary_veg_smooth > greater_than[0]] = (
-                    greater_than[1])
+                greater_than[1])
         for key in reversed(sorted(msa_f_table_copy)):
             msa_f[primary_veg_smooth <= key] = msa_f_table_copy[key]
         if less_than:
@@ -607,7 +604,7 @@ def _msa_i_calculation(
 
         if primary_greater_than:
             msa_i_primary[distance_to_infrastructure > primary_greater_than[0]] = (
-                    primary_greater_than[1])
+                primary_greater_than[1])
         for key in reversed(sorted(msa_i_primary_table_copy)):
             msa_i_primary[distance_to_infrastructure <= key] = (
                 msa_i_primary_table_copy[key])
@@ -617,7 +614,7 @@ def _msa_i_calculation(
 
         if other_greater_than:
             msa_i_other[distance_to_infrastructure > other_greater_than[0]] = (
-                    other_greater_than[1])
+                other_greater_than[1])
         for key in reversed(sorted(msa_i_other_table_copy)):
             msa_i_other[distance_to_infrastructure <= key] = (
                 msa_i_other_table_copy[key])

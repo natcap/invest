@@ -286,8 +286,7 @@ ARGS_SPEC = {
                     "about": (
                         "LULC codes matching the codes in the biophysical "
                         "table")},
-                "sink_lulc_classes": {
-                    "regexp": "(?!lulc-class)(^.+$)",
+                "(?!lulc-class)(^.+$)": {
                     "items": (
                         "One column header for each LULC code in the "
                         "biophysical table"),
@@ -674,7 +673,7 @@ def execute(args):
             yearly_accum_rasters[current_transition_year][pool] = os.path.join(
                 intermediate_dir, ACCUMULATION_RASTER_PATTERN.format(
                     pool=pool, year=current_transition_year, suffix=suffix))
-            yearly_accum_tasks[current_transition_year][pool]= task_graph.add_task(
+            yearly_accum_tasks[current_transition_year][pool] = task_graph.add_task(
                 func=_reclassify_accumulation_transition,
                 args=(aligned_lulc_paths[prior_transition_year],
                       aligned_lulc_paths[current_transition_year],
@@ -747,16 +746,16 @@ def execute(args):
         total_accumulation_tasks[current_transition_year] = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(yearly_accum_rasters[
-                        prior_transition_year][POOL_BIOMASS], 1),
-                   (yearly_accum_rasters[
-                       prior_transition_year][POOL_SOIL], 1),
-                   (yearly_accum_rasters[
-                       prior_transition_year][POOL_LITTER], 1),
-                   (current_transition_year - prior_transition_year, 'raw')],
-                  _calculate_accumulation_over_time,
-                  total_accumulation_rasters[current_transition_year],
-                  gdal.GDT_Float32,
-                  NODATA_FLOAT32_MIN),
+                prior_transition_year][POOL_BIOMASS], 1),
+                (yearly_accum_rasters[
+                    prior_transition_year][POOL_SOIL], 1),
+                (yearly_accum_rasters[
+                    prior_transition_year][POOL_LITTER], 1),
+                (current_transition_year - prior_transition_year, 'raw')],
+                _calculate_accumulation_over_time,
+                total_accumulation_rasters[current_transition_year],
+                gdal.GDT_Float32,
+                NODATA_FLOAT32_MIN),
             target_path_list=[
                 total_accumulation_rasters[current_transition_year],
             ],
@@ -863,7 +862,7 @@ def execute(args):
         # directory.
         stocks_at_end_of_baseline_period = os.path.join(
             output_dir, CARBON_STOCK_AT_YEAR_RASTER_PATTERN.format(
-                    year=end_of_baseline_period, suffix=suffix))
+                year=end_of_baseline_period, suffix=suffix))
         _ = task_graph.add_task(
             func=shutil.copyfile,
             args=(total_stock_rasters[end_of_baseline_period],
@@ -1174,7 +1173,7 @@ def execute_transition_analysis(args):
                     [(disturbance_vol_rasters[
                         current_transition_year][pool], 1),
                      (year_of_disturbance_rasters[
-                          current_transition_year][pool], 1),
+                         current_transition_year][pool], 1),
                      (half_life_rasters[current_transition_year][pool], 1),
                      (year, 'raw')],
                     _calculate_emissions,
@@ -1304,7 +1303,7 @@ def execute_transition_analysis(args):
         dependent_task_list=summary_net_sequestration_tasks,
         target_path_list=[total_net_sequestration_raster_path],
         task_name=(
-             'Calculate total net carbon sequestration across all years'))
+            'Calculate total net carbon sequestration across all years'))
 
     if do_economic_analysis:
         # Calculate Net Present Value for each of the transition years, relative to
@@ -1531,12 +1530,14 @@ def _track_disturbance(
     target_disturbance_volume_raster = gdal.OpenEx(
         target_disturbance_volume_raster_path,
         gdal.OF_RASTER | gdal.GA_Update)
-    target_disturbance_volume_band = target_disturbance_volume_raster.GetRasterBand(1)
+    target_disturbance_volume_band = target_disturbance_volume_raster.GetRasterBand(
+        1)
 
     target_year_of_disturbance_raster = gdal.OpenEx(
         target_year_of_disturbance_raster_path,
         gdal.OF_RASTER | gdal.GA_Update)
-    target_year_of_disturbance_band = target_year_of_disturbance_raster.GetRasterBand(1)
+    target_year_of_disturbance_band = target_year_of_disturbance_raster.GetRasterBand(
+        1)
 
     stock_raster = gdal.OpenEx(stock_raster_path, gdal.OF_RASTER)
     stock_band = stock_raster.GetRasterBand(1)
@@ -1552,7 +1553,6 @@ def _track_disturbance(
             prior_disturbance_volume_raster_path, gdal.OF_RASTER)
         prior_disturbance_volume_band = (
             prior_disturbance_volume_raster.GetRasterBand(1))
-
 
     for block_info, disturbance_magnitude_matrix in pygeoprocessing.iterblocks(
             (disturbance_magnitude_raster_path, 1)):
@@ -1985,8 +1985,8 @@ def _reclassify_accumulation_transition(
             valid_pixels &= (landuse_transition_to_matrix != to_nodata)
 
         output_matrix[valid_pixels] = accumulation_rate_matrix[
-                landuse_transition_from_matrix[valid_pixels],
-                landuse_transition_to_matrix[valid_pixels]].toarray().flatten()
+            landuse_transition_from_matrix[valid_pixels],
+            landuse_transition_to_matrix[valid_pixels]].toarray().flatten()
         return output_matrix
 
     pygeoprocessing.raster_calculator(

@@ -49,12 +49,8 @@ ARGS_SPEC = {
             "name": "Max area to convert"
         },
         "focal_landcover_codes": {
-            "validation_options": {
-                "regexp": {
-                    "pattern": "[0-9 ]+",
-                },
-            },
             "type": "freestyle_string",
+            "regexp": "[0-9 ]+",
             "about": (
                 "A space separated string of landcover codes that are used to "
                 "determine the proximity when referring to 'towards' or "
@@ -62,12 +58,8 @@ ARGS_SPEC = {
             "name": "Focal Landcover Codes"
         },
         "convertible_landcover_codes": {
-            "validation_options": {
-                "regexp": {
-                    "pattern": "[0-9 ]+",
-                },
-            },
             "type": "freestyle_string",
+            "regexp": "[0-9 ]+",
             "about": (
                 "A space separated string of landcover codes that can be "
                 "converted in the generation phase found in "
@@ -182,7 +174,8 @@ def execute(args):
     utils.make_directories(
         [output_dir, intermediate_output_dir, tmp_dir])
 
-    work_token_dir = os.path.join(intermediate_output_dir, '_taskgraph_working_dir')
+    work_token_dir = os.path.join(
+        intermediate_output_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -628,9 +621,9 @@ def _sort_to_disk(dataset_path, score_weight=1.0):
 
         col_coords, row_coords = numpy.meshgrid(
             range(scores_data['xoff'], scores_data['xoff'] +
-                   scores_data['win_xsize']),
+                  scores_data['win_xsize']),
             range(scores_data['yoff'], scores_data['yoff'] +
-                   scores_data['win_ysize']))
+                  scores_data['win_ysize']))
 
         flat_indexes = (col_coords + row_coords * n_cols).flatten()
 

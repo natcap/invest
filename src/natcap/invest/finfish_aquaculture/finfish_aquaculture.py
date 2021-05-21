@@ -27,8 +27,7 @@ ARGS_SPEC = {
                 "anything, but no spaces in the name."),
             "type": "vector",
             "fields": {
-                "id_field": {
-                    "regexp": "(\\w+)",
+                "(\\w+)": {  # may be anything, will be selected as the farm_ID
                     "items": "one",
                     "type": "code",
                     "about": (
@@ -493,4 +492,3 @@ def validate(args, limit_to=None):
             validation_warnings.append((['farm_ID'], error_msg))
 
     return validation_warnings
-

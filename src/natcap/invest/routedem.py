@@ -24,10 +24,8 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "dem_path": utils.DEM_ARG,
         "dem_band_index": {
-            "validation_options": {
-                "expression": "value >= 1",
-            },
             "type": "number",
+            "expression": "value >= 1",
             "units": u.none,
             "required": False,
             "about": (

@@ -74,10 +74,8 @@ WORKSPACE_SPEC = {
         "created."),
     "type": "directory",
     "contents": {},
-    "validation_options": {
-        "exists": False,
-        "permissions": "rwx",
-    }
+    "exists": False,
+    "permissions": "rwx",
 }
 
 SUFFIX_SPEC = {
@@ -87,11 +85,7 @@ SUFFIX_SPEC = {
         'written to the workspace.'),
     "type": "freestyle_string",
     "required": False,
-    "validation_options": {
-        "regexp": {
-            "pattern": "[a-zA-Z0-9_-]*"
-        }
-    }
+    "regexp": "[a-zA-Z0-9_-]*"
 }
 
 N_WORKERS_SPEC = {
@@ -105,9 +99,7 @@ N_WORKERS_SPEC = {
     "type": "number",
     "units": u.none,
     "required": False,
-    "validation_options": {
-        "expression": "value >= -1"
-    }
+    "expression": "value >= -1"
 }
 
 AREA = {
@@ -117,16 +109,12 @@ AREA = {
 }
 
 PROJECTED = {
-    "validation_options": {
-        "projected": True
-    }
+    "projected": True
 }
 
 METER_PROJECTED = {
-    "validation_options": {
-        "projected": True,
-        "projection_units": u.meter
-    }
+    "projected": True,
+    "projection_units": u.meter
 }
 
 PROJECTED_AREA = {
@@ -140,27 +128,19 @@ METER_PROJECTED_AREA = {
 }
 
 GT_0 = {
-    "validation_options": {
-        "expression": "value > 0"
-    }
+    "expression": "value > 0"
 }
 GTE_0 = {
-    "validation_options": {
-        "expression": "value >= 0"
-    }
+    "expression": "value >= 0"
 }
 BETWEEN_0_AND_1 = {
-    "validation_options": {
-        "expression": "(value >= 0) & (value <= 1)"
-    }
+    "expression": "(value >= 0) & (value <= 1)"
 }
 
 DISTANCE = {
     "type": "number",
     "units": u.meter,
-    "validation_options": {
-        "expression": "value >= 0"
-    }
+    "expression": "value >= 0"
 }
 
 METER_RASTER = {

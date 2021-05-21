@@ -45,13 +45,11 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "threshold_flow_accumulation": utils.THRESHOLD_FLOW_ACCUMULATION_ARG,
         "et0_dir": {
-            "validation_options": {
-                "exists": True,
-            },
             "type": "directory",
+            "exists": True,
             "contents": {
-                "et0_maps": {
-                    "regexp": "(\\w*?)(\\d+)",
+                # monthly et0 maps, each file ending in a number 1-12
+                "(\\w*?)(\\d+)": {
                     "items": "One for each month 1-12",
                     "about": (
                         "Twelve files, one for each month. File names must "
@@ -67,13 +65,11 @@ ARGS_SPEC = {
             "name": "ET0 Directory"
         },
         "precip_dir": {
-            "validation_options": {
-                "exists": True,
-            },
             "type": "directory",
+            "exists": True,
             "contents": {
-                "precip_maps": {
-                    "regexp": "(\\w*?)(\\d+)",
+                # monthly precipitation maps, each file ending in a number 1-12
+                "(\\w*?)(\\d+)": {
                     "items": "One for each month 1-12",
                     "about": (
                         "Twelve files, one for each month. File names must end "
@@ -109,8 +105,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
-                "curve_number_columns": {
-                    "regexp": "cn_([abcd])",
+                "cn_([abcd])": {
                     "items": "One for each soil group A, B, C, D",
                     "type": "number",
                     "units": u.none,
@@ -118,8 +113,7 @@ ARGS_SPEC = {
                         "Curve number values for each combination of soil "
                         "type and LULC class. No 0s are allowed.")
                 },
-                "monthly_kc_columns": {
-                    "regexp": "kc_(\\d+)",
+                "kc_(\\d+)": {
                     "items": "One for each month 1-12",
                     "type": "number",
                     "units": u.none,
@@ -217,8 +211,7 @@ ARGS_SPEC = {
                     "about": (
                         "Climate zone numbers, integers which correspond to "
                         "values found in the Climate zone raster")},
-                "monthly_rain_event_columns": {
-                    "regexp": "(\\w+)",
+                "(\\w+)": {  # jan, feb, mar, etc.
                     "items": f"One for each month in {MONTH_ID_TO_LABEL}",
                     "type": "number",
                     "units": u.none,
@@ -284,7 +277,7 @@ _OUTPUT_BASE_FILES = {
     'b_sum_path': 'B_sum.tif',
     'b_path': 'B.tif',
     'vri_path': 'Vri.tif',
-    }
+}
 
 _INTERMEDIATE_BASE_FILES = {
     'aet_path': 'aet.tif',
@@ -313,7 +306,7 @@ _TMP_BASE_FILES = {
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
     'l_sum_pre_clamp': 'l_sum_pre_clamp.tif'
-    }
+}
 
 
 def execute(args):

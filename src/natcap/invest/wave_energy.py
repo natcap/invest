@@ -32,10 +32,8 @@ ARGS_SPEC = {
         "results_suffix": utils.SUFFIX_SPEC,
         "n_workers": utils.N_WORKERS_SPEC,
         "wave_base_data_path": {
-            "validation_options": {
-                "exists": True,
-            },
             "type": "directory",
+            "exists": True,
             "contents": {
                 "NAmerica_WestCoast_4m.shp": {
                     "type": "vector",
@@ -176,9 +174,8 @@ ARGS_SPEC = {
                         "user-defined wave height bins from smallest to "
                         "largest")
                 },
-                "wave_period_bins": {
-                    # match decimal formatted numbers: 1, 1.1, .1
-                    "regexp": "(\\d+|\\d*\\.\\d+)",
+                # match decimal formatted numbers: 1, 1.1, .1
+                "(\\d+|\\d*\\.\\d+)": {
                     "items": (
                         "user-defined wave period bins (measured in seconds) "
                         "from smallest to largest"),

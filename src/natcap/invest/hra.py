@@ -120,9 +120,7 @@ ARGS_SPEC = {
                         "analysis is 250m.")
                 }
             },
-            "validation_options": {
-                "excel_ok": True
-            }
+            "excel_ok": True
         },
         "criteria_table_path": {
             "name": "Criteria Scores Table",
@@ -131,9 +129,7 @@ ARGS_SPEC = {
                 "ranking  (rating, DQ and weight) of each stressor on each "
                 "habitat, as well as the habitat resilience attributes."),
             "type": "csv",
-            "validation_options": {
-                "excel_ok": True,
-            },
+            "excel_ok": True,
         },
         "resolution": {
             "name": "Resolution of Analysis (meters)",
@@ -143,9 +139,7 @@ ARGS_SPEC = {
                 "size of the completed raster files."),
             "type": "number",
             "units": u.meter,
-            "validation_options": {
-                "expression": "value > 0",
-            }
+            "expression": "value > 0",
         },
         "max_rating": {
             "name": "Maximum Criteria Score",

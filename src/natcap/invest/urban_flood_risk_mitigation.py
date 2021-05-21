@@ -53,8 +53,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
-                "soil_group_curve_numbers": {
-                    "regexp": "cn_([abcd])",
+                "cn_([abcd])": {
                     "items": "One for each soil group A, B, C, D",
                     "type": "number",
                     "units": u.none,

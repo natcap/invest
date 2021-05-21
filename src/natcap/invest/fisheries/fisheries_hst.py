@@ -46,8 +46,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "habitats": {"type": "freestyle_string"},
-                "age_stages": {
-                    "regexp": "(?!habitats)(^\\w+$)",
+                "(?!habitats)(^\\w+$)": {
                     "items": "One for each life stage or age",
                     "type": "ratio",
                     "about": (
@@ -65,8 +64,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "habitats": {"type": "freestyle_string"},
-                "subregions": {
-                    "regexp": "(?!habitats)(^\\w+$)",
+                "(?!habitats)(^\\w+$)": {
                     "items": "One for each subregion",
                     "type": "ratio",
                     "about": (
@@ -89,7 +87,6 @@ ARGS_SPEC = {
         }
     }
 }
-
 
 
 def execute(args):

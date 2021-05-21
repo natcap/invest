@@ -70,14 +70,12 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
-                "nutrient_loads": {
-                    "regexp": "load_(\\w+)",
+                "load_(\\w+)": {  # nitrogen or phosphorus nutrient loads
                     "items": "n for nitrogen, p for phosphorus",
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
                     "about": "The nutrient loading for each land use class"},
-                "nutrient retention capacities": {
-                    "regexp": "eff_(\\w+)",
+                "eff_(\\w+)": {  # nutrient retention capacities
                     "items": "n for nitrogen, p for phosphorus",
                     "type": "ratio",
                     "about": (
@@ -89,8 +87,7 @@ ARGS_SPEC = {
                         "all natural vegetation types (such as forests, "
                         "natural pastures, wetlands, or prairie), indicating "
                         "that 60-80% of nutrient is retained.")},
-                "nutrient_critical_lengths": {
-                    "regexp": "crit_len_(\\w+)",
+                "crit_len_(\\w+)": {  # nutrient critical lengths
                     "items": "n for nitrogen, p for phosphorus",
                     "type": "number",
                     "units": u.meter,
@@ -205,7 +202,7 @@ _OUTPUT_BASE_FILES = {
     'n_export_path': 'n_export.tif',
     'p_export_path': 'p_export.tif',
     'watershed_results_ndr_path': 'watershed_results_ndr.shp',
-    }
+}
 
 _INTERMEDIATE_BASE_FILES = {
     'ic_factor_path': 'ic_factor.tif',
@@ -244,7 +241,7 @@ _INTERMEDIATE_BASE_FILES = {
     'flow_direction_path': 'flow_direction.tif',
     'thresholded_slope_path': 'thresholded_slope.tif',
     'dist_to_channel_path': 'dist_to_channel.tif',
-    }
+}
 
 _CACHE_BASE_FILES = {
     'filled_dem_path': 'filled_dem.tif',
@@ -259,7 +256,7 @@ _CACHE_BASE_FILES = {
     'subsurface_load_p_pickle_path': 'subsurface_load_p.pickle',
     'export_n_pickle_path': 'export_n.pickle',
     'export_p_pickle_path': 'export_p.pickle',
-    }
+}
 
 _TARGET_NODATA = -1
 
@@ -1325,9 +1322,9 @@ def _calculate_export(
         # these intermediate outputs should always have defined nodata
         # values assigned by pygeoprocessing
         valid_mask = ~(numpy.isclose(modified_load_array, load_nodata) |
-            numpy.isclose(ndr_array, ndr_nodata) |
-            numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
-            numpy.isclose(sub_ndr_array, sub_ndr_nodata))
+                       numpy.isclose(ndr_array, ndr_nodata) |
+                       numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
+                       numpy.isclose(sub_ndr_array, sub_ndr_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (

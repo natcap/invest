@@ -47,38 +47,9 @@ class ValidateArgsSpecs(unittest.TestCase):
 
     def test_model_specs(self):
 
-        model_names = [
-            'carbon',
-            'coastal_blue_carbon.coastal_blue_carbon',
-            'coastal_blue_carbon.preprocessor',
-            'coastal_vulnerability',
-            'crop_production_regression',
-            'crop_production_percentile',
-            'delineateit.delineateit',
-            'finfish_aquaculture.finfish_aquaculture',
-            'fisheries.fisheries',
-            'fisheries.fisheries_hst',
-            'forest_carbon_edge_effect',
-            'globio',
-            'habitat_quality',
-            'hra',
-            'hydropower.hydropower_water_yield',
-            'ndr.ndr',
-            'pollination',
-            'recreation.recmodel_client',
-            'routedem',
-            'scenic_quality.scenic_quality',
-            'scenario_gen_proximity',
-            'sdr.sdr',
-            'seasonal_water_yield.seasonal_water_yield',
-            'urban_cooling_model',
-            'urban_flood_risk_mitigation',
-            'wave_energy',
-            'wind_energy'
-        ]
-
         for model_name, val in cli._MODEL_UIS.items():
-            model = importlib.import_module(f'natcap.invest.{val["pyname"]}')
+            # val is a collections.namedtuple, fields accessible by name
+            model = importlib.import_module(val.pyname)
 
             # validate that each arg meets the expected pattern
             # save up errors to report at the end
@@ -140,12 +111,30 @@ class ValidateArgsSpecs(unittest.TestCase):
                             self.assertTrue(isinstance(val, str))
                     attrs.remove('options')
 
+                elif t == 'freestyle_string':
+                    # freestyle_string may optionally have a regexp attribute
+                    # this is a regular expression that the string must match
+                    if 'regexp' in arg:
+                        self.assertTrue(isinstance(arg['regexp'], str))
+                        re.compile(arg['regexp'])  # should be regex compilable
+                        attrs.remove('regexp')
+
                 elif t == 'number':
                     # number type should have a units property
                     self.assertTrue('units' in arg)
                     # Undefined units should use the custom u.none unit
                     self.assertTrue(isinstance(arg['units'], pint.Unit))
                     attrs.remove('units')
+
+                    # number type may optionally have an 'expression' attribute
+                    # this is a string expression to be evaluated with the
+                    # intent of determining that the value is within a range.
+                    # The expression must contain the string ``value``, which
+                    # will represent the user-provided value (after it has been
+                    # cast to a float).  Example: "(value >= 0) & (value <= 1)"
+                    if 'expression' in arg:
+                        self.assertTrue(isinstance(arg['expression'], str))
+                        attrs.remove('expression')
 
                 elif t == 'raster':
                     # raster type should have a bands property that maps each band
@@ -159,6 +148,21 @@ class ValidateArgsSpecs(unittest.TestCase):
                             f'{name}.bands.{band}',
                             valid_types=valid_nested_types['raster'])
                     attrs.remove('bands')
+
+                    # may optionally have a 'projected' attribute that says
+                    # whether the raster must be linearly projected
+                    if 'projected' in arg:
+                        self.assertTrue(isinstance(arg['projected'], bool))
+                        attrs.remove('projected')
+                    # if 'projected' is True, may also have a 'projection_units'
+                    # attribute saying the expected linear projection unit
+                    if 'projection_units' in arg:
+                        # doesn't make sense to have projection units unless
+                        # projected is True
+                        self.assertTrue(arg['projected'])
+                        self.assertTrue(
+                            isinstance(arg['projection_units'], pint.Unit))
+                        attrs.remove('projection_units')
 
                 elif t == 'vector':
                     # vector type should have:
@@ -179,6 +183,21 @@ class ValidateArgsSpecs(unittest.TestCase):
 
                     attrs.remove('fields')
                     attrs.remove('geometries')
+
+                    # may optionally have a 'projected' attribute that says
+                    # whether the vector must be linearly projected
+                    if 'projected' in arg:
+                        self.assertTrue(isinstance(arg['projected'], bool))
+                        attrs.remove('projected')
+                    # if 'projected' is True, may also have a 'projection_units'
+                    # attribute saying the expected linear projection unit
+                    if 'projection_units' in arg:
+                        # doesn't make sense to have projection units unless
+                        # projected is True
+                        self.assertTrue(arg['projected'])
+                        self.assertTrue(
+                            isinstance(arg['projection_units'], pint.Unit))
+                        attrs.remove('projection_units')
 
                 elif t == 'csv':
                     # csv type should have a rows property, columns property, or
@@ -206,6 +225,11 @@ class ValidateArgsSpecs(unittest.TestCase):
                         attrs.discard('rows')
                         attrs.discard('columns')
 
+                    # csv type may optionally have an 'excel_ok' attribute
+                    if 'excel_ok' in arg:
+                        self.assertTrue(isinstance(arg['excel_ok'], bool))
+                        attrs.discard('excel_ok')
+
                 elif t == 'directory':
                     # directory type should have a contents property that maps each
                     # expected path name/pattern within the directory to a nested
@@ -219,6 +243,23 @@ class ValidateArgsSpecs(unittest.TestCase):
                             f'{name}.contents.{path}',
                             valid_types=valid_nested_types['directory'])
                     attrs.remove('contents')
+
+                    # may optionally have a 'permissions' attribute, which is a
+                    # string of the unix-style directory permissions e.g. 'rwx'
+                    if 'permissions' in arg:
+                        self.validate_permissions_value(arg['permissions'])
+                        attrs.remove('permissions')
+                    # may optionally have an 'exists' attribute, which says
+                    # whether the directory must already exist
+                    if 'exists' in arg:
+                        self.assertTrue(isinstance(arg['exists'], bool))
+                        attrs.remove('exists')
+
+                elif t == 'file':
+                    # file type may optionally have a 'permissions' attribute
+                    # this is a string listing the permissions e.g. 'rwx'
+                    if 'permissions' in arg:
+                        self.validate_permissions_value(arg['permissions'])
 
             # iterate over the remaining attributes
             # type-specific ones have been removed by this point
@@ -238,63 +279,9 @@ class ValidateArgsSpecs(unittest.TestCase):
                 self.assertTrue(isinstance(arg['type'], str) or
                                 isinstance(arg['type'], set))
                 attrs.remove('type')
-            if 'regexp' in attrs:
-                # if it has 'regexp' it should have 'items' also
-                self.assertTrue('items' in arg)
-                self.assertTrue(isinstance(arg['regexp'], str))
-                re.compile(arg['regexp'])  # should compile without errors
-                attrs.remove('regexp')
             if 'items' in attrs:
-                # if it has 'items' it should have 'regexp' also
-                self.assertTrue('regexp' in arg)
                 self.assertTrue(isinstance(arg['items'], str))
                 attrs.remove('items')
-            if 'validation_options' in attrs:
-                # the allowed validation_options properties are type-specific
-                opts = arg['validation_options']
-                if arg['type'] == 'csv':
-                    self.assertTrue(list(opts.keys()) == ['excel_ok'])
-                    self.assertTrue(isinstance(opts['excel_ok'], bool))
-                elif arg['type'] == 'number':
-                    self.assertTrue(list(opts.keys()) == ['expression'])
-                    self.assertTrue(isinstance(opts['expression'], str))
-                elif arg['type'] == 'freestyle_string':
-                    self.assertEqual(list(opts.keys()), ['regexp'])
-                    self.assertTrue(isinstance(opts['regexp'], dict))
-                    self.assertEqual(list(opts['regexp'].keys()), ['pattern'])
-                    self.assertTrue(isinstance(opts['regexp']['pattern'], str))
-                elif arg['type'] in {'raster', 'vector'}:
-                    keys = set(opts.keys())
-                    # should have at least one key; shouldn't have
-                    # projection_units without projected
-                    self.assertTrue(
-                        (keys == {'projected'}) or
-                        (keys == {'projected', 'projection_units'}))
-                    self.assertTrue(isinstance(opts['projected'], bool))
-                    if 'projection_units' in keys:
-                        # doesn't make sense to have projection units unless
-                        # projected is True
-                        self.assertTrue(opts['projected'])
-                        self.assertTrue(
-                            isinstance(opts['projection_units'], pint.Unit))
-                elif arg['type'] == 'file':
-                    self.assertTrue(list(opts.keys()) == ['permissions'])
-                    self.validate_permissions_value(opts['permissions'])
-                elif arg['type'] == 'directory':
-                    keys = set(opts.keys())
-                    # should have at least one of 'permissions', 'exists'
-                    self.assertTrue(len(keys) > 0)
-                    self.assertTrue(keys.issubset({'permissions', 'exists'}))
-                    if 'permissions' in keys:
-                        self.validate_permissions_value(opts['permissions'])
-                    if 'exists' in keys:
-                        self.assertTrue(isinstance(opts['exists'], bool))
-
-                # validation options should not exist for any other types
-                else:
-                    raise AssertionError(f"{name}'s type does not allow the "
-                                         "validation_options attribute")
-                attrs.remove('validation_options')
 
             # args should not have any unexpected properties
             # all attrs should have been removed by now

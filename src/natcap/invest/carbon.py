@@ -91,9 +91,7 @@ ARGS_SPEC = {
             "name": "Carbon Pools"
         },
         "lulc_cur_year": {
-            "validation_options": {
-                "expression": "float(value).is_integer()"
-            },
+            "expression": "float(value).is_integer()",
             "type": "number",
             "units": u.year,
             "required": "do_valuation",
@@ -101,9 +99,7 @@ ARGS_SPEC = {
             "name": "Current Land Cover Calendar Year"
         },
         "lulc_fut_year": {
-            "validation_options": {
-                "expression": "float(value).is_integer()"
-            },
+            "expression": "float(value).is_integer()",
             "type": "number",
             "units": u.year,
             "required": "do_valuation",
@@ -151,7 +147,7 @@ _OUTPUT_BASE_FILES = {
     'npv_fut': 'npv_fut.tif',
     'npv_redd': 'npv_redd.tif',
     'html_report': 'report.html',
-    }
+}
 
 _INTERMEDIATE_BASE_FILES = {
     'c_above_cur': 'c_above_cur.tif',
@@ -166,13 +162,13 @@ _INTERMEDIATE_BASE_FILES = {
     'c_below_redd': 'c_below_redd.tif',
     'c_soil_redd': 'c_soil_redd.tif',
     'c_dead_redd': 'c_dead_redd.tif',
-    }
+}
 
 _TMP_BASE_FILES = {
     'aligned_lulc_cur_path': 'aligned_lulc_cur.tif',
     'aligned_lulc_fut_path': 'aligned_lulc_fut.tif',
     'aligned_lulc_redd_path': 'aligned_lulc_redd.tif',
-    }
+}
 
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0

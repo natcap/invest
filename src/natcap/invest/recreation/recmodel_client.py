@@ -47,7 +47,7 @@ predictor_table_columns = {
     "id": {
         "type": "freestyle_string",
         "about": ("A unique identifier for the predictor (10 "
-            "characters or less).")
+                  "characters or less).")
     },
     "path": {
         "type": {"raster", "vector"},
@@ -60,28 +60,28 @@ predictor_table_columns = {
         "type": "option_string",
         "options": {
             "raster_mean": ("Predictor is a raster. Metric is the "
-                "mean of the non-nodata values of the raster that "
-                "intersect the AOI grid cell or polygon."),
+                            "mean of the non-nodata values of the raster that "
+                            "intersect the AOI grid cell or polygon."),
             "raster_sum": ("Predictor is a raster. Metric is the "
-                "sum of the non-nodata values of the raster that "
-                "intersect the AOI grid cell or polygon."),
+                           "sum of the non-nodata values of the raster that "
+                           "intersect the AOI grid cell or polygon."),
             "point_count": ("Predictor is a point shapefile. "
-                "Metric is the count of those points in each AOI "
-                "grid cell or polygon."),
+                            "Metric is the count of those points in each AOI "
+                            "grid cell or polygon."),
             "point_nearest_distance": ("Predictor is a point "
-                "shapefile. Metric is the euclidean distance "
-                "between the center of each AOI grid cell and the "
-                "nearest point in this predictor layer."),
+                                       "shapefile. Metric is the euclidean distance "
+                                       "between the center of each AOI grid cell and the "
+                                       "nearest point in this predictor layer."),
             "line_intersect_length": ("Predictor is a line "
-                "shapefile. Metric is the total length of the lines "
-                "intersecting each AOI grid cell."),
+                                      "shapefile. Metric is the total length of the lines "
+                                      "intersecting each AOI grid cell."),
             "polygon_area_coverage": ("Predictor is a polygon "
-                "shapefile. Metric is the area of overlap between "
-                "the predictor and each AOI grid cell."),
+                                      "shapefile. Metric is the area of overlap between "
+                                      "the predictor and each AOI grid cell."),
             "polygon_percent_coverage": ("Predictor is a polygon "
-                "shapefile. Metric is the percent (0-100) of area "
-                "of overlap between the predictor and each AOI "
-                "grid cell.")
+                                         "shapefile. Metric is the percent (0-100) of area "
+                                         "of overlap between the predictor and each AOI "
+                                         "grid cell.")
         }
     }
 }
@@ -111,10 +111,8 @@ ARGS_SPEC = {
             "name": "hostname"
         },
         "port": {
-            "validation_options": {
-                "expression": "value >= 0",
-            },
             "type": "number",
+            "expression": "value >= 0",
             "units": u.none,
             "required": False,
             "about": (
@@ -123,19 +121,15 @@ ARGS_SPEC = {
             "name": "port"
         },
         "start_year": {
-            "validation_options": {
-                "expression": "value >= 2005",
-            },
             "type": "number",
+            "expression": "value >= 2005",
             "units": u.year,
             "about": "Year to start PUD calculations, date starts on Jan 1st.",
             "name": "Start Year (inclusive, must be >= 2005)"
         },
         "end_year": {
-            "validation_options": {
-                "expression": "value <= 2017",
-            },
             "type": "number",
+            "expression": "value <= 2017",
             "units": u.year,
             "about": (
                 "Year to end PUD calculations, date ends and includes Dec "
@@ -162,10 +156,8 @@ ARGS_SPEC = {
             "name": "Grid Type"
         },
         "cell_size": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
             "type": "number",
+            "expression": "value > 0",
             "units": u.projection_unit,
             "required": "grid_aoi",
             "about": (
@@ -224,7 +216,7 @@ _OUTPUT_BASE_FILES = {
     'predictor_vector_path': 'predictor_data.shp',
     'scenario_results_path': 'scenario_results.shp',
     'regression_coefficients': 'regression_coefficients.txt',
-    }
+}
 
 _INTERMEDIATE_BASE_FILES = {
     'local_aoi_path': 'aoi.shp',
@@ -232,7 +224,8 @@ _INTERMEDIATE_BASE_FILES = {
     'compressed_pud_path': 'pud.zip',
     'response_polygons_lookup': 'response_polygons_lookup.pickle',
     'server_version': 'server_version.pickle',
-    }
+}
+
 
 def execute(args):
     """Recreation.
@@ -725,7 +718,7 @@ def _schedule_predictor_data_processing(
         'point_count': _point_count,
         'point_nearest_distance': _point_nearest_distance,
         'line_intersect_length': _line_intersect_length,
-        }
+    }
 
     predictor_table = utils.build_lookup_from_csv(
         predictor_table_path, 'id')
@@ -825,7 +818,8 @@ def _json_to_shp_table(
     driver = gdal.GetDriverByName('ESRI Shapefile')
     if os.path.exists(predictor_vector_path):
         driver.Delete(predictor_vector_path)
-    response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    response_vector = gdal.OpenEx(
+        response_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     predictor_vector = driver.CreateCopy(
         predictor_vector_path, response_vector)
     response_vector = None
@@ -909,7 +903,7 @@ def _raster_sum_mean(
         'fid': aggregate_results.keys(),
         'sum': [fid['sum'] for fid in aggregate_results.values()],
         'count': [fid['count'] for fid in aggregate_results.values()],
-        }
+    }
 
     if op_mode == 'mean':
         mean_results = (
@@ -1561,12 +1555,12 @@ def _validate_predictor_types(table_path):
     # when the type values are used
     type_list = set([type.strip() for type in df['type']])
     valid_types = set({'raster_mean', 'raster_sum', 'point_count',
-                   'point_nearest_distance', 'line_intersect_length',
-                   'polygon_area_coverage', 'polygon_percent_coverage'})
+                       'point_nearest_distance', 'line_intersect_length',
+                       'polygon_area_coverage', 'polygon_percent_coverage'})
     difference = type_list.difference(valid_types)
     if difference:
         raise ValueError('The table contains invalid type value(s): '
-            f'{difference}. The allowed types are: {valid_types}')
+                         f'{difference}. The allowed types are: {valid_types}')
 
 
 def delay_op(last_time, time_delay, func):

@@ -144,8 +144,8 @@ ARGS_SPEC = {
                 "lulc": {"type": "code"},
                 "name": {"type": "freestyle_string"},
                 "habitat": {"type": "ratio"},
-                "threats": {
-                    "regexp": "(?!lulc|habitat|name)(^.+$)",
+                # threats: any column that's not 'lulc', 'name', or 'habitat'
+                "(?!lulc|habitat|name)(^.+$)": {
                     "items": "One for each threat in the threats table",
                     "type": "ratio",
                     "about": (
@@ -328,10 +328,10 @@ def execute(args):
                             'duplicate.')
                     # Check threat raster values are 0 <= x <= 1
                     threat_values_task = task_graph.add_task(
-                         func=_raster_values_in_bounds,
-                         args=((threat_path, 1), 0.0, 1.0),
-                         store_result=True,
-                         task_name=f'check_threat_values{lulc_key}_{threat}')
+                        func=_raster_values_in_bounds,
+                        args=((threat_path, 1), 0.0, 1.0),
+                        store_result=True,
+                        task_name=f'check_threat_values{lulc_key}_{threat}')
                     threat_values_task_lookup[threat_values_task.task_name] = {
                         'task': threat_values_task,
                         'path': threat_path_relative,
@@ -417,7 +417,7 @@ def execute(args):
               [_OUT_NODATA]),
         kwargs={
             'fill_value_list': [1.0]
-            },
+        },
         target_path_list=[access_raster_path],
         dependent_task_list=[align_task],
         task_name='access_raster')
@@ -431,7 +431,7 @@ def execute(args):
             kwargs={
                 'option_list': ['ATTRIBUTE=ACCESS'],
                 'burn_values': None
-                },
+            },
             target_path_list=[access_raster_path],
             dependent_task_list=[create_access_raster_task],
             task_name='rasterize_access')
@@ -524,7 +524,7 @@ def execute(args):
                     'target_nodata': _OUT_NODATA,
                     'ignore_nodata_and_edges': False,
                     'mask_nodata': False
-                    },
+                },
                 target_path_list=[filtered_threat_raster_path],
                 dependent_task_list=[create_kernel_task],
                 task_name=f'convolve_{decay_type}{lulc_key}_{threat}')
