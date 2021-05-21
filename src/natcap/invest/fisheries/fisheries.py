@@ -103,7 +103,6 @@ ARGS_SPEC = {
         "population_csv_dir": {
             "type": "directory",
             "required": "do_batch",
-            "exists": True,
             "contents": {
                 "(\\w+)": {  # population parameters table
                     "items": "One for each population",
@@ -202,7 +201,6 @@ ARGS_SPEC = {
         },
         "migration_dir": {
             "type": "directory",
-            "exists": True,
             "required": "migr_cont",
             "contents": {
                 "(\\w+)": {

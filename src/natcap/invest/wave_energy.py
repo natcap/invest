@@ -33,7 +33,6 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "wave_base_data_path": {
             "type": "directory",
-            "exists": True,
             "contents": {
                 "NAmerica_WestCoast_4m.shp": {
                     "type": "vector",

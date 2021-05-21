@@ -249,11 +249,12 @@ class ValidateArgsSpecs(unittest.TestCase):
                     if 'permissions' in arg:
                         self.validate_permissions_value(arg['permissions'])
                         attrs.remove('permissions')
-                    # may optionally have an 'exists' attribute, which says
+                    # may optionally have an 'must_exist' attribute, which says
                     # whether the directory must already exist
-                    if 'exists' in arg:
-                        self.assertTrue(isinstance(arg['exists'], bool))
-                        attrs.remove('exists')
+                    # this defaults to True
+                    if 'must_exist' in arg:
+                        self.assertTrue(isinstance(arg['must_exist'], bool))
+                        attrs.remove('must_exist')
 
                 elif t == 'file':
                     # file type may optionally have a 'permissions' attribute

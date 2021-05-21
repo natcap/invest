@@ -86,7 +86,6 @@ ARGS_SPEC = {
         },
         "model_data_path": {
             "type": "directory",
-            "exists": True,
             "contents": {
                 "climate_regression_yield_tables": {
                     "type": "directory",

@@ -116,12 +116,12 @@ def get_sufficient_keys(args):
     return sufficient_keys
 
 
-def check_directory(dirpath, exists=False, permissions='rx'):
+def check_directory(dirpath, must_exist=True, permissions='rx'):
     """Validate a directory.
 
     Args:
         dirpath (string): The directory path to validate.
-        exists=False (bool): If ``True``, the directory at ``dirpath``
+        must_exist=True (bool): If ``True``, the directory at ``dirpath``
             must already exist on the filesystem.
         permissions='rx' (string): A string that includes the lowercase
             characters ``r``, ``w`` and/or ``x`` indicating required
@@ -132,7 +132,7 @@ def check_directory(dirpath, exists=False, permissions='rx'):
         A string error message if an error was found.  ``None`` otherwise.
 
     """
-    if exists:
+    if must_exist:
         if not os.path.exists(dirpath):
             return "Directory not found"
 

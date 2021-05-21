@@ -205,7 +205,6 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "exists": True,
             "about": "Path to the InVEST Crop Production Data directory",
             "name": "model data directory"
         }

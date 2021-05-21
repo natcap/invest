@@ -61,7 +61,6 @@ ARGS_SPEC = {
         },
         "infrastructure_dir": {
             "type": "directory",
-            "exists": True,
             "contents": {
                 "(\\w+)": {  # may be named anything
                     "items": (

@@ -46,7 +46,6 @@ ARGS_SPEC = {
         "threshold_flow_accumulation": utils.THRESHOLD_FLOW_ACCUMULATION_ARG,
         "et0_dir": {
             "type": "directory",
-            "exists": True,
             "contents": {
                 # monthly et0 maps, each file ending in a number 1-12
                 "(\\w*?)(\\d+)": {
@@ -66,7 +65,6 @@ ARGS_SPEC = {
         },
         "precip_dir": {
             "type": "directory",
-            "exists": True,
             "contents": {
                 # monthly precipitation maps, each file ending in a number 1-12
                 "(\\w*?)(\\d+)": {

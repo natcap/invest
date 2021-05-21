@@ -74,7 +74,7 @@ WORKSPACE_SPEC = {
         "created."),
     "type": "directory",
     "contents": {},
-    "exists": False,
+    "must_exist": False,
     "permissions": "rwx",
 }
 
