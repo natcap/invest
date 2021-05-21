@@ -740,8 +740,7 @@ def get_header_patterns(spec):
         # we may implement conditionally required patterns in the future
         # if 'required' isn't a key, it defaults to True
         if ('required' not in val) or (val['required'] is True):
-            patterns.append(
-                val['regexp'] if 'regexp' in val else re.escape(key))
+            patterns.append(key)
     return patterns
 
 
@@ -1044,7 +1043,7 @@ def invest_validator(validate_func):
         # just ignore failed imports; assume they have no ARGS_SPEC.
         try:
             model_module = importlib.import_module(validate_func.__module__)
-        except:
+        except Exception:
             LOGGER.warning('Unable to import module %s: assuming no ARGS_SPEC.',
                            validate_func.__module__)
             model_module = None

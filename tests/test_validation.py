@@ -16,6 +16,7 @@ import pandas
 
 class SpatialOverlapTest(unittest.TestCase):
     """Test Spatial Overlap."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -107,6 +108,7 @@ class SpatialOverlapTest(unittest.TestCase):
 
 class ValidatorTest(unittest.TestCase):
     """Test Validator."""
+
     def test_args_wrong_type(self):
         """Validation: check for error when args is the wrong type."""
         from natcap.invest import validation
@@ -189,10 +191,10 @@ class ValidatorTest(unittest.TestCase):
 
     def test_n_workers(self):
         """Validation: validation error returned on invalid n_workers."""
-        from natcap.invest import validation
+        from natcap.invest import utils, validation
 
         args_spec = {
-            'n_workers': validation.N_WORKERS_SPEC,
+            'n_workers': utils.N_WORKERS_SPEC,
         }
 
         @validation.invest_validator
@@ -236,6 +238,7 @@ class ValidatorTest(unittest.TestCase):
 
 class DirectoryValidation(unittest.TestCase):
     """Test Directory Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -248,16 +251,14 @@ class DirectoryValidation(unittest.TestCase):
         """Validation: when a folder must exist and does."""
         from natcap.invest import validation
 
-        self.assertEqual(None, validation.check_directory(
-            self.workspace_dir, exists=True))
+        self.assertEqual(None, validation.check_directory(self.workspace_dir))
 
     def test_not_exists(self):
         """Validation: when a folder must exist but does not."""
         from natcap.invest import validation
 
         dirpath = os.path.join(self.workspace_dir, 'nonexistent_dir')
-        validation_warning = validation.check_directory(
-            dirpath, exists=True)
+        validation_warning = validation.check_directory(dirpath)
         self.assertTrue('not found' in validation_warning)
 
     def test_file(self):
@@ -268,8 +269,7 @@ class DirectoryValidation(unittest.TestCase):
         with open(filepath, 'w') as opened_file:
             opened_file.write('the text itself does not matter.')
 
-        validation_warning = validation.check_directory(
-            filepath, exists=True)
+        validation_warning = validation.check_directory(filepath)
         print(validation_warning)
 
     def test_valid_permissions(self):
@@ -277,7 +277,7 @@ class DirectoryValidation(unittest.TestCase):
         from natcap.invest import validation
 
         self.assertEqual(None, validation.check_directory(
-            self.workspace_dir, exists=True, permissions='rwx'))
+            self.workspace_dir, permissions='rwx'))
 
     def test_workspace_not_exists(self):
         """Validation: when a folder's parent must exist with permissions."""
@@ -287,11 +287,12 @@ class DirectoryValidation(unittest.TestCase):
         new_dir = os.path.join(self.workspace_dir, dirpath)
 
         self.assertEqual(None, validation.check_directory(
-            new_dir, exists=False, permissions='rwx'))
+            new_dir, must_exist=False, permissions='rwx'))
 
 
 class FileValidation(unittest.TestCase):
     """Test File Validator."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -321,6 +322,7 @@ class FileValidation(unittest.TestCase):
 
 class RasterValidation(unittest.TestCase):
     """Test Raster Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -435,6 +437,7 @@ class RasterValidation(unittest.TestCase):
 
 class VectorValidation(unittest.TestCase):
     """Test Vector Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -488,7 +491,8 @@ class VectorValidation(unittest.TestCase):
 
         error_msg = validation.check_vector(
             filepath, field_patterns=['col_a', 'COL_B', 'col_c'])
-        self.assertTrue('matched 0 headers, expected at least one' in error_msg)
+        self.assertTrue(
+            'matched 0 headers, expected at least one' in error_msg)
 
     def test_vector_projected_in_m(self):
         """Validation: test that a vector's projection has expected units."""
@@ -515,6 +519,7 @@ class VectorValidation(unittest.TestCase):
 
 class FreestyleStringValidation(unittest.TestCase):
     """Test Freestyle String Validation."""
+
     def test_int(self):
         """Validation: test that an int can be a valid string."""
         from natcap.invest import validation
@@ -553,6 +558,7 @@ class FreestyleStringValidation(unittest.TestCase):
 
 class OptionStringValidation(unittest.TestCase):
     """Test Option String Validation."""
+
     def test_valid_option(self):
         """Validation: test that a string is a valid option."""
         from natcap.invest import validation
@@ -569,6 +575,7 @@ class OptionStringValidation(unittest.TestCase):
 
 class NumberValidation(unittest.TestCase):
     """Test Number Validation."""
+
     def test_string(self):
         """Validation: test when a string is not a number."""
         from natcap.invest import validation
@@ -605,6 +612,7 @@ class NumberValidation(unittest.TestCase):
 
 class BooleanValidation(unittest.TestCase):
     """Test Boolean Validation."""
+
     def test_actual_bool(self):
         """Validation: test when boolean type objects are passed."""
         from natcap.invest import validation
@@ -628,6 +636,7 @@ class BooleanValidation(unittest.TestCase):
 
 class CSVValidation(unittest.TestCase):
     """Test CSV Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -780,7 +789,8 @@ class CSVValidation(unittest.TestCase):
 
         # make a copy of the real _VALIDATION_FUNCS and override the CSV function
         mock_validation_funcs = validation._VALIDATION_FUNCS.copy()
-        mock_validation_funcs['csv'] = functools.partial(validation.timeout, delay)
+        mock_validation_funcs['csv'] = functools.partial(
+            validation.timeout, delay)
 
         # replace the validation.check_csv with the mock function, and try to validate
         with unittest.mock.patch('natcap.invest.validation._VALIDATION_FUNCS',
@@ -831,6 +841,7 @@ class CSVValidation(unittest.TestCase):
 
 class TestValidationFromSpec(unittest.TestCase):
     """Test Validation From Spec."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -942,7 +953,6 @@ class TestValidationFromSpec(unittest.TestCase):
             validation_warnings = validation.validate(args, spec)
         self.assertTrue('some_var_not_in_args' in str(cm.exception))
 
-
     def test_conditional_requirement_not_required(self):
         """Validation: unrequired conditional requirement should always pass"""
         from natcap.invest import validation
@@ -986,7 +996,6 @@ class TestValidationFromSpec(unittest.TestCase):
 
         validation_warnings = validation.validate(args, spec)
         self.assertEqual(validation_warnings, [])
-
 
     def test_requirement_missing(self):
         """Validation: verify absolute requirement on missing key."""
