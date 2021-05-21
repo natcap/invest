@@ -9,9 +9,7 @@ import {
 import {
   getFlaskIsReady, shutdownPythonProcess
 } from '../server_requests';
-import {
-  createPythonFlaskProcess,
-} from './main_helpers';
+import createPythonFlaskProcess from './createPythonFlaskProcess';
 import findInvestBinaries from './findInvestBinaries';
 import setupIpcMainHandlers from './ipcMainHandlers';
 import setupDownloadHandlers from './setupDownloadHandlers';

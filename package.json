@@ -87,7 +87,8 @@
     "pptr-testing-library": "^0.6.4",
     "puppeteer-core": "^5.5.0",
     "react-devtools": "^4.10.1",
-    "react-test-renderer": "^17.0.1"
+    "react-test-renderer": "^17.0.1",
+    "yazl": "^2.5.1"
   },
   "browserslist": {
     "production": [

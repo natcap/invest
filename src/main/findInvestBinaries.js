@@ -1,7 +1,7 @@
-const path = require('path');
-const { execFileSync } = require('child_process');
+import path  from 'path';
+import { execFileSync } from 'child_process';
 
-const { getLogger } = require('../logger');
+import { getLogger } from '../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 /**

@@ -1,9 +1,7 @@
 import fs from 'fs';
 import readline from 'readline';
 import * as server_requests from '../../src/server_requests';
-import {
-  createPythonFlaskProcess
-} from '../../src/main/main_helpers';
+import createPythonFlaskProcess from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 import { argsDictFromObject } from '../../src/utils';
 

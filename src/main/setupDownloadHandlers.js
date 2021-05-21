@@ -1,11 +1,9 @@
 import path from 'path';
 import fs from 'fs';
 
-import {
-  ipcMain,
-} from 'electron';
+import { ipcMain } from 'electron';
 
-import { extractZipInplace } from './main_helpers';
+import extractZipInplace from './extractZipInplace';
 import { getLogger } from '../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);

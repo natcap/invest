@@ -5,24 +5,24 @@ instantiated by main.
 
 import fs from 'fs';
 import path from 'path';
-import { app, ipcMain, ipcRenderer } from 'electron';
 import { execFileSync } from 'child_process';
 
+import { app, ipcMain, ipcRenderer } from 'electron';
 import React from 'react';
 import {
   fireEvent, render, waitFor,
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import yazl from 'yazl';
 
 import { createWindow, destroyWindow } from '../../src/main/main';
 import {
   checkFirstRun,
   APP_HAS_RUN_TOKEN
 } from '../../src/main/setupCheckFirstRun';
-import {
-  createPythonFlaskProcess,
-} from '../../src/main/main_helpers';
+import createPythonFlaskProcess from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
+import extractZipInplace from '../../src/main/extractZipInplace';
 import {
   getFlaskIsReady,
   getInvestModelNames
@@ -34,7 +34,7 @@ import {
 
 jest.mock('child_process');
 execFileSync.mockReturnValue('foo');
-jest.mock('../../src/main/main_helpers');
+jest.mock('../../src/main/createPythonFlaskProcess');
 createPythonFlaskProcess.mockImplementation(() => {});
 jest.mock('../../src/server_requests');
 getFlaskIsReady.mockResolvedValue(true);
@@ -96,6 +96,56 @@ describe('findInvestBinaries', () => {
   });
 });
 
+describe.only('extractZipInplace', () => {
+  const root = path.join('tests', 'data');
+  const zipPath = path.join(root, 'output.zip');
+  const level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
+  const level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
+  const file1Path = path.join(level1Dir, 'file1');
+  const file2Path = path.join(level2Dir, 'file2');
+  let doneZipping = false;
+
+  beforeEach(() => {
+    fs.closeSync(fs.openSync(file1Path, 'w'));
+    fs.closeSync(fs.openSync(file2Path, 'w'));
+
+    const zipfile = new yazl.ZipFile();
+    zipfile.addFile(file1Path, path.relative(root, file1Path));
+    zipfile.addFile(file2Path, path.relative(root, file2Path));
+    zipfile.outputStream.pipe(
+      fs.createWriteStream(zipPath)
+    ).on('close', () => {
+      // being extra careful with recursive rm
+      if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
+        fs.rmdirSync(level1Dir, { recursive: true });
+      }
+      doneZipping = true;
+    });
+    zipfile.end();
+  });
+
+  afterEach(() => {
+    try {
+      fs.unlinkSync(zipPath);
+    } catch {}
+  });
+
+  it('should extract recursively', async () => {
+    await waitFor(() => expect(doneZipping).toBe(true));
+    // The expected state after the setup, before extraction
+    expect(fs.existsSync(zipPath)).toBe(true);
+    expect(fs.existsSync(file1Path)).toBe(false);
+    expect(fs.existsSync(file2Path)).toBe(false);
+
+    await extractZipInplace(zipPath);
+    // And the expected state after extraction
+    await waitFor(() => {
+      expect(fs.existsSync(file1Path)).toBe(true);
+      expect(fs.existsSync(file2Path)).toBe(true);
+    });
+  });
+});
+
 describe('createWindow', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -135,7 +185,7 @@ describe('createWindow', () => {
   });
 });
 
-describe('Download Sample Data Modal', () => {
+describe('Integration tests for Download Sample Data Modal', () => {
   beforeAll(async () => {
     await createWindow();
   });
