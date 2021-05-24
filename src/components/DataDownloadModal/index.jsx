@@ -11,9 +11,8 @@ import Table from 'react-bootstrap/Table';
 
 import Expire from '../Expire';
 import sampledataRegistry from '../../sampledata_registry.json';
-import { getLogger } from '../../logger';
 
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 /** Render a dialog with a form for configuring global invest settings */
 export class DataDownloadModal extends React.Component {

@@ -10,9 +10,8 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
 import InvestJob from '../../InvestJob';
-import { getLogger } from '../../logger';
 
-const logger = getLogger(__filename.split('/').slice(-2).join('/'));
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('/'));
 
 /**
  * Renders a table of buttons for each invest model and

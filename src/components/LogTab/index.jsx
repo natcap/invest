@@ -12,9 +12,8 @@ import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 
 import Portal from '../Portal';
-import { getLogger } from '../../logger';
 
-const logger = getLogger(__filename.split('/').slice(-2).join('/'));
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('/'));
 
 const LOG_TEXT_TAG = 'span';
 const ALLOWED_HTML_OPTIONS = {

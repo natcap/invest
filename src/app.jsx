@@ -21,11 +21,10 @@ import {
   saveSettingsStore, getAllSettings,
 } from './components/SettingsModal/SettingsStorage';
 import { getInvestModelNames } from './server_requests';
-import { getLogger } from './logger';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.

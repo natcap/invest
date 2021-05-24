@@ -16,9 +16,8 @@ import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
 import { getSpec } from '../../server_requests';
 import { dragOverHandlerNone } from '../../utils';
-import { getLogger } from '../../logger';
 
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 /** Get an invest model's ARGS_SPEC when a model button is clicked.
  *

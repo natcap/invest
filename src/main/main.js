@@ -1,3 +1,5 @@
+import path from 'path';
+
 import {
   app,
   BrowserWindow,
@@ -73,6 +75,7 @@ export const createWindow = async () => {
     webPreferences: {
       contextIsolation: false,
       nodeIntegration: true,
+      preload: path.join(__dirname, '..', 'preload.js'),
       additionalArguments: [
         ELECTRON_DEV_MODE ? '--dev' : 'packaged'
       ],

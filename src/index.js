@@ -1,8 +1,7 @@
 const { ipcRenderer } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 
-const { getLogger } = require('./logger');
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
-
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
+logger.info('RENDERER')
 const isDevMode = process.argv.includes('--dev');
 if (isDevMode) {
   // in dev mode we can have babel transpile modules on import

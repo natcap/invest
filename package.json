@@ -40,6 +40,7 @@
   "dependencies": {
     "cross-env": "^5.2.1",
     "electron-dl": "^3.2.1",
+    "electron-log": "^4.3.5",
     "esm": "^3.2.25",
     "glob": "^7.1.6",
     "localforage": "^1.9.0",
@@ -53,9 +54,7 @@
     "react-lazylog": "^4.5.3",
     "sanitize-html": "^2.2.0",
     "tail": "^2.2.0",
-    "winston": "^3.3.3",
-    "yauzl": "^2.10.0",
-    "winston-daily-rotate-file": "^4.5.1"
+    "yauzl": "^2.10.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.13.10",
