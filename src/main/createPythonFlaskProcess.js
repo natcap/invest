@@ -1,16 +1,20 @@
 import path from 'path';
 import { spawn } from 'child_process';
 
+import fetch from 'node-fetch';
+
 import { getLogger } from '../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
+const HOSTNAME = 'http://localhost';
+
 /**
  * Spawn a child process running the Python Flask app.
  *
  * @param  {string} investExe - path to executeable that launches flask app.
  * @returns {undefined}
  */
-export default function createPythonFlaskProcess(investExe) {
+export function createPythonFlaskProcess(investExe) {
   if (investExe) {
     const pythonServerProcess = spawn(
       path.basename(investExe),
@@ -43,4 +47,55 @@ export default function createPythonFlaskProcess(investExe) {
   } else {
     logger.error('no existing invest installations found');
   }
+}
+
+/** Find out if the Flask server is online, waiting until it is.
+ *
+ * Sometimes the app will make a server request before it's ready,
+ * so awaiting this response is one way to avoid that.
+ *
+ * @param {number} i - the number or previous tries
+ * @param {number} retries - number of recursive calls this function is allowed.
+ * @returns { Promise } resolves text indicating success.
+ */
+export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
+  return (
+    fetch(`${HOSTNAME}:${process.env.PORT}/ready`, {
+      method: 'get',
+    })
+      .then((response) => response.text())
+      .catch(async (error) => {
+        if (error.code === 'ECONNREFUSED') {
+          while (i < retries) {
+            i++;
+            // Try every X ms, usually takes a couple seconds to startup.
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            logger.debug(`retry # ${i}`);
+            return await getFlaskIsReady({ i: i, retries: retries });
+          }
+          logger.error(`Not able to connect to server after ${retries} tries.`);
+          logger.error(error.stack);
+          throw error;
+        } else {
+          logger.error(error.stack);
+          throw error;
+        }
+      })
+  );
+}
+
+/**
+ * Request the shutdown of the Flask app
+ *
+ * @returns {Promise} resolves undefined
+ */
+export function shutdownPythonProcess() {
+  return (
+    fetch(`http://localhost:${process.env.PORT}/shutdown`, {
+      method: 'get',
+    })
+      .then((response) => response.text())
+      .then((text) => { logger.debug(text); })
+      .catch((error) => { logger.error(error.stack); })
+  );
 }

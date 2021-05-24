@@ -20,7 +20,7 @@ import SAMPLE_SPEC from './data/carbon_args_spec.json';
 import {
   getSettingsValue, saveSettingsStore
 } from '../src/components/SettingsModal/SettingsStorage';
-import setupInvestHandlers from '../src/main/setupInvestHandlers';
+import { setupInvestRunHandlers } from '../src/main/setupInvestHandlers';
 
 jest.mock('child_process');
 jest.mock('../src/server_requests');
@@ -462,7 +462,7 @@ describe('InVEST subprocess testing', () => {
   const investExe = 'foo';
 
   beforeAll(() => {
-    setupInvestHandlers(investExe);
+    setupInvestRunHandlers(investExe);
   });
 
   beforeEach(() => {

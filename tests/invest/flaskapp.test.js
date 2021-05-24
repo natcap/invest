@@ -1,7 +1,14 @@
 import fs from 'fs';
+
 import readline from 'readline';
+import fetch from 'node-fetch';
+
 import * as server_requests from '../../src/server_requests';
-import createPythonFlaskProcess from '../../src/main/createPythonFlaskProcess';
+import {
+  createPythonFlaskProcess,
+  shutdownPythonProcess,
+  getFlaskIsReady,
+} from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 import { argsDictFromObject } from '../../src/utils';
 
@@ -13,9 +20,9 @@ if (!process.env.PORT) {
 }
 
 jest.setTimeout(250000); // This test is slow in CI
-
-const isDevMode = true; // otherwise need to mock process.resourcesPath
+global.window.fetch = fetch;
 beforeAll(async () => {
+  const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
   createPythonFlaskProcess(investExe);
   // In the CI the flask app takes more than 10x as long to startup.
@@ -23,11 +30,11 @@ beforeAll(async () => {
   // So, allowing many retries, especially because the error
   // that is thrown if all retries fail is swallowed by jest
   // and tests try to run anyway.
-  await server_requests.getFlaskIsReady({ retries: 201 });
+  await getFlaskIsReady({ retries: 201 });
 });
 
 afterAll(async () => {
-  await server_requests.shutdownPythonProcess();
+  await shutdownPythonProcess();
 });
 
 test('invest list items have expected properties', async () => {

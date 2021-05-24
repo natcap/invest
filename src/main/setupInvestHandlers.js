@@ -2,9 +2,11 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { spawn, exec } from 'child_process';
-import { app, ipcMain } from 'electron';
 
-import { findMostRecentLogfile } from '../utils';
+import { app, ipcMain } from 'electron';
+import glob from 'glob';
+
+// TODO: this wont work from node, fetch is undefined.
 import { writeParametersToFile } from '../server_requests';
 import { getLogger } from '../logger';
 
@@ -19,8 +21,46 @@ const LOGLEVELMAP = {
 };
 
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
+const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g;
 
-export default function setupInvestRunHandlers(investExe) {
+/**
+ * Given an invest workspace, find the most recently modified invest log.
+ *
+ * This function is used in order to associate a logfile with an active
+ * InVEST run, so the log can be tailed to a UI component.
+ *
+ * @param {string} directory - the path to an invest workspace directory
+ * @returns {Promise} - resolves string path to an invest logfile
+ */
+export function findMostRecentLogfile(directory) {
+  return new Promise((resolve) => {
+    const files = glob.sync(path.join(directory, '*.txt'));
+    const logfiles = [];
+    files.forEach((file) => {
+      const match = file.match(LOGFILE_REGEX);
+      if (match) {
+        logfiles.push(path.join(directory, match[0]));
+      }
+    });
+    if (logfiles.length === 1) {
+      // This is the most likely path
+      resolve(logfiles[0]);
+      return;
+    }
+    if (logfiles.length > 1) {
+      // reverse sort (b - a) based on last-modified time
+      const sortedFiles = logfiles.sort(
+        (a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs
+      );
+      resolve(sortedFiles[0]);
+    } else {
+      logger.error(`No invest logfile found in ${directory}`);
+      resolve(undefined);
+    }
+  });
+}
+
+export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
 
   ipcMain.on('invest-kill', (event, workspaceDir) => {

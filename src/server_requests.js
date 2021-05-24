@@ -1,47 +1,11 @@
-import fetch from 'node-fetch';
-import { getLogger } from './logger';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://localhost';
 
 // The Flask server sends UTF-8 encoded responses by default
-// response.text() always decodes the response using UTF-8 (https://developer.mozilla.org/en-US/docs/Web/API/Body/text)
-// response.json() doesn't say but is presumably also UTF-8 (https://developer.mozilla.org/en-US/docs/Web/API/Body/json)
-
-/** Find out if the Flask server is online, waiting until it is.
- *
- * Sometimes the app will make a server request before it's ready,
- * so awaiting this response is one way to avoid that.
- *
- * @param {number} i - the number or previous tries
- * @param {number} retries - number of recursive calls this function is allowed.
- * @returns { Promise } resolves text indicating success.
- */
-export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
-  return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/ready`, {
-      method: 'get',
-    })
-      .then((response) => response.text())
-      .catch(async (error) => {
-        if (error.code === 'ECONNREFUSED') {
-          while (i < retries) {
-            i++;
-            // Try every X ms, usually takes a couple seconds to startup.
-            await new Promise((resolve) => setTimeout(resolve, 300));
-            logger.debug(`retry # ${i}`);
-            return await getFlaskIsReady({ i: i, retries: retries });
-          }
-          logger.error(`Not able to connect to server after ${retries} tries.`);
-          logger.error(error.stack);
-          throw error;
-        } else {
-          logger.error(error.stack);
-          throw error;
-        }
-      })
-  );
-}
+// response.text() always decodes the response using UTF-8
+// https://developer.mozilla.org/en-US/docs/Web/API/Body/text
+// response.json() doesn't say but is presumably also UTF-8
+// https://developer.mozilla.org/en-US/docs/Web/API/Body/json
 
 /**
  * Get the list of invest model names that can be passed to getSpec.
@@ -50,7 +14,7 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
  */
 export function getInvestModelNames() {
   return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/models`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/models`, {
       method: 'get',
     })
       .then((response) => response.json())
@@ -66,7 +30,7 @@ export function getInvestModelNames() {
  */
 export function getSpec(payload) {
   return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/getspec`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/getspec`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -87,7 +51,7 @@ export function getSpec(payload) {
  */
 export function fetchValidation(payload) {
   return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/validate`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/validate`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -105,7 +69,7 @@ export function fetchValidation(payload) {
  */
 export function fetchDatastackFromFile(payload) {
   return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/post_datastack_file`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/post_datastack_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -123,7 +87,7 @@ export function fetchDatastackFromFile(payload) {
  */
 export function getVectorColumnNames(payload) {
   return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/colnames`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/colnames`, {
       method: 'post',
       body: JSON.stringify({vector_path: payload}),
       headers: { 'Content-Type': 'application/json' },
@@ -146,7 +110,7 @@ export function getVectorColumnNames(payload) {
  */
 export function saveToPython(payload) {
   return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/save_to_python`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/save_to_python`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -170,7 +134,7 @@ export function saveToPython(payload) {
  */
 export function writeParametersToFile(payload) {
   return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/write_parameter_set_file`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/write_parameter_set_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -178,21 +142,5 @@ export function writeParametersToFile(payload) {
       .then((response) => response.text())
       .then((text) => logger.debug(text))
       .catch((error) => logger.error(error.stack))
-  );
-}
-
-/**
- * Request the shutdown of the Flask app
- *
- * @returns {Promise} resolves undefined
- */
-export function shutdownPythonProcess() {
-  return (
-    fetch(`http://localhost:${process.env.PORT}/shutdown`, {
-      method: 'get',
-    })
-      .then((response) => response.text())
-      .then((text) => { logger.debug(text); })
-      .catch((error) => { logger.error(error.stack); })
   );
 }

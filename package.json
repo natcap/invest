@@ -22,8 +22,7 @@
     "collectCoverage": true,
     "setupFiles": [
       "./tests/jest.overrides.js"
-    ],
-    "automock": false
+    ]
   },
   "invest": {
     "bucket": "releases.naturalcapitalproject.org",

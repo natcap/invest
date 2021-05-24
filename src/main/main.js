@@ -9,16 +9,17 @@ import {
 } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import {
-  getFlaskIsReady, shutdownPythonProcess
-} from '../server_requests';
-import createPythonFlaskProcess from './createPythonFlaskProcess';
+  createPythonFlaskProcess,
+  getFlaskIsReady,
+  shutdownPythonProcess,
+} from './createPythonFlaskProcess';
 import findInvestBinaries from './findInvestBinaries';
 import setupIpcMainHandlers from './ipcMainHandlers';
 import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
-import setupInvestRunHandlers from './setupInvestHandlers';
+import { setupInvestRunHandlers } from './setupInvestHandlers';
 import { getLogger } from '../logger';
 import { menuTemplate } from './menubar';
 import pkg from '../../package.json';

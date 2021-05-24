@@ -20,11 +20,14 @@ import {
   checkFirstRun,
   APP_HAS_RUN_TOKEN
 } from '../../src/main/setupCheckFirstRun';
-import createPythonFlaskProcess from '../../src/main/createPythonFlaskProcess';
+import {
+  createPythonFlaskProcess,
+  getFlaskIsReady,
+} from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
+import { findMostRecentLogfile } from '../../src/main/setupInvestHandlers';
 import {
-  getFlaskIsReady,
   getInvestModelNames
 } from '../../src/server_requests';
 import App from '../../src/app';
@@ -188,6 +191,68 @@ describe('createWindow', () => {
     expect(registeredOnChannels.sort()).toEqual(expectedOnChannels.sort());
   });
 });
+
+describe('findMostRecentLogfile', () => {
+  function setupDir() {
+    return fs.mkdtempSync('tests/data/_');
+  }
+
+  test('Ignores files that are not invest logs', async () => {
+    const dir = setupDir();
+    const a = path.join(
+      dir, 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt'
+    );
+    // write one file, pause, write a more recent file.
+    const b = path.join(dir, 'foo.txt');
+    fs.closeSync(fs.openSync(a, 'w'));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    fs.closeSync(fs.openSync(b, 'w'));
+    const recent = await findMostRecentLogfile(dir);
+
+    // File b was created more recently, but it's not an invest log
+    expect(recent).toEqual(a);
+    fs.unlinkSync(a);
+    fs.unlinkSync(b);
+    fs.rmdirSync(dir);
+  });
+
+  test('regex matcher works on variuos invest models', async () => {
+    const dir = setupDir();
+    const a = path.join(
+      dir, 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt'
+    );
+    fs.closeSync(fs.openSync(a, 'w'));
+    let recent = await findMostRecentLogfile(dir);
+    expect(recent).toEqual(a);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const b = path.join(
+      dir, 'InVEST-natcap.invest.some.model-log-9999-99-99--99_99_99.txt'
+    );
+    fs.closeSync(fs.openSync(b, 'w'));
+    recent = await findMostRecentLogfile(dir);
+    expect(recent).toEqual(b);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const c = path.join(
+      dir, 'InVEST-natcap.invest.some.really_long_model.name-log-9999-99-99--99_99_99.txt'
+    );
+    fs.closeSync(fs.openSync(c, 'w'));
+    recent = await findMostRecentLogfile(dir);
+    expect(recent).toEqual(c);
+    fs.unlinkSync(a);
+    fs.unlinkSync(b);
+    fs.unlinkSync(c);
+    fs.rmdirSync(dir);
+  });
+
+  test('Returns undefined when no logiles exist', async () => {
+    const dir = setupDir();
+    expect(await findMostRecentLogfile(dir))
+      .toBeUndefined();
+    fs.rmdirSync(dir);
+  });
+})
 
 describe('Integration tests for Download Sample Data Modal', () => {
   beforeAll(async () => {
