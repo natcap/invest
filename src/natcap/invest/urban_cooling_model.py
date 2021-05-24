@@ -267,9 +267,9 @@ def execute(args):
         args['t_air_average_radius'] (float): radius of the averaging filter
             for turning T_air_nomix into T_air.
         args['uhi_max'] (float): Magnitude of the UHI effect.
-        args['do_energy_valuation'] (bool): if True, calculate energy savings 
+        args['do_energy_valuation'] (bool): if True, calculate energy savings
             valuation for buildings.
-        args['do_productivity_valuation'] (bool): if True, calculate work 
+        args['do_productivity_valuation'] (bool): if True, calculate work
             productivity valuation based on humidity and temperature.
         args['avg_rel_humidity'] (float): (optional, depends on
             'do_productivity_valuation') Average relative humidity (0-100%).
@@ -524,7 +524,7 @@ def execute(args):
             (green_area_sum_raster_path, 1),
             (cc_park_raster_path, 1),
             (green_area_threshold, 'raw'),
-            ], hm_op, hm_raster_path, gdal.GDT_Float32, TARGET_NODATA),
+        ], hm_op, hm_raster_path, gdal.GDT_Float32, TARGET_NODATA),
         target_path_list=[hm_raster_path],
         dependent_task_list=[cc_task, green_area_sum_task, cc_park_task],
         task_name='calculate HM index')
@@ -763,7 +763,7 @@ def calculate_uhi_result_vector(
             if no valuation occurred.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
-            
+
                 * avg_cc
                 * avg_tmp_an
                 * avd_eng_cn
@@ -839,7 +839,8 @@ def calculate_uhi_result_vector(
         LOGGER.info('Parsing building footprint geometry')
         building_shapely_polygon_lookup = dict(
             (poly_feat.GetFID(),
-             shapely.wkb.loads(poly_feat.GetGeometryRef().ExportToWkb()))
+             shapely.wkb.loads(
+                bytes(poly_feat.GetGeometryRef().ExportToWkb())))
             for poly_feat in energy_consumption_layer)
 
         LOGGER.info("Constructing building footprint spatial index")
@@ -892,7 +893,7 @@ def calculate_uhi_result_vector(
         if energy_consumption_vector_path:
             aoi_geometry = feature.GetGeometryRef()
             aoi_shapely_geometry = shapely.wkb.loads(
-                aoi_geometry.ExportToWkb())
+                bytes(aoi_geometry.ExportToWkb()))
             aoi_shapely_geometry_prep = shapely.prepared.prep(
                 aoi_shapely_geometry)
             avd_eng_cn = 0.0
