@@ -96,7 +96,7 @@ describe('findInvestBinaries', () => {
   });
 });
 
-describe.only('extractZipInplace', () => {
+describe('extractZipInplace', () => {
   const root = path.join('tests', 'data');
   const zipPath = path.join(root, 'output.zip');
   const level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
@@ -127,6 +127,10 @@ describe.only('extractZipInplace', () => {
   afterEach(() => {
     try {
       fs.unlinkSync(zipPath);
+      // being extra careful with recursive rm
+      if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
+        fs.rmdirSync(level1Dir, { recursive: true });
+      }
     } catch {}
   });
 
