@@ -48,10 +48,13 @@ jobs:
                 include:
                     - python-version: 3.7
                       numpy: "numpy=1.15"  # fuzzy assertion in conda is single '='
+                      gdal: "gdal==3.1.2"
                     - python-version: 3.8
                       numpy: "numpy=1.16"
+                      gdal: "gdal==3.2.0"
                     - python-version: 3.9
                       numpy: "numpy=1.20"
+                      gdal: "gdal==3.3.0"
         steps:
             - uses: actions/checkout@v2
               with:
@@ -88,7 +91,7 @@ jobs:
               run: |
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  conda install ${{ matrix.numpy }} toml twine
+                  conda install ${{ matrix.numpy }} ${{ matrix.gdal }} toml twine
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build wheel
