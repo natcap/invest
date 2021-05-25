@@ -6,6 +6,7 @@ import {
   screen,
   nativeTheme,
   Menu,
+  ipcMain,
 } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import {
@@ -19,6 +20,7 @@ import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
 import { setupInvestRunHandlers } from './setupInvestHandlers';
+import { ipcMainChannels } from './ipcMainChannels';
 import { getLogger } from '../logger';
 import { menuTemplate } from './menubar';
 import pkg from '../../package.json';
@@ -124,6 +126,12 @@ export const createWindow = async () => {
   // TODO: remove listeners on exit
 };
 
+export function removeIpcMainListeners() {
+  Object.values(ipcMainChannels).forEach((channel) => {
+    ipcMain.removeAllListeners(channel);
+  });
+}
+
 export function main(argv) {
   // calling requestSingleInstanceLock on mac causes a crash
   if (process.platform.startsWith('win')) {
@@ -164,12 +172,14 @@ export function main(argv) {
     // On OS X it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
     if (process.platform !== 'darwin') {
+      removeIpcMainListeners();
       await shutdownPythonProcess();
       app.quit();
     }
   });
   app.on('will-quit', async () => {
     if (process.platform === 'darwin') {
+      removeIpcMainListeners();
       await shutdownPythonProcess();
     }
   });

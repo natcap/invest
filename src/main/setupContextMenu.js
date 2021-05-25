@@ -4,8 +4,10 @@ import {
   Menu
 } from 'electron';
 
+import { ipcMainChannels } from './ipcMainChannels';
+
 export default function setupContextMenu() {
-  ipcMain.on('show-context-menu', (event, rightClickPos) => {
+  ipcMain.on(ipcMainChannels.SHOW_CONTEXT_MENU, (event, rightClickPos) => {
     const template = [
       {
         label: 'Inspect Element',

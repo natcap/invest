@@ -4,6 +4,7 @@ import fs from 'fs';
 import { ipcMain } from 'electron';
 
 import extractZipInplace from './extractZipInplace';
+import { ipcMainChannels } from './ipcMainChannels';
 import { getLogger } from '../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -12,20 +13,18 @@ export default function setupDownloadHandlers(mainWindow) {
   let downloadDir;
   let downloadLength;
   const downloadQueue = [];
-  ipcMain.on('download-url', async (event, urlArray, directory) => {
-    console.log('main download-url')
-    logger.debug(`${urlArray}`);
-    downloadDir = directory;
-    downloadQueue.push(...urlArray);
-    downloadLength = downloadQueue.length;
-    mainWindow.webContents.send(
-      'download-status',
-      [(downloadLength - downloadQueue.length), downloadLength]
-    );
-    console.log('main after webContents.send');
-    urlArray.forEach((url) => mainWindow.webContents.downloadURL(url));
-    console.log('main after webContents.downloadURL');
-  });
+  ipcMain.on(ipcMainChannels.DOWNLOAD_URL,
+    async (event, urlArray, directory) => {
+      logger.debug(`${urlArray}`);
+      downloadDir = directory;
+      downloadQueue.push(...urlArray);
+      downloadLength = downloadQueue.length;
+      mainWindow.webContents.send(
+        'download-status',
+        [(downloadLength - downloadQueue.length), downloadLength]
+      );
+      urlArray.forEach((url) => mainWindow.webContents.downloadURL(url));
+    });
 
   mainWindow.webContents.session.on('will-download', (event, item) => {
     const filename = item.getFilename();

@@ -8,6 +8,7 @@ import glob from 'glob';
 import fetch from 'node-fetch';
 
 import { getLogger } from '../logger';
+import { ipcMainChannels } from './ipcMainChannels';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -62,7 +63,7 @@ export function findMostRecentLogfile(directory) {
 export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
 
-  ipcMain.on('invest-kill', (event, workspaceDir) => {
+  ipcMain.on(ipcMainChannels.INVEST_KILL, (event, workspaceDir) => {
     if (runningJobs[workspaceDir]) {
       const pid = runningJobs[workspaceDir];
       if (process.platform !== 'win32') {
@@ -74,7 +75,7 @@ export function setupInvestRunHandlers(investExe) {
     }
   });
 
-  ipcMain.on('invest-run', async (
+  ipcMain.on(ipcMainChannels.INVEST_RUN, async (
     event, modelRunName, pyModuleName, args, loggingLevel, channel
   ) => {
     // Write a temporary datastack json for passing to invest CLI

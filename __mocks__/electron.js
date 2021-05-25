@@ -36,18 +36,15 @@ mockIPC.send = (channel, ...args) => {
   };
   mockIPC.emit(channel, event, ...args);
 };
-// mockIPC.invoke = (channel, ...args) => {
-//   mockIPC.emit(channel, {}, ...args);
-// };
 mockIPC.invoke = jest.fn().mockImplementation(() => Promise.resolve());
 export const ipcMain = mockIPC;
 export const ipcRenderer = mockIPC;
 
-export const app = {
-  getPath: jest.fn().mockImplementation(
-    () => path.resolve('tests/data')
-  )
-}
+const mockApp = new events.EventEmitter();
+mockApp.getPath = jest.fn().mockImplementation(
+  () => path.resolve('tests/data')
+);
+export const app = mockApp;
 
 export class BrowserWindow {
   constructor() {

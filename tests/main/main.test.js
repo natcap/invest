@@ -15,7 +15,11 @@ import {
 import '@testing-library/jest-dom';
 import yazl from 'yazl';
 
-import { createWindow, destroyWindow } from '../../src/main/main';
+import {
+  createWindow,
+  destroyWindow,
+  removeIpcMainListeners
+} from '../../src/main/main';
 import {
   checkFirstRun,
   APP_HAS_RUN_TOKEN
@@ -27,6 +31,7 @@ import {
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
 import { findMostRecentLogfile } from '../../src/main/setupInvestHandlers';
+import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import { getInvestModelNames } from '../../src/server_requests';
 import App from '../../src/app';
 import {
@@ -155,40 +160,45 @@ describe('extractZipInplace', () => {
 describe('createWindow', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
-    await createWindow();
   });
   afterEach(() => {
-    // TODO: might not need this at all.
-    destroyWindow();
+    jest.clearAllMocks();
   });
-  it('should register various ipcMain listeners', () => {
-    const expectedHandleOnceChannels = ['is-first-run'];
+  it('should register various ipcMain listeners', async () => {
+    const expectedHandleOnceChannels = [ipcMainChannels.IS_FIRST_RUN];
     const expectedHandleChannels = [
-      'show-open-dialog',
-      'show-save-dialog',
+      ipcMainChannels.SHOW_OPEN_DIALOG,
+      ipcMainChannels.SHOW_SAVE_DIALOG,
     ];
     const expectedOnChannels = [
-      'download-url',
-      'invest-run',
-      'invest-kill',
-      'show-context-menu',
+      ipcMainChannels.DOWNLOAD_URL,
+      ipcMainChannels.INVEST_RUN,
+      ipcMainChannels.INVEST_KILL,
+      ipcMainChannels.SHOW_CONTEXT_MENU,
     ];
-    // Even with mocking, the 'on' method is a real event handler,
-    // so we can get it's registered events from the EventEmitter.
-    const registeredOnChannels = ipcMain.eventNames();
-    // for 'handle' & 'handleOnce', we query the mock's calls.
-    const registeredHandleChannels = ipcMain.handle.mock.calls.map(
-      (item) => item[0]
-    );
-    const registeredHandleOnceChannels = ipcMain.handleOnce.mock.calls.map(
-      (item) => item[0]
-    );
-    expect(registeredHandleChannels.sort())
-      .toEqual(expectedHandleChannels.sort());
-    expect(registeredHandleOnceChannels.sort())
-      .toEqual(expectedHandleOnceChannels.sort());
-    expect(registeredOnChannels.sort())
-      .toEqual(expectedOnChannels.sort());
+    createWindow();
+    await waitFor(() => {
+      // Even with mocking, the 'on' method is a real event handler,
+      // so we can get it's registered events from the EventEmitter.
+      const registeredOnChannels = ipcMain.eventNames();
+      // for 'handle' & 'handleOnce', we query the mock's calls.
+      const registeredHandleChannels = ipcMain.handle.mock.calls.map(
+        (item) => item[0]
+      );
+      const registeredHandleOnceChannels = ipcMain.handleOnce.mock.calls.map(
+        (item) => item[0]
+      );
+      expect(registeredHandleChannels.sort())
+        .toEqual(expectedHandleChannels.sort());
+      expect(registeredHandleOnceChannels.sort())
+        .toEqual(expectedHandleOnceChannels.sort());
+      expect(registeredOnChannels.sort())
+        .toEqual(expectedOnChannels.sort());
+    });
+    removeIpcMainListeners();
+    await waitFor(() => {
+      expect(ipcMain.eventNames()).toEqual([]);
+    });
   });
 });
 

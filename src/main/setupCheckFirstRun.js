@@ -1,10 +1,12 @@
 import fs from 'fs';
 import path from 'path';
+
 import {
   app,
   ipcMain,
 } from 'electron';
 
+import { ipcMainChannels } from './ipcMainChannels';
 import { getLogger } from '../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -30,5 +32,7 @@ export function checkFirstRun() {
 }
 
 export function setupCheckFirstRun() {
-  ipcMain.handleOnce('is-first-run', (event) => checkFirstRun());
+  ipcMain.handleOnce(
+    ipcMainChannels.IS_FIRST_RUN, (event) => checkFirstRun()
+  );
 }

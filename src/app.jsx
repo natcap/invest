@@ -66,7 +66,6 @@ export default class App extends React.Component {
     });
 
     ipcRenderer.on('download-status', (event, downloadedNofN) => {
-      console.log('from renderer download-status')
       this.setState({
         downloadedNofN: downloadedNofN
       });
