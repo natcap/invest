@@ -161,7 +161,7 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	$(TESTRUNNER) tests
+	$(TESTRUNNER) tests/test_ndr.py
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) ui_tests
@@ -257,7 +257,8 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	# If gdalXXX.dll is in the PATH, then set the USE_PATH_FOR_GDAL_PYTHON=YES environment variable
 	# to feed the PATH into os.add_dll_directory().
 	USE_PATH_FOR_GDAL_PYTHON=YES
-	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
+	echo $$USE_PATH_FOR_GDAL_PYTHON
+	USE_PATH_FOR_GDAL_PYTHON=YES $(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
 	$(CONDA) list --export > $(INVEST_BINARIES_DIR)/package_versions.txt
 	$(INVEST_BINARIES_DIR)/invest list
 
