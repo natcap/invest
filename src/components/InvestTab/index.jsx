@@ -60,6 +60,7 @@ export default class InvestTab extends React.Component {
       logfile: null,
     };
 
+    this.ipcSuffix = window.crypto.getRandomValues(new Uint16Array(1))[0];
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
@@ -77,6 +78,12 @@ export default class InvestTab extends React.Component {
       jobStatus: job.metadata.status,
       logfile: job.metadata.logfile
     }, () => { this.switchTabs('setup'); });
+  }
+
+  componentWillUnmount() {
+    ipcRenderer.removeAllListeners(`invest-logging-${this.ipcSuffix}`);
+    ipcRenderer.removeAllListeners(`invest-stderr-${this.ipcSuffix}`);
+    ipcRenderer.removeAllListeners(`invest-exit-${this.ipcSuffix}`);
   }
 
   /** Spawn a child process to run an invest model via the invest CLI.
@@ -112,10 +119,7 @@ export default class InvestTab extends React.Component {
       jobStatus: job.metadata.status,
       workspaceDir: args.workspace_dir
     });
-    const channel = args.workspace_dir
-      .replace(/(\/)|(:)|(\\)|( )/ig, '');
-    ipcRenderer.on(`invest-logging-${channel}`, (event, logfile) => {
-      logger.debug(`ipcRenderer.on ${logfile}`);
+    ipcRenderer.on(`invest-logging-${this.ipcSuffix}`, (event, logfile) => {
       this.setState({
         logfile: logfile
       }, () => {
@@ -124,14 +128,14 @@ export default class InvestTab extends React.Component {
       job.setProperty('logfile', logfile);
       saveJob(job);
     });
-    ipcRenderer.on(`invest-stderr-${channel}`, (event, data) => {
+    ipcRenderer.on(`invest-stderr-${this.ipcSuffix}`, (event, data) => {
       let stderr = Object.assign('', this.state.logStdErr);
       stderr += data;
       this.setState({
         logStdErr: stderr,
       });
     });
-    ipcRenderer.on(`invest-exit-${channel}`, (event, code) => {
+    ipcRenderer.on(`invest-exit-${this.ipcSuffix}`, (event, code) => {
       // Invest CLI exits w/ code 1 when it catches errors,
       // Models exit w/ code 255 (on all OS?) when errors raise from execute()
       // Windows taskkill yields exit code 1
@@ -150,7 +154,7 @@ export default class InvestTab extends React.Component {
       this.state.modelSpec.module,
       args,
       investSettings.loggingLevel,
-      channel,
+      this.ipcSuffix
     );
   }
 
