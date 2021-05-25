@@ -10,7 +10,7 @@
     "test": "jest --runInBand --testPathIgnorePatterns /tests/binary_tests/",
     "test-renderer": "jest --runInBand --testMatch **/tests/*.test.js",
     "test-main": "jest --runInBand --testMatch **/tests/main/*.test.js",
-    "test-flask-app": "jest --runInBand --testMatch **/tests/binary_tests/flaskapp.test.js",
+    "test-flask-app": "jest --runInBand --testMatch **/tests/invest/flaskapp.test.js",
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
     "postinstall": "electron-builder install-app-deps",
     "fetch-invest": "node ./scripts/fetch_invest_binaries.js && git diff src/sampledata_registry.json",
