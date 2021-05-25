@@ -102,7 +102,7 @@ class SpatialOverlapTest(unittest.TestCase):
         projections are actually the same, because there isn't a great way to
         do so. So there's the possibility that some bounding boxes overlap
         numerically, but have different projections, and thus pass validation
-        when the shouldn't.
+        when they shouldn't.
         """
 
         from natcap.invest import validation
@@ -113,7 +113,6 @@ class SpatialOverlapTest(unittest.TestCase):
 
         # bounding boxes overlap if we don't account for the projections
         for filepath, geotransform, epsg in (
-
                 (filepath_1, [1, 1, 0, 1, 0, 1], 4326),
                 (filepath_2, [2, 1, 0, 2, 0, 1], 2193)):
             raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
