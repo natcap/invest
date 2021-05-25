@@ -4,8 +4,10 @@ import events from 'events';
 import os from 'os';
 import { spawn, exec } from 'child_process';
 import Stream from 'stream';
+
 import React from 'react';
 import { ipcRenderer } from 'electron';
+import fetch from 'node-fetch';
 import {
   fireEvent, render, waitFor, within
 } from '@testing-library/react';
@@ -24,6 +26,7 @@ import { setupInvestRunHandlers } from '../src/main/setupInvestHandlers';
 
 jest.mock('child_process');
 jest.mock('../src/server_requests');
+jest.mock('node-fetch');
 
 const MOCK_MODEL_LIST_KEY = 'Carbon';
 const MOCK_MODEL_RUN_NAME = 'carbon';

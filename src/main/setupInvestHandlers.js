@@ -5,9 +5,8 @@ import { spawn, exec } from 'child_process';
 
 import { app, ipcMain } from 'electron';
 import glob from 'glob';
+import fetch from 'node-fetch';
 
-// TODO: this wont work from node, fetch is undefined.
-import { writeParametersToFile } from '../server_requests';
 import { getLogger } from '../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -19,9 +18,9 @@ const LOGLEVELMAP = {
   WARNING: '-vv',
   ERROR: '-v',
 };
-
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g;
+const HOSTNAME = 'http://localhost';
 
 /**
  * Given an invest workspace, find the most recently modified invest log.
@@ -93,7 +92,16 @@ export function setupInvestRunHandlers(investExe) {
       relativePaths: false,
       args: JSON.stringify(args),
     };
-    await writeParametersToFile(payload);
+    try {
+      const response = await fetch(`${HOSTNAME}:${process.env.PORT}/write_parameter_set_file`, {
+        method: 'post',
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      logger.debug(await response.text());
+    } catch (error) {
+      logger.error(error.stack);
+    }
 
     const cmdArgs = [
       LOGLEVELMAP[loggingLevel],
