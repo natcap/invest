@@ -31,7 +31,8 @@ kwargs = {
         'distutils.dist',
         'rtree',  # mac builds aren't picking up rtree by default.
         'pkg_resources.py2_warn',
-        'cmath'
+        'cmath',
+        'osgeo'
     ],
     'datas': [('qt.conf', '.'), proj_datas],
     'cipher': block_cipher,
@@ -54,7 +55,8 @@ if is_darwin:
     a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
         itertools.chain(
-            glob.glob(os.path.join(conda_env, 'lib', 'libspatialindex*.dylib')),
+            glob.glob(os.path.join(conda_env, 'lib',
+                                   'libspatialindex*.dylib')),
             glob.glob(os.path.join(conda_env, 'lib', 'libgeos*.dylib')),
             glob.glob(os.path.join(conda_env, 'lib', 'libproj*.dylib')),
         )
