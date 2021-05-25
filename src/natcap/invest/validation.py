@@ -570,7 +570,6 @@ def check_spatial_overlap(spatial_filepaths_list,
 
     bounding_boxes = []
     checked_file_list = []
-    wkts = []
     for filepath in spatial_filepaths_list:
         try:
             info = pygeoprocessing.get_raster_info(filepath)
@@ -593,16 +592,6 @@ def check_spatial_overlap(spatial_filepaths_list,
 
         bounding_boxes.append(bounding_box)
         checked_file_list.append(filepath)
-        wkts.append(info['projection_wkt'])
-
-    if different_projections_ok is False:
-        # compare spatial reference objects, wkt representations may vary some
-        srs = osr.SpatialReference(wkts[0])
-        # check each projection against the first one
-        same = [srs.IsSame(osr.SpatialReference(wkt)) for wkt in wkts[1:]]
-        if not all(same):
-            return (f'Spatial files {spatial_filepaths_list} do not all '
-                    'have the same projection')
 
     try:
         pygeoprocessing.merge_bounding_box_list(bounding_boxes, 'intersection')
