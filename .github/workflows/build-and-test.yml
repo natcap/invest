@@ -177,7 +177,6 @@ jobs:
                 python-version: [3.7, 3.8, 3.9]
                 python-architecture: [x64]
                 os: [windows-latest, macos-latest]
-                gdal: [3.2.2, 3.3.0]
         steps:
             - uses: actions/checkout@v2
 
@@ -197,7 +196,7 @@ jobs:
               run: |
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  conda install toml twine gdal==${{ matrix.gdal }}
+                  conda install toml twine
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   python ./scripts/convert-requirements-to-conda-yml.py \
                     requirements.txt > requirements-all.yml
