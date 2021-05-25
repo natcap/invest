@@ -96,7 +96,7 @@ ARGS_SPEC = {
                             "Pixel values are 1, indicating presence of the "
                             "habitat/stressor, or 0 indicating absence. Any "
                             "values besides 0 or 1 will be treated as 0.")
-                        }
+                    }
                     },
                     "fields": {},
                     "geometries": utils.POLYGONS
@@ -105,7 +105,7 @@ ARGS_SPEC = {
                     "type": "option_string",
                     "options": ["habitat", "stressor"]
                 },
-                "stressor buffer (meters)": {
+                "stressor buffer \(meters\)": {
                     "type": "number",
                     "units": u.meter,
                     "about": (
@@ -502,8 +502,8 @@ def execute(args):
                          float(args['resolution'])/linear_unit)
     distance_transform_tasks = []
     for (align_raster_path, dist_raster_path, stressor_name) in zip(
-         align_stressor_raster_list, dist_stressor_raster_list,
-         stressor_names):
+        align_stressor_raster_list, dist_stressor_raster_list,
+            stressor_names):
 
         distance_transform_task = task_graph.add_task(
             func=pygeoprocessing.distance_transform_edt,
@@ -585,7 +585,7 @@ def execute(args):
 
             # Convert stressor buffer from meters to projection unit
             stressor_buffer = stressor_info_df[_BUFFER_HEADER].item() / float(
-                    stressor_info_df['LINEAR_UNIT'].item())
+                stressor_info_df['LINEAR_UNIT'].item())
 
             # Calculate exposure scores on each habitat-stressor pair
             pair_expo_target_path_list = [
@@ -2349,7 +2349,7 @@ def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
         return path
     # Habitat rasters do not need to be transformed
     elif (suffix_front == 'dist_' or suffix_front == 'buff_') and (
-          row['TYPE'] == _HABITAT_TYPE):
+            row['TYPE'] == _HABITAT_TYPE):
         return None
 
     return target_raster_path
@@ -2484,7 +2484,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     if file_ext == '.csv':
         # use sep=None, engine='python' to infer what the separator is
         info_df = pandas.read_csv(base_info_table_path, sep=None,
-            engine='python')
+                                  engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         info_df = pandas.read_excel(base_info_table_path)
     else:
@@ -2608,10 +2608,10 @@ def _get_criteria_dataframe(base_criteria_table_path):
     if file_ext == '.csv':
         # use sep=None, engine='python' to infer what the separator is
         criteria_df = pandas.read_csv(base_criteria_table_path,
-            index_col=0, header=None, sep=None, engine='python')
+                                      index_col=0, header=None, sep=None, engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         criteria_df = pandas.read_excel(base_criteria_table_path,
-            index_col=0, header=None)
+                                        index_col=0, header=None)
     else:
         raise ValueError('Criteria table %s is not a CSV or an Excel file.' %
                          base_criteria_table_path)
@@ -2824,7 +2824,7 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
         # The value might be NaN or a string of non-digit, therefore check for
         # both cases
         error_message = (
-                'Values in the %s column for habitat "%s" ' % (key, habitat))
+            'Values in the %s column for habitat "%s" ' % (key, habitat))
         if stressor:
             error_message += 'and stressor "%s"' % stressor
         error_message += ' should be a number, but is "%s".' % value
@@ -2953,7 +2953,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                         habitat + '_' + stressor + suffix + '_.pickle')
 
                 _ = _validate_rating(
-                        rating, max_rating, criteria_name, habitat, stressor)
+                    rating, max_rating, criteria_name, habitat, stressor)
 
                 # Check the DQ and weight values when we have collected
                 # both of them

@@ -166,7 +166,7 @@ ARGS_SPEC = {
         "machine_perf_path": {
             "type": "csv",
             "columns": {
-                "hs(m)/tp(sec)": {
+                "hs\(m\)/tp\(sec\)": {
                     "type": "number",
                     "units": u.meter,
                     "about": (
@@ -174,7 +174,7 @@ ARGS_SPEC = {
                         "largest")
                 },
                 # match decimal formatted numbers: 1, 1.1, .1
-                "(\\d+|\\d*\\.\\d+)": {
+                "(\d+|\d*\.\d+)": {
                     "items": (
                         "user-defined wave period bins (measured in seconds) "
                         "from smallest to largest"),
