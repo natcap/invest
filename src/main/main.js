@@ -14,7 +14,6 @@ import {
   shutdownPythonProcess,
 } from './createPythonFlaskProcess';
 import findInvestBinaries from './findInvestBinaries';
-import setupIpcMainHandlers from './ipcMainHandlers';
 import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
@@ -58,7 +57,6 @@ export const createWindow = async () => {
   logger.info(`Running invest-workbench version ${pkg.version}`);
   setupDialogs();
   setupContextMenu();
-  setupIpcMainHandlers();
   setupCheckFirstRun();
 
   // always use light mode regardless of the OS/browser setting

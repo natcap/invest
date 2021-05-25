@@ -27,12 +27,11 @@ import {
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
 import { findMostRecentLogfile } from '../../src/main/setupInvestHandlers';
-import {
-  getInvestModelNames
-} from '../../src/server_requests';
+import { getInvestModelNames } from '../../src/server_requests';
 import App from '../../src/app';
 import {
-  clearSettingsStore, getSettingsValue
+  clearSettingsStore,
+  getSettingsValue,
 } from '../../src/components/SettingsModal/SettingsStorage';
 
 jest.mock('child_process');
@@ -163,21 +162,19 @@ describe('createWindow', () => {
     destroyWindow();
   });
   it('should register various ipcMain listeners', () => {
+    const expectedHandleOnceChannels = ['is-first-run'];
     const expectedHandleChannels = [
       'show-open-dialog',
       'show-save-dialog',
-      'is-dev-mode',
-      'user-data',
     ];
-    const expectedHandleOnceChannels = ['is-first-run'];
     const expectedOnChannels = [
       'download-url',
       'invest-run',
       'invest-kill',
-      'show-context-menu'
+      'show-context-menu',
     ];
-    // the 'on' method is a real event handler, so we can get
-    // it's registered events from the EventEmitter.
+    // Even with mocking, the 'on' method is a real event handler,
+    // so we can get it's registered events from the EventEmitter.
     const registeredOnChannels = ipcMain.eventNames();
     // for 'handle' & 'handleOnce', we query the mock's calls.
     const registeredHandleChannels = ipcMain.handle.mock.calls.map(
@@ -186,9 +183,12 @@ describe('createWindow', () => {
     const registeredHandleOnceChannels = ipcMain.handleOnce.mock.calls.map(
       (item) => item[0]
     );
-    expect(registeredHandleChannels.sort()).toEqual(expectedHandleChannels.sort());
-    expect(registeredHandleOnceChannels.sort()).toEqual(expectedHandleOnceChannels.sort());
-    expect(registeredOnChannels.sort()).toEqual(expectedOnChannels.sort());
+    expect(registeredHandleChannels.sort())
+      .toEqual(expectedHandleChannels.sort());
+    expect(registeredHandleOnceChannels.sort())
+      .toEqual(expectedHandleOnceChannels.sort());
+    expect(registeredOnChannels.sort())
+      .toEqual(expectedOnChannels.sort());
   });
 });
 
