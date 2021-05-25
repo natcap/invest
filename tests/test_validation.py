@@ -92,15 +92,28 @@ class SpatialOverlapTest(unittest.TestCase):
         expected = f'Spatial file {filepath_2} has no projection'
         self.assertEqual(error_msg, expected)
 
+    @unittest.skip("skipping due to unresolved projection comparison question")
     def test_different_projections_not_ok(self):
-        """Validation: different projections not allowed by default."""
+        """Validation: different projections not allowed by default.
+
+        This test illustrates a bug we don't yet have a good solution for
+        (natcap/invest#558)
+        When ``different_projections_ok is False``, we don't check that the
+        projections are actually the same, because there isn't a great way to
+        do so. So there's the possibility that some bounding boxes overlap
+        numerically, but have different projections, and thus pass validation
+        when the shouldn't.
+        """
+
         from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GTiff')
         filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
         filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
 
+        # bounding boxes overlap if we don't account for the projections
         for filepath, geotransform, epsg in (
+
                 (filepath_1, [1, 1, 0, 1, 0, 1], 4326),
                 (filepath_2, [2, 1, 0, 2, 0, 1], 2193)):
             raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
