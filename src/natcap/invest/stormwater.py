@@ -563,13 +563,16 @@ def lookup_ratios(lulc_path, lulc_nodata, soil_group_path, soil_group_nodata,
     def ratio_op(lulc_array, soil_group_array):
         output_ratio_array = numpy.full(lulc_array.shape, FLOAT_NODATA,
                                         dtype=numpy.float32)
-        valid_mask = ((lulc_array != lulc_nodata) &
-                      (soil_group_array != soil_group_nodata))
+        valid_mask = numpy.full(lulc_array.shape, True)
+        if lulc_nodata is not None:
+            valid_mask &= (lulc_array != lulc_nodata)
+        if soil_group_nodata is not None:
+            valid_mask &= (soil_group_array != soil_group_nodata)
         # the index of each lucode in the sorted lucodes array
         lulc_index = numpy.digitize(lulc_array[valid_mask], sorted_lucodes,
                                     right=True)
-        output_ratio_array[valid_mask] = ratio_lookup[lulc_index,
-                                                      soil_group_array[valid_mask]]
+        output_ratio_array[valid_mask] = (
+            ratio_lookup[lulc_index, soil_group_array[valid_mask]])
         return output_ratio_array
 
     pygeoprocessing.raster_calculator(
@@ -597,7 +600,7 @@ def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
     volume_array = numpy.full(ratio_array.shape, FLOAT_NODATA,
                               dtype=numpy.float32)
     valid_mask = ~numpy.isclose(ratio_array, FLOAT_NODATA)
-    if precip_nodata:
+    if precip_nodata is not None:
         valid_mask &= ~numpy.isclose(precip_array, precip_nodata)
 
     # precipitation (mm/yr) * pixel area (m^2) *
@@ -633,9 +636,9 @@ def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array,
     """
     load_array = numpy.full(
         lulc_array.shape, FLOAT_NODATA, dtype=numpy.float32)
-    valid_mask = (
-        (lulc_array != lulc_nodata) &
-        ~numpy.isclose(retention_volume_array, FLOAT_NODATA))
+    valid_mask = ~numpy.isclose(retention_volume_array, FLOAT_NODATA)
+    if lulc_nodata is not None:
+        valid_mask &= (lulc_array != lulc_nodata)
 
     # bin each value in the LULC array such that
     # lulc_array[i,j] == sorted_lucodes[lulc_index[i,j]]. thus,
