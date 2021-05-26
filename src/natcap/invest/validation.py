@@ -258,7 +258,8 @@ def _check_projection(srs, projected, projection_units):
         A string error message if an error was found.  ``None`` otherwise.
 
     """
-    if srs is None:
+    empty_srs = osr.SpatialReference()
+    if srs is None or srs.IsSame(empty_srs):
         return "Dataset must have a valid projection."
 
     if projected:

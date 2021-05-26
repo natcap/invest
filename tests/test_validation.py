@@ -1212,6 +1212,50 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertTrue('Bounding boxes do not intersect' in
                         validation_warnings[0][1])
 
+    def test_spatial_overlap_error_undefined_projection(self):
+        """Validation: check spatial overlap message when no projection"""
+        from natcap.invest import validation
+
+        spec = {
+            'raster_a': {
+                'type': 'raster',
+                'name': 'raster 1',
+                'about': 'raster 1',
+                'required': True,
+            },
+            'raster_b': {
+                'type': 'raster',
+                'name': 'raster 2',
+                'about': 'raster 2',
+                'required': True,
+            }
+        }
+
+        driver = gdal.GetDriverByName('GTiff')
+        filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
+        filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
+
+        raster_1 = driver.Create(filepath_1, 3, 3, 1, gdal.GDT_Int32)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        raster_1.SetProjection(wgs84_srs.ExportToWkt())
+        raster_1.SetGeoTransform([1, 1, 0, 1, 0, 1])
+        raster_1 = None
+
+        # don't define a projection for the second raster
+        driver.Create(filepath_2, 3, 3, 1, gdal.GDT_Int32)
+
+        args = {
+            'raster_a': filepath_1,
+            'raster_b': filepath_2
+        }
+
+        validation_warnings = validation.validate(
+            args, spec, {'spatial_keys': list(args.keys()),
+                         'different_projections_ok': True})
+        expected = [(['raster_b'], 'Dataset must have a valid projection.')]
+        self.assertEqual(validation_warnings, expected)
+
     def test_spatial_overlap_error_optional_args(self):
         """Validation: check for spatial mismatch with insufficient args."""
         from natcap.invest import validation
