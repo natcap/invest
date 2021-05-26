@@ -24,7 +24,7 @@ const ARTIFACT_NAME = `invest_${pkg.invest.version}_workbench_${workbenchVersion
 
 const config = {
   extraMetadata: {
-    main: 'build/main.js',
+    main: 'build/main/main.js',
   },
   extraResources: [
     {

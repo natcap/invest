@@ -35,10 +35,12 @@ function clean() {
       ]
     }
   );
-  try {
-    files.forEach((file) => {
+  files.forEach((file) => {
+    try {
       fs.unlinkSync(file);
-    });
+    } catch {}
+  });
+  try {
     fs.unlinkSync(ELECTRON_BUILDER_ENV);
   } catch {}
 }
@@ -51,6 +53,10 @@ function build() {
 
   // transpile all jsx and es6 files to javascript
   // excluding ResultsTab jsx because we've temporarily removed that feature
+  // TODO: I think there are bugs in --ignore, but it's not worth dealing with
+  // because we need to switch to webpack for this anyway.
+  // https://github.com/babel/babel/issues/11394
+  // https://github.com/natcap/invest-workbench/issues/60#issuecomment-847170000
   const cmdArgs = [SRC_DIR, '-d', BUILD_DIR, '--ignore', '**/ResultsTab/*'];
   const runBabel = spawnSync('npx babel', cmdArgs, {
     shell: true,
