@@ -42,7 +42,7 @@ export const ipcRenderer = mockIPC;
 
 const mockApp = new events.EventEmitter();
 mockApp.getPath = jest.fn().mockImplementation(
-  () => path.resolve('tests/data')
+  () => path.join('tests', 'data')
 );
 export const app = mockApp;
 

@@ -79,7 +79,7 @@ export function setupInvestRunHandlers(investExe) {
     event, modelRunName, pyModuleName, args, loggingLevel, channel
   ) => {
     // Write a temporary datastack json for passing to invest CLI
-    fs.mkdir(TEMP_DIR, (err) => { throw err });
+    fs.mkdir(TEMP_DIR, (err) => {});
     const tempDatastackDir = fs.mkdtempSync(
       path.join(TEMP_DIR, 'data-')
     );
