@@ -79,6 +79,7 @@ jobs:
             - name: Build userguide, binaries, installer
               shell: bash -l {0}
               run: |
+                  USE_PATH_FOR_GDAL_PYTHON=YES
                   # This builds the users guide, binaries, and installer
                   make windows_installer
 
