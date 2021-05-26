@@ -14,7 +14,7 @@
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
     "postinstall": "electron-builder install-app-deps",
     "fetch-invest": "node ./scripts/fetch_invest_binaries.js && git diff src/sampledata_registry.json",
-    "build": "node ./build.js",
+    "build": "node ./build.js clean && babel src -d build --verbose --config-file ./babel.config.js --copy-files",
     "dist": "cross-env DEBUG=electron-builder electron-builder build --publish never --config electron-builder-config.js"
   },
   "jest": {
@@ -83,7 +83,7 @@
     "fs-extra": "^9.1.0",
     "jest": "^26.6.3",
     "pptr-testing-library": "^0.6.4",
-    "puppeteer-core": "^5.5.0",
+    "puppeteer-core": "^9.1.1",
     "react-devtools": "^4.10.1",
     "react-test-renderer": "^17.0.1",
     "yazl": "^2.5.1"

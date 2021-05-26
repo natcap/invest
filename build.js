@@ -17,7 +17,7 @@ if (process.argv[2] && process.argv[2] === 'clean') {
   // have been removed from src/ code but are still in build/
   // from a previous build.
   clean();
-  build();
+  // build();
 }
 
 /** Remove all the files created during build()
@@ -57,9 +57,17 @@ function build() {
   // because we need to switch to webpack for this anyway.
   // https://github.com/babel/babel/issues/11394
   // https://github.com/natcap/invest-workbench/issues/60#issuecomment-847170000
-  const cmdArgs = [SRC_DIR, '-d', BUILD_DIR, '--ignore', '**/ResultsTab/*'];
+  const cmdArgs = [
+    SRC_DIR,
+    '-d', BUILD_DIR,
+    '--config-file', './babel.config.js',
+    '--ignore="node_modules"',
+    '--verbose'
+  ];
+  console.log(process.cwd());
   const runBabel = spawnSync('npx babel', cmdArgs, {
     shell: true,
+    cwd: process.cwd(),
   });
 
   console.log(`${runBabel.stdout}`);

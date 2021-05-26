@@ -163,13 +163,16 @@ test('Run a real invest model', async () => {
 
   // Button is disabled until validation completes
   const runButton = await findByRole(doc, 'button', { name: 'Run' });
+  console.log('found run button')
   await waitFor(async () => {
     const isEnabled = await page.evaluate(
       (btn) => !btn.disabled,
       runButton
     );
+    console.log(isEnabled)
     expect(isEnabled).toBe(true);
-  });
+  }, { timeout: 3000 });
+  console.log('after wait for run enabled')
   await runButton.click();
 
   const logTab = await findByText(doc, 'Log');
@@ -196,7 +199,7 @@ test('Run a real invest model', async () => {
 // Also verify that window 1 has focus.
 test('App re-launch will exit and focus on first instance', async () => {
   if (process.platform === 'win32') {
-      await waitFor(() => {
+    await waitFor(() => {
       expect(BROWSER.isConnected()).toBeTruthy();
     });
 
@@ -215,5 +218,4 @@ test('App re-launch will exit and focus on first instance', async () => {
     // is less important because mac generally won't open multiple instances
     console.log("Skipping this test because we're not on Windows");
   }
-
 });
