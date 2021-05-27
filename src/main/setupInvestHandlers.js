@@ -79,10 +79,12 @@ export function setupInvestRunHandlers(investExe) {
     event, modelRunName, pyModuleName, args, loggingLevel, channel
   ) => {
     // Write a temporary datastack json for passing to invest CLI
-    fs.mkdir(TEMP_DIR, (err) => {});
-    const tempDatastackDir = fs.mkdtempSync(
-      path.join(TEMP_DIR, 'data-')
-    );
+    let tempDatastackDir;
+    fs.mkdir(TEMP_DIR, (err) => {
+      tempDatastackDir = fs.mkdtempSync(
+        path.join(TEMP_DIR, 'data-')
+      );
+    });
     const datastackPath = path.join(tempDatastackDir, 'datastack.json');
     // TODO: only need pyModuleName to make a compliant logfile name
     // as the prepare_workspace call in cli.py takes it from the datastack.json
