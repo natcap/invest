@@ -106,13 +106,17 @@ describe('findInvestBinaries', () => {
 describe('extractZipInplace', () => {
   const root = path.join('tests', 'data');
   const zipPath = path.join(root, 'output.zip');
-  const level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
-  const level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
-  const file1Path = path.join(level1Dir, 'file1');
-  const file2Path = path.join(level2Dir, 'file2');
+  let level1Dir;
+  let level2Dir;
+  let file1Path;
+  let file2Path;
   let doneZipping = false;
 
   beforeEach(() => {
+    level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
+    level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
+    file1Path = path.join(level1Dir, 'file1');
+    file2Path = path.join(level2Dir, 'file2');
     fs.closeSync(fs.openSync(file1Path, 'w'));
     fs.closeSync(fs.openSync(file2Path, 'w'));
 
