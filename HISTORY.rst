@@ -67,6 +67,8 @@ Unreleased Changes (3.9.1)
       Coastal Blue Carbon, SDR, DelineateIt, and Seasonal Water Yield models.
       These models will no longer attempt to copy intermediate artifacts that
       could have been computed by previous runs.
+    * Validation now returns a more helpful message when a spatial input has
+      no projection defined.
 * Carbon
     * Fixed a bug where, if rate change and discount rate were set to 0, the
       valuation results were in $/year rather than $, too small by a factor of
