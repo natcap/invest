@@ -719,21 +719,23 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
         ).astype(bool))
 
     # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
-    adjusted_ratio_array[valid_mask] = (ratio_array[valid_mask] +
-                                        (1 - ratio_array[valid_mask]) * adjustment_factor_array[valid_mask])
+    adjusted_ratio_array[valid_mask] = (
+        ratio_array[valid_mask] +
+        (1 - ratio_array[valid_mask]) * adjustment_factor_array[valid_mask])
     return adjusted_ratio_array
 
 
-def aggregate_results(base_aggregate_areas_path, target_path, wkt, aggregations):
+def aggregate_results(base_aggregate_areas_path, target_vector_path, srs_wkt,
+                      aggregations):
     """Aggregate outputs into regions of interest.
 
     Args:
         base_aggregate_areas_path (str): path to vector of polygon(s) to
             aggregate over. This is the original input.
-        target_path (str): path to write out the results. This will be a copy
-            of the base vector with added fields, reprojected to the target WKT
-            and saved in geopackage format.
-        wkt (str): a Well-Known Text representation of the target spatial
+        target_vector_path (str): path to write out the results. This will be a
+            copy of the base vector with added fields, reprojected to the
+            target WKT and saved in geopackage format.
+        srs_wkt (str): a Well-Known Text representation of the target spatial
             reference. The base vector is reprojected to this spatial reference
             before aggregating the rasters over it.
         aggregations (list[tuple(str,str,str)]): list of tuples describing the
@@ -745,16 +747,15 @@ def aggregate_results(base_aggregate_areas_path, target_path, wkt, aggregations)
     Returns:
         None
     """
-    pygeoprocessing.reproject_vector(base_aggregate_areas_path, wkt,
-                                     target_path, driver_name='GPKG')
-    # create a copy of the aggregate areas vector to write to
-    aggregate_vector = gdal.OpenEx(target_path, gdal.GA_Update)
+    pygeoprocessing.reproject_vector(base_aggregate_areas_path, srs_wkt,
+                                     target_vector_path, driver_name='GPKG')
+    aggregate_vector = gdal.OpenEx(target_vector_path, gdal.GA_Update)
     aggregate_layer = aggregate_vector.GetLayer()
 
-    for raster_path, field_id, op in aggregations:
+    for raster_path, field_id, aggregation_op in aggregations:
         # aggregate the raster by the vector region(s)
         aggregate_stats = pygeoprocessing.zonal_statistics(
-            (raster_path, 1), target_path)
+            (raster_path, 1), target_vector_path)
 
         # set up the field to hold the aggregate data
         aggregate_field = ogr.FieldDefn(field_id, ogr.OFTReal)
@@ -766,7 +767,7 @@ def aggregate_results(base_aggregate_areas_path, target_path, wkt, aggregations)
         # save the aggregate data to the field for each feature
         for feature in aggregate_layer:
             feature_id = feature.GetFID()
-            if op == 'mean':
+            if aggregation_op == 'mean':
                 pixel_count = aggregate_stats[feature_id]['count']
                 try:
                     value = (aggregate_stats[feature_id]['sum'] / pixel_count)
@@ -774,7 +775,7 @@ def aggregate_results(base_aggregate_areas_path, target_path, wkt, aggregations)
                     LOGGER.warning(
                         f'Polygon {feature_id} does not overlap {raster_path}')
                     value = 0.0
-            elif op == 'sum':
+            elif aggregation_op == 'sum':
                 value = aggregate_stats[feature_id]['sum']
             feature.SetField(field_id, float(value))
             aggregate_layer.SetFeature(feature)
