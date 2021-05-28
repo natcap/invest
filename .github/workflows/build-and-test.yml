@@ -136,7 +136,6 @@ jobs:
               shell: bash -l {0}
               run: |
                   pip install $(find dist -name "natcap.invest*.whl")
-                  export USE_PATH_FOR_GDAL_PYTHON=YES
                   make test
 
             - uses: actions/upload-artifact@v2

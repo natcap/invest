@@ -83,6 +83,12 @@ jobs:
             - name: Build userguide, binaries, installer
               shell: bash -l {0}
               run: |
+                  # resolves ModuleNotFoundError during pyinstaller build on windows:
+                  # On Windows, with Python >= 3.8, DLLs are no longer imported from the PATH.
+                  # If gdalXXX.dll is in the PATH, then set the USE_PATH_FOR_GDAL_PYTHON=YES environment variable
+                  # to feed the PATH into os.add_dll_directory().
+                  # The path filtering step in exe/hooks/rthook.py is needed because of this likely gdal bug:
+                  # https://github.com/OSGeo/gdal/issues/3898
                   export USE_PATH_FOR_GDAL_PYTHON=YES
                   # This builds the users guide, binaries, and installer
                   make windows_installer

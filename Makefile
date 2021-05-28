@@ -252,15 +252,7 @@ binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-$(RMDIR) $(BUILD_DIR)/pyi-build
 	-$(RMDIR) $(INVEST_BINARIES_DIR)
-	# resolves ModuleNotFoundError during pyinstaller build on windows:
-	# On Windows, with Python >= 3.8, DLLs are no longer imported from the PATH.
-	# If gdalXXX.dll is in the PATH, then set the USE_PATH_FOR_GDAL_PYTHON=YES environment variable
-	# to feed the PATH into os.add_dll_directory().
-	USE_PATH_FOR_GDAL_PYTHON=YES
-	echo $$USE_PATH_FOR_GDAL_PYTHON
-	export USE_PATH_FOR_GDAL_PYTHON
-	echo $$USE_PATH_FOR_GDAL_PYTHON
-	USE_PATH_FOR_GDAL_PYTHON=YES $(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
+	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
 	$(CONDA) list --export > $(INVEST_BINARIES_DIR)/package_versions.txt
 	$(INVEST_BINARIES_DIR)/invest list
 

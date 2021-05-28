@@ -12,8 +12,6 @@ block_cipher = None
 exename = 'invest'
 conda_env = os.environ['CONDA_PREFIX']
 
-print('environment:', os.environ)
-
 if is_win:
     proj_datas = ((os.path.join(conda_env, 'Library/share/proj'), 'proj'))
 else:
