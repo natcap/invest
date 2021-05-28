@@ -531,17 +531,15 @@ def execute(args):
     task_graph.join()
 
 
-def lookup_ratios(lulc_path, lulc_nodata, soil_group_path, soil_group_nodata,
-                  ratio_lookup, sorted_lucodes, output_path):
+def lookup_ratios(lulc_path, soil_group_path, ratio_lookup, sorted_lucodes,
+                  output_path):
     """Look up retention/infiltration ratios from LULC codes and soil groups.
 
     Args:
         lulc_array (numpy.ndarray): 2D array of LULC codes
-        lulc_nodata (int): nodata value for the LULC array
         soil_group_array (numpy.ndarray): 2D array with the same shape as
             ``lulc_array``. Values in {1, 2, 3, 4} corresponding to soil
             groups A, B, C, and D.
-        soil_group_nodata (int): nodata value for the soil group array
         ratio_lookup (numpy.ndarray): 2D array where rows correspond to
             sorted LULC codes and the 4 columns correspond to soil groups
             A, B, C, D in order. Shape: (number of lulc codes, 4).
@@ -554,6 +552,9 @@ def lookup_ratios(lulc_path, lulc_nodata, soil_group_path, soil_group_nodata,
     Returns:
         None
     """
+    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+    soil_group_nodata = pygeoprocessing.get_raster_info(
+        soil_group_path)['nodata'][0]
     # insert a column on the left side of the array so that the soil
     # group codes 1-4 line up with their indexes. this is faster than
     # decrementing every value in a large raster.
