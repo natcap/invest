@@ -54,8 +54,7 @@ if is_darwin:
     a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
         itertools.chain(
-            glob.glob(os.path.join(conda_env, 'lib',
-                                   'libspatialindex*.dylib')),
+            glob.glob(os.path.join(conda_env, 'lib', 'libspatialindex*.dylib')),
             glob.glob(os.path.join(conda_env, 'lib', 'libgeos*.dylib')),
             glob.glob(os.path.join(conda_env, 'lib', 'libproj*.dylib')),
         )
