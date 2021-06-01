@@ -249,9 +249,7 @@ def execute(args):
         func=lookup_ratios,
         args=(
             files['lulc_aligned_path'],
-            lulc_nodata,
             files['soil_group_aligned_path'],
-            soil_group_nodata,
             retention_ratio_array,
             sorted_lucodes,
             files['retention_ratio_path']),
@@ -418,9 +416,7 @@ def execute(args):
             func=lookup_ratios,
             args=(
                 files['lulc_aligned_path'],
-                lulc_nodata,
                 files['soil_group_aligned_path'],
-                soil_group_nodata,
                 infiltration_ratio_array,
                 sorted_lucodes,
                 files['infiltration_ratio_path']),
