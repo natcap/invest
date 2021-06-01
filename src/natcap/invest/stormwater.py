@@ -119,22 +119,18 @@ INTERMEDIATE_OUTPUTS = {
     'reprojected_centerlines_path': 'reprojected_centerlines.gpkg',
     'rasterized_centerlines_path': 'rasterized_centerlines.tif',
     'impervious_lulc_path': 'is_impervious_lulc.tif',
-    'retention_ratio_path': 'retention_ratio.tif',
-    'adjusted_retention_ratio_path': 'adjusted_retention_ratio.tif',
-    'x_coords_path': 'x_coords.tif',
-    'y_coords_path': 'y_coords.tif',
     'road_distance_path': 'road_distance.tif',
     'search_kernel_path': 'search_kernel.tif',
     'impervious_lulc_distance_path': 'impervious_lulc_distance.tif',
     'near_impervious_lulc_path': 'near_impervious_lulc.tif',
     'near_road_path': 'near_road.tif',
-    'ratio_n_values_path': 'ratio_n_values.tif',
-    'ratio_sum_path': 'ratio_sum.tif',
     'ratio_average_path': 'ratio_average.tif'
 }
 
 FINAL_OUTPUTS = {
     'reprojected_aggregate_areas_path': 'aggregate_data.gpkg',
+    'retention_ratio_path': 'retention_ratio.tif',
+    'adjusted_retention_ratio_path': 'adjusted_retention_ratio.tif',
     'retention_volume_path': 'retention_volume.tif',
     'infiltration_ratio_path': 'infiltration_ratio.tif',
     'infiltration_volume_path': 'infiltration_volume.tif',
@@ -405,7 +401,7 @@ def execute(args):
     aggregation_task_dependencies = [retention_volume_task]
     data_to_aggregate = [
         # tuple of (raster path, output field name, op) for aggregation
-        (files['retention_ratio_path'], 'RR_mean', 'mean'),
+        (final_retention_ratio_path, 'RR_mean', 'mean'),
         (files['retention_volume_path'], 'RV_sum', 'sum')]
 
     # (Optional) Calculate stormwater infiltration ratio and volume from
