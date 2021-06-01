@@ -113,12 +113,16 @@ describe('extractZipInplace', () => {
   let doneZipping = false;
 
   beforeEach(() => {
-    level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
-    level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
-    file1Path = path.join(level1Dir, 'file1');
-    file2Path = path.join(level2Dir, 'file2');
-    fs.closeSync(fs.openSync(file1Path, 'w'));
-    fs.closeSync(fs.openSync(file2Path, 'w'));
+    try {
+      level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
+      level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
+      file1Path = path.join(level1Dir, 'file1');
+      file2Path = path.join(level2Dir, 'file2');
+      fs.closeSync(fs.openSync(file1Path, 'w'));
+      fs.closeSync(fs.openSync(file2Path, 'w'));
+    } catch (error) {
+      console.trace(error);
+    }
 
     const zipfile = new yazl.ZipFile();
     zipfile.addFile(file1Path, path.relative(root, file1Path));
