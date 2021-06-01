@@ -122,6 +122,7 @@ describe('extractZipInplace', () => {
       fs.closeSync(fs.openSync(file2Path, 'w'));
     } catch (error) {
       console.trace(error);
+      throw error;
     }
 
     const zipfile = new yazl.ZipFile();
