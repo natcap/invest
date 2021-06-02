@@ -390,8 +390,7 @@ class StormwaterTests(unittest.TestCase):
         adjusted_ratio_raster = gdal.OpenEx(
             os.path.join(
                 self.workspace_dir,
-                'intermediate',
-                stormwater.INTERMEDIATE_OUTPUTS['adjusted_retention_ratio_path']),
+                stormwater.FINAL_OUTPUTS['adjusted_retention_ratio_path']),
             gdal.OF_RASTER)
         retention_volume_raster = gdal.OpenEx(
             os.path.join(
@@ -487,13 +486,11 @@ class StormwaterTests(unittest.TestCase):
         soil_group_array = numpy.array([
             [4, 4],
             [2, 2]], dtype=numpy.uint8)
-        lulc_nodata = 255
-        soil_group_nodata = 255
         lulc_path = os.path.join(self.workspace_dir, 'lulc.tif')
         soil_group_path = os.path.join(self.workspace_dir, 'soil_groups.tif')
         output_path = os.path.join(self.workspace_dir, 'out.tif')
-        to_raster(lulc_array, lulc_path)
-        to_raster(soil_group_array, soil_group_path)
+        to_raster(lulc_array, lulc_path, nodata=255)
+        to_raster(soil_group_array, soil_group_path, nodata=255)
         # rows correspond to sorted lucodes, columns to soil groups A-D
         ratio_array = numpy.array([
             [0.11, 0.12, 0.13, 0.14],
@@ -505,9 +502,7 @@ class StormwaterTests(unittest.TestCase):
             [0.22, 0.12]], dtype=numpy.float32)
         stormwater.lookup_ratios(
             lulc_path,
-            lulc_nodata,
             soil_group_path,
-            soil_group_nodata,
             ratio_array,
             sorted_lucodes,
             output_path)
