@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := b7a51f189315e08484b5ba997a5c1de88ab7f06d
+GIT_SAMPLE_DATA_REPO_REV    := 598664165b911186e16a987c556f56f993cc78dd
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -205,6 +205,7 @@ $(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs install
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) checkout $(GIT_SAMPLE_DATA_REPO_REV)
+	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs checkout
 
 $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_TEST_DATA_REPO) $(GIT_TEST_DATA_REPO_PATH)
@@ -212,6 +213,7 @@ $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs install
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
+	git -C $(GIT_TEST_DATA_REPO_PATH) lfs checkout
 
 fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
 

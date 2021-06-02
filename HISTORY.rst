@@ -51,6 +51,8 @@ workbench-alpha
 Unreleased Changes (3.9.1)
 --------------------------
 * General:
+    * Moved the sample data JSON files out of the root sample_data folder and
+      into their respective model folders.
     * Updated documentation on installing InVEST from source.
     * Restructured API reference docs and removed outdated and redundant pages.
     * Include logger name in the logging format. This is helpful for the cython
@@ -80,10 +82,16 @@ Unreleased Changes (3.9.1)
       Coastal Blue Carbon, SDR, DelineateIt, and Seasonal Water Yield models.
       These models will no longer attempt to copy intermediate artifacts that
       could have been computed by previous runs.
+    * Validation now returns a more helpful message when a spatial input has
+      no projection defined.
 * Carbon
     * Fixed a bug where, if rate change and discount rate were set to 0, the
       valuation results were in $/year rather than $, too small by a factor of
       ``lulc_fut_year - lulc_cur_year``.
+    * Improved UI to indicate that Calendar Year inputs are only required for
+      valuation, not also for sequestration.
+    * Increasing the precision of ``numpy.sum`` from Float32 to Float64 when
+      aggregating raster values for the HTML report.
 * DelineateIt:
     * The DelineateIt UI has been updated so that the point-snapping options
       will always be interactive.
@@ -97,8 +105,12 @@ Unreleased Changes (3.9.1)
     * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
       This bug did not affect the output.
 * HRA
-    * Fixed bugs that allowed zeros in DQ & Weight columns of criteria 
+    * Fixed bugs that allowed zeros in DQ & Weight columns of criteria
       table to raise DivideByZero errors.
+* Pollination
+    * Updated so that the ``total_pollinator_abundance_[season].tif`` outputs
+      are always created. Before, they weren't created if a farm vector was
+      not supplied, even though they are independent.
 * Seasonal Water Yield
     * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata
       values and could show negative numbers.
