@@ -288,13 +288,11 @@ def execute(args):
     if int(args['end_year']) < int(args['start_year']):
         raise ValueError(
             "Start year must be less than or equal to end year.\n"
-            "start_year: %s\nend_year: %s" % (
-                args['start_year'], args['end_year']))
+            f"start_year: {args['start_year']}\nend_year: {args['end_year']}")
 
     # in case the user defines a hostname
     if 'hostname' in args:
-        server_url = "PYRO:natcap.invest.recreation@%s:%s" % (
-            args['hostname'], args['port'])
+        server_url = f"PYRO:natcap.invest.recreation@{args['hostname']}:{args['port']}"
     else:
         # else use a well known path to get active server
         server_url = urllib.request.urlopen(
@@ -461,7 +459,7 @@ def _retrieve_photo_user_days(
     LOGGER.info('Contacting server, please wait.')
     recmodel_server = Pyro4.Proxy(server_url)
     server_version = recmodel_server.get_version()
-    LOGGER.info('Server online, version: %s', server_version)
+    LOGGER.info(f'Server online, version: {server_version}')
     # store server version info in a file so we can list it in results summary.
     with open(server_version_pickle, 'wb') as f:
         pickle.dump(server_version, f)
@@ -469,15 +467,15 @@ def _retrieve_photo_user_days(
     # validate available year range
     min_year, max_year = recmodel_server.get_valid_year_range()
     LOGGER.info(
-        "Server supports year queries between %d and %d", min_year, max_year)
+        f"Server supports year queries between {min_year} and {max_year}")
     if not min_year <= int(start_year) <= max_year:
         raise ValueError(
-            "Start year must be between %d and %d.\n"
-            " User input: (%s)" % (min_year, max_year, start_year))
+            f"Start year must be between {min_year} and {max_year}.\n"
+            f" User input: ({start_year})")
     if not min_year <= int(end_year) <= max_year:
         raise ValueError(
-            "End year must be between %d and %d.\n"
-            " User input: (%s)" % (min_year, max_year, end_year))
+            f"End year must be between {min_year} and {max_year}.\n"
+            f" User input: ({end_year})")
 
     # append jan 1 to start and dec 31 to end
     date_range = (str(start_year)+'-01-01',
@@ -488,7 +486,7 @@ def _retrieve_photo_user_days(
         for suffix in _ESRI_SHAPEFILE_EXTENSIONS:
             filename = basename + suffix
             if os.path.exists(filename):
-                LOGGER.info('archiving %s', filename)
+                LOGGER.info(f'archiving {filename}')
                 aoizip.write(filename, os.path.basename(filename))
 
     # convert shapefile to binary string for serialization
@@ -502,9 +500,8 @@ def _retrieve_photo_user_days(
         recmodel_server.calc_photo_user_days_in_aoi(
             zip_file_binary, date_range,
             pud_results_filename))
-    LOGGER.info(
-        'received result, took %f seconds, workspace_id: %s',
-        time.time() - start_time, workspace_id)
+    LOGGER.info(f'received result, took {time.time() - start_time} seconds, '
+                f'workspace_id: {workspace_id}')
 
     # unpack result
     open(compressed_pud_path, 'wb').write(
@@ -617,7 +614,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
         n_rows = int((extent[3] - extent[2]) / cell_size)
         n_cols = int((extent[1] - extent[0]) / cell_size)
     else:
-        raise ValueError('Unknown polygon type: %s' % grid_type)
+        raise ValueError(f'Unknown polygon type: {grid_type}')
 
     for row_index in range(n_rows):
         for col_index in range(n_cols):
@@ -698,7 +695,7 @@ def _schedule_predictor_data_processing(
     predictor_json_list = []  # tracks predictor files to add to shp
 
     for predictor_id in predictor_table:
-        LOGGER.info("Building predictor %s", predictor_id)
+        LOGGER.info(f"Building predictor {predictor_id}")
 
         predictor_path = _sanitize_path(
             predictor_table_path, predictor_table[predictor_id]['path'])
@@ -714,7 +711,7 @@ def _schedule_predictor_data_processing(
                 args=(predictor_path, raster_op_mode, response_vector_path,
                       predictor_target_path),
                 target_path_list=[predictor_target_path],
-                task_name='predictor %s' % predictor_id))
+                task_name=f'predictor {predictor_id}'))
         # polygon types are a special case because the polygon_area
         # function requires an additional 'mode' argument.
         elif predictor_type.startswith('polygon'):
@@ -727,7 +724,7 @@ def _schedule_predictor_data_processing(
                       predictor_path, predictor_target_path),
                 target_path_list=[predictor_target_path],
                 dependent_task_list=[prepare_response_polygons_task],
-                task_name='predictor %s' % predictor_id))
+                task_name=f'predictor {predictor_id}'))
         else:
             predictor_target_path = os.path.join(
                 working_dir, predictor_id + '.json')
@@ -738,7 +735,7 @@ def _schedule_predictor_data_processing(
                       predictor_target_path),
                 target_path_list=[predictor_target_path],
                 dependent_task_list=[prepare_response_polygons_task],
-                task_name='predictor %s' % predictor_id))
+                task_name=f'predictor {predictor_id}'))
 
     assemble_predictor_data_task = task_graph.add_task(
         func=_json_to_shp_table,
@@ -928,9 +925,8 @@ def _polygon_area(
             response_polygons_lookup.items()):
         if time.time() - start_time > 5.0:
             LOGGER.info(
-                "%s polygon area: %.2f%% complete",
-                os.path.basename(polygon_vector_path),
-                (100.0*index)/len(response_polygons_lookup))
+                f"{os.path.basename(polygon_vector_path)} polygon area: "
+                f"{(100.0*index)/len(response_polygons_lookup):.2f}% complete")
             start_time = time.time()
 
         potential_intersecting_poly_ids = polygon_spatial_index.intersection(
@@ -948,9 +944,9 @@ def _polygon_area(
         elif mode == 'polygon_percent_coverage':
             polygon_coverage_lookup[str(feature_id)] = (
                 polygon_area_coverage / geometry.area * 100.0)
-    LOGGER.info(
-        "%s polygon area: 100.00%% complete",
-        os.path.basename(polygon_vector_path))
+    LOGGER.info(f"{os.path.basename(polygon_vector_path)} polygon area: "
+                f"100.00% complete")
+
     with open(predictor_target_path, 'w') as jsonfile:
         json.dump(polygon_coverage_lookup, jsonfile)
 
@@ -988,9 +984,8 @@ def _line_intersect_length(
             response_polygons_lookup.items()):
         last_time = delay_op(
             last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
-                "%s line intersect length: %.2f%% complete",
-                os.path.basename(line_vector_path),
-                (100.0 * feature_count)/len(response_polygons_lookup)))
+                f"{os.path.basename(line_vector_path)} line intersect length: "
+                f"{(100.0 * feature_count)/len(response_polygons_lookup):.2f}% complete"))
         potential_intersecting_lines = line_spatial_index.intersection(
             geometry.bounds)
         line_length = sum([
@@ -998,9 +993,8 @@ def _line_intersect_length(
             for line_index in potential_intersecting_lines if
             geometry.intersects(lines[line_index])])
         line_length_lookup[str(feature_id)] = line_length
-    LOGGER.info(
-        "%s line intersect length: 100.00%% complete",
-        os.path.basename(line_vector_path))
+    LOGGER.info(f"{os.path.basename(line_vector_path)} line intersect length: "
+                "100.00% complete")
     with open(predictor_target_path, 'w') as jsonfile:
         json.dump(line_length_lookup, jsonfile)
 
@@ -1034,15 +1028,13 @@ def _point_nearest_distance(
             response_polygons_lookup.items()):
         last_time = delay_op(
             last_time, 5.0, lambda: LOGGER.info(
-                "%s point distance: %.2f%% complete",
-                os.path.basename(point_vector_path),
-                (100.0*index)/len(response_polygons_lookup)))
+                f"{os.path.basename(point_vector_path)} point distance: "
+                f"{(100.0*index)/len(response_polygons_lookup):.2f}% complete"))
 
         point_distance_lookup[str(feature_id)] = min([
             geometry.distance(point) for point in points])
-    LOGGER.info(
-        "%s point distance: 100.00%% complete",
-        os.path.basename(point_vector_path))
+    LOGGER.info(f"{os.path.basename(point_vector_path)} point distance: "
+                "100.00% complete")
     with open(predictor_target_path, 'w') as jsonfile:
         json.dump(point_distance_lookup, jsonfile)
 
@@ -1076,15 +1068,13 @@ def _point_count(
             response_polygons_lookup.items()):
         last_time = delay_op(
             last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
-                "%s point count: %.2f%% complete",
-                os.path.basename(point_vector_path),
-                (100.0*index)/len(response_polygons_lookup)))
+                f"{os.path.basename(point_vector_path)} point count: "
+                f"{(100.0*index)/len(response_polygons_lookup):.2f}% complete"))
         point_count = len([
             point for point in points if geometry.contains(point)])
         point_count_lookup[str(feature_id)] = point_count
-    LOGGER.info(
-        "%s point count: 100.00%% complete",
-        os.path.basename(point_vector_path))
+    LOGGER.info(f"{os.path.basename(point_vector_path)} point count: "
+                "100.00% complete")
     with open(predictor_target_path, 'w') as jsonfile:
         json.dump(point_count_lookup, jsonfile)
 
@@ -1151,13 +1141,13 @@ def _compute_and_summarize_regression(
     coefficients_string = '               estimate     stderr    t value\n'
     # The last coefficient is the y-intercept,
     # but we want it at the top of the report, thus [-1] on lists
-    coefficients_string += '%-12s %+.3e %+.3e %+.3e\n' % (
-        predictor_id_list[-1], coefficients[-1], se_est[-1],
-        coefficients[-1] / se_est[-1])
+    coefficients_string += (
+        f'{predictor_id_list[-1]:12} {coefficients[-1]:+.3e} '
+        f'{se_est[-1]:+.3e} {coefficients[-1] / se_est[-1]:+.3e}\n')
     # Since the intercept has already been reported, [:-1] on all the lists
     coefficients_string += '\n'.join(
-        '%-12s %+.3e %+.3e %+.3e' % (
-            p_id, coefficient, se_est_factor, coefficient / se_est_factor)
+        f'{p_id:12} {coefficient:+.3e} {se_est_factor:+.3e} '
+        f'{coefficient / se_est_factor:+.3e}'
         for p_id, coefficient, se_est_factor in zip(
             predictor_id_list[:-1], coefficients[:-1], se_est[:-1]))
 
@@ -1165,18 +1155,18 @@ def _compute_and_summarize_regression(
     with open(server_version_path, 'rb') as f:
         server_version = pickle.load(f)
     report_string = (
-        '\n******************************\n'
-        '%s\n'
-        '---\n\n'
-        'Residual standard error: %.4f on %d degrees of freedom\n'
-        'Multiple R-squared: %.4f\n'
-        'Adjusted R-squared: %.4f\n'
-        'SSres: %.4f\n'
-        'server id hash: %s\n'
-        '********************************\n' % (
-            coefficients_string, std_err, dof, r_sq, r_sq_adj, ssres,
-            server_version))
+        f'\n******************************\n'
+        f'{coefficients_string}\n'
+        f'---\n\n'
+        f'Residual standard error: {std_err:.4f} on {dof} degrees of freedom\n'
+        f'Multiple R-squared: {r_sq:.4f}\n'
+        f'Adjusted R-squared: {r_sq_adj:.4f}\n'
+        f'SSres: {ssres:.4f}\n'
+        f'server id hash: {server_version}\n'
+        f'********************************\n')
     LOGGER.info(report_string)
+    print('\n')
+    print(report_string)
     with open(target_regression_summary_path, 'w') as \
             regression_log:
         regression_log.write(report_string + '\n')
@@ -1302,7 +1292,7 @@ def _build_regression(
                 data_matrix[:, 1:].T, data_matrix[:, 1:])))
         se_est = numpy.sqrt(var_est)
     else:
-        LOGGER.warning("Linear model is under constrained with DOF=%d", dof)
+        LOGGER.warning(f"Linear model is under constrained with DOF={dof}")
         std_err = sigma2 = numpy.nan
         se_est = var_est = [numpy.nan] * data_matrix.shape[1]
     return predictor_names, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est
@@ -1363,11 +1353,10 @@ def _calculate_scenario(
                 response_value += (
                     coefficient *
                     feature.GetField(str(predictor_id)))
-        except TypeError as e:
+        except TypeError:
             # TypeError will happen if GetField returned None
-            LOGGER.warning(
-                'incomplete predictor data for feature_id %d, \
-                not estimating PUD_EST' % feature_id)
+            LOGGER.warning('incomplete predictor data for feature_id '
+                           f'{feature_id}, not estimating PUD_EST')
             feature = None
             continue  # without writing to the feature
         response_value += y_intercept
@@ -1400,8 +1389,8 @@ def _validate_same_id_lengths(table_path):
             too_long.add(p_id)
     if len(too_long) > 0:
         raise ValueError(
-            "The following IDs are more than 10 characters long: %s" %
-            str(too_long))
+            "The following IDs are more than 10 characters long: "
+            f"{str(too_long)}")
 
 
 def _validate_same_ids_and_types(
@@ -1438,10 +1427,9 @@ def _validate_same_ids_and_types(
         (p_id, scenario_predictor_table[p_id]['type'].strip()) for p_id in
         scenario_predictor_table])
     if predictor_table_pairs != scenario_predictor_table_pairs:
-        raise ValueError(
-            'table pairs unequal.\n\tpredictor: %s\n\tscenario:%s' % (
-                str(predictor_table_pairs),
-                str(scenario_predictor_table_pairs)))
+        raise ValueError('table pairs unequal.\n\t'
+                         f'predictor: {predictor_table_pairs}\n\t'
+                         f'scenario:{scenario_predictor_table_pairs}')
     LOGGER.info('tables validate correctly')
 
 
@@ -1490,16 +1478,16 @@ def _validate_same_projection(base_vector_path, table_path):
         else:
             vector = gdal.OpenEx(path, gdal.OF_VECTOR)
             if vector is None:
-                raise ValueError("%s did not load", path)
+                raise ValueError(f"{path} did not load")
             layer = vector.GetLayer()
             ref = osr.SpatialReference(layer.GetSpatialRef().ExportToWkt())
             layer = None
             vector = None
         if not base_ref.IsSame(ref):
             LOGGER.warning(
-                "%s might have a different projection than the base AOI "
-                "\nbase:%s\ncurrent:%s", path, base_ref.ExportToPrettyWkt(),
-                ref.ExportToPrettyWkt())
+                f"{path} might have a different projection than the base AOI\n"
+                f"base:{base_ref.ExportToPrettyWkt()}\n"
+                f"current:{ref.ExportToPrettyWkt()}")
             invalid_projections = True
     if invalid_projections:
         raise ValueError(
