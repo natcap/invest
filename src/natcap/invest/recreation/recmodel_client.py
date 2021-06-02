@@ -1165,8 +1165,6 @@ def _compute_and_summarize_regression(
         f'server id hash: {server_version}\n'
         f'********************************\n')
     LOGGER.info(report_string)
-    print('\n')
-    print(report_string)
     with open(target_regression_summary_path, 'w') as \
             regression_log:
         regression_log.write(report_string + '\n')
