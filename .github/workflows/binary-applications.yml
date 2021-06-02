@@ -30,12 +30,8 @@ jobs:
         name: "Build windows binaries"
         needs: check-syntax-errors
         runs-on: windows-latest
-        strategy:
-          fail-fast: false
-          matrix:
-              python-version: [3.7, 3.8, 3.9]
-              gdal: [3.2.2, 3.3.0]
         env:
+            PYTHON_VERSION: 3.9
             PYTHON_ARCH: x64
         steps:
             - uses: actions/checkout@v2
@@ -49,7 +45,7 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: ~\AppData\Local\pip\Cache
-                  key: windows-py${{ matrix.python-version }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
+                  key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH }}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -64,7 +60,7 @@ jobs:
               run: |
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  conda install toml requests gdal==${{ matrix.gdal }}
+                  conda install toml requests
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
