@@ -96,6 +96,8 @@ Unreleased Changes (3.9.1)
     * Updated so that the ``total_pollinator_abundance_[season].tif`` outputs
       are always created. Before, they weren't created if a farm vector was
       not supplied, even though they are independent.
+* Recreation
+    * Fixed some incorrectly formatted log and error messages
 * Seasonal Water Yield
     * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata
       values and could show negative numbers.
