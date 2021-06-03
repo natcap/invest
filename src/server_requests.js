@@ -50,6 +50,7 @@ export function getSpec(payload) {
  * @returns {Promise} resolves array
  */
 export function fetchValidation(payload) {
+  logger.debug('calling window.fetch validation');
   return (
     window.fetch(`${HOSTNAME}:${process.env.PORT}/validate`, {
       method: 'post',

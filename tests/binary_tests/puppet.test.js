@@ -13,12 +13,12 @@ const TMP_DIR = fs.mkdtempSync('tests/data/_');
 const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
 let ELECTRON_PROCESS;
 let BROWSER;
-// append to this filename and the image will be uploaded to github artifacts
-// E.g. page.screenshot({ path: `${SCREENSHOT_PREFIX}screenshot.png` })
 
 // For ease of automated testing, run the app from the 'unpacked' directory
 // to avoid need to install first on windows or extract on mac.
 let BINARY_PATH;
+// append to this prefix and the image will be uploaded to github artifacts
+// E.g. page.screenshot({ path: `${SCREENSHOT_PREFIX}screenshot.png` })
 let SCREENSHOT_PREFIX;
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
@@ -163,16 +163,13 @@ test('Run a real invest model', async () => {
 
   // Button is disabled until validation completes
   const runButton = await findByRole(doc, 'button', { name: 'Run' });
-  console.log('found run button')
   await waitFor(async () => {
     const isEnabled = await page.evaluate(
       (btn) => !btn.disabled,
       runButton
     );
-    console.log(isEnabled)
     expect(isEnabled).toBe(true);
-  }, { timeout: 3000 });
-  console.log('after wait for run enabled')
+  });
   await runButton.click();
 
   const logTab = await findByText(doc, 'Log');

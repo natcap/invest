@@ -16,6 +16,7 @@ const HOSTNAME = 'http://localhost';
  */
 export function createPythonFlaskProcess(investExe) {
   if (investExe) {
+    // TODO: should we not set --debug level during production?
     const pythonServerProcess = spawn(
       path.basename(investExe),
       ['--debug', 'serve', '--port', process.env.PORT],
@@ -42,7 +43,13 @@ export function createPythonFlaskProcess(investExe) {
       throw err;
     });
     pythonServerProcess.on('close', (code, signal) => {
-      logger.debug(`Flask process terminated with code ${code} and signal ${signal}`);
+      logger.debug(`Flask process closed with code ${code} and signal ${signal}`);
+    });
+    pythonServerProcess.on('exit', (code) => {
+      logger.debug(`Flask process exited with code ${code}`);
+    });
+    pythonServerProcess.on('disconnect', () => {
+      logger.debug(`Flask process disconnected`);
     });
   } else {
     logger.error('no existing invest installations found');
