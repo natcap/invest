@@ -274,6 +274,7 @@ $(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
 	# the UG directory will check out its own copy of the sample data
 	ls
 	ls doc
+	mkdir $(GIT_UG_REPO_PATH)/invest-sample-data
 	ls $(GIT_UG_REPO_PATH)
 	ln -s $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_UG_REPO_PATH)/invest-sample-data
 	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
