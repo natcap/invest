@@ -273,12 +273,13 @@ WORKING_DIR := $(shell pwd)
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
 	# the UG directory will check out its own copy of the sample data
+	$(CONDA) install sphinx sphinx-rtd-theme setuptools_scm
 	ls
 	ls doc
 	ls $(GIT_UG_REPO_PATH)
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	ls $(GIT_SAMPLE_DATA_REPO_PATH)
-	ln -s $(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
+	ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data
 	echo "end of list"
 	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html

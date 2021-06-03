@@ -26,15 +26,17 @@ jobs:
                   path: ~\AppData\Local\pip\Cache
                   key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
+            - name: Setup conda environment
+              uses: conda-incubator/setup-miniconda@v2
+              with:
+                  activate-environment: winbin-env
+                  auto-update-conda: true
+                  python-version: 3.8
+                  channels: conda-forge
+
             - name: build user's guide
               run: make userguide
-            # - name: Setup conda environment
-            #   uses: conda-incubator/setup-miniconda@v2
-            #   with:
-            #       activate-environment: winbin-env
-            #       auto-update-conda: true
-            #       python-version: 3.8
-            #       channels: conda-forge
+
 
             # - name: Install python dependencies
             #   shell: bash -l {0}
@@ -142,30 +144,18 @@ jobs:
                   path: ~/opt/anaconda3
                   key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
 
+            - name: Setup conda environment
+              uses: conda-incubator/setup-miniconda@v2
+              with:
+                  activate-environment: macbin-env
+                  auto-update-conda: true
+                  python-version: 3.8
+                  channels: conda-forge
+
             - name: build user's guide
-              run: make userguide
-    #         - name: Setup conda environment
-    #           uses: conda-incubator/setup-miniconda@v2
-    #           with:
-    #               activate-environment: macbin-env
-    #               auto-update-conda: true
-    #               python-version: 3.8
-    #               channels: conda-forge
-
-    #         - name: Build conda env with python dependencies
-    #           shell: bash -l {0}
-    #           run: |
-    #               conda upgrade -y pip setuptools
-    #               conda install toml requests
-    #               conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-    #               python ./scripts/convert-requirements-to-conda-yml.py \
-    #                     requirements.txt \
-    #                     requirements-dev.txt \
-    #                     requirements-gui.txt > requirements-all.yml
-    #               conda env update --file requirements-all.yml
-
-    #               # Libtiff from conda defaults channel gets around issue with missing libwebp
-    #               conda install --yes libtiff
+              run: |
+                  make userguide
+                  conda install
 
     #         - name: Build binaries
     #           shell: bash -l {0}
