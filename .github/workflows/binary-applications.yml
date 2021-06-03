@@ -55,8 +55,8 @@ jobs:
               if: always()
               run: |
                   df -h
-                  du -sh \
-                  du -sh .
+                  du -h \
+                  du -h .
 
 
 
@@ -127,46 +127,46 @@ jobs:
             #       name: InVEST-user-guide
             #       path: dist/InVEST_*_userguide.zip
 
-    build-mac-binaries:
-        name: "Build mac binaries"
-        runs-on: macos-10.15
-        env:
-            PYTHON_VERSION: 3.8
-            PYTHON_ARCH: x64
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  fetch-depth: 0  # fetch complete history
+    # build-mac-binaries:
+    #     name: "Build mac binaries"
+    #     runs-on: macos-10.15
+    #     env:
+    #         PYTHON_VERSION: 3.8
+    #         PYTHON_ARCH: x64
+    #     steps:
+    #         - uses: actions/checkout@v2
+    #           with:
+    #               fetch-depth: 0  # fetch complete history
 
-            - name: Fetch git tags
-              run: git fetch origin +refs/tags/*:refs/tags/*
+    #         - name: Fetch git tags
+    #           run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Install homebrew dependencies
-              run: |
-                  brew update
-                  brew install pandoc
+    #         - name: Install homebrew dependencies
+    #           run: |
+    #               brew update
+    #               brew install pandoc
 
-            - name: Restore conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ~/opt/anaconda3
-                  key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
+    #         - name: Restore conda cache
+    #           uses: actions/cache@v2
+    #           with:
+    #               path: ~/opt/anaconda3
+    #               key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: macbin-env
-                  auto-update-conda: true
-                  python-version: 3.8
-                  channels: conda-forge
+    #         - name: Setup conda environment
+    #           uses: conda-incubator/setup-miniconda@v2
+    #           with:
+    #               activate-environment: macbin-env
+    #               auto-update-conda: true
+    #               python-version: 3.8
+    #               channels: conda-forge
 
-            - name: build user's guide
-              run: |
-                  conda install sphinx setuptools_scm
-                  pip install sphinx-rtd-theme
-                  make userguide
+    #         - name: build user's guide
+    #           run: |
+    #               conda install sphinx setuptools_scm
+    #               pip install sphinx-rtd-theme
+    #               make userguide
 
-    #         - name: Build binaries
+    # #         - name: Build binaries
     #           shell: bash -l {0}
     #           run: |
     #               make install
