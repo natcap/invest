@@ -19,7 +19,7 @@ export function createPythonFlaskProcess(investExe) {
     // TODO: should we not set --debug level during production?
     const pythonServerProcess = spawn(
       path.basename(investExe),
-      ['--debug', 'serve', '--port', process.env.PORT],
+      ['serve', '--port', process.env.PORT],
       {
         env: {
           PATH: path.dirname(investExe),
