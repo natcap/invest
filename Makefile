@@ -273,7 +273,8 @@ WORKING_DIR := $(shell pwd)
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
 	# the UG directory will check out its own copy of the sample data
-	$(CONDA) install sphinx sphinx-rtd-theme setuptools_scm
+	$(CONDA) install sphinx setuptools_scm
+	pip install sphinx-rtd-theme
 	ls
 	ls doc
 	ls $(GIT_UG_REPO_PATH)
