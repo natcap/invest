@@ -271,15 +271,7 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_TARGET_DIR)
 WORKING_DIR := $(shell pwd)
 # Userguide HTML docs are copied to dist/userguide
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
-$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
-	# the UG directory will check out its own copy of the sample data
-	$(CONDA) install sphinx setuptools_scm
-	pip install sphinx-rtd-theme
-	ls
-	ls doc
-	ls $(GIT_UG_REPO_PATH)
-	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
-	ls $(GIT_SAMPLE_DATA_REPO_PATH)
+$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
 	ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data
 	echo "end of list"
