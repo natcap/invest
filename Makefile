@@ -270,8 +270,8 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_TARGET_DIR)
 
 WORKING_DIR := $(shell pwd)
 # Userguide HTML docs are copied to dist/userguide
-userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE) $(GIT_SAMPLE_DATA_REPO_PATH)
-$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
+userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
+$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
 	# the UG directory will check out its own copy of the sample data
 	ls
 	ls doc
