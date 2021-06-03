@@ -8,7 +8,6 @@ jobs:
 
     build-windows-binaries:
         name: "Build windows binaries"
-        needs: check-syntax-errors
         runs-on: windows-latest
         env:
             PYTHON_VERSION: 3.8
