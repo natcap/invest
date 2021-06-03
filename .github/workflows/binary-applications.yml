@@ -34,23 +34,31 @@ jobs:
                   python-version: 3.8
                   channels: conda-forge
 
+            - name: Install python dependencies
+              shell: bash -l {0}
+              run: |
+                  conda install nomkl # make sure numpy is w/out MKL
+                  conda upgrade -y pip setuptools
+                  conda install toml requests
+                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                        requirements.txt \
+                        requirements-dev.txt \
+                        requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
+                  python -m pip install .
+
             - name: build user's guide
               run: make userguide
 
+            - name: print out debugging info
+              if: always()
+              run: |
+                  df -h
+                  du -sh \
+                  du -sh .
 
-            # - name: Install python dependencies
-            #   shell: bash -l {0}
-            #   run: |
-            #       conda install nomkl # make sure numpy is w/out MKL
-            #       conda upgrade -y pip setuptools
-            #       conda install toml requests
-            #       conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-            #       python ./scripts/convert-requirements-to-conda-yml.py \
-            #             requirements.txt \
-            #             requirements-dev.txt \
-            #             requirements-gui.txt > requirements-all.yml
-            #       conda env update --file requirements-all.yml
-            #       python -m pip install .
+
 
             # - name: Install build dependencies
             #   shell: powershell
@@ -154,8 +162,9 @@ jobs:
 
             - name: build user's guide
               run: |
+                  conda install sphinx setuptools_scm
+                  pip install sphinx-rtd-theme
                   make userguide
-                  conda install
 
     #         - name: Build binaries
     #           shell: bash -l {0}
