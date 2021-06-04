@@ -125,19 +125,25 @@ describe('extractZipInplace', () => {
       throw error;
     }
 
-    const zipfile = new yazl.ZipFile();
-    zipfile.addFile(file1Path, path.relative(root, file1Path));
-    zipfile.addFile(file2Path, path.relative(root, file2Path));
-    zipfile.outputStream.pipe(
-      fs.createWriteStream(zipPath)
-    ).on('close', () => {
-      // being extra careful with recursive rm
-      if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
-        fs.rmdirSync(level1Dir, { recursive: true });
-      }
-      doneZipping = true;
-    });
-    zipfile.end();
+    try {
+      const zipfile = new yazl.ZipFile();
+      zipfile.addFile(file1Path, path.relative(root, file1Path));
+      zipfile.addFile(file2Path, path.relative(root, file2Path));
+      zipfile.outputStream.pipe(
+        fs.createWriteStream(zipPath)
+      ).on('close', () => {
+        // being extra careful with recursive rm
+        if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
+          fs.rmdirSync(level1Dir, { recursive: true });
+        }
+        doneZipping = true;
+      });
+      zipfile.end();
+    } catch (error) {
+      console.trace(error)
+      console.log('caught from beforeEach')
+      throw error;
+    }
   });
 
   afterEach(() => {
@@ -151,18 +157,24 @@ describe('extractZipInplace', () => {
   });
 
   it('should extract recursively', async () => {
-    await waitFor(() => expect(doneZipping).toBe(true));
-    // The expected state after the setup, before extraction
-    expect(fs.existsSync(zipPath)).toBe(true);
-    expect(fs.existsSync(file1Path)).toBe(false);
-    expect(fs.existsSync(file2Path)).toBe(false);
+    try {
+      await waitFor(() => expect(doneZipping).toBe(true));
+      // The expected state after the setup, before extraction
+      expect(fs.existsSync(zipPath)).toBe(true);
+      expect(fs.existsSync(file1Path)).toBe(false);
+      expect(fs.existsSync(file2Path)).toBe(false);
 
-    await extractZipInplace(zipPath);
-    // And the expected state after extraction
-    await waitFor(() => {
-      expect(fs.existsSync(file1Path)).toBe(true);
-      expect(fs.existsSync(file2Path)).toBe(true);
-    });
+      await extractZipInplace(zipPath);
+      // And the expected state after extraction
+      await waitFor(() => {
+        expect(fs.existsSync(file1Path)).toBe(true);
+        expect(fs.existsSync(file2Path)).toBe(true);
+      });
+    } catch (error) {
+      console.log('caught from test');
+      console.trace(error);
+      throw error;
+    }
   });
 });
 
