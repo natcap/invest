@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 0057a412104fbf97d1777bfffa3ad725485b9e02
 
 GIT_UG_REPO                  := https://github.com/emlys/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 42829faa06ab266e82632a6c79c5622e12297cf9
+GIT_UG_REPO_REV              := 40e2cb74324703b0db3aeabdf3b848064d5da097
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -272,8 +272,9 @@ WORKING_DIR := $(shell pwd)
 # Userguide HTML docs are copied to dist/userguide
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
+	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
-	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data
+	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data/pollination
 	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
 	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
 
