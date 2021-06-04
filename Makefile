@@ -272,13 +272,7 @@ WORKING_DIR := $(shell pwd)
 # Userguide HTML docs are copied to dist/userguide
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
-	ls $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH)
-	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
-	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data
-	echo "end of list"
-	find -L $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data
-	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data/invest-sample-data
 	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
 	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
 
