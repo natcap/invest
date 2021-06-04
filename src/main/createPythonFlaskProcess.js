@@ -16,7 +16,11 @@ const HOSTNAME = 'http://localhost';
  */
 export function createPythonFlaskProcess(investExe) {
   if (investExe) {
-    // TODO: should we not set --debug level during production?
+    // TODO: starting `invest serve`` without any python logging
+    // because of https://github.com/natcap/invest/issues/563
+    // & https://github.com/natcap/invest-workbench/issues/144
+    // Once those are resolved, we probably want some logging here,
+    // maybe --debug if devMode, -vvv if production?
     const pythonServerProcess = spawn(
       path.basename(investExe),
       ['serve', '--port', process.env.PORT],

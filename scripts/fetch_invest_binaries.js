@@ -22,20 +22,32 @@ switch (process.platform) {
       `No prebuilt invest binaries are available for ${process.platform}`
     );
 }
+const binaryZipName = `${filePrefix}_invest_binaries.zip`;
 
-const BUCKET = pkg.invest.bucket;
-// forknames are only in the path on the dev-builds bucket
-const FORK = BUCKET === 'releases.naturalcapitalproject.org'
-  ? '' : pkg.invest.fork;
-const REPO = 'invest';
+const { bucket } = pkg.invest;
+const repo = 'invest';
 const VERSION = pkg.invest.version;
-const SRCFILE = `${filePrefix}_invest_binaries.zip`;
 const DESTFILE = path.join(
-  __dirname, `../build/version_${VERSION}_${SRCFILE}`
+  __dirname, `../build/version_${VERSION}_${binaryZipName}`
 );
-const SRC_URL = url.resolve(
+let DATA_PREFIX;
+let binaryZipPath;
+// forknames are only in the path on the dev-builds bucket
+if (bucket === 'releases.naturalcapitalproject.org') {
+  binaryZipPath = `${bucket}/${repo}/${VERSION}/${binaryZipName}`;
+  DATA_PREFIX = `${repo}/${VERSION}/data`;
+} else if (bucket === 'natcap-dev-build-artifacts') {
+  const { fork } = pkg.invest;
+  binaryZipPath = `${bucket}/${repo}/${fork}/${VERSION}/${binaryZipName}`;
+  DATA_PREFIX = `${repo}/${fork}/${VERSION}/data`;
+}
+const SRC_BINARY_URL = url.resolve(
   'https://storage.googleapis.com',
-  path.join(BUCKET, REPO, FORK, VERSION, SRCFILE)
+  binaryZipPath
+);
+const DATA_QUERY_URL = url.resolve(
+  'https://www.googleapis.com/storage/v1/b/',
+  `${bucket}/o?prefix=${encodeURIComponent(DATA_PREFIX)}`
 );
 
 /**
@@ -51,7 +63,7 @@ function downloadAndUnzipBinaries(src, dest) {
     console.log(`http status: ${response.statusCode}`);
     if (response.statusCode !== 200) {
       fileStream.close();
-      return;
+      throw new Error(`${response.statusCode} for ${src}`);
     }
     response.pipe(fileStream);
     fileStream.on('finish', () => {
@@ -93,13 +105,15 @@ function downloadAndUnzipBinaries(src, dest) {
  * keys may be left out and then this script can be run to populate those keys.
  */
 async function updateSampledataRegistry() {
-  const googleAPI = 'https://www.googleapis.com/storage/v1/b';
+  // const googleAPI = 'https://www.googleapis.com/storage/v1/b';
   const template = require('../src/sampledata_registry.json');
   // make a deep copy so we can check if any updates were made and
   // only overwrite the file if necessary.
   const registry = JSON.parse(JSON.stringify(template));
-  const dataPrefix = encodeURIComponent(`invest/${VERSION}/data`);
-  const dataEndpoint = `${googleAPI}/${BUCKET}/o?prefix=${dataPrefix}`;
+  // const dataPrefix = encodeURIComponent(
+  //   path.join('invest', FORK, VERSION, 'data')
+  // );
+  // const dataEndpoint = `${googleAPI}/${BUCKET}/o?prefix=${dataPrefix}`;
 
   async function queryStorage(endpoint) {
     let data;
@@ -109,6 +123,9 @@ async function updateSampledataRegistry() {
     } else {
       throw new Error(response.status);
     }
+    if (!data.items) {
+      throw new Error(`no items found at ${DATA_QUERY_URL}`);
+    }
     // organize the data so we can index into it by filename
     const dataIndex = {};
     data.items.forEach((item) => {
@@ -116,10 +133,10 @@ async function updateSampledataRegistry() {
     });
     return dataIndex;
   }
-
-  const dataItems = await queryStorage(dataEndpoint);
+  console.log(DATA_QUERY_URL)
+  const dataItems = await queryStorage(DATA_QUERY_URL);
   Object.keys(registry).forEach((model) => {
-    const filename = `invest/${VERSION}/data/${registry[model].filename}`;
+    const filename = `${decodeURIComponent(DATA_PREFIX)}/${registry[model].filename}`;
     try {
       registry[model].url = dataItems[filename].mediaLink;
       registry[model].filesize = dataItems[filename].size;
@@ -170,7 +187,7 @@ if (process.argv[2] && process.argv[2] === 'sampledata') {
     console.log(`will download for version ${VERSION}`);
   } finally {
     if (willDownload) {
-      downloadAndUnzipBinaries(SRC_URL, DESTFILE);
+      downloadAndUnzipBinaries(SRC_BINARY_URL, DESTFILE);
     }
     updateSampledataRegistry();
   }
