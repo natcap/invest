@@ -86,9 +86,6 @@ export function setupInvestRunHandlers(investExe) {
       path.join(TEMP_DIR, 'data-')
     );
     const datastackPath = path.join(tempDatastackDir, 'datastack.json');
-    // TODO: only need pyModuleName to make a compliant logfile name
-    // as the prepare_workspace call in cli.py takes it from the datastack.json
-    // It could get it elsewhere, like a lookup based on the run name.
     const payload = {
       parameterSetPath: datastackPath,
       moduleName: pyModuleName,
