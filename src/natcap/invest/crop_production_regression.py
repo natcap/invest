@@ -184,7 +184,7 @@ _NITROGEN_YIELD_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, '%s_nitrogen_yield%s.tif')
 
 # crop_id, file_suffix
-_phosphorus_YIELD_FILE_PATTERN = os.path.join(
+_PHOSPHORUS_YIELD_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, '%s_phosphorus_yield%s.tif')
 
 # crop_id, file_suffix
@@ -196,7 +196,7 @@ _CLIPPED_NITROGEN_RATE_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, 'nitrogen_rate%s.tif')
 
 # file suffix
-_CLIPPED_phosphorus_RATE_FILE_PATTERN = os.path.join(
+_CLIPPED_PHOSPHORUS_RATE_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, 'phosphorus_rate%s.tif')
 
 # file suffix
@@ -510,7 +510,7 @@ def execute(args):
 
         LOGGER.info('Calc phosphorus yield')
         phosphorus_yield_raster_path = os.path.join(
-            output_dir, _phosphorus_YIELD_FILE_PATTERN % (
+            output_dir, _PHOSPHORUS_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
         calc_phosphorus_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
