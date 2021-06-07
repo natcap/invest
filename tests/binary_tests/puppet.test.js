@@ -2,8 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import glob from 'glob';
-import fetch from 'node-fetch';
 import { spawn, spawnSync } from 'child_process';
+
+import rimraf from 'rimraf';
+import fetch from 'node-fetch';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
@@ -102,7 +104,7 @@ afterAll(async () => {
 
   // being extra careful with recursive rm
   if (TMP_DIR.startsWith('tests/data')) {
-    fs.rmdirSync(TMP_DIR, { recursive: true });
+    rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
   }
   const wasKilled = ELECTRON_PROCESS.kill();
   console.log(`electron process was killed: ${wasKilled}`);

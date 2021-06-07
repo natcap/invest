@@ -129,7 +129,7 @@ describe('extractZipInplace', () => {
     ).on('close', () => {
       // being extra careful with recursive rm
       if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
-        fs.rmdirSync(level1Dir, { recursive: true });
+        rimraf(level1Dir, (error) => { if (error) { throw error; } });
       }
       doneZipping = true;
     });

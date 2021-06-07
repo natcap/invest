@@ -8,6 +8,7 @@ import Stream from 'stream';
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import fetch from 'node-fetch';
+import rimraf from 'rimraf';
 import {
   fireEvent, render, waitFor, within
 } from '@testing-library/react';
@@ -527,7 +528,7 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc = null;
     // being extra careful with recursive rm
     if (fakeWorkspace.startsWith(path.join('tests', 'data'))) {
-      fs.rmdirSync(fakeWorkspace, { recursive: true });
+      rimraf(fakeWorkspace, (error) => { if (error) { throw error; } });
     }
     await InvestJob.clearStore();
     jest.resetAllMocks();
