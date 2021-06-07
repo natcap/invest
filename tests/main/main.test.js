@@ -14,6 +14,7 @@ import {
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import yazl from 'yazl';
+import rimraf from 'rimraf';
 
 import {
   createWindow,
@@ -113,69 +114,49 @@ describe('extractZipInplace', () => {
   let doneZipping = false;
 
   beforeEach(() => {
-    try {
-      level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
-      level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
-      file1Path = path.join(level1Dir, 'file1');
-      file2Path = path.join(level2Dir, 'file2');
-      fs.closeSync(fs.openSync(file1Path, 'w'));
-      fs.closeSync(fs.openSync(file2Path, 'w'));
-    } catch (error) {
-      console.trace(error);
-      throw error;
-    }
+    level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
+    level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
+    file1Path = path.join(level1Dir, 'file1');
+    file2Path = path.join(level2Dir, 'file2');
+    fs.closeSync(fs.openSync(file1Path, 'w'));
+    fs.closeSync(fs.openSync(file2Path, 'w'));
 
-    try {
-      const zipfile = new yazl.ZipFile();
-      zipfile.addFile(file1Path, path.relative(root, file1Path));
-      zipfile.addFile(file2Path, path.relative(root, file2Path));
-      zipfile.outputStream.pipe(
-        fs.createWriteStream(zipPath)
-      ).on('close', () => {
-        // being extra careful with recursive rm
-        if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
-          fs.rmdirSync(level1Dir, { recursive: true });
-        }
-        doneZipping = true;
-      });
-      zipfile.end();
-    } catch (error) {
-      console.trace(error)
-      console.log('caught from beforeEach')
-      throw error;
-    }
-  });
-
-  afterEach(() => {
-    try {
-      fs.unlinkSync(zipPath);
+    const zipfile = new yazl.ZipFile();
+    zipfile.addFile(file1Path, path.relative(root, file1Path));
+    zipfile.addFile(file2Path, path.relative(root, file2Path));
+    zipfile.outputStream.pipe(
+      fs.createWriteStream(zipPath)
+    ).on('close', () => {
       // being extra careful with recursive rm
       if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
         fs.rmdirSync(level1Dir, { recursive: true });
       }
-    } catch {}
+      doneZipping = true;
+    });
+    zipfile.end();
+  });
+
+  afterEach(() => {
+    fs.unlinkSync(zipPath);
+    // being extra careful with recursive rm
+    if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
+      rimraf(level1Dir, (error) => { if (error) { throw error; } });
+    }
   });
 
   it('should extract recursively', async () => {
-    // try {
-    //   await waitFor(() => expect(doneZipping).toBe(true));
-    //   // The expected state after the setup, before extraction
-    //   expect(fs.existsSync(zipPath)).toBe(true);
-    //   expect(fs.existsSync(file1Path)).toBe(false);
-    //   expect(fs.existsSync(file2Path)).toBe(false);
+    await waitFor(() => expect(doneZipping).toBe(true));
+    // The expected state after the setup, before extraction
+    expect(fs.existsSync(zipPath)).toBe(true);
+    expect(fs.existsSync(file1Path)).toBe(false);
+    expect(fs.existsSync(file2Path)).toBe(false);
 
-    //   await extractZipInplace(zipPath);
-    //   // And the expected state after extraction
-    //   await waitFor(() => {
-    //     expect(fs.existsSync(file1Path)).toBe(true);
-    //     expect(fs.existsSync(file2Path)).toBe(true);
-    //   });
-    // } catch (error) {
-    //   console.log('caught from test');
-    //   console.trace(error);
-    //   throw error;
-    // }
-    expect(true).toBe(false);
+    await extractZipInplace(zipPath);
+    // And the expected state after extraction
+    await waitFor(() => {
+      expect(fs.existsSync(file1Path)).toBe(true);
+      expect(fs.existsSync(file2Path)).toBe(true);
+    });
   });
 });
 

@@ -86,6 +86,7 @@
     "puppeteer-core": "^9.1.1",
     "react-devtools": "^4.10.1",
     "react-test-renderer": "^17.0.1",
+    "rimraf": "^3.0.2",
     "yazl": "^2.5.1"
   },
   "browserslist": {
