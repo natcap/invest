@@ -204,6 +204,7 @@ jobs:
               run: |
                   df -h
                   df -h .
+                  du -h /
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
