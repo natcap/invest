@@ -157,24 +157,25 @@ describe('extractZipInplace', () => {
   });
 
   it('should extract recursively', async () => {
-    try {
-      await waitFor(() => expect(doneZipping).toBe(true));
-      // The expected state after the setup, before extraction
-      expect(fs.existsSync(zipPath)).toBe(true);
-      expect(fs.existsSync(file1Path)).toBe(false);
-      expect(fs.existsSync(file2Path)).toBe(false);
+    // try {
+    //   await waitFor(() => expect(doneZipping).toBe(true));
+    //   // The expected state after the setup, before extraction
+    //   expect(fs.existsSync(zipPath)).toBe(true);
+    //   expect(fs.existsSync(file1Path)).toBe(false);
+    //   expect(fs.existsSync(file2Path)).toBe(false);
 
-      await extractZipInplace(zipPath);
-      // And the expected state after extraction
-      await waitFor(() => {
-        expect(fs.existsSync(file1Path)).toBe(true);
-        expect(fs.existsSync(file2Path)).toBe(true);
-      });
-    } catch (error) {
-      console.log('caught from test');
-      console.trace(error);
-      throw error;
-    }
+    //   await extractZipInplace(zipPath);
+    //   // And the expected state after extraction
+    //   await waitFor(() => {
+    //     expect(fs.existsSync(file1Path)).toBe(true);
+    //     expect(fs.existsSync(file2Path)).toBe(true);
+    //   });
+    // } catch (error) {
+    //   console.log('caught from test');
+    //   console.trace(error);
+    //   throw error;
+    // }
+    expect(true).toBe(false);
   });
 });
 
