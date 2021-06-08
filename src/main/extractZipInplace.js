@@ -8,6 +8,7 @@ import { getLogger } from '../logger';
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 export default function extractZipInplace(zipFilePath) {
+  console.log('extracting')
   return new Promise((resolve, reject) => {
     try {
       const extractToDir = path.dirname(zipFilePath);
@@ -24,7 +25,7 @@ export default function extractZipInplace(zipFilePath) {
           if (/\/$/.test(entry.fileName)) {
             fs.mkdir(writePath, (err) => {
               if (err) {
-                if (err.code === 'EEXIST') { } else logger.error(err);
+                if (err.code === 'EEXIST') { } else throw err;
               }
               zipfile.readEntry();
             });
@@ -39,7 +40,7 @@ export default function extractZipInplace(zipFilePath) {
               // to create the dir here.
               fs.mkdir(path.dirname(writePath), (err) => {
                 if (err) {
-                  if (err.code === 'EEXIST') { } else logger.error(err);
+                  if (err.code === 'EEXIST') { } else throw err;
                 }
               });
               const writable = fs.createWriteStream(writePath);

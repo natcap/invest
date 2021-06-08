@@ -172,7 +172,12 @@ describe('extractZipInplace', () => {
     expect(fs.existsSync(file1Path)).toBe(false);
     expect(fs.existsSync(file2Path)).toBe(false);
 
-    await extractZipInplace(zipPath);
+    try {
+      await extractZipInplace(zipPath);
+    } catch (error) {
+      console.log('caught from extractZip')
+      throw error;
+    }
     // And the expected state after extraction
     await waitFor(() => {
       expect(fs.existsSync(file1Path)).toBe(true);
