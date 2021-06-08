@@ -52,11 +52,11 @@ export default function extractZipInplace(zipFilePath) {
                 if (err) {
                   if (err.code === 'EEXIST') { } else throw err;
                 }
+                const writable = fs.createWriteStream(writePath);
+                console.log('fs.createWriteStream')
+                readStream.pipe(writable);
+                console.log('reaedStream.pipe')
               });
-              const writable = fs.createWriteStream(writePath);
-              console.log('fs.createWriteStream')
-              readStream.pipe(writable);
-              console.log('reaedStream.pipe')
             });
           }
         });
@@ -68,6 +68,8 @@ export default function extractZipInplace(zipFilePath) {
         console.log('zipfile.readEntry')
       });
     } catch (error) {
+      // TODO, even though an ENOENT was raised - prob from fs.createWriteStream
+      // this catch and reject never ran. wtf.
       console.log('rejecting');
       reject(error);
     }
