@@ -177,7 +177,6 @@ describe('extractZipInplace', () => {
     try {
       await extractZipInplace(zipPath);
     } catch (error) {
-      console.log('caught from extractZip')
       throw error;
     }
     // And the expected state after extraction
@@ -189,11 +188,8 @@ describe('extractZipInplace', () => {
     fs.unlinkSync(zipPath);
     // being extra careful with recursive rm
     if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
-      console.log('before rimraf')
       rimraf(level1Dir, (error) => {
-        console.log('rimraf callback')
         if (error) {
-          console.log('throw during rimraf');
           throw error;
         }
       });
