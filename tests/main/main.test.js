@@ -187,7 +187,14 @@ describe('extractZipInplace', () => {
     fs.unlinkSync(zipPath);
     // being extra careful with recursive rm
     if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
-      rimraf(level1Dir, (error) => { if (error) { throw error; } });
+      console.log('before rimraf')
+      rimraf(level1Dir, (error) => {
+        console.log('rimraf callback')
+        if (error) {
+          console.log('throw during rimraf');
+          throw error;
+        }
+      });
     }
   });
 });
