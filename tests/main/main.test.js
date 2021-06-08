@@ -113,7 +113,38 @@ describe('extractZipInplace', () => {
   let file2Path;
   let doneZipping = false;
 
-  beforeEach(() => {
+  // beforeEach(() => {
+    // level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
+    // level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
+    // file1Path = path.join(level1Dir, 'file1');
+    // file2Path = path.join(level2Dir, 'file2');
+    // fs.closeSync(fs.openSync(file1Path, 'w'));
+    // fs.closeSync(fs.openSync(file2Path, 'w'));
+
+    // const zipfile = new yazl.ZipFile();
+    // zipfile.addFile(file1Path, path.relative(root, file1Path));
+    // zipfile.addFile(file2Path, path.relative(root, file2Path));
+    // zipfile.outputStream.pipe(
+    //   fs.createWriteStream(zipPath)
+    // ).on('close', () => {
+    //   // being extra careful with recursive rm
+    //   if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
+    //     rimraf(level1Dir, (error) => { if (error) { throw error; } });
+    //   }
+    //   doneZipping = true;
+    // });
+    // zipfile.end();
+  // });
+
+  // afterEach(() => {
+  //   fs.unlinkSync(zipPath);
+  //   // being extra careful with recursive rm
+  //   if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
+  //     rimraf(level1Dir, (error) => { if (error) { throw error; } });
+  //   }
+  // });
+
+  it('should extract recursively', async () => {
     level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
     level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
     file1Path = path.join(level1Dir, 'file1');
@@ -134,17 +165,7 @@ describe('extractZipInplace', () => {
       doneZipping = true;
     });
     zipfile.end();
-  });
 
-  afterEach(() => {
-    fs.unlinkSync(zipPath);
-    // being extra careful with recursive rm
-    if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
-      rimraf(level1Dir, (error) => { if (error) { throw error; } });
-    }
-  });
-
-  it('should extract recursively', async () => {
     await waitFor(() => expect(doneZipping).toBe(true));
     // The expected state after the setup, before extraction
     expect(fs.existsSync(zipPath)).toBe(true);
@@ -157,6 +178,12 @@ describe('extractZipInplace', () => {
       expect(fs.existsSync(file1Path)).toBe(true);
       expect(fs.existsSync(file2Path)).toBe(true);
     });
+
+    fs.unlinkSync(zipPath);
+    // being extra careful with recursive rm
+    if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
+      rimraf(level1Dir, (error) => { if (error) { throw error; } });
+    }
   });
 });
 
