@@ -166,11 +166,13 @@ describe('extractZipInplace', () => {
     });
     zipfile.end();
 
-    await waitFor(() => expect(doneZipping).toBe(true));
-    // The expected state after the setup, before extraction
-    expect(fs.existsSync(zipPath)).toBe(true);
-    expect(fs.existsSync(file1Path)).toBe(false);
-    expect(fs.existsSync(file2Path)).toBe(false);
+    await waitFor(() => {
+      expect(doneZipping).toBe(true);
+      // The expected state after the setup, before extraction
+      expect(fs.existsSync(zipPath)).toBe(true);
+      expect(fs.existsSync(file1Path)).toBe(false);
+      expect(fs.existsSync(file2Path)).toBe(false);
+    });
 
     try {
       await extractZipInplace(zipPath);
