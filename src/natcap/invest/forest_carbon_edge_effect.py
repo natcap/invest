@@ -40,7 +40,7 @@ ARGS_SPEC = {
         "results_suffix": utils.SUFFIX_SPEC,
         "n_workers": utils.N_WORKERS_SPEC,
         "n_nearest_model_points": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.none,
             "required": "compute_forest_edge_effects",
@@ -55,7 +55,7 @@ ARGS_SPEC = {
         },
         "aoi_vector_path": {
             **utils.AOI_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "required": False
         },
         "biophysical_table_path": {
@@ -102,7 +102,7 @@ ARGS_SPEC = {
         },
         "lulc_raster_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "pools_to_calculate": {
             "type": "option_string",

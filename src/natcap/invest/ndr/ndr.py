@@ -31,11 +31,11 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "dem_path": {
             **utils.DEM_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "lulc_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "runoff_proxy_path": {
             "type": "raster",
@@ -55,7 +55,7 @@ ARGS_SPEC = {
         },
         "watersheds_path": {
             "type": "vector",
-            **utils.PROJECTED,
+            "projected": True,
             "fields": {"ws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
             "about": (
@@ -126,7 +126,7 @@ ARGS_SPEC = {
             "name": "Calculate Nitrogen Retention"
         },
         "threshold_flow_accumulation": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.pixel,
             "about": (

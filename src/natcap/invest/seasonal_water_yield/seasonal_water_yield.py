@@ -84,20 +84,20 @@ ARGS_SPEC = {
         },
         "dem_raster_path": {
             **utils.DEM_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "lulc_raster_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "soil_group_path": {
             **utils.SOIL_GROUP_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "required": "not user_defined_local_recharge"
         },
         "aoi_path": {
             **utils.AOI_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "biophysical_table_path": {
             "type": "csv",
@@ -186,7 +186,7 @@ ARGS_SPEC = {
                 "units": u.millimeter
             }},
             "required": "user_defined_local_recharge",
-            **utils.PROJECTED,
+            "projected": True,
             "about": (
                 "A path to a GDAL-compatible raster map of local recharge "
                 "values. Required if args['user_defined_local_recharge'] is "
@@ -227,7 +227,7 @@ ARGS_SPEC = {
             "type": "raster",
             "bands": {1: {"type": "code"}},
             "required": "user_defined_climate_zones",
-            **utils.PROJECTED,
+            "projected": True,
             "about": (
                 "Map of climate zones that are found in the Climate Zone "
                 "Table input.  Pixel values correspond to values in the cz_id "

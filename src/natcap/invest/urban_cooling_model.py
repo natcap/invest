@@ -40,7 +40,8 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "lulc_raster_path": {
             **utils.LULC_ARG,
-            **utils.METER_PROJECTED,
+            "projected": True,
+            "projection_units": u.meter,
             "about": (
                 "A GDAL-supported raster file containing integer values "
                 "representing the LULC code for each cell.  The LULC code "
@@ -67,23 +68,23 @@ ARGS_SPEC = {
                         "counted as a green area (green areas larger than 2ha "
                         "have an additional cooling effect), and 0 meaning "
                         "that the LULC is not counted as a green area.")},
-                # "shade":  {
-                #     "type": "ratio",
-                #     "required": "cc_method == factors",
-                #     "about": ("The proportion of tree cover (0 for no tree; 1 "
-                #         "for full tree cover; with trees>2m).")},
-                # "albedo": {
-                #     "type": "ratio",
-                #     "required": "cc_method == factors",
-                #     "about": ("The proportion of solar radiation directly "
-                #         "reflected by the LULC type. Required if using the "
-                #         "weighted factor approach to Cooling Coefficient "
-                #         "calculations.")},
-                # "building_intensity": {
-                #     "type": "ratio",
-                #     "required": "cc_method == intensity",
-                #     "about": ("The ratio of building floor area to footprint "
-                #         "area, normalized between 0 and 1.")}
+                "shade":  {
+                    "type": "ratio",
+                    "required": "cc_method == factors",
+                    "about": ("The proportion of tree cover (0 for no tree; 1 "
+                        "for full tree cover; with trees>2m).")},
+                "albedo": {
+                    "type": "ratio",
+                    "required": "cc_method == factors",
+                    "about": ("The proportion of solar radiation directly "
+                        "reflected by the LULC type. Required if using the "
+                        "weighted factor approach to Cooling Coefficient "
+                        "calculations.")},
+                "building_intensity": {
+                    "type": "ratio",
+                    "required": "cc_method == intensity",
+                    "about": ("The ratio of building floor area to footprint "
+                        "area, normalized between 0 and 1.")}
             },
             "about": (
                 "A CSV table containing model information corresponding to "
@@ -111,7 +112,7 @@ ARGS_SPEC = {
             "units": u.degree_Celsius,
             "about": (
                 "Rural reference temperature (where the urban heat "
-                "islandeffect is not observed) for the period of interest. "
+                "island effect is not observed) for the period of interest. "
                 "This could be nighttime or daytime temperature, for a "
                 "specific date or an average over several days. The results "
                 "will be given for the same period of interest)"),

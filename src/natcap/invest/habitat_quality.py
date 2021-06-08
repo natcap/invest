@@ -31,7 +31,7 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "lulc_cur_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file.  The current LULC must have "
                 "its' own threat rasters, where each threat raster file path "
@@ -44,7 +44,7 @@ ARGS_SPEC = {
         },
         "lulc_fut_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "required": False,
             "about": (
                 "Optional.  A GDAL-supported raster file.  Inputting a future "
@@ -61,7 +61,7 @@ ARGS_SPEC = {
         },
         "lulc_bas_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "required": False,
             "about": (
                 "Optional.  A GDAL-supported raster file.  If the baseline "
@@ -128,7 +128,7 @@ ARGS_SPEC = {
         },
         "access_vector_path": {
             "type": "vector",
-            **utils.PROJECTED,
+            "projected": True,
             "fields": {"access": {"type": "ratio"}},
             "geometries": utils.POLYGONS,
             "required": False,
@@ -160,7 +160,7 @@ ARGS_SPEC = {
             "name": "Sensitivity of Land Cover Types to Each Threat"
         },
         "half_saturation_constant": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.none,
             "about": (

@@ -30,7 +30,7 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "lulc_cur_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "about": (
                 "A GDAL-supported raster representing the land-cover of the "
                 "current scenario."),
@@ -47,7 +47,7 @@ ARGS_SPEC = {
         },
         "lulc_fut_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "required": "calc_sequestration",
             "about": (
                 "A GDAL-supported raster representing the land-cover of the "
@@ -68,7 +68,7 @@ ARGS_SPEC = {
         },
         "lulc_redd_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "required": "do_redd",
             "about": (
                 "A GDAL-supported raster representing the land-cover of the "

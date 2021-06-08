@@ -110,7 +110,8 @@ ARGS_SPEC = {
         },
         "dem_path": {
             **utils.DEM_ARG,
-            **utils.METER_PROJECTED,
+            "projected": True,
+            "projection_units": u.meter,
             "about": (
                 "A GDAL-supported raster file.  An elevation raster layer is "
                 "required to conduct viewshed analysis. Elevation data allows "
@@ -170,7 +171,7 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.meter,
             "required": False,
-            **utils.GT_0,
+            "expression": "value > 0",
             "about": (
                 "Radius beyond which the valuation is set to zero. The "
                 "valuation function 'f' cannot be negative at the radius 'r' "

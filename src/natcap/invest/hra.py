@@ -150,7 +150,7 @@ ARGS_SPEC = {
                 "table."),
             "type": "number",
             "units": u.none,
-            **utils.GT_0
+            "expression": "value > 0"
         },
         "risk_eq": {
             "name": "Risk Equation",
@@ -173,7 +173,8 @@ ARGS_SPEC = {
         },
         "aoi_vector_path": {
             **utils.AOI_ARG,
-            **utils.METER_PROJECTED,
+            "projected": True,
+            "projection_units": u.meter,
             "fields": {
                 "name": {
                     "required": False,

@@ -31,7 +31,8 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "landcover_raster_path": {
             **utils.LULC_ARG,
-            **utils.METER_PROJECTED,
+            "projected": True,
+            "projection_units": u.meter,
             "about": (
                 "A raster file, representing integer land use/land code "
                 "covers for each cell. This rastershould have a projected "

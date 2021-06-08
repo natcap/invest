@@ -36,7 +36,7 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "dem_path": {
             **utils.DEM_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "detect_pour_points": {
             "type": "boolean",
@@ -66,7 +66,7 @@ ARGS_SPEC = {
             "name": "Snap points to the nearest stream"
         },
         "flow_threshold": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.pixel,
             "required": "snap_points",
@@ -78,7 +78,7 @@ ARGS_SPEC = {
             "name": "Threshold Flow Accumulation"
         },
         "snap_distance": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.pixels,
             "required": "snap_points",

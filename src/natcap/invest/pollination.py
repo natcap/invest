@@ -29,7 +29,7 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "landcover_raster_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "about": (
                 "This is the landcover map that's used to map biophysical "
                 "properties about habitat and floral resources of landcover "

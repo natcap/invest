@@ -32,7 +32,7 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "base_lulc_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "about": "Path to the base landcover map",
             "name": "Base Land Use/Cover"
         },
@@ -42,7 +42,7 @@ ARGS_SPEC = {
             "name": "Replacement Landcover Code"
         },
         "area_to_convert": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.hectare,
             "about": "Max area to convert",
@@ -67,7 +67,7 @@ ARGS_SPEC = {
             "name": "Convertible Landcover Codes"
         },
         "n_fragmentation_steps": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.count,
             "about": (
@@ -80,7 +80,7 @@ ARGS_SPEC = {
         },
         "aoi_path": {
             **utils.AOI_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "required": False,
             "about": (
                 "This is a set of polygons that will be used to aggregate "

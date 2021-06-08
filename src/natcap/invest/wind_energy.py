@@ -80,7 +80,8 @@ ARGS_SPEC = {
         },
         "aoi_vector_path": {
             **utils.AOI_ARG,
-            **utils.METER_PROJECTED,
+            "projected": True,
+            "projection_units": u.meter,
             "required": "valuation_container & grid_points_path",
             "about": (
                 "A GDAL-supported vector file containing a single polygon "
@@ -230,7 +231,7 @@ ARGS_SPEC = {
             "name": "Turbine Type Parameters File"
         },
         "number_of_turbines": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.count,
             "about": (
@@ -341,7 +342,7 @@ ARGS_SPEC = {
             "name": "Grid Connection Points"
         },
         "avg_grid_distance": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.kilometer,
             "required": "valuation_container & (not grid_points_path)",

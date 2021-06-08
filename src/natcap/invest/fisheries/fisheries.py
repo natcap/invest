@@ -32,7 +32,7 @@ ARGS_SPEC = {
             "required": False
         },
         "total_timesteps": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.count,
             "about": (
@@ -136,7 +136,7 @@ ARGS_SPEC = {
                 "Spawners by Individuals or Weight (Beverton-Holt / Ricker)")
         },
         "total_init_recruits": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.count,
             "about": (

@@ -44,7 +44,7 @@ ARGS_SPEC = {
         },
         "lulc_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "required": "not predefined_globio"
         },
         "lulc_to_globio_table_path": {
@@ -82,7 +82,7 @@ ARGS_SPEC = {
         "pasture_path": {
             "type": "raster",
             "bands": {1: {"type": "ratio"}},
-            **utils.PROJECTED,
+            "projected": True,
             "required": "not predefined_globio",
             "about": "Map of the proportion of each pixel that is pasture",
             "name": "Pasture"
@@ -91,7 +91,7 @@ ARGS_SPEC = {
             "name": "Potential Vegetation",
             "type": "raster",
             "bands": {1: {"type": "code"}},
-            **utils.PROJECTED,
+            "projected": True,
             "required": "not predefined_globio",
             "about": (
                 "This should be the potential vegetation map from Ramankutty "
@@ -153,12 +153,12 @@ ARGS_SPEC = {
         },
         "aoi_path": {
             **utils.AOI_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "required": False
         },
         "globio_lulc_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "required": "predefined_globio",
             "about": "used in mode (b) path to predefined globio raster.",
             "name": "GLOBIO Classified Land Use"

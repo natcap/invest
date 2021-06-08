@@ -108,35 +108,6 @@ AREA = {
     "geometries": {"POLYGON", "MULTIPOLYGON"}
 }
 
-PROJECTED = {
-    "projected": True
-}
-
-METER_PROJECTED = {
-    "projected": True,
-    "projection_units": u.meter
-}
-
-PROJECTED_AREA = {
-    **AREA,
-    **PROJECTED
-}
-
-METER_PROJECTED_AREA = {
-    **AREA,
-    **METER_PROJECTED
-}
-
-GT_0 = {
-    "expression": "value > 0"
-}
-GTE_0 = {
-    "expression": "value >= 0"
-}
-BETWEEN_0_AND_1 = {
-    "expression": "(value >= 0) & (value <= 1)"
-}
-
 DISTANCE = {
     "type": "number",
     "units": u.meter,
@@ -210,7 +181,7 @@ SOIL_GROUP_ARG = {
     "name": "soil hydrologic group"
 }
 THRESHOLD_FLOW_ACCUMULATION_ARG = {
-    **GTE_0,
+    "expression": "value >= 0",
     "type": "number",
     "units": u.pixel,
     "about": (

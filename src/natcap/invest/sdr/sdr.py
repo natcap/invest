@@ -39,7 +39,7 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "dem_path": {
             **utils.DEM_ARG,
-            **utils.PROJECTED,
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file with an elevation value for "
                 "each cell.  Make sure the DEM is corrected by filling in "
@@ -53,7 +53,7 @@ ARGS_SPEC = {
             "bands": {1: {
                 "type": "number",
                 "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
-            **utils.PROJECTED,
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file, with an erosivity index value "
                 "for each cell.  This variable depends on the intensity and "
@@ -69,7 +69,7 @@ ARGS_SPEC = {
             "bands": {1: {
                 "type": "number",
                 "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
-            **utils.PROJECTED,
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file, with a soil erodibility value "
                 "for each cell which is a measure of the susceptibility of "
@@ -79,7 +79,7 @@ ARGS_SPEC = {
         },
         "lulc_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "watersheds_path": {
             "type": "vector",
@@ -87,7 +87,7 @@ ARGS_SPEC = {
                 "ws_id": {"type": "code"}
             },
             "geometries": utils.POLYGONS,
-            **utils.PROJECTED,
+            "projected": True,
             "about": (
                 "This is a layer of polygons representing watersheds such "
                 "that each watershed contributes to a point of interest where "
@@ -113,7 +113,7 @@ ARGS_SPEC = {
             "name": "Biophysical Table"
         },
         "threshold_flow_accumulation": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.pixel,
             "about": (

@@ -35,7 +35,7 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "aoi_watersheds_path": utils.AOI_ARG,
         "rainfall_depth": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.millimeter,
             "about": "Depth of rainfall",
@@ -43,11 +43,11 @@ ARGS_SPEC = {
         },
         "lulc_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "soils_hydrological_group_raster_path": {
             **utils.SOIL_GROUP_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "curve_number_table_path": {
             "type": "csv",

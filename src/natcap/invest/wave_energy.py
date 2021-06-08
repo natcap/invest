@@ -155,7 +155,8 @@ ARGS_SPEC = {
         },
         "aoi_path": {
             **utils.AOI_ARG,
-            **utils.METER_PROJECTED,
+            "projected": True,
+            "projection_units": u.meter,
             "required": False,
             "about": (
                 "An OGR-supported vector file containing a single polygon "
@@ -325,7 +326,7 @@ ARGS_SPEC = {
             "name": "Machine Economic Table"
         },
         "number_of_machines": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.count,
             "required": "valuation_container",

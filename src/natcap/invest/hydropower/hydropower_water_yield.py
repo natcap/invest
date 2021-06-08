@@ -35,7 +35,7 @@ ARGS_SPEC = {
         "n_workers": utils.N_WORKERS_SPEC,
         "lulc_path": {
             **utils.LULC_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "depth_to_root_rest_layer_path": {
             "type": "raster",
@@ -43,7 +43,7 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.millimeter
             }},
-            **utils.PROJECTED,
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file containing an average root "
                 "restricting layer depth value for each cell."),
@@ -51,12 +51,12 @@ ARGS_SPEC = {
         },
         "precipitation_path": {
             **utils.PRECIP_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "pawc_path": {
             "type": "raster",
             "bands": {1: {"type": "ratio"}},
-            **utils.PROJECTED,
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file containing plant available "
                 "water content values for each cell.  The plant available "
@@ -65,10 +65,10 @@ ARGS_SPEC = {
         },
         "eto_path": {
             **utils.ETO_ARG,
-            **utils.PROJECTED
+            "projected": True
         },
         "watersheds_path": {
-            **utils.PROJECTED,
+            "projected": True,
             "type": "vector",
             "fields": {"ws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
@@ -80,7 +80,7 @@ ARGS_SPEC = {
             "name": "Watersheds"
         },
         "sub_watersheds_path": {
-            **utils.PROJECTED,
+            "projected": True,
             "type": "vector",
             "fields": {"subws_id": {"type": "code"}},
             "geometries": utils.POLYGONS,
@@ -108,7 +108,7 @@ ARGS_SPEC = {
             "name": "Biophysical Table"
         },
         "seasonality_constant": {
-            **utils.GT_0,
+            "expression": "value > 0",
             "type": "number",
             "units": u.none,
             "about": (
