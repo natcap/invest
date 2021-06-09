@@ -55,7 +55,8 @@ u.define('pixel = []')            # non-specific unit of area
 u.define('projection_unit = []')  # non-specific unit of length
 # used in coastal vulnerability, the DEM pixel values measure
 # elevation (length) but the specific units don't matter
-u.define('linear_unit_of_elevation = []')  # non-specific unit of length
+# and in the rec model for cell size
+u.define('linear_unit')  # non-specific unit of length
 # add "us_survey_foot" on to the aliases because it's used in some rasters
 u.define('survey_foot = 1200 / 3937 * meter = sft = us_survey_foot')
 # Vitamin A in the crop production nutrient table is measured in IUs
