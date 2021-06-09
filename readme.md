@@ -13,9 +13,10 @@ workflows of an InVEST user.
 
 In production, the invest exe comes from prebuilt binaries that are an artifact of the `invest` build process.  
 
-For development, choose either:  
-  **A.** Duplicate the production setup by fetching prebuilt binaries `npm run fetch-invest`  
-  **B.** Use any other locally installed, compatible, invest CLI (e.g. from a local python environment). To configure this, see `.env-example`
+For development, duplicate the production setup by fetching prebuilt binaries:  
+`npm run fetch-invest`.  
+Or build your own local invest binaries using invest's `make binaries` and then
+copy the entire `dist/invest/` dir to this repo's `build/invest/`.  
 
 * `npm start`
 

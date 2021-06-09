@@ -1,14 +1,10 @@
 const { ipcRenderer } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
-logger.info('RENDERER')
 const isDevMode = process.argv.includes('--dev');
 if (isDevMode) {
   // in dev mode we can have babel transpile modules on import
   require('@babel/register'); // eslint-disable-line import/no-extraneous-dependencies
-  // load the '.env' file from the project root
-  const dotenv = require('dotenv'); // eslint-disable-line import/no-extraneous-dependencies
-  dotenv.config();
   require('react-devtools');
 }
 

@@ -1,4 +1,4 @@
-import path  from 'path';
+import path from 'path';
 import { execFileSync } from 'child_process';
 
 import { getLogger } from '../logger';
@@ -18,13 +18,7 @@ export default function findInvestBinaries(isDevMode) {
     const filename = `invest${ext}`;
 
     if (isDevMode) {
-      // If no dotenv vars are set, default to where this project's
-      // build process places the binaries.
-      // TODO: remove or add back the dotenv functionality?
-      investExe = process.env.INVEST
-        || path.join('build', 'invest', filename);
-
-    // point to binaries included in this app's installation.
+      investExe = path.join('build', 'invest', filename);
     } else {
       const binaryPath = path.join(process.resourcesPath, 'invest');
       investExe = path.join(binaryPath, filename);
@@ -36,6 +30,6 @@ export default function findInvestBinaries(isDevMode) {
   } catch (error) {
     logger.error(error.message);
     logger.error('InVEST binaries are probably missing.');
-    throw new Error(error.message);
+    throw error;
   }
 }
