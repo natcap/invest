@@ -25,9 +25,9 @@
     ]
   },
   "invest": {
-    "bucket": "natcap-dev-build-artifacts",
-    "fork": "davemfish",
-    "version": "3.9.0.post432+gc81573f7",
+    "bucket": "releases.naturalcapitalproject.org",
+    "fork": "natcap",
+    "version": "3.9.0.post432+gdecbeffb",
     "target": {
       "macos": "mac_invest_binaries.zip",
       "windows": "windows_invest_binaries.zip"
