@@ -1,3 +1,5 @@
+/* eslint-disable max-classes-per-file */
+
 /* Mocks of all parts of the electron API that we use.
 
 None of the electron APIs are available in a node env, even though
@@ -12,15 +14,11 @@ even for APIs that would otherwise seem okay to call during a test.
 import path from 'path';
 import events from 'events';
 
-// TODO - is ReturnThis necessary? What are the implications?
-// TODO: given this functional IPC, some tests can probably
-// mock return values/implementations at a lower-level
-// e.g. electron shell API, etc.
 class MockIPC extends events.EventEmitter {
   constructor() {
     super();
-    this.handle = jest.fn().mockReturnThis();
-    this.handleOnce = jest.fn().mockReturnThis();
+    this.handle = jest.fn();
+    this.handleOnce = jest.fn();
     this.invoke = jest.fn().mockImplementation(() => Promise.resolve());
     this.send = (channel, ...args) => {
       const event = {
@@ -36,11 +34,15 @@ const electronMockIPC = new MockIPC();
 export const ipcMain = electronMockIPC;
 export const ipcRenderer = electronMockIPC;
 
-const mockApp = new events.EventEmitter();
-mockApp.getPath = jest.fn().mockImplementation(
-  () => path.join('tests', 'data')
-);
-export const app = mockApp;
+class MockApp extends events.EventEmitter {
+  constructor() {
+    super();
+    this.getPath = jest.fn().mockImplementation(
+      () => path.join('tests', 'data')
+    );
+  }
+}
+export const app = new MockApp();
 
 export class BrowserWindow {
   constructor() {
