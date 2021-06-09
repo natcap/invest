@@ -144,10 +144,11 @@ ARGS_SPEC = {
             "name": "Valuation function",
             "type": "option_string",
             "required": "do_valuation",
-            "options": [
-                'linear: a + bx',
-                'logarithmic: a + b log(x+1)',
-                'exponential: a * e^(-bx)'],
+            "options": {
+                "linear: a + bx": "",
+                "logarithmic: a + b log(x+1)": "",
+                "exponential: a * e^(-bx)": ""
+            },
             "about": (
                 "This field indicates the functional form f(x) the model will "
                 "use to value the visual impact for each viewpoint."),

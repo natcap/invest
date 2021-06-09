@@ -45,12 +45,13 @@ ARGS_SPEC = {
             "columns": {
                 "crop_name": {
                     "type": "option_string",
-                    "options": [
-                        "barley", "maize", "oilpalm", "potato", "rice", "rye"
-                        "soybean", "sugarbeet", "sugarcane", "sunflower",
-                        "wheat"
-                    ]
-
+                    "options": {
+                        crop: "" for crop in [
+                            "barley", "maize", "oilpalm", "potato", "rice",
+                            "rye", "soybean", "sugarbeet", "sugarcane",
+                            "sunflower", "wheat"
+                        ]
+                    }
                 },
                 "lucode": {"type": "code"}
             },

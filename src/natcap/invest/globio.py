@@ -130,10 +130,24 @@ ARGS_SPEC = {
             "columns": {
                 "msa_type": {
                     "type": "option_string",
-                    "options": [
-                        "msa_i_primary", "msa_i_other", "msa_f", "msa_lu"]
+                    "options": {
+                        "msa_i_primary": (
+                            "This MSA value represents infrastructure impacts "
+                            "on primary vegetation. The value in the 'value' "
+                            "column is a distance range in meters."),
+                        "msa_i_other": (
+                            "This MSA value represents infrastructure impacts "
+                            "on non-primary vegetation. The value in the "
+                            "'value' column is a distance range in meters."),
+                        "msa_f": (
+                            "This MSA value represents fragmentation impacts."
+                            "The value in the 'value' column is an FFQI range."),
+                        "msa_lu": (
+                            "This MSA value represents land-use impacts. The "
+                            "value in the 'value' column is one of the GLOBIO-"
+                            "recognized LULC codes."),
+                    }
                 },
-                "measurement": {"type": "freestyle_string"},
                 "value": {
                     "type": "freestyle_string",
                     "about": (
@@ -142,8 +156,7 @@ ARGS_SPEC = {
                         "separated by a hyphen e.g. 1000-2000), or an upper "
                         "or lower bound (a number preceded by > or < e.g. <5")
                 },
-                "msa_x": {"type": "ratio"},
-                "se": {"type": "number", "units": u.none}
+                "msa_x": {"type": "ratio"}
             },
             "about": (
                 "A CSV table containing MSA threshold values as defined in "

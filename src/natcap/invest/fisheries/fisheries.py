@@ -42,7 +42,10 @@ ARGS_SPEC = {
         },
         "population_type": {
             "type": "option_string",
-            "options": ["Age-Based", "Stage-Based"],
+            "options": {
+                "Age-Based": "",
+                "Stage-Based": ""
+            },
             "about": (
                 "Specifies whether the lifecycle classes provided in the "
                 "Population Parameters CSV file represent ages (uniform "
@@ -59,7 +62,10 @@ ARGS_SPEC = {
         },
         "sexsp": {
             "type": "option_string",
-            "options": ["No", "Yes"],
+            "options": {
+                "No": "",
+                "Yes": ""
+            },
             "about": (
                 "Specifies whether or not the lifecycle classes provided in "
                 "the Population Parameters CSV file are distinguished by sex."),
@@ -67,7 +73,10 @@ ARGS_SPEC = {
         },
         "harvest_units": {
             "type": "option_string",
-            "options": ["Individuals", "Weight"],
+            "options": {
+                "Individuals": "Output harvest values as numbers of individuals harvested",
+                "Weight": "Output harvest values as total weight harvested"
+            },
             "about": (
                 "Specifies whether the harvest output values are calculated "
                 "in terms of number of individuals or in terms of biomass "
@@ -122,7 +131,10 @@ ARGS_SPEC = {
         },
         "spawn_units": {
             "type": "option_string",
-            "options": ["Weight", "Individuals"],
+            "options": {
+                "Weight": "",
+                "Individuals": ""
+            },
             "about": (
                 "Specifies whether the spawner abundance used in the "
                 "recruitment function should be calculated in terms of number "
@@ -149,7 +161,12 @@ ARGS_SPEC = {
         },
         "recruitment_type": {
             "type": "option_string",
-            "options": ["Beverton-Holt", "Ricker", "Fecundity", "Fixed"],
+            "options": {
+                "Beverton-Holt": "",
+                "Ricker": "",
+                "Fecundity": "",
+                "Fixed": ""}
+            },
             "about": (
                 "The selected equation is used to calculate recruitment into "
                 "the subregions at the beginning of each time step. "

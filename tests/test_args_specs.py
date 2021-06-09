@@ -100,15 +100,10 @@ class ValidateArgsSpecs(unittest.TestCase):
                     self.assertTrue('options' in arg)
                     # May be a list or dict because some option sets are self
                     # explanatory and others need a description
-                    self.assertTrue(isinstance(arg['options'], list) or
-                                    isinstance(arg['options'], dict))
-                    if isinstance(arg['options'], list):
-                        for item in arg['options']:
-                            self.assertTrue(isinstance(item, str))
-                    elif isinstance(arg['options'], dict):
-                        for key, val in arg['options'].items():
-                            self.assertTrue(isinstance(key, str))
-                            self.assertTrue(isinstance(val, str))
+                    self.assertTrue(isinstance(arg['options'], dict))
+                    for key, val in arg['options'].items():
+                        self.assertTrue(isinstance(key, str))
+                        self.assertTrue(isinstance(val, str))
                     attrs.remove('options')
 
                 elif t == 'freestyle_string':

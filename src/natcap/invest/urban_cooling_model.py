@@ -205,16 +205,15 @@ ARGS_SPEC = {
         "cc_method": {
             "name": "Cooling capacity calculation method",
             "type": "option_string",
-            "options": ['factors', 'intensity'],
+            "options": {
+                "factors": ("Use the weighted shade, albedo, and ETI factors "
+                            "as a temperature predictor (for daytime temperatures)"),
+                "intensity": ("Use building intensity as a temperature "
+                              "predictor (for nighttime temperatures)")
+            },
             "about": (
                 "The method selected here determines the predictor used for "
-                "air temperature.  If 'Weighted Factors' is selected, the "
-                "Cooling Capacity calculations will use the weighted factors "
-                "for shade, albedo and ETI as a predictor for daytime "
-                "temperatures. <br/>Alternatively, if <b>'Building "
-                "Intensity'</b> is selected, building intensity will be used "
-                "as a predictor for nighttime temperature instead of shade, "
-                "albedo and ETI."),
+                "air temperature."),
         },
         "cc_weight_shade": {
             "name": "Cooling capacity: adjust shade weight",
