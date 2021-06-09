@@ -70,12 +70,12 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
-                "load_(\\w+)": {  # nitrogen or phosphorus nutrient loads
+                "load_([np])": {  # nitrogen or phosphorus nutrient loads
                     "items": "n for nitrogen, p for phosphorus",
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
                     "about": "The nutrient loading for each land use class"},
-                "eff_(\\w+)": {  # nutrient retention capacities
+                "eff_([np])": {  # nutrient retention capacities
                     "items": "n for nitrogen, p for phosphorus",
                     "type": "ratio",
                     "about": (
@@ -87,7 +87,7 @@ ARGS_SPEC = {
                         "all natural vegetation types (such as forests, "
                         "natural pastures, wetlands, or prairie), indicating "
                         "that 60-80% of nutrient is retained.")},
-                "crit_len_(\\w+)": {  # nutrient critical lengths
+                "crit_len_([np])": {  # nutrient critical lengths
                     "items": "n for nitrogen, p for phosphorus",
                     "type": "number",
                     "units": u.meter,

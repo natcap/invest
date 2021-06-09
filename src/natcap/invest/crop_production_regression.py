@@ -35,7 +35,7 @@ ARGS_SPEC = {
             "projection_units": u.meter,
             "about": (
                 "A raster file, representing integer land use/land code "
-                "covers for each cell. This rastershould have a projected "
+                "covers for each cell. This raster should have a projected "
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
                 "results in hectares."),
