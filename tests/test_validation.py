@@ -270,7 +270,6 @@ class DirectoryValidation(unittest.TestCase):
             opened_file.write('the text itself does not matter.')
 
         validation_warning = validation.check_directory(filepath)
-        print(validation_warning)
 
     def test_valid_permissions(self):
         """Validation: folder permissions."""
@@ -490,7 +489,7 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, field_patterns=['col_a', 'COL_B', 'col_c'])
+            filepath, fields={'col_a': {}, 'COL_B': {}, 'col_c': {}})
         self.assertTrue(
             'matched 0 headers, expected at least one' in error_msg)
 
@@ -666,7 +665,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         self.assertEqual(None, validation.check_csv(
-            target_file, header_patterns=['foo', 'bar']))
+            target_file, columns={'foo': {}, 'bar': {}}))
 
     def test_csv_bom_fieldnames(self):
         """Validation: test that we can check fieldnames in a CSV with BOM."""
@@ -681,7 +680,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file, encoding='utf-8-sig')
 
         self.assertEqual(None, validation.check_csv(
-            target_file, header_patterns=['foo', 'bar']))
+            target_file, columns={'foo': {}, 'bar': {}}))
 
     def test_csv_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in a CSV."""
@@ -696,7 +695,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         error_msg = validation.check_csv(
-            target_file, header_patterns=['field_a'])
+            target_file, columns={'field_a': {}})
         expected_msg = 'field_a matched 0 headers, expected at least one'
         self.assertEqual(error_msg, expected_msg)
 
@@ -735,7 +734,7 @@ class CSVValidation(unittest.TestCase):
         df.to_excel(target_file)
 
         error_msg = validation.check_csv(
-            target_file, header_patterns=['field_a'], excel_ok=True)
+            target_file, columns={'field_a': {}}, excel_ok=True)
         expected_msg = 'field_a matched 0 headers, expected at least one'
         self.assertEqual(error_msg, expected_msg)
 
@@ -752,12 +751,12 @@ class CSVValidation(unittest.TestCase):
         df.to_pickle(target_file)
 
         error_msg = validation.check_csv(
-            target_file, header_patterns=['field_a'], excel_ok=True)
+            target_file, columns={'field_a': {}}, excel_ok=True)
         self.assertTrue('could not be opened as a CSV or Excel file' in
                         error_msg)
 
         error_msg = validation.check_csv(
-            target_file, header_patterns=['field_a'], excel_ok=False)
+            target_file, columns={'field_a': {}}, excel_ok=False)
         self.assertTrue('could not be opened as a CSV' in error_msg)
 
     def test_slow_to_open(self):
@@ -1390,8 +1389,10 @@ class TestValidationFromSpec(unittest.TestCase):
         """Validation: test getting header patterns from a spec."""
         from natcap.invest import validation
         spec = {
-            'a': {'attr1': 1},
-            'b': {'regexp': '\\d+', 'attr1': 1}
+            'a': {},
+            '\\d+': {'required': 'conditional statement'},
+            'c': {'required': False}
         }
         patterns = validation.get_header_patterns(spec)
-        self.assertEqual(sorted(patterns), ['\\d+', 'a'])
+        # should only get the patterns that are always required
+        self.assertEqual(sorted(patterns), ['a'])

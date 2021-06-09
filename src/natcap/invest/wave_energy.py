@@ -139,7 +139,7 @@ ARGS_SPEC = {
         },
         "analysis_area_path": {
             "type": "option_string",
-            "options":
+            "options": {
                 "West Coast of North America and Hawaii": "",
                 "East Coast of North America and Puerto Rico": "",
                 "North Sea 4 meter resolution": "",

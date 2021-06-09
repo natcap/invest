@@ -165,7 +165,7 @@ ARGS_SPEC = {
                 "Beverton-Holt": "",
                 "Ricker": "",
                 "Fecundity": "",
-                "Fixed": ""}
+                "Fixed": ""
             },
             "about": (
                 "The selected equation is used to calculate recruitment into "

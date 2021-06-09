@@ -103,7 +103,10 @@ ARGS_SPEC = {
                 },
                 "type": {
                     "type": "option_string",
-                    "options": ["habitat", "stressor"]
+                    "options": {
+                        "habitat": "This row is a habitat layer",
+                        "stressor": "This row is a stressor layer"
+                    }
                 },
                 "stressor buffer \(meters\)": {
                     "type": "number",

@@ -35,12 +35,13 @@ ARGS_SPEC = {
         },
         "algorithm": {
             "type": "option_string",
-            "options": ["D8", "MFD"],
-            "about": (
-                "The routing algorithm to use. <ul><li>D8: all water flows "
-                "directly into the most downhill of each of the 8 neighbors "
-                "of a cell.</li><li>MFD: Multiple Flow Direction. Fractional "
-                "flow is modeled between pixels.</li></ul>"),
+            "options": {
+                "D8": ("All water on a pixel flows into the most downhill of "
+                       "its 8 surrounding pixels"),
+                "MFD": ("Flow off a pixel is modeled fractionally so that "
+                        "water is split among multiple downstream pixels")
+            },
+            "about": "The routing algorithm to use",
             "name": "Routing Algorithm"
         },
         "calculate_flow_direction": {

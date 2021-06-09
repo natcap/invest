@@ -106,12 +106,13 @@ ARGS_SPEC = {
         },
         "pools_to_calculate": {
             "type": "option_string",
-            "options": ["all", "above_ground"],
-            "about": (
-                "If 'all carbon pools' is selected then the headers "
-                "'c_above', 'c_below', 'c_dead', 'c_soil' are used in the "
-                "carbon pool calculation.  Otherwise only 'c_above' is "
-                "considered."),
+            "options": {
+                "all": ("Use all pools (c_above, c_below, c_dead, and c_soil) "
+                        "in the carbon pool calculation"),
+                "above_ground": (
+                    "Only use the c_above pool in the carbon pool calculation")
+            },
+            "about": "Which carbon pools to use (all or c_above only)",
             "name": "Carbon Pools to Calculate"
         },
         "compute_forest_edge_effects": {
