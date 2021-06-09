@@ -494,10 +494,6 @@ def check_code(value, **kwargs):
             return f'Value "{value}" does not represent an integer'
     except (TypeError, ValueError):
         return NOT_A_NUMBER_MSG % value
-
-    if as_float < 0:
-        return f'Value "{value}" is less than zero'
-
     return None
 
 

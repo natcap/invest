@@ -1371,15 +1371,14 @@ class TestValidationFromSpec(unittest.TestCase):
         args = {
             'a': 'xyz',    # not a number
             'b': '1.5',    # not an integer
-            'c': '-1',     # too small
-            'd': '0',      # lower bound
+            'c': '-1',     # negative integers are ok
+            'd': '0'
         }
         spec = {name: {'type': 'code'} for name in args}
 
         expected_warnings = [
             (['a'], 'Value "xyz" could not be interpreted as a number'),
-            (['b'], 'Value "1.5" does not represent an integer'),
-            (['c'], 'Value "-1" is less than zero')]
+            (['b'], 'Value "1.5" does not represent an integer')]
         actual_warnings = validation.validate(args, spec)
         self.assertEqual(len(actual_warnings), len(expected_warnings))
         for warning in actual_warnings:
