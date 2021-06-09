@@ -150,13 +150,13 @@ export default class App extends React.Component {
     });
   }
 
-  /** Save data describing an invest job to a persistent JSON file.
+  /** Save data describing an invest job to a persistent store.
    *
-   * @param {object} job - as constructed by new InvestJob()
+   * And update the app's view of that store.
+   * 
+   * @param {object} job - an instance of InvestJob.
    */
   async saveJob(job) {
-    // TODO: make job.save send an ipcMain to update recentJobs?
-    // and then remove the need for this saveJob wrapper.
     const recentJobs = await job.save();
     this.setState({
       recentJobs: recentJobs,
