@@ -153,7 +153,7 @@ describe('extractZipInplace', () => {
       expect(fs.existsSync(file2Path)).toBe(false);
     });
 
-    await extractZipInplace(zipPath);
+    expect(await extractZipInplace(zipPath)).toBe(true);
 
     // And the expected state after extraction
     await waitFor(() => {
@@ -268,7 +268,7 @@ describe('findMostRecentLogfile', () => {
       .toBeUndefined();
     fs.rmdirSync(dir);
   });
-})
+});
 
 describe('Integration tests for Download Sample Data Modal', () => {
   beforeAll(async () => {

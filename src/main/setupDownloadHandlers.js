@@ -45,10 +45,15 @@ export default function setupDownloadHandlers(mainWindow) {
     item.once('done', async (event, state) => {
       if (state === 'completed') {
         logger.info(`${itemURL} complete`);
-        await extractZipInplace(item.savePath);
-        fs.unlink(item.savePath, (err) => {
-          if (err) { logger.error(err); }
-        });
+        try {
+          await extractZipInplace(item.savePath);
+          fs.unlink(item.savePath, (err) => {
+            if (err) { logger.error(err); }
+          });
+        } catch (error) {
+          logger.error(`Something went wrong unzipping ${item.savePath}`);
+          logger.error(error.stack);
+        }
         const idx = downloadQueue.findIndex((item) => item === itemURL);
         downloadQueue.splice(idx, 1);
         mainWindow.webContents.send(
