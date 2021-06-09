@@ -119,16 +119,24 @@ ARGS_SPEC = {
         "demand_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
+                "lucode": {
+                    "about": "LULC code corresponding to the LULC raster",
+                    "type": "code"
+                },
                 "demand": {
+                    "about": ("Estimated average consumptive water use for "
+                              "a pixel in each LULC type"),
                     "type": "number",
-                    "units": u.meter**3/u.year/u.pixel}
+                    "units": u.meter**3/u.year/u.pixel
+                }
             },
             "required": False,
             "about": (
                 "A table mapping each LULC class to the estimated average "
-                "consumptive water use for that class. NOTE: the accounting "
-                "for pixel area is important since larger areas will consume "
+                "consumptive water use for that class. Each LULC code in the "
+                "LULC raster must have a corresponding row in this table. "
+                "NOTE: It is important that the demand values account for "
+                "pixel area is important since larger areas will consume "
                 "more water for the same land-cover type."),
             "name": "Water Demand Table"
         },
