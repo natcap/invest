@@ -149,9 +149,17 @@ ARGS_SPEC = {
         "sensitivity_table_path": {
             "type": "csv",
             "columns": {
-                "lulc": {"type": "code"},
-                "name": {"type": "freestyle_string"},
-                "habitat": {"type": "ratio"},
+                "lulc": {
+                    "type": "code",
+                    "about": ("LULC codes corresponding to those in the LULC "
+                              "rasters.")
+                },
+                "habitat": {
+                    "type": "ratio",
+                    "about": (
+                        "Suitability of this LULC class as habitat, where 0 "
+                        "is not suitable and 1 is completely suitable.")
+                    },
                 # threats: any column that's not 'lulc', 'name', or 'habitat'
                 "(?!lulc|habitat|name)(^.+$)": {
                     "items": "One for each threat in the threats table",
