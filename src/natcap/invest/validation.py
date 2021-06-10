@@ -216,7 +216,8 @@ def _check_projection(srs, projected, projection_units):
         A string error message if an error was found. ``None`` otherwise.
 
     """
-    if srs is None:
+    empty_srs = osr.SpatialReference()
+    if srs is None or srs.IsSame(empty_srs):
         return "Dataset must have a valid projection."
 
     if projected:
@@ -655,11 +656,15 @@ def check_spatial_overlap(spatial_filepaths_list,
             info = pygeoprocessing.get_raster_info(filepath)
         except ValueError:
             info = pygeoprocessing.get_vector_info(filepath)
-        bounding_box = info['bounding_box']
+
+        if info['projection_wkt'] is None:
+            return f'Spatial file {filepath} has no projection'
 
         if different_projections_ok:
             bounding_box = pygeoprocessing.transform_bounding_box(
-                bounding_box, info['projection_wkt'], wgs84_wkt)
+                info['bounding_box'], info['projection_wkt'], wgs84_wkt)
+        else:
+            bounding_box = info['bounding_box']
 
         if all([numpy.isinf(coord) for coord in bounding_box]):
             LOGGER.warning(
@@ -1042,7 +1047,6 @@ def invest_validator(validate_func):
                 if args_value not in ('', None):
                     input_type = args_key_spec['type']
                     validator_func = _VALIDATION_FUNCS[input_type]
-
                     error_msg = validator_func(args_value, **args_key_spec)
 
                 if error_msg is None:

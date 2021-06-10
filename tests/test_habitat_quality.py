@@ -328,7 +328,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -376,7 +376,7 @@ class HabitatQualityTests(unittest.TestCase):
             'results_suffix': 'regression',
             'workspace_dir': self.workspace_dir,
             'n_workers': -1,
-            }
+        }
 
         args['access_vector_path'] = os.path.join(
             args['workspace_dir'], 'access_samp.shp')
@@ -451,7 +451,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -546,11 +546,11 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         with open(args['sensitivity_table_path'], 'w') as open_table:
             open_table.write(
-                    'LULC,NAME,HABITAT,%s,%s\n' % tuple(threatnames))
+                'LULC,NAME,HABITAT,%s,%s\n' % tuple(threatnames))
             open_table.write('1,"lulc 1",1,1,1\n')
             open_table.write('2,"lulc 2",0.5,0.5,1\n')
             open_table.write('3,"lulc 3",0,0.3,1\n')
@@ -664,7 +664,7 @@ class HabitatQualityTests(unittest.TestCase):
             'results_suffix': 'regression',
             'workspace_dir': self.workspace_dir,
             'n_workers': -1,
-            }
+        }
 
         args['access_vector_path'] = os.path.join(
             args['workspace_dir'], 'access_samp.shp')
@@ -712,7 +712,7 @@ class HabitatQualityTests(unittest.TestCase):
             'results_suffix': 'regression',
             'workspace_dir': self.workspace_dir,
             'n_workers': -1,
-            }
+        }
 
         args['access_vector_path'] = os.path.join(
             args['workspace_dir'], 'access_samp.shp')
@@ -814,7 +814,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -865,7 +865,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1053,7 +1053,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         make_threats_raster(args['workspace_dir'])
 
@@ -1102,7 +1102,7 @@ class HabitatQualityTests(unittest.TestCase):
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             args['lulc' + scenario + 'path'] = path
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
             # Add a nodata value to this raster to make sure we don't include
             # the nodata value in the error message.
@@ -1185,7 +1185,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1235,7 +1235,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1291,7 +1291,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1344,7 +1344,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1398,7 +1398,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1451,7 +1451,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1504,7 +1504,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1557,7 +1557,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1610,7 +1610,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1663,7 +1663,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1716,7 +1716,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1732,11 +1732,11 @@ class HabitatQualityTests(unittest.TestCase):
             for (i, threat), value in zip(
                     enumerate(threat_names), threat_values):
                 raster_path = os.path.join(
-                        args['workspace_dir'], threat + suffix + '.tif')
+                    args['workspace_dir'], threat + suffix + '.tif')
                 # making variations among threats
                 threat_array[100//(i+1):, :] = value
                 make_raster_from_array(
-                        threat_array, raster_path, nodata_val=-1)
+                    threat_array, raster_path, nodata_val=-1)
 
         # create threats table for the test
         args['threats_table_path'] = os.path.join(
@@ -1783,7 +1783,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -1799,11 +1799,11 @@ class HabitatQualityTests(unittest.TestCase):
             for (i, threat), value in zip(
                     enumerate(threat_names), threat_values):
                 raster_path = os.path.join(
-                        args['workspace_dir'], threat + suffix + '.tif')
+                    args['workspace_dir'], threat + suffix + '.tif')
                 # making variations among threats
                 threat_array[100//(i+1):, :] = value
                 make_raster_from_array(
-                        threat_array, raster_path, nodata_val=-1)
+                    threat_array, raster_path, nodata_val=-1)
 
         # create threats table for the test
         args['threats_table_path'] = os.path.join(
@@ -1853,11 +1853,11 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         # make future LULC with different origin
         args['lulc_fut_path'] = os.path.join(
-                args['workspace_dir'], 'lc_samp_fut_b.tif')
+            args['workspace_dir'], 'lc_samp_fut_b.tif')
         lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
         lulc_array[50:, :] = 3
         srs = osr.SpatialReference()
@@ -1893,11 +1893,11 @@ class HabitatQualityTests(unittest.TestCase):
             for (i, threat), value in zip(
                     enumerate(threat_names), threat_values):
                 raster_path = os.path.join(
-                        args['workspace_dir'], threat + suffix + '.tif')
+                    args['workspace_dir'], threat + suffix + '.tif')
                 # making variations among threats
                 threat_array[100//(i+1):, :] = value
                 make_raster_from_array(
-                        threat_array, raster_path, nodata_val=-1)
+                    threat_array, raster_path, nodata_val=-1)
 
         # create threats table for the test
         args['threats_table_path'] = os.path.join(
@@ -1920,8 +1920,8 @@ class HabitatQualityTests(unittest.TestCase):
             "Bounding boxes do not intersect" in
             validate_result[0][1], validate_result[0][1])
 
-    def test_habitat_quality_argspec_projected(self):
-        """Habitat Quality: raise error on incorrect projection."""
+    def test_habitat_quality_argspec_missing_projection(self):
+        """Habitat Quality: raise error on missing projection."""
         from natcap.invest import habitat_quality
 
         args = {
@@ -1973,11 +1973,11 @@ class HabitatQualityTests(unittest.TestCase):
             for (i, threat), value in zip(
                     enumerate(threat_names), threat_values):
                 raster_path = os.path.join(
-                        args['workspace_dir'], threat + suffix + '.tif')
+                    args['workspace_dir'], threat + suffix + '.tif')
                 # making variations among threats
                 threat_array[100//(i+1):, :] = value
                 make_raster_from_array(
-                        threat_array, raster_path, nodata_val=-1)
+                    threat_array, raster_path, nodata_val=-1)
 
         # create threats table for the test
         args['threats_table_path'] = os.path.join(
@@ -1993,12 +1993,9 @@ class HabitatQualityTests(unittest.TestCase):
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "Dataset must be projected in linear units" in
-            validate_result[0][1], validate_result[0][1])
+        expected = [
+            (['lulc_cur_path'], 'Dataset must have a valid projection.')]
+        self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_argspec_missing_threat_header(self):
         """Habitat Quality: test validate for a threat header."""
@@ -2022,7 +2019,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -2071,7 +2068,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
@@ -2122,7 +2119,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_raster_from_array(
-                    lulc_array, args['lulc' + scenario + 'path'])
+                lulc_array, args['lulc' + scenario + 'path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
