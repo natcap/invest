@@ -1,10 +1,6 @@
 module.exports = {
   presets: [
-    ['@babel/preset-env', {
-      targets: {
-        electron: '12'
-      }
-    }],
+    '@babel/preset-env',
     '@babel/preset-react',
   ],
   plugins: [
