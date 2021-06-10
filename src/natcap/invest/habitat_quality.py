@@ -129,7 +129,15 @@ ARGS_SPEC = {
         "access_vector_path": {
             "type": "vector",
             "projected": True,
-            "fields": {"access": {"type": "ratio"}},
+            "fields": {
+                "access": {
+                    "type": "ratio",
+                    "about": (
+                        "The region's relative accessibility to threats, "
+                        "where 0 represents completely inaccessible and 1 "
+                        "represents completely accessible")
+                }
+            },
             "geometries": utils.POLYGONS,
             "required": False,
             "about": (
