@@ -397,7 +397,11 @@ def _accumulate_totals(raster_path):
     nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
     raster_sum = 0.0
     for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
-        raster_sum += numpy.sum(block[block != nodata])
+        # The float64 dtype in the sum is needed to reduce numerical error in
+        # the sum.  Users calculated the sum with ArcGIS zonal statistics,
+        # noticed a difference and wrote to us about it on the forum.
+        raster_sum += numpy.sum(
+            block[~numpy.isclose(block, nodata)], dtype=numpy.float64)
     return raster_sum
 
 
