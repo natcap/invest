@@ -987,7 +987,7 @@ def aggregate_regression_results_to_polygons(
             aggregate_table.write('\n')
 
 
-@ validation.invest_validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 

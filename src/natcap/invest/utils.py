@@ -109,12 +109,6 @@ AREA = {
     "geometries": {"POLYGON", "MULTIPOLYGON"}
 }
 
-DISTANCE = {
-    "type": "number",
-    "units": u.meter,
-    "expression": "value >= 0"
-}
-
 METER_RASTER = {
     "type": "raster",
     "bands": {

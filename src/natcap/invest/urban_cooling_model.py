@@ -72,11 +72,12 @@ ARGS_SPEC = {
                     "type": "ratio",
                     "required": "cc_method == factors",
                     "about": ("The proportion of tree cover (0 for no tree; 1 "
-                        "for full tree cover; with trees>2m).")},
+                              "for full tree cover; with trees>2m).")},
                 "albedo": {
                     "type": "ratio",
                     "required": "cc_method == factors",
-                    "about": ("The proportion of solar radiation directly "
+                    "about": (
+                        "The proportion of solar radiation directly "
                         "reflected by the LULC type. Required if using the "
                         "weighted factor approach to Cooling Coefficient "
                         "calculations.")},
@@ -84,7 +85,7 @@ ARGS_SPEC = {
                     "type": "ratio",
                     "required": "cc_method == intensity",
                     "about": ("The ratio of building floor area to footprint "
-                        "area, normalized between 0 and 1.")}
+                              "area, normalized between 0 and 1.")}
             },
             "about": (
                 "A CSV table containing model information corresponding to "
@@ -93,14 +94,18 @@ ARGS_SPEC = {
                 "table.  Each row is a land use/land cover class."),
         },
         "green_area_cooling_distance": {
-            **utils.DISTANCE,
+            "type": "number",
+            "units": u.meter,
+            "expression": "value >= 0",
             "name": "Green area max cooling distance effect",
             "about": (
                 "Distance over which green areas larger than 2 hectares will "
                 "have a cooling effect."),
         },
         "t_air_average_radius": {
-            **utils.DISTANCE,
+            "type": "number",
+            "units": u.meter,
+            "expression": "value >= 0",
             "name": "T_air moving average radius",
             "about": (
                 "Radius of the averaging filter for turning T_air_nomix into "
