@@ -110,10 +110,6 @@ async function updateSampledataRegistry() {
   // make a deep copy so we can check if any updates were made and
   // only overwrite the file if necessary.
   const registry = JSON.parse(JSON.stringify(template));
-  // const dataPrefix = encodeURIComponent(
-  //   path.join('invest', FORK, VERSION, 'data')
-  // );
-  // const dataEndpoint = `${googleAPI}/${BUCKET}/o?prefix=${dataPrefix}`;
 
   async function queryStorage(endpoint) {
     let data;
@@ -133,7 +129,6 @@ async function updateSampledataRegistry() {
     });
     return dataIndex;
   }
-  console.log(DATA_QUERY_URL)
   const dataItems = await queryStorage(DATA_QUERY_URL);
   Object.keys(registry).forEach((model) => {
     const filename = `${decodeURIComponent(DATA_PREFIX)}/${registry[model].filename}`;
