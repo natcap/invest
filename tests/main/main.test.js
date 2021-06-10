@@ -232,7 +232,7 @@ describe('findMostRecentLogfile', () => {
     fs.rmdirSync(dir);
   });
 
-  test('regex matcher works on variuos invest models', async () => {
+  test('regex matcher works on various invest models', async () => {
     const dir = setupDir();
     const a = path.join(
       dir, 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt'

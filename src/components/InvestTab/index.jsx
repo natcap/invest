@@ -189,7 +189,6 @@ export default class InvestTab extends React.Component {
       navID,
       modelRunName,
       argsValues,
-      // logfile,
     } = this.props.job.metadata;
 
     // Don't render the model setup & log until data has been fetched.

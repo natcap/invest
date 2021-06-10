@@ -141,7 +141,6 @@ export function setupInvestRunHandlers(investExe) {
     // And because it could actually be stderr emitted from the
     // invest CLI or even the shell, rather than the invest model,
     // in which case it's useful to logger.debug too.
-    // let stderr = Object.assign('', this.state.logStdErr);
     investRun.stderr.on('data', (data) => {
       logger.debug(`${data}`);
       event.reply(`invest-stderr-${channel}`, `${data}${os.EOL}`);
