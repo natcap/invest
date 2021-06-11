@@ -728,10 +728,11 @@ def timeout(func, *args, timeout=5, **kwargs):
 
 
 def get_header_patterns(spec):
-    """Get expected header patterns from an arg spec.
+    """Get expected header patterns from a row/column/field spec dictionary.
 
     Args:
-        spec (dict):
+        spec (dict): a row/column/field spec dictionary that maps row/column/
+            field patterns to specs for them
 
     Returns:
         list of strings that are regex-compilable to match a pattern
