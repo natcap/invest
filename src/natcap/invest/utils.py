@@ -165,14 +165,14 @@ ETO_ARG = {
             "units": u.millimeter
         }
     },
-    "about": "A map of evapotranspiration values"
+    "about": "A map of evapotranspiration values."
 }
 SOIL_GROUP_ARG = {
     "type": "raster",
     "bands": {1: {"type": "code"}},
     "about": (
         "Raster with values equal to 1, 2, 3, 4, corresponding to "
-        "soil hydrologic group A, B, C, or D, respectively"),
+        "soil hydrologic group A, B, C, or D, respectively."),
     "name": "soil hydrologic group"
 }
 THRESHOLD_FLOW_ACCUMULATION_ARG = {
