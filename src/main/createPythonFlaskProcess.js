@@ -58,9 +58,6 @@ export function createPythonFlaskProcess(investExe) {
 
 /** Find out if the Flask server is online, waiting until it is.
  *
- * Sometimes the app will make a server request before it's ready,
- * so awaiting this response is one way to avoid that.
- *
  * @param {number} i - the number or previous tries
  * @param {number} retries - number of recursive calls this function is allowed.
  * @returns { Promise } resolves text indicating success.
