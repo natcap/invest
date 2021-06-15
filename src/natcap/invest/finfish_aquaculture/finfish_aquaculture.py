@@ -27,8 +27,7 @@ ARGS_SPEC = {
                 "anything, but no spaces in the name."),
             "type": "vector",
             "fields": {
-                "(\\w+)": {  # may be anything, will be selected as the farm_ID
-                    "items": "one",
+                "[FARM_ID]": {  # may be anything, will be selected as the farm_ID
                     "type": "code",
                     "about": (
                         "A user-defined ID field with a unique integer code "

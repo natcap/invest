@@ -512,9 +512,9 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, fields={'col_a': {}, 'COL_B': {}, 'col_c': {}})
-        self.assertTrue(
-            'matched 0 headers, expected at least one' in error_msg)
+            filepath, fields={'col_a': {}, 'col_b': {}, 'col_c': {}})
+        expected = validation.MATCHED_NO_HEADERS_MSG % ('field', 'col_c')
+        self.assertEqual(error_msg, expected)
 
     def test_vector_projected_in_m(self):
         """Validation: test that a vector's projection has expected units."""
@@ -719,7 +719,7 @@ class CSVValidation(unittest.TestCase):
 
         error_msg = validation.check_csv(
             target_file, columns={'field_a': {}})
-        expected_msg = 'field_a matched 0 headers, expected at least one'
+        expected_msg = validation.MATCHED_NO_HEADERS_MSG % ('column', 'field_a')
         self.assertEqual(error_msg, expected_msg)
 
     def test_csv_not_utf_8(self):
@@ -758,7 +758,7 @@ class CSVValidation(unittest.TestCase):
 
         error_msg = validation.check_csv(
             target_file, columns={'field_a': {}}, excel_ok=True)
-        expected_msg = 'field_a matched 0 headers, expected at least one'
+        expected_msg = validation.MATCHED_NO_HEADERS_MSG % ('column', 'field_a')
         self.assertEqual(error_msg, expected_msg)
 
     def test_wrong_filetype(self):
@@ -827,7 +827,7 @@ class CSVValidation(unittest.TestCase):
     def test_check_patterns(self):
         """Validation: check that CSV header validation works."""
         from natcap.invest import validation
-        patterns = ['hello', r'\d+']
+        patterns = ['hello', '1']
         headers = ['hello', '1', '2']
         result = validation.check_patterns(patterns, headers)
         self.assertEqual(result, None)
@@ -835,30 +835,19 @@ class CSVValidation(unittest.TestCase):
         # each pattern should match at least one header
         headers = ['1', '2']
         result = validation.check_patterns(patterns, headers)
-        expected = 'hello matched 0 headers, expected at least one'
+        expected = validation.MATCHED_NO_HEADERS_MSG % ('header', 'hello')
         self.assertEqual(result, expected)
 
         # duplicate headers that match a pattern are not allowed
         headers = ['hello', '1', '1']
         result = validation.check_patterns(patterns, headers)
-        expected = (
-            r'Header 1 (matched pattern \d+) was found 2 times, expected '
-            'only once')
+        expected = validation.DUPLICATE_HEADER_MSG % ('header', '1', 2)
         self.assertEqual(result, expected)
 
         # duplicate headers that don't match a pattern are allowed
         headers = ['hello', '1', 'x', 'x']
         result = validation.check_patterns(patterns, headers)
         self.assertEqual(result, None)
-
-        # two patterns matching the same header is not allowed
-        patterns = ['hello', r'h.*']
-        headers = ['hello']
-        expected = (
-            f'Header hello was matched by more than one pattern: {patterns}, '
-            'expected exactly one')
-        result = validation.check_patterns(patterns, headers)
-        self.assertEqual(result, expected)
 
 
 class TestValidationFromSpec(unittest.TestCase):

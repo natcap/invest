@@ -48,8 +48,7 @@ ARGS_SPEC = {
             "type": "directory",
             "contents": {
                 # monthly et0 maps, each file ending in a number 1-12
-                "(\\w*?)(\\d+)": {
-                    "items": "One for each month 1-12",
+                "[MONTH]": {
                     "about": (
                         "Twelve files, one for each month. File names must "
                         "end with the month number (1-12)."),
@@ -67,8 +66,7 @@ ARGS_SPEC = {
             "type": "directory",
             "contents": {
                 # monthly precipitation maps, each file ending in a number 1-12
-                "(\\w*?)(\\d+)": {
-                    "items": "One for each month 1-12",
+                "[MONTH]": {
                     "about": (
                         "Twelve files, one for each month. File names must end "
                         "with the month number (1-12)."),
@@ -103,16 +101,14 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
-                "cn_([abcd])": {
-                    "items": "One for each soil group A, B, C, D",
+                "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
                     "about": (
                         "Curve number values for each combination of soil "
                         "type and LULC class. No 0s are allowed.")
                 },
-                "kc_(\\d+)": {
-                    "items": "One for each month 1-12",
+                "kc_[MONTH]": {
                     "type": "number",
                     "units": u.none,
                     "about": (
@@ -209,8 +205,7 @@ ARGS_SPEC = {
                     "about": (
                         "Climate zone numbers, integers which correspond to "
                         "values found in the Climate zone raster")},
-                "(\\w+)": {  # jan, feb, mar, etc.
-                    "items": f"One for each month in {MONTH_ID_TO_LABEL}",
+                "[MONTH]": {  # jan, feb, mar, etc.
                     "type": "number",
                     "units": u.none,
                     "about": (

@@ -65,10 +65,7 @@ ARGS_SPEC = {
             "type": "vector",
             "geometries": {"POINT"},
             "fields": {
-                "(radius|radius2)": {
-                    "items": (
-                        "RADIUS preferred, but may also be called RADIUS2 for "
-                        "backwards compatibility."),
+                "RADIUS": {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
@@ -79,7 +76,8 @@ ARGS_SPEC = {
                         "backwards compatibility), but is converted to a "
                         "positive number. If the field doesn’t exist, the "
                         "model will include all pixels in the DEM in the "
-                        "visibility analysis.")},
+                        "visibility analysis. RADIUS preferred, but may also "
+                        "be called RADIUS2 for backwards compatibility.")},
                 "weight": {
                     "type": "number",
                     "units": u.none,

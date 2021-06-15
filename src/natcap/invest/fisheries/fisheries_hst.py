@@ -25,7 +25,7 @@ ARGS_SPEC = {
         "sexsp": {
             "name": "Population Classes are Sex-Specific",
             "type": "option_string",
-            "options": ["No", "Yes"],
+            "options": {"No": "", "Yes": ""},
             "about": (
                 "Specifies whether or not the population classes provided in "
                 "the Population Parameters CSV file are distinguished by sex."),
@@ -46,8 +46,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "habitats": {"type": "freestyle_string"},
-                "(?!habitats)(^\\w+$)": {
-                    "items": "One for each life stage or age",
+                "[LIFE STAGE OR AGE]": {
                     "type": "ratio",
                     "about": (
                         "One column for each life stage or age in the habitat "
@@ -64,8 +63,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "habitats": {"type": "freestyle_string"},
-                "(?!habitats)(^\\w+$)": {
-                    "items": "One for each subregion",
+                "[SUBREGION]": {
                     "type": "ratio",
                     "about": (
                         "For each subregion, the proportion of habitat area "

@@ -27,7 +27,11 @@ CHECK_ALL_KEYS = None
 MESSAGE_REQUIRED = 'Parameter is required but is missing or has no value'
 LOGGER = logging.getLogger(__name__)
 
-MATCHED_NO_HEADERS_MSG = '%s matched 0 headers, expected at least one'
+# (header type, header name) e.g. 'column', 'lucode'
+MATCHED_NO_HEADERS_MSG = 'Expected the %s %s but did not find it'
+# (header type, header name, number of times found) e.g. 'row', 'lucode', 2
+DUPLICATE_HEADER_MSG = 'Expected the %s %s only once but found it %d times'
+
 NOT_A_NUMBER_MSG = 'Value "%s" could not be interpreted as a number'
 
 
@@ -346,7 +350,7 @@ def check_vector(filepath, fields=None, projected=False, projection_units=None,
     if fields:
         field_patterns = get_header_patterns(fields)
         fieldnames = [defn.GetName() for defn in layer.schema]
-        required_field_warning = check_patterns(field_patterns, fieldnames)
+        required_field_warning = check_patterns(field_patterns, fieldnames, 'field')
         if required_field_warning:
             return required_field_warning
 
@@ -565,13 +569,13 @@ def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
     # assume that at most one of `rows` and `columns` is defined
     if columns:
         headers = [str(name).strip() for name in dataframe.iloc[0]]
-        return check_patterns(get_header_patterns(columns), headers)
+        return check_patterns(get_header_patterns(columns), headers, 'column')
     elif rows:
         headers = [str(name).strip() for name in dataframe.iloc[:, 0]]
-        return check_patterns(get_header_patterns(rows), headers)
+        return check_patterns(get_header_patterns(rows), headers, 'row')
 
 
-def check_patterns(patterns, headers):
+def check_patterns(expected_headers, actual_headers, header_name='header'):
     """Validate that table headers (rows/columns) match a list of patterns.
 
     - Each pattern should match at least one header.
@@ -585,48 +589,20 @@ def check_patterns(patterns, headers):
             Each pattern should be parse-able as regex and will be anchored to
             the header start and end.
         headers (list[str]): A list of headers to validate.
+        header_name (str): A string to use in the error message to refer to the
+            header (typically one of 'column', 'row', 'field')
 
     Returns:
         None, if validation passes; or a string describing the problem, if a
         validation rule is broken.
     """
-    headers = [header.lower() for header in headers]  # case insensitive
-    # use a list not a dict in case there's duplicates
-    # map each expected header pattern to a list of headers that it matches
-    pattern_to_headers = [[] for pattern in patterns]
-    # map each actual header to a list of patterns that match it
-    header_to_patterns = [[] for header in headers]
-
-    for pattern_index, pattern in enumerate(patterns):
-        # add $ to the end to make it try to match the entire string
-        # re.match already anchors the pattern to the string start
-        compiled_pattern = re.compile(pattern + '$')
-        for header_index, header in enumerate(headers):
-            match = re.match(compiled_pattern, header)
-            if match:
-                pattern_to_headers[pattern_index].append(header)
-                header_to_patterns[header_index].append(pattern)
-
-    for pattern_index, matching_headers in enumerate(pattern_to_headers):
-        # each pattern should match at least one header
-        if len(matching_headers) == 0:
-            return MATCHED_NO_HEADERS_MSG % patterns[pattern_index]
-
-    for header_index, matching_patterns in enumerate(header_to_patterns):
-        # no header should be matched by more than one pattern
-        # it would be neat to prove that all patterns are mutually
-        # exclusive in test_args_specs.py, but easier to check it here.
-        if len(matching_patterns) > 1:
-            return (f'Header {headers[header_index]} was matched by more than '
-                    f'one pattern: {matching_patterns}, expected exactly one')
-        # each header that's matched by a pattern should not be duplicated
-        if len(matching_patterns) > 0:
-            count = headers.count(headers[header_index])
-            if count > 1:
-                return (f'Header {headers[header_index]} (matched pattern '
-                        f'{matching_patterns[0]}) was found {count} times, '
-                        'expected only once')
-
+    actual_headers = [header.lower() for header in actual_headers]  # case insensitive
+    for expected in expected_headers:
+        count = actual_headers.count(expected)
+        if count == 0:
+            return MATCHED_NO_HEADERS_MSG % (header_name, expected)
+        elif count > 1:
+            return DUPLICATE_HEADER_MSG % (header_name, expected, count)
     return None
 
 
@@ -743,7 +719,11 @@ def get_header_patterns(spec):
         # we may implement conditionally required patterns in the future
         # if 'required' isn't a key, it defaults to True
         if ('required' not in val) or (val['required'] is True):
-            patterns.append(key)
+            # brackets are a special character for our args spec syntax
+            # they surround the part of the key that's user-defined
+            # user-defined rows/columns/fields are not validated here, so skip
+            if '[' not in key:
+                patterns.append(key)
     return patterns
 
 

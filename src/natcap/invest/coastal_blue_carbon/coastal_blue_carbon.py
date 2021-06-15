@@ -286,10 +286,7 @@ ARGS_SPEC = {
                     "about": (
                         "LULC codes matching the codes in the biophysical "
                         "table")},
-                "(?!lulc-class)(^.+$)": {
-                    "items": (
-                        "One column header for each LULC code in the "
-                        "biophysical table"),
+                "[LULC CODE]": {
                     "type": "option_string",
                     "options": {
                         "accum": "a state of carbon accumulation",

@@ -113,10 +113,7 @@ ARGS_SPEC = {
             "type": "directory",
             "required": "do_batch",
             "contents": {
-                "(\\w+)": {  # population parameters table
-                    "items": "One for each population",
-                    "type": "csv",
-                }
+                "[POPULATION_PARAMS_TABLE]": {"type": "csv"}
             },
             "about": (
                 "The provided CSV folder should contain a set of Population "
@@ -220,13 +217,12 @@ ARGS_SPEC = {
             "type": "directory",
             "required": "migr_cont",
             "contents": {
-                "(\\w+)": {
-                    "items": "One for each lifecycle class",
+                "[LIFECYCLE_CLASS_TABLE]": {
                     "type": "csv",
                     "columns": {
                         "migration": {"type": "freestyle_string"},
-                        "(?!migration)(^\\w+$)": {
-                            "items": ("One for each region from which "
+                        "[REGION]": {
+                            "about": ("One for each region from which "
                                       "migration occurs"),
                             "type": "freestyle_string"}
                     }

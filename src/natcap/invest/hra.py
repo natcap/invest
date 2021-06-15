@@ -162,7 +162,7 @@ ARGS_SPEC = {
                 "equation. This will determine the numeric output of risk for "
                 "every habitat and stressor overlap area."),
             "type": "option_string",
-            "options": ["Multiplicative", "Euclidean"]
+            "options": {"Multiplicative": "", "Euclidean": ""}
         },
         "decay_eq": {
             "name": "Decay Equation",
@@ -172,7 +172,7 @@ ARGS_SPEC = {
                 "this equation will determine the rate at which stressor data "
                 "is reduced."),
             "type": "option_string",
-            "options": ["None", "Linear", "Exponential"]
+            "options": {"None": "", "Linear": "", "Exponential": ""}
         },
         "aoi_vector_path": {
             **utils.AOI_ARG,

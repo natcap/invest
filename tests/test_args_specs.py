@@ -275,9 +275,6 @@ class ValidateArgsSpecs(unittest.TestCase):
                 self.assertTrue(isinstance(arg['type'], str) or
                                 isinstance(arg['type'], set))
                 attrs.remove('type')
-            if 'items' in attrs:
-                self.assertTrue(isinstance(arg['items'], str))
-                attrs.remove('items')
 
             # args should not have any unexpected properties
             # all attrs should have been removed by now

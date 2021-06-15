@@ -92,8 +92,7 @@ ARGS_SPEC = {
                 "climate_regression_yield_tables": {
                     "type": "directory",
                     "contents": {
-                        "(\\w+)_regression_yield_table.csv": {
-                            "items": "One for each crop",
+                        "[CROP]_regression_yield_table.csv": {
                             "type": "csv",
                             "columns": {
                                 'climate_bin': {"type": "code"},

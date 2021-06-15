@@ -42,8 +42,7 @@ ARGS_SPEC = {
                     "type": "freestyle_string",
                     "about": "unique pollinator species or guild name"
                 },
-                "nesting_suitability_(\\w+)_index": {
-                    "items": "One column for each substrate defined",
+                "nesting_suitability_[SUBSTRATE]_index": {
                     "type": "ratio",
                     "about": (
                         "Utilization of this substrate by this species, with "
@@ -55,8 +54,7 @@ ARGS_SPEC = {
                         "nesting_[SUBSTRATE]_availability_index in the "
                         "biophysical table.")
                 },
-                "foraging_activity_(\\w+)_index": {
-                    "items": "One column for each season defined",
+                "foraging_activity_[SEASON]_index": {
                     "type": "ratio",
                     "about": (
                         "Pollinator activity by floral season (i.e., flight "
@@ -99,15 +97,13 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {"type": "code"},
-                "nesting_(\\w+)_availability_index": {
-                    "items": "One column for each substrate defined",
+                "nesting_[SUBSTRATE]_availability_index": {
                     "type": "ratio",
                     "about": (
                         "Availability of the given nesting type within each "
                         "LULC type. The SUBSTRATE name must exactly match a "
                         "substrate given in the Guild Table.")},
-                "floral_resources_(\\w+)_index": {
-                    "items": "One column for each season defined",
+                "floral_resources_[SEASON]_index": {
                     "type": "ratio",
                     "about": (
                         "Abundance of flowers in each LULC class for the "
@@ -146,15 +142,13 @@ ARGS_SPEC = {
                     "about": (
                         "The season in which the crop is pollinated. This "
                         "season must match a season in the guild table.")},
-                "fr_(\\w+)": {  # floral resources for each season
-                    "items": "One for each season of interest",
+                "fr_[SEASON]": {  # floral resources for each season
                     "type": "ratio",
                     "about": (
                         "The floral resources available at this farm for the "
                         "given season. The SEASON string must exactly match "
                         "one of the seasons provided in the guild table")},
-                "n_(\\w+)": {  # nesting availabilities for each substrate
-                    "items": "One for each substrate of interest",
+                "n_[SUBSTRATE]": {  # nesting availabilities for each substrate
                     "type": "ratio",
                     "about": (
                         "The nesting substrate suitability for the farm for "

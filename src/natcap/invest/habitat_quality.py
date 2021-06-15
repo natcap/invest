@@ -160,9 +160,7 @@ ARGS_SPEC = {
                         "Suitability of this LULC class as habitat, where 0 "
                         "is not suitable and 1 is completely suitable.")
                     },
-                # threats: any column that's not 'lulc', 'name', or 'habitat'
-                "(?!lulc|habitat|name)(^.+$)": {
-                    "items": "One for each threat in the threats table",
+                "[THREAT]": {
                     "type": "ratio",
                     "about": (
                         "The relative sensitivity of each LULC class to each "
