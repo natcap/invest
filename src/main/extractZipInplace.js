@@ -32,7 +32,7 @@ export default function extractZipInplace(zipFilePath) {
         if (/\/$/.test(entry.fileName)) {
           fs.mkdir(writePath, (e) => {
             if (e) {
-              if (e.code === 'EEXIST') { } else throw e;
+              if (e.code !== 'EEXIST') { throw e; }
             }
             zipfile.readEntry();
           });
@@ -47,7 +47,7 @@ export default function extractZipInplace(zipFilePath) {
             // to create the dir here.
             fs.mkdir(path.dirname(writePath), (e) => {
               if (e) {
-                if (e.code === 'EEXIST') { } else throw e;
+                if (e.code !== 'EEXIST') { throw e; }
               }
               const writable = fs.createWriteStream(writePath);
               readStream.pipe(writable);
