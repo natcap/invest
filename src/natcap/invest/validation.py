@@ -375,15 +375,9 @@ def check_freestyle_string(value, regexp=None, **kwargs):
 
     """
     if regexp:
-        flags = 0
-        if 'case_sensitive' in regexp:
-            if regexp['case_sensitive'] is False:
-                flags = re.IGNORECASE
-        matches = re.findall(regexp['pattern'], str(value), flags)
+        matches = re.findall(regexp, str(value), re.IGNORECASE)
         if not matches:
-            return ("Value did not match expected pattern %s"
-                    % regexp['pattern'])
-
+            return f"Value did not match expected pattern {regexp}"
     return None
 
 
@@ -886,10 +880,11 @@ def validate(args, spec, spatial_overlap_opts=None):
             continue
 
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
+
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
             continue
-
+        warning_msg = type_validation_func(args[key], **parameter_spec)
         try:
             # pass the entire arg spec into the validation function as kwargs
             # each type validation function allows extra kwargs with **kwargs

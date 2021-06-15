@@ -16,6 +16,10 @@ from . import validation
 
 LOGGER = logging.getLogger(__name__)
 
+MISSING_SENSITIVITY_TABLE_THREATS_MSG = (
+    'Threats %s does not match any column in the sensitivity table. '
+    'Sensitivity columns: %s')  # (set of missing threats, set of found columns)
+
 ARGS_SPEC = {
     "model_name": "Habitat Quality",
     "module": __name__,
@@ -1068,9 +1072,8 @@ def validate(args, limit_to=None):
         if missing_sens_header_set:
             validation_warnings.append(
                 (['sensitivity_table_path'],
-                 (f'Threats "{missing_sens_header_set}" does not match any'
-                  ' column in the sensitivity table. Sensitivity columns:'
-                  f' {sens_header_set}')))
+                 MISSING_SENSITIVITY_TABLE_THREATS_MSG % (
+                    missing_sens_header_set, sens_header_set)))
 
             invalid_keys.add('snsitivity_table_path')
 

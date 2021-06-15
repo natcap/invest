@@ -1271,7 +1271,7 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habtitat_quality_validation_missing_sens_header(self):
         """Habitat Quality: test validation for sens threat header."""
-        from natcap.invest import habitat_quality
+        from natcap.invest import habitat_quality, validation
 
         args = {
             'half_saturation_constant': '0.5',
@@ -1317,10 +1317,10 @@ class HabitatQualityTests(unittest.TestCase):
 
         # At least one threat header is expected, so there should be a message
         validate_result = habitat_quality.validate(args, limit_to=None)
-        expected = [(
-            ['sensitivity_table_path'],
-            '(?!lulc|habitat|name)(^.+$) matched 0 headers, expected at least one')]
-        self.assertEqual(validate_result, expected)
+        self.assertEqual(len(validate_result), 1)
+        self.assertEqual(validate_result[0][0], ['sensitivity_table_path'])
+        expected_msg = 'does not match any column in the sensitivity table'
+        self.assertTrue(expected_msg in validate_result[0][1])
 
     def test_habtitat_quality_validation_bad_threat_path(self):
         """Habitat Quality: test validation for bad threat paths."""
@@ -1999,7 +1999,7 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habitat_quality_argspec_missing_threat_header(self):
         """Habitat Quality: test validate for a threat header."""
-        from natcap.invest import habitat_quality
+        from natcap.invest import habitat_quality, validation
 
         args = {
             'half_saturation_constant': '0.5',
@@ -2043,7 +2043,7 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            'decay matched 0 headers, expected at least one')]
+            validation.MATCHED_NO_HEADERS_MSG % ('column', 'decay'))]
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_validate_missing_base_column(self):
