@@ -7,6 +7,13 @@ import { getLogger } from '../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
+/** Extract a zip archive to a directory with the same basename.
+ *
+ * Handle an arbitrary depth of files and folders within the archive.
+ *
+ * @param {string} zipFilePath - path to the local zipfile.
+ * @returns { Promise } resolves true when done extracting all contents.
+ */
 export default function extractZipInplace(zipFilePath) {
   return new Promise((resolve) => {
     const extractToDir = path.dirname(zipFilePath);
