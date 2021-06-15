@@ -9,7 +9,8 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 /** Extract a zip archive to a directory with the same basename.
  *
- * Handle an arbitrary depth of files and folders within the archive.
+ * Handle an arbitrary depth of files and folders within the archive,
+ * mirroring that structure in the output directory.
  *
  * @param {string} zipFilePath - path to the local zipfile.
  * @returns { Promise } resolves true when done extracting all contents.
@@ -18,9 +19,10 @@ export default function extractZipInplace(zipFilePath) {
   return new Promise((resolve) => {
     const extractToDir = path.dirname(zipFilePath);
     logger.info(`extracting ${zipFilePath}`);
+    // lazyEntries allows explicit calls of readEntry,
+    // which we need to because we need to setup dirs as we go.
     const options = {
       lazyEntries: true,
-      autoClose: true,
     };
     yauzl.open(zipFilePath, options, (error, zipfile) => {
       if (error) throw error;
