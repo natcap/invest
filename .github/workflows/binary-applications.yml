@@ -31,7 +31,7 @@ jobs:
         needs: check-syntax-errors
         runs-on: windows-latest
         env:
-            PYTHON_VERSION: 3.8
+            PYTHON_VERSION: 3.9
             PYTHON_ARCH: x64
         steps:
             - uses: actions/checkout@v2
@@ -45,7 +45,7 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: ~\AppData\Local\pip\Cache
-                  key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
+                  key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH }}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -79,6 +79,13 @@ jobs:
             - name: Build userguide, binaries, installer
               shell: bash -l {0}
               run: |
+                  # resolves ModuleNotFoundError during pyinstaller build on windows:
+                  # On Windows, with Python >= 3.8, DLLs are no longer imported from the PATH.
+                  # If gdalXXX.dll is in the PATH, then set the USE_PATH_FOR_GDAL_PYTHON=YES environment variable
+                  # to feed the PATH into os.add_dll_directory().
+                  # The path filtering step in exe/hooks/rthook.py is needed because of this likely gdal bug:
+                  # https://github.com/OSGeo/gdal/issues/3898
+                  export USE_PATH_FOR_GDAL_PYTHON=YES
                   # This builds the users guide, binaries, and installer
                   make windows_installer
 
