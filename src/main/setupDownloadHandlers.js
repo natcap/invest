@@ -39,6 +39,7 @@ export default function setupDownloadHandlers(mainWindow) {
     });
 
   mainWindow.webContents.session.on('will-download', (event, item) => {
+    // item is an instance of electron's DownloadItem
     const filename = item.getFilename();
     item.setSavePath(path.join(downloadDir, filename));
     const itemURL = item.getURL();
