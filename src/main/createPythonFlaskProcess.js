@@ -15,49 +15,45 @@ const HOSTNAME = 'http://localhost';
  * @returns {undefined}
  */
 export function createPythonFlaskProcess(investExe) {
-  if (investExe) {
-    // TODO: starting `invest serve` without any python logging
-    // because of https://github.com/natcap/invest/issues/563
-    // & https://github.com/natcap/invest-workbench/issues/144
-    // Once those are resolved, we probably want some logging here,
-    // maybe --debug if devMode, -vvv if production?
-    const pythonServerProcess = spawn(
-      path.basename(investExe),
-      ['serve', '--port', process.env.PORT],
-      {
-        env: {
-          PATH: path.dirname(investExe),
-        },
-      }
-    );
+  // TODO: starting `invest serve` without any python logging
+  // because of https://github.com/natcap/invest/issues/563
+  // & https://github.com/natcap/invest-workbench/issues/144
+  // Once those are resolved, we probably want some logging here,
+  // maybe --debug if devMode, -vvv if production?
+  const pythonServerProcess = spawn(
+    path.basename(investExe),
+    ['serve', '--port', process.env.PORT],
+    {
+      env: {
+        PATH: path.dirname(investExe),
+      },
+    }
+  );
 
-    logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-    pythonServerProcess.stdout.on('data', (data) => {
-      logger.debug(`${data}`);
-    });
-    pythonServerProcess.stderr.on('data', (data) => {
-      logger.debug(`${data}`);
-    });
-    pythonServerProcess.on('error', (err) => {
-      logger.error(err.stack);
-      logger.error(
-        `The flask app ${investExe} crashed or failed to start
-         so this application must be restarted`
-      );
-      throw err;
-    });
-    pythonServerProcess.on('close', (code, signal) => {
-      logger.debug(`Flask process closed with code ${code} and signal ${signal}`);
-    });
-    pythonServerProcess.on('exit', (code) => {
-      logger.debug(`Flask process exited with code ${code}`);
-    });
-    pythonServerProcess.on('disconnect', () => {
-      logger.debug(`Flask process disconnected`);
-    });
-  } else {
-    logger.error('no existing invest installations found');
-  }
+  logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
+  pythonServerProcess.stdout.on('data', (data) => {
+    logger.debug(`${data}`);
+  });
+  pythonServerProcess.stderr.on('data', (data) => {
+    logger.debug(`${data}`);
+  });
+  pythonServerProcess.on('error', (err) => {
+    logger.error(err.stack);
+    logger.error(
+      `The flask app ${investExe} crashed or failed to start
+       so this application must be restarted`
+    );
+    throw err;
+  });
+  pythonServerProcess.on('close', (code, signal) => {
+    logger.debug(`Flask process closed with code ${code} and signal ${signal}`);
+  });
+  pythonServerProcess.on('exit', (code) => {
+    logger.debug(`Flask process exited with code ${code}`);
+  });
+  pythonServerProcess.on('disconnect', () => {
+    logger.debug(`Flask process disconnected`);
+  });
 }
 
 /** Find out if the Flask server is online, waiting until it is.
