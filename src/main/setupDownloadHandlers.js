@@ -9,6 +9,18 @@ import { getLogger } from '../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
+/** Setup listeners and handlers for zipfile downloads initiated by users.
+ *
+ * Listen for DOWNLOAD_URL events from the renderer, which are passed with
+ * an array of URLs for zip files, and a directory where files will be saved.
+ *
+ * Send messages back to the renderer to indicate progress in terms of number
+ * of files completely downloaded and extracted.
+ *
+ * @param {BrowserWindow} mainWindow - instance of an electron BrowserWindow
+ *
+ * @returns {undefined}
+ */
 export default function setupDownloadHandlers(mainWindow) {
   let downloadDir;
   let downloadLength;
