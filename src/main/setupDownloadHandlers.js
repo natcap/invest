@@ -27,7 +27,7 @@ export default function setupDownloadHandlers(mainWindow) {
   const downloadQueue = [];
   ipcMain.on(ipcMainChannels.DOWNLOAD_URL,
     async (event, urlArray, directory) => {
-      logger.debug(`${urlArray}`);
+      logger.debug(`User requesting downloads for: ${urlArray}`);
       downloadDir = directory;
       downloadQueue.push(...urlArray);
       downloadLength = downloadQueue.length;
@@ -50,7 +50,7 @@ export default function setupDownloadHandlers(mainWindow) {
         if (item.isPaused()) {
           logger.info('download paused');
         } else {
-          logger.info(`${item.getSavePath()}`);
+          logger.info(`Saving: ${item.getSavePath()}`);
           logger.info(`Received bytes: ${item.getReceivedBytes()}`);
         }
       }
