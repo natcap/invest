@@ -169,6 +169,3 @@ export function main(argv) {
 if (typeof require !== 'undefined' && require.main === module) {
   main(process.argv);
 }
-
-// module.exports = main;
-
