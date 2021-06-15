@@ -108,7 +108,7 @@ ARGS_SPEC = {
                         "stressor": "This row is a stressor layer"
                     }
                 },
-                "stressor buffer \(meters\)": {
+                "stressor buffer (meters)": {
                     "type": "number",
                     "units": u.meter,
                     "about": (
