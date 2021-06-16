@@ -376,9 +376,9 @@ _TARGET_RESAMPLE_METHOD = 'near'
 
 # Percentile values and units specified explicitly in the user's guide
 _PERCENTILES = [25, 50, 75, 90]
-_CAPWE_UNITS_SHORT = ' MWh/yr'
+_CAPWE_UNITS_SHORT = 'MWh/yr'
 _CAPWE_UNITS_LONG = 'megawatt hours per year'
-_WP_UNITS_SHORT = ' kW/m'
+_WP_UNITS_SHORT = 'kW/m'
 _WP_UNITS_LONG = 'wave power per unit width of wave crest length'
 _NPV_UNITS_SHORT = 'currency'
 _NPV_UNITS_LONG = 'thousands of currency units'
@@ -1538,7 +1538,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     percentile_dict = {}
     for idx in range(len(percentile_groups)):
         percentile_dict[percentile_groups[idx]] = value_ranges[idx]
-    value_range_field = 'Value Range (' + units_long + ',' + units_short + ')'
+    value_range_field = 'Value Range (' + units_long + ', ' + units_short + ')'
     _create_raster_attr_table(
         target_raster_path, percentile_dict, column_name=value_range_field)
 
