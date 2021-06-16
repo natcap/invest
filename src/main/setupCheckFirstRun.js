@@ -32,7 +32,7 @@ export function checkFirstRun() {
 }
 
 export function setupCheckFirstRun() {
-  ipcMain.handleOnce(
+  ipcMain.handle(
     ipcMainChannels.IS_FIRST_RUN, (event) => checkFirstRun()
   );
 }

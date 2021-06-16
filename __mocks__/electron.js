@@ -18,7 +18,6 @@ class MockIPC extends events.EventEmitter {
   constructor() {
     super();
     this.handle = jest.fn();
-    this.handleOnce = jest.fn();
     this.invoke = jest.fn().mockImplementation(() => Promise.resolve());
     this.send = (channel, ...args) => {
       const event = {

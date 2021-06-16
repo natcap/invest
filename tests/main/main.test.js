@@ -171,10 +171,10 @@ describe('createWindow', () => {
     jest.clearAllMocks();
   });
   it('should register various ipcMain listeners', async () => {
-    const expectedHandleOnceChannels = [ipcMainChannels.IS_FIRST_RUN];
     const expectedHandleChannels = [
       ipcMainChannels.SHOW_OPEN_DIALOG,
       ipcMainChannels.SHOW_SAVE_DIALOG,
+      ipcMainChannels.IS_FIRST_RUN,
     ];
     const expectedOnChannels = [
       ipcMainChannels.DOWNLOAD_URL,
@@ -187,17 +187,12 @@ describe('createWindow', () => {
       // Even with mocking, the 'on' method is a real event handler,
       // so we can get it's registered events from the EventEmitter.
       const registeredOnChannels = ipcMain.eventNames();
-      // for 'handle' & 'handleOnce', we query the mock's calls.
+      // for 'handle', we query the mock's calls.
       const registeredHandleChannels = ipcMain.handle.mock.calls.map(
-        (item) => item[0]
-      );
-      const registeredHandleOnceChannels = ipcMain.handleOnce.mock.calls.map(
         (item) => item[0]
       );
       expect(registeredHandleChannels.sort())
         .toEqual(expectedHandleChannels.sort());
-      expect(registeredHandleOnceChannels.sort())
-        .toEqual(expectedHandleOnceChannels.sort());
       expect(registeredOnChannels.sort())
         .toEqual(expectedOnChannels.sort());
     });
