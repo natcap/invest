@@ -28,9 +28,9 @@ MESSAGE_REQUIRED = 'Parameter is required but is missing or has no value'
 LOGGER = logging.getLogger(__name__)
 
 # (header type, header name) e.g. 'column', 'lucode'
-MATCHED_NO_HEADERS_MSG = 'Expected the %s %s but did not find it'
+MATCHED_NO_HEADERS_MSG = 'Expected the %s "%s" but did not find it'
 # (header type, header name, number of times found) e.g. 'row', 'lucode', 2
-DUPLICATE_HEADER_MSG = 'Expected the %s %s only once but found it %d times'
+DUPLICATE_HEADER_MSG = 'Expected the %s "%s" only once but found it %d times'
 
 NOT_A_NUMBER_MSG = 'Value "%s" could not be interpreted as a number'
 
