@@ -277,8 +277,8 @@ userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	ls $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH)
-	cd $(WORKING_DIR)/data
-	cmd.exe /c mklink /d invest-sample-data "$(WORKING_DIR)/$(GIT_UG_REPO_PATH)"
+	cd $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
+	cmd.exe /c mklink /d invest-sample-data "$(WORKING_DIR)/data/invest-sample-data"
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data/pollination
 	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
 	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
