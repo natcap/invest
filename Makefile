@@ -277,11 +277,15 @@ RESULT := $(shell echo $(SEPARATED_PATH) | sed 's:/:\\:g')
 ifeq ($(OS),Windows_NT)
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
+	echo $(WORKING_DIR)
+	echo $(SEPARATED_PATH)
+	echo $(RESULT)
+
+	echo $(SEPARATED_PATH) | sed 's:/:\\:g'
+
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	ls $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
-
-	echo $(RESULT)
 
 	cmd //C "mklink /d invest-sample-data $(RESULT)"
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data/pollination
