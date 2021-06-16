@@ -1241,7 +1241,7 @@ class RecreationValidationTests(unittest.TestCase):
 
     def test_bad_predictor_table_header(self):
         """Recreation Validate: assert messages for bad table headers."""
-        from natcap.invest.recreation import recmodel_client
+        from natcap.invest import recreation, validation
 
         table_path = os.path.join(self.workspace_dir, 'table.csv')
         with open(table_path, 'w') as file:
@@ -1250,8 +1250,8 @@ class RecreationValidationTests(unittest.TestCase):
 
         expected_message = [(
             ['predictor_table_path'],
-            'id matched 0 headers, expected at least one')]
-        validation_warnings = recmodel_client.validate({
+            validation.MATCHED_NO_HEADERS_MSG % ('column', 'id'))]
+        validation_warnings = recreation.recmodel_client.validate({
             'compute_regression': True,
             'predictor_table_path': table_path,
             'start_year': '2012',
@@ -1261,7 +1261,7 @@ class RecreationValidationTests(unittest.TestCase):
 
         self.assertEqual(validation_warnings, expected_message)
 
-        validation_warnings = recmodel_client.validate({
+        validation_warnings = recreation.recmodel_client.validate({
             'compute_regression': True,
             'predictor_table_path': table_path,
             'scenario_predictor_table_path': table_path,
@@ -1269,12 +1269,14 @@ class RecreationValidationTests(unittest.TestCase):
             'end_year': '2016',
             'workspace_dir': self.workspace_dir,
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
-        expected_message = [
+        expected_messages = [
             (['predictor_table_path'],
-             'id matched 0 headers, expected at least one'),
+             validation.MATCHED_NO_HEADERS_MSG % ('column', 'id')),
             (['scenario_predictor_table_path'],
-             'id matched 0 headers, expected at least one')]
-        self.assertEqual(validation_warnings, expected_message)
+             validation.MATCHED_NO_HEADERS_MSG % ('column', 'id'))]
+        self.assertEqual(len(validation_warnings), 2)
+        for message in expected_messages:
+            self.assertTrue(message in validation_warnings)
 
     def test_validate_predictor_types_whitespace(self):
         """Recreation Validate: assert type validation ignores whitespace"""
