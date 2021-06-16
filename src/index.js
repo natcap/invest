@@ -23,7 +23,7 @@ window.addEventListener('contextmenu', (e) => {
   ipcRenderer.send('show-context-menu', rightClickPosition);
 });
 
-const render = async function render(isFirstRun) {
+function render(isFirstRun) {
   reactDom.default.render(
     react.default.createElement(
       app.default, {
