@@ -271,6 +271,8 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_TARGET_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_TARGET_DIR))"
 
 WORKING_DIR := $(shell pwd)
+SEPARATED_PATH := $(WORKING_DIR)/data/invest-sample-data
+RESULT := $(shell echo $(SEPARATED_PATH) | sed 's:/:\\:g')
 # Userguide HTML docs are copied to dist/userguide
 ifeq ($(OS),Windows_NT)
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
@@ -278,12 +280,10 @@ $(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DI
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	ls $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
-	SEPARATED_PATH=$(WORKING_DIR)/data/invest-sample-data
-	INVERTED_SEPARATORS_PATH="${SEPARATED_PATH////\\}"
-	echo SEPARATED_PATH
-	echo INVERTED_SEPARATORS_PATH
 
-	cmd //C "mklink /d invest-sample-data $(INVERTED_SEPARATORS_PATH)"
+	echo $(RESULT)
+
+	cmd //C "mklink /d invest-sample-data $(RESULT)"
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data/pollination
 	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
 	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
