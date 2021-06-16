@@ -272,7 +272,7 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_TARGET_DIR)
 
 WORKING_DIR := $(shell pwd)
 SEPARATED_PATH := $(WORKING_DIR)/data/invest-sample-data
-RESULT := $(shell echo $(SEPARATED_PATH) | sed 's:/:\\:g')
+RESULT := $(shell echo $(SEPARATED_PATH) | sed 's:\/:\\:g')
 # Userguide HTML docs are copied to dist/userguide
 ifeq ($(OS),Windows_NT)
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
@@ -281,7 +281,7 @@ $(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DI
 	echo $(SEPARATED_PATH)
 	echo $(RESULT)
 
-	echo $(SEPARATED_PATH) | sed 's:/:\\:g'
+	echo $(SEPARATED_PATH) | sed 's:\/:\\:g'
 
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	ls $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH)
