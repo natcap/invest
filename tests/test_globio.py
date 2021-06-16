@@ -444,7 +444,7 @@ class GlobioValidationTests(unittest.TestCase):
 
     def test_missing_field_in_msa_parameters(self):
         """GLOBIO Validate: warning message on invalid fields."""
-        from natcap.invest import globio
+        from natcap.invest import globio, validation
         msa_parameters_path = os.path.join(self.workspace_dir, 'bad_table.csv')
         with open(msa_parameters_path, 'w') as file:
             file.write('foo,bar\n')
@@ -453,5 +453,5 @@ class GlobioValidationTests(unittest.TestCase):
             {'msa_parameters_path': msa_parameters_path})
         expected_warning = (
             ['msa_parameters_path'],
-            'msa_type matched 0 headers, expected at least one')
+            validation.MATCHED_NO_HEADERS_MSG % ('column', 'msa_type'))
         self.assertTrue(expected_warning in validation_warnings)
