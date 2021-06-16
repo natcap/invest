@@ -323,7 +323,7 @@ def check_vector(filepath, fields=None, projected=False, projection_units=None,
             that are expected to match the vector fields. Patterns may be an
             ordinary string to match a header exactly, or use any valid regex
             syntax to match 1 or more headers. See the docstring of
-            ``check_patterns`` for details on matching rules.
+            ``check_headers`` for details on matching rules.
         projected=False (bool): Whether the spatial reference must be projected
             in linear units.  If None, the projection will not be checked.
         projection_units=None (pint.Units): The required linear units of the
@@ -348,9 +348,9 @@ def check_vector(filepath, fields=None, projected=False, projection_units=None,
     srs = layer.GetSpatialRef()
 
     if fields:
-        field_patterns = get_header_patterns(fields)
+        field_patterns = get_headers_to_validate(fields)
         fieldnames = [defn.GetName() for defn in layer.schema]
-        required_field_warning = check_patterns(field_patterns, fieldnames, 'field')
+        required_field_warning = check_headers(field_patterns, fieldnames, 'field')
         if required_field_warning:
             return required_field_warning
 
@@ -524,7 +524,7 @@ def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
             are expected to match the table headers (as defined by ``axis``).
             Patterns may be an ordinary string to match a header exactly, or
             use any valid regex syntax to match 1 or more headers. See the
-            docstring of ``check_patterns`` for details on matching rules.
+            docstring of ``check_headers`` for details on matching rules.
         columns (dict):
         axis (int): The axis of the table to use as the header. If 0, the first
             column will be used. If 1, the first row will be used.
@@ -563,13 +563,13 @@ def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
     # assume that at most one of `rows` and `columns` is defined
     if columns:
         headers = [str(name).strip() for name in dataframe.iloc[0]]
-        return check_patterns(get_header_patterns(columns), headers, 'column')
+        return check_headers(get_headers_to_validate(columns), headers, 'column')
     elif rows:
         headers = [str(name).strip() for name in dataframe.iloc[:, 0]]
-        return check_patterns(get_header_patterns(rows), headers, 'row')
+        return check_headers(get_headers_to_validate(rows), headers, 'row')
 
 
-def check_patterns(expected_headers, actual_headers, header_name='header'):
+def check_headers(expected_headers, actual_headers, header_name='header'):
     """Validate that table headers (rows/columns) match a list of patterns.
 
     - Each pattern should match at least one header.
@@ -697,15 +697,19 @@ def timeout(func, *args, timeout=5, **kwargs):
         return a
 
 
-def get_header_patterns(spec):
-    """Get expected header patterns from a row/column/field spec dictionary.
+def get_headers_to_validate(spec):
+    """Get header names to validate from a row/column/field spec dictionary.
+
+    This module only validates row/column/field names that are static and
+    always required. If `'required'` is anything besides `True`, or if the name
+    contains brackets indicating it's user-defined, it is not returned.
 
     Args:
         spec (dict): a row/column/field spec dictionary that maps row/column/
-            field patterns to specs for them
+            field names to specs for them
 
     Returns:
-        list of strings that are regex-compilable to match a pattern
+        list of expected header names to validate against
     """
     patterns = []
     for key, val in spec.items():

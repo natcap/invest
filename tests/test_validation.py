@@ -812,29 +812,29 @@ class CSVValidation(unittest.TestCase):
                 self.assertTrue(len(ws) == 1)
                 self.assertTrue('timed out' in str(ws[0].message))
 
-    def test_check_patterns(self):
+    def test_check_headers(self):
         """Validation: check that CSV header validation works."""
         from natcap.invest import validation
-        patterns = ['hello', '1']
-        headers = ['hello', '1', '2']
-        result = validation.check_patterns(patterns, headers)
+        expected_headers = ['hello', '1']
+        actual = ['hello', '1', '2']
+        result = validation.check_headers(expected_headers, actual)
         self.assertEqual(result, None)
 
         # each pattern should match at least one header
-        headers = ['1', '2']
-        result = validation.check_patterns(patterns, headers)
-        expected = validation.MATCHED_NO_HEADERS_MSG % ('header', 'hello')
-        self.assertEqual(result, expected)
+        actual = ['1', '2']
+        result = validation.check_headers(expected_headers, actual)
+        expected_msg = validation.MATCHED_NO_HEADERS_MSG % ('header', 'hello')
+        self.assertEqual(result, expected_msg)
 
         # duplicate headers that match a pattern are not allowed
-        headers = ['hello', '1', '1']
-        result = validation.check_patterns(patterns, headers)
-        expected = validation.DUPLICATE_HEADER_MSG % ('header', '1', 2)
-        self.assertEqual(result, expected)
+        actual = ['hello', '1', '1']
+        result = validation.check_headers(expected_headers, actual, 'column')
+        expected_msg = validation.DUPLICATE_HEADER_MSG % ('column', '1', 2)
+        self.assertEqual(result, expected_msg)
 
         # duplicate headers that don't match a pattern are allowed
-        headers = ['hello', '1', 'x', 'x']
-        result = validation.check_patterns(patterns, headers)
+        actual = ['hello', '1', 'x', 'x']
+        result = validation.check_headers(expected_headers, actual)
         self.assertEqual(result, None)
 
 
@@ -1428,14 +1428,15 @@ class TestValidationFromSpec(unittest.TestCase):
         for warning in actual_warnings:
             self.assertTrue(warning in expected_warnings)
 
-    def test_get_header_patterns(self):
+    def test_get_headers_to_validate(self):
         """Validation: test getting header patterns from a spec."""
         from natcap.invest import validation
         spec = {
             'a': {},
-            '\\d+': {'required': 'conditional statement'},
-            'c': {'required': False}
+            'foo_[BAR]': {},
+            'c': {'required': 'conditional statement'},
+            'd': {'required': False}
         }
-        patterns = validation.get_header_patterns(spec)
-        # should only get the patterns that are always required
+        patterns = validation.get_headers_to_validate(spec)
+        # should only get the patterns that are static and always required
         self.assertEqual(sorted(patterns), ['a'])
