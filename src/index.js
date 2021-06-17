@@ -22,7 +22,7 @@ window.addEventListener('contextmenu', (e) => {
 
 function render(isFirstRun) {
   ReactDom.render(
-    <App isFirstRun/>,
+    <App isFirstRun={isFirstRun}/>,
     document.getElementById('App')
   )
 };
