@@ -273,22 +273,20 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_TARGET_DIR)
 WORKING_DIR := $(shell pwd)
 SEPARATED_PATH := $(WORKING_DIR)/data/invest-sample-data
 RESULT := $(shell echo $(SEPARATED_PATH) | sed 's:\/:\\:g')
+
+export MSYS = winsymlinks:nativestrict
 # Userguide HTML docs are copied to dist/userguide
 ifeq ($(OS),Windows_NT)
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
 	echo $(WORKING_DIR)
-	echo $(SEPARATED_PATH)
-	echo $(RESULT)
-
-	echo $(SEPARATED_PATH) | sed 's:\/:\\:g'
+	echo $(MSYS)
 
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	ls $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH)
-	cd $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
-
-	cmd //C "mklink /d invest-sample-data $(RESULT)"
+	ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data/pollination
+
 	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
 	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
 else
