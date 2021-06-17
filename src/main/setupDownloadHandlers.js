@@ -33,7 +33,7 @@ export default function setupDownloadHandlers(mainWindow) {
       downloadLength = downloadQueue.length;
       mainWindow.webContents.send(
         'download-status',
-        [(downloadLength - downloadQueue.length), downloadLength]
+        [0, downloadLength]
       );
       urlArray.forEach((url) => mainWindow.webContents.downloadURL(url));
     });
