@@ -78,12 +78,9 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
             return await getFlaskIsReady({ i: i, retries: retries });
           }
           logger.error(`Not able to connect to server after ${retries} tries.`);
-          logger.error(error.stack);
-          throw error;
-        } else {
-          logger.error(error.stack);
-          throw error;
         }
+        logger.error(error);
+        throw error;
       })
   );
 }
