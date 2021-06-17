@@ -44,8 +44,8 @@ export default function extractZipInplace(zipFilePath) {
             });
             // Sometimes an entry will be in a dir, where the
             // dir itself was *not* an entry, therefore we still need
-            // to create the dir here.
-            fs.mkdir(path.dirname(writePath), (e) => {
+            // to create the dir (and possibly all dirs in the chain) here.
+            fs.mkdir(path.dirname(writePath), { recursive: true }, (e) => {
               if (e) {
                 if (e.code !== 'EEXIST') { throw e; }
               }
