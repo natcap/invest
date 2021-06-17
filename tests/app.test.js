@@ -60,7 +60,7 @@ describe('Various ways to open and close InVEST models', () => {
 
   test('Clicking an invest model button renders SetupTab', async () => {
     const { findByText, findByRole } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
@@ -87,7 +87,7 @@ describe('Various ways to open and close InVEST models', () => {
     await mockJob.save();
 
     const { findByText, findByLabelText, findByRole } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const recentJobCard = await findByText(
@@ -122,7 +122,7 @@ describe('Various ways to open and close InVEST models', () => {
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const { findByText, findByLabelText, findByRole } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const openButton = await findByRole('button', { name: 'Open' });
@@ -144,7 +144,7 @@ describe('Various ways to open and close InVEST models', () => {
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     const { findByRole } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const openButton = await findByRole('button', { name: 'Open' });
@@ -162,7 +162,7 @@ describe('Various ways to open and close InVEST models', () => {
       findByRole,
       findAllByRole,
       queryAllByRole,
-    } = render(<App investExe="foo" />);
+    } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
     const homeTab = await findByRole('tabpanel', { name: /Home/ });
@@ -265,7 +265,7 @@ describe('Display recently executed InVEST jobs', () => {
     });
     recentJobs = await job2.save();
 
-    const { getByText } = render(<App investExe="foo" />);
+    const { getByText } = render(<App />);
 
     await waitFor(() => {
       recentJobs.forEach((job) => {
@@ -277,7 +277,7 @@ describe('Display recently executed InVEST jobs', () => {
 
   test('Recent Jobs: placeholder if there are no recent jobs', async () => {
     const { findByText } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const node = await findByText(/No recent InVEST runs/);
@@ -296,7 +296,7 @@ describe('Display recently executed InVEST jobs', () => {
     });
     const recentJobs = await job1.save();
 
-    const { getByText, findByText, getByTitle } = render(<App investExe="foo" />);
+    const { getByText, findByText, getByTitle } = render(<App />);
 
     await waitFor(() => {
       recentJobs.forEach((job) => {
@@ -328,7 +328,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const {
       getByText, getByLabelText, getByTitle, findByTitle
     } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     fireEvent.click(await findByTitle('settings'));
@@ -394,7 +394,7 @@ describe('InVEST global settings: dialog interactions', () => {
     await saveSettingsStore(expectedSettings);
 
     const { getByText, getByLabelText, findByTitle } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     fireEvent.click(await findByTitle('settings'));
@@ -427,7 +427,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const {
       findByText, findByRole, findByTitle, queryByText
     } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const settingsBtn = await findByTitle('settings');

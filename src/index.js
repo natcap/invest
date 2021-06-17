@@ -36,5 +36,5 @@ function render(isFirstRun) {
 
 ipcRenderer.invoke('is-first-run')
   .then((response) => {
-    render(response.isFirstRun);
+    render(response);
   });
