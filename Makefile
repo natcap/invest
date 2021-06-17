@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 0057a412104fbf97d1777bfffa3ad725485b9e02
 
 GIT_UG_REPO                  := https://github.com/emlys/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 38029e7b84e4eb6a812af2c9ab99f60022eb79a3
+GIT_UG_REPO_REV              := 8674e3c90e4cf8a87605eec2786a0457fdb1d568
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -21,7 +21,6 @@ ifeq ($(OS),Windows_NT)
 	ENV_ACTIVATE = $(ENV_SCRIPTS)\activate
 	CP := cp
 	COPYDIR := $(CP) -r
-	LN := mklink /d
 	MKDIR := mkdir -p
 	RM := rm
 	RMDIR := $(RM) -r
@@ -47,7 +46,6 @@ else
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	CP := cp
 	COPYDIR := $(CP) -r
-	LN := ln -s
 	MKDIR := mkdir -p
 	RM := rm
 	RMDIR := $(RM) -r
@@ -237,7 +235,7 @@ install: $(DIST_DIR)/natcap.invest%.whl
 	$(PIP) install --isolated --upgrade --no-index --only-binary natcap.invest --find-links=dist natcap.invest
 
 
-# Bulid python packages and put them in dist/
+# Build python packages and put them in dist/
 python_packages: $(DIST_DIR)/natcap.invest%.whl $(DIST_DIR)/natcap.invest%.zip
 $(DIST_DIR)/natcap.invest%.whl: | $(DIST_DIR)
 	$(PYTHON) setup.py bdist_wheel
@@ -270,36 +268,21 @@ $(APIDOCS_TARGET_DIR): | $(DIST_DIR)
 $(APIDOCS_ZIP_FILE): $(APIDOCS_TARGET_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_TARGET_DIR))"
 
+# need to get the working directory path because ln doesn't work with relative paths
 WORKING_DIR := $(shell pwd)
-SEPARATED_PATH := $(WORKING_DIR)/data/invest-sample-data
-RESULT := $(shell echo $(SEPARATED_PATH) | sed 's:\/:\\:g')
-
-export MSYS = winsymlinks:nativestrict
-# Userguide HTML docs are copied to dist/userguide
 ifeq ($(OS),Windows_NT)
-userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
-$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
-	echo $(WORKING_DIR)
-	echo $(MSYS)
-
-	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
-	ls $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH)
-	ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
-	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data/pollination
-
-	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
-	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
-else
-userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
-$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
-	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
-	ls $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH)
-	ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
-	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data/pollination
-	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
-	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
+	# this setting is necessary for ln to work on git bash for windows
+	export MSYS = winsymlinks:nativestrict
 endif
-
+# Userguide HTML docs are copied to dist/userguide
+userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
+$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
+	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
+	ls $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH)
+	ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
+	ls $(WORKING_DIR)/$(GIT_UG_REPO_PATH)/invest-sample-data/pollination
+	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
+	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
 
 $(USERGUIDE_ZIP_FILE): $(USERGUIDE_TARGET_DIR)
 	cd $(DIST_DIR) && $(ZIP) -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_TARGET_DIR))

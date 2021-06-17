@@ -82,13 +82,6 @@ jobs:
                   # This builds the users guide, binaries, and installer
                   make windows_installer
 
-            - name: Run df
-              if: always()
-              run: |
-                  df -h
-                  df -h .
-                  du -h \
-
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
@@ -197,14 +190,6 @@ jobs:
               run: |
                   make install
                   make mac_dmg
-
-            - name: Run df
-              shell: bash -l {0}
-              if: always()
-              run: |
-                  df -h
-                  df -h .
-                  du -h /
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
