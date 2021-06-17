@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 0057a412104fbf97d1777bfffa3ad725485b9e02
 
 GIT_UG_REPO                  := https://github.com/emlys/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 7aa65322845e6fad908bed8c1bf69296713c065e
+GIT_UG_REPO_REV              := 38029e7b84e4eb6a812af2c9ab99f60022eb79a3
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
