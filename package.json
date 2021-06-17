@@ -11,7 +11,9 @@
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
     "postinstall": "electron-builder install-app-deps",
     "fetch-invest": "node ./scripts/fetch_invest_binaries.js && git diff src/sampledata_registry.json",
-    "dev": "node ./build.js clean && babel src -d build --verbose --config-file ./babel.config.js --copy-files --watch -s both",
+    "devtools": "react-devtools",
+    "babel-watch": "node ./build.js clean && babel src -d build --verbose --config-file ./babel.config.js --copy-files --watch -s both",
+    "dev": "concurrently \"npm:devtools\" \"npm:babel-watch\"",
     "build": "node ./build.js clean && babel src -d build --verbose --config-file ./babel.config.js --copy-files",
     "dist": "cross-env DEBUG=electron-builder electron-builder build --publish never --config electron-builder-config.js"
   },
@@ -65,6 +67,7 @@
     "@testing-library/react": "^11.2.5",
     "@testing-library/user-event": "^12.8.3",
     "babel-eslint": "^10.1.0",
+    "concurrently": "^6.2.0",
     "electron": "^12.0.2",
     "electron-builder": "^22.10.5",
     "electron-devtools-installer": "^3.1.1",
