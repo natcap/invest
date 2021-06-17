@@ -16,15 +16,16 @@ workflows of an InVEST user.
 * `npm run dev` (this process stays live, do it in a separate shell)
 * `npm start`
 
+#### To run javascript outside the electron runtime,
+but with the same ECMAscript features and babel configurations:  
+`node -r @babel/register script.js`.
+
 ## To package this app for distribution
 * `npm run install`
 * `npm run fetch-invest`
 * `npm run build`
 * `npm run dist`  - Configure the packaging in `electron-builder-config.js`.
 
-#### To run javascript outside the electron runtime,
-but with the same ECMAscript features and babel configurations:  
-`node -r @babel/register script.js`.
 
 ## Client logfile locations:
 * Windows: "C:\Users\dmf\AppData\Roaming\logs\invest-workbench\"
