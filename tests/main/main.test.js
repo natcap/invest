@@ -116,7 +116,6 @@ describe('extractZipInplace', () => {
   beforeEach(() => {
     level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
     level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
-    level3Dir = fs.mkdtempSync(path.join(level2Dir, 'level3'));
     file1Path = path.join(level1Dir, 'file1');
     file2Path = path.join(level2Dir, 'file2');
     fs.closeSync(fs.openSync(file1Path, 'w'));
