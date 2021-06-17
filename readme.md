@@ -7,30 +7,26 @@ InVEST models, and to be extensible to future models or common auxilary
 workflows of an InVEST user.
 
 ## To develop and launch this Application
-
-* `npm install`  
+* `npm install`
 * `npm run fetch-invest`
 	+ fetches prebuilt invest binaries (see package.json invest property)
 	+ Alternatively, build your own local invest binaries:
 		* use invest's `make binaries`, then
-		* `cp -r invest/dist/invest/ invest-workbench/build/invest/` 
+		* `cp -r invest/dist/invest/ invest-workbench/build/invest/`
 * `npm run dev` (this process stays live, do it in a separate shell)
 * `npm start`
 
-## To package this app for distribution  
-`npm run install`
-`npm run fetch-invest`
-`npm run build`
-`npm run dist`  - Configure the packaging in `electron-builder-config.js`.  
+## To package this app for distribution
+* `npm run install`
+* `npm run fetch-invest`
+* `npm run build`
+* `npm run dist`  - Configure the packaging in `electron-builder-config.js`.
 
-
-
-To run javascript outside the electron runtime,  
+#### To run javascript outside the electron runtime,
 but with the same ECMAscript features and babel configurations:  
-`node -r @babel/register script.js`.  
+`node -r @babel/register script.js`.
 
 ## Client logfile locations:
-
-Windows: "C:\Users\dmf\AppData\Roaming\logs\invest-workbench\"  
-Mac: "\~/Library/Application Support/logs/invest-workbench/"  
-Linux: "\~/.config/invest-workbench/logs/"  
+* Windows: "C:\Users\dmf\AppData\Roaming\logs\invest-workbench\"
+* Mac: "\~/Library/Application Support/logs/invest-workbench/"
+* Linux: "\~/.config/invest-workbench/logs/"
