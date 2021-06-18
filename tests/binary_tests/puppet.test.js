@@ -26,7 +26,7 @@ if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
   [BINARY_PATH] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
   SCREENSHOT_PREFIX = path.join(
-    os.homedir(), 'Library/Application Support/invest-workbench/logs/invest-workbench-'
+    os.homedir(), 'Library/Logs/invest-workbench/invest-workbench-'
   );
 } else if (process.platform === 'win32') {
   [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');

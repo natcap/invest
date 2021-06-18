@@ -52,6 +52,6 @@ To run javascript outside the electron runtime, but with the same ECMAscript fea
 
 ## Client logfile locations:
 
-Windows: "C:\Users\dmf\AppData\Roaming\invest-workbench\"  
-Mac: "\~/Library/Application Support/invest-workbench/"  
-Linux: "\~/.config/invest-workbench/"  
+Windows: "C:\Users\dmf\AppData\Roaming\invest-workbench\logs\"  
+Mac: "\~/Library/Logs/invest-workbench/"  
+Linux: "\~/.config/invest-workbench/logs/"  
