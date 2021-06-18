@@ -214,10 +214,10 @@ class ValidatorTest(unittest.TestCase):
 
     def test_n_workers(self):
         """Validation: validation error returned on invalid n_workers."""
-        from natcap.invest import utils, validation
+        from natcap.invest import spec_utils, validation
 
         args_spec = {
-            'n_workers': utils.N_WORKERS_SPEC,
+            'n_workers': spec_utils.N_WORKERS,
         }
 
         @validation.invest_validator
@@ -412,37 +412,11 @@ class RasterValidation(unittest.TestCase):
         error_msg = validation.check_raster(filepath, projected=True)
         self.assertTrue('must be projected in linear units' in error_msg)
 
-    def test_raster_projected_in_m(self):
-        """Validation: test when a raster is projected in meters."""
-        from natcap.invest import utils, validation
-
-        # Use EPSG:32731  # WGS84 / UTM zone 31s
-        driver = gdal.GetDriverByName('GTiff')
-        filepath = os.path.join(self.workspace_dir, 'raster.tif')
-        raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
-        meters_srs = osr.SpatialReference()
-        meters_srs.ImportFromEPSG(32731)
-        raster.SetProjection(meters_srs.ExportToWkt())
-        raster = None
-
-        for unit in ('m', 'meter', 'metre', 'meters', 'metres'):
-            pint_unit = utils.u.Unit(unit)
-            error_msg = validation.check_raster(
-                filepath, projected=True, projection_units=pint_unit)
-            self.assertEqual(error_msg, None)
-
-        # Check error message when we validate that the raster should be
-        # projected in feet.
-        error_msg = validation.check_raster(
-            filepath, projected=True, projection_units=utils.u.foot)
-        expected_msg = "Layer must be projected in this unit: 'foot'"
-        self.assertEqual(error_msg, expected_msg)
-
     def test_raster_incorrect_units(self):
         """Validation: test when a raster projection has wrong units."""
-        from natcap.invest import utils, validation
+        from natcap.invest import spec_utils, validation
 
-        # Use EPSG:32066  # NAD27 / BLM 16N (in US Feet)
+        # Use EPSG:32066  # NAD27 / BLM 16N (in US Survey Feet)
         driver = gdal.GetDriverByName('GTiff')
         filepath = os.path.join(self.workspace_dir, 'raster.tif')
         raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
@@ -452,9 +426,10 @@ class RasterValidation(unittest.TestCase):
         raster = None
 
         error_msg = validation.check_raster(
-            filepath, projected=True, projection_units=utils.u.meter)
-        self.assertEqual(
-            "Layer must be projected in this unit: 'meter'", error_msg)
+            filepath, projected=True, projection_units=spec_utils.u.meter)
+        expected_msg = validation.WRONG_PROJECTION_UNIT_MSG % (
+            'meter', 'survey_foot')
+        self.assertEqual(expected_msg, error_msg)
 
 
 class VectorValidation(unittest.TestCase):
@@ -518,7 +493,7 @@ class VectorValidation(unittest.TestCase):
 
     def test_vector_projected_in_m(self):
         """Validation: test that a vector's projection has expected units."""
-        from natcap.invest import utils, validation
+        from natcap.invest import spec_utils, validation
 
         driver = gdal.GetDriverByName('GPKG')
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
@@ -531,12 +506,12 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, projected=True, projection_units=utils.u.foot)
-        expected_msg = "Layer must be projected in this unit: 'foot'"
+            filepath, projected=True, projection_units=spec_utils.u.foot)
+        expected_msg = validation.WRONG_PROJECTION_UNIT_MSG % ('foot', 'meter')
         self.assertEqual(error_msg, expected_msg)
 
         self.assertEqual(None, validation.check_vector(
-            filepath, projected=True, projection_units=utils.u.meter))
+            filepath, projected=True, projection_units=spec_utils.u.meter))
 
 
 class FreestyleStringValidation(unittest.TestCase):

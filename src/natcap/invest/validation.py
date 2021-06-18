@@ -1,6 +1,5 @@
 """Common validation utilities for InVEST models."""
 import ast
-import copy
 import inspect
 import logging
 import pprint
@@ -19,6 +18,7 @@ from osgeo import gdal, osr
 import numpy
 
 from . import utils
+from . import spec_utils
 
 
 #: A flag to pass to the validation context manager indicating that all keys
@@ -33,6 +33,7 @@ MATCHED_NO_HEADERS_MSG = 'Expected the %s "%s" but did not find it'
 DUPLICATE_HEADER_MSG = 'Expected the %s "%s" only once but found it %d times'
 
 NOT_A_NUMBER_MSG = 'Value "%s" could not be interpreted as a number'
+WRONG_PROJECTION_UNIT_MSG = 'Layer must be projected in this unit: "%s" but found this unit: "%s"'
 
 
 def _evaluate_expression(expression, variable_map):
@@ -234,13 +235,12 @@ def _check_projection(srs, projected, projection_units):
         layer_units_name = srs.GetLinearUnitsName().lower().replace(' ', '_')
         try:
             # this will parse common synonyms: m, meter, meters, metre, metres
-            layer_units = utils.u.Unit(layer_units_name)
+            layer_units = spec_utils.u.Unit(layer_units_name)
             # Compare pint Unit objects
             if projection_units != layer_units:
-                return ("Layer must be projected in this unit: "
-                        f"'{projection_units}'")
+                return WRONG_PROJECTION_UNIT_MSG % (projection_units, layer_units)
         except pint.errors.UndefinedUnitError:
-            return f"SRS has unrecognized unit '{layer_units_name}'"
+            return WRONG_PROJECTION_UNIT_MSG % (projection_units, layer_units)
 
     return None
 
