@@ -64,7 +64,7 @@ ARGS_SPEC = {
         "structure_path": {
             "name": "Features Impacting Scenic Quality",
             "type": "vector",
-            "geometries": {"POINT"},
+            "geometries": spec_utils.POINT,
             "fields": {
                 "RADIUS": {
                     "type": "number",

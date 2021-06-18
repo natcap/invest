@@ -23,7 +23,7 @@ ARGS_SPEC = {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
-        "dem_path": utils.DEM_ARG,
+        "dem_path": spec_utils.DEM,
         "dem_band_index": {
             "type": "number",
             "expression": "value >= 1",
