@@ -272,7 +272,7 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_TARGET_DIR)
 WORKING_DIR := $(shell pwd)
 ifeq ($(OS),Windows_NT)
 	# this setting is necessary for ln to work on git bash for windows
-	export MSYS = winsymlinks:nativestrict
+# 	export MSYS = winsymlinks:nativestrict
 endif
 # Userguide HTML docs are copied to dist/userguide
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
