@@ -26,12 +26,12 @@ if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
   [BINARY_PATH] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
   SCREENSHOT_PREFIX = path.join(
-    os.homedir(), 'Library/Application Support/invest-workbench/invest-workbench-'
+    os.homedir(), 'Library/Application Support/invest-workbench/logs/invest-workbench-'
   );
 } else if (process.platform === 'win32') {
   [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');
   SCREENSHOT_PREFIX = path.join(
-    os.homedir(), 'AppData/Roaming/invest-workbench/invest-workbench-'
+    os.homedir(), 'AppData/Roaming/invest-workbench/logs/invest-workbench-'
   );
 }
 

@@ -102,18 +102,14 @@ jobs:
       if: matrix.os == 'macos-latest' && always()
       with:
         name: 'macos_puppeteer_log.zip'
-        path: |
-          '~/Library/Application Support/invest-workbench/invest-workbench*'
-          '~/Library/Application Support/invest-workbench/logs/'
+        path: '~/Library/Application Support/invest-workbench/logs/'
 
     - name: Upload app logging from puppeteer to github - Windows
       uses: actions/upload-artifact@v2.2.4
       if: matrix.os == 'windows-latest' && always()
       with:
         name: 'windows_puppeteer_log.zip'
-        path: |
-          '~/AppData/Roaming/invest-workbench/invest-workbench*'
-          '~/AppData/Roaming/invest-workbench/logs/'
+        path: '~/AppData/Roaming/invest-workbench/logs/'
 
     - name: Upload installer artifacts to github
       uses: actions/upload-artifact@v2.2.4
