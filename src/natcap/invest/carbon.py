@@ -13,7 +13,8 @@ import taskgraph
 
 from . import validation
 from . import utils
-from .utils import u
+from . import spec_utils
+from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,11 +26,11 @@ ARGS_SPEC = {
         "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_redd_path"],
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "lulc_cur_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True,
             "about": (
                 "A GDAL-supported raster representing the land-cover of the "
@@ -46,7 +47,7 @@ ARGS_SPEC = {
             "name": "Calculate Sequestration"
         },
         "lulc_fut_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True,
             "required": "calc_sequestration",
             "about": (
@@ -67,7 +68,7 @@ ARGS_SPEC = {
             "name": "REDD Scenario Analysis"
         },
         "lulc_redd_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True,
             "required": "do_redd",
             "about": (

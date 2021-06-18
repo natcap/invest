@@ -10,8 +10,10 @@ import pygeoprocessing.routing
 from osgeo import gdal, ogr
 import taskgraph
 
-from ..utils import u
-from .. import utils, validation
+from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
+from .. import validation
 from . import ndr_core
 
 LOGGER = logging.getLogger(__name__)
@@ -26,15 +28,15 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "dem_path": {
-            **utils.DEM_ARG,
+            **spec_utils.DEM,
             "projected": True
         },
         "lulc_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True
         },
         "runoff_proxy_path": {
@@ -57,7 +59,7 @@ ARGS_SPEC = {
             "type": "vector",
             "projected": True,
             "fields": {"ws_id": {"type": "code"}},
-            "geometries": utils.POLYGONS,
+            "geometries": spec_utils.POLYGONS,
             "about": (
                 "A GDAL-supported vector file containing watersheds such that "
                 "each watershed contributes to a point of interest where "

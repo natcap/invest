@@ -17,9 +17,10 @@ from osgeo import ogr
 
 import taskgraph
 import pygeoprocessing
-from .utils import u
-from . import validation
 from . import utils
+from . import spec_utils
+from .spec_utils import u
+from . import validation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,23 +29,23 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "wave_energy.html",
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "wave_base_data_path": {
             "type": "directory",
             "contents": {
                 "NAmerica_WestCoast_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POINT'},
+                    "geometries": spec_utils.POINT,
                     "about": (
                         "point vector for the west coast of North America and "
                         "Hawaii")},
                 "WCNA_extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POLYGON'},
+                    "geometries": spec_utils.POLYGON,
                     "about": (
                         "extract vector for the west coast of North America "
                         "and Hawaii")},
@@ -56,14 +57,14 @@ ARGS_SPEC = {
                 "NAmerica_EastCoast_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POINT'},
+                    "geometries": spec_utils.POINT,
                     "about": (
                         "point vector for the East Coast of North America and "
                         "Puerto Rico")},
                 "ECNA_extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POLYGON'},
+                    "geometries": spec_utils.POLYGON,
                     "about": (
                         "extract vector for the East Coast of North America "
                         "and Puerto Rico")},
@@ -75,13 +76,13 @@ ARGS_SPEC = {
                 "North_Sea_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POINT'},
+                    "geometries": spec_utils.POINT,
                     "about": (
                         "point vector for the North Sea 4 meter resolution")},
                 "North_Sea_4m_Extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POLYGON'},
+                    "geometries": spec_utils.POLYGON,
                     "about": (
                         "extract vector for the North Sea 4 meter resolution")},
                 "North_Sea_4m.bin": {
@@ -92,13 +93,13 @@ ARGS_SPEC = {
                 "North_Sea_10m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POINT'},
+                    "geometries": spec_utils.POINT,
                     "about": (
                         "point vector for the North Sea 10 meter resolution")},
                 "North_Sea_10m_Extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POLYGON'},
+                    "geometries": spec_utils.POLYGON,
                     "about": (
                         "extract vector for the North Sea 10 meter resolution")},
                 "North_Sea_10m.bin": {
@@ -109,12 +110,12 @@ ARGS_SPEC = {
                 "Australia_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POINT'},
+                    "geometries": spec_utils.POINT,
                     "about": "point vector for Australia"},
                 "Australia_Extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POLYGON'},
+                    "geometries": spec_utils.POLYGON,
                     "about": "extract vector for Australia"},
                 "Australia_4m.bin": {
                     "type": "file",
@@ -122,12 +123,12 @@ ARGS_SPEC = {
                 "Global.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POINT'},
+                    "geometries": spec_utils.POINT,
                     "about": "Global point vector"},
                 "Global_extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": {'POLYGON'},
+                    "geometries": spec_utils.POLYGON,
                     "about": "Global extract vector"},
                 "Global_WW3.txt.bin": {
                     "type": "file",
@@ -154,7 +155,7 @@ ARGS_SPEC = {
             "name": "Analysis Area"
         },
         "aoi_path": {
-            **utils.AOI_ARG,
+            **spec_utils.AOI,
             "projected": True,
             "projection_units": u.meter,
             "required": False,
@@ -219,7 +220,7 @@ ARGS_SPEC = {
             "name": "Machine Parameter Table"
         },
         "dem_path": {
-            **utils.DEM_ARG,
+            **spec_utils.DEM,
             "about": (
                 "A GDAL-supported raster file containing a digital elevation "
                 "model dataset that has elevation values in meters. Used to "

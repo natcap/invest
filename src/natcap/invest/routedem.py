@@ -8,8 +8,9 @@ import pygeoprocessing.routing
 import taskgraph
 import numpy
 
-from .utils import u
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -19,9 +20,9 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "routedem.html",
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "dem_path": utils.DEM_ARG,
         "dem_band_index": {
             "type": "number",
@@ -64,7 +65,7 @@ ARGS_SPEC = {
             "name": "Calculate Stream Thresholds"
         },
         "threshold_flow_accumulation": {
-            **utils.THRESHOLD_FLOW_ACCUMULATION_ARG,
+            **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "calculate_stream_threshold"
         },
         "calculate_downstream_distance": {

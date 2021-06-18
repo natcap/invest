@@ -16,8 +16,9 @@ import pygeoprocessing
 import scipy.spatial
 import taskgraph
 
-from .utils import u
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -36,9 +37,9 @@ ARGS_SPEC = {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "n_nearest_model_points": {
             "expression": "value > 0",
             "type": "number",
@@ -54,7 +55,7 @@ ARGS_SPEC = {
             "name": "Number of nearest model points to average"
         },
         "aoi_vector_path": {
-            **utils.AOI_ARG,
+            **spec_utils.AOI,
             "projected": True,
             "required": False
         },
@@ -101,7 +102,7 @@ ARGS_SPEC = {
             "name": "Biophysical Table"
         },
         "lulc_raster_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True
         },
         "pools_to_calculate": {
@@ -136,7 +137,7 @@ ARGS_SPEC = {
                 "theta2": {"type": "number", "units": u.none},
                 "theta3": {"type": "number", "units": u.none}
             },
-            "geometries": utils.POLYGONS,
+            "geometries": spec_utils.POLYGONS,
             "required": "compute_forest_edge_effects",
             "about": (
                 "A vector with fields 'method', 'theta1', 'theta2', 'theta3' "

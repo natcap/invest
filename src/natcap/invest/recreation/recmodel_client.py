@@ -22,7 +22,6 @@ import shapely.prepared
 import pygeoprocessing
 import numpy
 import numpy.linalg
-import pandas
 import shapely.speedups
 import taskgraph
 
@@ -31,8 +30,9 @@ if shapely.speedups.available:
 
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
-from ..utils import u
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ predictor_table_columns = {
         "about": "A spatial file to use as a predictor",
         "bands": {1: {"type": "number", "units": u.none}},
         "fields": {},
-        "geometries": {'POINT', 'LINE', 'POLYGON'}
+        "geometries": spec_utils.ALL_GEOMS
     },
     "type": {
         "type": "option_string",
@@ -92,11 +92,11 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "recreation.html",
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "aoi_path": {
-            **utils.AREA,
+            **spec_utils.AREA,
             "about": (
                 "A GDAL-supported vector file representing the area of "
                 "interest where the model will run the analysis."),

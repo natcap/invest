@@ -13,8 +13,9 @@ import pygeoprocessing
 import numpy
 import taskgraph
 
-from .utils import u
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -24,11 +25,11 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "croppollination.html",
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "landcover_raster_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True,
             "about": (
                 "This is the landcover map that's used to map biophysical "
@@ -170,7 +171,7 @@ ARGS_SPEC = {
                         "States. Agricultural extension offices are also a "
                         "good source of this information.")}
             },
-            "geometries": utils.POLYGONS,
+            "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
                 "Map of farm sites to be analyzed, with pollination data "

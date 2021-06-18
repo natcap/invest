@@ -17,8 +17,9 @@ import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
-from ..utils import u
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 from . import sdr_core
 
@@ -34,11 +35,11 @@ ARGS_SPEC = {
         "different_projections_ok": False,
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "dem_path": {
-            **utils.DEM_ARG,
+            **spec_utils.DEM,
             "projected": True,
             "about": (
                 "A GDAL-supported raster file with an elevation value for "
@@ -78,7 +79,7 @@ ARGS_SPEC = {
             "name": "Soil Erodibility"
         },
         "lulc_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True
         },
         "watersheds_path": {
@@ -86,7 +87,7 @@ ARGS_SPEC = {
             "fields": {
                 "ws_id": {"type": "code"}
             },
-            "geometries": utils.POLYGONS,
+            "geometries": spec_utils.POLYGONS,
             "projected": True,
             "about": (
                 "This is a layer of polygons representing watersheds such "

@@ -17,9 +17,10 @@ import shapely.wkb
 import shapely.prepared
 import rtree
 
-from .utils import u
-from . import validation
 from . import utils
+from . import spec_utils
+from .spec_utils import u
+from . import validation
 
 LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
@@ -35,11 +36,11 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "lulc_raster_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
             "about": (
@@ -52,8 +53,8 @@ ARGS_SPEC = {
                 "vegetated and non-vegetated covers (e.g. 'residential', "
                 "which may have 30% canopy cover.")
         },
-        "ref_eto_raster_path": utils.ETO_ARG,
-        "aoi_vector_path": utils.AOI_ARG,
+        "ref_eto_raster_path": spec_utils.ETO,
+        "aoi_vector_path": spec_utils.AOI,
         "biophysical_table_path": {
             "name": "Biophysical Table",
             "type": "csv",
@@ -153,7 +154,7 @@ ARGS_SPEC = {
             "name": "Buildings vector",
             "type": "vector",
             "fields": {"type": {"type": "code"}},
-            "geometries": utils.POLYGONS,
+            "geometries": spec_utils.POLYGONS,
             "required": "do_energy_valuation",
             "about": (
                 "A GDAL-compatible vector with built infrastructure "

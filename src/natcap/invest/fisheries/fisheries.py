@@ -7,8 +7,9 @@ from osgeo import gdal
 
 from . import fisheries_io as io
 from . import fisheries_model as model
-from ..utils import u
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -19,10 +20,10 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "fisheries.html",
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
         "aoi_vector_path": {
-            **utils.AOI_ARG,
+            **spec_utils.AOI,
             "fields": {
                 "name": {
                     "type": "freestyle_string",

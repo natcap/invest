@@ -4,8 +4,9 @@ import csv
 import logging
 
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
-from ..utils import u
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 
 
@@ -16,8 +17,8 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "marine_fish.html",
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
         "ff_farm_loc": {
             "name": "Finfish Farm Location",
             "about": (
@@ -34,7 +35,7 @@ ARGS_SPEC = {
                         "identifying each farm geometry.")
                 }
             },
-            "geometries": {'POLYGON', 'POINT'},
+            "geometries": spec_utils.POLYGON | spec_utils.POINT,
         },
         "farm_ID": {
             "name": "Farm Identifier Name",

@@ -13,8 +13,9 @@ import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
 
-from ..utils import u
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 
 from . import seasonal_water_yield_core
@@ -40,10 +41,10 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
-        "threshold_flow_accumulation": utils.THRESHOLD_FLOW_ACCUMULATION_ARG,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
+        "threshold_flow_accumulation": spec_utils.THRESHOLD_FLOW_ACCUMULATION,
         "et0_dir": {
             "type": "directory",
             "contents": {
@@ -52,7 +53,7 @@ ARGS_SPEC = {
                     "about": (
                         "Twelve files, one for each month. File names must "
                         "end with the month number (1-12)."),
-                    **utils.ETO_ARG
+                    **spec_utils.ETO
                 }
             },
             "required": "not user_defined_local_recharge",
@@ -70,7 +71,7 @@ ARGS_SPEC = {
                     "about": (
                         "Twelve files, one for each month. File names must end "
                         "with the month number (1-12)."),
-                    **utils.PRECIP_ARG
+                    **spec_utils.PRECIP
                 }
             },
             "required": "not user_defined_local_recharge",
@@ -81,20 +82,20 @@ ARGS_SPEC = {
             "name": "Precipitation Directory"
         },
         "dem_raster_path": {
-            **utils.DEM_ARG,
+            **spec_utils.DEM,
             "projected": True
         },
         "lulc_raster_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True
         },
         "soil_group_path": {
-            **utils.SOIL_GROUP_ARG,
+            **spec_utils.SOIL_GROUP,
             "projected": True,
             "required": "not user_defined_local_recharge"
         },
         "aoi_path": {
-            **utils.AOI_ARG,
+            **spec_utils.AOI,
             "projected": True
         },
         "biophysical_table_path": {

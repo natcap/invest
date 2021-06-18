@@ -10,9 +10,10 @@ from osgeo import ogr
 import pygeoprocessing
 import taskgraph
 
-from ..utils import u
-from .. import validation
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
+from .. import validation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,11 +31,11 @@ ARGS_SPEC = {
         "different_projections_ok": False,
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "lulc_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True
         },
         "depth_to_root_rest_layer_path": {
@@ -50,7 +51,7 @@ ARGS_SPEC = {
             "name": "Depth To Root Restricting Layer"
         },
         "precipitation_path": {
-            **utils.PRECIP_ARG,
+            **spec_utils.PRECIP,
             "projected": True
         },
         "pawc_path": {
@@ -64,14 +65,14 @@ ARGS_SPEC = {
             "name": "Plant Available Water Fraction"
         },
         "eto_path": {
-            **utils.ETO_ARG,
+            **spec_utils.ETO,
             "projected": True
         },
         "watersheds_path": {
             "projected": True,
             "type": "vector",
             "fields": {"ws_id": {"type": "code"}},
-            "geometries": utils.POLYGONS,
+            "geometries": spec_utils.POLYGONS,
             "about": (
                 "A GDAL-supported vector file containing one polygon per "
                 "watershed.  Each polygon that represents a watershed is "
@@ -83,7 +84,7 @@ ARGS_SPEC = {
             "projected": True,
             "type": "vector",
             "fields": {"subws_id": {"type": "code"}},
-            "geometries": utils.POLYGONS,
+            "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
                 "A GDAL-supported vector file with one polygon per sub- "

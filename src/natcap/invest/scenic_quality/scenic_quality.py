@@ -15,8 +15,9 @@ import rtree
 import shapely.geometry
 
 from natcap.invest.scenic_quality.viewshed import viewshed
-from ..utils import u
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -54,11 +55,11 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "aoi_path": {
-            **utils.AOI_ARG,
+            **spec_utils.AOI,
         },
         "structure_path": {
             "name": "Features Impacting Scenic Quality",
@@ -107,7 +108,7 @@ ARGS_SPEC = {
                 "input."),
         },
         "dem_path": {
-            **utils.DEM_ARG,
+            **spec_utils.DEM,
             "projected": True,
             "projection_units": u.meter,
             "about": (

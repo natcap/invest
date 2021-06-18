@@ -5,13 +5,12 @@ change and the dependencies that particular classes of the given species
 have on particular habitats.
 """
 import logging
-import csv
 
 import numpy as np
 
 from . import fisheries_hst_io as io
 from .. import validation
-from .. import utils
+from .. import spec_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,8 +19,8 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "fisheries.html",
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
         "sexsp": {
             "name": "Population Classes are Sex-Specific",
             "type": "option_string",

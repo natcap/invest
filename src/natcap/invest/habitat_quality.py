@@ -10,8 +10,9 @@ from osgeo import osr
 import pygeoprocessing
 import taskgraph
 
-from .utils import u
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -30,11 +31,11 @@ ARGS_SPEC = {
             "access_vector_path"],
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "lulc_cur_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True,
             "about": (
                 "A GDAL-supported raster file.  The current LULC must have "
@@ -47,7 +48,7 @@ ARGS_SPEC = {
             "name": "Current Land Cover"
         },
         "lulc_fut_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True,
             "required": False,
             "about": (
@@ -64,7 +65,7 @@ ARGS_SPEC = {
             "name": "Future Land Cover"
         },
         "lulc_bas_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True,
             "required": False,
             "about": (
@@ -142,7 +143,7 @@ ARGS_SPEC = {
                         "represents completely accessible")
                 }
             },
-            "geometries": utils.POLYGONS,
+            "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
                 "Map of the relative protection that legal, institutional, "

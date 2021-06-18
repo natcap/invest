@@ -22,9 +22,10 @@ from osgeo import osr
 
 import taskgraph
 import pygeoprocessing
-from .utils import u
-from . import validation
 from . import utils
+from . import spec_utils
+from .spec_utils import u
+from . import validation
 
 
 LOGGER = logging.getLogger(__name__)
@@ -40,9 +41,9 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "wind_data_path": {
             "type": "csv",
             "columns": {
@@ -79,7 +80,7 @@ ARGS_SPEC = {
             "name": "Wind Data Points (CSV)"
         },
         "aoi_vector_path": {
-            **utils.AOI_ARG,
+            **spec_utils.AOI,
             "projected": True,
             "projection_units": u.meter,
             "required": "valuation_container & grid_points_path",
@@ -106,7 +107,7 @@ ARGS_SPEC = {
             "name": "Bathymetric Digital Elevation Model"
         },
         "land_polygon_vector_path": {
-            **utils.AREA,
+            **spec_utils.AREA,
             "required": "min_distance | max_distance | valuation_container",
             "about": (
                 "A GDAL-supported polygon vector that represents the land and "

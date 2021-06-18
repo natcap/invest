@@ -11,8 +11,9 @@ import numpy
 import pygeoprocessing
 import taskgraph
 
-from .utils import u
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 
@@ -33,9 +34,9 @@ ARGS_SPEC = {
             "aoi_path", "globio_lulc_path"],
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "predefined_globio": {
             "type": "boolean",
             "required": False,
@@ -43,7 +44,7 @@ ARGS_SPEC = {
             "name": "Predefined land use map for GLOBIO"
         },
         "lulc_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True,
             "required": "not predefined_globio"
         },
@@ -70,7 +71,7 @@ ARGS_SPEC = {
                     "type": {"raster", "vector"},
                     "bands": {1: {"type": "number", "units": u.none}},
                     "fields": {},
-                    "geometries": utils.ALL_GEOMS
+                    "geometries": spec_utils.ALL_GEOMS
                 }
             },
             "about": (
@@ -165,12 +166,12 @@ ARGS_SPEC = {
             "name": "MSA Parameter Table"
         },
         "aoi_path": {
-            **utils.AOI_ARG,
+            **spec_utils.AOI,
             "projected": True,
             "required": False
         },
         "globio_lulc_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True,
             "required": "predefined_globio",
             "about": "used in mode (b) path to predefined globio raster.",

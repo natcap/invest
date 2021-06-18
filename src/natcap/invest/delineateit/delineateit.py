@@ -14,8 +14,9 @@ import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
 
-from ..utils import u
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 from . import delineateit_core
 
@@ -31,11 +32,11 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "dem_path": {
-            **utils.DEM_ARG,
+            **spec_utils.DEM,
             "projected": True
         },
         "detect_pour_points": {
@@ -49,7 +50,7 @@ ARGS_SPEC = {
         "outlet_vector_path": {
             "type": "vector",
             "fields": {},
-            "geometries": utils.ALL_GEOMS,
+            "geometries": spec_utils.ALL_GEOMS,
             "required": "not detect_pour_points",
             "about": (
                 "This is a layer of geometries representing watershed outlets "

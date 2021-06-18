@@ -66,7 +66,7 @@ u.define('international_unit = [biologic_amount] = iu = IU')
 # Use u.none for unitless measurements
 u.define('none = []')
 
-WORKSPACE_SPEC = {
+WORKSPACE = {
     "name": "Workspace",
     "about": (
         "The folder where all intermediate and output files of the model "

@@ -13,9 +13,10 @@ import rtree
 import shapely.wkb
 import shapely.prepared
 
-from .utils import u
-from . import validation
 from . import utils
+from . import spec_utils
+from .spec_utils import u
+from . import validation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,10 +31,10 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
-        "aoi_watersheds_path": utils.AOI_ARG,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
+        "aoi_watersheds_path": spec_utils.AOI,
         "rainfall_depth": {
             "expression": "value > 0",
             "type": "number",
@@ -42,11 +43,11 @@ ARGS_SPEC = {
             "name": "Depth of rainfall"
         },
         "lulc_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True
         },
         "soils_hydrological_group_raster_path": {
-            **utils.SOIL_GROUP_ARG,
+            **spec_utils.SOIL_GROUP,
             "projected": True
         },
         "curve_number_table_path": {
@@ -69,7 +70,7 @@ ARGS_SPEC = {
         "built_infrastructure_vector_path": {
             "type": "vector",
             "fields": {"type": {"type": "code"}},
-            "geometries": utils.POLYGONS,
+            "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
                 "Path to a vector with built infrastructure footprints. "

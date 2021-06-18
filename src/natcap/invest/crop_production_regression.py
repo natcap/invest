@@ -9,7 +9,8 @@ from osgeo import osr
 import pygeoprocessing
 import taskgraph
 
-from .utils import u
+from .spec_utils import u
+from . import spec_utils
 from . import utils
 from . import validation
 
@@ -26,11 +27,11 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": utils.WORKSPACE_SPEC,
-        "results_suffix": utils.SUFFIX_SPEC,
-        "n_workers": utils.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "landcover_raster_path": {
-            **utils.LULC_ARG,
+            **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
             "about": (
@@ -83,7 +84,7 @@ ARGS_SPEC = {
             "name": "Fertilization Rate Table Path"
         },
         "aggregate_polygon_path": {
-            **utils.AOI_ARG,
+            **spec_utils.AOI,
             "required": False
         },
         "model_data_path": {
