@@ -28,6 +28,6 @@ but with the same ECMAscript features and babel configurations:
 
 
 ## Client logfile locations:
-* Windows: "C:\Users\dmf\AppData\Roaming\logs\invest-workbench\"
-* Mac: "\~/Library/Application Support/logs/invest-workbench/"
+* Windows: "C:\Users\dmf\AppData\Roaming\invest-workbench\logs\"
+* Mac: "\~/Library/Logs/invest-workbench/"
 * Linux: "\~/.config/invest-workbench/logs/"

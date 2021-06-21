@@ -24,7 +24,7 @@ switch (process.platform) {
 }
 const binaryZipName = `${filePrefix}_invest_binaries.zip`;
 
-const { bucket } = pkg.invest;
+const { bucket, fork } = pkg.invest;
 const repo = 'invest';
 const VERSION = pkg.invest.version;
 const DESTFILE = path.join(

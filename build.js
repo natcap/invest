@@ -7,7 +7,7 @@ const glob = require('glob');
 const SRC_DIR = 'src';
 const BUILD_DIR = 'build';
 
-if (process.argv[2] && process.argv[2] === 'clean') {
+if (process.argv[2] === 'clean') {
   clean();
 } else {
   // clean before build just to remove any files that may
