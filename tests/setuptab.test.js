@@ -29,7 +29,6 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
       uiSpec={uiSpec}
       argsInitValues={undefined}
       investExecute={() => {}}
-      argsToJsonFile={() => {}}
       nWorkers="-1"
       sidebarSetupElementId="foo"
       sidebarFooterElementId="foo"

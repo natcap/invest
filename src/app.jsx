@@ -21,11 +21,10 @@ import {
   saveSettingsStore, getAllSettings,
 } from './components/SettingsModal/SettingsStorage';
 import { getInvestModelNames } from './server_requests';
-import { getLogger } from './logger';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -71,6 +70,10 @@ export default class App extends React.Component {
         downloadedNofN: downloadedNofN
       });
     });
+  }
+
+  componentWillUnmount() {
+    ipcRenderer.removeAllListeners('download-status');
   }
 
   /** Change the tab that is currently visible.
@@ -147,9 +150,11 @@ export default class App extends React.Component {
     });
   }
 
-  /** Save data describing an invest job to a persistent JSON file.
+  /** Save data describing an invest job to a persistent store.
    *
-   * @param {object} job - as constructed by new InvestJob()
+   * And update the app's view of that store.
+   * 
+   * @param {object} job - an instance of InvestJob.
    */
   async saveJob(job) {
     const recentJobs = await job.save();
@@ -166,7 +171,6 @@ export default class App extends React.Component {
   }
 
   render() {
-    const { investExe } = this.props;
     const {
       investList,
       investSettings,
@@ -206,7 +210,6 @@ export default class App extends React.Component {
         >
           <InvestTab
             job={job}
-            investExe={investExe}
             investSettings={investSettings}
             saveJob={this.saveJob}
           />
@@ -288,7 +291,6 @@ export default class App extends React.Component {
 }
 
 App.propTypes = {
-  investExe: PropTypes.string.isRequired,
   isFirstRun: PropTypes.bool,
 };
 

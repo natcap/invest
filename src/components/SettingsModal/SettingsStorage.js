@@ -1,8 +1,6 @@
 import localforage from 'localforage';
 
-import { getLogger } from '../../logger';
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 const investSettingsStore = localforage.createInstance({
   name: 'InvestSettings',

@@ -7,9 +7,10 @@
       Please help us by reporting problems (nothing is too small or too large) to:  davefisher@stanford.edu
     </p>
     <p>
-      Include a brief description of the problem and attach the logfile
-      that you can find using the button below. (There may be up to four logfiles with names like "invest-workbench-log-2020-04-20.txt".)
-      <b>Please include the most recent logfile, or all of them.</b>
+      Include a brief description of the problem and attach the log files
+      that you can find using the button below. (There may be multiple 
+      files with a ".log" extension.)
+      <b>Please include all the log files.</b>
     </p>
     <button type="button" onclick="handleButtonClick()">
       Find My Logs
@@ -29,25 +30,15 @@
     </p>
   </body>
   <script>
-    const { shell, ipcRenderer } = require('electron');
+    const { shell } = require('electron');
     const { getLogger } = require('../logger');
     const logger = getLogger(__filename.split('/').slice(-1)[0]);
-
-    let userDataPath;
-
-    ipcRenderer.invoke('user-data')
-    .then(response => {
-      userDataPath = response;
-    })
-    .catch(e => {
-        logger.error(e.message);
-    });
 
     logger.debug('PROBLEM REPORT: process dump');
     logger.debug(JSON.stringify(process, null, 2));
 
     function handleButtonClick() {
-      shell.openPath(userDataPath);
+      shell.showItemInFolder(logger.transports.file.getFile().path)
     }
     function handleLinkClick(event) {
       event.preventDefault();

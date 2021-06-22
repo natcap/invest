@@ -2,16 +2,18 @@ import path from 'path';
 import fs from 'fs';
 import events from 'events';
 import os from 'os';
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import Stream from 'stream';
+
 import React from 'react';
 import { ipcRenderer } from 'electron';
+import fetch from 'node-fetch';
+import rimraf from 'rimraf';
 import {
   fireEvent, render, waitFor, within
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import InvestTab from '../src/components/InvestTab';
 import App from '../src/app';
 import {
   getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
@@ -19,11 +21,13 @@ import {
 import InvestJob from '../src/InvestJob';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 import {
-  clearSettingsStore, getSettingsValue, saveSettingsStore
+  getSettingsValue, saveSettingsStore
 } from '../src/components/SettingsModal/SettingsStorage';
+import { setupInvestRunHandlers } from '../src/main/setupInvestHandlers';
 
 jest.mock('child_process');
 jest.mock('../src/server_requests');
+jest.mock('node-fetch');
 
 const MOCK_MODEL_LIST_KEY = 'Carbon';
 const MOCK_MODEL_RUN_NAME = 'carbon';
@@ -56,7 +60,7 @@ describe('Various ways to open and close InVEST models', () => {
 
   test('Clicking an invest model button renders SetupTab', async () => {
     const { findByText, findByRole } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
@@ -83,7 +87,7 @@ describe('Various ways to open and close InVEST models', () => {
     await mockJob.save();
 
     const { findByText, findByLabelText, findByRole } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const recentJobCard = await findByText(
@@ -118,7 +122,7 @@ describe('Various ways to open and close InVEST models', () => {
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const { findByText, findByLabelText, findByRole } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const openButton = await findByRole('button', { name: 'Open' });
@@ -140,7 +144,7 @@ describe('Various ways to open and close InVEST models', () => {
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     const { findByRole } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const openButton = await findByRole('button', { name: 'Open' });
@@ -158,7 +162,7 @@ describe('Various ways to open and close InVEST models', () => {
       findByRole,
       findAllByRole,
       queryAllByRole,
-    } = render(<App investExe="foo" />);
+    } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
     const homeTab = await findByRole('tabpanel', { name: /Home/ });
@@ -261,7 +265,7 @@ describe('Display recently executed InVEST jobs', () => {
     });
     recentJobs = await job2.save();
 
-    const { getByText } = render(<App investExe="foo" />);
+    const { getByText } = render(<App />);
 
     await waitFor(() => {
       recentJobs.forEach((job) => {
@@ -273,7 +277,7 @@ describe('Display recently executed InVEST jobs', () => {
 
   test('Recent Jobs: placeholder if there are no recent jobs', async () => {
     const { findByText } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const node = await findByText(/No recent InVEST runs/);
@@ -292,7 +296,7 @@ describe('Display recently executed InVEST jobs', () => {
     });
     const recentJobs = await job1.save();
 
-    const { getByText, findByText, getByTitle } = render(<App investExe="foo" />);
+    const { getByText, findByText, getByTitle } = render(<App />);
 
     await waitFor(() => {
       recentJobs.forEach((job) => {
@@ -324,7 +328,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const {
       getByText, getByLabelText, getByTitle, findByTitle
     } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     fireEvent.click(await findByTitle('settings'));
@@ -390,7 +394,7 @@ describe('InVEST global settings: dialog interactions', () => {
     await saveSettingsStore(expectedSettings);
 
     const { getByText, getByLabelText, findByTitle } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     fireEvent.click(await findByTitle('settings'));
@@ -423,7 +427,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const {
       findByText, findByRole, findByTitle, queryByText
     } = render(
-      <App investExe="foo" />
+      <App />
     );
 
     const settingsBtn = await findByTitle('settings');
@@ -458,9 +462,21 @@ describe('InVEST subprocess testing', () => {
   let fakeWorkspace;
   let logfilePath;
   let mockInvestProc;
+  let spyKill;
+  const investExe = 'foo';
+
+  beforeAll(() => {
+    setupInvestRunHandlers(investExe);
+  });
 
   beforeEach(() => {
     fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
+    getSpec.mockResolvedValue(spec);
+    fetchValidation.mockResolvedValue([]);
+    getInvestModelNames.mockResolvedValue(
+      { Carbon: { internal_name: 'carbon' } }
+    );
+
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
     mockInvestProc = new events.EventEmitter();
@@ -471,11 +487,6 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc.stderr = new Stream.Readable({
       read: () => {},
     });
-    getSpec.mockResolvedValue(spec);
-    fetchValidation.mockResolvedValue([]);
-    getInvestModelNames.mockResolvedValue(
-      { Carbon: { internal_name: 'carbon' } }
-    );
 
     spawn.mockImplementation(() => {
       // To simulate an invest model run, write a logfile to the workspace
@@ -490,17 +501,34 @@ describe('InVEST subprocess testing', () => {
       return mockInvestProc;
     });
 
+    if (process.platform !== 'win32') {
+      spyKill = jest.spyOn(process, 'kill')
+        .mockImplementation(() => {
+          mockInvestProc.emit('exit', null);
+        });
+    } else {
+      exec.mockImplementation(() => {
+        mockInvestProc.emit('exit', null);
+      });
+    }
+
     // mock out the whole UI config module
     // brackets around spec.model_name turns it into a valid literal key
     const mockUISpec = { [spec.model_name]: { order: [Object.keys(spec.args)] } };
     jest.mock('../src/ui_config', () => mockUISpec);
   });
 
+  afterAll(() => {
+    if (spyKill) {
+      spyKill.mockRestore();
+    }
+  });
+
   afterEach(async () => {
     mockInvestProc = null;
     // being extra careful with recursive rm
     if (fakeWorkspace.startsWith(path.join('tests', 'data'))) {
-      fs.rmdirSync(fakeWorkspace, { recursive: true });
+      rimraf(fakeWorkspace, (error) => { if (error) { throw error; } });
     }
     await InvestJob.clearStore();
     jest.resetAllMocks();
@@ -514,7 +542,7 @@ describe('InVEST subprocess testing', () => {
       findByRole,
       queryByText,
       unmount,
-    } = render(<App investExe="foo" />);
+    } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
     fireEvent.click(carbon);
@@ -531,7 +559,9 @@ describe('InVEST subprocess testing', () => {
     // stdout listener is how the app knows the process started
     mockInvestProc.stdout.push('hello from stdout');
     const logTab = await findByText('Log');
-    expect(logTab.classList.contains('active')).toBeTruthy();
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
     // some text from the logfile should be rendered:
     expect(await findByText(dummyTextToLog, { exact: false }))
       .toBeInTheDocument();
@@ -566,7 +596,7 @@ describe('InVEST subprocess testing', () => {
       findByLabelText,
       findByRole,
       unmount,
-    } = render(<App investExe="foo" />);
+    } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
     fireEvent.click(carbon);
@@ -608,17 +638,12 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('user terminates process - expect log display', async () => {
-    const spy = jest.spyOn(InvestTab.prototype, 'terminateInvestProcess')
-      .mockImplementation(() => {
-        mockInvestProc.emit('exit', null);
-      });
-
     const {
       findByText,
       findByLabelText,
       findByRole,
       unmount,
-    } = render(<App investExe="foo" />);
+    } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
     fireEvent.click(carbon);
@@ -643,6 +668,8 @@ describe('InVEST subprocess testing', () => {
     fireEvent.click(cancelButton);
     expect(await findByText('Open Workspace'))
       .toBeEnabled();
+    expect(await findByText('Run Canceled'))
+      .toBeInTheDocument();
 
     // A recent job card should be rendered
     const cardText = await within(
@@ -650,21 +677,15 @@ describe('InVEST subprocess testing', () => {
     ).findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
     unmount();
-    spy.mockRestore();
   });
 
   test('re-run a job - expect new log display', async () => {
-    const spy = jest.spyOn(InvestTab.prototype, 'terminateInvestProcess')
-      .mockImplementation(() => {
-        mockInvestProc.emit('exit', null);
-      });
-
     const {
       findByText,
       findByLabelText,
       findByRole,
       unmount,
-    } = render(<App investExe="foo" />);
+    } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
     fireEvent.click(carbon);
@@ -709,102 +730,5 @@ describe('InVEST subprocess testing', () => {
     // Give it time to run the listener before unmounting.
     await new Promise((resolve) => setTimeout(resolve, 300));
     unmount();
-    spy.mockRestore();
-  });
-});
-
-describe('Download Sample Data Modal', () => {
-  beforeEach(async () => {
-    getInvestModelNames.mockResolvedValue({});
-  });
-  afterEach(async () => {
-    await clearSettingsStore();
-    jest.resetAllMocks();
-  });
-
-  test('Modal does not display when app has been run before', async () => {
-    const { queryByText } = render(
-      <App
-        investExe="foo"
-        isFirstRun={false}
-      />
-    );
-
-    const modalTitle = await queryByText('Download InVEST sample data');
-    expect(modalTitle).toBeNull();
-  });
-
-  test('Modal displays immediately on user`s first run', async () => {
-    const {
-      findByText,
-      getByText,
-    } = render(
-      <App
-        investExe="foo"
-        isFirstRun={true}
-      />
-    );
-
-    const modalTitle = await findByText('Download InVEST sample data');
-    expect(modalTitle).toBeInTheDocument();
-    fireEvent.click(getByText('Cancel'));
-    await waitFor(() => {
-      expect(modalTitle).not.toBeInTheDocument();
-    });
-  });
-
-  test('Download sends signal to main & stores location', async () => {
-    const dialogData = {
-      filePaths: ['foo/directory'],
-    };
-    ipcRenderer.invoke.mockResolvedValue(dialogData);
-
-    const {
-      findByRole,
-      findAllByRole,
-    } = render(
-      <App
-        investExe="foo"
-        isFirstRun={true}
-      />
-    );
-
-    const allCheckBoxes = await findAllByRole('checkbox');
-    const downloadButton = await findByRole('button', { name: 'Download' });
-    fireEvent.click(downloadButton);
-
-    // Many datasets selected - ipcRenderer.send should be called with
-    // 2nd parameter as an array of length:
-    const nURLs = allCheckBoxes.length - 1; // all except Select All
-    await waitFor(() => {
-      // first call and second parameter
-      expect(ipcRenderer.send.mock.calls[0][1])
-        .toHaveLength(nURLs);
-    });
-    await waitFor(async () => {
-      expect(await getSettingsValue('sampleDataDir'))
-        .toBe(dialogData.filePaths[0]);
-    });
-  });
-
-  test('Cancel does not store a sampleDataDir value', async () => {
-    const { findByRole } = render(
-      <App
-        investExe="foo"
-        isFirstRun={true}
-      />
-    );
-
-    const existingValue = await getSettingsValue('sampleDataDir');
-    const cancelButton = await findByRole('button', { name: 'Cancel' });
-    fireEvent.click(cancelButton);
-
-    await waitFor(() => {
-      expect(ipcRenderer.send).toHaveBeenCalledTimes(0);
-    });
-    await waitFor(async () => {
-      const value = await getSettingsValue('sampleDataDir');
-      expect(value).toBe(existingValue);
-    });
   });
 });

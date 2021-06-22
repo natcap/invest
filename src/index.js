@@ -1,15 +1,10 @@
 const { ipcRenderer } = require('electron'); // eslint-disable-line import/no-extraneous-dependencies
 
-const { getLogger } = require('./logger');
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
-
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 const isDevMode = process.argv.includes('--dev');
 if (isDevMode) {
   // in dev mode we can have babel transpile modules on import
   require('@babel/register'); // eslint-disable-line import/no-extraneous-dependencies
-  // load the '.env' file from the project root
-  const dotenv = require('dotenv'); // eslint-disable-line import/no-extraneous-dependencies
-  dotenv.config();
   require('react-devtools');
 }
 
@@ -25,14 +20,13 @@ let rightClickPosition = null;
 window.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   rightClickPosition = { x: e.x, y: e.y };
-  ipcRenderer.invoke('show-context-menu', rightClickPosition);
+  ipcRenderer.send('show-context-menu', rightClickPosition);
 });
 
-const render = async function render(investExe, isFirstRun) {
+function render(isFirstRun) {
   reactDom.default.render(
     react.default.createElement(
       app.default, {
-        investExe: investExe,
         isFirstRun: isFirstRun,
       }
     ),
@@ -40,9 +34,7 @@ const render = async function render(investExe, isFirstRun) {
   );
 };
 
-ipcRenderer.invoke('variable-request')
-  // render the App after receiving any critical data
-  // from the main process
+ipcRenderer.invoke('is-first-run')
   .then((response) => {
-    render(response.investExe, response.isFirstRun);
+    render(response);
   });

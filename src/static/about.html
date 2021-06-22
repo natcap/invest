@@ -136,23 +136,15 @@
     </p>
   </body>
   <script>
-    const { ipcRenderer, shell } = require('electron');
-    const { getLogger } = require('../logger');
-    const logger = getLogger(__filename.split('/').slice(-1)[0]);
+    const pkg = require('../../package.json');
 
     const node1 = document.getElementById('invest-version');
     const node2 = document.getElementById('workbench-version');
+    const text1 = document.createTextNode(pkg.invest.version)
+    const text2 = document.createTextNode(pkg.version)
+    node1.appendChild(text1)
+    node2.appendChild(text2)
 
-    ipcRenderer.invoke('variable-request')
-    .then(response => {
-      const text1 = document.createTextNode(response.investVersion)
-      node1.appendChild(text1)
-      const text2 = document.createTextNode(response.workbenchVersion)
-      node2.appendChild(text2)
-    })
-    .catch(e => {
-        logger.error(e.message);
-    });
 
     function handleClick(event) {
       event.preventDefault();

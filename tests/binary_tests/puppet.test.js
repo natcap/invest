@@ -2,8 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import glob from 'glob';
-import fetch from 'node-fetch';
 import { spawn, spawnSync } from 'child_process';
+
+import rimraf from 'rimraf';
+import fetch from 'node-fetch';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
@@ -13,23 +15,23 @@ const TMP_DIR = fs.mkdtempSync('tests/data/_');
 const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
 let ELECTRON_PROCESS;
 let BROWSER;
-// append to this filename and the image will be uploaded to github artifacts
-// E.g. page.screenshot({ path: `${SCREENSHOT_PREFIX}screenshot.png` })
 
 // For ease of automated testing, run the app from the 'unpacked' directory
 // to avoid need to install first on windows or extract on mac.
 let BINARY_PATH;
+// append to this prefix and the image will be uploaded to github artifacts
+// E.g. page.screenshot({ path: `${SCREENSHOT_PREFIX}screenshot.png` })
 let SCREENSHOT_PREFIX;
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
   [BINARY_PATH] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
   SCREENSHOT_PREFIX = path.join(
-    os.homedir(), 'Library/Application Support/invest-workbench/invest-workbench-'
+    os.homedir(), 'Library/Logs/invest-workbench/invest-workbench-'
   );
 } else if (process.platform === 'win32') {
   [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');
   SCREENSHOT_PREFIX = path.join(
-    os.homedir(), 'AppData/Roaming/invest-workbench/invest-workbench-'
+    os.homedir(), 'AppData/Roaming/invest-workbench/logs/invest-workbench-'
   );
 }
 
@@ -102,7 +104,7 @@ afterAll(async () => {
 
   // being extra careful with recursive rm
   if (TMP_DIR.startsWith('tests/data')) {
-    fs.rmdirSync(TMP_DIR, { recursive: true });
+    rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
   }
   const wasKilled = ELECTRON_PROCESS.kill();
   console.log(`electron process was killed: ${wasKilled}`);
@@ -196,7 +198,7 @@ test('Run a real invest model', async () => {
 // Also verify that window 1 has focus.
 test('App re-launch will exit and focus on first instance', async () => {
   if (process.platform === 'win32') {
-      await waitFor(() => {
+    await waitFor(() => {
       expect(BROWSER.isConnected()).toBeTruthy();
     });
 
@@ -215,5 +217,4 @@ test('App re-launch will exit and focus on first instance', async () => {
     // is less important because mac generally won't open multiple instances
     console.log("Skipping this test because we're not on Windows");
   }
-
 });

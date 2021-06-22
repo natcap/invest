@@ -1,9 +1,7 @@
-import fs from 'fs';
 import path from 'path';
-import os from 'os';
-import { spawn, exec } from 'child_process';
 import React from 'react';
 import PropTypes from 'prop-types';
+import { ipcRenderer } from 'electron';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -16,22 +14,10 @@ import Spinner from 'react-bootstrap/Spinner';
 import SetupTab from '../SetupTab';
 import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
-import { getSpec, writeParametersToFile } from '../../server_requests';
-import { findMostRecentLogfile, cleanupDir } from '../../utils';
-import { fileRegistry } from '../../constants';
-import { getLogger } from '../../logger';
-import { dragOverHandlerNone } from '../../utils.js';
+import { getSpec } from '../../server_requests';
+import { dragOverHandlerNone } from '../../utils';
 
-
-const logger = getLogger(__filename.split('/').slice(-1)[0]);
-
-// to translate to the invest CLI's verbosity flag:
-const LOGLEVELMAP = {
-  DEBUG: '--debug',
-  INFO: '-vvv',
-  WARNING: '-vv',
-  ERROR: '-v',
-};
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 /** Get an invest model's ARGS_SPEC when a model button is clicked.
  *
@@ -47,12 +33,11 @@ async function investGetSpec(modelName) {
     const uiSpec = uiSpecs[modelSpec.model_name];
     if (uiSpec) {
       return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
-    } else {
-      logger.error(`no UI spec found for ${modelName}`);
-    } 
+    }
+    logger.error(`no UI spec found for ${modelName}`);
   } else {
     logger.error(`no args spec found for ${modelName}`);
-  }  
+  }
   return undefined;
 }
 
@@ -71,19 +56,17 @@ export default class InvestTab extends React.Component {
       argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
       logStdErr: null, // stderr data from the invest subprocess
       jobStatus: null, // 'running', 'error', 'success'
-      procID: null,
+      workspaceDir: null,
+      logfile: null,
     };
 
-    this.argsToJsonFile = this.argsToJsonFile.bind(this);
+    this.ipcSuffix = window.crypto.getRandomValues(new Uint16Array(1))[0];
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
-    this.investRun = undefined;
   }
 
   async componentDidMount() {
-    // If these dir already exists, this will err and pass
-    fs.mkdir(fileRegistry.TEMP_DIR, (err) => {});
     const { job } = this.props;
     const {
       modelSpec, argsSpec, uiSpec
@@ -93,31 +76,14 @@ export default class InvestTab extends React.Component {
       argsSpec: argsSpec,
       uiSpec: uiSpec,
       jobStatus: job.metadata.status,
+      logfile: job.metadata.logfile
     }, () => { this.switchTabs('setup'); });
   }
 
-  componentWillUnmout() {
-    // this object holds stream handlers, so it's important to clean up
-    this.investRun = null;
-  }
-
-  /** Write an invest args JSON file for passing to invest cli.
-   *
-   * Outsourcing this to natcap.invest.datastack via flask ensures
-   * a compliant json with an invest version string.
-   *
-   * @param {string} datastackPath - path to a JSON file.
-   * @param {object} argsValues - the invest "args dictionary"
-   *   as a javascript object
-   */
-  async argsToJsonFile(datastackPath, argsValues) {
-    const payload = {
-      parameterSetPath: datastackPath,
-      moduleName: this.state.modelSpec.module,
-      relativePaths: false,
-      args: JSON.stringify(argsValues),
-    };
-    await writeParametersToFile(payload);
+  componentWillUnmount() {
+    ipcRenderer.removeAllListeners(`invest-logging-${this.ipcSuffix}`);
+    ipcRenderer.removeAllListeners(`invest-stderr-${this.ipcSuffix}`);
+    ipcRenderer.removeAllListeners(`invest-exit-${this.ipcSuffix}`);
   }
 
   /** Spawn a child process to run an invest model via the invest CLI.
@@ -134,7 +100,6 @@ export default class InvestTab extends React.Component {
   async investExecute(argsValues) {
     const {
       job,
-      investExe,
       investSettings,
       saveJob,
     } = this.props;
@@ -152,111 +117,52 @@ export default class InvestTab extends React.Component {
     // can display an appropriate visual cue when it's clicked
     this.setState({
       jobStatus: job.metadata.status,
+      workspaceDir: args.workspace_dir
     });
-
-    // Write a temporary datastack json for passing to invest CLI
-    const tempDir = fs.mkdtempSync(path.join(
-      fileRegistry.TEMP_DIR, 'data-'
-    ));
-    const datastackPath = path.join(tempDir, 'datastack.json');
-    await this.argsToJsonFile(datastackPath, args);
-
-    const cmdArgs = [
-      LOGLEVELMAP[investSettings.loggingLevel],
-      'run',
-      job.metadata.modelRunName,
-      '--headless',
-      `-d "${datastackPath}"`,
-    ];
-    if (process.platform !== 'win32') {
-      this.investRun = spawn(path.basename(investExe), cmdArgs, {
-        env: { PATH: path.dirname(investExe) },
-        shell: true, // without shell, IOError when datastack.py loads json
-        detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
+    ipcRenderer.on(`invest-logging-${this.ipcSuffix}`, (event, logfile) => {
+      this.setState({
+        logfile: logfile
+      }, () => {
+        this.switchTabs('log');
       });
-    } else { // windows
-      this.investRun = spawn(path.basename(investExe), cmdArgs, {
-        env: { PATH: path.dirname(investExe) },
-        shell: true,
-      });
-    }
-
-    // There's no general way to know that a spawned process started,
-    // so this logic to listen once on stdout seems like the way.
-    this.investRun.stdout.once('data', async () => {
-      const logfile = await findMostRecentLogfile(args.workspace_dir);
       job.setProperty('logfile', logfile);
-      // TODO: handle case when logfile is still undefined?
-      // Could be if some stdout is emitted before a logfile exists.
-      logger.debug(`invest logging to: ${job.metadata.logfile}`);
-      this.setState(
-        {
-          procID: this.investRun.pid,
-        }, () => {
-          this.switchTabs('log');
-          saveJob(job);
-        }
-      );
+      saveJob(job);
     });
-
-    // Capture stderr to a string separate from the invest log
-    // so that it can be displayed separately when invest exits.
-    // And because it could actually be stderr emitted from the
-    // invest CLI or even the shell, rather than the invest model,
-    // in which case it's useful to logger.debug too.
-    let stderr = Object.assign('', this.state.logStdErr);
-    this.investRun.stderr.on('data', (data) => {
-      logger.debug(`${data}`);
-      stderr += `${data}${os.EOL}`;
+    ipcRenderer.on(`invest-stderr-${this.ipcSuffix}`, (event, data) => {
+      let stderr = Object.assign('', this.state.logStdErr);
+      stderr += data;
       this.setState({
         logStdErr: stderr,
       });
     });
-
-    // Set some state when the invest process exits and update the app's
-    // persistent database by calling saveJob.
-    this.investRun.on('exit', (code) => {
-      logger.debug(code);
-      if (code === 0) {
-        job.setProperty('status', 'success');
-      } else {
-        // Invest CLI exits w/ code 1 when it catches errors,
-        // Models exit w/ code 255 (on all OS?) when errors raise from execute()
-        // Windows taskkill yields exit code 1
-        // Non-windows process.kill yields exit code null
-        job.setProperty('status', 'error');
-      }
+    ipcRenderer.on(`invest-exit-${this.ipcSuffix}`, (event, code) => {
+      // Invest CLI exits w/ code 1 when it catches errors,
+      // Models exit w/ code 255 (on all OS?) when errors raise from execute()
+      // Windows taskkill yields exit code 1
+      // Non-windows process.kill yields exit code null
+      const status = (code === 0) ? 'success' : 'error';
       this.setState({
-        jobStatus: job.metadata.status,
-        procID: null,
-      }, () => {
-        saveJob(job);
-        fs.unlink(datastackPath, (err) => {
-          if (err) { logger.error(err); }
-          fs.rmdir(tempDir, (e) => {
-            if (e) { logger.error(e); }
-          });
-        });
+        jobStatus: status
       });
+      job.setProperty('status', status);
+      saveJob(job);
     });
+
+    ipcRenderer.send(
+      'invest-run',
+      job.metadata.modelRunName,
+      this.state.modelSpec.module,
+      args,
+      investSettings.loggingLevel,
+      this.ipcSuffix
+    );
   }
 
-  terminateInvestProcess(pid) {
-    if (pid) {
-      if (this.state.jobStatus === 'running') {
-        if (process.platform !== 'win32') {
-          // the '-' prefix on pid sends signal to children as well
-          process.kill(-pid, 'SIGTERM');
-        } else {
-          exec(`taskkill /pid ${pid} /t /f`);
-        }
-      }
-      // this replaces any stderr that might exist, but that's
-      // okay since the user requested terminating the process.
-      this.setState({
-        logStdErr: 'Run Canceled',
-      });
-    }
+  terminateInvestProcess() {
+    ipcRenderer.send('invest-kill', this.state.workspaceDir);
+    this.setState({
+      logStdErr: 'Run Canceled'
+    });
   }
 
   /** Change the tab that is currently visible.
@@ -277,13 +183,12 @@ export default class InvestTab extends React.Component {
       uiSpec,
       jobStatus,
       logStdErr,
-      procID,
+      logfile,
     } = this.state;
     const {
       navID,
       modelRunName,
       argsValues,
-      logfile,
     } = this.props.job.metadata;
 
     // Don't render the model setup & log until data has been fetched.
@@ -295,7 +200,6 @@ export default class InvestTab extends React.Component {
     const logDisabled = !logfile;
     const sidebarSetupElementId = `sidebar-setup-${navID}`;
     const sidebarFooterElementId = `sidebar-footer-${navID}`;
-
 
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
@@ -353,7 +257,6 @@ export default class InvestTab extends React.Component {
                   uiSpec={uiSpec}
                   argsInitValues={argsValues}
                   investExecute={this.investExecute}
-                  argsToJsonFile={this.argsToJsonFile}
                   nWorkers={this.props.investSettings.nWorkers}
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
@@ -366,7 +269,6 @@ export default class InvestTab extends React.Component {
                   logfile={logfile}
                   logStdErr={logStdErr}
                   terminateInvestProcess={this.terminateInvestProcess}
-                  procID={procID}
                   pyModuleName={modelSpec.module}
                   sidebarFooterElementId={sidebarFooterElementId}
                 />
@@ -392,7 +294,6 @@ InvestTab.propTypes = {
     save: PropTypes.func.isRequired,
     setProperty: PropTypes.func.isRequired,
   }).isRequired,
-  investExe: PropTypes.string.isRequired,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,

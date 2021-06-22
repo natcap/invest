@@ -3,7 +3,7 @@ import React from 'react';
 import Button from 'react-bootstrap/Button';
 
 import SaveFileButton from '../../SaveFileButton';
-import { dragOverHandlerNone } from '../../../utils.js';
+import { dragOverHandlerNone } from '../../../utils';
 
 export function SaveParametersButtons(props) {
   return (
@@ -11,7 +11,7 @@ export function SaveParametersButtons(props) {
       <SaveFileButton
         title="Save to JSON"
         defaultTargetPath="invest_args.json"
-        func={props.wrapArgsToJsonFile}
+        func={props.saveJsonFile}
       />
       <SaveFileButton
         title="Save to Python script"

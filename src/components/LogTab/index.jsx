@@ -12,9 +12,8 @@ import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 
 import Portal from '../Portal';
-import { getLogger } from '../../logger';
 
-const logger = getLogger(__filename.split('/').slice(-2).join('/'));
+const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('/'));
 
 const LOG_TEXT_TAG = 'span';
 const ALLOWED_HTML_OPTIONS = {
@@ -115,6 +114,10 @@ export default class LogTab extends React.Component {
     this.unwatchLogfile();
   }
 
+  handleOpenWorkspace() {
+    shell.showItemInFolder(this.props.logfile);
+  }
+
   tailLogfile(logfile) {
     try {
       if (process.platform === 'win32') {
@@ -163,10 +166,6 @@ export default class LogTab extends React.Component {
     }
   }
 
-  handleOpenWorkspace() {
-    shell.showItemInFolder(this.props.logfile);
-  }
-
   unwatchLogfile() {
     if (this.tail) {
       try {
@@ -182,7 +181,6 @@ export default class LogTab extends React.Component {
     const {
       jobStatus,
       logStdErr,
-      procID,
       terminateInvestProcess,
       sidebarFooterElementId,
     } = this.props;
@@ -200,8 +198,7 @@ export default class LogTab extends React.Component {
     const CancelButton = (
       <Button
         variant="outline-dark"
-        onClick={() => terminateInvestProcess(procID)}
-        disabled={!procID}
+        onClick={terminateInvestProcess}
       >
         Cancel Run
       </Button>
@@ -258,7 +255,6 @@ LogTab.propTypes = {
   jobStatus: PropTypes.string,
   logfile: PropTypes.string,
   logStdErr: PropTypes.string,
-  procID: PropTypes.number,
   pyModuleName: PropTypes.string.isRequired,
   terminateInvestProcess: PropTypes.func.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,
