@@ -6,5 +6,4 @@ module.exports = {
   plugins: [
     '@babel/plugin-transform-runtime',
   ],
-  ignore: ['**/__mocks__/*'],
 };
