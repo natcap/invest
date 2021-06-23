@@ -3,14 +3,14 @@ import fs from 'fs';
 import readline from 'readline';
 import fetch from 'node-fetch';
 
-import * as server_requests from '../../src/server_requests';
+import * as server_requests from '../../src/renderer/server_requests';
 import {
   createPythonFlaskProcess,
   shutdownPythonProcess,
   getFlaskIsReady,
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
-import { argsDictFromObject } from '../../src/utils';
+import { argsDictFromObject } from '../../src/renderer/utils';
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -135,7 +135,7 @@ test('validate the UI spec', async () => {
   const models = await server_requests.getInvestModelNames();
   const modelInternalNames = Object.keys(models).map(
     key => models[key].internal_name);
-  const uiSpec = require('../../src/ui_config');
+  const uiSpec = require('../../src/renderer/ui_config');
   // get the args spec for each model
   const argsSpecs = await Promise.all(modelInternalNames.map(
     async model => await server_requests.getSpec(model)

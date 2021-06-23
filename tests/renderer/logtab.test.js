@@ -8,7 +8,7 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import LogTab from '../src/components/LogTab';
+import LogTab from '../../src/renderer/components/LogTab';
 
 function renderLogTab(logfilePath, primaryPythonLogger) {
   const { ...utils } = render(
@@ -26,7 +26,7 @@ function renderLogTab(logfilePath, primaryPythonLogger) {
 }
 
 function makeLogFile(text) {
-  const workspace = fs.mkdtempSync(path.join('tests/data', 'log-'));
+  const workspace = fs.mkdtempSync('tests/data/log-');
   const logfilePath = path.join(workspace, 'logfile.txt');
   fs.writeFileSync(logfilePath, text);
   return logfilePath;

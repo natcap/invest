@@ -14,19 +14,19 @@ import {
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import App from '../src/app';
+import App from '../../src/renderer/app';
 import {
   getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
-} from '../src/server_requests';
-import InvestJob from '../src/InvestJob';
-import SAMPLE_SPEC from './data/carbon_args_spec.json';
+} from '../../src/renderer/server_requests';
+import InvestJob from '../../src/renderer/InvestJob';
+import SAMPLE_SPEC from '../data/carbon_args_spec.json';
 import {
   getSettingsValue, saveSettingsStore
-} from '../src/components/SettingsModal/SettingsStorage';
-import { setupInvestRunHandlers } from '../src/main/setupInvestHandlers';
+} from '../../src/renderer/components/SettingsModal/SettingsStorage';
+import { setupInvestRunHandlers } from '../../src/main/setupInvestHandlers';
 
 jest.mock('child_process');
-jest.mock('../src/server_requests');
+jest.mock('../../src/renderer/server_requests');
 jest.mock('node-fetch');
 
 const MOCK_MODEL_LIST_KEY = 'Carbon';
@@ -515,7 +515,7 @@ describe('InVEST subprocess testing', () => {
     // mock out the whole UI config module
     // brackets around spec.model_name turns it into a valid literal key
     const mockUISpec = { [spec.model_name]: { order: [Object.keys(spec.args)] } };
-    jest.mock('../src/ui_config', () => mockUISpec);
+    jest.mock('../../src/renderer/ui_config', () => mockUISpec);
   });
 
   afterAll(() => {

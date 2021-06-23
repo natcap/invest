@@ -5,13 +5,13 @@ import {
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import SetupTab from '../src/components/SetupTab';
-import ArgInput from '../src/components/SetupTab/ArgInput';
+import SetupTab from '../../src/renderer/components/SetupTab';
+import ArgInput from '../../src/renderer/components/SetupTab/ArgInput';
 import {
   fetchDatastackFromFile, fetchValidation,
-} from '../src/server_requests';
+} from '../../src/renderer/server_requests';
 
-jest.mock('../src/server_requests');
+jest.mock('../../src/renderer/server_requests');
 
 const MODULE = 'carbon';
 
