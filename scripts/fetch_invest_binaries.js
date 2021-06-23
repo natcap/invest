@@ -37,7 +37,6 @@ if (bucket === 'releases.naturalcapitalproject.org') {
   binaryZipPath = `${bucket}/${repo}/${VERSION}/${binaryZipName}`;
   DATA_PREFIX = `${repo}/${VERSION}/data`;
 } else if (bucket === 'natcap-dev-build-artifacts') {
-  const { fork } = pkg.invest;
   binaryZipPath = `${bucket}/${repo}/${fork}/${VERSION}/${binaryZipName}`;
   DATA_PREFIX = `${repo}/${fork}/${VERSION}/data`;
 }
