@@ -1,4 +1,3 @@
-'use strict';
 /* We can't rely on babel to clean it's output directory every time
 it compiles because,
 1. There's a bug https://github.com/babel/babel/issues/9293
@@ -10,7 +9,6 @@ const fs = require('fs-extra');
 const path = require('path');
 const glob = require('glob');
 
-const SRC_DIR = 'src';
 const BUILD_DIR = 'build';
 
 /** Remove all the files created during build()
@@ -34,3 +32,5 @@ function clean() {
     } catch {}
   });
 }
+
+clean();
