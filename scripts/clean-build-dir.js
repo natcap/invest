@@ -1,24 +1,15 @@
-'use strict';
+/* We can't rely on babel to clean it's output directory every time
+it compiles because,
+1. There's a bug https://github.com/babel/babel/issues/9293
+2. We have the special build/invest dir that is outside the scope
+   of babel and that should persist.
+*/
 
 const fs = require('fs-extra');
 const path = require('path');
 const glob = require('glob');
 
-const SRC_DIR = 'src';
 const BUILD_DIR = 'build';
-
-if (process.argv[2] === 'clean') {
-  clean();
-} else {
-  // clean before build just to remove any files that may
-  // have been removed from src/ code but are still in build/
-  // from a previous build.
-  clean();
-  // TODO: formerly we were doing other stuff here,
-  // and we might again in the future with work on
-  // https://github.com/natcap/invest-workbench/issues/146
-  // So we should clean this up as part of that issue.
-}
 
 /** Remove all the files created during build()
  *
@@ -41,3 +32,5 @@ function clean() {
     } catch {}
   });
 }
+
+clean();

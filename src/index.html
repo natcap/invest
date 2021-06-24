@@ -1,34 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta 
-    name="viewport" 
-    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
-    charset="UTF-8"
-  >
-  <link
-    rel="stylesheet"
-    href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
-    crossorigin="anonymous"
-  />
-  <link 
-    rel="stylesheet" 
-    type="text/css" 
-    href="../node_modules/material-design-icons/iconfont/material-icons.css"
-  />
-  <link
-    rel="stylesheet"
-    href="styles/style.css"
-  />
-</head>
+  <head>
+    <meta 
+      name="viewport" 
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+      charset="UTF-8"
+    >
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+    <link 
+      rel="stylesheet" 
+      type="text/css" 
+      href="../node_modules/material-design-icons/iconfont/material-icons.css"
+    />
+    <link
+      rel="stylesheet"
+      href="styles/style.css"
+    />
+  </head>
 
-<body>
-  <div id="App"></div>
-</body>
-<script>
-  require = require("esm")(module)
-  require("file://".concat(__dirname, "/index.js"))
-</script>
-
+  <body>
+    <div id="App"></div>
+  </body>
+  <script src="./index.js" type="module">
+  </script>
 </html>
