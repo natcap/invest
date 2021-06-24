@@ -82,13 +82,10 @@ body {
 	border-color: #6c757d;
 }
 
-/*Top Level Tabs*/
-
-#top-tab-content.tab-content {
+/* Home Tab */
+.tab-pane[title=Home] {
 	padding-top: 16px;
 }
-
-/* Home Tab */
 
 .invest-list-table {
 	display: block;

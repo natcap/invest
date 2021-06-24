@@ -9,6 +9,7 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/Col';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -225,53 +226,62 @@ export default class App extends React.Component {
           storeDownloadDir={this.storeDownloadDir}
         />
         <TabContainer activeKey={activeTab}>
-          <Navbar onDragOver={dragOverHandlerNone}>
-            <Navbar.Brand onDragOver={dragOverHandlerNone}>
-              <Nav.Link
+          <Navbar
+            className="px-0"
+            onDragOver={dragOverHandlerNone}
+          >
+            <Col sm={3} className="px-0">
+              <Navbar.Brand onDragOver={dragOverHandlerNone}>
+                <Nav.Link
+                  onSelect={this.switchTabs}
+                  eventKey="home"
+                  onDragOver={dragOverHandlerNone}
+                >
+                  InVEST
+                </Nav.Link>
+              </Navbar.Brand>
+            </Col>
+            <Col sm={7} className="px-0">
+              <Nav
+                variant="pills"
+                className="mr-auto horizontal-scroll"
+                activeKey={activeTab}
                 onSelect={this.switchTabs}
-                eventKey="home"
                 onDragOver={dragOverHandlerNone}
               >
-                InVEST
-              </Nav.Link>
-            </Navbar.Brand>
-            <Nav
-              variant="pills"
-              className="mr-auto horizontal-scroll"
-              activeKey={activeTab}
-              onSelect={this.switchTabs}
-              onDragOver={dragOverHandlerNone}
-            >
-              {investNavItems}
-            </Nav>
-            {
-              (downloadedNofN)
-                ? (
-                  <DownloadProgressBar
-                    downloadedNofN={downloadedNofN}
-                    expireAfter={5000} // milliseconds
-                  />
-                )
-                : <div />
-            }
-            <LoadButton
-              openInvestModel={this.openInvestModel}
-              batchUpdateArgs={this.batchUpdateArgs}
-            />
-            {
-              // don't render until after we fetched the data
-              (investSettings)
-                ? (
-                  <SettingsModal
-                    className="mx-3"
-                    saveSettings={this.saveSettings}
-                    investSettings={investSettings}
-                    clearJobsStorage={this.clearRecentJobs}
-                    showDownloadModal={() => this.showDownloadModal(true)}
-                  />
-                )
-                : <div />
-            }
+                {investNavItems}
+              </Nav>
+              {
+                (downloadedNofN)
+                  ? (
+                    <DownloadProgressBar
+                      downloadedNofN={downloadedNofN}
+                      expireAfter={5000} // milliseconds
+                    />
+                  )
+                  : <div />
+              }
+            </Col>
+            <Col sm={2} className="px-0">
+              <LoadButton
+                openInvestModel={this.openInvestModel}
+                batchUpdateArgs={this.batchUpdateArgs}
+              />
+              {
+                // don't render until after we fetched the data
+                (investSettings)
+                  ? (
+                    <SettingsModal
+                      className="mx-3"
+                      saveSettings={this.saveSettings}
+                      investSettings={investSettings}
+                      clearJobsStorage={this.clearRecentJobs}
+                      showDownloadModal={() => this.showDownloadModal(true)}
+                    />
+                  )
+                  : <div />
+              }
+            </Col>
           </Navbar>
 
           <TabContent id="top-tab-content">
