@@ -8,7 +8,7 @@ body {
 
 /*Top Navigation*/
 
-.navbar {
+.navbar .row {
 	align-items: baseline;
 	padding-bottom: 0px;
 	border-bottom: 3px solid var(--invest-green);

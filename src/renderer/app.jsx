@@ -9,7 +9,9 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
+import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Container from 'react-bootstrap/Container';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -154,7 +156,7 @@ export default class App extends React.Component {
   /** Save data describing an invest job to a persistent store.
    *
    * And update the app's view of that store.
-   * 
+   *
    * @param {object} job - an instance of InvestJob.
    */
   async saveJob(job) {
@@ -230,58 +232,64 @@ export default class App extends React.Component {
             className="px-0"
             onDragOver={dragOverHandlerNone}
           >
-            <Col sm={3} className="px-0">
-              <Navbar.Brand onDragOver={dragOverHandlerNone}>
-                <Nav.Link
+          {/*<Container fluid>*/}
+            <Row
+              className="w-100"
+            >
+              <Col sm={3} className="px-0">
+                <Navbar.Brand onDragOver={dragOverHandlerNone}>
+                  <Nav.Link
+                    onSelect={this.switchTabs}
+                    eventKey="home"
+                    onDragOver={dragOverHandlerNone}
+                  >
+                    InVEST
+                  </Nav.Link>
+                </Navbar.Brand>
+              </Col>
+              <Col sm={7} className="px-0">
+                <Nav
+                  variant="pills"
+                  className="mr-auto horizontal-scroll"
+                  activeKey={activeTab}
                   onSelect={this.switchTabs}
-                  eventKey="home"
                   onDragOver={dragOverHandlerNone}
                 >
-                  InVEST
-                </Nav.Link>
-              </Navbar.Brand>
-            </Col>
-            <Col sm={7} className="px-0">
-              <Nav
-                variant="pills"
-                className="mr-auto horizontal-scroll"
-                activeKey={activeTab}
-                onSelect={this.switchTabs}
-                onDragOver={dragOverHandlerNone}
-              >
-                {investNavItems}
-              </Nav>
-              {
-                (downloadedNofN)
-                  ? (
-                    <DownloadProgressBar
-                      downloadedNofN={downloadedNofN}
-                      expireAfter={5000} // milliseconds
-                    />
-                  )
-                  : <div />
-              }
-            </Col>
-            <Col sm={2} className="px-0">
-              <LoadButton
-                openInvestModel={this.openInvestModel}
-                batchUpdateArgs={this.batchUpdateArgs}
-              />
-              {
-                // don't render until after we fetched the data
-                (investSettings)
-                  ? (
-                    <SettingsModal
-                      className="mx-3"
-                      saveSettings={this.saveSettings}
-                      investSettings={investSettings}
-                      clearJobsStorage={this.clearRecentJobs}
-                      showDownloadModal={() => this.showDownloadModal(true)}
-                    />
-                  )
-                  : <div />
-              }
-            </Col>
+                  {investNavItems}
+                </Nav>
+                {
+                  (downloadedNofN)
+                    ? (
+                      <DownloadProgressBar
+                        downloadedNofN={downloadedNofN}
+                        expireAfter={5000} // milliseconds
+                      />
+                    )
+                    : <div />
+                }
+              </Col>
+              <Col sm={2} className="px-0">
+                <LoadButton
+                  openInvestModel={this.openInvestModel}
+                  batchUpdateArgs={this.batchUpdateArgs}
+                />
+                {
+                  // don't render until after we fetched the data
+                  (investSettings)
+                    ? (
+                      <SettingsModal
+                        className="mx-3"
+                        saveSettings={this.saveSettings}
+                        investSettings={investSettings}
+                        clearJobsStorage={this.clearRecentJobs}
+                        showDownloadModal={() => this.showDownloadModal(true)}
+                      />
+                    )
+                    : <div />
+                }
+              </Col>
+            </Row>
+            {/*</Container>*/}
           </Navbar>
 
           <TabContent id="top-tab-content">
