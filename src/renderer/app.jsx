@@ -229,7 +229,7 @@ export default class App extends React.Component {
         />
         <TabContainer activeKey={activeTab}>
           <Navbar
-            className="px-0"
+            className="px-0 py-0"
             onDragOver={dragOverHandlerNone}
           >
           {/*<Container fluid>*/}
@@ -268,7 +268,7 @@ export default class App extends React.Component {
                     : <div />
                 }
               </Col>
-              <Col sm={2} className="px-0">
+              <Col sm={2} className="px-0 text-right">
                 <LoadButton
                   openInvestModel={this.openInvestModel}
                   batchUpdateArgs={this.batchUpdateArgs}
