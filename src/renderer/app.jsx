@@ -246,10 +246,10 @@ export default class App extends React.Component {
                   </Nav.Link>
                 </Navbar.Brand>
               </Col>
-              <Col sm={7} className="px-0">
+              <Col sm={7} className="pl-1 pr-0">
                 <Nav
-                  variant="pills"
-                  className="mr-auto horizontal-scroll"
+                  variant="tabs"
+                  className="mr-auto"
                   activeKey={activeTab}
                   onSelect={this.switchTabs}
                   onDragOver={dragOverHandlerNone}

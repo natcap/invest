@@ -12,6 +12,12 @@ body {
 	height: 3rem;
 }
 
+.navbar-nav.nav-tabs {
+	border-bottom: 0px;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
 .navbar .row {
 	align-items: baseline;
 	padding-bottom: 0px;
@@ -29,6 +35,7 @@ body {
 
 .navbar-light .navbar-nav .nav-link.active {
 	background-color: ghostwhite;
+	border: 1px solid var(--invest-green);
 }
 
 /*TODO:  This probably applies to more than just navbar*/
@@ -70,14 +77,11 @@ body {
 	vertical-align: middle;
 }
 
-.horizontal-scroll {
-	overflow-x: auto;
-}
-
 .close-tab.btn {
 	background-color: transparent;
 	border-color: transparent;
 	color: #6c757d;
+	margin-left: 0.1rem;
 	padding-left: 0.6rem;
 	padding-right: 0.6rem;
 	padding-top: 0.25rem;
@@ -85,6 +89,8 @@ body {
 }
 .close-tab:hover, .close-tab:focus, .close-tab:active {
 	border-color: #6c757d;
+	background-color: #e46672;
+	color: white;
 }
 
 .tab-content {
