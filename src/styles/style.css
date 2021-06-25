@@ -8,6 +8,10 @@ body {
 
 /*Top Navigation*/
 
+.navbar {
+	height: 3rem;
+}
+
 .navbar .row {
 	align-items: baseline;
 	padding-bottom: 0px;
@@ -17,15 +21,17 @@ body {
 
 .navbar-light .navbar-nav .nav-link {
   background-color: transparent;
-  padding-right: 1rem;
-  padding-left: 1rem;
+  /*padding-right: 1rem;*/
+  /*padding-left: 1rem;*/
   color: #999999;
+  font-size: 1.1rem;
 }
 
 .navbar-light .navbar-nav .nav-link.active {
 	background-color: ghostwhite;
 }
 
+/*TODO:  This probably applies to more than just navbar*/
 .nav-link {
 	color: gray;
 	font-size: 1.3rem;
@@ -72,20 +78,20 @@ body {
 	background-color: transparent;
 	border-color: transparent;
 	color: #6c757d;
-	margin-left: 0.5rem;
-	padding-left: 1rem;
-	padding-right: 1rem;
+	padding-left: 0.6rem;
+	padding-right: 0.6rem;
 	padding-top: 0.25rem;
-	padding-bottom: 0.25rem;
+	padding-bottom: 0.5rem;
 }
 .close-tab:hover, .close-tab:focus, .close-tab:active {
 	border-color: #6c757d;
 }
 
-/* Home Tab */
-.tab-pane[title=Home] {
-	padding-top: 16px;
+.tab-content {
+	padding-top:  1rem;
 }
+
+/* Home Tab */
 
 .invest-list-table {
 	display: block;

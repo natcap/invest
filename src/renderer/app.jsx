@@ -232,7 +232,6 @@ export default class App extends React.Component {
             className="px-0 py-0"
             onDragOver={dragOverHandlerNone}
           >
-          {/*<Container fluid>*/}
             <Row
               className="w-100"
             >
@@ -289,7 +288,6 @@ export default class App extends React.Component {
                 }
               </Col>
             </Row>
-            {/*</Container>*/}
           </Navbar>
 
           <TabContent id="top-tab-content">
