@@ -146,7 +146,7 @@ ARGS_SPEC = {
         },
         "grid_type": {
             "type": "option_string",
-            "options": {"square": "", "hexagon": ""},
+            "options": {"square", "hexagon"},
             "required": "grid_aoi",
             "about": (
                 "Optional, but must exist if args['grid_aoi'] is True. Is one "

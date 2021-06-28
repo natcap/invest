@@ -681,7 +681,7 @@ class WaveEnergyValidateTests(unittest.TestCase):
 
     def test_validate_bad_aoi_incorrect_proj_units(self):
         """WaveEnergy: test validating AOI vector with incorrect units."""
-        from natcap.invest import wave_energy
+        from natcap.invest import wave_energy, validation
 
         args = {}
         # Validation will recognize the units "foot" and say it's incorrect
@@ -689,19 +689,21 @@ class WaveEnergyValidateTests(unittest.TestCase):
                                         'bad_AOI_us_survey_foot.shp')
         validation_error_list = wave_energy.validate(args)
         expected_error = (
-            ['aoi_path'], "Layer must be projected in this unit: 'meter'")
+            ['aoi_path'],
+            validation.WRONG_PROJECTION_UNIT_MSG % ('meter', 'us_survey_foot'))
         self.assertTrue(expected_error in validation_error_list)
 
     def test_validate_bad_aoi_unrecognized_proj_units(self):
         """WaveEnergy: test validating AOI vector with unrecognized units"""
-        from natcap.invest import wave_energy
+        from natcap.invest import wave_energy, validation
 
         args = {}
-        # The unit "US survey foot" is not recognized by pint
+        # The unit "not_a_unit" is not recognized by pint
         args['aoi_path'] = os.path.join(
             SAMPLE_DATA, 'bad_AOI_fake_unit.shp')
 
         validation_error_list = wave_energy.validate(args)
         expected_error = (
-            ['aoi_path'], "SRS has unrecognized unit 'not_a_unit'")
+            ['aoi_path'],
+            validation.WRONG_PROJECTION_UNIT_MSG % ('meter', 'not_a_unit'))
         self.assertTrue(expected_error in validation_error_list)

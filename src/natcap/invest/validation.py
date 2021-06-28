@@ -238,9 +238,11 @@ def _check_projection(srs, projected, projection_units):
             layer_units = spec_utils.u.Unit(layer_units_name)
             # Compare pint Unit objects
             if projection_units != layer_units:
-                return WRONG_PROJECTION_UNIT_MSG % (projection_units, layer_units)
+                return WRONG_PROJECTION_UNIT_MSG % (
+                    projection_units, layer_units_name)
         except pint.errors.UndefinedUnitError:
-            return WRONG_PROJECTION_UNIT_MSG % (projection_units, layer_units)
+            return WRONG_PROJECTION_UNIT_MSG % (
+                projection_units, layer_units_name)
 
     return None
 

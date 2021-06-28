@@ -428,7 +428,7 @@ class RasterValidation(unittest.TestCase):
         error_msg = validation.check_raster(
             filepath, projected=True, projection_units=spec_utils.u.meter)
         expected_msg = validation.WRONG_PROJECTION_UNIT_MSG % (
-            'meter', 'survey_foot')
+            'meter', 'us_survey_foot')
         self.assertEqual(expected_msg, error_msg)
 
 
@@ -507,7 +507,7 @@ class VectorValidation(unittest.TestCase):
 
         error_msg = validation.check_vector(
             filepath, projected=True, projection_units=spec_utils.u.foot)
-        expected_msg = validation.WRONG_PROJECTION_UNIT_MSG % ('foot', 'meter')
+        expected_msg = validation.WRONG_PROJECTION_UNIT_MSG % ('foot', 'metre')
         self.assertEqual(error_msg, expected_msg)
 
         self.assertEqual(None, validation.check_vector(
@@ -540,6 +540,7 @@ class FreestyleStringValidation(unittest.TestCase):
         error_msg = validation.check_freestyle_string(
             'foobar12', regexp='^[a-zA-Z]+$')
         self.assertTrue('did not match expected pattern' in error_msg)
+
 
 class OptionStringValidation(unittest.TestCase):
     """Test Option String Validation."""
@@ -682,7 +683,8 @@ class CSVValidation(unittest.TestCase):
 
         error_msg = validation.check_csv(
             target_file, columns={'field_a': {}})
-        expected_msg = validation.MATCHED_NO_HEADERS_MSG % ('column', 'field_a')
+        expected_msg = validation.MATCHED_NO_HEADERS_MSG % (
+            'column', 'field_a')
         self.assertEqual(error_msg, expected_msg)
 
     def test_csv_not_utf_8(self):
@@ -721,7 +723,8 @@ class CSVValidation(unittest.TestCase):
 
         error_msg = validation.check_csv(
             target_file, columns={'field_a': {}}, excel_ok=True)
-        expected_msg = validation.MATCHED_NO_HEADERS_MSG % ('column', 'field_a')
+        expected_msg = validation.MATCHED_NO_HEADERS_MSG % (
+            'column', 'field_a')
         self.assertEqual(error_msg, expected_msg)
 
     def test_wrong_filetype(self):

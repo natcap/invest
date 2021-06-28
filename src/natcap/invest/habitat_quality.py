@@ -106,7 +106,7 @@ ARGS_SPEC = {
                 },
                 "decay": {
                     "type": "option_string",
-                    "options": {"linear": "", "exponential": ""},
+                    "options": {"linear", "exponential"},
                     "about": "The type of decay over space for each threat."
                 },
                 "cur_path": {
@@ -164,7 +164,7 @@ ARGS_SPEC = {
                     "about": (
                         "Suitability of this LULC class as habitat, where 0 "
                         "is not suitable and 1 is completely suitable.")
-                    },
+                },
                 "[THREAT]": {
                     "type": "ratio",
                     "about": (

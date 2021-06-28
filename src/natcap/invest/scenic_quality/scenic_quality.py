@@ -144,9 +144,9 @@ ARGS_SPEC = {
             "type": "option_string",
             "required": "do_valuation",
             "options": {
-                "linear: a + bx": "",
-                "logarithmic: a + b log(x+1)": "",
-                "exponential: a * e^(-bx)": ""
+                "linear: a + bx",
+                "logarithmic: a + b log(x+1)",
+                "exponential: a * e^(-bx)"
             },
             "about": (
                 "This field indicates the functional form f(x) the model will "
