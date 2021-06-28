@@ -319,11 +319,9 @@ def check_vector(filepath, fields=None, projected=False, projection_units=None,
     Args:
         filepath (string): The path to the vector on disk.  The file must exist
             and be readable.
-        fields=None (list[str]): A list of regex-compilable patterns
-            that are expected to match the vector fields. Patterns may be an
-            ordinary string to match a header exactly, or use any valid regex
-            syntax to match 1 or more headers. See the docstring of
-            ``check_headers`` for details on matching rules.
+        fields=None (dict): A dictionary spec of field names that the vector is
+            expected to have. See the docstring of ``check_headers`` for
+            details on validation rules.
         projected=False (bool): Whether the spatial reference must be projected
             in linear units.  If None, the projection will not be checked.
         projection_units=None (pint.Units): The required linear units of the
@@ -350,7 +348,8 @@ def check_vector(filepath, fields=None, projected=False, projection_units=None,
     if fields:
         field_patterns = get_headers_to_validate(fields)
         fieldnames = [defn.GetName() for defn in layer.schema]
-        required_field_warning = check_headers(field_patterns, fieldnames, 'field')
+        required_field_warning = check_headers(
+            field_patterns, fieldnames, 'field')
         if required_field_warning:
             return required_field_warning
 
@@ -520,16 +519,16 @@ def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
 
     Args:
         filepath (string): The string filepath to the table.
-        rows (dict): A list of regex-compilable patterns that
-            are expected to match the table headers (as defined by ``axis``).
-            Patterns may be an ordinary string to match a header exactly, or
-            use any valid regex syntax to match 1 or more headers. See the
-            docstring of ``check_headers`` for details on matching rules.
-        columns (dict):
-        axis (int): The axis of the table to use as the header. If 0, the first
-            column will be used. If 1, the first row will be used.
+        rows (dict): A dictionary spec of row names that are expected to exist
+            in the first column of the table. See the docstring of
+            ``check_headers`` for details on validation rules. No more than one
+            of `rows` and `columns` should be defined.
+        columns (dict): A dictionary spec of column names that are expected to
+            exist in the first row of the table. See the docstring of
+            ``check_headers`` for details on validation rules. No more than one
+            of `rows` and `columns` should be defined.
         excel_ok=False (boolean): Whether it's OK for the file to be an Excel
-            table.  This is not a common case.
+            table. This is not a common case.
 
     Returns:
         A string error message if an error was found. ``None`` otherwise.
@@ -570,19 +569,17 @@ def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
 
 
 def check_headers(expected_headers, actual_headers, header_name='header'):
-    """Validate that table headers (rows/columns) match a list of patterns.
+    """Validate that expected headers are in a list of actual headers.
 
-    - Each pattern should match at least one header.
-    - No header should be matched by more than one pattern.
-    - Each header that's matched by any pattern should not be duplicated.
-    - Headers are allowed to not match any pattern.
+    - Each expected header should be found exactly once.
+    - Actual headers may contain extra headers that are not expected.
     - Headers are converted to lowercase before matching.
 
     Args:
-        patterns (list[str]): A list of patterns expected to match header(s).
-            Each pattern should be parse-able as regex and will be anchored to
-            the header start and end.
-        headers (list[str]): A list of headers to validate.
+        expected_headers (list[str]): A list of headers that are expected to
+            exist in `actual_headers`.
+        actual_headers (list[str]): A list of actual headers to validate
+            against `expected_headers`.
         header_name (str): A string to use in the error message to refer to the
             header (typically one of 'column', 'row', 'field')
 
@@ -590,7 +587,8 @@ def check_headers(expected_headers, actual_headers, header_name='header'):
         None, if validation passes; or a string describing the problem, if a
         validation rule is broken.
     """
-    actual_headers = [header.lower() for header in actual_headers]  # case insensitive
+    actual_headers = [header.lower()
+                      for header in actual_headers]  # case insensitive
     for expected in expected_headers:
         count = actual_headers.count(expected)
         if count == 0:
@@ -711,18 +709,19 @@ def get_headers_to_validate(spec):
     Returns:
         list of expected header names to validate against
     """
-    patterns = []
+    headers = []
     for key, val in spec.items():
-        # for now only check patterns for things that are always required
-        # we may implement conditionally required patterns in the future
+        # for now only check headers that are always required
+        # assume that any conditionally-required headers are validated by the
+        # model's validate function
         # if 'required' isn't a key, it defaults to True
         if ('required' not in val) or (val['required'] is True):
             # brackets are a special character for our args spec syntax
             # they surround the part of the key that's user-defined
             # user-defined rows/columns/fields are not validated here, so skip
             if '[' not in key:
-                patterns.append(key)
-    return patterns
+                headers.append(key)
+    return headers
 
 
 # accessing a file could take a long time if it's in a file streaming service
