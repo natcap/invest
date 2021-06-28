@@ -64,12 +64,6 @@ N_WORKERS = {
     "expression": "value >= -1"
 }
 
-AREA = {
-    "type": "vector",
-    "fields": {},
-    "geometries": {"POLYGON", "MULTIPOLYGON"}
-}
-
 METER_RASTER = {
     "type": "raster",
     "bands": {
@@ -80,7 +74,9 @@ METER_RASTER = {
     }
 }
 AOI = {
-    **AREA,
+    "type": "vector",
+    "fields": {},
+    "geometries": {"POLYGON", "MULTIPOLYGON"},
     "name": "area of interest",
     "about": (
         "A polygon vector containing features over which to aggregate and "

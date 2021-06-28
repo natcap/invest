@@ -96,11 +96,10 @@ ARGS_SPEC = {
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "aoi_path": {
-            **spec_utils.AREA,
+            **spec_utils.AOI,
             "about": (
                 "A GDAL-supported vector file representing the area of "
-                "interest where the model will run the analysis."),
-            "name": "Area of Interest (Vector)"
+                "interest where the model will run the analysis.")
         },
         "hostname": {
             "type": "freestyle_string",

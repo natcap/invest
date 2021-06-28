@@ -107,7 +107,9 @@ ARGS_SPEC = {
             "name": "Bathymetric Digital Elevation Model"
         },
         "land_polygon_vector_path": {
-            **spec_utils.AREA,
+            "type": "vector",
+            "fields": {},
+            "geometries": {"POLYGON", "MULTIPOLYGON"},
             "required": "min_distance | max_distance | valuation_container",
             "about": (
                 "A GDAL-supported polygon vector that represents the land and "
