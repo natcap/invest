@@ -4,8 +4,11 @@ import {
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import { DataDownloadModal, DownloadProgressBar } from '../src/components/DataDownloadModal';
-import sampledata_registry from '../src/sampledata_registry.json';
+import {
+  DataDownloadModal,
+  DownloadProgressBar
+} from '../../src/renderer/components/DataDownloadModal';
+import sampledata_registry from '../../src/renderer/sampledata_registry.json';
 
 const nModels = Object.keys(sampledata_registry).length;
 const modelName = Object.keys(sampledata_registry)[0];

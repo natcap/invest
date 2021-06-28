@@ -3,14 +3,16 @@ import { ipcRenderer } from 'electron';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import InvestTab from '../src/components/InvestTab';
-import SetupTab from '../src/components/SetupTab';
+import InvestTab from '../../src/renderer/components/InvestTab';
+import SetupTab from '../../src/renderer/components/SetupTab';
 import {
   getSpec, saveToPython, writeParametersToFile, fetchValidation
-} from '../src/server_requests';
-import InvestJob from '../src/InvestJob';
+} from '../../src/renderer/server_requests';
+import InvestJob from '../../src/renderer/InvestJob';
 
-jest.mock('../src/server_requests');
+jest.mock('../../src/renderer/server_requests');
+
+const UI_CONFIG_PATH = '../../src/renderer/ui_config';
 
 function renderInvestTab() {
   const job = new InvestJob({
@@ -55,7 +57,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     // mock out the whole UI config module
     // brackets around spec.model_name turns it into a valid literal key
     const mockUISpec = {[spec.model_name]: {order: [Object.keys(spec.args)]}}
-    jest.mock('../src/ui_config', () => mockUISpec);
+    jest.mock(UI_CONFIG_PATH, () => mockUISpec);
   });
 
   afterAll(() => {
@@ -204,7 +206,7 @@ describe('InVEST Run Button', () => {
     // mock out the whole UI config module
     // brackets around spec.model_name turns it into a valid literal key
     let mockUISpec = {[spec.model_name]: {order: [Object.keys(spec.args)]}}
-    jest.mock('../src/ui_config', () => mockUISpec);
+    jest.mock(UI_CONFIG_PATH, () => mockUISpec);
   });
 
   afterAll(() => {

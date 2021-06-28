@@ -3,7 +3,7 @@ import { render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
-import LoadButton from '../src/components/LoadButton';
+import LoadButton from '../../src/renderer/components/LoadButton';
 
 test('Open File: displays a tooltip on hover', async () => {
   const { findByRole, findByText, queryByText } = render(

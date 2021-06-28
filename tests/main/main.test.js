@@ -33,18 +33,18 @@ import findInvestBinaries from '../../src/main/findInvestBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
 import { findMostRecentLogfile } from '../../src/main/setupInvestHandlers';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
-import { getInvestModelNames } from '../../src/server_requests';
-import App from '../../src/app';
+import { getInvestModelNames } from '../../src/renderer/server_requests';
+import App from '../../src/renderer/app';
 import {
   clearSettingsStore,
   getSettingsValue,
-} from '../../src/components/SettingsModal/SettingsStorage';
+} from '../../src/renderer/components/SettingsModal/SettingsStorage';
 
 jest.mock('child_process');
 execFileSync.mockReturnValue('foo');
 jest.mock('../../src/main/createPythonFlaskProcess');
 createPythonFlaskProcess.mockImplementation(() => {});
-jest.mock('../../src/server_requests');
+jest.mock('../../src/renderer/server_requests');
 getFlaskIsReady.mockResolvedValue(true);
 
 // These vars are only defined in an electron environment and our

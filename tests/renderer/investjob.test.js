@@ -1,4 +1,4 @@
-import InvestJob from '../src/InvestJob';
+import InvestJob from '../../src/renderer/InvestJob';
 
 describe('InvestJob', () => {
   const baseArgsValues = {

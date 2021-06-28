@@ -1,6 +1,6 @@
 import {
   boolStringToBoolean
-} from '../src/utils';
+} from '../../src/renderer/utils';
 
 test('boolStringToBoolean converts various strings to bools', () => {
   expect(boolStringToBoolean('true')).toBe(true);

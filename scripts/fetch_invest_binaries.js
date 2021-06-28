@@ -37,7 +37,6 @@ if (bucket === 'releases.naturalcapitalproject.org') {
   binaryZipPath = `${bucket}/${repo}/${VERSION}/${binaryZipName}`;
   DATA_PREFIX = `${repo}/${VERSION}/data`;
 } else if (bucket === 'natcap-dev-build-artifacts') {
-  const { fork } = pkg.invest;
   binaryZipPath = `${bucket}/${repo}/${fork}/${VERSION}/${binaryZipName}`;
   DATA_PREFIX = `${repo}/${fork}/${VERSION}/data`;
 }
@@ -48,6 +47,14 @@ const SRC_BINARY_URL = url.resolve(
 const DATA_QUERY_URL = url.resolve(
   'https://www.googleapis.com/storage/v1/b/',
   `${bucket}/o?prefix=${encodeURIComponent(DATA_PREFIX)}`
+);
+
+const dataRegistryRelativePath = 'renderer/sampledata_registry.json';
+const DATA_REGISTRY_SRC_PATH = path.join(
+  __dirname, '../src/', dataRegistryRelativePath
+);
+const DATA_REGISTRY_BUILD_PATH = path.join(
+  __dirname, '../build/', dataRegistryRelativePath
 );
 
 /**
@@ -106,7 +113,7 @@ function downloadAndUnzipBinaries(src, dest) {
  */
 async function updateSampledataRegistry() {
   // const googleAPI = 'https://www.googleapis.com/storage/v1/b';
-  const template = require('../src/sampledata_registry.json');
+  const template = require(DATA_REGISTRY_SRC_PATH);
   // make a deep copy so we can check if any updates were made and
   // only overwrite the file if necessary.
   const registry = JSON.parse(JSON.stringify(template));
@@ -147,14 +154,14 @@ async function updateSampledataRegistry() {
     return;
   }
   fs.writeFileSync(
-    path.join(__dirname, '../src/sampledata_registry.json'),
+    DATA_REGISTRY_SRC_PATH,
     JSON.stringify(registry, null, 2)
   );
-  // build.js does this copy also, but doing it here too so that
-  // it doesn't matter if this script is run before or after build.js
+  // babel does this copy also, but doing it here too so that
+  // it doesn't matter if this script is run before or after npm run build
   fs.copyFileSync(
-    path.join(__dirname, '../src/sampledata_registry.json'),
-    path.join(__dirname, '../build/sampledata_registry.json')
+    DATA_REGISTRY_SRC_PATH,
+    DATA_REGISTRY_BUILD_PATH
   );
   console.log('sample data registry was updated. Please review the changes and commit them');
 }

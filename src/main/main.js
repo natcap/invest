@@ -84,7 +84,7 @@ export const createWindow = async () => {
     menuTemplate(mainWindow, ELECTRON_DEV_MODE)
   );
   Menu.setApplicationMenu(menubar);
-  mainWindow.loadURL(`file://${__dirname}/../index.html`);
+  mainWindow.loadURL(`file://${__dirname}/../renderer/index.html`);
 
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();
