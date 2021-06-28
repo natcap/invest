@@ -188,21 +188,24 @@ export default class App extends React.Component {
     const investTabPanes = [];
     openJobs.forEach((job) => {
       investNavItems.push(
-        <Nav.Item key={job.metadata.navID}>
+        <Nav.Item
+          key={job.metadata.navID}
+          className={job.metadata.navID === activeTab ? 'active' : ''}
+        >
           <Nav.Link eventKey={job.metadata.navID}>
             {job.metadata.modelHumanName}
-            <Button
-              className="close-tab"
-              variant="outline-dark"
-              onClick={(event) => {
-                event.stopPropagation();
-                this.closeInvestModel(job.metadata.navID);
-              }}
-              onDragOver={dragOverHandlerNone}
-            >
-              x
-            </Button>
           </Nav.Link>
+          <Button
+            className="close-tab"
+            variant="outline-dark"
+            onClick={(event) => {
+              event.stopPropagation();
+              this.closeInvestModel(job.metadata.navID);
+            }}
+            onDragOver={dragOverHandlerNone}
+          >
+            x
+          </Button>
         </Nav.Item>
       );
       investTabPanes.push(
@@ -248,6 +251,7 @@ export default class App extends React.Component {
               </Col>
               <Col sm={7} className="pl-1 pr-0">
                 <Nav
+                  justify
                   variant="tabs"
                   className="mr-auto"
                   activeKey={activeTab}

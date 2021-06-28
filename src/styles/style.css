@@ -12,37 +12,11 @@ body {
 	height: 3rem;
 }
 
-.navbar-nav.nav-tabs {
-	border-bottom: 0px;
-	overflow-x: auto;
-	overflow-y: hidden;
-}
-
 .navbar .row {
 	align-items: baseline;
 	padding-bottom: 0px;
 	border-bottom: 3px solid var(--invest-green);
 	background-color: #fff
-}
-
-.navbar-light .navbar-nav .nav-link {
-  background-color: transparent;
-  /*padding-right: 1rem;*/
-  /*padding-left: 1rem;*/
-  color: #999999;
-  font-size: 1.1rem;
-}
-
-.navbar-light .navbar-nav .nav-link.active {
-	background-color: ghostwhite;
-	border: 1px solid var(--invest-green);
-}
-
-/*TODO:  This probably applies to more than just navbar*/
-.nav-link {
-	color: gray;
-	font-size: 1.3rem;
-	font-weight: 550;
 }
 
 .navbar-brand .nav-link {
@@ -52,9 +26,70 @@ body {
 	letter-spacing: 1px;
 }
 
-.navbar-nav .nav-item {
-	white-space: nowrap;
+.navbar-nav.nav-tabs {
+	border-bottom: 0px;
+	overflow-x: hidden;
+	overflow-y: hidden;
 }
+
+.navbar-nav .nav-item {
+	/*display: block flow;*/
+	/*justify-content: space-between;*/
+	max-width: fit-content;
+	white-space: nowrap;
+	flex: 1; /*size by available space, not by content*/
+	min-width: 0; /*and allow it to shrink to fit container*/
+	background-color: transparent;
+	border: 1px solid #999999;
+  border-bottom: 0px;
+}
+
+.navbar-nav .nav-item.active {
+	border: 3px solid var(--invest-green);
+	border-bottom: 0px;
+	background-color: ghostwhite;
+}
+
+.navbar-light .navbar-nav .nav-link {
+	display: inline;
+	/*flex: 1;*/
+	min-width: 0;
+  background-color: transparent;
+  color: #999999;
+  border: 0px;
+  border-bottom: 0px;
+  font-size: 1.1rem;
+}
+
+.navbar-light .navbar-nav .nav-link.active {
+	background-color: transparent;
+}
+
+.close-tab.btn {
+	display: inline;
+	float: right;
+	background-color: transparent;
+	border-color: transparent;
+	color: #6c757d;
+	margin-left: 0.1rem;
+	padding-left: 0.6rem;
+	padding-right: 0.6rem;
+	padding-top: 0.25rem;
+	padding-bottom: 0.5rem;
+}
+.close-tab:hover, .close-tab:focus, .close-tab:active {
+	border-color: #6c757d;
+	background-color: #e46672;
+	color: white;
+}
+
+/*TODO:  This probably applies to more than just navbar*/
+.nav-link {
+	color: gray;
+	font-size: 1.3rem;
+	font-weight: 550;
+}
+
 
 .progress {
 	height: 2rem;
@@ -75,22 +110,6 @@ body {
 	color: black;
 	font-size: 2rem;
 	vertical-align: middle;
-}
-
-.close-tab.btn {
-	background-color: transparent;
-	border-color: transparent;
-	color: #6c757d;
-	margin-left: 0.1rem;
-	padding-left: 0.6rem;
-	padding-right: 0.6rem;
-	padding-top: 0.25rem;
-	padding-bottom: 0.5rem;
-}
-.close-tab:hover, .close-tab:focus, .close-tab:active {
-	border-color: #6c757d;
-	background-color: #e46672;
-	color: white;
 }
 
 .tab-content {
@@ -297,7 +316,7 @@ input[type=text]::placeholder {
 
 #log-text {
 	font-family: monospace;
-	font-size:1.3rem;
+	font-size:1.0rem;
 	color: #000;
 }
 
