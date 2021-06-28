@@ -10,7 +10,6 @@ from datetime import datetime
 import time
 
 import pandas
-import pint
 import numpy
 from shapely.wkt import loads
 from osgeo import gdal
