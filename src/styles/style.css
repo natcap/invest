@@ -14,9 +14,13 @@ body {
 
 .navbar .row {
 	align-items: baseline;
-	padding-bottom: 0px;
+	padding-bottom: 0;
 	border-bottom: 3px solid var(--invest-green);
 	background-color: #fff
+}
+
+.navbar-brand {
+	padding-bottom: 0px;
 }
 
 .navbar-brand .nav-link {
@@ -24,6 +28,7 @@ body {
 	font-weight: 600;
 	font-size: 2.0rem;
 	letter-spacing: 1px;
+	padding-bottom: 0;
 }
 
 .navbar-nav.nav-tabs {
@@ -51,7 +56,6 @@ body {
 }
 
 .navbar-light .navbar-nav .nav-link {
-	/*flex: 1;*/
 	overflow: hidden;
 	text-overflow: ellipsis;
 	min-width: 0;
@@ -67,7 +71,6 @@ body {
 }
 
 .close-tab.btn {
-	/*float: right;*/
 	background-color: transparent;
 	border-color: transparent;
 	color: #6c757d;
@@ -89,7 +92,6 @@ body {
 	font-size: 1.3rem;
 	font-weight: 550;
 }
-
 
 .progress {
 	height: 2rem;
@@ -113,7 +115,7 @@ body {
 }
 
 .tab-content {
-	padding-top:  1rem;
+	padding-top:  10px;
 }
 
 /* Home Tab */
