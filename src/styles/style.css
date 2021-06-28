@@ -33,8 +33,8 @@ body {
 }
 
 .navbar-nav .nav-item {
-	/*display: block flow;*/
-	/*justify-content: space-between;*/
+	display: flex;
+	justify-content: space-between;
 	max-width: fit-content;
 	white-space: nowrap;
 	flex: 1; /*size by available space, not by content*/
@@ -51,8 +51,9 @@ body {
 }
 
 .navbar-light .navbar-nav .nav-link {
-	display: inline;
 	/*flex: 1;*/
+	overflow: hidden;
+	text-overflow: ellipsis;
 	min-width: 0;
   background-color: transparent;
   color: #999999;
@@ -66,8 +67,7 @@ body {
 }
 
 .close-tab.btn {
-	display: inline;
-	float: right;
+	/*float: right;*/
 	background-color: transparent;
 	border-color: transparent;
 	color: #6c757d;
