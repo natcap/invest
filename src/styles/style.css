@@ -13,7 +13,6 @@ body {
 }
 
 .navbar .row {
-	flex-wrap: nowrap;
 	align-items: baseline;
 	padding-bottom: 0;
 	border-bottom: 3px solid var(--invest-green);

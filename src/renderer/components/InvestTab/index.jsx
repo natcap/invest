@@ -203,7 +203,7 @@ export default class InvestTab extends React.Component {
 
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
-        <Row>
+        <Row className="flex-nowrap">
           <Col sm={3} className="invest-sidebar-col" onDragOver={dragOverHandlerNone}>
             <Nav
               className="flex-column"

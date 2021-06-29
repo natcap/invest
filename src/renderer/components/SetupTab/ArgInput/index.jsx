@@ -142,7 +142,7 @@ export default class ArgInput extends React.PureComponent {
             </span>
           </FormLabel>
           <Col sm="8">
-            <InputGroup>
+            <InputGroup className="flex-nowrap">
               <AboutModal argument={argSpec} />
               <Form.Control
                 id={argkey}
@@ -200,15 +200,16 @@ export default class ArgInput extends React.PureComponent {
       // instead React avoids setting the property altogether. Hence, !! to
       // cast undefined to false.
       Input = (
-        <Form.Group 
-          as={Row} 
-          key={argkey} 
+        <Form.Group
+          as={Row}
+          key={argkey}
           data-testid={`group-${argkey}`}
-          className={className}>
+          className={className}
+        >
           <FormLabel argkey={argkey}>
             <span>{argSpec.name}</span>
           </FormLabel>
-          <Col sm="8">
+          <Col sm="8" className="text-nowrap">
             <AboutModal argument={argSpec} />
             <Form.Check
               id={argkey}
