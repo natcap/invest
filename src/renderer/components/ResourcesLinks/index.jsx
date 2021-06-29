@@ -63,7 +63,7 @@ export default function ResourcesTab(props) {
         {"User's Guide"}
       </a>
       <a href={forumURL} onClick={handleClick}>
-        FAQ
+        Frequently Asked Questions
       </a>
     </React.Fragment>
   );
