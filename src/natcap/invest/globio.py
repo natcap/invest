@@ -12,6 +12,8 @@ import pygeoprocessing
 import taskgraph
 
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 
@@ -32,132 +34,147 @@ ARGS_SPEC = {
             "aoi_path", "globio_lulc_path"],
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "predefined_globio": {
             "type": "boolean",
             "required": False,
-            "about": 'if True then "mode (b)" else "mode (a)"',
+            "about": "if True then mode (b) else mode (a)",
             "name": "Predefined land use map for GLOBIO"
         },
         "lulc_path": {
-            "type": "raster",
-            "validation_options": {
-                "projected": True,
-            },
-            "required": "not predefined_globio",
-            "about": (
-                'used in "mode (a)" path to a base landcover map with'
-                ' integer codes'),
-            "name": "Land Use/Cover (Raster)"
+            **spec_utils.LULC,
+            "projected": True,
+            "required": "not predefined_globio"
         },
         "lulc_to_globio_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "globio_lucode"],
-            },
             "type": "csv",
+            "columns": {
+                "lucode": {"type": "code"},
+                "globio_lucode": {"type": "code"}
+            },
             "required": "not predefined_globio",
             "about": (
-                "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input.  It "
-                "must contain the fields 'lucode', 'globio_lucode'.  "
-                "See the InVEST User's Guide for more information "
-                "about these fields."),
+                "A table mapping each LULC code in the LULC raster input to "
+                "the corresponding GLOBIO LULC code."),
             "name": "Landcover to GLOBIO Landcover Table"
         },
         "infrastructure_dir": {
-            "validation_options": {
-                "exists": True,
-            },
             "type": "directory",
-            "required": True,
+            "contents": {
+                "[INFRASTRUCTURE_MAP]": {  # may be named anything
+                    "about": (
+                        "Raster(s) and/or vector(s) of any forms of "
+                        "infrastructure you want to consider in the MSA "
+                        "calculation."),
+                    "type": {"raster", "vector"},
+                    "bands": {1: {"type": "number", "units": u.none}},
+                    "fields": {},
+                    "geometries": spec_utils.ALL_GEOMS
+                }
+            },
             "about": (
-                'Used in "mode (a) and (b)" a path to a folder containing '
-                'maps of either GDAL compatible rasters or vectors. '
-                'These data will be used in the infrastructure '
-                'to calculation of MSA.'),
+                "Used in mode (a) and (b) a path to a folder containing maps "
+                "of either GDAL compatible rasters or vectors. These data "
+                "will be used in the infrastructure to calculation of MSA."),
             "name": "Infrastructure Directory"
         },
         "pasture_path": {
             "type": "raster",
-            "validation_options": {
-                "projected": True,
-            },
+            "bands": {1: {"type": "ratio"}},
+            "projected": True,
             "required": "not predefined_globio",
-            "about": 'used in "mode (a)" path to pasture raster',
-            "name": "Pasture (Raster)"
+            "about": "Map of the proportion of each pixel that is pasture",
+            "name": "Pasture"
         },
         "potential_vegetation_path": {
+            "name": "Potential Vegetation",
             "type": "raster",
-            "validation_options": {
-                "projected": True,
-            },
+            "bands": {1: {"type": "code"}},
+            "projected": True,
             "required": "not predefined_globio",
             "about": (
-                'used in "mode (a)" path to potential vegetation raster'),
-            "name": "Potential Vegetation (Raster)"
+                "This should be the potential vegetation map from Ramankutty "
+                "and Foley (1999), or if a different map, it must have the "
+                "same LULC codes.")
         },
         "pasture_threshold": {
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            },
-            "type": "number",
+            "type": "ratio",
             "required": "not predefined_globio",
-            "about": 'used in "mode (a)"',
+            "about": (
+                "Areas with a pasture proportion greater than or equal to "
+                "this threshold are considered grassland or livestock "
+                "grazing. Can be adjusted such that the aggregate land-use "
+                "matches regional statistics."),
             "name": "Pasture Threshold"
         },
         "intensification_fraction": {
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            },
-            "type": "number",
-            "required": True,
+            "type": "ratio",
             "about": (
                 "A value between 0 and 1 denoting proportion of total "
                 "agriculture that should be classified as 'high input'."),
             "name": "Proportion of of Agriculture Intensified"
         },
         "primary_threshold": {
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            },
-            "type": "number",
+            "type": "ratio",
             "required": "not predefined_globio",
-            "about": 'used in "mode (a)"',
+            "about": (
+                "Areas with FFQI (forest fragmentation quality index) greater "
+                "than or equal to this threshold are classified as primary "
+                "forest. The rest is classified as secondary forest. Can be "
+                "adjusted to match regional statistics."),
             "name": "Primary Threshold"
         },
         "msa_parameters_path": {
-            "validation_options": {
-                "required_fields": [
-                    "MSA_type", "measurement", "value", "msa_x", "se"],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "msa_type": {
+                    "type": "option_string",
+                    "options": {
+                        "msa_i_primary": (
+                            "This MSA value represents infrastructure impacts "
+                            "on primary vegetation. The value in the 'value' "
+                            "column is a distance range in meters."),
+                        "msa_i_other": (
+                            "This MSA value represents infrastructure impacts "
+                            "on non-primary vegetation. The value in the "
+                            "'value' column is a distance range in meters."),
+                        "msa_f": (
+                            "This MSA value represents fragmentation impacts."
+                            "The value in the 'value' column is an FFQI range."),
+                        "msa_lu": (
+                            "This MSA value represents land-use impacts. The "
+                            "value in the 'value' column is one of the GLOBIO-"
+                            "recognized LULC codes."),
+                    }
+                },
+                "value": {
+                    "type": "freestyle_string",
+                    "about": (
+                        "Indicates a number or range of a bin. This may be a "
+                        "single number e.g. 1000, a range (two numbers "
+                        "separated by a hyphen e.g. 1000-2000), or an upper "
+                        "or lower bound (a number preceded by > or < e.g. <5")
+                },
+                "msa_x": {"type": "ratio"}
+            },
             "about": (
                 "A CSV table containing MSA threshold values as defined in "
-                "the user's guide.  Provided for advanced users that may "
-                "wish to change those values."),
+                "the user's guide.  Provided for advanced users that may wish "
+                "to change those values."),
             "name": "MSA Parameter Table"
         },
         "aoi_path": {
-            "type": "vector",
-            "validation_options": {
-                "projected": True,
-            },
-            "required": False,
-            "about": (
-                "This is a set of polygons that can be used to aggregate MSA "
-                "sum and mean to a polygon."),
-            "name": "AOI",
+            **spec_utils.AOI,
+            "projected": True,
+            "required": False
         },
         "globio_lulc_path": {
-            "validation_options": {
-                "projected": True,
-            },
-            "type": "raster",
+            **spec_utils.LULC,
+            "projected": True,
             "required": "predefined_globio",
-            "about": 'used in "mode (b)" path to predefined globio raster.',
+            "about": "used in mode (b) path to predefined globio raster.",
             "name": "GLOBIO Classified Land Use"
         }
     }
@@ -300,7 +317,7 @@ def execute(args):
     mask_primary_veg_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(globio_lulc_path, 1), (globio_nodata, 'raw'),
-              (primary_veg_mask_nodata, 'raw')], _primary_veg_mask_op,
+               (primary_veg_mask_nodata, 'raw')], _primary_veg_mask_op,
               primary_veg_mask_path, gdal.GDT_Int16, primary_veg_mask_nodata),
         target_path_list=[primary_veg_mask_path],
         dependent_task_list=calculate_globio_task_list,
@@ -519,7 +536,7 @@ def _msa_f_calculation(
 
         if greater_than:
             msa_f[primary_veg_smooth > greater_than[0]] = (
-                    greater_than[1])
+                greater_than[1])
         for key in reversed(sorted(msa_f_table_copy)):
             msa_f[primary_veg_smooth <= key] = msa_f_table_copy[key]
         if less_than:
@@ -600,7 +617,7 @@ def _msa_i_calculation(
 
         if primary_greater_than:
             msa_i_primary[distance_to_infrastructure > primary_greater_than[0]] = (
-                    primary_greater_than[1])
+                primary_greater_than[1])
         for key in reversed(sorted(msa_i_primary_table_copy)):
             msa_i_primary[distance_to_infrastructure <= key] = (
                 msa_i_primary_table_copy[key])
@@ -610,7 +627,7 @@ def _msa_i_calculation(
 
         if other_greater_than:
             msa_i_other[distance_to_infrastructure > other_greater_than[0]] = (
-                    other_greater_than[1])
+                other_greater_than[1])
         for key in reversed(sorted(msa_i_other_table_copy)):
             msa_i_other[distance_to_infrastructure <= key] = (
                 msa_i_other_table_copy[key])
@@ -735,7 +752,7 @@ def load_msa_parameter_table(
                 valueb: ...
                 '<': (bound, msa_lu_value),
                 '>': (bound, msa_lu_value)
-                12: (msa_lu_8 * (1.0 - intensification_fraction) + 
+                12: (msa_lu_8 * (1.0 - intensification_fraction) +
                 msa_lu_9 * intensification_fraction}}
 
     """

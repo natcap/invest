@@ -214,10 +214,10 @@ class ValidatorTest(unittest.TestCase):
 
     def test_n_workers(self):
         """Validation: validation error returned on invalid n_workers."""
-        from natcap.invest import validation
+        from natcap.invest import spec_utils, validation
 
         args_spec = {
-            'n_workers': validation.N_WORKERS_SPEC,
+            'n_workers': spec_utils.N_WORKERS,
         }
 
         @validation.invest_validator
@@ -274,16 +274,14 @@ class DirectoryValidation(unittest.TestCase):
         """Validation: when a folder must exist and does."""
         from natcap.invest import validation
 
-        self.assertEqual(None, validation.check_directory(
-            self.workspace_dir, exists=True))
+        self.assertEqual(None, validation.check_directory(self.workspace_dir))
 
     def test_not_exists(self):
         """Validation: when a folder must exist but does not."""
         from natcap.invest import validation
 
         dirpath = os.path.join(self.workspace_dir, 'nonexistent_dir')
-        validation_warning = validation.check_directory(
-            dirpath, exists=True)
+        validation_warning = validation.check_directory(dirpath)
         self.assertTrue('not found' in validation_warning)
 
     def test_file(self):
@@ -294,15 +292,14 @@ class DirectoryValidation(unittest.TestCase):
         with open(filepath, 'w') as opened_file:
             opened_file.write('the text itself does not matter.')
 
-        validation_warning = validation.check_directory(
-            filepath, exists=True)
+        validation_warning = validation.check_directory(filepath)
 
     def test_valid_permissions(self):
         """Validation: folder permissions."""
         from natcap.invest import validation
 
         self.assertEqual(None, validation.check_directory(
-            self.workspace_dir, exists=True, permissions='rwx'))
+            self.workspace_dir, permissions='rwx'))
 
     def test_workspace_not_exists(self):
         """Validation: when a folder's parent must exist with permissions."""
@@ -312,7 +309,7 @@ class DirectoryValidation(unittest.TestCase):
         new_dir = os.path.join(self.workspace_dir, dirpath)
 
         self.assertEqual(None, validation.check_directory(
-            new_dir, exists=False, permissions='rwx'))
+            new_dir, must_exist=False, permissions='rwx'))
 
 
 class FileValidation(unittest.TestCase):
@@ -415,35 +412,11 @@ class RasterValidation(unittest.TestCase):
         error_msg = validation.check_raster(filepath, projected=True)
         self.assertTrue('must be projected in linear units' in error_msg)
 
-    def test_raster_projected_in_m(self):
-        """Validation: test when a raster is projected in meters."""
-        from natcap.invest import validation
-
-        # Use EPSG:32731  # WGS84 / UTM zone 31s
-        driver = gdal.GetDriverByName('GTiff')
-        filepath = os.path.join(self.workspace_dir, 'raster.tif')
-        raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
-        meters_srs = osr.SpatialReference()
-        meters_srs.ImportFromEPSG(32731)
-        raster.SetProjection(meters_srs.ExportToWkt())
-        raster = None
-
-        for unit in ('m', 'meter', 'metre', 'meters', 'metres'):
-            error_msg = validation.check_raster(
-                filepath, projected=True, projection_units=unit)
-            self.assertEqual(error_msg, None)
-
-        # Check error message when we validate that the raster should be
-        # projected in feet.
-        error_msg = validation.check_raster(
-            filepath, projected=True, projection_units='feet')
-        self.assertTrue('projected in feet' in error_msg)
-
     def test_raster_incorrect_units(self):
         """Validation: test when a raster projection has wrong units."""
-        from natcap.invest import validation
+        from natcap.invest import spec_utils, validation
 
-        # Use EPSG:32066  # NAD27 / BLM 16N (in US Feet)
+        # Use EPSG:32066  # NAD27 / BLM 16N (in US Survey Feet)
         driver = gdal.GetDriverByName('GTiff')
         filepath = os.path.join(self.workspace_dir, 'raster.tif')
         raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
@@ -453,8 +426,10 @@ class RasterValidation(unittest.TestCase):
         raster = None
 
         error_msg = validation.check_raster(
-            filepath, projected=True, projection_units='m')
-        self.assertTrue('must be projected in meters' in error_msg)
+            filepath, projected=True, projection_units=spec_utils.u.meter)
+        expected_msg = validation.WRONG_PROJECTION_UNIT_MSG % (
+            'meter', 'us_survey_foot')
+        self.assertEqual(expected_msg, error_msg)
 
 
 class VectorValidation(unittest.TestCase):
@@ -512,13 +487,13 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, required_fields=['col_a', 'COL_B', 'col_c'])
-        self.assertTrue('Fields are missing' in error_msg)
-        self.assertTrue('col_c'.upper() in error_msg)
+            filepath, fields={'col_a': {}, 'col_b': {}, 'col_c': {}})
+        expected = validation.MATCHED_NO_HEADERS_MSG % ('field', 'col_c')
+        self.assertEqual(error_msg, expected)
 
     def test_vector_projected_in_m(self):
         """Validation: test that a vector's projection has expected units."""
-        from natcap.invest import validation
+        from natcap.invest import spec_utils, validation
 
         driver = gdal.GetDriverByName('GPKG')
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
@@ -531,11 +506,12 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, projected=True, projection_units='feet')
-        self.assertTrue('projected in feet' in error_msg)
+            filepath, projected=True, projection_units=spec_utils.u.foot)
+        expected_msg = validation.WRONG_PROJECTION_UNIT_MSG % ('foot', 'metre')
+        self.assertEqual(error_msg, expected_msg)
 
         self.assertEqual(None, validation.check_vector(
-            filepath, projected=True, projection_units='m'))
+            filepath, projected=True, projection_units=spec_utils.u.meter))
 
 
 class FreestyleStringValidation(unittest.TestCase):
@@ -556,11 +532,13 @@ class FreestyleStringValidation(unittest.TestCase):
         from natcap.invest import validation
 
         self.assertEqual(None, validation.check_freestyle_string(
-            1.234, regexp={'pattern': '^1.[0-9]+$', 'case_sensitive': True}))
+            1.234, regexp='^1.[0-9]+$'))
+
+        self.assertEqual(None, validation.check_freestyle_string(
+            'bar', regexp='BAR'))  # should be case-insensitive
 
         error_msg = validation.check_freestyle_string(
-            'foobar12', regexp={'pattern': '^[a-zA-Z]+$',
-                                'case_sensitive': True})
+            'foobar12', regexp='^[a-zA-Z]+$')
         self.assertTrue('did not match expected pattern' in error_msg)
 
 
@@ -674,7 +652,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         self.assertEqual(None, validation.check_csv(
-            target_file, required_fields=['foo', 'bar']))
+            target_file, columns={'foo': {}, 'bar': {}}))
 
     def test_csv_bom_fieldnames(self):
         """Validation: test that we can check fieldnames in a CSV with BOM."""
@@ -689,7 +667,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file, encoding='utf-8-sig')
 
         self.assertEqual(None, validation.check_csv(
-            target_file, required_fields=['foo', 'bar']))
+            target_file, columns={'foo': {}, 'bar': {}}))
 
     def test_csv_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in a CSV."""
@@ -704,8 +682,10 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         error_msg = validation.check_csv(
-            target_file, required_fields=['field_a'])
-        self.assertTrue('missing from this table' in error_msg)
+            target_file, columns={'field_a': {}})
+        expected_msg = validation.MATCHED_NO_HEADERS_MSG % (
+            'column', 'field_a')
+        self.assertEqual(error_msg, expected_msg)
 
     def test_csv_not_utf_8(self):
         """Validation: test that non-UTF8 CSVs can validate."""
@@ -742,8 +722,10 @@ class CSVValidation(unittest.TestCase):
         df.to_excel(target_file)
 
         error_msg = validation.check_csv(
-            target_file, required_fields=['field_a'], excel_ok=True)
-        self.assertTrue('missing from this table' in error_msg)
+            target_file, columns={'field_a': {}}, excel_ok=True)
+        expected_msg = validation.MATCHED_NO_HEADERS_MSG % (
+            'column', 'field_a')
+        self.assertEqual(error_msg, expected_msg)
 
     def test_wrong_filetype(self):
         """Validation: verify CSV type does not open pickles."""
@@ -758,12 +740,12 @@ class CSVValidation(unittest.TestCase):
         df.to_pickle(target_file)
 
         error_msg = validation.check_csv(
-            target_file, required_fields=['field_a'], excel_ok=True)
+            target_file, columns={'field_a': {}}, excel_ok=True)
         self.assertTrue('could not be opened as a CSV or Excel file' in
                         error_msg)
 
         error_msg = validation.check_csv(
-            target_file, required_fields=['field_a'], excel_ok=False)
+            target_file, columns={'field_a': {}}, excel_ok=False)
         self.assertTrue('could not be opened as a CSV' in error_msg)
 
     def test_slow_to_open(self):
@@ -807,6 +789,31 @@ class CSVValidation(unittest.TestCase):
                 validation.validate(args, spec)
                 self.assertTrue(len(ws) == 1)
                 self.assertTrue('timed out' in str(ws[0].message))
+
+    def test_check_headers(self):
+        """Validation: check that CSV header validation works."""
+        from natcap.invest import validation
+        expected_headers = ['hello', '1']
+        actual = ['hello', '1', '2']
+        result = validation.check_headers(expected_headers, actual)
+        self.assertEqual(result, None)
+
+        # each pattern should match at least one header
+        actual = ['1', '2']
+        result = validation.check_headers(expected_headers, actual)
+        expected_msg = validation.MATCHED_NO_HEADERS_MSG % ('header', 'hello')
+        self.assertEqual(result, expected_msg)
+
+        # duplicate headers that match a pattern are not allowed
+        actual = ['hello', '1', '1']
+        result = validation.check_headers(expected_headers, actual, 'column')
+        expected_msg = validation.DUPLICATE_HEADER_MSG % ('column', '1', 2)
+        self.assertEqual(result, expected_msg)
+
+        # duplicate headers that don't match a pattern are allowed
+        actual = ['hello', '1', 'x', 'x']
+        result = validation.check_headers(expected_headers, actual)
+        self.assertEqual(result, None)
 
 
 class TestValidationFromSpec(unittest.TestCase):
@@ -1020,8 +1027,8 @@ class TestValidationFromSpec(unittest.TestCase):
 
         args = {'number_a': 'not a number'}
         self.assertEqual(
-            [(['number_a'], ("Value 'not a number' could not be interpreted "
-                             "as a number"))],
+            [(['number_a'], ('Value "not a number" could not be interpreted '
+                             'as a number'))],
             validation.validate(args, spec))
 
     def test_conditionally_required_no_value(self):
@@ -1063,9 +1070,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 "about": "About the first parameter",
                 "type": "option_string",
                 "required": "number_a",
-                "validation_options": {
-                    "options": ['AAA', 'BBB']
-                }
+                "options": ['AAA', 'BBB']
             }
         }
 
@@ -1166,6 +1171,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 'name': 'vector 1',
                 'about': 'vector 1',
                 'required': True,
+                'fields': {}
             }
         }
 
@@ -1338,3 +1344,77 @@ class TestValidationFromSpec(unittest.TestCase):
         with self.assertLogs('natcap.invest.validation', level='DEBUG') as cm:
             validation.validate(args, spec)
         self.assertTrue(message in cm.output)
+
+    def test_check_ratio(self):
+        """Validation: test ratio type validation."""
+        from natcap.invest import validation
+        args = {
+            'a': 'xyz',  # not a number
+            'b': '1.5',  # too large
+            'c': '-1',   # too small
+            'd': '0',    # lower bound
+            'e': '0.5',  # middle
+            'f': '1'     # upper bound
+        }
+        spec = {name: {'type': 'ratio'} for name in args}
+
+        expected_warnings = [
+            (['a'], 'Value "xyz" could not be interpreted as a number'),
+            (['b'], 'Value 1.5 is not in the range [0, 1]'),
+            (['c'], 'Value -1.0 is not in the range [0, 1]')]
+        actual_warnings = validation.validate(args, spec)
+        for warning in actual_warnings:
+            self.assertTrue(warning in expected_warnings)
+
+    def test_check_percent(self):
+        """Validation: test percent type validation."""
+        from natcap.invest import validation
+        args = {
+            'a': 'xyz',    # not a number
+            'b': '100.5',  # too large
+            'c': '-1',     # too small
+            'd': '0',      # lower bound
+            'e': '55.5',   # middle
+            'f': '100'     # upper bound
+        }
+        spec = {name: {'type': 'percent'} for name in args}
+
+        expected_warnings = [
+            (['a'], 'Value "xyz" could not be interpreted as a number'),
+            (['b'], 'Value 100.5 is not in the range [0, 100]'),
+            (['c'], 'Value -1.0 is not in the range [0, 100]')]
+        actual_warnings = validation.validate(args, spec)
+        for warning in actual_warnings:
+            self.assertTrue(warning in expected_warnings)
+
+    def test_check_code(self):
+        """Validation: test code type validation."""
+        from natcap.invest import validation
+        args = {
+            'a': 'xyz',    # not a number
+            'b': '1.5',    # not an integer
+            'c': '-1',     # negative integers are ok
+            'd': '0'
+        }
+        spec = {name: {'type': 'code'} for name in args}
+
+        expected_warnings = [
+            (['a'], 'Value "xyz" could not be interpreted as a number'),
+            (['b'], 'Value "1.5" does not represent an integer')]
+        actual_warnings = validation.validate(args, spec)
+        self.assertEqual(len(actual_warnings), len(expected_warnings))
+        for warning in actual_warnings:
+            self.assertTrue(warning in expected_warnings)
+
+    def test_get_headers_to_validate(self):
+        """Validation: test getting header patterns from a spec."""
+        from natcap.invest import validation
+        spec = {
+            'a': {},
+            'foo_[BAR]': {},
+            'c': {'required': 'conditional statement'},
+            'd': {'required': False}
+        }
+        patterns = validation.get_headers_to_validate(spec)
+        # should only get the patterns that are static and always required
+        self.assertEqual(sorted(patterns), ['a'])

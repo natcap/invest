@@ -10,8 +10,10 @@ from osgeo import ogr
 import pygeoprocessing
 import taskgraph
 
-from .. import validation
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
+from .. import validation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,79 +31,48 @@ ARGS_SPEC = {
         "different_projections_ok": False,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "lulc_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing LULC code "
-                "(expressed as integers) for each cell."),
-            "name": "Land Use"
+            **spec_utils.LULC,
+            "projected": True
         },
         "depth_to_root_rest_layer_path": {
             "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }},
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file containing an average root "
-                "restricting layer depth value for each cell. The root "
-                "restricting layer depth value should be in "
-                "millimeters (mm)."),
+                "restricting layer depth value for each cell."),
             "name": "Depth To Root Restricting Layer"
         },
         "precipitation_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing non-zero, average "
-                "annual precipitation values for each cell. The "
-                "precipitation values should be in millimeters "
-                "(mm)."),
-            "name": "Precipitation"
+            **spec_utils.PRECIP,
+            "projected": True
         },
         "pawc_path": {
             "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            "bands": {1: {"type": "ratio"}},
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file containing plant available "
                 "water content values for each cell.  The plant available "
-                "water content fraction should be a value between 0 "
-                "and 1."),
+                "water content fraction should be a value between 0 and 1."),
             "name": "Plant Available Water Fraction"
         },
         "eto_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing annual average "
-                "reference evapotranspiration values for each cell.  The "
-                "reference evapotranspiration values should be in "
-                "millimeters (mm)."),
-            "name": "Reference Evapotranspiration"
+            **spec_utils.ETO,
+            "projected": True
         },
         "watersheds_path": {
-            "validation_options": {
-                "required_fields": ['ws_id'],
-                "projected": True,
-            },
+            "projected": True,
             "type": "vector",
-            "required": True,
+            "fields": {"ws_id": {"type": "code"}},
+            "geometries": spec_utils.POLYGONS,
             "about": (
                 "A GDAL-supported vector file containing one polygon per "
                 "watershed.  Each polygon that represents a watershed is "
@@ -110,76 +81,133 @@ ARGS_SPEC = {
             "name": "Watersheds"
         },
         "sub_watersheds_path": {
-            "validation_options": {
-                "required_fields": ["subws_id"],
-                "projected": True
-            },
+            "projected": True,
             "type": "vector",
+            "fields": {"subws_id": {"type": "code"}},
+            "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
-                "A GDAL-supported vector file with one polygon per "
-                "sub-watershed within the main watersheds specified in the "
-                "Watersheds shapefile.  Each polygon that represents a "
-                "sub-watershed is required to have a field 'subws_id' that "
-                "is a unique integer which identifies that sub-watershed."),
+                "A GDAL-supported vector file with one polygon per sub- "
+                "watershed within the main watersheds specified in the "
+                "Watersheds shapefile.  Each polygon that represents a sub- "
+                "watershed is required to have a field 'subws_id' that is a "
+                "unique integer which identifies that sub-watershed."),
             "name": "Sub-Watersheds"
         },
         "biophysical_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "root_depth", "Kc"],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "lucode": {"type": "code"},
+                "root_depth": {"type": "number", "units": u.millimeter},
+                "kc": {"type": "number", "units": u.none}
+            },
             "about": (
                 "A CSV table of land use/land cover (LULC) classes, "
                 "containing data on biophysical coefficients used in this "
-                "model.  The following columns are required: "
-                "'lucode' (integer), 'root_depth' (mm), 'Kc' (coefficient)."),
+                "model.  The following columns are required: 'lucode' "
+                "(integer), 'root_depth' (mm), 'Kc' (coefficient)."),
             "name": "Biophysical Table"
         },
         "seasonality_constant": {
-            "validation_options": {
-                "expression": "value > 0"
-            },
+            "expression": "value > 0",
             "type": "number",
-            "required": True,
+            "units": u.none,
             "about": (
-                "Floating point value on the order of 1 to 30 "
-                "corresponding to the seasonal distribution of "
-                "precipitation."),
+                "Floating point value on the order of 1 to 30 corresponding "
+                "to the seasonal distribution of precipitation."),
             "name": "Z parameter"
         },
         "demand_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "demand"],
-            },
             "type": "csv",
+            "columns": {
+                "lucode": {
+                    "about": "LULC code corresponding to the LULC raster",
+                    "type": "code"
+                },
+                "demand": {
+                    "about": ("Estimated average consumptive water use for "
+                              "a pixel in each LULC type"),
+                    "type": "number",
+                    "units": u.meter**3/u.year/u.pixel
+                }
+            },
             "required": False,
             "about": (
-                "A CSV table of LULC classes, showing consumptive water use "
-                "for each land-use/land-cover type.  The table requires two "
-                "column fields: 'lucode' and 'demand'. The demand values "
-                "should be the estimated average consumptive water use for "
-                "each land-use/land- cover type.  Water use should be given "
-                "in cubic meters per year for a pixel in the "
-                "land-use/land-cover map.  NOTE: the accounting for pixel "
-                "area is important since larger areas will consume more "
-                "water for the same land-cover type."),
+                "A table mapping each LULC class to the estimated average "
+                "consumptive water use for that class. Each LULC code in the "
+                "LULC raster must have a corresponding row in this table. "
+                "NOTE: It is important that the demand values account for "
+                "pixel area is important since larger areas will consume "
+                "more water for the same land-cover type."),
             "name": "Water Demand Table"
         },
         "valuation_table_path": {
-            "validation_options": {
-                "required_fields": ["ws_id", "efficiency", "fraction",
-                                    "height", "kw_price", "cost", "time_span",
-                                    "discount"],
-            },
             "type": "csv",
+            "columns": {
+                "ws_id": {
+                    "type": "code",
+                    "about": (
+                        "Watershed ID corresponding to a watershed in the "
+                        "watersheds vector file")
+                },
+                "efficiency": {
+                    "type": "ratio",
+                    "about": (
+                        "Turbine efficiency, the proportion of potential "
+                        "energy captured by the turbine. May be obtained from "
+                        "the hydropower plant manager. Generally 0.7 to 0.9.")
+                },
+                "fraction": {
+                    "type": "ratio",
+                    "about": (
+                        "The fraction of inflow water volume that is used to "
+                        "generate energy, obtained from the hydropower plant "
+                        "manager. Managers can release water without "
+                        "generating electricity to satisfy irrigation, "
+                        "drinking water or environmental demands.")
+                },
+                "height": {
+                    "type": "number",
+                    "units": u.meter,
+                    "about": (
+                        "The head, measured as the average annual effective "
+                        "height of water behind each dam at the turbine "
+                        "intake.")
+                },
+                "kw_price": {
+                    "type": "number",
+                    "units": u.currency/u.kilowatt_hour,
+                    "about": (
+                        "The price of power produced by the station, in the "
+                        "same currency used for the cost column.")
+                },
+                "cost": {
+                    "type": "number",
+                    "units": u.currency/u.year,
+                    "about": (
+                        "Annual cost of running the hydropower station "
+                        "(maintenance and operations costs), in the same "
+                        "currency used for the kw_price column.")
+                },
+                "time_span": {
+                    "type": "number",
+                    "units": u.year,
+                    "about": (
+                        "Either the expected lifespan of the hydropower "
+                        "station or the duration of the land use scenario of "
+                        "interest. Used in net present value calculations.")
+                },
+                "discount": {
+                    "type": "percent",
+                    "about": (
+                        "The discount rate over the time span, used in net "
+                        "present value calculations.")
+                }
+            },
             "required": False,
             "about": (
-                "A CSV table of hydropower stations with associated model "
-                "values.  The table should have the following column "
-                "fields: 'ws_id', 'efficiency', 'fraction', 'height', "
-                "'kw_price', 'cost', 'time_span', and 'discount'."),
+                "A table mapping each watershed's hydropower station to its "
+                "associated valuation parameters"),
             "name": "Hydropower Valuation Table"
         }
     }
@@ -253,7 +281,7 @@ def execute(args):
         args['valuation_table_path'] (string): (optional) if a non-empty
             string, a path to an input CSV table of
             hydropower stations with the following fields to calculate
-            valuation: 'ws_id', 'time_span', 'discount', 'efficiency', 
+            valuation: 'ws_id', 'time_span', 'discount', 'efficiency',
             'fraction', 'cost', 'height', 'kw_price'
             Required if ``calculate_valuation`` is True.
 

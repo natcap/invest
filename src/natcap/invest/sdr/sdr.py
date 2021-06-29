@@ -18,6 +18,8 @@ import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 from . import sdr_core
 
@@ -33,15 +35,12 @@ ARGS_SPEC = {
         "different_projections_ok": False,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "dem_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            **spec_utils.DEM,
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file with an elevation value for "
                 "each cell.  Make sure the DEM is corrected by filling in "
@@ -49,111 +48,102 @@ ARGS_SPEC = {
                 "the elevation model (recommended when unusual streams are "
                 "observed.) See the 'Working with the DEM' section of the "
                 "InVEST User's Guide for more information."),
-            "name": "Digital Elevation Model"
         },
         "erosivity_path": {
             "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            "bands": {1: {
+                "type": "number",
+                "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file, with an erosivity index value "
                 "for each cell.  This variable depends on the intensity and "
                 "duration of rainfall in the area of interest.  The greater "
-                "the intensity and duration of the rain storm, the higher "
-                "the erosion potential. The erosivity index is widely used, "
-                "but in case of its absence, there are methods and equations "
-                "to help generate a grid using climatic data.  The units are "
-                "MJ*mm/(ha*h*yr)."),
+                "the intensity and duration of the rain storm, the higher the "
+                "erosion potential. The erosivity index is widely used, but "
+                "in case of its absence, there are methods and equations to "
+                "help generate a grid using climatic data."),
             "name": "Rainfall Erosivity Index (R)"
         },
         "erodibility_path": {
             "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file, with a soil erodibility value "
                 "for each cell which is a measure of the susceptibility of "
                 "soil particles to detachment and transport by rainfall and "
-                "runoff.  Units are in T*ha*h/(ha*MJ*mm)."),
+                "runoff."),
             "name": "Soil Erodibility"
         },
         "lulc_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file, with an integer LULC code "
-                "for each cell."),
-            "name": "Land-Use/Land-Cover"
+            **spec_utils.LULC,
+            "projected": True
         },
         "watersheds_path": {
-            "validation_options": {
-                "required_fields": ["ws_id"],
-                "projected": True,
-            },
             "type": "vector",
-            "required": True,
+            "fields": {
+                "ws_id": {"type": "code"}
+            },
+            "geometries": spec_utils.POLYGONS,
+            "projected": True,
             "about": (
                 "This is a layer of polygons representing watersheds such "
-                "that each watershed contributes to a point of interest "
-                "where water quality will be analyzed.  It must have the "
-                "integer field 'ws_id' where the values uniquely identify "
-                "each watershed."),
+                "that each watershed contributes to a point of interest where "
+                "water quality will be analyzed.  It must have the integer "
+                "field 'ws_id' where the values uniquely identify each "
+                "watershed."),
             "name": "Watersheds"
         },
         "biophysical_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "usle_c", "usle_p"],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "lucode": {"type": "code"},
+                "usle_c": {
+                    "type": "ratio",
+                    "about": "Cover-management factor for the USLE"},
+                "usle_p": {
+                    "type": "ratio",
+                    "about": "Support practice factor for the USLE"}
+            },
             "about": (
                 "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input.  It "
-                "must contain the fields 'lucode', 'usle_c', and 'usle_p'.  "
-                "See the InVEST Sediment User's Guide for more information "
-                "about these fields."),
+                "each of the land use classes in the LULC raster input."),
             "name": "Biophysical Table"
         },
         "threshold_flow_accumulation": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            "expression": "value > 0",
             "type": "number",
-            "required": True,
+            "units": u.pixel,
             "about": (
                 "The number of upstream cells that must flow into a cell "
                 "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream.  "
+                "stops and the remaining export is exported to the stream. "
                 "Used to define streams from the DEM."),
             "name": "Threshold Flow Accumulation"
         },
         "k_param": {
             "type": "number",
-            "required": True,
+            "units": u.none,
             "about": "Borselli k parameter.",
             "name": "Borselli k Parameter"
         },
         "sdr_max": {
-            "type": "number",
-            "required": True,
+            "type": "ratio",
             "about": "Maximum SDR value.",
             "name": "Max SDR Value"
         },
         "ic_0_param": {
             "type": "number",
-            "required": True,
+            "units": u.none,
             "about": "Borselli IC0 parameter.",
             "name": "Borselli IC0 Parameter"
         },
         "drainage_path": {
             "type": "raster",
+            "bands": {1: {"type": "number", "units": u.none}},
             "required": False,
             "about": (
                 "An optional GDAL-supported raster file mask, that indicates "

@@ -15,6 +15,8 @@ import taskgraph
 import pygeoprocessing
 
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 
@@ -68,9 +70,9 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "habitat_risk_assessment.html",
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "info_table_path": {
             "name": "Habitat Stressor Information CSV or Excel File",
             "about": (
@@ -81,11 +83,48 @@ ARGS_SPEC = {
                 "The `STRESSOR BUFFER (meters)` column should have a buffer "
                 "value if the `TYPE` column is a stressor."),
             "type": "csv",
-            "required": True,
-            "validation_options": {
-                "required_fields": ["NAME", "PATH", "TYPE", _BUFFER_HEADER],
-                "excel_ok": True,
-            }
+            "columns": {
+                "name": {
+                    "type": "freestyle_string",
+                    "about": "A unique name for each habitat/stressor input"
+                },
+                "path": {
+                    "type": {"vector", "raster"},
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none,
+                        "about": (
+                            "Pixel values are 1, indicating presence of the "
+                            "habitat/stressor, or 0 indicating absence. Any "
+                            "values besides 0 or 1 will be treated as 0.")
+                    }
+                    },
+                    "fields": {},
+                    "geometries": spec_utils.POLYGONS
+                },
+                "type": {
+                    "type": "option_string",
+                    "options": {
+                        "habitat": "This row is a habitat layer",
+                        "stressor": "This row is a stressor layer"
+                    }
+                },
+                "stressor buffer (meters)": {
+                    "type": "number",
+                    "units": u.meter,
+                    "about": (
+                        "The desired buffer distance used to expand a given "
+                        "stressor’s influence or footprint. This should be "
+                        "left blank for habitats, but must not be blank for "
+                        "stressors. Enter 0 if no buffering is desired for a "
+                        "given stressor. The model will round down this "
+                        "buffer distance to the nearest cell unit. e.g., a "
+                        "buffer distance of 600m will buffer a stressor’s "
+                        "footprint by two grid cells if the resolution of "
+                        "analysis is 250m.")
+                }
+            },
+            "excel_ok": True
         },
         "criteria_table_path": {
             "name": "Criteria Scores Table",
@@ -94,10 +133,7 @@ ARGS_SPEC = {
                 "ranking  (rating, DQ and weight) of each stressor on each "
                 "habitat, as well as the habitat resilience attributes."),
             "type": "csv",
-            "validation_options": {
-                "excel_ok": True,
-            },
-            "required": True,
+            "excel_ok": True,
         },
         "resolution": {
             "name": "Resolution of Analysis (meters)",
@@ -106,10 +142,8 @@ ARGS_SPEC = {
                 "stressor files into rasters. This value will be the pixel "
                 "size of the completed raster files."),
             "type": "number",
-            "required": True,
-            "validation_options": {
-                "expression": "value > 0",
-            }
+            "units": u.meter,
+            "expression": "value > 0",
         },
         "max_rating": {
             "name": "Maximum Criteria Score",
@@ -119,58 +153,52 @@ ARGS_SPEC = {
                 "with the values within Rating column of the Criteria Scores "
                 "table."),
             "type": "number",
-            "required": True,
-            "validation_options": {
-                "expression": "value > 0",
-            }
+            "units": u.none,
+            "expression": "value > 0"
         },
         "risk_eq": {
             "name": "Risk Equation",
             "about": (
                 "Each of these represents an option of a risk calculation "
-                "equation. This will determine the numeric output of risk "
-                "for every habitat and stressor overlap area."),
+                "equation. This will determine the numeric output of risk for "
+                "every habitat and stressor overlap area."),
             "type": "option_string",
-            "required": True,
-            "validation_options": {
-                "options": ["Multiplicative", "Euclidean"],
-            }
+            "options": {"Multiplicative", "Euclidean"}
         },
         "decay_eq": {
             "name": "Decay Equation",
             "about": (
-                "Each of these represents an option of a decay equation "
-                "for the buffered stressors. If stressor buffering is "
-                "desired, this equation will determine the rate at which "
-                "stressor data is reduced."),
+                "Each of these represents an option of a decay equation for "
+                "the buffered stressors. If stressor buffering is desired, "
+                "this equation will determine the rate at which stressor data "
+                "is reduced."),
             "type": "option_string",
-            "required": True,
-            "validation_options": {
-                "options": ["None", "Linear", "Exponential"],
-            }
+            "options": {"None", "Linear", "Exponential"}
         },
         "aoi_vector_path": {
-            "name": "Area of Interest",
+            **spec_utils.AOI,
+            "projected": True,
+            "projection_units": u.meter,
+            "fields": {
+                "name": {
+                    "required": False,
+                    "type": "freestyle_string",
+                    "about": (
+                        "Uniquely identifies each feature. Required if "
+                        "the vector contains more than one feature.")
+                }
+            },
             "about": (
                 "A GDAL-supported vector file containing feature containing "
-                "one or more planning regions. subregions. An optional field "
-                "called `name` could be added to compute average risk values "
-                "within each subregion."),
-            "type": "vector",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-                "projection_units": "m",
-            }
+                "one or more planning regions or subregions."),
         },
         "visualize_outputs": {
             "name": "Generate GeoJSONs for Web Visualization",
-            "help": (
+            "about": (
                 "Check to enable the generation of GeoJSON outputs. This "
                 "could be used to visualize the risk scores on a map in the "
                 "HRA visualization web application."),
             "type": "boolean",
-            "required": True,
         }
     }
 }
@@ -479,8 +507,8 @@ def execute(args):
                          float(args['resolution'])/linear_unit)
     distance_transform_tasks = []
     for (align_raster_path, dist_raster_path, stressor_name) in zip(
-         align_stressor_raster_list, dist_stressor_raster_list,
-         stressor_names):
+        align_stressor_raster_list, dist_stressor_raster_list,
+            stressor_names):
 
         distance_transform_task = task_graph.add_task(
             func=pygeoprocessing.distance_transform_edt,
@@ -562,7 +590,7 @@ def execute(args):
 
             # Convert stressor buffer from meters to projection unit
             stressor_buffer = stressor_info_df[_BUFFER_HEADER].item() / float(
-                    stressor_info_df['LINEAR_UNIT'].item())
+                stressor_info_df['LINEAR_UNIT'].item())
 
             # Calculate exposure scores on each habitat-stressor pair
             pair_expo_target_path_list = [
@@ -2326,7 +2354,7 @@ def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
         return path
     # Habitat rasters do not need to be transformed
     elif (suffix_front == 'dist_' or suffix_front == 'buff_') and (
-          row['TYPE'] == _HABITAT_TYPE):
+            row['TYPE'] == _HABITAT_TYPE):
         return None
 
     return target_raster_path
@@ -2394,7 +2422,7 @@ def _label_linear_unit(row):
             to transform them to meters
 
     Raises:
-        ValueError if any of the file's spatial reference is missing or if 
+        ValueError if any of the file's spatial reference is missing or if
             any of the file's are not linearly projected.
 
     """
@@ -2460,8 +2488,8 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     file_ext = os.path.splitext(base_info_table_path)[1].lower()
     if file_ext == '.csv':
         # use sep=None, engine='python' to infer what the separator is
-        info_df = pandas.read_csv(base_info_table_path, sep=None, 
-            engine='python')
+        info_df = pandas.read_csv(base_info_table_path, sep=None,
+                                  engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         info_df = pandas.read_excel(base_info_table_path)
     else:
@@ -2584,11 +2612,11 @@ def _get_criteria_dataframe(base_criteria_table_path):
     file_ext = os.path.splitext(base_criteria_table_path)[1].lower()
     if file_ext == '.csv':
         # use sep=None, engine='python' to infer what the separator is
-        criteria_df = pandas.read_csv(base_criteria_table_path, 
-            index_col=0, header=None, sep=None, engine='python')
+        criteria_df = pandas.read_csv(base_criteria_table_path,
+                                      index_col=0, header=None, sep=None, engine='python')
     elif file_ext in ['.xlsx', '.xls']:
-        criteria_df = pandas.read_excel(base_criteria_table_path, 
-            index_col=0, header=None)
+        criteria_df = pandas.read_excel(base_criteria_table_path,
+                                        index_col=0, header=None)
     else:
         raise ValueError('Criteria table %s is not a CSV or an Excel file.' %
                          base_criteria_table_path)
@@ -2801,7 +2829,7 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
         # The value might be NaN or a string of non-digit, therefore check for
         # both cases
         error_message = (
-                'Values in the %s column for habitat "%s" ' % (key, habitat))
+            'Values in the %s column for habitat "%s" ' % (key, habitat))
         if stressor:
             error_message += 'and stressor "%s"' % stressor
         error_message += ' should be a number, but is "%s".' % value
@@ -2930,7 +2958,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                         habitat + '_' + stressor + suffix + '_.pickle')
 
                 _ = _validate_rating(
-                        rating, max_rating, criteria_name, habitat, stressor)
+                    rating, max_rating, criteria_name, habitat, stressor)
 
                 # Check the DQ and weight values when we have collected
                 # both of them
