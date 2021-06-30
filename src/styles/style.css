@@ -195,6 +195,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	padding-right: 0rem;
+	min-width: 250px;
 }
 
 .invest-sidebar-col .nav-link {
@@ -216,10 +217,11 @@ body {
 	padding-left: 2rem;
 }
 
+/* Resources Links */
 .sidebar-row {
 	display: flex;
 	flex-direction: column;
-	font-size: 1.3rem;
+	font-size: 1.0rem;
 	padding: inherit;
 }
 

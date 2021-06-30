@@ -204,7 +204,11 @@ export default class InvestTab extends React.Component {
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
         <Row className="flex-nowrap">
-          <Col sm={3} className="invest-sidebar-col" onDragOver={dragOverHandlerNone}>
+          <Col
+            md={3}
+            className="invest-sidebar-col"
+            onDragOver={dragOverHandlerNone}
+          >
             <Nav
               className="flex-column"
               id="vertical tabs"
@@ -247,7 +251,7 @@ export default class InvestTab extends React.Component {
               id={sidebarFooterElementId}
             />
           </Col>
-          <Col sm={9} className="invest-main-col">
+          <Col className="invest-main-col">
             <TabContent>
               <TabPane eventKey="setup" title="Setup">
                 <SetupTab
