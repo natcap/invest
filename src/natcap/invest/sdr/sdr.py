@@ -152,6 +152,21 @@ ARGS_SPEC = {
             "about": "Borselli IC0 parameter.",
             "name": "Borselli IC0 parameter"
         },
+        "l_max": {
+            "type": "number",
+            "required": True,
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "about": (
+                "Values of L (the slope length component of the LS "
+                "slope length * slope gradient factor) larger than this value "
+                "will be clamped to this value. Ranges of 122-333 (unitless) "
+                "and ranges are are found in relevant literature such as "
+                "Desmet and Govers, 1996 and Renard et al., 1997 "
+                "(see user's guide)."),
+            "name": "Max L Value",
+        },
         "drainage_path": {
             "type": "raster",
             "required": False,
@@ -400,6 +415,7 @@ def execute(args):
             f_reg['flow_accumulation_path'],
             f_reg['slope_path'],
             f_reg['weighted_avg_aspect_path'],
+            float(args['l_max']),
             f_reg['ls_path']),
         target_path_list=[f_reg['ls_path']],
         dependent_task_list=[
@@ -661,8 +677,8 @@ def execute(args):
 
 
 def _calculate_ls_factor(
-        flow_accumulation_path, slope_path, avg_aspect_path,
-        out_ls_prime_factor_path):
+        flow_accumulation_path, slope_path, avg_aspect_path, l_max,
+        target_ls_prime_factor_path):
     """Calculate LS factor.
 
     Calculates a modified LS factor as Equation 3 from "Extension and
@@ -678,7 +694,9 @@ def _calculate_ls_factor(
         slope_path (string): path to slope raster as a percent
         avg_aspect_path (string): The path to to raster of the weighted average
             of aspects based on proportional flow.
-        out_ls_prime_factor_path (string): path to output ls_prime_factor
+        l_max (float): if the calculated value of L exceeds this value
+            it is clamped to this value.
+        target_ls_prime_factor_path (string): path to output ls_prime_factor
             raster
 
     Returns:
@@ -695,13 +713,15 @@ def _calculate_ls_factor(
     cell_size = abs(flow_accumulation_info['pixel_size'][0])
     cell_area = cell_size ** 2
 
-    def ls_factor_function(percent_slope, flow_accumulation, avg_aspect):
+    def ls_factor_function(
+            percent_slope, flow_accumulation, avg_aspect, l_max):
         """Calculate the LS' factor.
 
         Args:
             percent_slope (numpy.ndarray): slope in percent
             flow_accumulation (numpy.ndarray): upstream pixels
             avg_aspect (numpy.ndarray): the weighted average aspect from MFD
+            l_max (float): max L factor, clamp to this value if L exceeds it
 
         Returns:
             ls_factor
@@ -727,7 +747,7 @@ def _calculate_ls_factor(
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
         beta = (
-            (numpy.sin(slope_in_radians) / 0.0986) /
+            (numpy.sin(slope_in_radians) / 0.0896) /
             (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
         # Set m value via lookup table: Table 1 in
@@ -745,26 +765,24 @@ def _calculate_ls_factor(
             beta[big_slope_mask] / (1 + beta[big_slope_mask]))
         m_exp[~big_slope_mask] = m_table[m_indexes]
 
-        # from McCool paper: "as a final check against excessively long slope
-        # length calculations ... cap of 333m"
-        # from Rafa, this should really be the upstream area capped to
-        # "333^2 m^2" because McCool is 1D
-        contributing_area[contributing_area > 333**2] = 333**2
-
-        ls_prime_factor = (
+        l_factor = (
             ((contributing_area + cell_area)**(m_exp+1) -
              contributing_area ** (m_exp+1)) /
             ((cell_size ** (m_exp + 2)) * (avg_aspect[valid_mask]**m_exp) *
              (22.13**m_exp)))
 
-        result[valid_mask] = ls_prime_factor * slope_factor
+        # threshold L factor to l_max
+        l_factor[l_factor > l_max] = l_max
+
+        result[valid_mask] = l_factor * slope_factor
         return result
 
     # call vectorize datasets to calculate the ls_factor
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in [
-            slope_path, flow_accumulation_path, avg_aspect_path]],
-        ls_factor_function, out_ls_prime_factor_path, gdal.GDT_Float32,
+            slope_path, flow_accumulation_path, avg_aspect_path]] + [
+            (l_max, 'raw')],
+        ls_factor_function, target_ls_prime_factor_path, gdal.GDT_Float32,
         _TARGET_NODATA)
 
 
@@ -1299,9 +1317,13 @@ def _generate_report(
         sed_deposition_path, watershed_results_sdr_path):
     """Create shapefile with USLE, sed export, retention, and deposition."""
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
+    if os.path.exists(watershed_results_sdr_path):
+        LOGGER.warning(f'overwriting results at {watershed_results_sdr_path}')
+        os.remove(watershed_results_sdr_path)
     driver = gdal.GetDriverByName('ESRI Shapefile')
     target_vector = driver.CreateCopy(
         watershed_results_sdr_path, original_datasource)
+
     target_layer = target_vector.GetLayer()
     target_layer.SyncToDisk()
 
