@@ -66,10 +66,6 @@ body {
   font-size: 1.1rem;
 }
 
-.navbar-light .navbar-nav .nav-link.active {
-	background-color: transparent;
-}
-
 .close-tab.btn {
 	background-color: transparent;
 	border-color: transparent;
@@ -84,13 +80,6 @@ body {
 	border-color: #6c757d;
 	background-color: #e46672;
 	color: white;
-}
-
-/*TODO:  This probably applies to more than just navbar*/
-.nav-link {
-	color: gray;
-	font-size: 1.3rem;
-	font-weight: 550;
 }
 
 .progress {
@@ -199,7 +188,18 @@ body {
 }
 
 .invest-sidebar-col .nav-link {
+	color: #000;
 	background-color: #fff;
+	font-size: 1.3rem;
+	font-weight: 550;
+}
+
+.invest-sidebar-col .nav-link:hover, .nav-link:focus {
+	background-color: ghostwhite;
+}
+
+.invest-sidebar-col .nav-link.disabled {
+	color: #6c757d;
 }
 
 .invest-sidebar-col .nav-link.active {
