@@ -20,7 +20,7 @@ body {
 }
 
 .navbar-brand {
-	padding-bottom: 0px;
+	padding-bottom: 0;
 }
 
 .navbar-brand .nav-link {
@@ -32,7 +32,7 @@ body {
 }
 
 .navbar-nav.nav-tabs {
-	border-bottom: 0px;
+	border-bottom: 0;
 	overflow-x: hidden;
 	overflow-y: hidden;
 }
@@ -46,12 +46,12 @@ body {
 	min-width: 0; /*and allow it to shrink to fit container*/
 	background-color: transparent;
 	border: 1px solid #999999;
-  border-bottom: 0px;
+  border-bottom: 0;
 }
 
 .navbar-nav .nav-item.active {
 	border: 3px solid var(--invest-green);
-	border-bottom: 0px;
+	border-bottom: 0;
 	background-color: ghostwhite;
 }
 
@@ -61,8 +61,8 @@ body {
 	min-width: 0;
   background-color: transparent;
   color: #999999;
-  border: 0px;
-  border-bottom: 0px;
+  border: 0;
+  border-bottom: 0;
   font-size: 1.1rem;
 }
 
@@ -185,7 +185,7 @@ body {
 .invest-sidebar-col {
 	display: flex;
 	flex-direction: column;
-	padding-right: 0rem;
+	padding-right: 0;
 	min-width: 250px;
 }
 
@@ -208,7 +208,7 @@ body {
 	color: #000;
 	background-color: ghostwhite;
 	border-right: 5px solid var(--invest-green);
-	border-radius: 0rem;
+	border-radius: 0;
 }
 
 .sidebar-setup {
@@ -240,7 +240,7 @@ body {
 }
 
 .invest-main-col {
-	padding-left: 0rem;
+	padding-left: 0;
 	height: 85vh;
 }
 
