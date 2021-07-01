@@ -144,12 +144,12 @@ body {
 	flex-direction: row;
 	width: 400px; 
 	margin-bottom: 15px!important;
-	border-width: 2px;
+	/*border-width: 2px;*/
 	padding: 0;
 }
 
 .card-body {
-	width: inherit;
+	/*width: inherit;*/
 	padding: 0;
 }
 
