@@ -129,28 +129,25 @@ body {
 	font-weight: 600;
 }
 
-.recent-job-card-group {
+.recent-job-card-col {
 	display: flex;
-	flex-wrap: wrap;
-	flex-direction: row;
+	flex-wrap: nowrap;
+	flex-direction: column;
 	height: 87vh;
 	overflow-y: auto;
 }
 
-/* cards can expand to fill space, via flex,
-   but need an explicit width so they are all uniform.*/
 .recent-job-card {
 	flex: 1 0 auto!important;
 	flex-direction: row;
-	width: 400px; 
+	width: inherit; 
 	margin-bottom: 15px!important;
-	/*border-width: 2px;*/
 	padding: 0;
 }
 
 .card-body {
-	/*width: inherit;*/
 	padding: 0;
+	width: inherit;
 }
 
 .card-header {
@@ -176,7 +173,7 @@ body {
 
 .card-title .text-mono {
 	font-family: monospace;
-	font-size: 1.5rem;
+	font-size: 1.2rem;
 }
 
 .card-text {
