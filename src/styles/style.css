@@ -194,7 +194,7 @@ body {
 	font-weight: 550;
 }
 
-.invest-sidebar-col .nav-link:hover, .nav-link:focus {
+.invest-sidebar-col .nav-link:hover, .invest-sidebar-col .nav-link:focus {
 	background-color: ghostwhite;
 }
 
