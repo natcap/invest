@@ -119,6 +119,11 @@ body {
 	overflow-y: auto;
 }
 
+.invest-list-table .table td {
+	border-top: none;
+	border-bottom: 1px solid #dee2e6;
+}
+
 .invest-button {
 	color: var(--invest-green);
 	font-weight: 600;
