@@ -140,7 +140,7 @@ export default class SetupTab extends React.Component {
       const { argsEnabled } = this.state;
       for (const key in enabledFunctions) {
         // evaluate the function to determine if it should be enabled
-        argsEnabled[key] = await enabledFunctions[key](this.state);
+        argsEnabled[key] = enabledFunctions[key](this.state);
       }
       this.setState({ argsEnabled: argsEnabled });
     }
@@ -158,7 +158,7 @@ export default class SetupTab extends React.Component {
 
   /**
    * n_workers is a special invest arg stored in global settings
-   * 
+   *
    * @param  {object} argsValues - of the shape returned by `initializeArgValues`.
    * @returns {object} copy of original argsValues with an n_workers property.
    */
