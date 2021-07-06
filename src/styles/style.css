@@ -309,7 +309,7 @@ input[type=text]::placeholder {
 }
 
 .invalid-feedback {
-	font-size: 1.15rem;
+	font-size: 0.9rem;
 	font-family: monospace;
 	white-space: pre-wrap;
 	padding-left: 3rem;
