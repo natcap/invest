@@ -467,7 +467,7 @@ describe('Misc form validation stuff', () => {
         },
       },
     };
-    const uiSpec = {order: [Object.keys(spec.args)]}
+    const uiSpec = { order: [Object.keys(spec.args)] };
     const vectorValue = './vector.shp';
     const expectedVal1 = '-84.9';
     const vectorBox = `[${expectedVal1}, 19.1, -69.1, 29.5]`;
@@ -487,7 +487,7 @@ describe('Misc form validation stuff', () => {
 
     // Feedback on each input should only include the bounding box
     // of that single input.
-    const vectorGroup = vectorInput.closest('div');
+    const vectorGroup = vectorInput.closest('.input-group');
     await waitFor(() => {
       expect(within(vectorGroup).getByText(RegExp(expectedVal1)))
         .toBeInTheDocument();
@@ -495,7 +495,7 @@ describe('Misc form validation stuff', () => {
         .toBeNull();
     });
 
-    const rasterGroup = rasterInput.closest('div');
+    const rasterGroup = rasterInput.closest('.input-group');
     await waitFor(() => {
       expect(within(rasterGroup).getByText(RegExp(expectedVal2)))
         .toBeInTheDocument();

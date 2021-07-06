@@ -9,6 +9,9 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
+import Container from 'react-bootstrap/Container';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -153,7 +156,7 @@ export default class App extends React.Component {
   /** Save data describing an invest job to a persistent store.
    *
    * And update the app's view of that store.
-   * 
+   *
    * @param {object} job - an instance of InvestJob.
    */
   async saveJob(job) {
@@ -185,21 +188,24 @@ export default class App extends React.Component {
     const investTabPanes = [];
     openJobs.forEach((job) => {
       investNavItems.push(
-        <Nav.Item key={job.metadata.navID}>
+        <Nav.Item
+          key={job.metadata.navID}
+          className={job.metadata.navID === activeTab ? 'active' : ''}
+        >
           <Nav.Link eventKey={job.metadata.navID}>
             {job.metadata.modelHumanName}
-            <Button
-              className="close-tab"
-              variant="outline-dark"
-              onClick={(event) => {
-                event.stopPropagation();
-                this.closeInvestModel(job.metadata.navID);
-              }}
-              onDragOver={dragOverHandlerNone}
-            >
-              x
-            </Button>
           </Nav.Link>
+          <Button
+            className="close-tab"
+            variant="outline-dark"
+            onClick={(event) => {
+              event.stopPropagation();
+              this.closeInvestModel(job.metadata.navID);
+            }}
+            onDragOver={dragOverHandlerNone}
+          >
+            x
+          </Button>
         </Nav.Item>
       );
       investTabPanes.push(
@@ -225,53 +231,67 @@ export default class App extends React.Component {
           storeDownloadDir={this.storeDownloadDir}
         />
         <TabContainer activeKey={activeTab}>
-          <Navbar onDragOver={dragOverHandlerNone}>
-            <Navbar.Brand onDragOver={dragOverHandlerNone}>
-              <Nav.Link
-                onSelect={this.switchTabs}
-                eventKey="home"
-                onDragOver={dragOverHandlerNone}
-              >
-                InVEST
-              </Nav.Link>
-            </Navbar.Brand>
-            <Nav
-              variant="pills"
-              className="mr-auto horizontal-scroll"
-              activeKey={activeTab}
-              onSelect={this.switchTabs}
-              onDragOver={dragOverHandlerNone}
+          <Navbar
+            className="px-0 py-0"
+            onDragOver={dragOverHandlerNone}
+          >
+            <Row
+              className="w-100 flex-nowrap"
             >
-              {investNavItems}
-            </Nav>
-            {
-              (downloadedNofN)
-                ? (
-                  <DownloadProgressBar
-                    downloadedNofN={downloadedNofN}
-                    expireAfter={5000} // milliseconds
-                  />
-                )
-                : <div />
-            }
-            <LoadButton
-              openInvestModel={this.openInvestModel}
-              batchUpdateArgs={this.batchUpdateArgs}
-            />
-            {
-              // don't render until after we fetched the data
-              (investSettings)
-                ? (
-                  <SettingsModal
-                    className="mx-3"
-                    saveSettings={this.saveSettings}
-                    investSettings={investSettings}
-                    clearJobsStorage={this.clearRecentJobs}
-                    showDownloadModal={() => this.showDownloadModal(true)}
-                  />
-                )
-                : <div />
-            }
+              <Col sm={3} className="px-0">
+                <Navbar.Brand onDragOver={dragOverHandlerNone}>
+                  <Nav.Link
+                    onSelect={this.switchTabs}
+                    eventKey="home"
+                    onDragOver={dragOverHandlerNone}
+                  >
+                    InVEST
+                  </Nav.Link>
+                </Navbar.Brand>
+              </Col>
+              <Col sm={7} className="pl-1 pr-0">
+                <Nav
+                  justify
+                  variant="tabs"
+                  className="mr-auto"
+                  activeKey={activeTab}
+                  onSelect={this.switchTabs}
+                  onDragOver={dragOverHandlerNone}
+                >
+                  {investNavItems}
+                </Nav>
+                {
+                  (downloadedNofN)
+                    ? (
+                      <DownloadProgressBar
+                        downloadedNofN={downloadedNofN}
+                        expireAfter={5000} // milliseconds
+                      />
+                    )
+                    : <div />
+                }
+              </Col>
+              <Col sm={2} className="px-0 text-right">
+                <LoadButton
+                  openInvestModel={this.openInvestModel}
+                  batchUpdateArgs={this.batchUpdateArgs}
+                />
+                {
+                  // don't render until after we fetched the data
+                  (investSettings)
+                    ? (
+                      <SettingsModal
+                        className="mx-3"
+                        saveSettings={this.saveSettings}
+                        investSettings={investSettings}
+                        clearJobsStorage={this.clearRecentJobs}
+                        showDownloadModal={() => this.showDownloadModal(true)}
+                      />
+                    )
+                    : <div />
+                }
+              </Col>
+            </Row>
           </Navbar>
 
           <TabContent id="top-tab-content">

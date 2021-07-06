@@ -69,6 +69,7 @@ export const createWindow = async () => {
     width: width,
     height: height,
     useContentSize: true,
+    minWidth: 800,
     show: true, // see comment in 'ready-to-show' listener
     webPreferences: {
       contextIsolation: false,

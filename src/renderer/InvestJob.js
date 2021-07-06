@@ -96,7 +96,9 @@ export default class InvestJob {
     if (!this.metadata.workspaceHash) {
       this.setWorkspaceHash();
     }
-    this.metadata.humanTime = new Date().toLocaleString();
+    const isoDate = new Date().toISOString().split('T')[0];
+    const localTime = new Date().toTimeString().split(' ')[0];
+    this.metadata.humanTime = `${isoDate}  ${localTime}`;
     let sortedKeys = await investJobStore.getItem(HASH_ARRAY_KEY);
     if (!sortedKeys) {
       await InvestJob.initDB();

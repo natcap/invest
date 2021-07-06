@@ -205,7 +205,8 @@ describe('Various ways to open and close InVEST models', () => {
     expect(tab3EventKey).not.toEqual(tab1EventKey);
 
     // Click the close button on the middle tab
-    const tab2CloseButton = await within(tab2).getByRole('button', { name: /x/ });
+    const tab2CloseButton = await within(tab2.closest('.nav-item'))
+      .getByRole('button', { name: /x/ });
     fireEvent.click(tab2CloseButton);
     // Now there should only be 2 model tabs open
     modelTabs = await findAllByRole('tab', { name: /Carbon/ });
@@ -215,7 +216,8 @@ describe('Various ways to open and close InVEST models', () => {
     expect(tab1.classList.contains('active')).toBeFalsy();
 
     // Click the close button on the right tab
-    const tab3CloseButton = await within(tab3).getByRole('button', { name: /x/ });
+    const tab3CloseButton = await within(tab3.closest('.nav-item'))
+      .getByRole('button', { name: /x/ });
     fireEvent.click(tab3CloseButton);
     // Now there should only be 1 model tab open
     modelTabs = await findAllByRole('tab', { name: /Carbon/ });
@@ -225,7 +227,8 @@ describe('Various ways to open and close InVEST models', () => {
     expect(homeTab.classList.contains('active')).toBeFalsy();
 
     // Click the close button on the last tab
-    const tab1CloseButton = await within(tab1).getByRole('button', { name: /x/ });
+    const tab1CloseButton = await within(tab1.closest('.nav-item'))
+      .getByRole('button', { name: /x/ });
     fireEvent.click(tab1CloseButton);
     // Now there should be no model tabs open.
     modelTabs = await queryAllByRole('tab', { name: /Carbon/ });
@@ -540,6 +543,7 @@ describe('InVEST subprocess testing', () => {
       findByText,
       findByLabelText,
       findByRole,
+      getByRole,
       queryByText,
       unmount,
     } = render(<App />);
@@ -568,8 +572,9 @@ describe('InVEST subprocess testing', () => {
     expect(queryByText('Model Complete')).toBeNull();
     expect(queryByText('Open Workspace')).toBeNull();
     // Job should already be saved to recent jobs database w/ status:
-    const recentJobCards = await findByLabelText('Recent InVEST Runs:');
-    expect(await within(recentJobCards).findByText('running'))
+    await getByRole('button', { name: 'InVEST' }).click();
+    const homeTab = await getByRole('tabpanel', { name: /Home/ });
+    expect(await within(homeTab).findByText('running'))
       .toBeInTheDocument();
 
     mockInvestProc.emit('exit', 0); // 0 - exit w/o error
@@ -578,10 +583,10 @@ describe('InVEST subprocess testing', () => {
     expect(execute).toBeEnabled();
 
     // A recent job card should be rendered w/ updated status
-    const cardText = await within(recentJobCards)
+    const cardText = await within(homeTab)
       .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
-    expect(within(recentJobCards).queryByText('running'))
+    expect(within(homeTab).queryByText('running'))
       .toBeNull();
     // Normally we don't explicitly unmount the rendered components,
     // but in this case we're 'watching' a file that the afterEach()
@@ -595,6 +600,7 @@ describe('InVEST subprocess testing', () => {
       findByText,
       findByLabelText,
       findByRole,
+      getByRole,
       unmount,
     } = render(<App />);
 
@@ -630,9 +636,10 @@ describe('InVEST subprocess testing', () => {
       .toBeEnabled();
 
     // A recent job card should be rendered
-    const cardText = await within(
-      await findByLabelText('Recent InVEST Runs:')
-    ).findByText(`${path.resolve(fakeWorkspace)}`);
+    await getByRole('button', { name: 'InVEST' }).click();
+    const homeTab = await getByRole('tabpanel', { name: /Home/ });
+    const cardText = await within(homeTab)
+      .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
     unmount();
   });
@@ -642,6 +649,7 @@ describe('InVEST subprocess testing', () => {
       findByText,
       findByLabelText,
       findByRole,
+      getByRole,
       unmount,
     } = render(<App />);
 
@@ -672,9 +680,10 @@ describe('InVEST subprocess testing', () => {
       .toBeInTheDocument();
 
     // A recent job card should be rendered
-    const cardText = await within(
-      await findByLabelText('Recent InVEST Runs:')
-    ).findByText(`${path.resolve(fakeWorkspace)}`);
+    await getByRole('button', { name: 'InVEST' }).click();
+    const homeTab = await getByRole('tabpanel', { name: /Home/ });
+    const cardText = await within(homeTab)
+      .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
     unmount();
   });

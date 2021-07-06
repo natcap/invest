@@ -46,7 +46,13 @@ FormLabel.propTypes = {
 
 function Feedback(props) {
   return (
-    <Form.Control.Feedback type="invalid" id={`${props.argkey}-feedback`}>
+    // d-block class is needed because of a bootstrap bug
+    // https://github.com/twbs/bootstrap/issues/29439
+    <Form.Control.Feedback
+      className="d-block"
+      type="invalid"
+      id={`${props.argkey}-feedback`}
+    >
       {`${props.argtype} : ${(props.message)}`}
     </Form.Control.Feedback>
   );
@@ -143,41 +149,43 @@ export default class ArgInput extends React.PureComponent {
           </FormLabel>
           <Col sm="8">
             <InputGroup>
-              <AboutModal argument={argSpec} />
-              <Form.Control
-                id={argkey}
-                name={argkey}
-                type="text"
-                placeholder={typeLabel}
-                value={value || ''} // empty string is handled better than `undefined`
-                onChange={handleChange}
-                onFocus={handleChange}
-                isValid={touched && isValid}
-                isInvalid={validationMessage}
-                disabled={!enabled}
-                onDrop={inputDropHandler}
-                onDragOver={dragOverHandler}
-                onDragEnter={dragEnterHandler}
-                onDragLeave={dragLeavingHandler}
-              />
-              {
-                ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type)
-                  ? (  // add a file selector button for path input types
-                    <InputGroup.Append>
-                      <Button
-                        id={argkey}
-                        variant="outline-secondary"
-                        value={argSpec.type} // dialog will limit options accordingly
-                        name={argkey}
-                        onClick={selectFile}
-                        disabled={!enabled}
-                      >
-                        Browse
-                      </Button>
-                    </InputGroup.Append>
-                  )
-                  : <React.Fragment />
-              }
+              <div className="d-flex flex-nowrap w-100">
+                <AboutModal argument={argSpec} />
+                <Form.Control
+                  id={argkey}
+                  name={argkey}
+                  type="text"
+                  placeholder={typeLabel}
+                  value={value || ''} // empty string is handled better than `undefined`
+                  onChange={handleChange}
+                  onFocus={handleChange}
+                  isValid={touched && isValid}
+                  isInvalid={validationMessage}
+                  disabled={!enabled}
+                  onDrop={inputDropHandler}
+                  onDragOver={dragOverHandler}
+                  onDragEnter={dragEnterHandler}
+                  onDragLeave={dragLeavingHandler}
+                />
+                {
+                  ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type)
+                    ? (  // add a file selector button for path input types
+                      <InputGroup.Append>
+                        <Button
+                          id={argkey}
+                          variant="outline-secondary"
+                          value={argSpec.type} // dialog will limit options accordingly
+                          name={argkey}
+                          onClick={selectFile}
+                          disabled={!enabled}
+                        >
+                          Browse
+                        </Button>
+                      </InputGroup.Append>
+                    )
+                    : <React.Fragment />
+                }
+              </div>
               {
                 (validationMessage && touched)
                   ? (
@@ -200,15 +208,16 @@ export default class ArgInput extends React.PureComponent {
       // instead React avoids setting the property altogether. Hence, !! to
       // cast undefined to false.
       Input = (
-        <Form.Group 
-          as={Row} 
-          key={argkey} 
+        <Form.Group
+          as={Row}
+          key={argkey}
           data-testid={`group-${argkey}`}
-          className={className}>
+          className={className}
+        >
           <FormLabel argkey={argkey}>
             <span>{argSpec.name}</span>
           </FormLabel>
-          <Col sm="8">
+          <Col sm="8" className="text-nowrap">
             <AboutModal argument={argSpec} />
             <Form.Check
               id={argkey}
@@ -239,30 +248,33 @@ export default class ArgInput extends React.PureComponent {
     // Dropdown menus for args with options
     } else if (argSpec.type === 'option_string') {
       Input = (
-        <Form.Group 
-          as={Row} 
-          key={argkey} 
+        <Form.Group
+          as={Row}
+          key={argkey}
           data-testid={`group-${argkey}`}
-          className={className}>
+          className={className}
+        >
           <FormLabel argkey={argkey}>
             <span>{argSpec.name}</span>
           </FormLabel>
           <Col sm="4">
             <InputGroup>
-              <AboutModal argument={argSpec} />
-              <Form.Control
-                id={argkey}
-                as="select"
-                name={argkey}
-                value={value}
-                onChange={handleChange}
-                onFocus={handleChange}
-                disabled={!enabled}
-              >
-                {dropdownOptions.map((opt) =>
-                  <option value={opt} key={opt}>{opt}</option>
-                )}
-              </Form.Control>
+              <div className="d-flex flex-nowrap w-100">
+                <AboutModal argument={argSpec} />
+                <Form.Control
+                  id={argkey}
+                  as="select"
+                  name={argkey}
+                  value={value}
+                  onChange={handleChange}
+                  onFocus={handleChange}
+                  disabled={!enabled}
+                >
+                  {dropdownOptions.map(
+                    (opt) => <option value={opt} key={opt}>{opt}</option>
+                  )}
+                </Form.Control>
+              </div>
               {
                 (validationMessage && touched)
                   ? (

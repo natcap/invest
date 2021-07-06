@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
 import Table from 'react-bootstrap/Table';
-import CardGroup from 'react-bootstrap/CardGroup';
 import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
@@ -66,7 +65,7 @@ export default class HomeTab extends React.PureComponent {
             </tbody>
           </Table>
         </Col>
-        <Col md={7} className="recent-job-card-group">
+        <Col className="recent-job-card-col">
           <RecentInvestJobs
             openInvestModel={this.props.openInvestModel}
             recentJobs={recentJobs}
@@ -146,16 +145,14 @@ class RecentInvestJobs extends React.PureComponent {
 
     return (
       <Container>
-        <h4 id="recent-job-card-group">
-          Recent InVEST Runs:
+        <h4>
+          Recent runs:
         </h4>
         {recentButtons.length
           ? (
-            <CardGroup
-              aria-labelledby="recent-job-card-group"
-            >
+            <React.Fragment>
               {recentButtons}
-            </CardGroup>
+            </React.Fragment>
           )
           : (
             <div>
