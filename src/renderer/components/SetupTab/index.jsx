@@ -72,7 +72,7 @@ export default class SetupTab extends React.Component {
       argsValidation: null,
       argsValid: false,
       argsEnabled: null,
-      argsDropdownOptions: null
+      argsDropdownOptions: null,
     };
 
     this.savePythonScript = this.savePythonScript.bind(this);
@@ -119,7 +119,7 @@ export default class SetupTab extends React.Component {
       argsValues: argsValues,
       argsValidation: argsValidation,
       argsEnabled: argsEnabled,
-      argsDropdownOptions: argsDropdownOptions
+      argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
       this.callUISpecFunctions();
@@ -127,7 +127,7 @@ export default class SetupTab extends React.Component {
   }
 
   /**
-   * Call functions from the UI spec to determine the enabled/disabled 
+   * Call functions from the UI spec to determine the enabled/disabled
    * state and dropdown options for each input, if applicable.
    *
    * @returns {undefined}
@@ -152,7 +152,7 @@ export default class SetupTab extends React.Component {
         // evaluate the function to get a list of dropdown options
         argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
       }
-      this.setState({argsDropdownOptions: argsDropdownOptions});
+      this.setState({ argsDropdownOptions: argsDropdownOptions });
     }
   }
 
@@ -230,7 +230,7 @@ export default class SetupTab extends React.Component {
 
   /** Update state with values and validate a batch of InVEST arguments.
    *
-   * @params {object} argsDict - key: value pairs of InVEST arguments.
+   * @param {object} argsDict - key: value pairs of InVEST arguments.
    */
   batchUpdateArgs(argsDict) {
     const { argsSpec, uiSpec } = this.props;
@@ -308,7 +308,7 @@ export default class SetupTab extends React.Component {
       argsValid,
       argsValidation,
       argsEnabled,
-      argsDropdownOptions
+      argsDropdownOptions,
     } = this.state;
     if (argsValues) {
       const {
@@ -317,7 +317,7 @@ export default class SetupTab extends React.Component {
         sidebarSetupElementId,
         sidebarFooterElementId,
         isRunning,
-        uiSpec
+        uiSpec,
       } = this.props;
 
       const buttonText = (
