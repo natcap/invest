@@ -207,7 +207,6 @@ describe('Various ways to open and close InVEST models', () => {
     // Click the close button on the middle tab
     const tab2CloseButton = await within(tab2.closest('.nav-item'))
       .getByRole('button', { name: /x/ });
-    // const tab2CloseButton = await within(tab2).getByRole('button', { name: /x/ });
     fireEvent.click(tab2CloseButton);
     // Now there should only be 2 model tabs open
     modelTabs = await findAllByRole('tab', { name: /Carbon/ });
