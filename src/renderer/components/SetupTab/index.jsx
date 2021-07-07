@@ -144,10 +144,9 @@ export default class SetupTab extends React.Component {
     if (enabledFunctions) {
       // this model has some fields that are conditionally enabled
       const { argsEnabled } = this.state;
-      for (const key in enabledFunctions) {
-        // evaluate the function to determine if it should be enabled
+      Object.keys(enabledFunctions).forEach((key) => {
         argsEnabled[key] = enabledFunctions[key](this.state);
-      }
+      });
       if (this._isMounted) {
         this.setState({ argsEnabled: argsEnabled });
       }
@@ -156,10 +155,9 @@ export default class SetupTab extends React.Component {
     if (dropdownFunctions) {
       // this model has a dropdown that's dynamically populated
       const { argsDropdownOptions } = this.state;
-      for (const key in dropdownFunctions) {
-        // evaluate the function to get a list of dropdown options
+      await Promise.all(Object.keys(dropdownFunctions).map(async (key) => {
         argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
-      }
+      }));
       if (this._isMounted) {
         this.setState({ argsDropdownOptions: argsDropdownOptions });
       }
