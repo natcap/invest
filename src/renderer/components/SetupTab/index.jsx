@@ -22,7 +22,7 @@ import { argsDictFromObject } from '../../utils';
  * One object will store input form values and track if the input has been
  * touched. The other object stores data returned by invest validation.
  *
- * @param {object} argsSpec - an InVEST model's ARGS_SPEC.args 
+ * @param {object} argsSpec - an InVEST model's ARGS_SPEC.args
  * @param {object} uiSpec - the model's UI Spec.
  * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
  *
@@ -64,6 +64,8 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
 
 /** Renders an arguments form, execute button, and save buttons. */
 export default class SetupTab extends React.Component {
+  isMounted = false;
+
   constructor(props) {
     super(props);
 
@@ -93,6 +95,7 @@ export default class SetupTab extends React.Component {
     * that only needs to compute when this.props.argsSpec changes,
     * not on every re-render.
     */
+    this.isMounted = true;
     const { argsInitValues, argsSpec, uiSpec } = this.props;
 
     const {
@@ -126,6 +129,10 @@ export default class SetupTab extends React.Component {
     });
   }
 
+  componentWillUnmount() {
+    this.isMounted = false;
+  }
+
   /**
    * Call functions from the UI spec to determine the enabled/disabled
    * state and dropdown options for each input, if applicable.
@@ -142,7 +149,9 @@ export default class SetupTab extends React.Component {
         // evaluate the function to determine if it should be enabled
         argsEnabled[key] = enabledFunctions[key](this.state);
       }
-      this.setState({ argsEnabled: argsEnabled });
+      if (this.isMounted) {
+        this.setState({ argsEnabled: argsEnabled });
+      }
     }
 
     if (dropdownFunctions) {
@@ -152,7 +161,9 @@ export default class SetupTab extends React.Component {
         // evaluate the function to get a list of dropdown options
         argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
       }
-      this.setState({ argsDropdownOptions: argsDropdownOptions });
+      if (this.isMounted) {
+        this.setState({ argsDropdownOptions: argsDropdownOptions });
+      }
     }
   }
 
@@ -279,10 +290,12 @@ export default class SetupTab extends React.Component {
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';
       });
-      this.setState({
-        argsValidation: argsValidation,
-        argsValid: false,
-      });
+      if (this.isMounted) {
+        this.setState({
+          argsValidation: argsValidation,
+          argsValid: false,
+        });
+      }
 
     // B) All args were validated and none were invalid:
     } else {
@@ -293,7 +306,7 @@ export default class SetupTab extends React.Component {
       // It's possible all args were already valid, in which case
       // no validation state has changed and this setState call can
       // be avoided entirely.
-      if (!this.state.argsValid) {
+      if (!this.state.argsValid && this.isMounted) {
         this.setState({
           argsValidation: argsValidation,
           argsValid: true,
@@ -379,7 +392,7 @@ SetupTab.propTypes = {
     PropTypes.shape({
       name: PropTypes.string,
       type: PropTypes.string,
-    }),
+    })
   ).isRequired,
   uiSpec: PropTypes.object,
   argsInitValues: PropTypes.object,
