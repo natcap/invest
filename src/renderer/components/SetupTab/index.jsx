@@ -64,10 +64,9 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
 
 /** Renders an arguments form, execute button, and save buttons. */
 export default class SetupTab extends React.Component {
-  isMounted = false;
-
   constructor(props) {
     super(props);
+    this._isMounted = false;
 
     this.state = {
       argsValues: null,
@@ -95,7 +94,7 @@ export default class SetupTab extends React.Component {
     * that only needs to compute when this.props.argsSpec changes,
     * not on every re-render.
     */
-    this.isMounted = true;
+    this._isMounted = true;
     const { argsInitValues, argsSpec, uiSpec } = this.props;
 
     const {
@@ -130,7 +129,7 @@ export default class SetupTab extends React.Component {
   }
 
   componentWillUnmount() {
-    this.isMounted = false;
+    this._isMounted = false;
   }
 
   /**
@@ -149,7 +148,7 @@ export default class SetupTab extends React.Component {
         // evaluate the function to determine if it should be enabled
         argsEnabled[key] = enabledFunctions[key](this.state);
       }
-      if (this.isMounted) {
+      if (this._isMounted) {
         this.setState({ argsEnabled: argsEnabled });
       }
     }
@@ -161,7 +160,7 @@ export default class SetupTab extends React.Component {
         // evaluate the function to get a list of dropdown options
         argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
       }
-      if (this.isMounted) {
+      if (this._isMounted) {
         this.setState({ argsDropdownOptions: argsDropdownOptions });
       }
     }
@@ -290,7 +289,7 @@ export default class SetupTab extends React.Component {
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';
       });
-      if (this.isMounted) {
+      if (this._isMounted) {
         this.setState({
           argsValidation: argsValidation,
           argsValid: false,
@@ -306,7 +305,7 @@ export default class SetupTab extends React.Component {
       // It's possible all args were already valid, in which case
       // no validation state has changed and this setState call can
       // be avoided entirely.
-      if (!this.state.argsValid && this.isMounted) {
+      if (!this.state.argsValid && this._isMounted) {
         this.setState({
           argsValidation: argsValidation,
           argsValid: true,
