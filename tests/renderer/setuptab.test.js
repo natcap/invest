@@ -352,8 +352,7 @@ describe('UI spec functionality', () => {
 
     // check that the dropdown option appears when the text field gets a value
     fireEvent.change(arg1, { target: { value: 'a vector' } });
-    option = await findByText('Field1');
-    expect(option).toBeInTheDocument();
+    option = await findByText('Field1'); // will raise an error if not found
   });
 
   test('Grouping and sorting of args', async () => {
