@@ -17,10 +17,9 @@ import {
 } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 
-/** Setup the objects that store InVEST argument values in SetupTab state.
+/** Initialize values of InVEST args based on the model's UI Spec.
  *
- * One object will store input form values and track if the input has been
- * touched. The other object stores data returned by invest validation.
+ * Values initialize with either a complete args dict, or with empty/default values.
  *
  * @param {object} argsSpec - an InVEST model's ARGS_SPEC.args
  * @param {object} uiSpec - the model's UI Spec.
