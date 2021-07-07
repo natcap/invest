@@ -147,9 +147,9 @@ _MODEL_UIS = {
         gui='seasonal_water_yield.SeasonalWaterYield',
         aliases=('swy',)),
     'stormwater': _UIMETA(
-        humanname="Stormwater Retention", 
-        pyname='natcap.invest.stormwater', 
-        gui='stormwater.Stormwater', 
+        humanname="Stormwater Retention",
+        pyname='natcap.invest.stormwater',
+        gui='stormwater.Stormwater',
         aliases=()),
     'wind_energy': _UIMETA(
         humanname="Offshore Wind Energy Production",
