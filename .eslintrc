@@ -31,11 +31,6 @@
         },
     },
     "rules": {
-        "object-shorthand": ["error", "never"],
-        "max-classes-per-file": ["error", 2],
-        "react/destructuring-assignment": ["warn", "always"],
-        "react/jsx-fragments": ["off", "syntax"],
-        "react/jsx-filename-extension": [1, { "extensions": [".js", ".jsx"] }],
         "camelcase": ["warn", ],
         "comma-dangle": ["warn", {
             "arrays": "always-multiline",
@@ -44,6 +39,12 @@
             "exports": "never",
             "functions": "never"
         }],
-        "linebreak-style": 0
+        "linebreak-style": ["off", ],
+        "max-classes-per-file": ["error", 2],
+        "object-shorthand": ["error", "never"],
+        "no-underscore-dangle": ["off", ],
+        "react/destructuring-assignment": ["warn", "always"],
+        "react/jsx-fragments": ["off", "syntax"],
+        "react/jsx-filename-extension": ["warn", { "extensions": [".js", ".jsx"] }]
     }
 }

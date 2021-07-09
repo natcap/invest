@@ -315,33 +315,35 @@ describe('UI spec functionality', () => {
   });
 
   test('expect dropdown options can be dynamic', async () => {
-    const mockGetVectorColumnNames = (state => {
-      if (state.argsValues.arg1.value) {
-        return ['Field1'];
-      } else {
-        return [];
-      }
+    const mockGetVectorColumnNames = ((state) => {
+      // the real getVectorColumnNames returns a Promise
+      return new Promise((resolve) => {
+        if (state.argsValues.arg1.value) {
+          resolve(['Field1']);
+        }
+        resolve([]);
+      });
     });
     const spec = {
       args: {
         arg1: {
           name: 'afoo',
-          type: 'vector'
+          type: 'vector',
         },
         arg2: {
           name: 'bfoo',
           type: 'option_string',
           validation_options: {
-            options: []
-          }
-        }
+            options: [],
+          },
+        },
       },
     };
     const uiSpec = {
       order: [Object.keys(spec.args)],
       dropdownFunctions: {
-        arg2: mockGetVectorColumnNames
-      }
+        arg2: mockGetVectorColumnNames,
+      },
     };
     const { findByLabelText, findByText, queryByText } = renderSetupFromSpec(spec, uiSpec);
     const arg1 = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
@@ -349,8 +351,8 @@ describe('UI spec functionality', () => {
     expect(option).toBeNull();
 
     // check that the dropdown option appears when the text field gets a value
-    fireEvent.change(arg1, { target: { value: 'a vector'}});
-    option = await findByText('Field1');  // will raise an error if not found
+    fireEvent.change(arg1, { target: { value: 'a vector' } });
+    option = await findByText('Field1'); // will raise an error if not found
   });
 
   test('Grouping and sorting of args', async () => {

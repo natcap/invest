@@ -17,12 +17,11 @@ import {
 } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 
-/** Setup the objects that store InVEST argument values in SetupTab state.
+/** Initialize values of InVEST args based on the model's UI Spec.
  *
- * One object will store input form values and track if the input has been
- * touched. The other object stores data returned by invest validation.
+ * Values initialize with either a complete args dict, or with empty/default values.
  *
- * @param {object} argsSpec - an InVEST model's ARGS_SPEC.args 
+ * @param {object} argsSpec - an InVEST model's ARGS_SPEC.args
  * @param {object} uiSpec - the model's UI Spec.
  * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
  *
@@ -66,13 +65,14 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
 export default class SetupTab extends React.Component {
   constructor(props) {
     super(props);
+    this._isMounted = false;
 
     this.state = {
       argsValues: null,
       argsValidation: null,
       argsValid: false,
       argsEnabled: null,
-      argsDropdownOptions: null
+      argsDropdownOptions: null,
     };
 
     this.savePythonScript = this.savePythonScript.bind(this);
@@ -93,6 +93,7 @@ export default class SetupTab extends React.Component {
     * that only needs to compute when this.props.argsSpec changes,
     * not on every re-render.
     */
+    this._isMounted = true;
     const { argsInitValues, argsSpec, uiSpec } = this.props;
 
     const {
@@ -119,15 +120,19 @@ export default class SetupTab extends React.Component {
       argsValues: argsValues,
       argsValidation: argsValidation,
       argsEnabled: argsEnabled,
-      argsDropdownOptions: argsDropdownOptions
+      argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
       this.callUISpecFunctions();
     });
   }
 
+  componentWillUnmount() {
+    this._isMounted = false;
+  }
+
   /**
-   * Call functions from the UI spec to determine the enabled/disabled 
+   * Call functions from the UI spec to determine the enabled/disabled
    * state and dropdown options for each input, if applicable.
    *
    * @returns {undefined}
@@ -138,27 +143,29 @@ export default class SetupTab extends React.Component {
     if (enabledFunctions) {
       // this model has some fields that are conditionally enabled
       const { argsEnabled } = this.state;
-      for (const key in enabledFunctions) {
-        // evaluate the function to determine if it should be enabled
-        argsEnabled[key] = await enabledFunctions[key](this.state);
+      Object.keys(enabledFunctions).forEach((key) => {
+        argsEnabled[key] = enabledFunctions[key](this.state);
+      });
+      if (this._isMounted) {
+        this.setState({ argsEnabled: argsEnabled });
       }
-      this.setState({ argsEnabled: argsEnabled });
     }
 
     if (dropdownFunctions) {
       // this model has a dropdown that's dynamically populated
       const { argsDropdownOptions } = this.state;
-      for (const key in dropdownFunctions) {
-        // evaluate the function to get a list of dropdown options
+      await Promise.all(Object.keys(dropdownFunctions).map(async (key) => {
         argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
+      }));
+      if (this._isMounted) {
+        this.setState({ argsDropdownOptions: argsDropdownOptions });
       }
-      this.setState({argsDropdownOptions: argsDropdownOptions});
     }
   }
 
   /**
    * n_workers is a special invest arg stored in global settings
-   * 
+   *
    * @param  {object} argsValues - of the shape returned by `initializeArgValues`.
    * @returns {object} copy of original argsValues with an n_workers property.
    */
@@ -230,7 +237,7 @@ export default class SetupTab extends React.Component {
 
   /** Update state with values and validate a batch of InVEST arguments.
    *
-   * @params {object} argsDict - key: value pairs of InVEST arguments.
+   * @param {object} argsDict - key: value pairs of InVEST arguments.
    */
   batchUpdateArgs(argsDict) {
     const { argsSpec, uiSpec } = this.props;
@@ -279,10 +286,12 @@ export default class SetupTab extends React.Component {
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';
       });
-      this.setState({
-        argsValidation: argsValidation,
-        argsValid: false,
-      });
+      if (this._isMounted) {
+        this.setState({
+          argsValidation: argsValidation,
+          argsValid: false,
+        });
+      }
 
     // B) All args were validated and none were invalid:
     } else {
@@ -293,7 +302,7 @@ export default class SetupTab extends React.Component {
       // It's possible all args were already valid, in which case
       // no validation state has changed and this setState call can
       // be avoided entirely.
-      if (!this.state.argsValid) {
+      if (!this.state.argsValid && this._isMounted) {
         this.setState({
           argsValidation: argsValidation,
           argsValid: true,
@@ -308,7 +317,7 @@ export default class SetupTab extends React.Component {
       argsValid,
       argsValidation,
       argsEnabled,
-      argsDropdownOptions
+      argsDropdownOptions,
     } = this.state;
     if (argsValues) {
       const {
@@ -317,7 +326,7 @@ export default class SetupTab extends React.Component {
         sidebarSetupElementId,
         sidebarFooterElementId,
         isRunning,
-        uiSpec
+        uiSpec,
       } = this.props;
 
       const buttonText = (
@@ -379,7 +388,7 @@ SetupTab.propTypes = {
     PropTypes.shape({
       name: PropTypes.string,
       type: PropTypes.string,
-    }),
+    })
   ).isRequired,
   uiSpec: PropTypes.object,
   argsInitValues: PropTypes.object,
