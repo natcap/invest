@@ -36,6 +36,8 @@
 Unreleased Changes (3.9.1)
 --------------------------
 * General:
+    * Added error-handling for when ``pandas`` fails to decode a non-utf8
+      encoded CSV.
     * Moved the sample data JSON files out of the root sample_data folder and
       into their respective model folders.
     * Updated documentation on installing InVEST from source.
