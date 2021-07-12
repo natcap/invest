@@ -593,7 +593,8 @@ def main(user_args=None):
             # executeable will exit with 'Failed to execute script cli' on an
             # uncaught exception. And that only adds unhelpful noise to stderr.
             except Exception as error:
-                parser.exit(DEFAULT_EXIT_CODE, str(error))
+                LOGGER.exception(error)
+                parser.exit(DEFAULT_EXIT_CODE)
 
     # If we're running in a GUI (either through ``invest run`` or
     # ``invest quickrun``), we'll need to load the Model's GUI class,
