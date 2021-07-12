@@ -8,6 +8,7 @@ import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
+import LoadButton from '../LoadButton';
 import InvestJob from '../../InvestJob';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('/'));
@@ -145,9 +146,16 @@ class RecentInvestJobs extends React.PureComponent {
 
     return (
       <Container>
-        <h4>
-          Recent runs:
-        </h4>
+        <div className="mb-1">
+          <h4 className="d-inline-block">
+            Recent runs:
+          </h4>
+          <LoadButton
+            className="float-right"
+            openInvestModel={this.props.openInvestModel}
+            batchUpdateArgs={this.props.batchUpdateArgs}
+          />
+        </div>
         {recentButtons.length
           ? (
             <React.Fragment>
@@ -156,8 +164,6 @@ class RecentInvestJobs extends React.PureComponent {
           )
           : (
             <div>
-              No recent InVEST runs yet.
-              <br />
               Try the <b>Open</b> button to setup a model from a sample 
               datastack file (.json) or from an invest model's logfile (.txt)
             </div>

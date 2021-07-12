@@ -11,11 +11,9 @@ import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import Container from 'react-bootstrap/Container';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
-import LoadButton from './components/LoadButton';
 import SettingsModal from './components/SettingsModal';
 import {
   DataDownloadModal, DownloadProgressBar
@@ -236,7 +234,7 @@ export default class App extends React.Component {
             onDragOver={dragOverHandlerNone}
           >
             <Row
-              className="w-100 flex-nowrap"
+              className="w-100 flex-nowrap mr-0"
             >
               <Col sm={3} className="px-0">
                 <Navbar.Brand onDragOver={dragOverHandlerNone}>
@@ -249,7 +247,7 @@ export default class App extends React.Component {
                   </Nav.Link>
                 </Navbar.Brand>
               </Col>
-              <Col sm={7} className="pl-1 pr-0">
+              <Col sm={8} className="pl-1 pr-0">
                 <Nav
                   justify
                   variant="tabs"
@@ -271,11 +269,7 @@ export default class App extends React.Component {
                     : <div />
                 }
               </Col>
-              <Col sm={2} className="px-0 text-right">
-                <LoadButton
-                  openInvestModel={this.openInvestModel}
-                  batchUpdateArgs={this.batchUpdateArgs}
-                />
+              <Col sm={1} className="px-0 text-right">
                 {
                   // don't render until after we fetched the data
                   (investSettings)
@@ -300,6 +294,7 @@ export default class App extends React.Component {
                 investList={investList}
                 openInvestModel={this.openInvestModel}
                 recentJobs={recentJobs}
+                batchUpdateArgs={this.batchUpdateArgs}
               />
             </TabPane>
             {investTabPanes}

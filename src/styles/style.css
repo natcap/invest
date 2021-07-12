@@ -135,6 +135,7 @@ body {
 	flex-direction: column;
 	height: 87vh;
 	overflow-y: auto;
+	margin-top: 15px;
 }
 
 .recent-job-card {

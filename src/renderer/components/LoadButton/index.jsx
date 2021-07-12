@@ -42,7 +42,7 @@ export default class LoadButton extends React.Component {
         overlay={<Tooltip>{tipText}</Tooltip>}
       >
         <Button
-          className="mx-3"
+          className={this.props.className}
           onClick={this.browseFile}
           variant="outline-dark"
           onDragOver={dragOverHandlerNone}
