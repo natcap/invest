@@ -247,7 +247,7 @@ export default class App extends React.Component {
                   </Nav.Link>
                 </Navbar.Brand>
               </Col>
-              <Col sm={8} className="pl-1 pr-0">
+              <Col className="pl-1 pr-0 navbar-middle">
                 <Nav
                   justify
                   variant="tabs"
@@ -258,6 +258,8 @@ export default class App extends React.Component {
                 >
                   {investNavItems}
                 </Nav>
+              </Col>
+              <Col className="px-0 text-right navbar-right">
                 {
                   (downloadedNofN)
                     ? (
@@ -268,8 +270,6 @@ export default class App extends React.Component {
                     )
                     : <div />
                 }
-              </Col>
-              <Col sm={1} className="px-0 text-right">
                 {
                   // don't render until after we fetched the data
                   (investSettings)
