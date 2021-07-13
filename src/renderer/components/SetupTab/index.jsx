@@ -6,6 +6,8 @@ import Container from 'react-bootstrap/Container';
 import Spinner from 'react-bootstrap/Spinner';
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
+import Tooltip from 'react-bootstrap/Tooltip';
 
 import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
@@ -381,12 +383,22 @@ export default class SetupTab extends React.Component {
             />
           </Row>
           <Portal elId={sidebarSetupElementId}>
-            <Button
-              onClick={this.browseForDatastack}
-              variant="link"
+            <OverlayTrigger
+              placement="right"
+              delay={{ show: 250, hide: 400 }}
+              overlay={(
+                <Tooltip>
+                  Browse to a datastack (.json) or invest logfile (.txt)
+                </Tooltip>
+              )}
             >
-              Load parameters from file
-            </Button>
+              <Button
+                onClick={this.browseForDatastack}
+                variant="link"
+              >
+                Load parameters from file
+              </Button>
+            </OverlayTrigger>
             <SaveParametersButtons
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}

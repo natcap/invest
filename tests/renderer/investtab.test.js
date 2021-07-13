@@ -2,6 +2,7 @@ import React from 'react';
 import { ipcRenderer } from 'electron';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import userEvent from '@testing-library/user-event';
 
 import InvestTab from '../../src/renderer/components/InvestTab';
 import SetupTab from '../../src/renderer/components/SetupTab';
@@ -154,9 +155,17 @@ describe('Save InVEST Model Setup Buttons', () => {
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText, findByLabelText } = renderInvestTab();
+    const { findByText, findByLabelText, queryByText } = renderInvestTab();
 
     const loadButton = await findByText('Load parameters from file');
+    // test the tooltip before we click
+    userEvent.hover(loadButton);
+    const hoverText = 'Browse to a datastack (.json) or invest logfile (.txt)';
+    expect(await findByText(hoverText)).toBeInTheDocument();
+    userEvent.unhover(loadButton);
+    await waitFor(() => {
+      expect(queryByText(hoverText)).toBeNull();
+    });
     fireEvent.click(loadButton);
 
     const input1 = await findByLabelText(spec.args.workspace.name);
