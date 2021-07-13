@@ -13,7 +13,7 @@ import { fetchDatastackFromFile } from '../../server_requests';
  * Render a button that loads args from a datastack, parameterset, or logfile.
  * Opens a native OS filesystem dialog to browse to a file.
  */
-export default class LoadButton extends React.Component {
+export default class OpenButton extends React.Component {
   constructor(props) {
     super(props);
     this.browseFile = this.browseFile.bind(this);
@@ -52,6 +52,6 @@ export default class LoadButton extends React.Component {
   }
 }
 
-LoadButton.propTypes = {
+OpenButton.propTypes = {
   openInvestModel: PropTypes.func.isRequired,
 };

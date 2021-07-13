@@ -8,7 +8,7 @@ import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
-import LoadButton from '../LoadButton';
+import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('/'));
@@ -150,7 +150,7 @@ class RecentInvestJobs extends React.PureComponent {
           <h4 className="d-inline-block">
             Recent runs:
           </h4>
-          <LoadButton
+          <OpenButton
             className="float-right"
             openInvestModel={this.props.openInvestModel}
             batchUpdateArgs={this.props.batchUpdateArgs}
