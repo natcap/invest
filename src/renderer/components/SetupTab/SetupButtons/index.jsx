@@ -3,7 +3,6 @@ import React from 'react';
 import Button from 'react-bootstrap/Button';
 
 import SaveFileButton from '../../SaveFileButton';
-import { dragOverHandlerNone } from '../../../utils';
 
 export function SaveParametersButtons(props) {
   return (
@@ -30,7 +29,6 @@ export function RunButton(props) {
       size="lg"
       onClick={props.wrapInvestExecute}
       disabled={props.disabled}
-      onDragOver={dragOverHandlerNone}
     >
       {props.buttonText}
     </Button>

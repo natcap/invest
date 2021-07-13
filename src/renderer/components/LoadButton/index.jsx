@@ -8,7 +8,6 @@ import Tooltip from 'react-bootstrap/Tooltip';
 
 import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
-import { dragOverHandlerNone } from '../../utils';
 
 /**
  * Render a button that loads args from a datastack, parameterset, or logfile.
@@ -45,7 +44,6 @@ export default class LoadButton extends React.Component {
           className={this.props.className}
           onClick={this.browseFile}
           variant="outline-dark"
-          onDragOver={dragOverHandlerNone}
         >
           Open
         </Button>

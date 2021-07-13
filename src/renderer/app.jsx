@@ -237,11 +237,10 @@ export default class App extends React.Component {
               className="w-100 flex-nowrap mr-0"
             >
               <Col sm={3} className="px-0">
-                <Navbar.Brand onDragOver={dragOverHandlerNone}>
+                <Navbar.Brand>
                   <Nav.Link
                     onSelect={this.switchTabs}
                     eventKey="home"
-                    onDragOver={dragOverHandlerNone}
                   >
                     InVEST
                   </Nav.Link>
@@ -254,7 +253,6 @@ export default class App extends React.Component {
                   className="mr-auto"
                   activeKey={activeTab}
                   onSelect={this.switchTabs}
-                  onDragOver={dragOverHandlerNone}
                 >
                   {investNavItems}
                 </Nav>
@@ -288,7 +286,10 @@ export default class App extends React.Component {
             </Row>
           </Navbar>
 
-          <TabContent id="top-tab-content">
+          <TabContent
+            id="top-tab-content"
+            onDragOver={dragOverHandlerNone}
+          >
             <TabPane eventKey="home" title="Home">
               <HomeTab
                 investList={investList}

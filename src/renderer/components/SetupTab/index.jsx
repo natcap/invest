@@ -20,7 +20,7 @@ import {
   saveToPython,
   writeParametersToFile
 } from '../../server_requests';
-import { argsDictFromObject, dragOverHandlerNone } from '../../utils';
+import { argsDictFromObject } from '../../utils';
 
 /** Initialize values of InVEST args based on the model's UI Spec.
  *
@@ -369,7 +369,7 @@ export default class SetupTab extends React.Component {
           : <span>Run</span>
       );
       return (
-        <Container fluid onDragOver={dragOverHandlerNone}>
+        <Container fluid>
           <Row>
             <ArgsForm
               argsSpec={argsSpec}

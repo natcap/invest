@@ -4,8 +4,6 @@ import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
 
-import { dragOverHandlerNone } from '../../utils';
-
 /** Render a button that saves current args to a datastack json.
  * Opens an native OS filesystem dialog to browse to a save location.
  * Creates the JSON using datastack.py.
@@ -28,7 +26,6 @@ export default class SaveFileButton extends React.Component {
       <Button
         onClick={this.browseSaveFile}
         variant="link"
-        onDragOver={dragOverHandlerNone}
       >
         {this.props.title}
       </Button>

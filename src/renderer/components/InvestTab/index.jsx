@@ -15,7 +15,6 @@ import SetupTab from '../SetupTab';
 import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
 import { getSpec } from '../../server_requests';
-import { dragOverHandlerNone } from '../../utils';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -207,7 +206,6 @@ export default class InvestTab extends React.Component {
           <Col
             md={3}
             className="invest-sidebar-col"
-            onDragOver={dragOverHandlerNone}
           >
             <Nav
               className="flex-column"
