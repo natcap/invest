@@ -6,7 +6,11 @@ import '@testing-library/jest-dom';
 import InvestTab from '../../src/renderer/components/InvestTab';
 import SetupTab from '../../src/renderer/components/SetupTab';
 import {
-  getSpec, saveToPython, writeParametersToFile, fetchValidation
+  getSpec,
+  saveToPython,
+  writeParametersToFile,
+  fetchValidation,
+  fetchDatastackFromFile
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 
@@ -136,6 +140,31 @@ describe('Save InVEST Model Setup Buttons', () => {
     });
   });
 
+  test('Load Parameters Button: loads parameters', async () => {
+    const mockDatastack = {
+      module_name: spec.module,
+      args: {
+        workspace: 'myworkspace',
+        port: '9999',
+      },
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+    const mockDialogData = {
+      filePaths: ['foo.json']
+    };
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+
+    const { findByText, findByLabelText } = renderInvestTab();
+
+    const loadButton = await findByText('Load parameters from file');
+    fireEvent.click(loadButton);
+
+    const input1 = await findByLabelText(spec.args.workspace.name);
+    expect(input1).toHaveValue(mockDatastack.args.workspace);
+    const input2 = await findByLabelText(spec.args.port.name);
+    expect(input2).toHaveValue(mockDatastack.args.port);
+  });
+
   test('SaveParametersButton: Dialog callback does nothing when canceled', async () => {
     // this resembles the callback data if the dialog is canceled instead of
     // a save file selected.
@@ -174,6 +203,28 @@ describe('Save InVEST Model Setup Buttons', () => {
 
     const saveButton = await findByText('Save to Python script');
     fireEvent.click(saveButton);
+
+    // These are the calls that would have triggered if a file was selected
+    expect(spy).toHaveBeenCalledTimes(0);
+    spy.mockRestore(); // restores to unmocked implementation
+  });
+
+  test('Load Parameters Button: does nothing when canceled', async () => {
+    // this resembles the callback data if the dialog is canceled instead of 
+    // a save file selected.
+    const mockDialogData = {
+      filePaths: ['']
+    };
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    // Spy on this method so we can assert it was never called.
+    // Don't forget to restore! Otherwise the beforeEach will 'resetAllMocks'
+    // will silently turn this spy into a function that returns nothing.
+    const spy = jest.spyOn(SetupTab.prototype, 'loadParametersFromFile');
+
+    const { findByText } = renderInvestTab();
+
+    const loadButton = await findByText('Load parameters from file');
+    fireEvent.click(loadButton);
 
     // These are the calls that would have triggered if a file was selected
     expect(spy).toHaveBeenCalledTimes(0);

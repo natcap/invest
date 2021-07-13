@@ -345,7 +345,6 @@ export default class SetupTab extends React.Component {
     if (argsValues) {
       const {
         argsSpec,
-        pyModuleName,
         sidebarSetupElementId,
         sidebarFooterElementId,
         isRunning,
