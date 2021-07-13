@@ -44,14 +44,7 @@ export default class ArgsForm extends React.Component {
       alert('Only drop one file at a time.');
       return;
     }
-    const datastack = await fetchDatastackFromFile(fileList[0].path);
-
-    if (datastack.module_name === this.props.pyModuleName) {
-      this.props.batchUpdateArgs(datastack.args);
-    } else {
-      alert(
-        `Parameter/Log file for ${datastack.module_name} does not match this model: ${this.props.pyModuleName}`);
-    }
+    this.props.loadParametersFromFile(fileList[0].path);
   }
 
   /** Handle drag enter events for the Form elements. */
@@ -202,6 +195,5 @@ ArgsForm.propTypes = {
     PropTypes.arrayOf(PropTypes.string),
   ).isRequired,
   updateArgValues: PropTypes.func.isRequired,
-  batchUpdateArgs: PropTypes.func.isRequired,
-  pyModuleName: PropTypes.string.isRequired,
+  loadParametersFromFile: PropTypes.func.isRequired,
 };
