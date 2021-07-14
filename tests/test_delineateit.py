@@ -110,6 +110,7 @@ class DelineateItTests(unittest.TestCase):
     def test_delineateit_validate(self):
         """DelineateIt: test validation function."""
         from natcap.invest.delineateit import delineateit
+        from natcap.invest import validation
         missing_keys = {}
         validation_warnings = delineateit.validate(missing_keys)
         self.assertEqual(len(validation_warnings), 2)
@@ -163,7 +164,8 @@ class DelineateItTests(unittest.TestCase):
              (['outlet_vector_path'], (
                  'File could not be opened as a GDAL vector')),
              (['snap_distance'], (
-                 "Value 'fooooo' could not be interpreted as a number"))])
+                validation.NOT_A_NUMBER_MSG %
+                bad_spatial_files_args['snap_distance']))])
 
     def test_point_snapping(self):
         """DelineateIt: test point snapping."""

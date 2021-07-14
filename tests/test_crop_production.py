@@ -223,7 +223,7 @@ class CropProductionTests(unittest.TestCase):
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
             'nitrogen_fertilization_rate': 29.6,
-            'phosphorous_fertilization_rate': 8.4,
+            'phosphorus_fertilization_rate': 8.4,
             'potassium_fertilization_rate': 14.2,
             'n_workers': '-1'
         }
@@ -254,7 +254,7 @@ class CropProductionTests(unittest.TestCase):
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
             'nitrogen_fertilization_rate': 29.6,
-            'phosphorous_fertilization_rate': 8.4,
+            'phosphorus_fertilization_rate': 8.4,
             'potassium_fertilization_rate': 14.2,
             'n_workers': '-1'
         }
@@ -308,7 +308,7 @@ class CropProductionTests(unittest.TestCase):
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
             'nitrogen_fertilization_rate': 29.6,
-            'phosphorous_fertilization_rate': 8.4,
+            'phosphorus_fertilization_rate': 8.4,
             'potassium_fertilization_rate': 14.2,
         }
 
@@ -355,7 +355,7 @@ class CropProductionTests(unittest.TestCase):
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
             'nitrogen_fertilization_rate': 29.6,
-            'phosphorous_fertilization_rate': 8.4,
+            'phosphorus_fertilization_rate': 8.4,
             'potassium_fertilization_rate': 14.2,
         }
 

@@ -18,6 +18,8 @@ import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 from . import sdr_core
 
@@ -33,15 +35,12 @@ ARGS_SPEC = {
         "different_projections_ok": False,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "dem_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            **spec_utils.DEM,
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file with an elevation value for "
                 "each cell.  Make sure the DEM is corrected by filling in "
@@ -49,111 +48,115 @@ ARGS_SPEC = {
                 "the elevation model (recommended when unusual streams are "
                 "observed.) See the 'Working with the DEM' section of the "
                 "InVEST User's Guide for more information."),
-            "name": "Digital Elevation Model"
         },
         "erosivity_path": {
             "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            "bands": {1: {
+                "type": "number",
+                "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file, with an erosivity index value "
                 "for each cell.  This variable depends on the intensity and "
                 "duration of rainfall in the area of interest.  The greater "
-                "the intensity and duration of the rain storm, the higher "
-                "the erosion potential. The erosivity index is widely used, "
-                "but in case of its absence, there are methods and equations "
-                "to help generate a grid using climatic data.  The units are "
-                "MJ*mm/(ha*h*yr)."),
+                "the intensity and duration of the rain storm, the higher the "
+                "erosion potential. The erosivity index is widely used, but "
+                "in case of its absence, there are methods and equations to "
+                "help generate a grid using climatic data."),
             "name": "Rainfall Erosivity Index (R)"
         },
         "erodibility_path": {
             "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file, with a soil erodibility value "
                 "for each cell which is a measure of the susceptibility of "
                 "soil particles to detachment and transport by rainfall and "
-                "runoff.  Units are in T*ha*h/(ha*MJ*mm)."),
+                "runoff."),
             "name": "Soil Erodibility"
         },
         "lulc_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file, with an integer LULC code "
-                "for each cell."),
-            "name": "Land-Use/Land-Cover"
+            **spec_utils.LULC,
+            "projected": True
         },
         "watersheds_path": {
-            "validation_options": {
-                "required_fields": ["ws_id"],
-                "projected": True,
-            },
             "type": "vector",
-            "required": True,
+            "fields": {
+                "ws_id": {"type": "code"}
+            },
+            "geometries": spec_utils.POLYGONS,
+            "projected": True,
             "about": (
                 "This is a layer of polygons representing watersheds such "
-                "that each watershed contributes to a point of interest "
-                "where water quality will be analyzed.  It must have the "
-                "integer field 'ws_id' where the values uniquely identify "
-                "each watershed."),
+                "that each watershed contributes to a point of interest where "
+                "water quality will be analyzed.  It must have the integer "
+                "field 'ws_id' where the values uniquely identify each "
+                "watershed."),
             "name": "Watersheds"
         },
         "biophysical_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "usle_c", "usle_p"],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "lucode": {"type": "code"},
+                "usle_c": {
+                    "type": "ratio",
+                    "about": "Cover-management factor for the USLE"},
+                "usle_p": {
+                    "type": "ratio",
+                    "about": "Support practice factor for the USLE"}
+            },
             "about": (
                 "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input.  It "
-                "must contain the fields 'lucode', 'usle_c', and 'usle_p'.  "
-                "See the InVEST Sediment User's Guide for more information "
-                "about these fields."),
+                "each of the land use classes in the LULC raster input."),
             "name": "Biophysical Table"
         },
         "threshold_flow_accumulation": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            "expression": "value > 0",
             "type": "number",
-            "required": True,
+            "units": u.pixel,
             "about": (
                 "The number of upstream cells that must flow into a cell "
                 "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream.  "
+                "stops and the remaining export is exported to the stream. "
                 "Used to define streams from the DEM."),
             "name": "Threshold Flow Accumulation"
         },
         "k_param": {
             "type": "number",
-            "required": True,
+            "units": u.none,
             "about": "Borselli k parameter.",
             "name": "Borselli k Parameter"
         },
         "sdr_max": {
-            "type": "number",
-            "required": True,
+            "type": "ratio",
             "about": "Maximum SDR value.",
             "name": "Max SDR Value"
         },
         "ic_0_param": {
             "type": "number",
-            "required": True,
+            "units": u.none,
             "about": "Borselli IC0 parameter.",
             "name": "Borselli IC0 Parameter"
         },
+        "l_max": {
+            "type": "number",
+            "expression": "value > 0",
+            "units": u.none,
+            "about": (
+                "Values of L (the slope length component of the LS "
+                "slope length * slope gradient factor) larger than this value "
+                "will be clamped to this value. Ranges of 122-333 (unitless) "
+                "are found in relevant literature such as "
+                "Desmet and Govers, 1996 and Renard et al., 1997 "
+                "(see user's guide)."),
+            "name": "Max L Value",
+        },
         "drainage_path": {
             "type": "raster",
+            "bands": {1: {"type": "number", "units": u.none}},
             "required": False,
             "about": (
                 "An optional GDAL-supported raster file mask, that indicates "
@@ -400,6 +403,7 @@ def execute(args):
             f_reg['flow_accumulation_path'],
             f_reg['slope_path'],
             f_reg['weighted_avg_aspect_path'],
+            float(args['l_max']),
             f_reg['ls_path']),
         target_path_list=[f_reg['ls_path']],
         dependent_task_list=[
@@ -661,8 +665,8 @@ def execute(args):
 
 
 def _calculate_ls_factor(
-        flow_accumulation_path, slope_path, avg_aspect_path,
-        out_ls_prime_factor_path):
+        flow_accumulation_path, slope_path, avg_aspect_path, l_max,
+        target_ls_prime_factor_path):
     """Calculate LS factor.
 
     Calculates a modified LS factor as Equation 3 from "Extension and
@@ -678,7 +682,9 @@ def _calculate_ls_factor(
         slope_path (string): path to slope raster as a percent
         avg_aspect_path (string): The path to to raster of the weighted average
             of aspects based on proportional flow.
-        out_ls_prime_factor_path (string): path to output ls_prime_factor
+        l_max (float): if the calculated value of L exceeds this value
+            it is clamped to this value.
+        target_ls_prime_factor_path (string): path to output ls_prime_factor
             raster
 
     Returns:
@@ -695,13 +701,15 @@ def _calculate_ls_factor(
     cell_size = abs(flow_accumulation_info['pixel_size'][0])
     cell_area = cell_size ** 2
 
-    def ls_factor_function(percent_slope, flow_accumulation, avg_aspect):
+    def ls_factor_function(
+            percent_slope, flow_accumulation, avg_aspect, l_max):
         """Calculate the LS' factor.
 
         Args:
             percent_slope (numpy.ndarray): slope in percent
             flow_accumulation (numpy.ndarray): upstream pixels
             avg_aspect (numpy.ndarray): the weighted average aspect from MFD
+            l_max (float): max L factor, clamp to this value if L exceeds it
 
         Returns:
             ls_factor
@@ -727,7 +735,7 @@ def _calculate_ls_factor(
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
         beta = (
-            (numpy.sin(slope_in_radians) / 0.0986) /
+            (numpy.sin(slope_in_radians) / 0.0896) /
             (3 * numpy.sin(slope_in_radians)**0.8 + 0.56))
 
         # Set m value via lookup table: Table 1 in
@@ -745,26 +753,24 @@ def _calculate_ls_factor(
             beta[big_slope_mask] / (1 + beta[big_slope_mask]))
         m_exp[~big_slope_mask] = m_table[m_indexes]
 
-        # from McCool paper: "as a final check against excessively long slope
-        # length calculations ... cap of 333m"
-        # from Rafa, this should really be the upstream area capped to
-        # "333^2 m^2" because McCool is 1D
-        contributing_area[contributing_area > 333**2] = 333**2
-
-        ls_prime_factor = (
+        l_factor = (
             ((contributing_area + cell_area)**(m_exp+1) -
              contributing_area ** (m_exp+1)) /
             ((cell_size ** (m_exp + 2)) * (avg_aspect[valid_mask]**m_exp) *
              (22.13**m_exp)))
 
-        result[valid_mask] = ls_prime_factor * slope_factor
+        # threshold L factor to l_max
+        l_factor[l_factor > l_max] = l_max
+
+        result[valid_mask] = l_factor * slope_factor
         return result
 
     # call vectorize datasets to calculate the ls_factor
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in [
-            slope_path, flow_accumulation_path, avg_aspect_path]],
-        ls_factor_function, out_ls_prime_factor_path, gdal.GDT_Float32,
+            slope_path, flow_accumulation_path, avg_aspect_path]] + [
+            (l_max, 'raw')],
+        ls_factor_function, target_ls_prime_factor_path, gdal.GDT_Float32,
         _TARGET_NODATA)
 
 
@@ -1299,9 +1305,13 @@ def _generate_report(
         sed_deposition_path, watershed_results_sdr_path):
     """Create shapefile with USLE, sed export, retention, and deposition."""
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
+    if os.path.exists(watershed_results_sdr_path):
+        LOGGER.warning(f'overwriting results at {watershed_results_sdr_path}')
+        os.remove(watershed_results_sdr_path)
     driver = gdal.GetDriverByName('ESRI Shapefile')
     target_vector = driver.CreateCopy(
         watershed_results_sdr_path, original_datasource)
+
     target_layer = target_vector.GetLayer()
     target_layer.SyncToDisk()
 

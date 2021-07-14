@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := b7a51f189315e08484b5ba997a5c1de88ab7f06d
+GIT_SAMPLE_DATA_REPO_REV    := f8c3ef11d06cee9d6f5a07f48057c05939e83028
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 39d4f500ad55463c106b36cca632cd342229c1eb
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 69993168d50422593a39ea5b47cc87e8b94122a1
+GIT_UG_REPO_REV              := c53f85cec40c830ddd5b18a61e97c48607dd0ef9
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -202,6 +202,7 @@ $(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs install
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) checkout $(GIT_SAMPLE_DATA_REPO_REV)
+	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs checkout
 
 $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_TEST_DATA_REPO) $(GIT_TEST_DATA_REPO_PATH)
@@ -209,6 +210,7 @@ $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs install
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
+	git -C $(GIT_TEST_DATA_REPO_PATH) lfs checkout
 
 fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
 
@@ -233,7 +235,7 @@ install: $(DIST_DIR)/natcap.invest%.whl
 	$(PIP) install --isolated --upgrade --no-index --only-binary natcap.invest --find-links=dist natcap.invest
 
 
-# Bulid python packages and put them in dist/
+# Build python packages and put them in dist/
 python_packages: $(DIST_DIR)/natcap.invest%.whl $(DIST_DIR)/natcap.invest%.zip
 $(DIST_DIR)/natcap.invest%.whl: | $(DIST_DIR)
 	$(PYTHON) setup.py bdist_wheel
@@ -266,9 +268,16 @@ $(APIDOCS_TARGET_DIR): | $(DIST_DIR)
 $(APIDOCS_ZIP_FILE): $(APIDOCS_TARGET_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_TARGET_DIR))"
 
+# need to get the working directory path because ln doesn't work with relative paths
+WORKING_DIR := $(shell pwd)
+ifeq ($(OS),Windows_NT)
+	# this setting is necessary for ln to work on git bash for windows
+	export MSYS = winsymlinks:nativestrict
+endif
 # Userguide HTML docs are copied to dist/userguide
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
-$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
+$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
+	ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
 	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
 

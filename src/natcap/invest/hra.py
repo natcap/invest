@@ -15,6 +15,8 @@ import taskgraph
 import pygeoprocessing
 
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 
@@ -68,9 +70,9 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "habitat_risk_assessment.html",
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "info_table_path": {
             "name": "Habitat Stressor Information CSV or Excel File",
             "about": (
@@ -81,11 +83,48 @@ ARGS_SPEC = {
                 "The `STRESSOR BUFFER (meters)` column should have a buffer "
                 "value if the `TYPE` column is a stressor."),
             "type": "csv",
-            "required": True,
-            "validation_options": {
-                "required_fields": ["NAME", "PATH", "TYPE", _BUFFER_HEADER],
-                "excel_ok": True,
-            }
+            "columns": {
+                "name": {
+                    "type": "freestyle_string",
+                    "about": "A unique name for each habitat/stressor input"
+                },
+                "path": {
+                    "type": {"vector", "raster"},
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none,
+                        "about": (
+                            "Pixel values are 1, indicating presence of the "
+                            "habitat/stressor, or 0 indicating absence. Any "
+                            "values besides 0 or 1 will be treated as 0.")
+                    }
+                    },
+                    "fields": {},
+                    "geometries": spec_utils.POLYGONS
+                },
+                "type": {
+                    "type": "option_string",
+                    "options": {
+                        "habitat": "This row is a habitat layer",
+                        "stressor": "This row is a stressor layer"
+                    }
+                },
+                "stressor buffer (meters)": {
+                    "type": "number",
+                    "units": u.meter,
+                    "about": (
+                        "The desired buffer distance used to expand a given "
+                        "stressor’s influence or footprint. This should be "
+                        "left blank for habitats, but must not be blank for "
+                        "stressors. Enter 0 if no buffering is desired for a "
+                        "given stressor. The model will round down this "
+                        "buffer distance to the nearest cell unit. e.g., a "
+                        "buffer distance of 600m will buffer a stressor’s "
+                        "footprint by two grid cells if the resolution of "
+                        "analysis is 250m.")
+                }
+            },
+            "excel_ok": True
         },
         "criteria_table_path": {
             "name": "Criteria Scores Table",
@@ -94,10 +133,7 @@ ARGS_SPEC = {
                 "ranking  (rating, DQ and weight) of each stressor on each "
                 "habitat, as well as the habitat resilience attributes."),
             "type": "csv",
-            "validation_options": {
-                "excel_ok": True,
-            },
-            "required": True,
+            "excel_ok": True,
         },
         "resolution": {
             "name": "Resolution of Analysis (meters)",
@@ -106,10 +142,8 @@ ARGS_SPEC = {
                 "stressor files into rasters. This value will be the pixel "
                 "size of the completed raster files."),
             "type": "number",
-            "required": True,
-            "validation_options": {
-                "expression": "value > 0",
-            }
+            "units": u.meter,
+            "expression": "value > 0",
         },
         "max_rating": {
             "name": "Maximum Criteria Score",
@@ -119,58 +153,52 @@ ARGS_SPEC = {
                 "with the values within Rating column of the Criteria Scores "
                 "table."),
             "type": "number",
-            "required": True,
-            "validation_options": {
-                "expression": "value > 0",
-            }
+            "units": u.none,
+            "expression": "value > 0"
         },
         "risk_eq": {
             "name": "Risk Equation",
             "about": (
                 "Each of these represents an option of a risk calculation "
-                "equation. This will determine the numeric output of risk "
-                "for every habitat and stressor overlap area."),
+                "equation. This will determine the numeric output of risk for "
+                "every habitat and stressor overlap area."),
             "type": "option_string",
-            "required": True,
-            "validation_options": {
-                "options": ["Multiplicative", "Euclidean"],
-            }
+            "options": {"Multiplicative", "Euclidean"}
         },
         "decay_eq": {
             "name": "Decay Equation",
             "about": (
-                "Each of these represents an option of a decay equation "
-                "for the buffered stressors. If stressor buffering is "
-                "desired, this equation will determine the rate at which "
-                "stressor data is reduced."),
+                "Each of these represents an option of a decay equation for "
+                "the buffered stressors. If stressor buffering is desired, "
+                "this equation will determine the rate at which stressor data "
+                "is reduced."),
             "type": "option_string",
-            "required": True,
-            "validation_options": {
-                "options": ["None", "Linear", "Exponential"],
-            }
+            "options": {"None", "Linear", "Exponential"}
         },
         "aoi_vector_path": {
-            "name": "Area of Interest",
+            **spec_utils.AOI,
+            "projected": True,
+            "projection_units": u.meter,
+            "fields": {
+                "name": {
+                    "required": False,
+                    "type": "freestyle_string",
+                    "about": (
+                        "Uniquely identifies each feature. Required if "
+                        "the vector contains more than one feature.")
+                }
+            },
             "about": (
                 "A GDAL-supported vector file containing feature containing "
-                "one or more planning regions. subregions. An optional field "
-                "called `name` could be added to compute average risk values "
-                "within each subregion."),
-            "type": "vector",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-                "projection_units": "m",
-            }
+                "one or more planning regions or subregions."),
         },
         "visualize_outputs": {
             "name": "Generate GeoJSONs for Web Visualization",
-            "help": (
+            "about": (
                 "Check to enable the generation of GeoJSON outputs. This "
                 "could be used to visualize the risk scores on a map in the "
                 "HRA visualization web application."),
             "type": "boolean",
-            "required": True,
         }
     }
 }
@@ -479,8 +507,8 @@ def execute(args):
                          float(args['resolution'])/linear_unit)
     distance_transform_tasks = []
     for (align_raster_path, dist_raster_path, stressor_name) in zip(
-         align_stressor_raster_list, dist_stressor_raster_list,
-         stressor_names):
+        align_stressor_raster_list, dist_stressor_raster_list,
+            stressor_names):
 
         distance_transform_task = task_graph.add_task(
             func=pygeoprocessing.distance_transform_edt,
@@ -562,7 +590,7 @@ def execute(args):
 
             # Convert stressor buffer from meters to projection unit
             stressor_buffer = stressor_info_df[_BUFFER_HEADER].item() / float(
-                    stressor_info_df['LINEAR_UNIT'].item())
+                stressor_info_df['LINEAR_UNIT'].item())
 
             # Calculate exposure scores on each habitat-stressor pair
             pair_expo_target_path_list = [
@@ -2326,7 +2354,7 @@ def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
         return path
     # Habitat rasters do not need to be transformed
     elif (suffix_front == 'dist_' or suffix_front == 'buff_') and (
-          row['TYPE'] == _HABITAT_TYPE):
+            row['TYPE'] == _HABITAT_TYPE):
         return None
 
     return target_raster_path
@@ -2394,7 +2422,7 @@ def _label_linear_unit(row):
             to transform them to meters
 
     Raises:
-        ValueError if any of the file's spatial reference is missing or if 
+        ValueError if any of the file's spatial reference is missing or if
             any of the file's are not linearly projected.
 
     """
@@ -2460,8 +2488,8 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     file_ext = os.path.splitext(base_info_table_path)[1].lower()
     if file_ext == '.csv':
         # use sep=None, engine='python' to infer what the separator is
-        info_df = pandas.read_csv(base_info_table_path, sep=None, 
-            engine='python')
+        info_df = pandas.read_csv(base_info_table_path, sep=None,
+                                  engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         info_df = pandas.read_excel(base_info_table_path)
     else:
@@ -2584,11 +2612,11 @@ def _get_criteria_dataframe(base_criteria_table_path):
     file_ext = os.path.splitext(base_criteria_table_path)[1].lower()
     if file_ext == '.csv':
         # use sep=None, engine='python' to infer what the separator is
-        criteria_df = pandas.read_csv(base_criteria_table_path, 
-            index_col=0, header=None, sep=None, engine='python')
+        criteria_df = pandas.read_csv(base_criteria_table_path,
+                                      index_col=0, header=None, sep=None, engine='python')
     elif file_ext in ['.xlsx', '.xls']:
-        criteria_df = pandas.read_excel(base_criteria_table_path, 
-            index_col=0, header=None)
+        criteria_df = pandas.read_excel(base_criteria_table_path,
+                                        index_col=0, header=None)
     else:
         raise ValueError('Criteria table %s is not a CSV or an Excel file.' %
                          base_criteria_table_path)
@@ -2596,8 +2624,8 @@ def _get_criteria_dataframe(base_criteria_table_path):
     # Drop columns that have all NA values
     criteria_df.dropna(axis=1, how='all', inplace=True)
 
-    # Convert empty cells (those that are not in string or unicode format) to
-    # None
+    # Convert empty cells (those that are not in string or unicode format)
+    # to None
     criteria_df.index = [x if isinstance(x, str) else None
                          for x in criteria_df.index]
 
@@ -2728,7 +2756,8 @@ def _validate_rating(
 
     Args:
         rating (str): a string of either digit or file path. If it's a digit,
-            it should range between 1 to maximum rating.
+            it should range between 1 to maximum rating. It could be a filepath
+            if the user is using spatially-explicit ratings.
         max_rating (float): a number representing the highest value that
             is represented in criteria rating.
         criteria_name (str): the name of the criteria attribute where rating
@@ -2738,46 +2767,46 @@ def _validate_rating(
             None when we're checking the habitat-only attributes. (optional)
 
     Returns:
-        _rating_lg_one (bool): a value indicating if the rating is at least 1.
+        True for values from 1 to max_rating.
+        False for values less than 1.
 
     Raises:
-        A ValueError if the rating score is larger than the maximum rating that
-            the user indicates.
+        ValueError if the rating score is larger than the maximum rating
+            or if the rating is numpy.nan, indicating a missing rating.
 
     """
-    _rating_lg_one = True
+    try:
+        num_rating = float(rating)
+    except ValueError:
+        # assume it's a path to a file, which is validated elsewhere
+        return True
 
-    # Rating might be a string of path or a string of digit. Validate the value
-    # when it's a digit
-    if isinstance(rating, str) and rating.isdigit():
-        rating = float(rating)
-        # If rating is less than 1, ignore this criteria attribute
-        if rating < 1:
-            _rating_lg_one = False
-            warning_message = '"%s" for habitat %s' % (criteria_name, habitat)
-            if stressor:
-                warning_message += (' and stressor %s' % stressor)
-            warning_message += (
-                ' has a rating %s less than 1, so this criteria attribute is '
-                'ignored in calculation.' % rating)
-            LOGGER.warning(warning_message)
+    message_prefix = '"%s" for habitat %s' % (criteria_name, habitat)
+    if stressor:
+        message_prefix += (' and stressor %s' % stressor)
 
-        # Raise an exception if rating is larger than the maximum rating that
-        # the user specified
-        elif rating > float(max_rating):
-            error_message = '"%s" for habitat %s' % (criteria_name, habitat)
-            if stressor:
-                error_message += (' and stressor %s' % stressor)
-            error_message += (
-                ' has a rating %s larger than the maximum rating %s. '
-                'Please check your criteria table.' % (rating, max_rating))
-            raise ValueError(error_message)
+    if num_rating < 1:
+        warning_message = message_prefix + (
+            ' has a rating %s less than 1, so this criteria attribute is '
+            'ignored in calculation.' % num_rating)
+        LOGGER.warning(warning_message)
+        return False
 
-    return _rating_lg_one
+    if num_rating > float(max_rating):
+        error_message = message_prefix + (
+            ' has a rating %s larger than the maximum rating %s. '
+            'Please check your criteria table.' % (rating, max_rating))
+        raise ValueError(error_message)
+
+    if numpy.isnan(num_rating):
+        raise ValueError(
+            f'{message_prefix} has no rating. Please check the criteria table.')
+
+    return True
 
 
 def _validate_dq_weight(dq, weight, habitat, stressor=None):
-    """Check if DQ and Weight column values are numbers.
+    """Check if DQ and Weight column values are numbers and not 0.
 
     Args:
         dq (str): a string representing the value of data quality score.
@@ -2790,7 +2819,7 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
         None
 
     Raises:
-        ValueError if the value of the DQ or weight is not a number.
+        ValueError if the value of the DQ or weight is 0 or not a number.
 
     """
     for key, value in {
@@ -2799,17 +2828,18 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
 
         # The value might be NaN or a string of non-digit, therefore check for
         # both cases
-        if (isinstance(value, (float, int)) and numpy.isnan(value)) or (
-                isinstance(value, str) and not value.isdigit()):
-            error_message = (
-                'Values in the %s column for habitat "%s" ' % (key, habitat))
+        error_message = (
+            'Values in the %s column for habitat "%s" ' % (key, habitat))
+        if stressor:
+            error_message += 'and stressor "%s"' % stressor
+        error_message += ' should be a number, but is "%s".' % value
 
-            # Format the error message based on whether stressor name is given
-            if stressor:
-                error_message += 'and stressor "%s"' % stressor
+        try:
+            num_value = float(value)
+        except ValueError:
+            raise ValueError(error_message)
 
-            error_message += ' should be a number, but is "%s".' % value
-
+        if numpy.isnan(num_value) or num_value == 0:
             raise ValueError(error_message)
 
 
@@ -2883,95 +2913,76 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
         # If stressor exists and the row index is not None
         elif stressor and row_idx:
             criteria_name = row_idx
-            criteria_type = row_data[_CRITERIA_TYPE_HEADER]
+            criteria_type = row_data.pop(_CRITERIA_TYPE_HEADER)
             criteria_type = criteria_type.upper()
             if criteria_type not in ['E', 'C']:
                 raise ValueError('Criteria Type in the criteria scores table '
                                  'should be either E or C.')
 
-            for idx, (row_key, row_value) in enumerate(row_data.items()):
-                # The first value in the criteria row should be a rating value
-                # with habitat name as key, after a stressor was found
-                if idx % 3 == 0:
-                    if row_key in habitat_names:
-                        habitat = row_key
+            # Values are always grouped in threes (rating, dq, weight)
+            for idx in range(0, row_data.size, 3):
+                habitat = row_data.keys()[idx]
+                rating = row_data[idx]
+                dq = row_data[idx + 1]
+                weight = row_data[idx + 2]
 
-                        # Create E or C raster paths on habitat-stressor pair
-                        overlap_df.loc[
-                            (habitat, stressor),
-                            criteria_type + '_RASTER_PATH'] = os.path.join(
-                                output_dir, criteria_type + '_' + habitat
-                                + '_' + stressor + suffix + '.tif')
-                        overlap_df.loc[
-                            (habitat, stressor),
-                            criteria_type + '_NUM_RASTER_PATH'] = os.path.join(
-                                inter_dir, criteria_type + '_num_' +
-                                habitat + '_' + stressor + suffix + '.tif')
+                # Create E or C raster paths on habitat-stressor pair
+                overlap_df.loc[
+                    (habitat, stressor),
+                    criteria_type + '_RASTER_PATH'] = os.path.join(
+                        output_dir, criteria_type + '_' + habitat
+                        + '_' + stressor + suffix + '.tif')
+                overlap_df.loc[
+                    (habitat, stressor),
+                    criteria_type + '_NUM_RASTER_PATH'] = os.path.join(
+                        inter_dir, criteria_type + '_num_' +
+                        habitat + '_' + stressor + suffix + '.tif')
 
-                        # Create individual habitat-stressor risk raster path
-                        overlap_df.loc[
-                            (habitat, stressor),
-                            'PAIR_RISK_RASTER_PATH'] = os.path.join(
-                                output_dir, 'RISK_' +
-                                habitat + '_' + stressor + suffix + '.tif')
+                # Create individual habitat-stressor risk raster path
+                overlap_df.loc[
+                    (habitat, stressor),
+                    'PAIR_RISK_RASTER_PATH'] = os.path.join(
+                        output_dir, 'RISK_' +
+                        habitat + '_' + stressor + suffix + '.tif')
 
-                        # Create pickle file path that stores zonal stats dict
-                        overlap_df.loc[
-                            (habitat, stressor), criteria_type +
-                            '_PICKLE_STATS_PATH'] = os.path.join(
-                                inter_dir, criteria_type + '_' +
-                                habitat + '_' + stressor + suffix + '_.pickle')
-                        overlap_df.loc[
-                            (habitat, stressor),
-                            'PAIR_RISK_PICKLE_STATS_PATH'] = os.path.join(
-                                inter_dir, 'risk_' +
-                                habitat + '_' + stressor + suffix + '_.pickle')
+                # Create pickle file path that stores zonal stats dict
+                overlap_df.loc[
+                    (habitat, stressor), criteria_type +
+                    '_PICKLE_STATS_PATH'] = os.path.join(
+                        inter_dir, criteria_type + '_' +
+                        habitat + '_' + stressor + suffix + '_.pickle')
+                overlap_df.loc[
+                    (habitat, stressor),
+                    'PAIR_RISK_PICKLE_STATS_PATH'] = os.path.join(
+                        inter_dir, 'risk_' +
+                        habitat + '_' + stressor + suffix + '_.pickle')
 
-                        # If rating is less than 1, skip this criteria row
-                        rating = row_value
-                        if not _validate_rating(
-                                rating, max_rating, criteria_name, habitat,
-                                stressor):
-                            continue
+                _ = _validate_rating(
+                    rating, max_rating, criteria_name, habitat, stressor)
 
-                    # If the first value is not a rating value, break the loop
-                    # since it has reaches the end of the criteria row
-                    else:
-                        break
+                # Check the DQ and weight values when we have collected
+                # both of them
+                _validate_dq_weight(dq, weight, habitat, stressor)
+                # Calculate cumulative numerator score if rating is a digit
+                if (isinstance(rating, str) and rating.isdigit()) or (
+                        isinstance(rating, (int, float))):
+                    overlap_df.loc[(habitat, stressor),
+                                   criteria_type + '_NUM'] += \
+                        float(rating)/float(dq)/float(weight)
 
-                # The second value in the row should be data quality (dq) for
-                # that habitat-stressor criteria
-                elif idx % 3 == 1:
-                    dq = row_value
-
-                # The third value in the row should be weight for the habitat-
-                # stressor criteria
+                # Save the rating, dq, and weight to the spatial criteria
+                # dictionary in the dataframe if rating is not a number
                 else:
-                    weight = row_value
-
-                    # Check the DQ and weight values when we have collected
-                    # both of them
-                    _validate_dq_weight(dq, weight, habitat, stressor)
-                    # Calculate cumulative numerator score if rating is a digit
-                    if (isinstance(rating, str) and rating.isdigit()) or (
-                            isinstance(rating, (int, float))):
-                        overlap_df.loc[(habitat, stressor),
-                                       criteria_type + '_NUM'] += \
-                            float(rating)/float(dq)/float(weight)
-
-                    # Save the rating, dq, and weight to the spatial criteria
-                    # dictionary in the dataframe if rating is not a number
-                    else:
-                        overlap_df.loc[
-                            (habitat, stressor),
-                            criteria_type + '_SPATIAL']['_'.join(
-                                [habitat, stressor, criteria_name])] = [
-                                    rating, dq, weight]
-
-                    # Calculate the cumulative denominator score
                     overlap_df.loc[
-                        (habitat, stressor), criteria_type + '_DENOM'] += \
-                        1/float(dq)/float(weight)
+                        (habitat, stressor),
+                        criteria_type + '_SPATIAL']['_'.join(
+                            [habitat, stressor, criteria_name])] = [
+                                rating, dq, weight]
+
+                # Calculate the cumulative denominator score
+                overlap_df.loc[
+                    (habitat, stressor), criteria_type + '_DENOM'] += \
+                    1/float(dq)/float(weight)
 
     # If any stressor-habitat doesn't have at least one E or C criteria rating,
     # raise an exception

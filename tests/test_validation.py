@@ -16,6 +16,7 @@ import pandas
 
 class SpatialOverlapTest(unittest.TestCase):
     """Test Spatial Overlap."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -24,8 +25,8 @@ class SpatialOverlapTest(unittest.TestCase):
         """Remove the workspace created for this test."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_no_overlap_no_reference(self):
-        """Validation: verify lack of overlap without a reference."""
+    def test_no_overlap(self):
+        """Validation: verify lack of overlap."""
         from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GTiff')
@@ -45,8 +46,8 @@ class SpatialOverlapTest(unittest.TestCase):
         error_msg = validation.check_spatial_overlap([filepath_1, filepath_2])
         self.assertTrue('Bounding boxes do not intersect' in error_msg)
 
-    def test_overlap_no_reference(self):
-        """Validation: verify overlap without a reference."""
+    def test_overlap(self):
+        """Validation: verify overlap."""
         from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GTiff')
@@ -66,47 +67,71 @@ class SpatialOverlapTest(unittest.TestCase):
         self.assertEqual(
             None, validation.check_spatial_overlap([filepath_1, filepath_2]))
 
-    def test_no_overlap_with_reference(self):
-        """Validation: verify lack of overlap given reference projection."""
+    def test_check_overlap_undefined_projection(self):
+        """Validation: check overlap of raster with an undefined projection."""
         from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GTiff')
         filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
         filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
-        reference_filepath = os.path.join(self.workspace_dir, 'reference.gpkg')
 
-        # Filepaths 1 and 2 are obviously outside of UTM zone 31N.
-        for filepath, geotransform, epsg_code in (
+        raster_1 = driver.Create(filepath_1, 3, 3, 1, gdal.GDT_Int32)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        raster_1.SetProjection(wgs84_srs.ExportToWkt())
+        raster_1.SetGeoTransform([1, 1, 0, 1, 0, 1])
+        raster_1 = None
+
+        # set up a raster with an undefined projection
+        raster_2 = driver.Create(filepath_2, 3, 3, 1, gdal.GDT_Int32)
+        raster_2.SetGeoTransform([2, 1, 0, 2, 0, 1])
+        raster_2 = None
+
+        error_msg = validation.check_spatial_overlap(
+            [filepath_1, filepath_2], different_projections_ok=True)
+        expected = f'Spatial file {filepath_2} has no projection'
+        self.assertEqual(error_msg, expected)
+
+    @unittest.skip("skipping due to unresolved projection comparison question")
+    def test_different_projections_not_ok(self):
+        """Validation: different projections not allowed by default.
+
+        This test illustrates a bug we don't yet have a good solution for
+        (natcap/invest#558)
+        When ``different_projections_ok is False``, we don't check that the
+        projections are actually the same, because there isn't a great way to
+        do so. So there's the possibility that some bounding boxes overlap
+        numerically, but have different projections, and thus pass validation
+        when they shouldn't.
+        """
+
+        from natcap.invest import validation
+
+        driver = gdal.GetDriverByName('GTiff')
+        filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
+        filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
+
+        # bounding boxes overlap if we don't account for the projections
+        for filepath, geotransform, epsg in (
                 (filepath_1, [1, 1, 0, 1, 0, 1], 4326),
-                (filepath_2, [100, 1, 0, 100, 0, 1], 4326)):
+                (filepath_2, [2, 1, 0, 2, 0, 1], 2193)):
             raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
             wgs84_srs = osr.SpatialReference()
-            wgs84_srs.ImportFromEPSG(epsg_code)
+            wgs84_srs.ImportFromEPSG(epsg)
             raster.SetProjection(wgs84_srs.ExportToWkt())
             raster.SetGeoTransform(geotransform)
             raster = None
 
-        gpkg_driver = gdal.GetDriverByName('GPKG')
-        vector = gpkg_driver.Create(reference_filepath, 0, 0, 0,
-                                    gdal.GDT_Unknown)
-        vector_srs = osr.SpatialReference()
-        vector_srs.ImportFromEPSG(32731)  # UTM 31N
-        layer = vector.CreateLayer('layer', vector_srs, ogr.wkbPoint)
-        new_feature = ogr.Feature(layer.GetLayerDefn())
-        new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT 1 1'))
-
-        new_feature = None
-        layer = None
-        vector = None
-
-        error_msg = validation.check_spatial_overlap(
-            [filepath_1, filepath_2, reference_filepath],
-            vector_srs.ExportToWkt())
-        self.assertTrue('Bounding boxes do not intersect' in error_msg)
+        expected = (f'Spatial files {[filepath_1, filepath_2]} do not all '
+                    'have the same projection')
+        self.assertEqual(
+            validation.check_spatial_overlap([filepath_1, filepath_2]),
+            expected)
 
 
 class ValidatorTest(unittest.TestCase):
     """Test Validator."""
+
     def test_args_wrong_type(self):
         """Validation: check for error when args is the wrong type."""
         from natcap.invest import validation
@@ -189,10 +214,10 @@ class ValidatorTest(unittest.TestCase):
 
     def test_n_workers(self):
         """Validation: validation error returned on invalid n_workers."""
-        from natcap.invest import validation
+        from natcap.invest import spec_utils, validation
 
         args_spec = {
-            'n_workers': validation.N_WORKERS_SPEC,
+            'n_workers': spec_utils.N_WORKERS,
         }
 
         @validation.invest_validator
@@ -236,6 +261,7 @@ class ValidatorTest(unittest.TestCase):
 
 class DirectoryValidation(unittest.TestCase):
     """Test Directory Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -248,16 +274,14 @@ class DirectoryValidation(unittest.TestCase):
         """Validation: when a folder must exist and does."""
         from natcap.invest import validation
 
-        self.assertEqual(None, validation.check_directory(
-            self.workspace_dir, exists=True))
+        self.assertEqual(None, validation.check_directory(self.workspace_dir))
 
     def test_not_exists(self):
         """Validation: when a folder must exist but does not."""
         from natcap.invest import validation
 
         dirpath = os.path.join(self.workspace_dir, 'nonexistent_dir')
-        validation_warning = validation.check_directory(
-            dirpath, exists=True)
+        validation_warning = validation.check_directory(dirpath)
         self.assertTrue('not found' in validation_warning)
 
     def test_file(self):
@@ -268,15 +292,14 @@ class DirectoryValidation(unittest.TestCase):
         with open(filepath, 'w') as opened_file:
             opened_file.write('the text itself does not matter.')
 
-        validation_warning = validation.check_directory(
-            filepath, exists=True)
+        validation_warning = validation.check_directory(filepath)
 
     def test_valid_permissions(self):
         """Validation: folder permissions."""
         from natcap.invest import validation
 
         self.assertEqual(None, validation.check_directory(
-            self.workspace_dir, exists=True, permissions='rwx'))
+            self.workspace_dir, permissions='rwx'))
 
     def test_workspace_not_exists(self):
         """Validation: when a folder's parent must exist with permissions."""
@@ -286,11 +309,12 @@ class DirectoryValidation(unittest.TestCase):
         new_dir = os.path.join(self.workspace_dir, dirpath)
 
         self.assertEqual(None, validation.check_directory(
-            new_dir, exists=False, permissions='rwx'))
+            new_dir, must_exist=False, permissions='rwx'))
 
 
 class FileValidation(unittest.TestCase):
     """Test File Validator."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -320,6 +344,7 @@ class FileValidation(unittest.TestCase):
 
 class RasterValidation(unittest.TestCase):
     """Test Raster Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -387,35 +412,11 @@ class RasterValidation(unittest.TestCase):
         error_msg = validation.check_raster(filepath, projected=True)
         self.assertTrue('must be projected in linear units' in error_msg)
 
-    def test_raster_projected_in_m(self):
-        """Validation: test when a raster is projected in meters."""
-        from natcap.invest import validation
-
-        # Use EPSG:32731  # WGS84 / UTM zone 31s
-        driver = gdal.GetDriverByName('GTiff')
-        filepath = os.path.join(self.workspace_dir, 'raster.tif')
-        raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
-        meters_srs = osr.SpatialReference()
-        meters_srs.ImportFromEPSG(32731)
-        raster.SetProjection(meters_srs.ExportToWkt())
-        raster = None
-
-        for unit in ('m', 'meter', 'metre', 'meters', 'metres'):
-            error_msg = validation.check_raster(
-                filepath, projected=True, projection_units=unit)
-            self.assertEqual(error_msg, None)
-
-        # Check error message when we validate that the raster should be
-        # projected in feet.
-        error_msg = validation.check_raster(
-            filepath, projected=True, projection_units='feet')
-        self.assertTrue('projected in feet' in error_msg)
-
     def test_raster_incorrect_units(self):
         """Validation: test when a raster projection has wrong units."""
-        from natcap.invest import validation
+        from natcap.invest import spec_utils, validation
 
-        # Use EPSG:32066  # NAD27 / BLM 16N (in US Feet)
+        # Use EPSG:32066  # NAD27 / BLM 16N (in US Survey Feet)
         driver = gdal.GetDriverByName('GTiff')
         filepath = os.path.join(self.workspace_dir, 'raster.tif')
         raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
@@ -425,12 +426,15 @@ class RasterValidation(unittest.TestCase):
         raster = None
 
         error_msg = validation.check_raster(
-            filepath, projected=True, projection_units='m')
-        self.assertTrue('must be projected in meters' in error_msg)
+            filepath, projected=True, projection_units=spec_utils.u.meter)
+        expected_msg = validation.WRONG_PROJECTION_UNIT_MSG % (
+            'meter', 'us_survey_foot')
+        self.assertEqual(expected_msg, error_msg)
 
 
 class VectorValidation(unittest.TestCase):
     """Test Vector Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -483,13 +487,13 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, required_fields=['col_a', 'COL_B', 'col_c'])
-        self.assertTrue('Fields are missing' in error_msg)
-        self.assertTrue('col_c'.upper() in error_msg)
+            filepath, fields={'col_a': {}, 'col_b': {}, 'col_c': {}})
+        expected = validation.MATCHED_NO_HEADERS_MSG % ('field', 'col_c')
+        self.assertEqual(error_msg, expected)
 
     def test_vector_projected_in_m(self):
         """Validation: test that a vector's projection has expected units."""
-        from natcap.invest import validation
+        from natcap.invest import spec_utils, validation
 
         driver = gdal.GetDriverByName('GPKG')
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
@@ -502,15 +506,17 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, projected=True, projection_units='feet')
-        self.assertTrue('projected in feet' in error_msg)
+            filepath, projected=True, projection_units=spec_utils.u.foot)
+        expected_msg = validation.WRONG_PROJECTION_UNIT_MSG % ('foot', 'metre')
+        self.assertEqual(error_msg, expected_msg)
 
         self.assertEqual(None, validation.check_vector(
-            filepath, projected=True, projection_units='m'))
+            filepath, projected=True, projection_units=spec_utils.u.meter))
 
 
 class FreestyleStringValidation(unittest.TestCase):
     """Test Freestyle String Validation."""
+
     def test_int(self):
         """Validation: test that an int can be a valid string."""
         from natcap.invest import validation
@@ -526,16 +532,19 @@ class FreestyleStringValidation(unittest.TestCase):
         from natcap.invest import validation
 
         self.assertEqual(None, validation.check_freestyle_string(
-            1.234, regexp={'pattern': '^1.[0-9]+$', 'case_sensitive': True}))
+            1.234, regexp='^1.[0-9]+$'))
+
+        self.assertEqual(None, validation.check_freestyle_string(
+            'bar', regexp='BAR'))  # should be case-insensitive
 
         error_msg = validation.check_freestyle_string(
-            'foobar12', regexp={'pattern': '^[a-zA-Z]+$',
-                                'case_sensitive': True})
+            'foobar12', regexp='^[a-zA-Z]+$')
         self.assertTrue('did not match expected pattern' in error_msg)
 
 
 class OptionStringValidation(unittest.TestCase):
     """Test Option String Validation."""
+
     def test_valid_option(self):
         """Validation: test that a string is a valid option."""
         from natcap.invest import validation
@@ -552,6 +561,7 @@ class OptionStringValidation(unittest.TestCase):
 
 class NumberValidation(unittest.TestCase):
     """Test Number Validation."""
+
     def test_string(self):
         """Validation: test when a string is not a number."""
         from natcap.invest import validation
@@ -588,6 +598,7 @@ class NumberValidation(unittest.TestCase):
 
 class BooleanValidation(unittest.TestCase):
     """Test Boolean Validation."""
+
     def test_actual_bool(self):
         """Validation: test when boolean type objects are passed."""
         from natcap.invest import validation
@@ -611,6 +622,7 @@ class BooleanValidation(unittest.TestCase):
 
 class CSVValidation(unittest.TestCase):
     """Test CSV Validation."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -640,7 +652,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         self.assertEqual(None, validation.check_csv(
-            target_file, required_fields=['foo', 'bar']))
+            target_file, columns={'foo': {}, 'bar': {}}))
 
     def test_csv_bom_fieldnames(self):
         """Validation: test that we can check fieldnames in a CSV with BOM."""
@@ -655,7 +667,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file, encoding='utf-8-sig')
 
         self.assertEqual(None, validation.check_csv(
-            target_file, required_fields=['foo', 'bar']))
+            target_file, columns={'foo': {}, 'bar': {}}))
 
     def test_csv_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in a CSV."""
@@ -670,30 +682,10 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         error_msg = validation.check_csv(
-            target_file, required_fields=['field_a'])
-        self.assertTrue('missing from this table' in error_msg)
-
-    def test_csv_not_utf_8(self):
-        """Validation: test that non-UTF8 CSVs can validate."""
-        from natcap.invest import validation
-
-        df = pandas.DataFrame([
-            {'fЮЮ': 1, 'bar': 2, 'baz': 3},  # special characters here.
-            {'foo': 2, 'bar': 3, 'baz': 4},
-            {'foo': 3, 'bar': 4, 'baz': 5}])
-
-        target_file = os.path.join(self.workspace_dir, 'test.csv')
-
-        # Save the CSV with the Windows Cyrillic codepage.
-        # https://en.wikipedia.org/wiki/ISO/IEC_8859-5
-        df.to_csv(target_file, encoding='iso8859_5')
-
-        # Note that non-UTF8 encodings should pass this check, but aren't
-        # actually being read correctly. Characters outside the ASCII set may
-        # be replaced with a replacement character.
-        # UTF16, UTF32, etc. will still raise an error.
-        error_msg = validation.check_csv(target_file)
-        self.assertEqual(error_msg, None)
+            target_file, columns={'field_a': {}})
+        expected_msg = validation.MATCHED_NO_HEADERS_MSG % (
+            'column', 'field_a')
+        self.assertEqual(error_msg, expected_msg)
 
     def test_excel_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in excel."""
@@ -708,8 +700,10 @@ class CSVValidation(unittest.TestCase):
         df.to_excel(target_file)
 
         error_msg = validation.check_csv(
-            target_file, required_fields=['field_a'], excel_ok=True)
-        self.assertTrue('missing from this table' in error_msg)
+            target_file, columns={'field_a': {}}, excel_ok=True)
+        expected_msg = validation.MATCHED_NO_HEADERS_MSG % (
+            'column', 'field_a')
+        self.assertEqual(error_msg, expected_msg)
 
     def test_wrong_filetype(self):
         """Validation: verify CSV type does not open pickles."""
@@ -724,12 +718,12 @@ class CSVValidation(unittest.TestCase):
         df.to_pickle(target_file)
 
         error_msg = validation.check_csv(
-            target_file, required_fields=['field_a'], excel_ok=True)
+            target_file, columns={'field_a': {}}, excel_ok=True)
         self.assertTrue('could not be opened as a CSV or Excel file' in
                         error_msg)
 
         error_msg = validation.check_csv(
-            target_file, required_fields=['field_a'], excel_ok=False)
+            target_file, columns={'field_a': {}}, excel_ok=False)
         self.assertTrue('could not be opened as a CSV' in error_msg)
 
     def test_slow_to_open(self):
@@ -761,7 +755,8 @@ class CSVValidation(unittest.TestCase):
 
         # make a copy of the real _VALIDATION_FUNCS and override the CSV function
         mock_validation_funcs = validation._VALIDATION_FUNCS.copy()
-        mock_validation_funcs['csv'] = functools.partial(validation.timeout, delay)
+        mock_validation_funcs['csv'] = functools.partial(
+            validation.timeout, delay)
 
         # replace the validation.check_csv with the mock function, and try to validate
         with unittest.mock.patch('natcap.invest.validation._VALIDATION_FUNCS',
@@ -773,9 +768,35 @@ class CSVValidation(unittest.TestCase):
                 self.assertTrue(len(ws) == 1)
                 self.assertTrue('timed out' in str(ws[0].message))
 
+    def test_check_headers(self):
+        """Validation: check that CSV header validation works."""
+        from natcap.invest import validation
+        expected_headers = ['hello', '1']
+        actual = ['hello', '1', '2']
+        result = validation.check_headers(expected_headers, actual)
+        self.assertEqual(result, None)
+
+        # each pattern should match at least one header
+        actual = ['1', '2']
+        result = validation.check_headers(expected_headers, actual)
+        expected_msg = validation.MATCHED_NO_HEADERS_MSG % ('header', 'hello')
+        self.assertEqual(result, expected_msg)
+
+        # duplicate headers that match a pattern are not allowed
+        actual = ['hello', '1', '1']
+        result = validation.check_headers(expected_headers, actual, 'column')
+        expected_msg = validation.DUPLICATE_HEADER_MSG % ('column', '1', 2)
+        self.assertEqual(result, expected_msg)
+
+        # duplicate headers that don't match a pattern are allowed
+        actual = ['hello', '1', 'x', 'x']
+        result = validation.check_headers(expected_headers, actual)
+        self.assertEqual(result, None)
+
 
 class TestValidationFromSpec(unittest.TestCase):
     """Test Validation From Spec."""
+
     def setUp(self):
         """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -887,7 +908,6 @@ class TestValidationFromSpec(unittest.TestCase):
             validation_warnings = validation.validate(args, spec)
         self.assertTrue('some_var_not_in_args' in str(cm.exception))
 
-
     def test_conditional_requirement_not_required(self):
         """Validation: unrequired conditional requirement should always pass"""
         from natcap.invest import validation
@@ -931,7 +951,6 @@ class TestValidationFromSpec(unittest.TestCase):
 
         validation_warnings = validation.validate(args, spec)
         self.assertEqual(validation_warnings, [])
-
 
     def test_requirement_missing(self):
         """Validation: verify absolute requirement on missing key."""
@@ -986,8 +1005,8 @@ class TestValidationFromSpec(unittest.TestCase):
 
         args = {'number_a': 'not a number'}
         self.assertEqual(
-            [(['number_a'], ("Value 'not a number' could not be interpreted "
-                             "as a number"))],
+            [(['number_a'], ('Value "not a number" could not be interpreted '
+                             'as a number'))],
             validation.validate(args, spec))
 
     def test_conditionally_required_no_value(self):
@@ -1029,9 +1048,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 "about": "About the first parameter",
                 "type": "option_string",
                 "required": "number_a",
-                "validation_options": {
-                    "options": ['AAA', 'BBB']
-                }
+                "options": ['AAA', 'BBB']
             }
         }
 
@@ -1132,6 +1149,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 'name': 'vector 1',
                 'about': 'vector 1',
                 'required': True,
+                'fields': {}
             }
         }
 
@@ -1177,6 +1195,50 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEqual(set(args.keys()), set(validation_warnings[0][0]))
         self.assertTrue('Bounding boxes do not intersect' in
                         validation_warnings[0][1])
+
+    def test_spatial_overlap_error_undefined_projection(self):
+        """Validation: check spatial overlap message when no projection"""
+        from natcap.invest import validation
+
+        spec = {
+            'raster_a': {
+                'type': 'raster',
+                'name': 'raster 1',
+                'about': 'raster 1',
+                'required': True,
+            },
+            'raster_b': {
+                'type': 'raster',
+                'name': 'raster 2',
+                'about': 'raster 2',
+                'required': True,
+            }
+        }
+
+        driver = gdal.GetDriverByName('GTiff')
+        filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
+        filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
+
+        raster_1 = driver.Create(filepath_1, 3, 3, 1, gdal.GDT_Int32)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        raster_1.SetProjection(wgs84_srs.ExportToWkt())
+        raster_1.SetGeoTransform([1, 1, 0, 1, 0, 1])
+        raster_1 = None
+
+        # don't define a projection for the second raster
+        driver.Create(filepath_2, 3, 3, 1, gdal.GDT_Int32)
+
+        args = {
+            'raster_a': filepath_1,
+            'raster_b': filepath_2
+        }
+
+        validation_warnings = validation.validate(
+            args, spec, {'spatial_keys': list(args.keys()),
+                         'different_projections_ok': True})
+        expected = [(['raster_b'], 'Dataset must have a valid projection.')]
+        self.assertEqual(validation_warnings, expected)
 
     def test_spatial_overlap_error_optional_args(self):
         """Validation: check for spatial mismatch with insufficient args."""
@@ -1260,3 +1322,77 @@ class TestValidationFromSpec(unittest.TestCase):
         with self.assertLogs('natcap.invest.validation', level='DEBUG') as cm:
             validation.validate(args, spec)
         self.assertTrue(message in cm.output)
+
+    def test_check_ratio(self):
+        """Validation: test ratio type validation."""
+        from natcap.invest import validation
+        args = {
+            'a': 'xyz',  # not a number
+            'b': '1.5',  # too large
+            'c': '-1',   # too small
+            'd': '0',    # lower bound
+            'e': '0.5',  # middle
+            'f': '1'     # upper bound
+        }
+        spec = {name: {'type': 'ratio'} for name in args}
+
+        expected_warnings = [
+            (['a'], 'Value "xyz" could not be interpreted as a number'),
+            (['b'], 'Value 1.5 is not in the range [0, 1]'),
+            (['c'], 'Value -1.0 is not in the range [0, 1]')]
+        actual_warnings = validation.validate(args, spec)
+        for warning in actual_warnings:
+            self.assertTrue(warning in expected_warnings)
+
+    def test_check_percent(self):
+        """Validation: test percent type validation."""
+        from natcap.invest import validation
+        args = {
+            'a': 'xyz',    # not a number
+            'b': '100.5',  # too large
+            'c': '-1',     # too small
+            'd': '0',      # lower bound
+            'e': '55.5',   # middle
+            'f': '100'     # upper bound
+        }
+        spec = {name: {'type': 'percent'} for name in args}
+
+        expected_warnings = [
+            (['a'], 'Value "xyz" could not be interpreted as a number'),
+            (['b'], 'Value 100.5 is not in the range [0, 100]'),
+            (['c'], 'Value -1.0 is not in the range [0, 100]')]
+        actual_warnings = validation.validate(args, spec)
+        for warning in actual_warnings:
+            self.assertTrue(warning in expected_warnings)
+
+    def test_check_code(self):
+        """Validation: test code type validation."""
+        from natcap.invest import validation
+        args = {
+            'a': 'xyz',    # not a number
+            'b': '1.5',    # not an integer
+            'c': '-1',     # negative integers are ok
+            'd': '0'
+        }
+        spec = {name: {'type': 'code'} for name in args}
+
+        expected_warnings = [
+            (['a'], 'Value "xyz" could not be interpreted as a number'),
+            (['b'], 'Value "1.5" does not represent an integer')]
+        actual_warnings = validation.validate(args, spec)
+        self.assertEqual(len(actual_warnings), len(expected_warnings))
+        for warning in actual_warnings:
+            self.assertTrue(warning in expected_warnings)
+
+    def test_get_headers_to_validate(self):
+        """Validation: test getting header patterns from a spec."""
+        from natcap.invest import validation
+        spec = {
+            'a': {},
+            'foo_[BAR]': {},
+            'c': {'required': 'conditional statement'},
+            'd': {'required': False}
+        }
+        patterns = validation.get_headers_to_validate(spec)
+        # should only get the patterns that are static and always required
+        self.assertEqual(sorted(patterns), ['a'])

@@ -9,11 +9,14 @@ from osgeo import osr
 import pygeoprocessing
 import taskgraph
 
+from .spec_utils import u
+from . import spec_utils
 from . import utils
 from . import validation
 
 
 LOGGER = logging.getLogger(__name__)
+
 
 ARGS_SPEC = {
     "model_name": "Crop Production Regression Model",
@@ -24,75 +27,137 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "landcover_raster_path": {
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters",
-            },
-            "type": "raster",
-            "required": True,
+            **spec_utils.LULC,
+            "projected": True,
+            "projection_units": u.meter,
             "about": (
                 "A raster file, representing integer land use/land code "
                 "covers for each cell. This raster should have a projected "
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
                 "results in hectares."),
-            "name": "Land-Use/Land-Cover Map"
         },
         "landcover_to_crop_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "crop_name"],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "crop_name": {
+                    "type": "option_string",
+                    "options": {
+                        "barley", "maize", "oilpalm", "potato", "rice",
+                        "rye", "soybean", "sugarbeet", "sugarcane",
+                        "sunflower", "wheat"
+                    }
+                },
+                "lucode": {"type": "code"}
+            },
             "about": (
                 "A CSV table mapping canonical crop names to land use codes "
-                "contained in the landcover/use raster.   The allowed crop "
-                "names are barley, maize, oilpalm, potato, rice, soybean, "
-                "sugarbeet, sugarcane, sunflower, and wheat."),
+                "contained in the landcover/use raster."),
             "name": "Landcover to Crop Table"
         },
         "fertilization_rate_table_path": {
-            "validation_options": {
-                "required_fields": [
-                    "crop_name", "nitrogen_rate", "phosphorous_rate",
-                    "potassium_rate"
-                ],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "crop_name": {"type": "freestyle_string"},
+                "nitrogen_rate": {
+                    "type": "number",
+                    "units": u.kilogram/u.hectare
+                },
+                "phosphorus_rate": {
+                    "type": "number",
+                    "units": u.kilogram/u.hectare
+                },
+                "potassium_rate": {
+                    "type": "number",
+                    "units": u.kilogram/u.hectare
+                }
+            },
             "about": (
-                "A table that maps fertilization rates to crops in the "
-                "simulation.  Must include the headers 'crop_name', "
-                "'nitrogen_rate',  'phosphorous_rate', and "
-                "'potassium_rate'."),
+                "A table that maps crops to fertilization rates for nitrogen, "
+                "phosphorus, and potassium."),
             "name": "Fertilization Rate Table Path"
         },
         "aggregate_polygon_path": {
-            "type": "vector",
-            "required": False,
-            "about": (
-                "A polygon vector containing features with which to "
-                "aggregate/summarize final results. It is fine to have "
-                "overlapping polygons."),
-            "name": "Aggregate results polygon"
+            **spec_utils.AOI,
+            "required": False
         },
         "model_data_path": {
-            "validation_options": {
-                "exists": True,
-            },
             "type": "directory",
-            "required": True,
+            "contents": {
+                "climate_regression_yield_tables": {
+                    "type": "directory",
+                    "contents": {
+                        "[CROP]_regression_yield_table.csv": {
+                            "type": "csv",
+                            "columns": {
+                                'climate_bin': {"type": "code"},
+                                'yield_ceiling': {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                },
+                                'b_nut':  {"type": "number", "units": u.none},
+                                'b_k2o':  {"type": "number", "units": u.none},
+                                'c_n':    {"type": "number", "units": u.none},
+                                'c_p2o5': {"type": "number", "units": u.none},
+                                'c_k2o':  {"type": "number", "units": u.none}
+                            }
+                        }
+                    }
+                },
+                "crop_nutrient.csv": {
+                    "type": "csv",
+                    "columns": {
+                        nutrient: {
+                            "type": "number",
+                            "units": units
+                        } for nutrient, units in {
+                            "protein":     u.gram/u.hectogram,
+                            "lipid":       u.gram/u.hectogram,       # total lipid
+                            "energy":      u.kilojoule/u.hectogram,
+                            "ca":          u.milligram/u.hectogram,  # calcium
+                            "fe":          u.milligram/u.hectogram,  # iron
+                            "mg":          u.milligram/u.hectogram,  # magnesium
+                            "ph":          u.milligram/u.hectogram,  # phosphorus
+                            "k":           u.milligram/u.hectogram,  # potassium
+                            "na":          u.milligram/u.hectogram,  # sodium
+                            "zn":          u.milligram/u.hectogram,  # zinc
+                            "cu":          u.milligram/u.hectogram,  # copper
+                            "fl":          u.microgram/u.hectogram,  # fluoride
+                            "mn":          u.milligram/u.hectogram,  # manganese
+                            "se":          u.microgram/u.hectogram,  # selenium
+                            "vita":        u.IU/u.hectogram,         # vitamin A
+                            "betac":       u.microgram/u.hectogram,  # beta carotene
+                            "alphac":      u.microgram/u.hectogram,  # alpha carotene
+                            "vite":        u.milligram/u.hectogram,  # vitamin e
+                            "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
+                            "lycopene":    u.microgram/u.hectogram,  # lycopene
+                            "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
+                            "betaT":       u.milligram/u.hectogram,  # beta tocopherol
+                            "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
+                            "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
+                            "vitc":        u.milligram/u.hectogram,  # vitamin C
+                            "thiamin":     u.milligram/u.hectogram,
+                            "riboflavin":  u.milligram/u.hectogram,
+                            "niacin":      u.milligram/u.hectogram,
+                            "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
+                            "vitb6":       u.milligram/u.hectogram,  # vitamin B6
+                            "folate":      u.microgram/u.hectogram,
+                            "vitb12":      u.microgram/u.hectogram,  # vitamin B12
+                            "vitk":        u.microgram/u.hectogram,  # vitamin K
+                        }.items()
+                    }
+                }
+            },
             "about": (
                 "A path to the InVEST Crop Production Data directory. These "
                 "data would have been included with the InVEST installer if "
                 "selected, or can be manually downloaded from "
-                "http://releases.naturalcapitalproject.org/invest. "
-                "If downloaded with InVEST, the default value should be "
-                "used."),
+                "http://releases.naturalcapitalproject.org/invest. If "
+                "downloaded with InVEST, the default value should be used."),
             "name": "Directory to model data"
         }
     }
@@ -104,8 +169,7 @@ _REGRESSION_TABLE_PATTERN = os.path.join(
     'climate_regression_yield_tables', '%s_regression_yield_table.csv')
 
 _EXPECTED_REGRESSION_TABLE_HEADERS = [
-    'climate_bin', 'yield_ceiling', 'b_nut', 'b_k2o', 'c_n', 'c_p2o5',
-    'c_k2o', 'yield_ceiling_rf']
+    'climate_bin', 'yield_ceiling', 'b_nut', 'b_k2o', 'c_n', 'c_p2o5', 'c_k2o']
 
 # crop_name, yield_regression_id, file_suffix
 _COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN = os.path.join(
@@ -120,8 +184,8 @@ _NITROGEN_YIELD_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, '%s_nitrogen_yield%s.tif')
 
 # crop_id, file_suffix
-_PHOSPHOROUS_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_phosphorous_yield%s.tif')
+_PHOSPHORUS_YIELD_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, '%s_phosphorus_yield%s.tif')
 
 # crop_id, file_suffix
 _POTASSIUM_YIELD_FILE_PATTERN = os.path.join(
@@ -132,8 +196,8 @@ _CLIPPED_NITROGEN_RATE_FILE_PATTERN = os.path.join(
     _INTERMEDIATE_OUTPUT_DIR, 'nitrogen_rate%s.tif')
 
 # file suffix
-_CLIPPED_PHOSPHOROUS_RATE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, 'phosphorous_rate%s.tif')
+_CLIPPED_PHOSPHORUS_RATE_FILE_PATTERN = os.path.join(
+    _INTERMEDIATE_OUTPUT_DIR, 'phosphorus_rate%s.tif')
 
 # file suffix
 _CLIPPED_POTASSIUM_RATE_FILE_PATTERN = os.path.join(
@@ -229,7 +293,7 @@ def execute(args):
             that contains fertilization rates for the crops in the simulation,
             though it can contain additional crops not used in the simulation.
             The headers must be 'crop_name', 'nitrogen_rate',
-            'phosphorous_rate', and 'potassium_rate', where 'crop_name' is the
+            'phosphorus_rate', and 'potassium_rate', where 'crop_name' is the
             name string used to identify crops in the
             'landcover_to_crop_table_path', and rates are in units kg/Ha.
         args['aggregate_polygon_path'] (string): path to polygon vector
@@ -242,7 +306,7 @@ def execute(args):
             * climate_bin_maps (contains [cropname]_climate_bin.tif files)
             * climate_percentile_yield (contains
               [cropname]_percentile_yield_table.csv files)
-              
+
             Please see the InVEST user's guide chapter on crop production for
             details about how to download these data.
 
@@ -419,7 +483,8 @@ def execute(args):
                         'target_bb': landcover_raster_info['bounding_box']},
                 target_path_list=[
                     regression_parameter_raster_path_lookup[yield_regression_id]],
-                dependent_task_list=[create_coarse_regression_parameter_task],
+                dependent_task_list=[
+                    create_coarse_regression_parameter_task],
                 task_name='create_interpolated_parameter_%s_%s' % (
                     crop_name, yield_regression_id))
             dependent_task_list.append(create_interpolated_parameter_task)
@@ -434,7 +499,8 @@ def execute(args):
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
                    (regression_parameter_raster_path_lookup['c_n'], 1),
                    (args['landcover_raster_path'], 1),
-                   (crop_to_fertlization_rate_table[crop_name]['nitrogen_rate'], 'raw'),
+                   (crop_to_fertlization_rate_table[crop_name]
+                    ['nitrogen_rate'], 'raw'),
                    (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
                   _x_yield_op,
                   nitrogen_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
@@ -442,23 +508,24 @@ def execute(args):
             dependent_task_list=dependent_task_list,
             task_name='calculate_nitrogen_yield_%s' % crop_name)
 
-        LOGGER.info('Calc phosphorous yield')
-        phosphorous_yield_raster_path = os.path.join(
-            output_dir, _PHOSPHOROUS_YIELD_FILE_PATTERN % (
+        LOGGER.info('Calc phosphorus yield')
+        phosphorus_yield_raster_path = os.path.join(
+            output_dir, _PHOSPHORUS_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
-        calc_phosphorous_yield_task = task_graph.add_task(
+        calc_phosphorus_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
                    (regression_parameter_raster_path_lookup['c_p2o5'], 1),
                    (args['landcover_raster_path'], 1),
-                   (crop_to_fertlization_rate_table[crop_name]['phosphorous_rate'], 'raw'),
+                   (crop_to_fertlization_rate_table[crop_name]
+                    ['phosphorus_rate'], 'raw'),
                    (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
                   _x_yield_op,
-                  phosphorous_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
-            target_path_list=[phosphorous_yield_raster_path],
+                  phosphorus_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
+            target_path_list=[phosphorus_yield_raster_path],
             dependent_task_list=dependent_task_list,
-            task_name='calculate_phosphorous_yield_%s' % crop_name)
+            task_name='calculate_phosphorus_yield_%s' % crop_name)
 
         LOGGER.info('Calc potassium yield')
         potassium_yield_raster_path = os.path.join(
@@ -470,7 +537,8 @@ def execute(args):
                    (regression_parameter_raster_path_lookup['b_k2o'], 1),
                    (regression_parameter_raster_path_lookup['c_k2o'], 1),
                    (args['landcover_raster_path'], 1),
-                   (crop_to_fertlization_rate_table[crop_name]['potassium_rate'], 'raw'),
+                   (crop_to_fertlization_rate_table[crop_name]
+                    ['potassium_rate'], 'raw'),
                    (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
                   _x_yield_op,
                   potassium_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
@@ -480,7 +548,7 @@ def execute(args):
 
         dependent_task_list.extend((
             calc_nitrogen_yield_task,
-            calc_phosphorous_yield_task,
+            calc_phosphorus_yield_task,
             calc_potassium_yield_task))
 
         LOGGER.info('Calc the min of N, K, and P')
@@ -491,7 +559,7 @@ def execute(args):
         calc_min_NKP_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(nitrogen_yield_raster_path, 1),
-                   (phosphorous_yield_raster_path, 1),
+                   (phosphorus_yield_raster_path, 1),
                    (potassium_yield_raster_path, 1)],
                   _min_op, crop_production_raster_path,
                   gdal.GDT_Float32, _NODATA_YIELD),
@@ -621,7 +689,7 @@ def _x_yield_op(
     """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC)).
 
     The regression model has identical mathematical equations for
-    the nitrogen, phosphorous, and potassium.  The only difference is
+    the nitrogen, phosphorus, and potassium.  The only difference is
     the scalars in the equation (fertilization rate and pixel area).
     """
     result = numpy.empty(b_x.shape, dtype=numpy.float32)
@@ -758,7 +826,7 @@ def tabulate_regression_results(
                     valid_mask = ~numpy.isclose(
                         yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
-                                          valid_mask & (yield_block > 0.0))
+                    valid_mask & (yield_block > 0.0))
                 yield_sum += numpy.sum(yield_block[valid_mask])
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum

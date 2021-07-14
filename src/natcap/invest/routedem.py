@@ -9,6 +9,8 @@ import taskgraph
 import numpy
 
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -18,41 +20,29 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "routedem.html",
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
-        "dem_path": {
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A GDAL-supported raster file containing a base Digital "
-                "Elevation Model to execute the routing functionality "
-                "across."),
-            "name": "Digital Elevation Model"
-        },
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
+        "dem_path": spec_utils.DEM,
         "dem_band_index": {
-            "validation_options": {
-                "expression": "value >= 1",
-            },
             "type": "number",
+            "expression": "value >= 1",
+            "units": u.none,
             "required": False,
             "about": (
-                "The band index to use from the raster. This positive "
-                "integer is 1-based. Default: 1"),
+                "The band index to use from the raster. This positive integer "
+                "is 1-based. Default: 1"),
             "name": "Band Index"
         },
         "algorithm": {
-            "validation_options": {
-                "options": ["D8", "MFD"],
-            },
             "type": "option_string",
-            "required": True,
-            "about": (
-                "The routing algorithm to use. "
-                "<ul><li>D8: all water flows directly into the most downhill "
-                "of each of the 8 neighbors of a cell.</li>"
-                "<li>MFD: Multiple Flow Direction. Fractional flow is "
-                "modeled between pixels.</li></ul>"),
+            "options": {
+                "D8": ("All water on a pixel flows into the most downhill of "
+                       "its 8 surrounding pixels"),
+                "MFD": ("Flow off a pixel is modeled fractionally so that "
+                        "water is split among multiple downstream pixels")
+            },
+            "about": "The routing algorithm to use",
             "name": "Routing Algorithm"
         },
         "calculate_flow_direction": {
@@ -62,7 +52,6 @@ ARGS_SPEC = {
             "name": "Calculate Flow Direction"
         },
         "calculate_flow_accumulation": {
-            "validation_options": {},
             "type": "boolean",
             "required": False,
             "about": "Select to calculate flow accumulation.",
@@ -71,25 +60,20 @@ ARGS_SPEC = {
         "calculate_stream_threshold": {
             "type": "boolean",
             "required": False,
-            "about": "Select to calculate a stream threshold to flow accumulation.",
+            "about": (
+                "Select to calculate a stream threshold to flow accumulation."),
             "name": "Calculate Stream Thresholds"
         },
         "threshold_flow_accumulation": {
-            "validation_options": {},
-            "type": "number",
-            "required": "calculate_stream_threshold",
-            "about": (
-                "The number of upstream cells that must flow into a cell "
-                "before it's classified as a stream."),
-            "name": "Threshold Flow Accumulation Limit"
+            **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
+            "required": "calculate_stream_threshold"
         },
         "calculate_downstream_distance": {
             "type": "boolean",
             "required": False,
             "about": (
-                "If selected, creates a downstream distance raster based "
-                "on the thresholded flow accumulation stream "
-                "classification."),
+                "If selected, creates a downstream distance raster based on "
+                "the thresholded flow accumulation stream classification."),
             "name": "Calculate Distance to stream"
         },
         "calculate_slope": {
@@ -150,7 +134,7 @@ def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
     valid_mask = slice(None)
     if in_nodata is not None:
         valid_mask = ~numpy.isclose(flow_accum_pixels, in_nodata)
-    
+
     out_matrix[valid_mask & stream_mask] = 1
     out_matrix[valid_mask & ~stream_mask] = 0
     return out_matrix

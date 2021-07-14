@@ -11,9 +11,15 @@ import pygeoprocessing
 import taskgraph
 
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 LOGGER = logging.getLogger(__name__)
+
+MISSING_SENSITIVITY_TABLE_THREATS_MSG = (
+    'Threats %s does not match any column in the sensitivity table. '
+    'Sensitivity columns: %s')  # (set of missing threats, set of found columns)
 
 ARGS_SPEC = {
     "model_name": "Habitat Quality",
@@ -25,37 +31,32 @@ ARGS_SPEC = {
             "access_vector_path"],
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "lulc_cur_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            **spec_utils.LULC,
+            "projected": True,
             "about": (
                 "A GDAL-supported raster file.  The current LULC must have "
                 "its' own threat rasters, where each threat raster file path "
-                "is defined in the <b>Threats Data</b> CSV.<br/><br/> "
-                "Each cell should represent a LULC code as an Integer. "
-                "The dataset should be in a projection where the units are "
-                "in meters and the projection used should be defined.  The "
-                "LULC codes must match the codes in the Sensitivity table."),
+                "is defined in the <b>Threats Data</b> CSV.<br/><br/> Each "
+                "cell should represent a LULC code as an Integer. The dataset "
+                "should be in a projection where the units are in meters and "
+                "the projection used should be defined.  The LULC codes must "
+                "match the codes in the Sensitivity table."),
             "name": "Current Land Cover"
         },
         "lulc_fut_path": {
-            "type": "raster",
+            **spec_utils.LULC,
+            "projected": True,
             "required": False,
-            "validation_options": {
-                "projected": True,
-            },
             "about": (
-                "Optional.  A GDAL-supported raster file.  Inputting a "
-                "future LULC will generate degradation, habitat quality, and "
-                "habitat rarity (If baseline is input) outputs.  The future "
-                "LULC must have it's own threat rasters, where each threat "
-                "raster file path is defined in the <b>Threats Data</b> CSV. "
+                "Optional.  A GDAL-supported raster file.  Inputting a future "
+                "LULC will generate degradation, habitat quality, and habitat "
+                "rarity (If baseline is input) outputs.  The future LULC must "
+                "have it's own threat rasters, where each threat raster file "
+                "path is defined in the <b>Threats Data</b> CSV. "
                 "<br/><br/>Each cell should represent a LULC code as an "
                 "Integer.  The dataset should be in a projection where the "
                 "units are in meters and the projection used should be "
@@ -64,128 +65,130 @@ ARGS_SPEC = {
             "name": "Future Land Cover"
         },
         "lulc_bas_path": {
-            "type": "raster",
+            **spec_utils.LULC,
+            "projected": True,
             "required": False,
-            "validation_options": {
-                "projected": True,
-            },
             "about": (
                 "Optional.  A GDAL-supported raster file.  If the baseline "
                 "LULC is provided, rarity outputs will be created for the "
-                "current and future LULC. The baseline LULC can have it's "
-                "own threat rasters (optional), where each threat raster "
-                "file path is defined in the <b>Threats Data</b> CSV. "
-                "If there are no threat rasters and the threat paths are "
-                "left blank in the CSV column, degradation and habitat "
-                "quality outputs will not be generated for the baseline "
-                "LULC.<br/><br/> "
-                "Each cell should represent a LULC code as an Integer.  The "
-                "dataset should be in a projection where the units are in "
-                "meters and the projection used should be defined. The LULC "
-                "codes must match the codes in the Sensitivity table.  If "
-                "possible the baseline map should refer to a time when "
-                "intensive management of the landscape was relatively rare."),
+                "current and future LULC. The baseline LULC can have it's own "
+                "threat rasters (optional), where each threat raster file "
+                "path is defined in the <b>Threats Data</b> CSV. If there are "
+                "no threat rasters and the threat paths are left blank in the "
+                "CSV column, degradation and habitat quality outputs will not "
+                "be generated for the baseline LULC.<br/><br/> Each cell "
+                "should represent a LULC code as an Integer.  The dataset "
+                "should be in a projection where the units are in meters and "
+                "the projection used should be defined. The LULC codes must "
+                "match the codes in the Sensitivity table.  If possible the "
+                "baseline map should refer to a time when intensive "
+                "management of the landscape was relatively rare."),
             "name": "Baseline Land Cover"
         },
         "threats_table_path": {
-            "validation_options": {
-                "required_fields": [
-                    "THREAT", "MAX_DIST", "WEIGHT", "DECAY", "CUR_PATH"],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "threat": {"type": "freestyle_string"},
+                "max_dist": {
+                    "type": "number",
+                    "units": u.kilometer,
+                    "about": (
+                        "The maximum distance over which each threat affects "
+                        "habitat quality. The impact of each degradation "
+                        "source will decline to zero at this maximum "
+                        "distance.")
+                },
+                "weight": {
+                    "type": "ratio",
+                    "about": (
+                        "The impact of each threat on habitat quality, "
+                        "relative to other threats.")
+                },
+                "decay": {
+                    "type": "option_string",
+                    "options": {"linear", "exponential"},
+                    "about": "The type of decay over space for each threat."
+                },
+                "cur_path": {
+                    "type": "raster",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "base_path": {
+                    "required": "lulc_bas_path",
+                    "type": "raster",
+                    "bands": {1: {"type": "ratio"}},
+                },
+                "fut_path": {
+                    "required": "lulc_fut_path",
+                    "type": "raster",
+                    "bands": {1: {"type": "ratio"}},
+                }
+            },
             "about": (
-                "A CSV file of all the threats for the model to consider. "
-                "Each row in the table is a degradation source. The columns "
-                "(THREAT, MAX_DIST, WEIGHT, DECAY) are different attributes "
-                "of each degradation source. The columns "
-                "(BASE_PATH, CUR_PATH, FUT_PATH) specify the filepath name "
-                "for the degradation source where the path is relative to "
-                "the THREAT CSV. Column names are case-insensitive. THREAT: "
-                "The name of the threat source and this name must match "
-                "exactly to the name of it's corresponding column in the "
-                "sensitivity table. "
-                "MAX_DIST: A number in kilometres (km) for the maximum "
-                "distance a threat has an affect. WEIGHT: A "
-                "floating point value between 0 and 1 for the threats "
-                "weight relative to the other threats.  Depending on the "
-                "type of habitat under review, certain threats may cause "
-                "greater degradation than other threats. "
-                "DECAY: A string value of either exponential or "
-                "linear representing the type of decay over space for "
-                "the threat. See the user's guide for valid values "
-                "for these columns. "
-                "BASE_PATH: optional. Required if baseline LULC input. "
-                "The THREAT raster filepath for the base scenario where the "
-                "filepath is relative to the THREAT CSV input. Entries can "
-                "be left empty if there is no baseline scenario or if using "
-                "the baseline LULC for rarity calculations only. "
-                "CUR_PATH: required. The THREAT raster filepath for the "
-                "current scenario where the filepath is relative to the "
-                "THREAT CSV input. "
-                "FUT_PATH: optional. Required if threat LULC input. The "
-                "THREAT raster filepath for the future scenario where the "
-                "filepath is relative to the THREAT CSV input. Entries can "
-                "be left empty if looking at current scenario only."
-                ),
-            "name": "Threats Data"
+                "Table mapping each threat of interest to its properties and "
+                "maps of its distribution. The raster columns give filepaths "
+                "to maps of the relative intensity of each threat, ranging "
+                "from 0 to 1. Paths are relative to the threats table path."),
+            "name": "Threats Table"
         },
         "access_vector_path": {
-            "validation_options": {
-                "required_fields": ["access"],
-                "projected": True,
-            },
             "type": "vector",
+            "projected": True,
+            "fields": {
+                "access": {
+                    "type": "ratio",
+                    "about": (
+                        "The region's relative accessibility to threats, "
+                        "where 0 represents completely inaccessible and 1 "
+                        "represents completely accessible")
+                }
+            },
+            "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
-                "A GDAL-supported vector file.  The input contains data on "
-                "the relative protection that legal / institutional / social "
-                "/ physical barriers provide against threats.  The vector "
-                "file should contain polygons with a field ACCESS. "
-                "The ACCESS values should range from 0 - 1, where 1 "
-                "is fully accessible.  Any cells not covered by a polygon "
-                "will be set to 1."),
-            "name": "Accessibility to Threats (Vector) (Optional)"
+                "Map of the relative protection that legal, institutional, "
+                "social, and physical barriers provide against threats. Any "
+                "cells not covered by a polygon will be set to 1."),
+            "name": "Accessibility to Threats"
         },
         "sensitivity_table_path": {
-            "validation_options": {
-                "required_fields": ["LULC", "NAME", "HABITAT"],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "lulc": {
+                    "type": "code",
+                    "about": ("LULC codes corresponding to those in the LULC "
+                              "rasters.")
+                },
+                "habitat": {
+                    "type": "ratio",
+                    "about": (
+                        "Suitability of this LULC class as habitat, where 0 "
+                        "is not suitable and 1 is completely suitable.")
+                },
+                "[THREAT]": {
+                    "type": "ratio",
+                    "about": (
+                        "The relative sensitivity of each LULC class to each "
+                        "type of threat.")
+                }
+            },
             "about": (
-                "A CSV file of LULC types, whether or not they are considered "
-                "habitat, and, for LULC types that are habitat, their "
-                "specific sensitivity to each threat. Each row is a LULC "
-                "type with the following columns: LULC, HABITAT, "
-                "THREAT1, THREAT2, ... , THREATN. Column names are "
-                "case-insensitive. LULC: Integer "
-                "values that reflect each LULC code found in current, "
-                "future, and baseline rasters. HABITAT: "
-                "A value of 0 or 1 (presence / absence) or a value between 0 "
-                "and 1 (continuum) depicting the suitability of "
-                "habitat. THREATX: Each THREATX should "
-                "match exactly with the threat names given in the threat "
-                "CSV file, where the THREATX is the name that matches. This "
-                "is a floating point value between 0 and 1 that represents "
-                "the sensitivity of a habitat to a threat."
-                "Please see the users guide for more detailed information on "
-                "proper column values and column names for each threat."),
+                "Table mapping each LULC class to data about the species' "
+                "habitat preference and threat sensitivity in areas with that "
+                "LULC."),
             "name": "Sensitivity of Land Cover Types to Each Threat"
         },
         "half_saturation_constant": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            "expression": "value > 0",
             "type": "number",
-            "required": True,
+            "units": u.none,
             "about": (
                 "A positive floating point value that is defaulted at 0.05. "
                 "This is the value of the parameter k in equation (4). In "
                 "general, set k to half of the highest grid cell degradation "
                 "value on the landscape.  To perform this model calibration "
                 "the model must be run once in order to find the highest "
-                "degradation value and set k for the provided landscape.  "
+                "degradation value and set k for the provided landscape. "
                 "Note that the choice of k only determines the spread and "
                 "central tendency of habitat quality cores and does not "
                 "affect the rank."),
@@ -344,10 +347,10 @@ def execute(args):
                             'duplicate.')
                     # Check threat raster values are 0 <= x <= 1
                     threat_values_task = task_graph.add_task(
-                         func=_raster_values_in_bounds,
-                         args=((threat_path, 1), 0.0, 1.0),
-                         store_result=True,
-                         task_name=f'check_threat_values{lulc_key}_{threat}')
+                        func=_raster_values_in_bounds,
+                        args=((threat_path, 1), 0.0, 1.0),
+                        store_result=True,
+                        task_name=f'check_threat_values{lulc_key}_{threat}')
                     threat_values_task_lookup[threat_values_task.task_name] = {
                         'task': threat_values_task,
                         'path': threat_path_relative,
@@ -433,7 +436,7 @@ def execute(args):
               [_OUT_NODATA]),
         kwargs={
             'fill_value_list': [1.0]
-            },
+        },
         target_path_list=[access_raster_path],
         dependent_task_list=[align_task],
         task_name='access_raster')
@@ -447,7 +450,7 @@ def execute(args):
             kwargs={
                 'option_list': ['ATTRIBUTE=ACCESS'],
                 'burn_values': None
-                },
+            },
             target_path_list=[access_raster_path],
             dependent_task_list=[create_access_raster_task],
             task_name='rasterize_access')
@@ -540,7 +543,7 @@ def execute(args):
                     'target_nodata': _OUT_NODATA,
                     'ignore_nodata_and_edges': False,
                     'mask_nodata': False
-                    },
+                },
                 target_path_list=[filtered_threat_raster_path],
                 dependent_task_list=[create_kernel_task],
                 task_name=f'convolve_{decay_type}{lulc_key}_{threat}')
@@ -1070,9 +1073,8 @@ def validate(args, limit_to=None):
         if missing_sens_header_set:
             validation_warnings.append(
                 (['sensitivity_table_path'],
-                 (f'Threats "{missing_sens_header_set}" does not match any'
-                  ' column in the sensitivity table. Sensitivity columns:'
-                  f' {sens_header_set}')))
+                 MISSING_SENSITIVITY_TABLE_THREATS_MSG % (
+                    missing_sens_header_set, sens_header_set)))
 
             invalid_keys.add('snsitivity_table_path')
 

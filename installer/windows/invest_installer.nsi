@@ -479,11 +479,6 @@ Section "InVEST Tools" Section_InVEST_Tools
     File ..\..\LICENSE.txt
     file ..\..\HISTORY.rst
 
-    SetOutPath "${SAMPLEDATADIR}"
-    ; Copy over all the sample parameter files
-    File ..\..\data\invest-sample-data\*.invs.json
-    File ..\..\data\invest-sample-data\*.invest.json
-
     SetOutPath "${INVEST_BINARIES}"
     File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*
     ; invest-autotest.bat is here to help automate testing the UIs.

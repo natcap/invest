@@ -17,8 +17,10 @@ from osgeo import ogr
 
 import taskgraph
 import pygeoprocessing
-from . import validation
 from . import utils
+from . import spec_utils
+from .spec_utils import u
+from . import validation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,81 +29,202 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "wave_energy.html",
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "wave_base_data_path": {
-            "validation_options": {
-                "exists": True,
-            },
             "type": "directory",
-            "required": True,
-            "about": "Select the folder that has the packaged Wave Energy Data.",
+            "contents": {
+                "NAmerica_WestCoast_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POINT,
+                    "about": (
+                        "point vector for the west coast of North America and "
+                        "Hawaii")},
+                "WCNA_extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POLYGON,
+                    "about": (
+                        "extract vector for the west coast of North America "
+                        "and Hawaii")},
+                "NAmerica_WestCoast_4m.txt.bin": {
+                    "type": "file",
+                    "about": (
+                        "WaveWatchIII data for the west coast of North "
+                        "America and Hawaii")},
+                "NAmerica_EastCoast_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POINT,
+                    "about": (
+                        "point vector for the East Coast of North America and "
+                        "Puerto Rico")},
+                "ECNA_extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POLYGON,
+                    "about": (
+                        "extract vector for the East Coast of North America "
+                        "and Puerto Rico")},
+                "NAmerica_EastCoast_4m.txt.bin": {
+                    "type": "file",
+                    "about": (
+                        "WaveWatchIII data for the East Coast of North "
+                        "America and Puerto Rico")},
+                "North_Sea_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POINT,
+                    "about": (
+                        "point vector for the North Sea 4 meter resolution")},
+                "North_Sea_4m_Extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POLYGON,
+                    "about": (
+                        "extract vector for the North Sea 4 meter resolution")},
+                "North_Sea_4m.bin": {
+                    "type": "file",
+                    "about": (
+                        "WaveWatchIII data for the North Sea 4 meter "
+                        "resolution")},
+                "North_Sea_10m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POINT,
+                    "about": (
+                        "point vector for the North Sea 10 meter resolution")},
+                "North_Sea_10m_Extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POLYGON,
+                    "about": (
+                        "extract vector for the North Sea 10 meter resolution")},
+                "North_Sea_10m.bin": {
+                    "type": "file",
+                    "about": (
+                        "WaveWatchIII data for the North Sea 10 meter "
+                        "resolution")},
+                "Australia_4m.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POINT,
+                    "about": "point vector for Australia"},
+                "Australia_Extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POLYGON,
+                    "about": "extract vector for Australia"},
+                "Australia_4m.bin": {
+                    "type": "file",
+                    "about": "WaveWatchIII data for Australia"},
+                "Global.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POINT,
+                    "about": "Global point vector"},
+                "Global_extract.shp": {
+                    "type": "vector",
+                    "fields": {},
+                    "geometries": spec_utils.POLYGON,
+                    "about": "Global extract vector"},
+                "Global_WW3.txt.bin": {
+                    "type": "file",
+                    "about": "Global WaveWatchIII data"}
+            },
+            "about": (
+                "Select the folder that has the packaged Wave Energy Data."),
             "name": "Wave Base Data Folder"
         },
         "analysis_area_path": {
-            "validation_options": {
-                "options": [
-                    "West Coast of North America and Hawaii",
-                    "East Coast of North America and Puerto Rico",
-                    "North Sea 4 meter resolution",
-                    "North Sea 10 meter resolution",
-                    "Australia",
-                    "Global"
-                ]
-            },
             "type": "option_string",
-            "required": True,
+            "options": {
+                "West Coast of North America and Hawaii",
+                "East Coast of North America and Puerto Rico",
+                "North Sea 4 meter resolution",
+                "North Sea 10 meter resolution",
+                "Australia",
+                "Global"
+            },
             "about": (
                 "A list of analysis areas for which the model can currently "
-                "be run.  All the wave energy data needed for these areas "
-                "are pre-packaged in the WaveData folder."),
+                "be run.  All the wave energy data needed for these areas are "
+                "pre-packaged in the WaveData folder."),
             "name": "Analysis Area"
         },
         "aoi_path": {
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters"
-            },
-            "type": "vector",
+            **spec_utils.AOI,
+            "projected": True,
+            "projection_units": u.meter,
             "required": False,
             "about": (
                 "An OGR-supported vector file containing a single polygon "
                 "representing the area of interest.  This input is required "
                 "for computing valuation and is recommended for biophysical "
-                "runs as well.  The AOI should be projected in linear units "
-                "of meters."),
-            "name": "Area of Interest"
+                "runs as well."),
         },
         "machine_perf_path": {
             "type": "csv",
-            "required": True,
+            "columns": {
+                "hs(m)/tp(sec)": {
+                    "type": "number",
+                    "units": u.meter,
+                    "about": (
+                        "user-defined wave height bins from smallest to "
+                        "largest")
+                },
+                "[WAVE_PERIOD_BIN]": {
+                    "about": (
+                        "Captured wave energy for the given seastate "
+                        "conditions described by the wave height (row) "
+                        "and wave period (column)"),
+                    "type": "number",
+                    "units": u.kilowatt
+                }
+            },
             "about": (
                 "A CSV Table that has the performance of a particular wave "
                 "energy machine at certain sea state conditions."),
             "name": "Machine Performance Table"
         },
         "machine_param_path": {
-            "validation_options": {
-                "required_fields": ["name", "value", "note"],
-            },
             "type": "csv",
-            "required": True,
+            "rows": {
+                "capmax": {
+                    "about": "maximum capacity for device",
+                    "type": "number",
+                    "units": u.kilowatt
+                },
+                "hsmax": {
+                    "about": (
+                        "Upper limit of wave height for device operation. The "
+                        "device shuts down when waves are higher than this."),
+                    "type": "number",
+                    "units": u.meter
+                },
+                "tpmax": {
+                    "about": (
+                        "Upper limit of wave period for device operation. The "
+                        "device shuts down when wave period is longer than this."),
+                    "type": "number",
+                    "units": u.second
+                }
+            },
             "about": (
                 "A CSV Table that has parameter values for a wave energy "
-                "machine.  This includes information on the maximum "
-                "capacity of the device and the upper limits for wave height "
-                "and period."),
+                "machine.  This includes information on the maximum capacity "
+                "of the device and the upper limits for wave height and "
+                "period."),
             "name": "Machine Parameter Table"
         },
         "dem_path": {
-            "type": "raster",
-            "required": True,
+            **spec_utils.DEM,
             "about": (
                 "A GDAL-supported raster file containing a digital elevation "
-                "model dataset that has elevation values in meters.  Used to "
-                "get the cable distance for wave energy transmission."),
-            "name": "Global Digital Elevation Model"
+                "model dataset that has elevation values in meters. Used to "
+                "get the cable distance for wave energy transmission.")
         },
         "valuation_container": {
             "type": "boolean",
@@ -110,10 +233,32 @@ ARGS_SPEC = {
             "name": "Valuation"
         },
         "land_gridPts_path": {
-            "validation_options": {
-                "required_fields": ['id', 'type', 'lat', 'long', 'location'],
-            },
             "type": "csv",
+            "columns": {
+                "id": {"type": "code", "about": (
+                    "unique identifier for the point")},
+                "type": {
+                    "type": "option_string",
+                    "options": {
+                        "LAND": "a land connection point",
+                        "GRID": "a grid connection point"
+                    }
+                },
+                "lat": {
+                    "type": "number",
+                    "units": u.degree,
+                    "about": "latitude of the connection point"
+                },
+                "long": {
+                    "type": "number",
+                    "units": u.degree,
+                    "about": "longitude of the connection point"
+                },
+                "location": {
+                    "type": "freestyle_string",
+                    "about": "name for the connection point location"
+                }
+            },
             "required": "valuation_container",
             "about": (
                 "A CSV Table that has the landing points and grid points "
@@ -121,10 +266,56 @@ ARGS_SPEC = {
             "name": "Grid Connection Points Table"
         },
         "machine_econ_path": {
-            "validation_options": {
-                'required_fields': ['name', 'value', 'note'],
-            },
             "type": "csv",
+            "rows": {
+                "capmax": {
+                    "type": "number",
+                    "units": u.kilowatt,
+                    "about": "maximum capacity of the device"
+                },
+                "cc": {
+                    "type": "number",
+                    "units": u.currency/(u.count * u.kilowatt),
+                    "about": (
+                        "capital cost per kilowatt of capacity per device "
+                        "installed")
+                },
+                "cml": {
+                    "type": "number",
+                    "units": u.currency/u.meter,
+                    "about": "cost of mooring lines"
+                },
+                "cul": {
+                    "type": "number",
+                    "units": u.currency/u.kilometer,
+                    "about": "cost of mooring lines"
+                },
+                "col": {
+                    "type": "number",
+                    "units": u.currency/u.kilometer,
+                    "about": "cost of overland transmission lines"
+                },
+                "omc": {
+                    "type": "number",
+                    "units": u.currency/u.kilowatt_hour,
+                    "about": "operating and maintenance cost"
+                },
+                "p": {
+                    "type": "number",
+                    "units": u.currency/u.kilowatt_hour,
+                    "about": "price of electricity"
+                },
+                "r": {
+                    "type": "ratio",
+                    "about": "discount rate"
+                },
+                "smlpm": {
+                    "type": "number",
+                    "units": u.count,
+                    "about": "number of slack lines required per machine"
+                }
+
+            },
             "required": "valuation_container",
             "about": (
                 "A CSV Table that has the economic parameters for the wave "
@@ -132,10 +323,9 @@ ARGS_SPEC = {
             "name": "Machine Economic Table"
         },
         "number_of_machines": {
-            "validation_options": {
-                "expression": "int(value) > 0"
-            },
+            "expression": "value > 0",
             "type": "number",
+            "units": u.count,
             "required": "valuation_container",
             "about": (
                 "An integer for how many wave energy machines will be in the "
@@ -187,12 +377,12 @@ _TARGET_RESAMPLE_METHOD = 'near'
 
 # Percentile values and units specified explicitly in the user's guide
 _PERCENTILES = [25, 50, 75, 90]
-_CAPWE_UNITS_SHORT = ' MWh/yr'
+_CAPWE_UNITS_SHORT = 'MWh/yr'
 _CAPWE_UNITS_LONG = 'megawatt hours per year'
-_WP_UNITS_SHORT = ' kW/m'
+_WP_UNITS_SHORT = 'kW/m'
 _WP_UNITS_LONG = 'wave power per unit width of wave crest length'
-_NPV_UNITS_SHORT = ' US$'
-_NPV_UNITS_LONG = 'thousands of US dollars'
+_NPV_UNITS_SHORT = 'currency'
+_NPV_UNITS_LONG = 'thousands of currency units'
 _STARTING_PERC_RANGE = '1'
 
 # Driver name for creating vector and raster files
@@ -469,7 +659,7 @@ def execute(args):
         coord_trans = utils.create_coordinate_transformer(
             analysis_area_sr, aoi_sr)
         coord_trans_opposite = utils.create_coordinate_transformer(
-                aoi_sr, analysis_area_sr)
+            aoi_sr, analysis_area_sr)
         target_pixel_size = _pixel_size_helper(wave_vector_path, coord_trans,
                                                coord_trans_opposite, dem_path)
 
@@ -827,7 +1017,8 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
     cml = float(machine_econ_dict['cml'])  # cost of mooring lines, $ per m
     cul = float(machine_econ_dict['cul'])  # cost of underwater cable, $ per km
     col = float(machine_econ_dict['col'])  # cost of overland cable, $ per km
-    omc = float(machine_econ_dict['omc'])  # operating & maintenance cost, $ per kWh
+    # operating & maintenance cost, $ per kWh
+    omc = float(machine_econ_dict['omc'])
     price = float(machine_econ_dict['p'])  # price of electricity, $ per kWh
     smlpm = float(machine_econ_dict['smlpm'])  # slack-moored
     d_rate = float(machine_econ_dict['r'])  # discount rate
@@ -859,7 +1050,8 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
     rho = 1.0 / (1.0 + d_rate)
     npv = numpy.power(rho, numpy.arange(_LIFE_SPAN)) * (
         annual_revenue - annual_cost)
-    npv_result = numpy.sum(npv) / 1000.0  # Convert [$US] to [thousands of $US]
+
+    npv_result = numpy.sum(npv) / 1000.0
 
     return npv_result, capwe_all_result
 
@@ -1311,7 +1503,8 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     if start_value:
         value_ranges.append('%s to %s' % (start_value, rounded_percentiles[0]))
     else:
-        value_ranges.append('Less than or equal to %s' % rounded_percentiles[0])
+        value_ranges.append('Less than or equal to %s' %
+                            rounded_percentiles[0])
     value_ranges += ['%s to %s' % (p, q) for (p, q) in
                      zip(rounded_percentiles[:-1], rounded_percentiles[1:])]
     # Add the last range to the range of values list
@@ -1346,7 +1539,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     percentile_dict = {}
     for idx in range(len(percentile_groups)):
         percentile_dict[percentile_groups[idx]] = value_ranges[idx]
-    value_range_field = 'Value Range (' + units_long + ',' + units_short + ')'
+    value_range_field = 'Value Range (' + units_long + ', ' + units_short + ')'
     _create_raster_attr_table(
         target_raster_path, percentile_dict, column_name=value_range_field)
 
@@ -1660,7 +1853,8 @@ def _index_raster_value_to_point_vector(
     vector_sr.ImportFromWkt(
         pygeoprocessing.get_vector_info(target_point_vector_path)[
             'projection_wkt'])
-    vector_coord_trans = utils.create_coordinate_transformer(vector_sr, raster_sr)
+    vector_coord_trans = utils.create_coordinate_transformer(
+        vector_sr, raster_sr)
 
     # Initialize an R-Tree indexing object with point geom from base_vector
     def generator_function():

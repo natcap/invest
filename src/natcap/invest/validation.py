@@ -11,12 +11,14 @@ import importlib
 import queue
 import warnings
 
-import pygeoprocessing
 import pandas
+import pint
+import pygeoprocessing
 from osgeo import gdal, osr
 import numpy
 
 from . import utils
+from . import spec_utils
 
 
 #: A flag to pass to the validation context manager indicating that all keys
@@ -25,50 +27,13 @@ CHECK_ALL_KEYS = None
 MESSAGE_REQUIRED = 'Parameter is required but is missing or has no value'
 LOGGER = logging.getLogger(__name__)
 
+# (header type, header name) e.g. 'column', 'lucode'
+MATCHED_NO_HEADERS_MSG = 'Expected the %s "%s" but did not find it'
+# (header type, header name, number of times found) e.g. 'row', 'lucode', 2
+DUPLICATE_HEADER_MSG = 'Expected the %s "%s" only once but found it %d times'
 
-WORKSPACE_SPEC = {
-    "name": "Workspace",
-    "about": (
-        "The folder where all intermediate and output files of the model "
-        "will be written.  If this folder does not exist, it will be "
-        "created."),
-    "type": "directory",
-    "required": True,
-    "validation_options": {
-        "exists": False,
-        "permissions": "rwx",
-    }
-}
-
-SUFFIX_SPEC = {
-    "name": "File suffix",
-    "about": (
-        'A string that will be added to the end of all files '
-        'written to the workspace.'),
-    "type": "freestyle_string",
-    "required": False,
-    "validation_options": {
-        "regexp": {
-            "pattern": "[a-zA-Z0-9_-]*",
-            "case_sensitive": False,
-        }
-    }
-}
-
-N_WORKERS_SPEC = {
-    "name": "Taskgraph n_workers parameter",
-    "about": (
-        "The n_workers parameter to provide to taskgraph. "
-        "-1 will cause all jobs to run synchronously. "
-        "0 will run all jobs in the same process, but scheduling will take "
-        "place asynchronously. Any other positive integer will cause that "
-        "many processes to be spawned to execute tasks."),
-    "type": "number",
-    "required": False,
-    "validation_options": {
-        "expression": "value >= -1"
-    }
-}
+NOT_A_NUMBER_MSG = 'Value "%s" could not be interpreted as a number'
+WRONG_PROJECTION_UNIT_MSG = 'Layer must be projected in this unit: "%s" but found this unit: "%s"'
 
 
 def _evaluate_expression(expression, variable_map):
@@ -156,12 +121,12 @@ def get_sufficient_keys(args):
     return sufficient_keys
 
 
-def check_directory(dirpath, exists=False, permissions='rx'):
+def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
     """Validate a directory.
 
     Args:
         dirpath (string): The directory path to validate.
-        exists=False (bool): If ``True``, the directory at ``dirpath``
+        must_exist=True (bool): If ``True``, the directory at ``dirpath``
             must already exist on the filesystem.
         permissions='rx' (string): A string that includes the lowercase
             characters ``r``, ``w`` and/or ``x`` indicating required
@@ -172,7 +137,7 @@ def check_directory(dirpath, exists=False, permissions='rx'):
         A string error message if an error was found.  ``None`` otherwise.
 
     """
-    if exists:
+    if must_exist:
         if not os.path.exists(dirpath):
             return "Directory not found"
 
@@ -196,7 +161,7 @@ def check_directory(dirpath, exists=False, permissions='rx'):
         return permissions_warning
 
 
-def check_file(filepath, permissions='r'):
+def check_file(filepath, permissions='r', **kwargs):
     """Validate a single file.
 
     Args:
@@ -250,15 +215,14 @@ def _check_projection(srs, projected, projection_units):
             representing the spatial reference of a GDAL dataset.
         projected (bool): Whether the spatial reference must be projected in
             linear units.
-        projection_units (string): The string label (case-insensitive)
-            indicating the required linear units of the projection.  Note that
-            "m", "meters", "meter", "metre" and "metres" are all synonymous.
+        projection_units (pint.Unit): The projection's required linear units.
 
     Returns:
-        A string error message if an error was found.  ``None`` otherwise.
+        A string error message if an error was found. ``None`` otherwise.
 
     """
-    if srs is None:
+    empty_srs = osr.SpatialReference()
+    if srs is None or srs.IsSame(empty_srs):
         return "Dataset must have a valid projection."
 
     if projected:
@@ -266,21 +230,24 @@ def _check_projection(srs, projected, projection_units):
             return "Dataset must be projected in linear units."
 
     if projection_units:
-        valid_meter_units = set(('m', 'meter', 'meters', 'metre', 'metres'))
-        layer_units_name = srs.GetLinearUnitsName().lower()
-
-        if projection_units in valid_meter_units:
-            if layer_units_name not in valid_meter_units:
-                return "Layer must be projected in meters"
-        else:
-            if layer_units_name.lower() != projection_units.lower():
-                return ("Layer must be projected in %s"
-                        % projection_units.lower())
+        # pint uses underscores in multi-word units e.g. 'survey_foot'
+        # it is case-sensitive
+        layer_units_name = srs.GetLinearUnitsName().lower().replace(' ', '_')
+        try:
+            # this will parse common synonyms: m, meter, meters, metre, metres
+            layer_units = spec_utils.u.Unit(layer_units_name)
+            # Compare pint Unit objects
+            if projection_units != layer_units:
+                return WRONG_PROJECTION_UNIT_MSG % (
+                    projection_units, layer_units_name)
+        except pint.errors.UndefinedUnitError:
+            return WRONG_PROJECTION_UNIT_MSG % (
+                projection_units, layer_units_name)
 
     return None
 
 
-def check_raster(filepath, projected=False, projection_units=None):
+def check_raster(filepath, projected=False, projection_units=None, **kwargs):
     """Validate a GDAL Raster on disk.
 
     Args:
@@ -288,9 +255,8 @@ def check_raster(filepath, projected=False, projection_units=None):
             and be readable.
         projected=False (bool): Whether the spatial reference must be projected
             in linear units.
-        projection_units=None (string): The string label (case-insensitive)
-            indicating the required linear units of the projection.  If
-            ``None``, the projection units will not be checked.
+        projection_units=None (pint.Units): The required linear units of the
+            projection. If ``None``, the projection units will not be checked.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -344,8 +310,8 @@ def load_fields_from_vector(filepath, layer_id=0):
     return fieldnames
 
 
-def check_vector(filepath, required_fields=None, projected=False,
-                 projection_units=None):
+def check_vector(filepath, fields=None, projected=False, projection_units=None,
+                 **kwargs):
     """Validate a GDAL vector on disk.
 
     Note:
@@ -355,14 +321,13 @@ def check_vector(filepath, required_fields=None, projected=False,
     Args:
         filepath (string): The path to the vector on disk.  The file must exist
             and be readable.
-        required_fields=None (list): The string fieldnames (case-insensitive)
-            that must be present in the vector layer's table.  If None,
-            fieldnames will not be checked.
+        fields=None (dict): A dictionary spec of field names that the vector is
+            expected to have. See the docstring of ``check_headers`` for
+            details on validation rules.
         projected=False (bool): Whether the spatial reference must be projected
             in linear units.  If None, the projection will not be checked.
-        projection_units=None (string): The string label (case-insensitive)
-            indicating the required linear units of the projection.  If
-            ``None``, the projection units will not be checked.
+        projection_units=None (pint.Units): The required linear units of the
+            projection. If ``None``, the projection units will not be checked.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -377,27 +342,24 @@ def check_vector(filepath, required_fields=None, projected=False,
     gdal.PopErrorHandler()
 
     if gdal_dataset is None:
-        return "File could not be opened as a GDAL vector"
+        return 'File could not be opened as a GDAL vector'
 
     layer = gdal_dataset.GetLayer()
     srs = layer.GetSpatialRef()
 
-    if required_fields:
-        fieldnames = set([defn.GetName().upper() for defn in layer.schema])
-        missing_fields = (
-            set(field.upper() for field in required_fields) - fieldnames)
-        if missing_fields:
-            return "Fields are missing from the first layer: %s" % sorted(
-                missing_fields)
+    if fields:
+        field_patterns = get_headers_to_validate(fields)
+        fieldnames = [defn.GetName() for defn in layer.schema]
+        required_field_warning = check_headers(
+            field_patterns, fieldnames, 'field')
+        if required_field_warning:
+            return required_field_warning
 
     projection_warning = _check_projection(srs, projected, projection_units)
-    if projection_warning:
-        return projection_warning
-
-    return None
+    return projection_warning
 
 
-def check_freestyle_string(value, regexp=None):
+def check_freestyle_string(value, regexp=None, **kwargs):
     """Validate an arbitrary string.
 
     Args:
@@ -414,19 +376,13 @@ def check_freestyle_string(value, regexp=None):
 
     """
     if regexp:
-        flags = 0
-        if 'case_sensitive' in regexp:
-            if regexp['case_sensitive']:
-                flags = re.IGNORECASE
-        matches = re.findall(regexp['pattern'], str(value), flags)
+        matches = re.findall(regexp, str(value), re.IGNORECASE)
         if not matches:
-            return ("Value did not match expected pattern %s"
-                    % regexp['pattern'])
-
+            return f"Value did not match expected pattern {regexp}"
     return None
 
 
-def check_option_string(value, options):
+def check_option_string(value, options, **kwargs):
     """Validate that a string is in a list of options.
 
     Args:
@@ -442,7 +398,7 @@ def check_option_string(value, options):
         return "Value must be one of: %s" % sorted(options)
 
 
-def check_number(value, expression=None):
+def check_number(value, expression=None, **kwargs):
     """Validate numbers.
 
     Args:
@@ -460,26 +416,88 @@ def check_number(value, expression=None):
     try:
         float(value)
     except (TypeError, ValueError):
-        return "Value '%s' could not be interpreted as a number" % value
+        return NOT_A_NUMBER_MSG % value
 
     if expression:
         # Check to make sure that 'value' is in the expression.
         if 'value' not in expression:
             raise AssertionError(
                 'The variable name value is not found in the '
-                'expression: "%s"' % expression)
+                f'expression: {expression}')
 
         # Expression is assumed to return a boolean, something like
         # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
         # be raised if asteval can't evaluate the expression.
         result = _evaluate_expression(expression, {'value': float(value)})
         if not result:  # A python bool object is returned.
-            return "Value does not meet condition %s" % expression
+            return f'Value does not meet condition {expression}'
 
     return None
 
 
-def check_boolean(value):
+def check_ratio(value, **kwargs):
+    """Validate a ratio (a proportion expressed as a value from 0 to 1).
+
+    Args:
+        value: A python value. This should be able to be cast to a float.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
+    try:
+        as_float = float(value)
+    except (TypeError, ValueError):
+        return NOT_A_NUMBER_MSG % value
+
+    if as_float < 0 or as_float > 1:
+        return f'Value {as_float} is not in the range [0, 1]'
+
+    return None
+
+
+def check_percent(value, **kwargs):
+    """Validate a percent (a proportion expressed as a value from 0 to 100).
+
+    Args:
+        value: A python value. This should be able to be cast to a float.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
+    try:
+        as_float = float(value)
+    except (TypeError, ValueError):
+        return NOT_A_NUMBER_MSG % value
+
+    if as_float < 0 or as_float > 100:
+        return f'Value {as_float} is not in the range [0, 100]'
+
+    return None
+
+
+def check_code(value, **kwargs):
+    """Validate a code (an integer ID).
+
+    Args:
+        value: A python value. This should be able to be cast to an int.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
+    try:
+        # must first cast to float, to handle both string and float inputs
+        as_float = float(value)
+        if not as_float.is_integer():
+            return f'Value "{value}" does not represent an integer'
+    except (TypeError, ValueError):
+        return NOT_A_NUMBER_MSG % value
+    return None
+
+
+def check_boolean(value, **kwargs):
     """Validate a boolean value.
 
     If the value provided is not a python boolean, an error message is
@@ -498,18 +516,24 @@ def check_boolean(value):
             type(value), value)
 
 
-def check_csv(filepath, required_fields=None, excel_ok=False):
+def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
     """Validate a table.
 
     Args:
         filepath (string): The string filepath to the table.
-        required_fields=None (list): A case-insensitive list of fieldnames that
-            must exist in the table.  If None, fieldnames will not be checked.
+        rows (dict): A dictionary spec of row names that are expected to exist
+            in the first column of the table. See the docstring of
+            ``check_headers`` for details on validation rules. No more than one
+            of `rows` and `columns` should be defined.
+        columns (dict): A dictionary spec of column names that are expected to
+            exist in the first row of the table. See the docstring of
+            ``check_headers`` for details on validation rules. No more than one
+            of `rows` and `columns` should be defined.
         excel_ok=False (boolean): Whether it's OK for the file to be an Excel
-            table.  This is not a common case.
+            table. This is not a common case.
 
     Returns:
-        A string error message if an error was found.  ``None`` otherwise.
+        A string error message if an error was found. ``None`` otherwise.
 
     """
     file_warning = check_file(filepath, permissions='r')
@@ -521,12 +545,12 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         encoding = None
         if utils.has_utf8_bom(filepath):
             encoding = 'utf-8-sig'
-
         # engine=python handles unknown characters by replacing them with a
         # replacement character, instead of raising an error
         # use sep=None, engine='python' to infer what the separator is
         dataframe = pandas.read_csv(
-            filepath, sep=None, engine='python', encoding=encoding)
+            filepath, sep=None, engine='python', encoding=encoding,
+            header=None)
     except Exception:
         if excel_ok:
             try:
@@ -537,15 +561,42 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
             return ("File could not be opened as a CSV. "
                     "File must be encoded as a UTF-8 CSV.")
 
-    if required_fields:
-        dataframe.columns = dataframe.columns.str.strip()
-        fields_in_table = set([name.upper() for name in dataframe.columns])
-        missing_fields = (
-            set(field.upper() for field in required_fields) - fields_in_table)
+    # assume that at most one of `rows` and `columns` is defined
+    if columns:
+        headers = [str(name).strip() for name in dataframe.iloc[0]]
+        return check_headers(get_headers_to_validate(columns), headers, 'column')
+    elif rows:
+        headers = [str(name).strip() for name in dataframe.iloc[:, 0]]
+        return check_headers(get_headers_to_validate(rows), headers, 'row')
 
-        if missing_fields:
-            return ("Fields are missing from this table: %s" %
-                    sorted(missing_fields))
+
+def check_headers(expected_headers, actual_headers, header_name='header'):
+    """Validate that expected headers are in a list of actual headers.
+
+    - Each expected header should be found exactly once.
+    - Actual headers may contain extra headers that are not expected.
+    - Headers are converted to lowercase before matching.
+
+    Args:
+        expected_headers (list[str]): A list of headers that are expected to
+            exist in `actual_headers`.
+        actual_headers (list[str]): A list of actual headers to validate
+            against `expected_headers`.
+        header_name (str): A string to use in the error message to refer to the
+            header (typically one of 'column', 'row', 'field')
+
+    Returns:
+        None, if validation passes; or a string describing the problem, if a
+        validation rule is broken.
+    """
+    actual_headers = [header.lower()
+                      for header in actual_headers]  # case insensitive
+    for expected in expected_headers:
+        count = actual_headers.count(expected)
+        if count == 0:
+            return MATCHED_NO_HEADERS_MSG % (header_name, expected)
+        elif count > 1:
+            return DUPLICATE_HEADER_MSG % (header_name, expected, count)
     return None
 
 
@@ -575,11 +626,15 @@ def check_spatial_overlap(spatial_filepaths_list,
             info = pygeoprocessing.get_raster_info(filepath)
         except ValueError:
             info = pygeoprocessing.get_vector_info(filepath)
-        bounding_box = info['bounding_box']
+
+        if info['projection_wkt'] is None:
+            return f'Spatial file {filepath} has no projection'
 
         if different_projections_ok:
             bounding_box = pygeoprocessing.transform_bounding_box(
-                bounding_box, info['projection_wkt'], wgs84_wkt)
+                info['bounding_box'], info['projection_wkt'], wgs84_wkt)
+        else:
+            bounding_box = info['bounding_box']
 
         if all([numpy.isinf(coord) for coord in bounding_box]):
             LOGGER.warning(
@@ -620,6 +675,7 @@ def timeout(func, *args, timeout=5, **kwargs):
     # use a queue to share the return value from the file checking thread
     # the target function puts the return value from `func` into shared memory
     message_queue = queue.Queue()
+
     def wrapper_func():
         message_queue.put(func(*args, **kwargs))
 
@@ -627,18 +683,47 @@ def timeout(func, *args, timeout=5, **kwargs):
     LOGGER.debug(f'Starting file checking thread with timeout={timeout}')
     thread.start()
     thread.join(timeout=timeout)
-
     if thread.is_alive():
         # first arg to `check_csv`, `check_raster`, `check_vector` is the path
         warnings.warn(f'Validation of file {args[0]} timed out. If this file '
-            'is stored in a file streaming service, it may be taking a long '
-            'time to download. Try storing it locally instead.')
+                      'is stored in a file streaming service, it may be taking a long '
+                      'time to download. Try storing it locally instead.')
         return None
 
     else:
         LOGGER.debug('File checking thread completed.')
         # get any warning messages returned from the thread
-        return message_queue.get()
+        a = message_queue.get()
+        return a
+
+
+def get_headers_to_validate(spec):
+    """Get header names to validate from a row/column/field spec dictionary.
+
+    This module only validates row/column/field names that are static and
+    always required. If `'required'` is anything besides `True`, or if the name
+    contains brackets indicating it's user-defined, it is not returned.
+
+    Args:
+        spec (dict): a row/column/field spec dictionary that maps row/column/
+            field names to specs for them
+
+    Returns:
+        list of expected header names to validate against
+    """
+    headers = []
+    for key, val in spec.items():
+        # for now only check headers that are always required
+        # assume that any conditionally-required headers are validated by the
+        # model's validate function
+        # if 'required' isn't a key, it defaults to True
+        if ('required' not in val) or (val['required'] is True):
+            # brackets are a special character for our args spec syntax
+            # they surround the part of the key that's user-defined
+            # user-defined rows/columns/fields are not validated here, so skip
+            if '[' not in key:
+                headers.append(key)
+    return headers
 
 
 # accessing a file could take a long time if it's in a file streaming service
@@ -648,10 +733,12 @@ _VALIDATION_FUNCS = {
     'boolean': check_boolean,
     'csv': functools.partial(timeout, check_csv),
     'file': functools.partial(timeout, check_file),
-    'folder': functools.partial(timeout, check_directory),
     'directory': functools.partial(timeout, check_directory),
     'freestyle_string': check_freestyle_string,
     'number': check_number,
+    'ratio': check_ratio,
+    'percent': check_percent,
+    'code': check_code,
     'option_string': check_option_string,
     'raster': functools.partial(timeout, check_raster),
     'vector': functools.partial(timeout, check_vector),
@@ -692,10 +779,11 @@ def validate(args, spec, spatial_overlap_opts=None):
     keys_with_no_value = set()
     conditionally_required_keys = set()
     for key, parameter_spec in spec.items():
+        # Default required to True since this is the most common
         try:
             required = parameter_spec['required']
         except KeyError:
-            required = False
+            required = True
         if required is True:  # Might be an args key, can't rely on truthiness
             if key not in args:
                 missing_keys.add(key)
@@ -795,20 +883,16 @@ def validate(args, spec, spatial_overlap_opts=None):
         except KeyError:
             LOGGER.debug(f'Provided key {key} does not exist in ARGS_SPEC')
             continue
-        # If no validation options specified, assume defaults.
-        try:
-            validation_options = parameter_spec['validation_options']
-        except KeyError:
-            validation_options = {}
+
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
+
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
             continue
-
         try:
-            warning_msg = type_validation_func(
-                args[key], **validation_options)
-
+            # pass the entire arg spec into the validation function as kwargs
+            # each type validation function allows extra kwargs with **kwargs
+            warning_msg = type_validation_func(args[key], **parameter_spec)
             if warning_msg:
                 validation_warnings.append(([key], warning_msg))
                 invalid_keys.add(key)
@@ -818,6 +902,7 @@ def validate(args, spec, spatial_overlap_opts=None):
                 key, args[key])
             validation_warnings.append(
                 ([key], 'An unexpected error occurred in validation'))
+
     # step 5: check spatial overlap if applicable
     if spatial_overlap_opts:
         spatial_keys = set(spatial_overlap_opts['spatial_keys'])
@@ -873,7 +958,7 @@ def invest_validator(validate_func):
         AssertionError when an invalid format is found.
 
     Example::
-    
+
         from natcap.invest import validation
         @validation.invest_validator
         def validate(args, limit_to=None):
@@ -904,9 +989,9 @@ def invest_validator(validate_func):
         # just ignore failed imports; assume they have no ARGS_SPEC.
         try:
             model_module = importlib.import_module(validate_func.__module__)
-        except:
+        except Exception:
             LOGGER.warning('Unable to import module %s: assuming no ARGS_SPEC.',
-                            validate_func.__module__)
+                           validate_func.__module__)
             model_module = None
 
         # If the module has an ARGS_SPEC defined, validate against that.
@@ -942,16 +1027,7 @@ def invest_validator(validate_func):
                 if args_value not in ('', None):
                     input_type = args_key_spec['type']
                     validator_func = _VALIDATION_FUNCS[input_type]
-
-
-                    try:
-                        validation_options = (
-                            args_key_spec['validation_options'])
-                    except KeyError:
-                        validation_options = {}
-
-                    error_msg = (
-                        validator_func(args_value, **validation_options))
+                    error_msg = validator_func(args_value, **args_key_spec)
 
                 if error_msg is None:
                     warnings_ = []

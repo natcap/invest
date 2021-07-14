@@ -14,6 +14,8 @@ import numpy
 import taskgraph
 
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -23,97 +25,157 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "croppollination.html",
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "landcover_raster_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            **spec_utils.LULC,
+            "projected": True,
             "about": (
                 "This is the landcover map that's used to map biophysical "
                 "properties about habitat and floral resources of landcover "
-                "types to a spatial layout."),
-            "name": "Land Cover Map"
+                "types to a spatial layout.")
         },
         "guild_table_path": {
-            "validation_options": {
-                "required_fields": ["species", "alpha", "relative_abundance"],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "species": {
+                    "type": "freestyle_string",
+                    "about": "unique pollinator species or guild name"
+                },
+                "nesting_suitability_[SUBSTRATE]_index": {
+                    "type": "ratio",
+                    "about": (
+                        "Utilization of this substrate by this species, with "
+                        "1 indicating a nesting substrate that is fully "
+                        "utilized and 0 indicating a nest substrate that is "
+                        "not utilized at all. Substrates are user defined, "
+                        "but might include ground nests, tree cavities, etc. "
+                        "The SUBSTRATE string must match a "
+                        "nesting_[SUBSTRATE]_availability_index in the "
+                        "biophysical table.")
+                },
+                "foraging_activity_[SEASON]_index": {
+                    "type": "ratio",
+                    "about": (
+                        "Pollinator activity by floral season (i.e., flight "
+                        "season), with 1 indicating the season of greatest "
+                        "activity for the species/guild, and 0 indicating a "
+                        "season of no activity. Seasons are user defined but "
+                        "might include spring, summer, fall; wet, dry, etc. "
+                        "The SEASON string must match a "
+                        "floral_resources_[SEASON]_index column in the "
+                        "biophysical table.")
+                },
+                "alpha": {
+                    "type": "number",
+                    "units": u.meters,
+                    "about": (
+                        "Average distance each species or guild travels to "
+                        "forage on flowers. The model uses this distance to "
+                        "define the neighborhood of available flowers around "
+                        "a given cell, and to weight the sums of floral "
+                        "resources and pollinator abundances on farms. This "
+                        "value can be determined by typical foraging distance "
+                        "of a bee species based on an allometric relationship "
+                        "(see Greenleaf et al. 2007).")
+                },
+                "relative_abundance": {
+                    "type": "ratio",
+                    "about": (
+                        "The proportion of total pollinator abundance that "
+                        "consists of this species/guild. Using the same value "
+                        "for each species will result in each species being "
+                        "weighted equally.")
+                }
+            },
             "about": (
-                "A table indicating the bee species to analyze in this model "
-                "run.  Table headers must include:<br/>* 'species': a bee "
-                "species whose column string names will be referred to in "
-                "other tables and the model will output analyses per species."
-                "<br/> * any number of columns matching "
-                "_NESTING_SUITABILITY_PATTERN with values in the range "
-                "[0.0, 1.0] indicating the suitability of the given species "
-                "to nest in a particular substrate.<br/>* any number of "
-                "_FORAGING_ACTIVITY_PATTERN columns with values in the range "
-                "[0.0, 1.0] indicating the relative level of foraging "
-                "activity for that species during a particular season."
-                "<br/>* 'alpha': the sigma average flight distance of that "
-                "bee species in meters.<br/>* 'relative_abundance': a weight "
-                "indicating the relative abundance of the particular species "
-                "with respect to the sum of all relative abundance weights "
-                "in the table."),
+                "A table mapping each pollinator species/guild of interest to "
+                "its pollination-related parameters."),
             "name": "Guild Table"
         },
         "landcover_biophysical_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode"],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "lucode": {"type": "code"},
+                "nesting_[SUBSTRATE]_availability_index": {
+                    "type": "ratio",
+                    "about": (
+                        "Availability of the given nesting type within each "
+                        "LULC type. The SUBSTRATE name must exactly match a "
+                        "substrate given in the Guild Table.")},
+                "floral_resources_[SEASON]_index": {
+                    "type": "ratio",
+                    "about": (
+                        "Abundance of flowers in each LULC class for the "
+                        "given season (floral coverage x proportion of the "
+                        "season for which there is that coverage).")}
+            },
             "about": (
-                "A CSV table mapping landcover codes in the landcover raster "
-                "to indexes of nesting availability for each nesting "
-                "substrate referenced in guilds table as well as indexes of "
-                "abundance of floral resources on that landcover type per "
-                "season in the bee activity columns of the guild table."
-                "<br/>All indexes are in the range [0.0, 1.0].<br/>Columns "
-                "in the table must be at least<br/>* 'lucode': representing "
-                "all the unique landcover codes in the raster st "
-                "`args['landcover_path']`<br/>* For every nesting matching "
-                "_NESTING_SUITABILITY_PATTERN in the guild stable, a column "
-                "matching the pattern in `_LANDCOVER_NESTING_INDEX_HEADER`."
-                "<br/>* For every season matching _FORAGING_ACTIVITY_PATTERN "
-                "in the guilds table, a column matching the pattern in "
-                "`_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`."),
+                "A table mapping each LULC class to nesting availability and "
+                "floral abundance data for each substrate and season in that "
+                "LULC class."),
             "name": "Land Cover Biophysical Table"
         },
         "farm_vector_path": {
-            "validation_options": {
-                "required_fields": ["crop_type", "half_sat", "season", "p_dep",
-                                    "p_managed"],
-            },
             "type": "vector",
+            "fields": {
+                "crop_type": {
+                    "type": "freestyle_string",
+                    "about": (
+                        "Name of the crop grown on each polygon, e.g. "
+                        "'blueberries', 'almonds', etc. For farms growing "
+                        "multiple overlapping crops, or crops in multiple "
+                        "seasons, a separate overlapping polygon must be "
+                        "included for each crop.")},
+                "half_sat": {
+                    "type": "ratio",
+                    "about": (
+                        "The half saturation coefficient for the crop grown "
+                        "on each farm. This represents the proportion of wild "
+                        "pollinators that results in 50% of pollinator- "
+                        "dependent crop yield being attained. This is a "
+                        "tunable parameter that may be most useful to adjust "
+                        "following an initial run of the model and an "
+                        "examination of the results.")},
+                "season": {
+                    "type": "freestyle_string",
+                    "about": (
+                        "The season in which the crop is pollinated. This "
+                        "season must match a season in the guild table.")},
+                "fr_[SEASON]": {  # floral resources for each season
+                    "type": "ratio",
+                    "about": (
+                        "The floral resources available at this farm for the "
+                        "given season. The SEASON string must exactly match "
+                        "one of the seasons provided in the guild table")},
+                "n_[SUBSTRATE]": {  # nesting availabilities for each substrate
+                    "type": "ratio",
+                    "about": (
+                        "The nesting substrate suitability for the farm for "
+                        "the given substrate. The SUBSTRATE string must match "
+                        "one of the substrates in the guild table.")},
+                "p_dep": {
+                    "type": "ratio",
+                    "about": (
+                        "The proportion of crop dependent on pollinators. See "
+                        "Klein et al. (2007) for estimates for common crops.")},
+                "p_managed": {
+                    "type": "ratio",
+                    "about": (
+                        "The proportion of pollination required on the farm "
+                        "provided by managed pollinators. This can be "
+                        "estimated as the proportion of the recommended hive "
+                        "density or stocking rate. See Delaplane & Mayer "
+                        "(2000) for recommended stocking rates in the United "
+                        "States. Agricultural extension offices are also a "
+                        "good source of this information.")}
+            },
+            "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
-                "This is a layer of polygons representing farm sites to be "
-                "analyzed.  The vector must have at least the following "
-                "fields:<br/><br/>* season (string): season in which the "
-                "farm needs pollination.<br/>* half_sat (float): a real in "
-                "the range [0.0, 1.0] representing the proportion of wild "
-                "pollinators to achieve a 50% yield of that crop.<br/>* "
-                "p_wild_dep (float): a number in the range [0.0, 1.0] "
-                "representing the proportion of yield dependent on "
-                "pollinators.<br/>* p_managed (float): proportion of "
-                "pollinators that come from non-native/managed hives.<br/>"
-                "* f_[season] (float): any number of fields that match this "
-                "pattern such that `season` also matches the season headers "
-                "in the biophysical and guild table.  Any areas that overlap "
-                "the landcover map will replace seasonal floral resources "
-                "with this value.  Ranges from 0..1.<br/>* n_[substrate] "
-                "(float): any number of fields that match this pattern such "
-                "that `substrate` also matches the nesting substrate headers "
-                "in the biophysical and guild table.  Any areas that "
-                "overlap the landcover map will replace nesting substrate "
-                "suitability with this value.  Ranges from 0..1."),
+                "Map of farm sites to be analyzed, with pollination data "
+                "specific to each farm."),
             "name": "Farm Vector"
         }
     }
@@ -199,7 +261,7 @@ _WILD_POLLINATOR_FARM_YIELD_FIELD_ID = 'y_wild'
 # dependent part of the yield
 _POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID = 'pdep_y_w'
 # output field for pollinator abundance on farm for the season of pollination
-_POLLINATOR_ABUDNANCE_FARM_FIELD_ID = 'p_abund'
+_POLLINATOR_ABUNDANCE_FARM_FIELD_ID = 'p_abund'
 # expected pattern for seasonal floral resources in input shapefile (season)
 _FARM_FLORAL_RESOURCES_HEADER_PATTERN = 'fr_%s'
 # regular expression version of _FARM_FLORAL_RESOURCES_PATTERN
@@ -233,7 +295,7 @@ def execute(args):
         args['guild_table_path'] (string): file path to a table indicating
             the bee species to analyze in this model run.  Table headers
             must include:
-            
+
                 * 'species': a bee species whose column string names will
                     be referred to in other tables and the model will output
                     analyses per species.
@@ -661,6 +723,30 @@ def execute(args):
             pollinator_abundance_path_map[(species, season)] = (
                 pollinator_abundance_path)
 
+    # calculate total abundance of all pollinators for each season
+    total_pollinator_abundance_task = {}
+    for season in scenario_variables['season_list']:
+        # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
+        total_pollinator_abundance_index_path = os.path.join(
+            output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
+                season, file_suffix))
+
+        pollinator_abundance_season_path_band_list = [
+            (pollinator_abundance_path_map[(species, season)], 1)
+            for species in scenario_variables['species_list']]
+
+        total_pollinator_abundance_task[season] = task_graph.add_task(
+            task_name='calculate_poll_abudnce_%s_%s' % (species, season),
+            func=pygeoprocessing.raster_calculator,
+            args=(
+                pollinator_abundance_season_path_band_list, _SumRasters(),
+                total_pollinator_abundance_index_path, gdal.GDT_Float32,
+                _INDEX_NODATA),
+            dependent_task_list=[
+                pollinator_abundance_task_map[(species, season)]
+                for species in scenario_variables['species_list']],
+            target_path_list=[total_pollinator_abundance_index_path])
+
     # next step is farm vector calculation, if no farms then okay to quit
     if farm_vector_path is None:
         task_graph.close()
@@ -681,28 +767,7 @@ def execute(args):
 
     farm_pollinator_season_path_list = []
     farm_pollinator_season_task_list = []
-    total_pollinator_abundance_task = {}
     for season in scenario_variables['season_list']:
-        # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
-        total_pollinator_abundance_index_path = os.path.join(
-            output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
-                season, file_suffix))
-
-        pollinator_abudnance_season_path_band_list = [
-            (pollinator_abundance_path_map[(species, season)], 1)
-            for species in scenario_variables['species_list']]
-
-        total_pollinator_abundance_task[season] = task_graph.add_task(
-            task_name='calculate_poll_abudnce_%s_%s' % (species, season),
-            func=pygeoprocessing.raster_calculator,
-            args=(
-                pollinator_abudnance_season_path_band_list, _SumRasters(),
-                total_pollinator_abundance_index_path, gdal.GDT_Float32,
-                _INDEX_NODATA),
-            dependent_task_list=[
-                pollinator_abundance_task_map[(species, season)]
-                for species in scenario_variables['species_list']],
-            target_path_list=[total_pollinator_abundance_index_path])
 
         half_saturation_raster_path = os.path.join(
             intermediate_output_dir, _HALF_SATURATION_FILE_PATTERN % (
@@ -848,7 +913,7 @@ def execute(args):
             # this is PAT ('p_abund')
             farm_season = farm_feature.GetField(_FARM_SEASON_FIELD)
             farm_feature.SetField(
-                _POLLINATOR_ABUDNANCE_FARM_FIELD_ID,
+                _POLLINATOR_ABUNDANCE_FARM_FIELD_ID,
                 pollinator_abundance_results[farm_season][fid]['sum'] /
                 float(pollinator_abundance_results[farm_season][fid]['count']))
 
@@ -920,7 +985,7 @@ def _create_farm_result_vector(
     target_layer = target_vector.GetLayer()
 
     farm_pollinator_abundance_defn = ogr.FieldDefn(
-        _POLLINATOR_ABUDNANCE_FARM_FIELD_ID, ogr.OFTReal)
+        _POLLINATOR_ABUNDANCE_FARM_FIELD_ID, ogr.OFTReal)
     farm_pollinator_abundance_defn.SetWidth(25)
     farm_pollinator_abundance_defn.SetPrecision(11)
     target_layer.CreateField(farm_pollinator_abundance_defn)

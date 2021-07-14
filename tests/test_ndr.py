@@ -62,8 +62,8 @@ class NDRTests(unittest.TestCase):
         """
         from natcap.invest.ndr import ndr
 
-        raster_xsize = 1124 
-        raster_ysize = 512 
+        raster_xsize = 1124
+        raster_ysize = 512
         float64_raster_path = os.path.join(
             self.workspace_dir, 'float64_raster.tif')
         driver = gdal.GetDriverByName('GTiff')
@@ -254,7 +254,8 @@ class NDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
         # should not raise an exception
-        ndr.validate(args)
+        validation_errors = ndr.validate(args)
+        self.assertEqual(len(validation_errors), 0)
 
         del args['workspace_dir']
         validation_errors = ndr.validate(args)
