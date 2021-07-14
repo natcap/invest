@@ -8,8 +8,11 @@ from osgeo import gdal, ogr, osr
 import pygeoprocessing
 import taskgraph
 
-from . import validation
+from . import spec_utils
+from .spec_utils import u
 from . import utils
+from . import validation
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,43 +31,67 @@ ARGS_SPEC = {
         "different_projections_ok": True
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "lulc_path": {
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A map of land use/land cover classes in the area of "
-                "interest"),
-            "name": "Land use/land cover",
-            "validation_options": {
-                "projected": True
-            }
+            **spec_utils.LULC,
+            "projected": True
         },
-        "soil_group_path": {
-            "type": "raster",
-            "required": True,
-            "about": (
-                "Map of hydrologic soil groups, where pixel values 1, 2, 3, "
-                "and 4 correspond to groups A, B, C, and D respectively"),
-            "name": "Soil groups"
-        },
-        "precipitation_path": {
-            "type": "raster",
-            "required": True,
-            "about": "Map of total annual precipitation",
-            "name": "Precipitation"
-        },
+        "soil_group_path": spec_utils.SOIL_GROUP,
+        "precipitation_path": spec_utils.PRECIP,
         "biophysical_table": {
             "type": "csv",
-            "required": True,
-            "about": "biophysical table",
+            "columns": {
+                "lucode": {
+                    "type": "code",
+                    "about": "LULC code corresponding to the LULC raster"
+                },
+                "EMC_[POLLUTANT]": {
+                    "type": "number",
+                    "units": u.milligram/u.liter,
+                    "about": (
+                        "Event mean concentration of the pollutant in "
+                        "stormwater. You may include any number of these "
+                        "columns for different pollutants, or none at all.")
+                },
+                **{
+                    f"RC_{soil_group}": {
+                        "type": "ratio",
+                        "about": ("Stormwater runoff coefficient for soil "
+                                  f"group {soil_group}")
+                    } for soil_group in ["A", "B", "C", "D"]
+                },
+                **{
+                    f"IR_{soil_group}": {
+                        "type": "ratio",
+                        "about": ("Stormwater infiltration coefficient for "
+                                  f"soil group {soil_group}"),
+                        "required": False
+                    } for soil_group in ["A", "B", "C", "D"]
+                },
+                "is_impervious": {
+                    "type": "boolean",
+                    "required": False,
+                    "about": (
+                        "Enter 1 if the LULC class is an impervious surface, "
+                        "0 if not. This column is only used if the 'adjust "
+                        "retention ratios' option is selected. If 'adjust "
+                        "retention ratios' is selected and this column exists, "
+                        "the adjustment algorithm takes into account the LULC "
+                        "as well as road centerlines. If this column does not "
+                        "exist, only the road centerlines are used.")
+                }
+            },
+            "about": (
+                "Table mapping each LULC code found in the LULC raster to "
+                "biophysical data about that LULC class. If you provide the "
+                "infiltration coefficient column (IR_[X]) for any soil group, "
+                "you must provide it for all four soil groups."),
             "name": "Biophysical table"
         },
         "adjust_retention_ratios": {
             "type": "boolean",
-            "required": True,
             "about": (
                 "If true, adjust retention ratios. The adjustment algorithm "
                 "accounts for drainage effects of nearby impervious surfaces "
@@ -76,9 +103,11 @@ ARGS_SPEC = {
         },
         "retention_radius": {
             "type": "number",
+            "units": u.linear_unit,
             "required": "adjust_retention_ratios",
             "about": (
-                "Radius around each pixel to adjust retention ratios. For the "
+                "Radius around each pixel to adjust retention ratios. "
+                "Measured in raster coordinate system units. For the "
                 "adjustment algorithm, a pixel is 'near' a connected "
                 "impervious surface if its centerpoint is within this radius "
                 "of connected-impervious LULC and/or a road centerline."),
@@ -86,12 +115,14 @@ ARGS_SPEC = {
         },
         "road_centerlines_path": {
             "type": "vector",
+            "geometries": {"LINESTRING", "MULTILINESTRING"},
+            "fields": {},
             "required": "adjust_retention_ratios",
             "about": "Map of road centerlines",
             "name": "Road centerlines"
         },
         "aggregate_areas_path": {
-            "type": "vector",
+            **spec_utils.AOI,
             "required": False,
             "about": (
                 "Areas over which to aggregate results (typically watersheds "
@@ -101,10 +132,10 @@ ARGS_SPEC = {
                 "provided; total retention value if replacement cost was "
                 "provided; and total avoided pollutant load for each "
                 "pollutant provided."),
-            "name": "Aggregate areas"
         },
         "replacement_cost": {
             "type": "number",
+            "units": u.currency/u.meter**3,
             "required": False,
             "about": "Replacement cost of stormwater retention devices",
             "name": "Replacement cost"
@@ -911,7 +942,7 @@ def raster_average(raster_path, radius, kernel_path, out_path):
         target_nodata=FLOAT_NODATA)
 
 
-@validation.invest_validator
+@ validation.invest_validator
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
