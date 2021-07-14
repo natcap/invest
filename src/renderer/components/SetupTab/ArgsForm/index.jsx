@@ -5,8 +5,8 @@ import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extrane
 import Form from 'react-bootstrap/Form';
 
 import ArgInput from '../ArgInput';
-import { fetchDatastackFromFile } from '../../../server_requests';
 import { boolStringToBoolean } from '../../../utils';
+import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 
 /** Prevent the default case for onDragOver so onDrop event will be fired. */
 function dragOverHandler(event) {
@@ -27,7 +27,7 @@ export default class ArgsForm extends React.Component {
     this.dragEnterHandler = this.dragEnterHandler.bind(this);
     this.dragLeaveHandler = this.dragLeaveHandler.bind(this);
     this.formRef = React.createRef(); // For dragging CSS
-    this.dragDepth = 0;  // To determine Form dragging CSS 
+    this.dragDepth = 0; // To determine Form dragging CSS
   }
 
   async onArchiveDragDrop(event) {
@@ -37,7 +37,7 @@ export default class ArgsForm extends React.Component {
     // No longer dragging so reset dragging depth and remove CSS
     this.dragDepth = 0;
     const formElement = this.formRef.current;
-    formElement.classList.remove("dragging");
+    formElement.classList.remove('dragging');
 
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
@@ -54,8 +54,8 @@ export default class ArgsForm extends React.Component {
     event.dataTransfer.dropEffect = 'copy';
     this.dragDepth++;
     const formElement = this.formRef.current;
-    if (!formElement.classList.contains("dragging")) {
-      formElement.classList.add("dragging");
+    if (!formElement.classList.contains('dragging')) {
+      formElement.classList.add('dragging');
     }
   }
 
@@ -65,8 +65,8 @@ export default class ArgsForm extends React.Component {
     event.stopPropagation();
     this.dragDepth--;
     const formElement = this.formRef.current;
-    if (this.dragDepth <= 0 ) {
-        formElement.classList.remove("dragging");
+    if (this.dragDepth <= 0) {
+      formElement.classList.remove('dragging');
     }
   }
 
@@ -74,7 +74,7 @@ export default class ArgsForm extends React.Component {
   inputDropHandler(event) {
     event.preventDefault();
     event.stopPropagation();
-    event.target.classList.remove("input-dragging");
+    event.target.classList.remove('input-dragging');
     // Don't take any action on disabled elements
     if (event.target.disabled) {
       return;
@@ -87,7 +87,7 @@ export default class ArgsForm extends React.Component {
     } else if (fileList.length === 1) {
       this.props.updateArgValues(name, fileList[0].path);
     } else {
-      throw "Error handling input file drop"
+      throw new Error('Error handling input file drop');
     }
   }
 
@@ -109,9 +109,12 @@ export default class ArgsForm extends React.Component {
     const { name, value } = event.target; // the arg's key and type
     const prop = (value === 'directory') ? 'openDirectory' : 'openFile';
     // TODO: could add more filters based on argType (e.g. only show .csv)
-    const data = await ipcRenderer.invoke('show-open-dialog', { properties: [prop] });
+    const data = await ipcRenderer.invoke(
+      ipcMainChannels.SHOW_OPEN_DIALOG, { properties: [prop] }
+    );
     if (data.filePaths.length) {
-      this.props.updateArgValues(name, data.filePaths[0]); // dialog defaults allow only 1 selection
+      // dialog defaults allow only 1 selection
+      this.props.updateArgValues(name, data.filePaths[0]);
     }
   }
 

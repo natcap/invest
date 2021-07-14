@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDom from 'react-dom';
 
 import App from './app';
+import { ipcMainChannels } from '../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -13,17 +14,17 @@ let rightClickPosition = null;
 window.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   rightClickPosition = { x: e.x, y: e.y };
-  ipcRenderer.send('show-context-menu', rightClickPosition);
+  ipcRenderer.send(ipcMainChannels.SHOW_CONTEXT_MENU, rightClickPosition);
 });
 
 function render(isFirstRun) {
   ReactDom.render(
-    <App isFirstRun={isFirstRun}/>,
+    <App isFirstRun={isFirstRun} />,
     document.getElementById('App')
-  )
-};
+  );
+}
 
-ipcRenderer.invoke('is-first-run')
+ipcRenderer.invoke(ipcMainChannels.IS_FIRST_RUN)
   .then((response) => {
     render(response);
   });

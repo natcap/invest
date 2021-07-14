@@ -21,6 +21,7 @@ import {
   writeParametersToFile
 } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 /** Initialize values of InVEST args based on the model's UI Spec.
  *
@@ -225,7 +226,7 @@ export default class SetupTab extends React.Component {
   }
 
   async browseForDatastack() {
-    const data = await ipcRenderer.invoke('show-open-dialog');
+    const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
     if (data.filePaths.length) {
       this.loadParametersFromFile(data.filePaths[0]);
     }

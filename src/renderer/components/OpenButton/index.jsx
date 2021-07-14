@@ -8,6 +8,7 @@ import Tooltip from 'react-bootstrap/Tooltip';
 
 import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 /**
  * Render a button that loads args from a datastack, parameterset, or logfile.
@@ -20,7 +21,7 @@ export default class OpenButton extends React.Component {
   }
 
   async browseFile() {
-    const data = await ipcRenderer.invoke('show-open-dialog');
+    const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
     if (data.filePaths.length) {
       const datastack = await fetchDatastackFromFile(data.filePaths[0]);
       const job = new InvestJob({
