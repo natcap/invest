@@ -9,7 +9,6 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Nav from 'react-bootstrap/Nav';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import Spinner from 'react-bootstrap/Spinner';
 
 import SetupTab from '../SetupTab';
 import LogTab from '../LogTab';
@@ -227,15 +226,6 @@ export default class InvestTab extends React.Component {
               <Nav.Item>
                 <Nav.Link eventKey="log" disabled={logDisabled}>
                   Log
-                  { isRunning
-                  && (
-                    <Spinner
-                      animation="border"
-                      size="sm"
-                      role="status"
-                      aria-hidden="true"
-                    />
-                  )}
                 </Nav.Link>
               </Nav.Item>
             </Nav>

@@ -11,6 +11,7 @@ import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Spinner from 'react-bootstrap/Spinner';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -185,14 +186,36 @@ export default class App extends React.Component {
     const investNavItems = [];
     const investTabPanes = [];
     openJobs.forEach((job) => {
-      const tabActiveClass = job.metadata.navID === activeTab ? 'active' : '';
+      let statusSymbol;
+      switch (job.metadata.status) {
+        case 'success':
+          statusSymbol = '\u{2705}'; // green check
+          break;
+        case 'error':
+          statusSymbol = '\u{1F6AB}'; // red do-not-enter
+          break;
+        case 'running':
+          statusSymbol = (
+            <Spinner
+              className="mb-1"
+              animation="border"
+              size="sm"
+              role="status"
+              aria-hidden="true"
+            />
+          );
+          break;
+        default:
+          statusSymbol = '';
+      }
       investNavItems.push(
         <Nav.Item
           key={job.metadata.navID}
-          className={`${tabActiveClass} ${job.metadata.status}`}
+          className={job.metadata.navID === activeTab ? 'active' : ''}
         >
           <Nav.Link eventKey={job.metadata.navID}>
-            {job.metadata.modelHumanName}
+            {statusSymbol}
+            {` ${job.metadata.modelHumanName}`}
           </Nav.Link>
           <Button
             className="close-tab"
