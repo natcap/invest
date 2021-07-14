@@ -65,6 +65,18 @@ body {
 	background-color: ghostwhite;
 }
 
+@keyframes blink { 
+   50% { border-color: blue; } 
+}
+
+.navbar-nav .nav-item.running:not(.active) {
+	animation: blink .5s step-end infinite alternate;
+}
+
+.navbar-nav .nav-item.error:not(.active) {
+	border-color: red;
+}
+
 .navbar-light .navbar-nav .nav-link {
 	overflow: hidden;
 	text-overflow: ellipsis;

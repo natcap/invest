@@ -185,10 +185,11 @@ export default class App extends React.Component {
     const investNavItems = [];
     const investTabPanes = [];
     openJobs.forEach((job) => {
+      const tabActiveClass = job.metadata.navID === activeTab ? 'active' : '';
       investNavItems.push(
         <Nav.Item
           key={job.metadata.navID}
-          className={job.metadata.navID === activeTab ? 'active' : ''}
+          className={`${tabActiveClass} ${job.metadata.status}`}
         >
           <Nav.Link eventKey={job.metadata.navID}>
             {job.metadata.modelHumanName}
