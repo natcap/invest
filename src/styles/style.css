@@ -198,7 +198,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	padding-right: 0;
-	min-width: 250px;
+	min-width: fit-content;
 }
 
 .invest-sidebar-col .nav-link {
@@ -229,6 +229,10 @@ body {
 	flex-wrap: nowrap;
 	align-items: flex-start;
 	padding-left: 1.5rem;
+}
+
+.sidebar-setup .btn {
+	white-space: nowrap;
 }
 
 /* Resources Links */
