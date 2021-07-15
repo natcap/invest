@@ -147,27 +147,27 @@ class RecentInvestJobs extends React.PureComponent {
     return (
       <Container>
         <div className="mb-1">
-          <h4 className="d-inline-block">
-            Recent runs:
-          </h4>
+          {recentButtons.length
+            ? (
+              <h4 className="d-inline-block">
+                Recent runs:
+              </h4>
+            )
+            : (
+              <div className="d-inline-block">
+                Try the <b>Open</b> button to setup a model from a sample 
+                datastack file (.json) or from an InVEST model's logfile (.txt)
+              </div>
+            )}
           <OpenButton
             className="float-right"
             openInvestModel={this.props.openInvestModel}
             batchUpdateArgs={this.props.batchUpdateArgs}
           />
         </div>
-        {recentButtons.length
-          ? (
-            <React.Fragment>
-              {recentButtons}
-            </React.Fragment>
-          )
-          : (
-            <div>
-              Try the <b>Open</b> button to setup a model from a sample 
-              datastack file (.json) or from an invest model's logfile (.txt)
-            </div>
-          )}
+        <React.Fragment>
+          {recentButtons}
+        </React.Fragment>
       </Container>
     );
   }
