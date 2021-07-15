@@ -160,7 +160,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     const loadButton = await findByText('Load parameters from file');
     // test the tooltip before we click
     userEvent.hover(loadButton);
-    const hoverText = 'Browse to a datastack (.json) or invest logfile (.txt)';
+    const hoverText = 'Browse to a datastack (.json) or InVEST logfile (.txt)';
     expect(await findByText(hoverText)).toBeInTheDocument();
     userEvent.unhover(loadButton);
     await waitFor(() => {
