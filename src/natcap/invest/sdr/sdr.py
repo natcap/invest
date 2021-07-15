@@ -13,7 +13,11 @@ import logging
 from osgeo import gdal
 from osgeo import ogr
 import numpy
+import shutil
+import tempfile
 
+from pygeoprocessing.geoprocessing_core import \
+    DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
@@ -213,6 +217,7 @@ _INTERMEDIATE_BASE_FILES = {
     'sdr_bare_soil_path': 'sdr_bare_soil.tif',
     'sdr_path': 'sdr_factor.tif',
     'slope_path': 'slope.tif',
+    'flow_accum_stream_path': 'flow_accum_stream.tif',
     'thresholded_slope_path': 'slope_threshold.tif',
     'thresholded_w_path': 'w_threshold.tif',
     'w_accumulation_path': 'w_accumulation.tif',
@@ -429,11 +434,20 @@ def execute(args):
             (f_reg['flow_accumulation_path'], 1),
             (f_reg['flow_direction_path'], 1),
             float(args['threshold_flow_accumulation']),
-            f_reg['stream_path']),
+            f_reg['flow_accum_stream_path']),
         kwargs={'trace_threshold_proportion': 0.7},
-        target_path_list=[f_reg['stream_path']],
+        target_path_list=[f_reg['flow_accum_stream_path']],
         dependent_task_list=[flow_accumulation_task],
         task_name='extract streams')
+
+    outlet_task = task_graph.add_task(
+        func=_add_drainage_outlets,
+        args=(
+            f_reg['flow_accum_stream_path'], f_reg['flow_direction_path'],
+            f_reg['stream_path']),
+        target_path_list=[f_reg['stream_path']],
+        dependent_task_list=[stream_task],
+        task_name='add edge drains to streams')
 
     if drainage_present:
         drainage_task = task_graph.add_task(
@@ -442,12 +456,12 @@ def execute(args):
                 f_reg['aligned_drainage_path'],
                 f_reg['stream_and_drainage_path']),
             target_path_list=[f_reg['stream_and_drainage_path']],
-            dependent_task_list=[stream_task, align_task],
+            dependent_task_list=[outlet_task, align_task],
             task_name='add drainage')
         drainage_raster_path_task = (
             f_reg['stream_and_drainage_path'], drainage_task)
     else:
-        drainage_raster_path_task = (f_reg['stream_path'], stream_task)
+        drainage_raster_path_task = (f_reg['stream_path'], outlet_task)
 
     threshold_w_task = task_graph.add_task(
         func=_calculate_w,
@@ -1354,6 +1368,59 @@ def _generate_report(
         target_layer.SetFeature(feature)
     target_vector = None
     target_layer = None
+
+
+def _add_drainage_outlets(
+        base_stream_raster_path, flow_dir_mfd_raster_path,
+        target_stream_raster_path):
+    """Detect raster edge drains and add to stream raster.
+
+    Args:
+        base_stream_raster_path (str): path to a defined 0/1 stream raster.
+        flow_dir_mfd_raster_path (str): path to an MFD flow dir raster used to
+            create ``base_stream_raster_path``.
+        target_stream_raster_path (str): created by this call, contains a union
+            of ``base_stream_raster_path`` and any single pixels that drain
+            watersheds that are not included in ``base_stream_raster_path``
+
+    Return:
+        ``None``
+    """
+    # temporary working directory to handle the vector outlets
+    working_dir = tempfile.mkdtemp(
+        dir=os.path.dirname(target_stream_raster_path),
+        prefix='_add_drainage_outlets_workspace')
+    outlet_vector_path = os.path.join(working_dir, 'outlets.gpkg')
+    pygeoprocessing.routing.detect_outlets(
+        (flow_dir_mfd_raster_path, 1), 'mfd', outlet_vector_path)
+
+    # create copy of stream raster to write over
+    raster_driver = gdal.GetDriverByName(
+        DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[0])
+    base_stream_raster = gdal.OpenEx(base_stream_raster_path, gdal.OF_RASTER)
+    raster_driver.CreateCopy(
+        target_stream_raster_path, base_stream_raster,
+        options=DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+
+    stream_raster = gdal.OpenEx(
+        target_stream_raster_path, gdal.OF_RASTER | gdal.GA_Update)
+    stream_band = stream_raster.GetRasterBand(1)
+
+    outlet_vector = gdal.OpenEx(outlet_vector_path, gdal.OF_VECTOR)
+    outlet_layer = outlet_vector.GetLayer()
+
+    # write a single 1 per outlet feature
+    one_array = numpy.ones((1, 1), dtype=numpy.int8)
+    for outlet_feature in outlet_layer:
+        stream_band.WriteArray(
+            one_array,
+            outlet_feature.GetField('i'),
+            outlet_feature.GetField('j'))
+    stream_band = None
+    stream_raster = None
+    outlet_layer = None
+    outlet_vector = None
+    shutil.rmtree(working_dir)
 
 
 @validation.invest_validator
