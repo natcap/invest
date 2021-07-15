@@ -221,7 +221,8 @@ export default class SetupTab extends React.Component {
       this.batchUpdateArgs(datastack.args);
     } else {
       alert(
-        `Parameter/Log file for ${datastack.module_name} does not match this model: ${this.props.pyModuleName}`);
+        `Datastack/Logfile for ${datastack.model_human_name} model does not match this model.`
+      );
     }
   }
 
@@ -389,7 +390,7 @@ export default class SetupTab extends React.Component {
               delay={{ show: 250, hide: 400 }}
               overlay={(
                 <Tooltip>
-                  Browse to a datastack (.json) or invest logfile (.txt)
+                  Browse to a datastack (.json) or InVEST logfile (.txt)
                 </Tooltip>
               )}
             >
