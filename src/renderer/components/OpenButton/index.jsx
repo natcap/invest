@@ -8,20 +8,20 @@ import Tooltip from 'react-bootstrap/Tooltip';
 
 import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
-import { dragOverHandlerNone } from '../../utils';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 /**
  * Render a button that loads args from a datastack, parameterset, or logfile.
  * Opens a native OS filesystem dialog to browse to a file.
  */
-export default class LoadButton extends React.Component {
+export default class OpenButton extends React.Component {
   constructor(props) {
     super(props);
     this.browseFile = this.browseFile.bind(this);
   }
 
   async browseFile() {
-    const data = await ipcRenderer.invoke('show-open-dialog');
+    const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
     if (data.filePaths.length) {
       const datastack = await fetchDatastackFromFile(data.filePaths[0]);
       const job = new InvestJob({
@@ -34,7 +34,7 @@ export default class LoadButton extends React.Component {
   }
 
   render() {
-    const tipText = 'Browse to a datastack (.json) or invest logfile (.txt)';
+    const tipText = 'Browse to a datastack (.json) or InVEST logfile (.txt)';
     return (
       <OverlayTrigger
         placement="left"
@@ -42,10 +42,9 @@ export default class LoadButton extends React.Component {
         overlay={<Tooltip>{tipText}</Tooltip>}
       >
         <Button
-          className="mx-3"
+          className={this.props.className}
           onClick={this.browseFile}
           variant="outline-dark"
-          onDragOver={dragOverHandlerNone}
         >
           Open
         </Button>
@@ -54,6 +53,6 @@ export default class LoadButton extends React.Component {
   }
 }
 
-LoadButton.propTypes = {
+OpenButton.propTypes = {
   openInvestModel: PropTypes.func.isRequired,
 };

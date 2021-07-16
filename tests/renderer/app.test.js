@@ -283,7 +283,7 @@ describe('Display recently executed InVEST jobs', () => {
       <App />
     );
 
-    const node = await findByText(/No recent InVEST runs/);
+    const node = await findByText(/button to setup a model/);
     expect(node).toBeInTheDocument();
   });
 
@@ -309,7 +309,7 @@ describe('Display recently executed InVEST jobs', () => {
     });
     fireEvent.click(getByTitle('settings'));
     fireEvent.click(getByText('Clear'));
-    const node = await findByText(/No recent InVEST runs/);
+    const node = await findByText(/button to setup a model/);
     expect(node).toBeInTheDocument();
   });
 });

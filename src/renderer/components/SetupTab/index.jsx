@@ -1,9 +1,13 @@
+import { ipcRenderer } from 'electron';
 import React from 'react';
 import PropTypes from 'prop-types';
 
 import Container from 'react-bootstrap/Container';
 import Spinner from 'react-bootstrap/Spinner';
 import Row from 'react-bootstrap/Row';
+import Button from 'react-bootstrap/Button';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
+import Tooltip from 'react-bootstrap/Tooltip';
 
 import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
@@ -11,11 +15,13 @@ import {
   RunButton, SaveParametersButtons
 } from './SetupButtons';
 import {
+  fetchDatastackFromFile,
   fetchValidation,
   saveToPython,
   writeParametersToFile
 } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 /** Initialize values of InVEST args based on the model's UI Spec.
  *
@@ -83,6 +89,8 @@ export default class SetupTab extends React.Component {
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.insertNWorkers = this.insertNWorkers.bind(this);
     this.callUISpecFunctions = this.callUISpecFunctions.bind(this);
+    this.browseForDatastack = this.browseForDatastack.bind(this);
+    this.loadParametersFromFile = this.loadParametersFromFile.bind(this);
   }
 
   componentDidMount() {
@@ -206,6 +214,25 @@ export default class SetupTab extends React.Component {
     writeParametersToFile(payload);
   }
 
+  async loadParametersFromFile(filepath) {
+    const datastack = await fetchDatastackFromFile(filepath);
+
+    if (datastack.module_name === this.props.pyModuleName) {
+      this.batchUpdateArgs(datastack.args);
+    } else {
+      alert(
+        `Datastack/Logfile for ${datastack.model_human_name} does not match this model.`
+      );
+    }
+  }
+
+  async browseForDatastack() {
+    const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
+    if (data.filePaths.length) {
+      this.loadParametersFromFile(data.filePaths[0]);
+    }
+  }
+
   wrapInvestExecute() {
     const argsValues = this.insertNWorkers(this.state.argsValues);
     this.props.investExecute(argsDictFromObject(argsValues));
@@ -322,7 +349,6 @@ export default class SetupTab extends React.Component {
     if (argsValues) {
       const {
         argsSpec,
-        pyModuleName,
         sidebarSetupElementId,
         sidebarFooterElementId,
         isRunning,
@@ -354,12 +380,27 @@ export default class SetupTab extends React.Component {
               argsEnabled={argsEnabled}
               argsDropdownOptions={argsDropdownOptions}
               argsOrder={uiSpec.order}
-              pyModuleName={pyModuleName}
               updateArgValues={this.updateArgValues}
-              batchUpdateArgs={this.batchUpdateArgs}
+              loadParametersFromFile={this.loadParametersFromFile}
             />
           </Row>
           <Portal elId={sidebarSetupElementId}>
+            <OverlayTrigger
+              placement="right"
+              delay={{ show: 250, hide: 400 }}
+              overlay={(
+                <Tooltip>
+                  Browse to a datastack (.json) or InVEST logfile (.txt)
+                </Tooltip>
+              )}
+            >
+              <Button
+                onClick={this.browseForDatastack}
+                variant="link"
+              >
+                Load parameters from file
+              </Button>
+            </OverlayTrigger>
             <SaveParametersButtons
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}

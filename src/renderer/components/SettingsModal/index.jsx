@@ -7,7 +7,6 @@ import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
-import { dragOverHandlerNone } from '../../utils';
 import { getDefaultSettings } from './SettingsStorage';
 
 /** Validate that n_workers is an acceptable value for Taskgraph.
@@ -130,7 +129,6 @@ export default class SettingsModal extends React.Component {
         <Button
           as={CustomButton}
           onClick={this.handleShow}
-          onDragOver={dragOverHandlerNone}
         />
 
         <Modal show={this.state.show} onHide={this.handleClose}>

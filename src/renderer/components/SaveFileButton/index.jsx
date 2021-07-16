@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
 
-import { dragOverHandlerNone } from '../../utils';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 /** Render a button that saves current args to a datastack json.
  * Opens an native OS filesystem dialog to browse to a save location.
@@ -17,7 +17,10 @@ export default class SaveFileButton extends React.Component {
   }
 
   async browseSaveFile(event) {
-    const data = await ipcRenderer.invoke('show-save-dialog', { defaultPath: this.props.defaultTargetPath });
+    const data = await ipcRenderer.invoke(
+      ipcMainChannels.SHOW_SAVE_DIALOG,
+      { defaultPath: this.props.defaultTargetPath }
+    );
     if (data.filePath) {
       this.props.func(data.filePath);
     }
@@ -28,7 +31,6 @@ export default class SaveFileButton extends React.Component {
       <Button
         onClick={this.browseSaveFile}
         variant="link"
-        onDragOver={dragOverHandlerNone}
       >
         {this.props.title}
       </Button>

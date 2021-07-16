@@ -23,6 +23,16 @@ body {
 	padding-bottom: 0;
 }
 
+.navbar-middle {
+	flex-shrink: 1;
+	min-width: 0;
+}
+
+.navbar-right {
+	max-width: fit-content;
+	margin-left: 0.5rem;
+}
+
 .navbar-brand .nav-link {
 	color: var(--invest-green);
 	font-weight: 600;
@@ -83,6 +93,7 @@ body {
 }
 
 .progress {
+	display: inline-flex;
 	height: 2rem;
 	font-size: 1rem;
 	background-color: #aeb1b3;
@@ -135,6 +146,7 @@ body {
 	flex-direction: column;
 	height: 87vh;
 	overflow-y: auto;
+	margin-top: 15px;
 }
 
 .recent-job-card {
@@ -186,7 +198,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	padding-right: 0;
-	min-width: 250px;
+	min-width: fit-content;
 }
 
 .invest-sidebar-col .nav-link {
@@ -216,7 +228,11 @@ body {
 	flex-direction: column;
 	flex-wrap: nowrap;
 	align-items: flex-start;
-	padding-left: 2rem;
+	padding-left: 1.5rem;
+}
+
+.sidebar-setup .btn {
+	white-space: nowrap;
 }
 
 /* Resources Links */

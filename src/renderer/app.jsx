@@ -11,11 +11,9 @@ import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import Container from 'react-bootstrap/Container';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
-import LoadButton from './components/LoadButton';
 import SettingsModal from './components/SettingsModal';
 import {
   DataDownloadModal, DownloadProgressBar
@@ -236,30 +234,30 @@ export default class App extends React.Component {
             onDragOver={dragOverHandlerNone}
           >
             <Row
-              className="w-100 flex-nowrap"
+              className="w-100 flex-nowrap mr-0"
             >
               <Col sm={3} className="px-0">
-                <Navbar.Brand onDragOver={dragOverHandlerNone}>
+                <Navbar.Brand>
                   <Nav.Link
                     onSelect={this.switchTabs}
                     eventKey="home"
-                    onDragOver={dragOverHandlerNone}
                   >
                     InVEST
                   </Nav.Link>
                 </Navbar.Brand>
               </Col>
-              <Col sm={7} className="pl-1 pr-0">
+              <Col className="pl-1 pr-0 navbar-middle">
                 <Nav
                   justify
                   variant="tabs"
                   className="mr-auto"
                   activeKey={activeTab}
                   onSelect={this.switchTabs}
-                  onDragOver={dragOverHandlerNone}
                 >
                   {investNavItems}
                 </Nav>
+              </Col>
+              <Col className="px-0 text-right navbar-right">
                 {
                   (downloadedNofN)
                     ? (
@@ -270,12 +268,6 @@ export default class App extends React.Component {
                     )
                     : <div />
                 }
-              </Col>
-              <Col sm={2} className="px-0 text-right">
-                <LoadButton
-                  openInvestModel={this.openInvestModel}
-                  batchUpdateArgs={this.batchUpdateArgs}
-                />
                 {
                   // don't render until after we fetched the data
                   (investSettings)
@@ -294,12 +286,16 @@ export default class App extends React.Component {
             </Row>
           </Navbar>
 
-          <TabContent id="top-tab-content">
+          <TabContent
+            id="top-tab-content"
+            onDragOver={dragOverHandlerNone}
+          >
             <TabPane eventKey="home" title="Home">
               <HomeTab
                 investList={investList}
                 openInvestModel={this.openInvestModel}
                 recentJobs={recentJobs}
+                batchUpdateArgs={this.batchUpdateArgs}
               />
             </TabPane>
             {investTabPanes}

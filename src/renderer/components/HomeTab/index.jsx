@@ -8,6 +8,7 @@ import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
+import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('/'));
@@ -145,23 +146,28 @@ class RecentInvestJobs extends React.PureComponent {
 
     return (
       <Container>
-        <h4>
-          Recent runs:
-        </h4>
-        {recentButtons.length
-          ? (
-            <React.Fragment>
-              {recentButtons}
-            </React.Fragment>
-          )
-          : (
-            <div>
-              No recent InVEST runs yet.
-              <br />
-              Try the <b>Open</b> button to setup a model from a sample 
-              datastack file (.json) or from an invest model's logfile (.txt)
-            </div>
-          )}
+        <div className="mb-1">
+          {recentButtons.length
+            ? (
+              <h4 className="d-inline-block">
+                Recent runs:
+              </h4>
+            )
+            : (
+              <div className="d-inline-block">
+                Try the <b>Open</b> button to setup a model from a sample 
+                datastack file (.json) or from an InVEST model's logfile (.txt)
+              </div>
+            )}
+          <OpenButton
+            className="float-right"
+            openInvestModel={this.props.openInvestModel}
+            batchUpdateArgs={this.props.batchUpdateArgs}
+          />
+        </div>
+        <React.Fragment>
+          {recentButtons}
+        </React.Fragment>
       </Container>
     );
   }

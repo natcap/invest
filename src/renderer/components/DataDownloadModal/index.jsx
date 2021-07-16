@@ -11,6 +11,7 @@ import Table from 'react-bootstrap/Table';
 
 import Expire from '../Expire';
 import sampledataRegistry from '../../sampledata_registry.json';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -50,12 +51,12 @@ export class DataDownloadModal extends React.Component {
     // even though the idea is to save files, here we just want to chooose
     // a directory, so must use OpenDialog.
     const data = await ipcRenderer.invoke(
-      'show-open-dialog',
+      ipcMainChannels.SHOW_OPEN_DIALOG,
       { properties: ['openDirectory'] }
     );
     if (data.filePaths.length) {
       ipcRenderer.send(
-        'download-url',
+        ipcMainChannels.DOWNLOAD_URL,
         this.state.selectedLinksArray,
         data.filePaths[0]
       );

@@ -15,7 +15,7 @@ import SetupTab from '../SetupTab';
 import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
 import { getSpec } from '../../server_requests';
-import { dragOverHandlerNone } from '../../utils';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -149,7 +149,7 @@ export default class InvestTab extends React.Component {
     });
 
     ipcRenderer.send(
-      'invest-run',
+      ipcMainChannels.INVEST_RUN,
       job.metadata.modelRunName,
       this.state.modelSpec.module,
       args,
@@ -159,7 +159,7 @@ export default class InvestTab extends React.Component {
   }
 
   terminateInvestProcess() {
-    ipcRenderer.send('invest-kill', this.state.workspaceDir);
+    ipcRenderer.send(ipcMainChannels.INVEST_KILL, this.state.workspaceDir);
     this.setState({
       logStdErr: 'Run Canceled'
     });
@@ -207,7 +207,6 @@ export default class InvestTab extends React.Component {
           <Col
             md={3}
             className="invest-sidebar-col"
-            onDragOver={dragOverHandlerNone}
           >
             <Nav
               className="flex-column"
