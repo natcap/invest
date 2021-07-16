@@ -18,6 +18,13 @@ from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
+CURRENT_LULC_NAME = 'current land use/land cover'
+FUTURE_LULC_NAME = 'future land use/land cover'
+CARBON_POOLS_NAME = 'carbon pools'
+CALCULATE_SEQUESTRATION_NAME = 'calculate sequestration'
+REDD_ANALYSIS_NAME = 'REDD scenario analysis'
+DO_VALUATION_NAME = 'run valuation model'
+
 ARGS_SPEC = {
     "model_name": "InVEST Carbon Model",
     "module": __name__,
@@ -33,108 +40,144 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "about": (
-                "A GDAL-supported raster representing the land-cover of the "
-                "current scenario."),
-            "name": "Current Land Use/Land Cover"
+                "A map of land cover for the current scenario. All values in "
+                "this raster must have corresponding entries in the "
+                f"{CARBON_POOLS_NAME} table."),
+            "name": CURRENT_LULC_NAME
         },
         "calc_sequestration": {
             "type": "boolean",
             "required": "do_valuation | do_redd",
             "about": (
                 "Check to enable sequestration analysis. This requires inputs "
-                "of Land Use/Land Cover maps for both current and future "
-                "scenarios."),
-            "name": "Calculate Sequestration"
+                "of land use/land cover maps for both current and future "
+                f"scenarios. Required if {REDD_ANALYSIS_NAME} or "
+                f"{DO_VALUATION_NAME} is selected."),
+            "name": CALCULATE_SEQUESTRATION_NAME
         },
         "lulc_fut_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": "calc_sequestration",
             "about": (
-                "A GDAL-supported raster representing the land-cover of the "
-                "future scenario. If REDD scenario analysis is enabled, this "
+                "A map of land cover for the future scenario. All values in "
+                "this raster must have corresponding entries in the "
+                f"{CARBON_POOLS_NAME} table. Required if "
+                f"{CALCULATE_SEQUESTRATION_NAME} is "
+                f"selected. If {REDD_ANALYSIS_NAME} is selected, this "
                 "should be the reference, or baseline, future scenario "
                 "against which to compare the REDD policy scenario."),
-            "name": "Future Landcover"
+            "name": FUTURE_LULC_NAME
         },
         "do_redd": {
             "type": "boolean",
             "required": False,
             "about": (
                 "Check to enable REDD scenario analysis.  This requires three "
-                "Land Use/Land Cover maps: one for the current scenario, one "
+                "land use/land cover maps: one for the current scenario, one "
                 "for the future baseline scenario, and one for the future "
                 "REDD policy scenario."),
-            "name": "REDD Scenario Analysis"
+            "name": REDD_ANALYSIS_NAME
         },
         "lulc_redd_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": "do_redd",
             "about": (
-                "A GDAL-supported raster representing the land-cover of the "
-                "REDD policy future scenario.  This scenario will be compared "
-                "to the baseline future scenario."),
-            "name": "REDD Policy"
+                "A map of land cover for the REDD policy scenario. All values "
+                "in this raster must have corresponding entries in the "
+                f"{CARBON_POOLS_NAME}. Required if {REDD_ANALYSIS_NAME} is "
+                "selected."),
+            "name": "REDD land use/land cover"
         },
         "carbon_pools_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
-                "c_above": {"type": "number", "units": u.metric_ton/u.hectare},
-                "c_below": {"type": "number", "units": u.metric_ton/u.hectare},
-                "c_soil": {"type": "number", "units": u.metric_ton/u.hectare},
-                "c_dead": {"type": "number", "units": u.metric_ton/u.hectare}
+                "lucode": {
+                    "type": "code",
+                    "about": (
+                        "Land use/land cover code. Every value in the LULC "
+                        "maps must have a corresponding entry in this column.")
+                },
+                "c_above": {
+                    "type": "number",
+                    "units": u.metric_ton/u.hectare,
+                    "about": "Carbon density of aboveground biomass."},
+                "c_below": {
+                    "type": "number",
+                    "units": u.metric_ton/u.hectare,
+                    "about": "Carbon density of belowground biomass."},
+                "c_soil": {
+                    "type": "number",
+                    "units": u.metric_ton/u.hectare,
+                    "about": "Carbon density of soil."},
+                "c_dead": {
+                    "type": "number",
+                    "units": u.metric_ton/u.hectare,
+                    "about": "Carbon density of dead matter."}
             },
             "about": (
-                "A table that maps the each LULC class from the LULC map(s)to "
-                "the amount of carbon in their carbon pools."),
-            "name": "Carbon Pools"
+                "A table that maps each LULC code to carbon pool data for "
+                "that LULC type."),
+            "name": CARBON_POOLS_NAME
         },
         "lulc_cur_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
             "units": u.year,
             "required": "do_valuation",
-            "about": "The calendar year of the current scenario.",
-            "name": "Current Land Cover Calendar Year"
+            "about": (
+                "The calendar year of the current scenario depicted in the "
+                f"{CURRENT_LULC_NAME}. Required if {DO_VALUATION_NAME} is "
+                "selected."),
+            "name": "current land cover year"
         },
         "lulc_fut_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
             "units": u.year,
             "required": "do_valuation",
-            "about": "The calendar year of the future scenario.",
-            "name": "Future Land Cover Calendar Year"
+            "about": (
+                "The calendar year of the future scenario depicted in the "
+                f"{FUTURE_LULC_NAME} map. Required if {DO_VALUATION_NAME} is "
+                "selected."),
+            "name": "future land cover year"
         },
         "do_valuation": {
             "type": "boolean",
             "required": False,
             "about": (
-                "Calculate NPV for a future or REDD scenario "
-                "and report in final HTML document."),
-            "name": "Run Valuation Model"
+                "Calculate net present value for the future scenario, and the "
+                "REDD scenario if provided, and report it in the final HTML "
+                "document."),
+            "name": DO_VALUATION_NAME
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
             "units": u.currency/u.ton,
             "required": "do_valuation",
-            "about": "The present value of carbon per metric ton.",
+            "about": (
+                "The present value of carbon. Required if "
+                f"{DO_VALUATION_NAME} is selected."),
             "name": "price of carbon"
         },
         "discount_rate": {
             "type": "ratio",
             "required": "do_valuation",
-            "about": "The discount rate as a floating point percent.",
-            "name": "Market Discount in Price of Carbon (%)"
+            "about": (
+                "The annual market discount rate in the price of carbon, "
+                "which reflects society's preference for immediate benefits "
+                f"over future benefits. Required if {DO_VALUATION_NAME} is "
+                "selected."),
+            "name": "Annual Market Discount Rate"
         },
         "rate_change": {
             "type": "ratio",
             "required": "do_valuation",
             "about": (
-                "The floating point percent increase of the price of carbon "
-                "per year."),
-            "name": "Annual Rate of Change in Price of Carbon"
+                "The annual increase of the price of carbon. Required if "
+                f"{DO_VALUATION_NAME} is selected."),
+            "name": "Annual Price Change"
         }
     }
 }

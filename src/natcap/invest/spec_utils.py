@@ -31,9 +31,9 @@ u.define('none = []')
 WORKSPACE = {
     "name": "Workspace",
     "about": (
-        "The folder where all intermediate and output files of the model "
-        "will be written.  If this folder does not exist, it will be "
-        "created."),
+        "The folder where all the model's output files will be written. If "
+        "this folder does not exist, it will be created. If data already "
+        "exists in the folder, it will be overwritten."),
     "type": "directory",
     "contents": {},
     "must_exist": False,
@@ -42,9 +42,7 @@ WORKSPACE = {
 
 SUFFIX = {
     "name": "File suffix",
-    "about": (
-        'A string that will be added to the end of all files '
-        'written to the workspace.'),
+    "about": "Text to append to all file names written to the workspace.",
     "type": "freestyle_string",
     "required": False,
     "regexp": "[a-zA-Z0-9_-]*"

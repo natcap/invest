@@ -28,16 +28,19 @@ ARGS_SPEC = {
             "name": "LULC Lookup Table",
             "type": "csv",
             "about": (
-                "A CSV table used to map lulc classes to their values in a "
-                "raster, as well as to indicate whether or not the lulc class "
-                "is a coastal blue carbon habitat."),
+                "A table mapping LULC codes from the snapshot rasters to the "
+                "corresponding LULC class names, and whether or not the LULC "
+                "class is a coastal blue carbon habitat."),
             "columns": {
                 "code": {
                     "type": "code",
-                    "about": "LULC code"},
-                "lulc-class" : {
+                    "about": (
+                        "Land use/land cover code. Every value in the "
+                        "snapshot LULC maps must have a corresponding entry "
+                        "in this column.")},
+                "lulc-class": {
                     "type": "freestyle_string",
-                    "about": "Text description of the LULC class"},
+                    "about": "Name of the LULC class."},
                 "is_coastal_blue_carbon_habitat": {
                     "type": "boolean",
                     "about": (
@@ -54,19 +57,16 @@ ARGS_SPEC = {
                     "about": "Year to snapshot"},
                 "raster_path": {
                     "type": "raster",
-                    "bands": {
-                        1: {
-                            "type": "code",
-                            "about": "Map of LULC codes"
-                        }
-                    }
+                    "bands": {1: {"type": "code"}},
+                    "about": (
+                        "Map of land use/land cover in the snapshot year. All "
+                        "values in this raster must have corresponding "
+                        "entries in the LULC Lookup table.")
                 }
             },
             "about": (
-                "A CSV table where each row represents the year and path to a "
-                "raster file on disk representing the landcover raster "
-                "representing the state of the landscape in that year. "
-                "Landcover codes match those in the LULC lookup table."),
+                "A table mapping snapshot years to corresponding LULC maps "
+                "for each year."),
             "name": "LULC Snapshots Table",
         },
     }
