@@ -221,7 +221,7 @@ export default class SetupTab extends React.Component {
       this.batchUpdateArgs(datastack.args);
     } else {
       alert(
-        `Datastack/Logfile for ${datastack.model_human_name} model does not match this model.`
+        `Datastack/Logfile for ${datastack.model_human_name} does not match this model.`
       );
     }
   }
