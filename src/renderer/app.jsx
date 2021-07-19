@@ -37,7 +37,8 @@ export default class App extends React.Component {
 
     this.state = {
       activeTab: 'home',
-      openJobs: [],
+      openNavIDs: [],
+      openJobs: {},
       investList: {},
       recentJobs: [],
       investSettings: null,
@@ -48,6 +49,7 @@ export default class App extends React.Component {
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
     this.closeInvestModel = this.closeInvestModel.bind(this);
+    this.updateJobProperty = this.updateJobProperty.bind(this);
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
     this.storeDownloadDir = this.storeDownloadDir.bind(this);
@@ -118,10 +120,18 @@ export default class App extends React.Component {
    */
   openInvestModel(job) {
     const navID = crypto.randomBytes(16).toString('hex');
-    job.setProperty('navID', navID);
-    this.setState((state) => ({
-      openJobs: [...state.openJobs, job],
-    }), () => this.switchTabs(navID));
+    // job.setProperty('navID', navID);
+    const openJobs = Object.assign({}, this.state.openJobs);
+    const openNavIDs = Object.assign([], this.state.openNavIDs);
+    openNavIDs.push(navID);
+    openJobs[navID] = job;
+    this.setState({
+      openNavIDs: openNavIDs,
+      openJobs: openJobs,
+    }, () => this.switchTabs(navID));
+    // this.setState((state) => ({
+    //   openJobs: [...state.openJobs, job],
+    // }), () => this.switchTabs(navID));
   }
 
   /**
@@ -132,23 +142,46 @@ export default class App extends React.Component {
    */
   closeInvestModel(navID) {
     let index;
-    const { openJobs } = this.state;
-    openJobs.forEach((job) => {
-      if (job.metadata.navID === navID) {
-        index = openJobs.indexOf(job);
-        openJobs.splice(index, 1);
+    const { openNavIDs, openJobs } = this.state;
+    delete openJobs[navID];
+    openNavIDs.forEach((id) => {
+      if (id === navID) {
+        index = openNavIDs.indexOf(navID);
+        openNavIDs.splice(index, 1);
       }
     });
+    // let index;
+    // const { openJobs } = this.state;
+    // openJobs.forEach((job) => {
+    //   if (job.metadata.navID === navID) {
+    //     index = openJobs.indexOf(job);
+    //     openJobs.splice(index, 1);
+    //   }
+    // });
     // Switch to the next tab if there is one, or the previous, or home.
     let switchTo = 'home';
-    if (openJobs[index]) {
-      switchTo = openJobs[index].metadata.navID;
-    } else if (openJobs[index - 1]) {
-      switchTo = openJobs[index - 1].metadata.navID;
+    if (openNavIDs[index]) {
+      switchTo = openNavIDs[index];
+    } else if (openNavIDs[index - 1]) {
+      switchTo = openNavIDs[index - 1];
     }
+    // if (openJobs[index]) {
+    //   switchTo = openJobs[index].metadata.navID;
+    // } else if (openJobs[index - 1]) {
+    //   switchTo = openJobs[index - 1].metadata.navID;
+    // }
     this.switchTabs(switchTo);
     this.setState({
+      openNavIDs: openNavIDs,
       openJobs: openJobs,
+    });
+  }
+
+  updateJobProperty(id, property, value) {
+    const { openJobs } = this.state;
+    openJobs[id].metadata[property] = value;
+    this.setState({
+      openJobs: openJobs
     });
   }
 
@@ -158,8 +191,13 @@ export default class App extends React.Component {
    *
    * @param {object} job - an instance of InvestJob.
    */
-  async saveJob(job) {
+  async saveJob(jobID) {
+    const job = this.state.openJobs[jobID];
+    // Object.entries(job.metadata).forEach((key, value) => {
+    //   job.setProperty(key, value);
+    // });
     const recentJobs = await job.save();
+    // const recentJobs = await this.state.openJobs[jobID].save();
     this.setState({
       recentJobs: recentJobs,
     });
@@ -178,6 +216,7 @@ export default class App extends React.Component {
       investSettings,
       recentJobs,
       openJobs,
+      openNavIDs,
       activeTab,
       showDownloadModal,
       downloadedNofN,
@@ -185,9 +224,14 @@ export default class App extends React.Component {
 
     const investNavItems = [];
     const investTabPanes = [];
-    openJobs.forEach((job) => {
+    openNavIDs.forEach((id) => {
+    // openJobs.forEach((job) => {
+      const job = openJobs[id].metadata;
       let statusSymbol;
-      switch (job.metadata.status) {
+      // this only works by coincidence that something else (saveJob)
+      // updated state & triggered re-render.
+      // React did not notice the change in job.metadata.status
+      switch (job.status) {
         case 'success':
           statusSymbol = '\u{2705}'; // green check
           break;
@@ -210,19 +254,19 @@ export default class App extends React.Component {
       }
       investNavItems.push(
         <Nav.Item
-          key={job.metadata.navID}
-          className={job.metadata.navID === activeTab ? 'active' : ''}
+          key={id}
+          className={id === activeTab ? 'active' : ''}
         >
-          <Nav.Link eventKey={job.metadata.navID}>
+          <Nav.Link eventKey={id}>
             {statusSymbol}
-            {` ${job.metadata.modelHumanName}`}
+            {` ${job.modelHumanName}`}
           </Nav.Link>
           <Button
             className="close-tab"
             variant="outline-dark"
             onClick={(event) => {
               event.stopPropagation();
-              this.closeInvestModel(job.metadata.navID);
+              this.closeInvestModel(id);
             }}
             onDragOver={dragOverHandlerNone}
           >
@@ -232,14 +276,16 @@ export default class App extends React.Component {
       );
       investTabPanes.push(
         <TabPane
-          key={job.metadata.navID}
-          eventKey={job.metadata.navID}
-          title={job.metadata.modelHumanName}
+          key={id}
+          eventKey={id}
+          title={job.modelHumanName}
         >
           <InvestTab
             job={job}
+            jobID={id}
             investSettings={investSettings}
             saveJob={this.saveJob}
+            updateJobProperty={this.updateJobProperty}
           />
         </TabPane>
       );

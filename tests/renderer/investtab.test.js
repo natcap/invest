@@ -24,13 +24,15 @@ function renderInvestTab() {
     modelRunName: 'carbon',
     modelHumanName: 'Carbon Model',
   });
-  job.setProperty('navID', 'carbon456asdf');
+  // job.setProperty('navID', 'carbon456asdf');
   const { ...utils } = render(
     <InvestTab
-      job={job}
+      job={job.metadata}
+      jobID="carbon456asdf"
       investExe="foo"
       investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
       saveJob={() => {}}
+      updateJobProperty={() => {}}
     />
   );
   return utils;

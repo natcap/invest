@@ -146,8 +146,6 @@ export function setupInvestRunHandlers(investExe) {
       event.reply(`invest-stderr-${channel}`, `${data}${os.EOL}`);
     });
 
-    // Set some state when the invest process exits and update the app's
-    // persistent database by calling saveJob.
     investRun.on('exit', (code) => {
       delete runningJobs[args.workspace_dir];
       event.reply(`invest-exit-${channel}`, code);

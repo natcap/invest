@@ -136,7 +136,7 @@ class RecentInvestJobs extends React.PureComponent {
             <Card.Footer className="text-muted">
               <span>{job.humanTime}</span>
               <span className="float-right">
-                <em>{job.status !== 'success' ? job.status : ''}</em>
+                <em>{job.stdErr || ''}</em>
               </span>
             </Card.Footer>
           </Card.Body>

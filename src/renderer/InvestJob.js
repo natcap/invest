@@ -49,7 +49,7 @@ export default class InvestJob {
    * @param {string} obj.modelHumanName - colloquial name of the invest model
    * @param {object} obj.argsValues - an invest "args dict" with initial values
    * @param {string} obj.logfile - path to an existing invest logfile
-   * @param {'running'|'success'|'error'} obj.status - status of the invest process
+   * @param {string} obj.stdErr - stdErr string, if any
    */
   constructor(
     {
@@ -57,15 +57,16 @@ export default class InvestJob {
       modelHumanName,
       argsValues,
       logfile,
-      status,
+      stdErr,
     }
   ) {
+    // TODO: re-think what structure is really needed here
     this.metadata = {};
     this.metadata.modelRunName = modelRunName;
     this.metadata.modelHumanName = modelHumanName;
     this.metadata.argsValues = argsValues;
     this.metadata.logfile = logfile;
-    this.metadata.status = status;
+    this.metadata.stdErr = stdErr;
     this.metadata.workspaceHash = null;
 
     this.save = this.save.bind(this);

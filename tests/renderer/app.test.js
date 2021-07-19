@@ -572,10 +572,11 @@ describe('InVEST subprocess testing', () => {
     expect(queryByText('Model Complete')).toBeNull();
     expect(queryByText('Open Workspace')).toBeNull();
     // Job should already be saved to recent jobs database w/ status:
-    await getByRole('button', { name: 'InVEST' }).click();
-    const homeTab = await getByRole('tabpanel', { name: /Home/ });
-    expect(await within(homeTab).findByText('running'))
-      .toBeInTheDocument();
+    // TODO: prob not gonna display recent card while running
+    // await getByRole('button', { name: 'InVEST' }).click();
+    // const homeTab = await getByRole('tabpanel', { name: /Home/ });
+    // expect(await within(homeTab).findByText('running'))
+    //   .toBeInTheDocument();
 
     mockInvestProc.emit('exit', 0); // 0 - exit w/o error
     expect(await findByText('Model Complete')).toBeInTheDocument();
@@ -583,6 +584,8 @@ describe('InVEST subprocess testing', () => {
     expect(execute).toBeEnabled();
 
     // A recent job card should be rendered w/ updated status
+    await getByRole('button', { name: 'InVEST' }).click();
+    const homeTab = await getByRole('tabpanel', { name: /Home/ });
     const cardText = await within(homeTab)
       .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
