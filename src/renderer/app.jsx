@@ -120,18 +120,13 @@ export default class App extends React.Component {
    */
   openInvestModel(job) {
     const navID = crypto.randomBytes(16).toString('hex');
-    // job.setProperty('navID', navID);
-    const openJobs = Object.assign({}, this.state.openJobs);
-    const openNavIDs = Object.assign([], this.state.openNavIDs);
+    const { openJobs, openNavIDs } = this.state;
     openNavIDs.push(navID);
     openJobs[navID] = job;
     this.setState({
       openNavIDs: openNavIDs,
       openJobs: openJobs,
     }, () => this.switchTabs(navID));
-    // this.setState((state) => ({
-    //   openJobs: [...state.openJobs, job],
-    // }), () => this.switchTabs(navID));
   }
 
   /**
@@ -150,14 +145,6 @@ export default class App extends React.Component {
         openNavIDs.splice(index, 1);
       }
     });
-    // let index;
-    // const { openJobs } = this.state;
-    // openJobs.forEach((job) => {
-    //   if (job.metadata.navID === navID) {
-    //     index = openJobs.indexOf(job);
-    //     openJobs.splice(index, 1);
-    //   }
-    // });
     // Switch to the next tab if there is one, or the previous, or home.
     let switchTo = 'home';
     if (openNavIDs[index]) {
@@ -165,11 +152,6 @@ export default class App extends React.Component {
     } else if (openNavIDs[index - 1]) {
       switchTo = openNavIDs[index - 1];
     }
-    // if (openJobs[index]) {
-    //   switchTo = openJobs[index].metadata.navID;
-    // } else if (openJobs[index - 1]) {
-    //   switchTo = openJobs[index - 1].metadata.navID;
-    // }
     this.switchTabs(switchTo);
     this.setState({
       openNavIDs: openNavIDs,
@@ -189,15 +171,12 @@ export default class App extends React.Component {
    *
    * And update the app's view of that store.
    *
-   * @param {object} job - an instance of InvestJob.
+   * @param {string} jobID - an instance of InvestJob.
+   * // TODO: update param docs - can navID & workspaceHash be unified?
    */
   async saveJob(jobID) {
     const job = this.state.openJobs[jobID];
-    // Object.entries(job.metadata).forEach((key, value) => {
-    //   job.setProperty(key, value);
-    // });
     const recentJobs = await job.save();
-    // const recentJobs = await this.state.openJobs[jobID].save();
     this.setState({
       recentJobs: recentJobs,
     });
@@ -225,12 +204,8 @@ export default class App extends React.Component {
     const investNavItems = [];
     const investTabPanes = [];
     openNavIDs.forEach((id) => {
-    // openJobs.forEach((job) => {
       const job = openJobs[id].metadata;
       let statusSymbol;
-      // this only works by coincidence that something else (saveJob)
-      // updated state & triggered re-render.
-      // React did not notice the change in job.metadata.status
       switch (job.status) {
         case 'success':
           statusSymbol = '\u{2705}'; // green check

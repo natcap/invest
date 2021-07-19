@@ -48,7 +48,7 @@ async function investGetSpec(modelName) {
 export default class InvestTab extends React.Component {
   constructor(props) {
     super(props);
-
+    // TODO: what's needed here? what should inherit from openJobs?
     this.state = {
       activeTab: 'setup',
       modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
@@ -59,6 +59,7 @@ export default class InvestTab extends React.Component {
       logfile: null,
     };
 
+    // TODO: could use the jobID or workspaceHash, right?
     this.ipcSuffix = window.crypto.getRandomValues(new Uint16Array(1))[0];
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
@@ -111,9 +112,7 @@ export default class InvestTab extends React.Component {
     // in part by it's workspace directory.
     args.workspace_dir = path.resolve(argsValues.workspace_dir);
 
-    // job.setProperty('argsValues', args);
     updateJobProperty(jobID, 'argsValues', args);
-    // job.setProperty('status', 'running');
     updateJobProperty(jobID, 'status', 'running');
 
     // Setting this very early in the click handler so the Execute button
@@ -128,7 +127,6 @@ export default class InvestTab extends React.Component {
       }, () => {
         this.switchTabs('log');
       });
-      // job.setProperty('logfile', logfile);
       updateJobProperty(jobID, 'logfile', logfile);
       // saveJob(job); // is there a reason to save here before the run completes?
     });
@@ -149,7 +147,6 @@ export default class InvestTab extends React.Component {
       // this.setState({
       //   jobStatus: status
       // });
-      // job.setProperty('stdErr', this.state.logStdErr);
       updateJobProperty(jobID, 'stdErr', this.state.logStdErr);
       saveJob(jobID);
     });
