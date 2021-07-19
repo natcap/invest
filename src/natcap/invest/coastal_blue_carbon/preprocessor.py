@@ -33,9 +33,9 @@ ARGS_SPEC = {
                 "is a coastal blue carbon habitat."),
             "columns": {
                 "code": {
-                    "type": "code",
+                    "type": "integer",
                     "about": "LULC code"},
-                "lulc-class" : {
+                "lulc-class": {
                     "type": "freestyle_string",
                     "about": "Text description of the LULC class"},
                 "is_coastal_blue_carbon_habitat": {
@@ -56,7 +56,7 @@ ARGS_SPEC = {
                     "type": "raster",
                     "bands": {
                         1: {
-                            "type": "code",
+                            "type": "integer",
                             "about": "Map of LULC codes"
                         }
                     }

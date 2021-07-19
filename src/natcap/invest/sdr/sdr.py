@@ -85,7 +85,7 @@ ARGS_SPEC = {
         "watersheds_path": {
             "type": "vector",
             "fields": {
-                "ws_id": {"type": "code"}
+                "ws_id": {"type": "integer"}
             },
             "geometries": spec_utils.POLYGONS,
             "projected": True,
@@ -100,7 +100,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
+                "lucode": {"type": "integer"},
                 "usle_c": {
                     "type": "ratio",
                     "about": "Cover-management factor for the USLE"},

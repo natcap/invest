@@ -58,7 +58,7 @@ ARGS_SPEC = {
         "watersheds_path": {
             "type": "vector",
             "projected": True,
-            "fields": {"ws_id": {"type": "code"}},
+            "fields": {"ws_id": {"type": "integer"}},
             "geometries": spec_utils.POLYGONS,
             "about": (
                 "A GDAL-supported vector file containing watersheds such that "
@@ -71,7 +71,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
+                "lucode": {"type": "integer"},
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
