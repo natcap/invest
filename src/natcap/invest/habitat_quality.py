@@ -155,7 +155,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lulc": {
-                    "type": "code",
+                    "type": "integer",
                     "about": ("LULC codes corresponding to those in the LULC "
                               "rasters.")
                 },

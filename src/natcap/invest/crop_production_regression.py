@@ -52,7 +52,7 @@ ARGS_SPEC = {
                         "sunflower", "wheat"
                     }
                 },
-                "lucode": {"type": "code"}
+                "lucode": {"type": "integer"}
             },
             "about": (
                 "A CSV table mapping canonical crop names to land use codes "
@@ -94,7 +94,7 @@ ARGS_SPEC = {
                         "[CROP]_regression_yield_table.csv": {
                             "type": "csv",
                             "columns": {
-                                'climate_bin': {"type": "code"},
+                                'climate_bin': {"type": "integer"},
                                 'yield_ceiling': {
                                     "type": "number",
                                     "units": u.metric_ton/u.hectare

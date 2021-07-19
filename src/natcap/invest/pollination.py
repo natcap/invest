@@ -97,7 +97,7 @@ ARGS_SPEC = {
         "landcover_biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
+                "lucode": {"type": "integer"},
                 "nesting_[SUBSTRATE]_availability_index": {
                     "type": "ratio",
                     "about": (

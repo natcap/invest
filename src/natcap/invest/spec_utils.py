@@ -84,7 +84,7 @@ AOI = {
 }
 LULC = {
     "type": "raster",
-    "bands": {1: {"type": "code"}},
+    "bands": {1: {"type": "integer"}},
     "about": "Map of land use/land cover codes.",
     "name": "land use/land cover"
 }
@@ -123,7 +123,7 @@ ETO = {
 }
 SOIL_GROUP = {
     "type": "raster",
-    "bands": {1: {"type": "code"}},
+    "bands": {1: {"type": "integer"}},
     "about": (
         "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4, "
         "corresponding to soil hydrologic groups A, B, C, or D, respectively."

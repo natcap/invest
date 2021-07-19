@@ -101,7 +101,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
+                "lucode": {"type": "integer"},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
@@ -202,7 +202,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "cz_id": {
-                    "type": "code",
+                    "type": "integer",
                     "about": (
                         "Climate zone numbers, integers which correspond to "
                         "values found in the Climate zone raster")},
@@ -221,7 +221,7 @@ ARGS_SPEC = {
         },
         "climate_zone_raster_path": {
             "type": "raster",
-            "bands": {1: {"type": "code"}},
+            "bands": {1: {"type": "integer"}},
             "required": "user_defined_climate_zones",
             "projected": True,
             "about": (

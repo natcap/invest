@@ -38,7 +38,7 @@ ARGS_SPEC = {
             "name": "Base Land Use/Cover"
         },
         "replacment_lucode": {
-            "type": "code",
+            "type": "integer",
             "about": "Code to replace when converting pixels",
             "name": "Replacement Landcover Code"
         },
