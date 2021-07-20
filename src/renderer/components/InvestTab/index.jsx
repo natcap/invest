@@ -48,15 +48,12 @@ async function investGetSpec(modelName) {
 export default class InvestTab extends React.Component {
   constructor(props) {
     super(props);
-    // TODO: what's needed here? what should inherit from openJobs?
     this.state = {
       activeTab: 'setup',
       modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
+      uiSpec: null,
       logStdErr: null, // stderr data from the invest subprocess
-      // jobStatus: null, // 'running', 'error', 'success'
-      workspaceDir: null,
-      logfile: null,
     };
 
     // TODO: could use the jobID or workspaceHash, right?
@@ -75,8 +72,6 @@ export default class InvestTab extends React.Component {
       modelSpec: modelSpec,
       argsSpec: argsSpec,
       uiSpec: uiSpec,
-      // jobStatus: job.status,
-      logfile: job.logfile
     }, () => { this.switchTabs('setup'); });
   }
 
@@ -113,22 +108,13 @@ export default class InvestTab extends React.Component {
     args.workspace_dir = path.resolve(argsValues.workspace_dir);
 
     updateJobProperty(jobID, 'argsValues', args);
-    updateJobProperty(jobID, 'status', 'running');
-
     // Setting this very early in the click handler so the Execute button
     // can display an appropriate visual cue when it's clicked
-    this.setState({
-      // jobStatus: job.status,
-      workspaceDir: args.workspace_dir
-    });
+    updateJobProperty(jobID, 'status', 'running');
+
     ipcRenderer.on(`invest-logging-${this.ipcSuffix}`, (event, logfile) => {
-      this.setState({
-        logfile: logfile
-      }, () => {
-        this.switchTabs('log');
-      });
       updateJobProperty(jobID, 'logfile', logfile);
-      // saveJob(job); // is there a reason to save here before the run completes?
+      this.switchTabs('log');
     });
     ipcRenderer.on(`invest-stderr-${this.ipcSuffix}`, (event, data) => {
       let stderr = Object.assign('', this.state.logStdErr);
@@ -143,11 +129,17 @@ export default class InvestTab extends React.Component {
       // Windows taskkill yields exit code 1
       // Non-windows process.kill yields exit code null
       const status = (code === 0) ? 'success' : 'error';
+      let finalTraceback = '';
+      if (this.state.logStdErr) {
+        let i = 1;
+        while (!finalTraceback) {
+          [finalTraceback] = `${this.state.logStdErr}`
+            .split(/\r\n|\r|\n/).splice(-1 * i);
+          i += 1;
+        }
+      }
       updateJobProperty(jobID, 'status', status);
-      // this.setState({
-      //   jobStatus: status
-      // });
-      updateJobProperty(jobID, 'stdErr', this.state.logStdErr);
+      updateJobProperty(jobID, 'finalTraceback', finalTraceback);
       saveJob(jobID);
     });
 
@@ -162,9 +154,16 @@ export default class InvestTab extends React.Component {
   }
 
   terminateInvestProcess() {
-    ipcRenderer.send(ipcMainChannels.INVEST_KILL, this.state.workspaceDir);
+    // ipcRenderer.send(ipcMainChannels.INVEST_KILL, this.state.workspaceDir);
+    // For the benefit of displaying user-feedback, mock some stdErr
+    // here before sending the kill signal. This way the exit listener will
+    // have some stderr data to work with.
     this.setState({
       logStdErr: 'Run Canceled'
+    }, () => {
+      ipcRenderer.send(
+        ipcMainChannels.INVEST_KILL, this.props.job.argsValues.workspace_dir
+      );
     });
   }
 
@@ -184,15 +183,13 @@ export default class InvestTab extends React.Component {
       modelSpec,
       argsSpec,
       uiSpec,
-      // jobStatus,
-      logStdErr,
-      logfile,
     } = this.state;
     const {
-      // navID,
       status,
       modelRunName,
       argsValues,
+      logfile,
+      finalTraceback,
     } = this.props.job;
     const { jobID } = this.props;
 
@@ -266,7 +263,7 @@ export default class InvestTab extends React.Component {
                 <LogTab
                   jobStatus={status}
                   logfile={logfile}
-                  logStdErr={logStdErr}
+                  finalTraceback={finalTraceback}
                   terminateInvestProcess={this.terminateInvestProcess}
                   pyModuleName={modelSpec.module}
                   sidebarFooterElementId={sidebarFooterElementId}
@@ -287,6 +284,7 @@ InvestTab.propTypes = {
     argsValues: PropTypes.object,
     logfile: PropTypes.string,
     status: PropTypes.string,
+    finalTraceback: PropTypes.string,
   }).isRequired,
   jobID: PropTypes.string.isRequired,
   investSettings: PropTypes.shape({

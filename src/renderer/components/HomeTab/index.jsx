@@ -136,7 +136,7 @@ class RecentInvestJobs extends React.PureComponent {
             <Card.Footer className="text-muted">
               <span>{job.humanTime}</span>
               <span className="float-right">
-                <em>{job.stdErr || ''}</em>
+                <em>{job.finalTraceback || ''}</em>
               </span>
             </Card.Footer>
           </Card.Body>

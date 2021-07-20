@@ -180,7 +180,7 @@ export default class LogTab extends React.Component {
   render() {
     const {
       jobStatus,
-      logStdErr,
+      finalTraceback,
       terminateInvestProcess,
       sidebarFooterElementId,
     } = this.props;
@@ -211,22 +211,9 @@ export default class LogTab extends React.Component {
         </Alert>
       );
     } else if (jobStatus === 'error') {
-      let lastCall = '';
-      if (logStdErr) {
-        let i = 1;
-        while (!lastCall) {
-          [lastCall] = `${logStdErr}`
-            .split(`${os.EOL}`).splice(-1 * i);
-          i += 1;
-        }
-      } else {
-        // Placeholder for a recent job re-loaded, logStdErr data doesn't persist.
-        lastCall = 'Model ended with error - see Log for details';
-      }
-
       ModelStatusAlert = (
         <Alert variant="danger">
-          {lastCall}
+          {finalTraceback}
           {WorkspaceButton}
         </Alert>
       );
@@ -254,7 +241,7 @@ export default class LogTab extends React.Component {
 LogTab.propTypes = {
   jobStatus: PropTypes.string,
   logfile: PropTypes.string,
-  logStdErr: PropTypes.string,
+  finalTraceback: PropTypes.string,
   pyModuleName: PropTypes.string.isRequired,
   terminateInvestProcess: PropTypes.func.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,

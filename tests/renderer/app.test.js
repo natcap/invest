@@ -679,8 +679,8 @@ describe('InVEST subprocess testing', () => {
     fireEvent.click(cancelButton);
     expect(await findByText('Open Workspace'))
       .toBeEnabled();
-    expect(await findByText('Run Canceled'))
-      .toBeInTheDocument();
+    expect(await findByRole('alert'))
+      .toHaveTextContent('Run Canceled');
 
     // A recent job card should be rendered
     await getByRole('button', { name: 'InVEST' }).click();
