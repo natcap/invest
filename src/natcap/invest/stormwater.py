@@ -309,6 +309,12 @@ def execute(args):
             task_name='reproject road centerlines vector to match rasters',
             dependent_task_list=[])
 
+        # for gdal.GDT_Byte, setting the datatype is not enough
+        # must also set PIXELTYPE=DEFAULT to guarantee unsigned byte type
+        # otherwise, `new_raster_from_base` may pass down the
+        # PIXELTYPE=SIGNEDBYTE attribute from a signed base to the new raster
+        creation_opts = pygeoprocessing.geoprocessing_core.DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1]  # noqa
+        unsigned_byte_creation_opts = creation_opts + ('PIXELTYPE=DEFAULT',)
         # pygeoprocessing.rasterize expects the target raster to already exist
         make_raster_task = task_graph.add_task(
             func=pygeoprocessing.new_raster_from_base,
@@ -317,6 +323,10 @@ def execute(args):
                 files['rasterized_centerlines_path'],
                 gdal.GDT_Byte,
                 [UINT8_NODATA]),
+            kwargs={
+                'raster_driver_creation_tuple': (
+                    'GTIFF', unsigned_byte_creation_opts)
+            },
             target_path_list=[files['rasterized_centerlines_path']],
             task_name='create raster to pass to pygeoprocessing.rasterize',
             dependent_task_list=[align_task])

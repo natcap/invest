@@ -10,6 +10,7 @@ import numpy
 from osgeo import gdal, osr
 import pandas
 import pygeoprocessing
+from pygeoprocessing.geoprocessing_core import DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS as opts_tuple  # noqa
 
 
 TEST_DATA = os.path.join(os.path.dirname(
@@ -17,7 +18,7 @@ TEST_DATA = os.path.join(os.path.dirname(
 
 
 def to_raster(array, path, nodata=-1, pixel_size=(20, -20), origin=(0, 0),
-              epsg=3857):
+              epsg=3857, raster_driver_creation_tuple=opts_tuple):
     """Wrap around pygeoprocessing.numpy_array_to_raster to set defaults.
 
     Sets some reasonable defaults for ``numpy_array_to_raster`` and takes care
@@ -33,6 +34,9 @@ def to_raster(array, path, nodata=-1, pixel_size=(20, -20), origin=(0, 0),
             ``numpy_array_to_raster``
         epsg (int): EPSG code used to instantiate a spatial reference that is
             passed to ``numpy_array_to_raster`` in WKT format
+        raster_driver_creation_tuple (tuple): a tuple containing a GDAL driver
+            name string as the first element and a GDAL creation options
+            tuple/list as the second.
 
     Returns:
         None
@@ -41,7 +45,12 @@ def to_raster(array, path, nodata=-1, pixel_size=(20, -20), origin=(0, 0),
     srs.ImportFromEPSG(epsg)
     projection_wkt = srs.ExportToWkt()
     pygeoprocessing.numpy_array_to_raster(
-        array, nodata, pixel_size, origin, projection_wkt, path)
+        array,
+        nodata,
+        pixel_size,
+        origin,
+        projection_wkt,
+        path)
 
 
 def mock_iterblocks(*args, **kwargs):
@@ -761,3 +770,56 @@ class StormwaterTests(unittest.TestCase):
         for arg_list, message in messages:
             if arg_list[0] in ['retention_radius', 'road_centerlines_path']:
                 self.assertEqual(message, 'Key is required but has no value')
+
+    def test_lulc_signed_byte(self):
+        """Stormwater: regression test for handling signed byte LULC input."""
+        from natcap.invest import stormwater
+
+        (_,
+         biophysical_table_path, _, _, _,
+         soil_group_path, _,
+         precipitation_path,
+         retention_cost,
+         pixel_size) = self.basic_setup(self.workspace_dir)
+
+        # make custom lulc raster with signed byte type
+        lulc_array = numpy.array([
+            [0,  0,  0,  0],
+            [1,  1,  1,  1],
+            [11, 11, 11, 11],
+            [12, 12, 12, 12]], dtype=numpy.int8)
+        lulc_path = os.path.join(self.workspace_dir, 'lulc.tif')
+        signed_byte_creation_opts = opts_tuple[1] + ('PIXELTYPE=SIGNEDBYTE',)
+        to_raster(
+            lulc_array,
+            lulc_path,
+            raster_driver_creation_tuple=(
+                opts_tuple[0], signed_byte_creation_opts
+            )
+        )
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'results_suffix': '',
+            'lulc_path': lulc_path,
+            'soil_group_path': soil_group_path,
+            'precipitation_path': precipitation_path,
+            'biophysical_table': biophysical_table_path,
+            'adjust_retention_ratios': True,
+            'retention_radius': 20,
+            'road_centerlines_path': os.path.join(
+                TEST_DATA, 'centerlines.gpkg'),
+            'aggregate_areas_path': None,
+            'replacement_cost': retention_cost
+        }
+
+        stormwater.execute(args)
+
+        # assert that not all distances to roads are zero
+        # this problem resulted from not handling signed byte rasters
+        # when calling `new_raster_from_base`
+        road_distance_path = os.path.join(
+            self.workspace_dir, 'intermediate', 'road_distance.tif')
+        distance_is_zero = pygeoprocessing.raster_to_numpy_array(
+            road_distance_path) == 0
+        self.assertFalse(numpy.all(distance_is_zero))
