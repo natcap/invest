@@ -544,34 +544,38 @@ class StormwaterTests(unittest.TestCase):
         """Stormwater: test avoided_pollutant_load_op function."""
         from natcap.invest import stormwater
 
-        lulc_nodata = -1
-        lulc_array = numpy.array([
-            [0, 0, 0],
-            [1, 1, 1],
-            [2, 2, lulc_nodata]], dtype=numpy.int8)
-        retention_volume_array = numpy.array([
-            [0, 1.5, stormwater.FLOAT_NODATA],
-            [0, 1.5, 100],
-            [0, 1.5, 100]], dtype=numpy.float32)
-        sorted_lucodes = numpy.array([0, 1, 2], dtype=numpy.uint8)
-        emc_array = numpy.array([0, 0.5, 3], dtype=numpy.float32)
+        # test with nodata values greater and less than the LULC codes
+        # there was a bug that only happened with a larger nodata value
+        for lulc_nodata in [-1, 127]:
+            with self.subTest(lulc_nodata=lulc_nodata):
+                lulc_array = numpy.array([
+                    [0, 0, 0],
+                    [1, 1, 1],
+                    [2, 2, lulc_nodata]], dtype=numpy.int8)
+                retention_volume_array = numpy.array([
+                    [0, 1.5, stormwater.FLOAT_NODATA],
+                    [0, 1.5, 100],
+                    [0, 1.5, 100]], dtype=numpy.float32)
+                sorted_lucodes = numpy.array([0, 1, 2], dtype=numpy.uint8)
+                emc_array = numpy.array([0, 0.5, 3], dtype=numpy.float32)
 
-        out = stormwater.avoided_pollutant_load_op(
-            lulc_array,
-            lulc_nodata,
-            retention_volume_array,
-            sorted_lucodes,
-            emc_array)
-        for y in range(lulc_array.shape[0]):
-            for x in range(lulc_array.shape[1]):
-                if (lulc_array[y, x] == lulc_nodata or
-                        retention_volume_array[y, x] == stormwater.FLOAT_NODATA):
-                    numpy.testing.assert_allclose(
-                        out[y, x], stormwater.FLOAT_NODATA)
-                else:
-                    emc_value = emc_array[lulc_array[y, x]]
-                    expected = emc_value * retention_volume_array[y, x] / 1000
-                    numpy.testing.assert_allclose(out[y, x], expected)
+                out = stormwater.avoided_pollutant_load_op(
+                    lulc_array,
+                    lulc_nodata,
+                    retention_volume_array,
+                    sorted_lucodes,
+                    emc_array)
+                for y in range(lulc_array.shape[0]):
+                    for x in range(lulc_array.shape[1]):
+                        if (lulc_array[y, x] == lulc_nodata or
+                                retention_volume_array[y, x] == stormwater.FLOAT_NODATA):
+                            numpy.testing.assert_allclose(
+                                out[y, x], stormwater.FLOAT_NODATA)
+                        else:
+                            emc_value = emc_array[lulc_array[y, x]]
+                            expected = emc_value * \
+                                retention_volume_array[y, x] / 1000
+                            numpy.testing.assert_allclose(out[y, x], expected)
 
     def test_retention_value_op(self):
         """Stormwater: test retention_value_op function."""

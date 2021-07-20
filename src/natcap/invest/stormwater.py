@@ -668,9 +668,12 @@ def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array,
     # lulc_array[i,j] == sorted_lucodes[lulc_index[i,j]]. thus,
     # emc_array[lulc_index[i,j]] is the EMC for the lucode at lulc_array[i,j]
     lulc_index = numpy.digitize(lulc_array, sorted_lucodes, right=True)
+    # need to mask out nodata pixels from lulc_index before indexing emc_array
+    # otherwise we get an IndexError when the nodata value is > all LULC values
+    valid_lulc_index = lulc_index[valid_mask]
     # EMC for pollutant (mg/L) * 1000 (L/m^3) * 0.000001 (kg/mg) *
     # retention (m^3/yr) = pollutant load (kg/yr)
-    load_array[valid_mask] = (emc_array[lulc_index][valid_mask] *
+    load_array[valid_mask] = (emc_array[valid_lulc_index] *
                               0.001 * retention_volume_array[valid_mask])
     return load_array
 
