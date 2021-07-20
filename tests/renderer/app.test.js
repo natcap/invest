@@ -82,7 +82,6 @@ describe('Various ways to open and close InVEST models', () => {
       modelHumanName: 'Carbon Sequestration',
       argsValues: argsValues,
       status: 'success',
-      humanTime: '3/5/2020, 10:43:14 AM',
     });
     await mockJob.save();
 
@@ -254,26 +253,39 @@ describe('Display recently executed InVEST jobs', () => {
         workspace_dir: 'work1',
       },
       status: 'success',
-      humanTime: '3/5/2020, 10:43:14 AM',
     });
     let recentJobs = await job1.save();
     const job2 = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Sequestration',
+      modelRunName: 'sdr',
+      modelHumanName: 'Sediment Ratio Delivery',
       argsValues: {
         workspace_dir: 'work2',
+        results_suffix: 'suffix',
       },
-      status: 'success',
-      humanTime: '3/5/2020, 10:43:14 AM',
+      status: 'error',
+      finalTraceback: 'ValueError ...',
     });
     recentJobs = await job2.save();
 
-    const { getByText } = render(<App />);
+    const { getByText, getAllByText } = render(<App />);
 
     await waitFor(() => {
       recentJobs.forEach((job) => {
+        expect(getByText(job.modelHumanName))
+          .toBeTruthy();
         expect(getByText(job.argsValues.workspace_dir))
           .toBeTruthy();
+        // the two save() calls might yield identical times, so getAll...
+        expect(getAllByText(job.humanTime))
+          .toBeTruthy();
+        if (job.finalTraceback) {
+          expect(getByText(job.finalTraceback))
+            .toBeTruthy();
+        }
+        if (job.argsValues.results_suffix) {
+          expect(getByText(job.argsValues.results_suffix))
+            .toBeTruthy();
+        }
       });
     });
   });
@@ -295,7 +307,6 @@ describe('Display recently executed InVEST jobs', () => {
         workspace_dir: 'work1',
       },
       status: 'success',
-      humanTime: '3/5/2020, 10:43:14 AM',
     });
     const recentJobs = await job1.save();
 

@@ -49,7 +49,7 @@ export default class InvestJob {
    * @param {string} obj.modelHumanName - colloquial name of the invest model
    * @param {object} obj.argsValues - an invest "args dict" with initial values
    * @param {string} obj.logfile - path to an existing invest logfile
-   * @param {string} obj.stdErr - stdErr string, if any
+   * @param {string} obj.finalTraceback - final & most relevant line of stderr
    */
   constructor(
     {
@@ -99,7 +99,7 @@ export default class InvestJob {
     }
     const isoDate = new Date().toISOString().split('T')[0];
     const localTime = new Date().toTimeString().split(' ')[0];
-    this.metadata.humanTime = `${isoDate}  ${localTime}`;
+    this.metadata.humanTime = `${isoDate} ${localTime}`;
     let sortedKeys = await investJobStore.getItem(HASH_ARRAY_KEY);
     if (!sortedKeys) {
       await InvestJob.initDB();
