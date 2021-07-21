@@ -111,6 +111,10 @@ Unreleased Changes (3.9.1)
     * Changed how SDR thresholds its L factor to allow direct thresholding
       rather than based off of upstream area. Exposed this parameter as
       ``l_max`` in the ``args`` input and in the user interface.
+* Urban Flood Risk
+    * Fixed a bug where a String ``Type`` column in the infrastructure vector
+      would cause the aggregation step of the model to crash, even with the
+      correct integer value in the column.
 * Wind Energy
     * Raising ValueError when AOI does not intersect Wind Data points.
 
