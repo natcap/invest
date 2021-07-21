@@ -219,15 +219,18 @@ class UFRMTests(unittest.TestCase):
             csv_file.write('"Type","damage"\n')
             for attr_dict in infra_attrs:
                 type_index = int(attr_dict['Type'])
-                csv_file.write(f'"{type_index}",1')
+                csv_file.write(f'"{type_index}",1\n')
 
         aoi_damage_dict = (
             urban_flood_risk_mitigation._calculate_damage_to_infrastructure_in_aoi(
                 aoi_path, infrastructure_path, structures_damage_table_path))
 
-        print(self.workspace_dir)
-
-        self.assertEqual(aoi_damage_dict, {})
+        # Total damage is the sum of the area of all infrastructure geometries
+        # that intersect the AOI, with each area multiplied by the damage cost.
+        # For this test, damage is always 1, so it's just the intersecting
+        # area.
+        self.assertEqual(len(aoi_damage_dict), 1)
+        numpy.testing.assert_allclose(aoi_damage_dict[0], 5645.787282992962)
 
     def test_ufrm_invalid_validation(self):
         """UFRM: assert validation error on bad args."""
