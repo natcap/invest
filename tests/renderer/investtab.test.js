@@ -19,17 +19,15 @@ jest.mock('../../src/renderer/server_requests');
 
 const UI_CONFIG_PATH = '../../src/renderer/ui_config';
 
-function renderInvestTab() {
-  const job = new InvestJob({
-    modelRunName: 'carbon',
-    modelHumanName: 'Carbon Model',
-  });
-  // job.setProperty('navID', 'carbon456asdf');
+const DEFAULT_JOB = new InvestJob({
+  modelRunName: 'carbon',
+  modelHumanName: 'Carbon Model',
+});
+function renderInvestTab(job = DEFAULT_JOB) {
   const { ...utils } = render(
     <InvestTab
-      job={job.metadata}
+      job={job}
       jobID="carbon456asdf"
-      investExe="foo"
       investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
       saveJob={() => {}}
       updateJobProperty={() => {}}
@@ -37,6 +35,17 @@ function renderInvestTab() {
   );
   return utils;
 }
+
+// describe('Renders with data from a recent run', () => {
+//   const job = new InvestJob({
+//     modelRunName: 'carbon',
+//     modelHumanName: 'Carbon Model',
+//     status: 'error',
+//     argsValues: {},
+//     logfile: 'foo.txt',
+//     finalTraceback: 'ValueError:',
+//   });
+// });
 
 describe('Save InVEST Model Setup Buttons', () => {
   const spec = {

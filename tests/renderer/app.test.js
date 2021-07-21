@@ -55,7 +55,7 @@ describe('Various ways to open and close InVEST models', () => {
   });
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore
-    await InvestJob.clearStore(); // should call because a test calls job.save()
+    await InvestJob.clearStore(); // because a test calls InvestJob.saveJob()
   });
 
   test('Clicking an invest model button renders SetupTab', async () => {
@@ -83,7 +83,7 @@ describe('Various ways to open and close InVEST models', () => {
       argsValues: argsValues,
       status: 'success',
     });
-    await mockJob.save();
+    await InvestJob.saveJob(mockJob);
 
     const { findByText, findByLabelText, findByRole } = render(
       <App />
@@ -237,7 +237,7 @@ describe('Various ways to open and close InVEST models', () => {
   });
 });
 
-describe('Display recently executed InVEST jobs', () => {
+describe('Display recently executed InVEST jobs on Home tab', () => {
   beforeEach(() => {
     getInvestModelNames.mockResolvedValue({});
   });
@@ -254,7 +254,7 @@ describe('Display recently executed InVEST jobs', () => {
       },
       status: 'success',
     });
-    await job1.save();
+    await InvestJob.saveJob(job1);
     const job2 = new InvestJob({
       modelRunName: 'sdr',
       modelHumanName: 'Sediment Ratio Delivery',
@@ -265,7 +265,7 @@ describe('Display recently executed InVEST jobs', () => {
       status: 'error',
       finalTraceback: 'ValueError ...',
     });
-    const recentJobs = await job2.save();
+    const recentJobs = await InvestJob.saveJob(job2);
     const initialJobs = [job1, job2];
 
     const { getByText } = render(<App />);
@@ -273,16 +273,16 @@ describe('Display recently executed InVEST jobs', () => {
     await waitFor(() => {
       initialJobs.forEach((job, idx) => {
         const recent = recentJobs[idx];
-        const card = getByText(job.metadata.modelHumanName)
+        const card = getByText(job.modelHumanName)
           .closest('button');
-        expect(within(card).getByText(job.metadata.argsValues.workspace_dir))
+        expect(within(card).getByText(job.argsValues.workspace_dir))
           .toBeInTheDocument();
-        if (job.metadata.finalTraceback) {
-          expect(getByText(job.metadata.finalTraceback))
+        if (job.finalTraceback) {
+          expect(getByText(job.finalTraceback))
             .toBeInTheDocument();
         }
-        if (job.metadata.argsValues.results_suffix) {
-          expect(getByText(job.metadata.argsValues.results_suffix))
+        if (job.argsValues.results_suffix) {
+          expect(getByText(job.argsValues.results_suffix))
             .toBeInTheDocument();
         }
         // The timestamp is not part of the initial object, but should
@@ -311,7 +311,7 @@ describe('Display recently executed InVEST jobs', () => {
       },
       status: 'success',
     });
-    const recentJobs = await job1.save();
+    const recentJobs = await InvestJob.saveJob(job1);
 
     const { getByText, findByText, getByTitle } = render(<App />);
 
@@ -585,12 +585,6 @@ describe('InVEST subprocess testing', () => {
       .toBeInTheDocument();
     expect(queryByText('Model Complete')).toBeNull();
     expect(queryByText('Open Workspace')).toBeNull();
-    // Job should already be saved to recent jobs database w/ status:
-    // TODO: prob not gonna display recent card while running
-    // await getByRole('button', { name: 'InVEST' }).click();
-    // const homeTab = await getByRole('tabpanel', { name: /Home/ });
-    // expect(await within(homeTab).findByText('running'))
-    //   .toBeInTheDocument();
 
     mockInvestProc.emit('exit', 0); // 0 - exit w/o error
     expect(await findByText('Model Complete')).toBeInTheDocument();

@@ -161,7 +161,7 @@ export default class App extends React.Component {
 
   updateJobProperty(id, property, value) {
     const { openJobs } = this.state;
-    openJobs[id].metadata[property] = value;
+    openJobs[id][property] = value;
     this.setState({
       openJobs: openJobs
     });
@@ -176,7 +176,7 @@ export default class App extends React.Component {
    */
   async saveJob(jobID) {
     const job = this.state.openJobs[jobID];
-    const recentJobs = await job.save();
+    const recentJobs = await InvestJob.saveJob(job);
     this.setState({
       recentJobs: recentJobs,
     });
@@ -204,7 +204,7 @@ export default class App extends React.Component {
     const investNavItems = [];
     const investTabPanes = [];
     openNavIDs.forEach((id) => {
-      const job = openJobs[id].metadata;
+      const job = openJobs[id];
       let statusSymbol;
       switch (job.status) {
         case 'success':

@@ -15,7 +15,7 @@ function renderLogTab(logfilePath, primaryPythonLogger) {
     <LogTab
       jobStatus="success"
       logfile={logfilePath}
-      logStdErr=""
+      finalTraceback=""
       procID={undefined}
       pyModuleName={primaryPythonLogger}
       terminateInvestProcess={() => {}}

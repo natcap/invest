@@ -10,39 +10,53 @@ describe('InvestJob', () => {
     InvestJob.clearStore();
   });
 
+  test('constructor errors on missing required properties', async () => {
+    const errorMessage = 'Cannot create instance of InvestJob without modelRunName and modelHumanName properties'
+    // Arrow func allows error to be caught and asserted on
+    // https://jestjs.io/docs/expect#tothrowerror
+    expect(() => new InvestJob({}))
+      .toThrow(errorMessage);
+    expect(() => new InvestJob({ modelRunName: 'carbon' }))
+      .toThrow(errorMessage);
+    expect(() => new InvestJob({ modelHumanName: 'Carbon' }))
+      .toThrow(errorMessage);
+  });
+
   test('workspaceHash collisions only when expected', async () => {
     const modelName = 'foo';
     const job1 = new InvestJob({
       modelRunName: modelName,
       modelHumanName: 'Foo',
+      argsValues: baseArgsValues,
     });
-    job1.setProperty('argsValues', baseArgsValues);
-    job1.setWorkspaceHash();
+    InvestJob.saveJob(job1);
     const job2 = new InvestJob({
       modelRunName: modelName,
       modelHumanName: 'Foo',
+      argsValues: baseArgsValues,
     });
-    job2.setProperty('argsValues', baseArgsValues);
-    job2.setWorkspaceHash();
-    expect(job1.metadata.workspaceHash).toBe(job2.metadata.workspaceHash);
+    let storedJobs = await InvestJob.saveJob(job2);
+    // Identical workspace, suffix, and modelRunName mean there should
+    // only be one saved job.
+    expect(storedJobs).toHaveLength(1);
 
     const job3 = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Foo',
+      argsValues: baseArgsValues,
     });
-    job3.setProperty('argsValues', baseArgsValues);
-    job3.setWorkspaceHash();
+    storedJobs = await InvestJob.saveJob(job3);
     // A different model with the same workspace should not collide
-    expect(job1.metadata.workspaceHash).not.toBe(job3.metadata.workspaceHash);
+    expect(storedJobs).toHaveLength(2);
   });
 
   test('save method errors if no workspace is set', async () => {
     const job = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
+      argsValues: { results_suffix: 'foo' },
     });
-    job.setProperty('argsValues', { results_suffix: 'foo' });
-    await expect(job.save()).rejects.toThrow(
+    await expect(InvestJob.saveJob(job)).rejects.toThrow(
       'Cannot hash a job that is missing workspace or modelRunName properties'
     );
   });
@@ -51,32 +65,32 @@ describe('InvestJob', () => {
     const job = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
+      argsValues: baseArgsValues,
     });
-    job.setProperty('argsValues', baseArgsValues);
-    const recentJobs = await job.save();
-    expect(recentJobs[0]).toBe(job.metadata);
+    const recentJobs = await InvestJob.saveJob(job);
+    expect(recentJobs[0]).toBe(job);
   });
 
   test('save method returns job store in sorted order', async () => {
     const job1 = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
+      argsValues: baseArgsValues,
     });
-    job1.setProperty('argsValues', baseArgsValues);
-    let recentJobs = await job1.save();
-    expect(recentJobs[0]).toBe(job1.metadata);
+    let recentJobs = await InvestJob.saveJob(job1);
+    expect(recentJobs[0]).toBe(job1);
 
     const job2 = new InvestJob({
       modelRunName: 'foo2',
       modelHumanName: 'Foo2',
+      argsValues: baseArgsValues,
     });
-    job2.setProperty('argsValues', baseArgsValues);
-    recentJobs = await job2.save();
+    recentJobs = await InvestJob.saveJob(job2);
     expect(recentJobs).toHaveLength(2);
     // The most recently saved job should always be first
-    expect(recentJobs[0]).toBe(job2.metadata);
-    recentJobs = await job1.save();
-    expect(recentJobs[0]).toBe(job1.metadata);
+    expect(recentJobs[0]).toBe(job2);
+    recentJobs = await InvestJob.saveJob(job1);
+    expect(recentJobs[0]).toBe(job1);
     expect(recentJobs).toHaveLength(2);
   });
 
@@ -84,11 +98,11 @@ describe('InvestJob', () => {
     const job1 = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
+      argsValues: baseArgsValues
     });
-    job1.setProperty('argsValues', baseArgsValues);
-    let recentJobs = await job1.save();
+    let recentJobs = await InvestJob.saveJob(job1);
     expect(recentJobs).toHaveLength(1);
-    recentJobs = await job1.save();
+    recentJobs = await InvestJob.saveJob(job1);
     expect(recentJobs).toHaveLength(1);
   });
 
@@ -98,19 +112,21 @@ describe('InvestJob', () => {
     while (i < InvestJob.max_cached_jobs) {
       i += 1;
       saves.push(
-        new InvestJob({
+        InvestJob.saveJob(new InvestJob({
           modelRunName: `model${i}`,
+          modelHumanName: 'Foo',
           argsValues: { workspace_dir: 'foo' }
-        }).save()
+        }))
       );
     }
     await Promise.all(saves);
     let jobsArray = await InvestJob.getJobStore();
     expect(jobsArray).toHaveLength(InvestJob.max_cached_jobs);
-    jobsArray = await new InvestJob({
+    jobsArray = await InvestJob.saveJob(new InvestJob({
       modelRunName: 'a new model',
+      modelHumanName: 'Foo',
       argsValues: { workspace_dir: 'foo' },
-    }).save();
+    }));
     expect(jobsArray).toHaveLength(InvestJob.max_cached_jobs);
   });
 
@@ -120,9 +136,9 @@ describe('InvestJob', () => {
     const job1 = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
+      argsValues: baseArgsValues,
     });
-    job1.setProperty('argsValues', baseArgsValues);
-    await job1.save();
+    await InvestJob.saveJob(job1);
     recentJobs = await InvestJob.getJobStore();
     expect(recentJobs).toHaveLength(1);
   });
@@ -131,13 +147,11 @@ describe('InvestJob', () => {
     const job1 = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
+      argsValues: baseArgsValues,
     });
-    job1.setProperty('argsValues', baseArgsValues);
-    await job1.save();
-    let recentJobs = await InvestJob.getJobStore();
+    let recentJobs = await InvestJob.saveJob(job1);
     expect(recentJobs).toHaveLength(1);
-    await InvestJob.clearStore();
-    recentJobs = await InvestJob.getJobStore();
+    recentJobs = await InvestJob.clearStore();
     expect(recentJobs).toHaveLength(0);
   });
 });
