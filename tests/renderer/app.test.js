@@ -254,7 +254,7 @@ describe('Display recently executed InVEST jobs', () => {
       },
       status: 'success',
     });
-    let recentJobs = await job1.save();
+    await job1.save();
     const job2 = new InvestJob({
       modelRunName: 'sdr',
       modelHumanName: 'Sediment Ratio Delivery',
@@ -265,27 +265,30 @@ describe('Display recently executed InVEST jobs', () => {
       status: 'error',
       finalTraceback: 'ValueError ...',
     });
-    recentJobs = await job2.save();
+    const recentJobs = await job2.save();
+    const initialJobs = [job1, job2];
 
-    const { getByText, getAllByText } = render(<App />);
+    const { getByText } = render(<App />);
 
     await waitFor(() => {
-      recentJobs.forEach((job) => {
-        expect(getByText(job.modelHumanName))
-          .toBeTruthy();
-        expect(getByText(job.argsValues.workspace_dir))
-          .toBeTruthy();
-        // the two save() calls might yield identical times, so getAll...
-        expect(getAllByText(job.humanTime))
-          .toBeTruthy();
-        if (job.finalTraceback) {
-          expect(getByText(job.finalTraceback))
-            .toBeTruthy();
+      initialJobs.forEach((job, idx) => {
+        const recent = recentJobs[idx];
+        const card = getByText(job.metadata.modelHumanName)
+          .closest('button');
+        expect(within(card).getByText(job.metadata.argsValues.workspace_dir))
+          .toBeInTheDocument();
+        if (job.metadata.finalTraceback) {
+          expect(getByText(job.metadata.finalTraceback))
+            .toBeInTheDocument();
         }
-        if (job.argsValues.results_suffix) {
-          expect(getByText(job.argsValues.results_suffix))
-            .toBeTruthy();
+        if (job.metadata.argsValues.results_suffix) {
+          expect(getByText(job.metadata.argsValues.results_suffix))
+            .toBeInTheDocument();
         }
+        // The timestamp is not part of the initial object, but should
+        // in the saved object
+        expect(within(card).getByText(recent.humanTime))
+          .toBeInTheDocument();
       });
     });
   });
