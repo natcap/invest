@@ -44,7 +44,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {
-                    "type": "code",
+                    "type": "integer",
                     "about": "LULC code corresponding to the LULC raster"
                 },
                 "EMC_[POLLUTANT]": {
