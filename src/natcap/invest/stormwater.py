@@ -162,7 +162,9 @@ FINAL_OUTPUTS = {
     'reprojected_aggregate_areas_path': 'aggregate_data.gpkg',
     'retention_ratio_path': 'retention_ratio.tif',
     'adjusted_retention_ratio_path': 'adjusted_retention_ratio.tif',
+    'runoff_ratio_path': 'runoff_ratio.tif',
     'retention_volume_path': 'retention_volume.tif',
+    'runoff_volume_path': 'runoff_volume.tif',
     'infiltration_ratio_path': 'infiltration_ratio.tif',
     'infiltration_volume_path': 'infiltration_volume.tif',
     'retention_value_path': 'retention_value.tif'
@@ -437,6 +439,36 @@ def execute(args):
         dependent_task_list=[align_task, final_retention_ratio_task],
         task_name='calculate stormwater retention volume'
     )
+
+    # Calculate stormwater runoff ratios and volume
+    runoff_ratio_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(
+            [(final_retention_ratio_path, 1)],
+            retention_to_runoff_op,
+            files['runoff_ratio_path'],
+            gdal.GDT_Float32,
+            FLOAT_NODATA),
+        target_path_list=[files['runoff_ratio_path']],
+        dependent_task_list=[final_retention_ratio_task],
+        task_name='calculate stormwater runoff ratio'
+    )
+
+    runoff_volume_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([
+            (files['runoff_ratio_path'], 1),
+            (files['precipitation_aligned_path'], 1),
+            (precipitation_nodata, 'raw'),
+            (pixel_area, 'raw')],
+            volume_op,
+            files['runoff_volume_path'],
+            gdal.GDT_Float32,
+            FLOAT_NODATA),
+        target_path_list=[files['runoff_volume_path']],
+        dependent_task_list=[align_task, runoff_ratio_task],
+        task_name='calculate stormwater runoff volume'
+    )
     aggregation_task_dependencies = [retention_volume_task]
     data_to_aggregate = [
         # tuple of (raster path, output field name, op) for aggregation
@@ -495,16 +527,21 @@ def execute(args):
     # Calculate avoided pollutant load for each pollutant from retention volume
     # and biophysical table EMC value
     avoided_load_paths = []
+    actual_load_paths = []
     for pollutant in pollutants:
-        # one output raster for each pollutant
+        # two output rasters for each pollutant
         avoided_pollutant_load_path = os.path.join(
             output_dir, f'avoided_pollutant_load_{pollutant}{suffix}.tif')
         avoided_load_paths.append(avoided_pollutant_load_path)
+        actual_pollutant_load_path = os.path.join(
+            output_dir, f'actual_pollutant_load_{pollutant}{suffix}.tif')
+        actual_load_paths.append(actual_pollutant_load_path)
         # make an array mapping each LULC code to the pollutant EMC value
         emc_array = numpy.array(
             [biophysical_dict[lucode][f'emc_{pollutant}']
                 for lucode in sorted_lucodes], dtype=numpy.float32)
 
+        # calculate avoided load from retention volume
         avoided_load_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
@@ -513,7 +550,7 @@ def execute(args):
                 (files['retention_volume_path'], 1),
                 (sorted_lucodes, 'raw'),
                 (emc_array, 'raw')],
-                avoided_pollutant_load_op,
+                pollutant_load_op,
                 avoided_pollutant_load_path,
                 gdal.GDT_Float32,
                 FLOAT_NODATA),
@@ -521,9 +558,28 @@ def execute(args):
             dependent_task_list=[retention_volume_task],
             task_name=f'calculate avoided pollutant {pollutant} load'
         )
-        aggregation_task_dependencies.append(avoided_load_task)
+        # calculate actual load from runoff volume
+        actual_load_task = task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=([
+                (files['lulc_aligned_path'], 1),
+                (lulc_nodata, 'raw'),
+                (files['runoff_volume_path'], 1),
+                (sorted_lucodes, 'raw'),
+                (emc_array, 'raw')],
+                pollutant_load_op,
+                actual_pollutant_load_path,
+                gdal.GDT_Float32,
+                FLOAT_NODATA),
+            target_path_list=[actual_pollutant_load_path],
+            dependent_task_list=[runoff_volume_task],
+            task_name=f'calculate actual pollutant {pollutant} load'
+        )
+        aggregation_task_dependencies += [avoided_load_task, actual_load_task]
         data_to_aggregate.append(
             (avoided_pollutant_load_path, f'avoided_{pollutant}', 'sum'))
+        data_to_aggregate.append(
+            (actual_pollutant_load_path, f'load_{pollutant}', 'mean'))
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed
@@ -646,17 +702,37 @@ def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
     return volume_array
 
 
-def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array,
-                              sorted_lucodes, emc_array):
-    """Calculate avoided pollutant loads from LULC codes retention volumes.
+def retention_to_runoff_op(retention_array):
+    """Calculate runoff ratios from retention ratios: runoff = 1 - retention.
+
+    Args:
+        retention_array (numpy.ndarray): array of stormwater retention ratios.
+            It is assumed that the nodata value is the global FLOAT_NODATA.
+
+    Returns:
+        numpy.ndarray of stormwater runoff ratios
+    """
+    runoff_array = numpy.full(retention_array.shape, FLOAT_NODATA,
+                              dtype=numpy.float32)
+    valid_mask = ~numpy.isclose(retention_array, FLOAT_NODATA)
+    runoff_array[valid_mask] = 1 - retention_array[valid_mask]
+    return runoff_array
+
+
+def pollutant_load_op(lulc_array, lulc_nodata, volume_array, sorted_lucodes,
+                      emc_array):
+    """Calculate pollutant loads from EMC and stormwater volumes.
+
+    Used for both actual pollutant load (where `volume_array` is the runoff
+    volume) and avoided pollutant load (where `volume_array` is the
+    retention volume).
 
     Args:
         lulc_array (numpy.ndarray): 2D array of LULC codes
         lulc_nodata (int): nodata value for the LULC array
-        retention_volume_array (numpy.ndarray): 2D array of stormwater
-            retention volumes, with the same shape as ``lulc_array``. It is
-            assumed that the retention volume nodata value is the global
-            FLOAT_NODATA.
+        volume_array (numpy.ndarray): 2D array of stormwater volumes, with the
+            same shape as ``lulc_array``. It is assumed that the volume nodata
+            value is the global FLOAT_NODATA.
         sorted_lucodes (numpy.ndarray): 1D array of the LULC codes in order
             from smallest to largest
         emc_array (numpy.ndarray): 1D array of pollutant EMC values for each
@@ -670,7 +746,7 @@ def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array,
     """
     load_array = numpy.full(
         lulc_array.shape, FLOAT_NODATA, dtype=numpy.float32)
-    valid_mask = ~numpy.isclose(retention_volume_array, FLOAT_NODATA)
+    valid_mask = ~numpy.isclose(volume_array, FLOAT_NODATA)
     if lulc_nodata is not None:
         valid_mask &= (lulc_array != lulc_nodata)
 
@@ -684,7 +760,7 @@ def avoided_pollutant_load_op(lulc_array, lulc_nodata, retention_volume_array,
     # EMC for pollutant (mg/L) * 1000 (L/m^3) * 0.000001 (kg/mg) *
     # retention (m^3/yr) = pollutant load (kg/yr)
     load_array[valid_mask] = (emc_array[valid_lulc_index] *
-                              0.001 * retention_volume_array[valid_mask])
+                              0.001 * volume_array[valid_mask])
     return load_array
 
 

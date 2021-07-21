@@ -215,6 +215,8 @@ class StormwaterTests(unittest.TestCase):
 
         retention_volume_path = os.path.join(
             self.workspace_dir, 'retention_volume_suffix.tif')
+        runoff_volume_path = os.path.join(
+            self.workspace_dir, 'intermediate', 'runoff_volume.tif')
         infiltration_volume_path = os.path.join(
             self.workspace_dir, 'infiltration_volume_suffix.tif')
         pollutant_path = os.path.join(
@@ -247,15 +249,15 @@ class StormwaterTests(unittest.TestCase):
 
                 # precipitation (mm/yr) * 0.001 (m/mm) * pixel area (m^2) =
                 # m^3/yr
-                actual_volume = retention_volume[row, col]
-                expected_volume = (1 - rc_value) * \
+                actual_retention_volume = retention_volume[row, col]
+                expected_retention_volume = (1 - rc_value) * \
                     precipitation * 0.001 * pixel_area
-                numpy.testing.assert_allclose(
-                    actual_volume, expected_volume, rtol=1e-6)
+                numpy.testing.assert_allclose(actual_retention_volume,
+                                              expected_retention_volume, rtol=1e-6)
 
                 # retention (m^3/yr) * cost ($/m^3) = value ($/yr)
                 actual_value = retention_value[row, col]
-                expected_value = expected_volume * retention_cost
+                expected_value = expected_retention_volume * retention_cost
                 numpy.testing.assert_allclose(
                     actual_value, expected_value, rtol=1e-6)
 
@@ -406,6 +408,13 @@ class StormwaterTests(unittest.TestCase):
                 self.workspace_dir,
                 stormwater.FINAL_OUTPUTS['retention_volume_path']),
             gdal.OF_RASTER)
+        runoff_volume_raster = gdal.OpenEx(
+            os.path.join(
+                self.workspace_dir,
+                stormwater.FINAL_OUTPUTS['runoff_volume_path']),
+            gdal.OF_RASTER)
+        actual_runoff_volume = runoff_volume_raster.GetRasterBand(
+            1).ReadAsArray()
         actual_adjusted_ratios = adjusted_ratio_raster.GetRasterBand(
             1).ReadAsArray()
         actual_retention_volume = retention_volume_raster.GetRasterBand(
@@ -422,11 +431,15 @@ class StormwaterTests(unittest.TestCase):
                                      precipitation_array * pixel_area * 0.001)
         numpy.testing.assert_allclose(actual_retention_volume,
                                       expected_retention_volume, rtol=1e-6)
+        expected_runoff_volume = ((1 - expected_adjusted_ratios) *
+                                  precipitation_array * pixel_area * 0.001)
+        numpy.testing.assert_allclose(actual_runoff_volume,
+                                      expected_runoff_volume, rtol=1e-6)
 
     def test_aggregate(self):
         """Stormwater: full model run with aggregate results."""
         from natcap.invest import stormwater
-
+        wdir = '/Users/emily/Documents/test-aggregate'
         (biophysical_table,
          biophysical_table_path,
          lulc_array,
@@ -439,7 +452,7 @@ class StormwaterTests(unittest.TestCase):
          pixel_area) = self.basic_setup(self.workspace_dir)
 
         args = {
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': wdir,
             'lulc_path': lulc_path,
             'soil_group_path': soil_group_path,
             'precipitation_path': precipitation_path,
@@ -457,24 +470,27 @@ class StormwaterTests(unittest.TestCase):
                 'RR_mean': 0.825,
                 'RV_sum': 8.5,
                 'avoided_pollutant1': .0085,
+                'load_pollutant1': .000375,
                 'val_sum': 21.505
             },
             2: {
                 'RR_mean': 0.5375,
                 'RV_sum': 7.5,
                 'avoided_pollutant1': .0075,
+                'load_pollutant1': .006875,
                 'val_sum': 18.975
             },
             3: {
                 'RR_mean': 0,
                 'RV_sum': 0,
                 'avoided_pollutant1': 0,
+                'load_pollutant1': 0,
                 'val_sum': 0
             }
         }
 
         aggregate_data_path = os.path.join(
-            self.workspace_dir,
+            wdir,
             stormwater.FINAL_OUTPUTS['reprojected_aggregate_areas_path'])
         aggregate_vector = gdal.OpenEx(aggregate_data_path, gdal.OF_VECTOR)
         aggregate_layer = aggregate_vector.GetLayer()
@@ -482,7 +498,7 @@ class StormwaterTests(unittest.TestCase):
             feature_id = feature.GetFID()
             for key, val in expected_feature_fields[feature_id].items():
                 field_value = feature.GetField(key)
-                numpy.testing.assert_allclose(field_value, val)
+                numpy.testing.assert_allclose(field_value, val, rtol=1e-6)
 
     def test_lookup_ratios(self):
         """Stormwater: test lookup_ratios function."""
@@ -549,8 +565,8 @@ class StormwaterTests(unittest.TestCase):
                         out[y, x],
                         precip_array[y, x] * ratio_array[y, x] * pixel_area / 1000)
 
-    def test_avoided_pollutant_load_op(self):
-        """Stormwater: test avoided_pollutant_load_op function."""
+    def test_pollutant_load_op(self):
+        """Stormwater: test pollutant_load_op function."""
         from natcap.invest import stormwater
 
         # test with nodata values greater and less than the LULC codes
@@ -568,7 +584,7 @@ class StormwaterTests(unittest.TestCase):
                 sorted_lucodes = numpy.array([0, 1, 2], dtype=numpy.uint8)
                 emc_array = numpy.array([0, 0.5, 3], dtype=numpy.float32)
 
-                out = stormwater.avoided_pollutant_load_op(
+                out = stormwater.pollutant_load_op(
                     lulc_array,
                     lulc_nodata,
                     retention_volume_array,
