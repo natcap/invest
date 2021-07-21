@@ -6,8 +6,11 @@ import shutil
 import os
 
 from osgeo import gdal
+from osgeo import osr
+from osgeo import ogr
 import numpy
 import pygeoprocessing
+import shapely.geometry
 
 
 class UFRMTests(unittest.TestCase):
@@ -150,6 +153,81 @@ class UFRMTests(unittest.TestCase):
             expected_message = (
                 'Check that the Soil Group raster does not contain')
             self.assertTrue(expected_message in actual_message)
+
+    def test_ufrm_string_damage_to_infrastructure(self):
+        """UFRM: handle str(int) structure indices.
+
+        This came up on the forums, where a user had provided a string column
+        type that contained integer data.  OGR returned these ints as strings,
+        leading to a ``KeyError``.  See
+        https://github.com/natcap/invest/issues/590.
+        """
+        from natcap.invest import urban_flood_risk_mitigation
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157)
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
+
+        aoi_geometry = [
+            shapely.geometry.box(pos_x, pos_y, pos_x + 200, pos_y + 200),
+        ]
+
+        def _infra_geom(xoff, yoff):
+            """Create sample infrastructure geometry at a position offset.
+
+            The geometry will be centered on (x+xoff, y+yoff).
+
+            Parameters:
+                xoff (number): The x offset, referenced against ``pos_x`` from
+                    the outer scope.
+                yoff (number): The y offset, referenced against ``pos_y`` from
+                    the outer scope.
+
+            Returns:
+                A ``shapely.Geometry`` of a point buffered by ``20`` centered
+                on the provided (x+xoff, y+yoff) point.
+            """
+            return shapely.geometry.Point(
+                pos_x + xoff, pos_y + yoff).buffer(20)
+
+        infra_geometries = [
+            _infra_geom(x_offset, 100)
+            for x_offset in range(0, 200, 40)]
+
+        infra_fields = {'Type': ogr.OFTString}  # THIS IS THE THING TESTED
+        infra_attrs = [
+            {'Type': str(index)} for index in range(len(infra_geometries))]
+
+        infrastructure_path = os.path.join(
+            self.workspace_dir, 'infra_vector.shp')
+        pygeoprocessing.shapely_geometry_to_vector(
+            infra_geometries, infrastructure_path, projection_wkt,
+            'ESRI Shapefile', fields=infra_fields, attribute_list=infra_attrs,
+            ogr_geom_type=ogr.wkbPolygon)
+
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.shp')
+        pygeoprocessing.shapely_geometry_to_vector(
+            aoi_geometry, aoi_path, projection_wkt,
+            'ESRI Shapefile', ogr_geom_type=ogr.wkbPolygon)
+
+        structures_damage_table_path = os.path.join(
+            self.workspace_dir, 'damage_table_path.csv')
+        with open(structures_damage_table_path, 'w') as csv_file:
+            csv_file.write('"Type","damage"\n')
+            for attr_dict in infra_attrs:
+                type_index = int(attr_dict['Type'])
+                csv_file.write(f'"{type_index}",1')
+
+        aoi_damage_dict = (
+            urban_flood_risk_mitigation._calculate_damage_to_infrastructure_in_aoi(
+                aoi_path, infrastructure_path, structures_damage_table_path))
+
+        print(self.workspace_dir)
+
+        self.assertEqual(aoi_damage_dict, {})
 
     def test_ufrm_invalid_validation(self):
         """UFRM: assert validation error on bad args."""
