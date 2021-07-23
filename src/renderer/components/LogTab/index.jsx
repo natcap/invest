@@ -104,8 +104,11 @@ export default class LogTab extends React.Component {
       this.tailLogfile(logfile);
     }
     if ((jobStatus !== 'running') && (prevProps.jobStatus !== jobStatus)) {
-      // status changed from running to anything else
-      this.unwatchLogfile();
+      // status changed from running to anything else.
+      // The invest log should be complete so it's good to unwatch it,
+      // but without a timeout sometimes the unwatch happened
+      // before invest was done writing to the file.
+      setTimeout(() => this.unwatchLogfile(), 3000);
     }
   }
 
