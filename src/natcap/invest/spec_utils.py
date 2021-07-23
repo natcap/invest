@@ -1,3 +1,5 @@
+import re
+
 import pint
 
 
@@ -156,3 +158,49 @@ LINES = LINESTRING | MULTILINESTRING
 POLYGONS = POLYGON | MULTIPOLYGON
 POINTS = POINT | MULTIPOINT
 ALL_GEOMS = LINES | POLYGONS | POINTS
+
+
+def format_unit(unit, mode):
+    """Represent a pint Unit as user-friendly unicode text.
+
+    Args:
+        unit (pint.Unit): the unit to format
+
+    Returns:
+        String describing the unit. The first unit name is pluralized and
+        unicode superscript numbers are used for exponents.
+    """
+    # pluralize the first unit so that it reads more naturally
+    custom_plurals = {
+        'foot': 'feet',
+        'currency': 'currency',
+        'degree_Celsius': 'degrees_Celsius'
+    }
+    unicode_exponents = {
+        '2': '²',
+        '3': '³'
+    }
+    units_string = str(unit)
+    if units_string == 'none':
+        return ''
+
+    words = units_string.split(' ')
+
+    # check if it has an irregular plural form
+    # if not, fall back to adding an 's' to the end
+    words[0] = custom_plurals.get(words[0], words[0] + 's')
+
+    units_string = ' '.join(words)
+    # pint separates words with underscores
+    units_string = units_string.replace('_', ' ')
+    # remove spaces around slashes
+    units_string = units_string.replace(' / ', '/')
+    # replace each exponent with a superscript: 'meters ** 3' -> 'meter³'
+    units_string = re.sub(
+        # match exponents as pint displays them: ' ** 3'
+        r' \*\* ([0-9]+)',
+        # capture the exponent number and replace it with a unicode exponent
+        # if we don't have a unicode exponent for it, fall back to ^ notation
+        lambda match: unicode_exponents.get(match[1], f'^{match[1]}'),
+        units_string)
+    return units_string
