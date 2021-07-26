@@ -71,6 +71,8 @@ Unreleased Changes (3.9.1)
       could have been computed by previous runs.
     * Validation now returns a more helpful message when a spatial input has
       no projection defined.
+    * Updated to pygeoprocessing 2.3.0
+    * Added support for GDAL 3.3.1 and above
 * Carbon
     * Fixed a bug where, if rate change and discount rate were set to 0, the
       valuation results were in $/year rather than $, too small by a factor of
