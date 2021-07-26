@@ -36,6 +36,8 @@
 Unreleased Changes (3.9.1)
 --------------------------
 * General:
+    * Added error-handling for when ``pandas`` fails to decode a non-utf8
+      encoded CSV.
     * Moved the sample data JSON files out of the root sample_data folder and
       into their respective model folders.
     * Updated documentation on installing InVEST from source.
@@ -67,6 +69,8 @@ Unreleased Changes (3.9.1)
       Coastal Blue Carbon, SDR, DelineateIt, and Seasonal Water Yield models.
       These models will no longer attempt to copy intermediate artifacts that
       could have been computed by previous runs.
+    * Validation now returns a more helpful message when a spatial input has
+      no projection defined.
 * Carbon
     * Fixed a bug where, if rate change and discount rate were set to 0, the
       valuation results were in $/year rather than $, too small by a factor of
@@ -94,12 +98,23 @@ Unreleased Changes (3.9.1)
     * Updated so that the ``total_pollinator_abundance_[season].tif`` outputs
       are always created. Before, they weren't created if a farm vector was
       not supplied, even though they are independent.
+* Recreation
+    * Fixed some incorrectly formatted log and error messages
 * Seasonal Water Yield
     * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata
       values and could show negative numbers.
 * SDR
     * Fixed a bug in validation that did not warn against different coordinate
       systems (all SDR inputs must share a common coordinate system).
+    * Fixed a bug that was incorrectly using a factor of 0.0986 rather than
+      0.0896. This would have a minor effect on end-user results.
+    * Changed how SDR thresholds its L factor to allow direct thresholding
+      rather than based off of upstream area. Exposed this parameter as
+      ``l_max`` in the ``args`` input and in the user interface.
+* Urban Flood Risk
+    * Fixed a bug where a String ``Type`` column in the infrastructure vector
+      would cause the aggregation step of the model to crash, even with the
+      correct integer value in the column.
 * Wind Energy
     * Raising ValueError when AOI does not intersect Wind Data points.
 

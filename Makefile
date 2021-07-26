@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 598664165b911186e16a987c556f56f993cc78dd
+GIT_SAMPLE_DATA_REPO_REV    := d8c508b64bfcab8364f93535dd3fd737d45593a6
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 20751f2aa4fb8d70d946389cc856869721d344c5
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 69993168d50422593a39ea5b47cc87e8b94122a1
+GIT_UG_REPO_REV              := c53f85cec40c830ddd5b18a61e97c48607dd0ef9
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -235,7 +235,7 @@ install: $(DIST_DIR)/natcap.invest%.whl
 	$(PIP) install --isolated --upgrade --no-index --only-binary natcap.invest --find-links=dist natcap.invest
 
 
-# Bulid python packages and put them in dist/
+# Build python packages and put them in dist/
 python_packages: $(DIST_DIR)/natcap.invest%.whl $(DIST_DIR)/natcap.invest%.zip
 $(DIST_DIR)/natcap.invest%.whl: | $(DIST_DIR)
 	$(PYTHON) setup.py bdist_wheel
@@ -268,9 +268,16 @@ $(APIDOCS_TARGET_DIR): | $(DIST_DIR)
 $(APIDOCS_ZIP_FILE): $(APIDOCS_TARGET_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && $(ZIP) -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_TARGET_DIR))"
 
+# need to get the working directory path because ln doesn't work with relative paths
+WORKING_DIR := $(shell pwd)
+ifeq ($(OS),Windows_NT)
+	# this setting is necessary for ln to work on git bash for windows
+	export MSYS = winsymlinks:nativestrict
+endif
 # Userguide HTML docs are copied to dist/userguide
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
-$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
+$(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
+	ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
 	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
 
