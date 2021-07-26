@@ -111,7 +111,7 @@ Unreleased Changes (3.9.1)
     * Changed how SDR thresholds its L factor to allow direct thresholding
       rather than based off of upstream area. Exposed this parameter as
       ``l_max`` in the ``args`` input and in the user interface.
-    * Added a feature that defines a single drainage pixel in hydroloically
+    * Added a feature that defines a single drainage pixel in hydrologically
       connected regions that do not otherwise have a stream defined from
       thresholding the flow accumulation layer. This will change SDR
       results in such regions within a reasonable numerical tolerance for
