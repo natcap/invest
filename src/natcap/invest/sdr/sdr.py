@@ -195,7 +195,7 @@ _OUTPUT_BASE_FILES = {
     'stream_path': 'stream.tif',
     'usle_path': 'usle.tif',
     'watershed_results_sdr_path': 'watershed_results_sdr.shp',
-    }
+}
 
 _INTERMEDIATE_BASE_FILES = {
     'cp_factor_path': 'cp.tif',
@@ -203,7 +203,6 @@ _INTERMEDIATE_BASE_FILES = {
     'd_dn_path': 'd_dn.tif',
     'd_up_bare_soil_path': 'd_up_bare_soil.tif',
     'd_up_path': 'd_up.tif',
-    'dem_offset_path': 'dem_offset.tif',
     'f_path': 'f.tif',
     'flow_accumulation_path': 'flow_accumulation.tif',
     'flow_direction_path': 'flow_direction.tif',
@@ -223,11 +222,10 @@ _INTERMEDIATE_BASE_FILES = {
     'w_accumulation_path': 'w_accumulation.tif',
     'w_bar_path': 'w_bar.tif',
     'w_path': 'w.tif',
-    'ws_factor_path': 'ws_factor.tif',
     'ws_inverse_path': 'ws_inverse.tif',
     'e_prime_path': 'e_prime.tif',
     'weighted_avg_aspect_path': 'weighted_avg_aspect.tif'
-    }
+}
 
 _TMP_BASE_FILES = {
     'aligned_dem_path': 'aligned_dem.tif',
@@ -235,7 +233,7 @@ _TMP_BASE_FILES = {
     'aligned_erodibility_path': 'aligned_erodibility.tif',
     'aligned_erosivity_path': 'aligned_erosivity.tif',
     'aligned_lulc_path': 'aligned_lulc.tif',
-    }
+}
 
 # Target nodata is for general rasters that are positive, and _IC_NODATA are
 # for rasters that are any range
@@ -359,7 +357,7 @@ def execute(args):
             'base_vector_path_list': (args['watersheds_path'],),
             'raster_align_index': 0,
             'vector_mask_options': vector_mask_options,
-            },
+        },
         target_path_list=aligned_list,
         task_name='align input rasters')
 
@@ -1350,7 +1348,7 @@ def _generate_report(
             (sed_retention_path, 1), watershed_results_sdr_path),
         'sed_dep': pygeoprocessing.zonal_statistics(
             (sed_deposition_path, 1), watershed_results_sdr_path),
-        }
+    }
 
     for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
