@@ -96,6 +96,12 @@ Unreleased Changes (3.9.1)
 * HRA
     * Fixed bugs that allowed zeros in DQ & Weight columns of criteria
       table to raise DivideByZero errors.
+* NDR
+    * Added a feature that defines a single drainage pixel in hydrologically
+      connected regions that do not otherwise have a stream defined from
+      thresholding the flow accumulation layer. This will change NDR
+      results in such regions within a reasonable numerical tolerance for
+      normative datasets.
 * Pollination
     * Updated so that the ``total_pollinator_abundance_[season].tif`` outputs
       are always created. Before, they weren't created if a farm vector was
