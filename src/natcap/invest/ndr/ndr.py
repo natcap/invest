@@ -3,10 +3,14 @@ import itertools
 import logging
 import os
 import pickle
+import shutil
+import tempfile
 
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
+from pygeoprocessing.geoprocessing_core import \
+    DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS
 from osgeo import gdal, ogr
 import taskgraph
 
@@ -186,7 +190,7 @@ _OUTPUT_BASE_FILES = {
     'n_export_path': 'n_export.tif',
     'p_export_path': 'p_export.tif',
     'watershed_results_ndr_path': 'watershed_results_ndr.shp',
-    }
+}
 
 _INTERMEDIATE_BASE_FILES = {
     'ic_factor_path': 'ic_factor.tif',
@@ -200,6 +204,7 @@ _INTERMEDIATE_BASE_FILES = {
     's_accumulation_path': 's_accumulation.tif',
     's_bar_path': 's_bar.tif',
     's_factor_inverse_path': 's_factor_inverse.tif',
+    'flow_accum_stream_path': 'flow_accum_stream.tif',
     'stream_path': 'stream.tif',
     'sub_crit_len_n_path': 'sub_crit_len_n.tif',
     'sub_crit_len_p_path': 'sub_crit_len_p.tif',
@@ -225,7 +230,7 @@ _INTERMEDIATE_BASE_FILES = {
     'flow_direction_path': 'flow_direction.tif',
     'thresholded_slope_path': 'thresholded_slope.tif',
     'dist_to_channel_path': 'dist_to_channel.tif',
-    }
+}
 
 _CACHE_BASE_FILES = {
     'filled_dem_path': 'filled_dem.tif',
@@ -240,7 +245,7 @@ _CACHE_BASE_FILES = {
     'subsurface_load_p_pickle_path': 'subsurface_load_p.pickle',
     'export_n_pickle_path': 'export_n.pickle',
     'export_p_pickle_path': 'export_p.pickle',
-    }
+}
 
 _TARGET_NODATA = -1
 
@@ -462,16 +467,26 @@ def execute(args):
         args=(
             (f_reg['flow_accumulation_path'], 1),
             (f_reg['flow_direction_path'], 1),
-            float(args['threshold_flow_accumulation']), f_reg['stream_path']),
-        target_path_list=[f_reg['stream_path']],
+            float(args['threshold_flow_accumulation']),
+            f_reg['flow_accum_stream_path']),
+        target_path_list=[f_reg['flow_accum_stream_path']],
         dependent_task_list=[flow_accum_task],
         task_name='stream extraction')
+
+    outlet_task = task_graph.add_task(
+        func=_add_drainage_outlets,
+        args=(
+            f_reg['flow_accum_stream_path'], f_reg['flow_direction_path'],
+            f_reg['stream_path']),
+        target_path_list=[f_reg['stream_path']],
+        dependent_task_list=[stream_extraction_task],
+        task_name='add edge drains to streams')
 
     calculate_slope_task = task_graph.add_task(
         func=pygeoprocessing.calculate_slope,
         args=((f_reg['filled_dem_path'], 1), f_reg['slope_path']),
         target_path_list=[f_reg['slope_path']],
-        dependent_task_list=[stream_extraction_task],
+        dependent_task_list=[fill_pits_task],
         task_name='calculate slope')
 
     threshold_slope_task = task_graph.add_task(
@@ -528,7 +543,7 @@ def execute(args):
             f_reg['d_dn_path']),
         kwargs={'weight_raster_path_band': (
             f_reg['s_factor_inverse_path'], 1)},
-        dependent_task_list=[stream_extraction_task, s_inv_task],
+        dependent_task_list=[outlet_task, s_inv_task],
         target_path_list=[f_reg['d_dn_path']],
         task_name='d dn')
 
@@ -537,7 +552,7 @@ def execute(args):
         args=(
             (f_reg['flow_direction_path'], 1), (f_reg['stream_path'], 1),
             f_reg['dist_to_channel_path']),
-        dependent_task_list=[stream_extraction_task],
+        dependent_task_list=[outlet_task],
         target_path_list=[f_reg['dist_to_channel_path']],
         task_name='dist to channel')
 
@@ -602,7 +617,7 @@ def execute(args):
                 f_reg['aligned_lulc_path'], f_reg['stream_path'],
                 lucode_to_parameters, 'eff_%s' % nutrient, eff_path),
             target_path_list=[eff_path],
-            dependent_task_list=[align_raster_task, stream_extraction_task],
+            dependent_task_list=[align_raster_task, outlet_task],
             task_name='ret eff %s' % nutrient)
 
         crit_len_path = f_reg['crit_len_%s_path' % nutrient]
@@ -612,7 +627,7 @@ def execute(args):
                 f_reg['aligned_lulc_path'], f_reg['stream_path'],
                 lucode_to_parameters, 'crit_len_%s' % nutrient, crit_len_path),
             target_path_list=[crit_len_path],
-            dependent_task_list=[align_raster_task, stream_extraction_task],
+            dependent_task_list=[align_raster_task, outlet_task],
             task_name='ret eff %s' % nutrient)
 
         effective_retention_path = (
@@ -624,7 +639,7 @@ def execute(args):
                 crit_len_path, effective_retention_path),
             target_path_list=[effective_retention_path],
             dependent_task_list=[
-                stream_extraction_task, eff_task, crit_len_task],
+                outlet_task, eff_task, crit_len_task],
             task_name='eff ret %s' % nutrient)
 
         ndr_path = f_reg['ndr_%s_path' % nutrient]
@@ -1270,7 +1285,7 @@ def _calculate_sub_ndr(
 
     def _sub_ndr_op(dist_to_channel_array):
         """Calculate subsurface NDR."""
-        # nodata value from this ntermediate output should always be 
+        # nodata value from this ntermediate output should always be
         # defined by pygeoprocessing, not None
         valid_mask = ~numpy.isclose(
             dist_to_channel_array, dist_to_channel_nodata)
@@ -1305,9 +1320,9 @@ def _calculate_export(
         # these intermediate outputs should always have defined nodata
         # values assigned by pygeoprocessing
         valid_mask = ~(numpy.isclose(modified_load_array, load_nodata) |
-            numpy.isclose(ndr_array, ndr_nodata) |
-            numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
-            numpy.isclose(sub_ndr_array, sub_ndr_nodata))
+                       numpy.isclose(ndr_array, ndr_nodata) |
+                       numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
+                       numpy.isclose(sub_ndr_array, sub_ndr_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1356,3 +1371,54 @@ def create_vector_copy(base_vector_path, target_vector_path):
     target_vector = driver.CreateCopy(
         target_vector_path, base_vector)
     target_vector = None  # seemingly uncessary but gdal seems to like it.
+
+
+def _add_drainage_outlets(
+        base_stream_raster_path, flow_dir_mfd_raster_path,
+        target_stream_raster_path):
+    """Detect raster edge drains and add to stream raster.
+    Args:
+        base_stream_raster_path (str): path to a defined 0/1 stream raster.
+        flow_dir_mfd_raster_path (str): path to an MFD flow dir raster used to
+            create ``base_stream_raster_path``.
+        target_stream_raster_path (str): created by this call, contains a union
+            of ``base_stream_raster_path`` and any single pixels that drain
+            watersheds that are not included in ``base_stream_raster_path``
+    Return:
+        ``None``
+    """
+    # temporary working directory to handle the vector outlets
+    working_dir = tempfile.mkdtemp(
+        dir=os.path.dirname(target_stream_raster_path),
+        prefix='_add_drainage_outlets_workspace')
+    outlet_vector_path = os.path.join(working_dir, 'outlets.gpkg')
+    pygeoprocessing.routing.detect_outlets(
+        (flow_dir_mfd_raster_path, 1), 'mfd', outlet_vector_path)
+
+    # create copy of stream raster to write over
+    raster_driver = gdal.GetDriverByName(
+        DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[0])
+    base_stream_raster = gdal.OpenEx(base_stream_raster_path, gdal.OF_RASTER)
+    raster_driver.CreateCopy(
+        target_stream_raster_path, base_stream_raster,
+        options=DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS[1])
+
+    stream_raster = gdal.OpenEx(
+        target_stream_raster_path, gdal.OF_RASTER | gdal.GA_Update)
+    stream_band = stream_raster.GetRasterBand(1)
+
+    outlet_vector = gdal.OpenEx(outlet_vector_path, gdal.OF_VECTOR)
+    outlet_layer = outlet_vector.GetLayer()
+
+    # write a single 1 per outlet feature
+    one_array = numpy.ones((1, 1), dtype=numpy.int8)
+    for outlet_feature in outlet_layer:
+        stream_band.WriteArray(
+            one_array,
+            outlet_feature.GetField('i'),
+            outlet_feature.GetField('j'))
+    stream_band = None
+    stream_raster = None
+    outlet_layer = None
+    outlet_vector = None
+    shutil.rmtree(working_dir)
