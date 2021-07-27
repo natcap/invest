@@ -192,10 +192,12 @@ _OUTPUT_BASE_FILES = {
     'sed_retention_path': 'sed_retention.tif',
     'sed_deposition_path': 'sed_deposition.tif',
     'stream_and_drainage_path': 'stream_and_drainage.tif',
-    'stream_path': 'stream.tif',
+    'stream_with_outlets_path': 'stream_with_outlets.tif',
     'usle_path': 'usle.tif',
     'watershed_results_sdr_path': 'watershed_results_sdr.shp',
 }
+
+INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
 
 _INTERMEDIATE_BASE_FILES = {
     'cp_factor_path': 'cp.tif',
@@ -216,7 +218,7 @@ _INTERMEDIATE_BASE_FILES = {
     'sdr_bare_soil_path': 'sdr_bare_soil.tif',
     'sdr_path': 'sdr_factor.tif',
     'slope_path': 'slope.tif',
-    'flow_accum_stream_path': 'flow_accum_stream.tif',
+    'stream_path': 'stream.tif',
     'thresholded_slope_path': 'slope_threshold.tif',
     'thresholded_w_path': 'w_threshold.tif',
     'w_accumulation_path': 'w_accumulation.tif',
@@ -305,7 +307,7 @@ def execute(args):
                         table_key, str(lulc_code), table[table_key]))
 
     intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
+        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
     output_dir = os.path.join(args['workspace_dir'])
     churn_dir = os.path.join(
         intermediate_output_dir, 'churn_dir_not_for_humans')
@@ -432,25 +434,25 @@ def execute(args):
             (f_reg['flow_accumulation_path'], 1),
             (f_reg['flow_direction_path'], 1),
             float(args['threshold_flow_accumulation']),
-            f_reg['flow_accum_stream_path']),
+            f_reg['stream_path']),
         kwargs={'trace_threshold_proportion': 0.7},
-        target_path_list=[f_reg['flow_accum_stream_path']],
+        target_path_list=[f_reg['stream_path']],
         dependent_task_list=[flow_accumulation_task],
         task_name='extract streams')
 
     outlet_task = task_graph.add_task(
         func=_add_drainage_outlets,
         args=(
-            f_reg['flow_accum_stream_path'], f_reg['flow_direction_path'],
-            f_reg['stream_path']),
-        target_path_list=[f_reg['stream_path']],
+            f_reg['stream_path'], f_reg['flow_direction_path'],
+            f_reg['stream_with_outlets_path']),
+        target_path_list=[f_reg['stream_with_outlets_path']],
         dependent_task_list=[stream_task],
         task_name='add edge drains to streams')
 
     if drainage_present:
         drainage_task = task_graph.add_task(
             func=_add_drainage(
-                f_reg['stream_path'],
+                f_reg['stream_with_outlets_path'],
                 f_reg['aligned_drainage_path'],
                 f_reg['stream_and_drainage_path']),
             target_path_list=[f_reg['stream_and_drainage_path']],
@@ -459,7 +461,8 @@ def execute(args):
         drainage_raster_path_task = (
             f_reg['stream_and_drainage_path'], drainage_task)
     else:
-        drainage_raster_path_task = (f_reg['stream_path'], outlet_task)
+        drainage_raster_path_task = (
+            f_reg['stream_with_outlets_path'], outlet_task)
 
     threshold_w_task = task_graph.add_task(
         func=_calculate_w,
