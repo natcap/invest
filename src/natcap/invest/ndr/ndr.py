@@ -192,6 +192,8 @@ _OUTPUT_BASE_FILES = {
     'watershed_results_ndr_path': 'watershed_results_ndr.shp',
 }
 
+INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
+
 _INTERMEDIATE_BASE_FILES = {
     'ic_factor_path': 'ic_factor.tif',
     'load_n_path': 'load_n.tif',
@@ -204,8 +206,8 @@ _INTERMEDIATE_BASE_FILES = {
     's_accumulation_path': 's_accumulation.tif',
     's_bar_path': 's_bar.tif',
     's_factor_inverse_path': 's_factor_inverse.tif',
-    'flow_accum_stream_path': 'flow_accum_stream.tif',
     'stream_path': 'stream.tif',
+    'stream_with_outlets_path': 'stream_with_outlets.tif',
     'sub_crit_len_n_path': 'sub_crit_len_n.tif',
     'sub_crit_len_p_path': 'sub_crit_len_p.tif',
     'sub_eff_n_path': 'sub_eff_n.tif',
@@ -373,8 +375,7 @@ def execute(args):
     # Load all the tables for preprocessing
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
-    output_dir = os.path.join(args['workspace_dir'])
+        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
     cache_dir = os.path.join(intermediate_output_dir, 'cache_dir')
     utils.make_directories([output_dir, intermediate_output_dir, cache_dir])
 
@@ -468,17 +469,17 @@ def execute(args):
             (f_reg['flow_accumulation_path'], 1),
             (f_reg['flow_direction_path'], 1),
             float(args['threshold_flow_accumulation']),
-            f_reg['flow_accum_stream_path']),
-        target_path_list=[f_reg['flow_accum_stream_path']],
+            f_reg['stream_path']),
+        target_path_list=[f_reg['stream_path']],
         dependent_task_list=[flow_accum_task],
         task_name='stream extraction')
 
     outlet_task = task_graph.add_task(
         func=_add_drainage_outlets,
         args=(
-            f_reg['flow_accum_stream_path'], f_reg['flow_direction_path'],
-            f_reg['stream_path']),
-        target_path_list=[f_reg['stream_path']],
+            f_reg['stream_path'], f_reg['flow_direction_path'],
+            f_reg['stream_with_outlets_path']),
+        target_path_list=[f_reg['stream_with_outlets_path']],
         dependent_task_list=[stream_extraction_task],
         task_name='add edge drains to streams')
 
@@ -539,7 +540,8 @@ def execute(args):
     d_dn_task = task_graph.add_task(
         func=pygeoprocessing.routing.distance_to_channel_mfd,
         args=(
-            (f_reg['flow_direction_path'], 1), (f_reg['stream_path'], 1),
+            (f_reg['flow_direction_path'], 1),
+            (f_reg['stream_with_outlets_path'], 1),
             f_reg['d_dn_path']),
         kwargs={'weight_raster_path_band': (
             f_reg['s_factor_inverse_path'], 1)},
@@ -550,7 +552,8 @@ def execute(args):
     dist_to_channel_task = task_graph.add_task(
         func=pygeoprocessing.routing.distance_to_channel_mfd,
         args=(
-            (f_reg['flow_direction_path'], 1), (f_reg['stream_path'], 1),
+            (f_reg['flow_direction_path'], 1),
+            (f_reg['stream_with_outlets_path'], 1),
             f_reg['dist_to_channel_path']),
         dependent_task_list=[outlet_task],
         target_path_list=[f_reg['dist_to_channel_path']],
@@ -614,7 +617,7 @@ def execute(args):
         eff_task = task_graph.add_task(
             func=_map_lulc_to_val_mask_stream,
             args=(
-                f_reg['aligned_lulc_path'], f_reg['stream_path'],
+                f_reg['aligned_lulc_path'], f_reg['stream_with_outlets_path'],
                 lucode_to_parameters, 'eff_%s' % nutrient, eff_path),
             target_path_list=[eff_path],
             dependent_task_list=[align_raster_task, outlet_task],
@@ -624,7 +627,7 @@ def execute(args):
         crit_len_task = task_graph.add_task(
             func=_map_lulc_to_val_mask_stream,
             args=(
-                f_reg['aligned_lulc_path'], f_reg['stream_path'],
+                f_reg['aligned_lulc_path'], f_reg['stream_with_outlets_path'],
                 lucode_to_parameters, 'crit_len_%s' % nutrient, crit_len_path),
             target_path_list=[crit_len_path],
             dependent_task_list=[align_raster_task, outlet_task],
@@ -635,7 +638,8 @@ def execute(args):
         ndr_eff_task = task_graph.add_task(
             func=ndr_core.ndr_eff_calculation,
             args=(
-                f_reg['flow_direction_path'], f_reg['stream_path'], eff_path,
+                f_reg['flow_direction_path'],
+                f_reg['stream_with_outlets_path'], eff_path,
                 crit_len_path, effective_retention_path),
             target_path_list=[effective_retention_path],
             dependent_task_list=[
