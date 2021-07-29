@@ -13,7 +13,7 @@ import Button from 'react-bootstrap/Button';
 
 import Portal from '../Portal';
 
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('/'));
+const logger = window.Workbench.getLogger('LogTab');
 
 const LOG_TEXT_TAG = 'span';
 const ALLOWED_HTML_OPTIONS = {
@@ -108,13 +108,17 @@ export default class LogTab extends React.Component {
       // The invest log should be complete so it's good to unwatch it,
       // but without a timeout sometimes the unwatch happened
       // before invest was done writing to the file.
-      setTimeout(() => this.unwatchLogfile(), 3000);
+      if (this.tail) {
+        setTimeout(() => this.unwatchLogfile(), 3000);
+      }
     }
   }
 
   componentWillUnmount() {
     // This does not trigger on browser window close
-    this.unwatchLogfile();
+    if (this.tail) {
+      this.unwatchLogfile();
+    }
   }
 
   handleOpenWorkspace() {
@@ -170,82 +174,27 @@ export default class LogTab extends React.Component {
   }
 
   unwatchLogfile() {
-    if (this.tail) {
-      try {
-        logger.debug(`unwatching file: ${this.tail.filename}`);
-        this.tail.unwatch();
-      } catch (error) {
-        logger.error(error.stack);
-      }
+    try {
+      logger.debug(`unwatching file: ${this.tail.filename}`);
+      this.tail.unwatch();
+    } catch (error) {
+      logger.error(error.stack);
     }
   }
 
   render() {
-    const {
-      jobStatus,
-      finalTraceback,
-      terminateInvestProcess,
-      sidebarFooterElementId,
-    } = this.props;
-    let ModelStatusAlert;
-    const WorkspaceButton = (
-      <Button
-        variant="outline-dark"
-        onClick={this.handleOpenWorkspace}
-        disabled={jobStatus === 'running'}
-      >
-        Open Workspace
-      </Button>
-    );
-
-    const CancelButton = (
-      <Button
-        variant="outline-dark"
-        onClick={terminateInvestProcess}
-      >
-        Cancel Run
-      </Button>
-    );
-
-    if (jobStatus === 'running') {
-      ModelStatusAlert = (
-        <Alert variant="secondary">
-          {CancelButton}
-        </Alert>
-      );
-    } else if (jobStatus === 'error') {
-      ModelStatusAlert = (
-        <Alert variant="danger">
-          {finalTraceback}
-          {WorkspaceButton}
-        </Alert>
-      );
-    } else if (jobStatus === 'success') {
-      ModelStatusAlert = (
-        <Alert variant="success">
-          Model Complete
-          {WorkspaceButton}
-        </Alert>
-      );
-    }
     return (
       <Container fluid>
         <Row>
           <LogDisplay logdata={this.state.logdata} />
         </Row>
-        <Portal id="log-alert" elId={sidebarFooterElementId}>
-          {ModelStatusAlert}
-        </Portal>
       </Container>
     );
   }
 }
 
 LogTab.propTypes = {
-  jobStatus: PropTypes.string,
-  logfile: PropTypes.string,
-  finalTraceback: PropTypes.string,
+  jobStatus: PropTypes.string.isRequired,
+  logfile: PropTypes.string.isRequired,
   pyModuleName: PropTypes.string.isRequired,
-  terminateInvestProcess: PropTypes.func.isRequired,
-  sidebarFooterElementId: PropTypes.string.isRequired,
 };

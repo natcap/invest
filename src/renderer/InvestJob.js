@@ -96,6 +96,7 @@ export default class InvestJob {
    * @param {string} obj.modelHumanName - colloquial name of the invest model
    * @param {object} obj.argsValues - an invest "args dict" with initial values
    * @param {string} obj.logfile - path to an existing invest logfile
+   * @param {string} obj.status - one of 'running'|'error'|'success'
    * @param {string} obj.finalTraceback - final & most relevant line of stderr
    */
   constructor(
@@ -104,6 +105,7 @@ export default class InvestJob {
       modelHumanName,
       argsValues,
       logfile,
+      status,
       finalTraceback,
     }
   ) {
@@ -115,6 +117,7 @@ export default class InvestJob {
     this.modelHumanName = modelHumanName;
     this.argsValues = argsValues;
     this.logfile = logfile;
+    this.status = status;
     this.finalTraceback = finalTraceback;
     this.workspaceHash = null;
   }

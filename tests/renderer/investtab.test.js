@@ -23,6 +23,13 @@ const DEFAULT_JOB = new InvestJob({
   modelRunName: 'carbon',
   modelHumanName: 'Carbon Model',
 });
+
+function mockUISpec(spec) {
+  return {
+    [spec.model_name]: { order: [Object.keys(spec.args)] }
+  };
+}
+
 function renderInvestTab(job = DEFAULT_JOB) {
   const { ...utils } = render(
     <InvestTab
@@ -36,16 +43,78 @@ function renderInvestTab(job = DEFAULT_JOB) {
   return utils;
 }
 
-// describe('Renders with data from a recent run', () => {
-//   const job = new InvestJob({
-//     modelRunName: 'carbon',
-//     modelHumanName: 'Carbon Model',
-//     status: 'error',
-//     argsValues: {},
-//     logfile: 'foo.txt',
-//     finalTraceback: 'ValueError:',
-//   });
-// });
+describe('Sidebar Alert renders with data from a recent run', () => {
+  const spec = {
+    module: 'natcap.invest.foo',
+    model_name: 'FooModel',
+    args: {
+      workspace: {
+        name: 'Workspace',
+        type: 'directory',
+        about: 'this is a workspace',
+      },
+    },
+  };
+
+  beforeAll(() => {
+    getSpec.mockResolvedValue(spec);
+    fetchValidation.mockResolvedValue([]);
+    const mockSpec = spec; // jest.mock not allowed to ref out-of-scope var
+    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+  });
+
+  afterAll(() => {
+    jest.resetModules();
+    jest.resetAllMocks();
+  });
+
+  test('final Traceback displays', async () => {
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'error',
+      argsValues: {},
+      logfile: 'foo.txt',
+      finalTraceback: 'ValueError:',
+    });
+
+    const { findByRole } = renderInvestTab(job);
+    expect(await findByRole('alert'))
+      .toHaveTextContent(job.finalTraceback);
+  });
+
+  test('Model Complete displays if status was success', async () => {
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'success',
+      argsValues: {},
+      logfile: 'foo.txt',
+      finalTraceback: '',
+    });
+
+    const { findByRole } = renderInvestTab(job);
+    expect(await findByRole('alert'))
+      .toHaveTextContent('Model Complete');
+  });
+
+  test('Model Complete displays even with non-fatal stderr', async () => {
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'success',
+      argsValues: {},
+      logfile: 'foo.txt',
+      finalTraceback: 'Error that did not actually raise an exception',
+    });
+
+    const { findByRole, queryByText } = renderInvestTab(job);
+    expect(await findByRole('alert'))
+      .toHaveTextContent('Model Complete');
+    expect(queryByText(job.finalTraceback))
+      .toBeNull();
+  });
+});
 
 describe('Save InVEST Model Setup Buttons', () => {
   const spec = {
