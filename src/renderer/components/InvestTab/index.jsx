@@ -309,10 +309,7 @@ export default class InvestTab extends React.Component {
                 <LogTab
                   jobStatus={status}
                   logfile={logfile}
-                  // finalTraceback={finalTraceback}
-                  // terminateInvestProcess={this.terminateInvestProcess}
                   pyModuleName={modelSpec.module}
-                  // sidebarFooterElementId={sidebarFooterElementId}
                 />
               </TabPane>
             </TabContent>

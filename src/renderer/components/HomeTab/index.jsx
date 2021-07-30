@@ -134,9 +134,12 @@ class RecentInvestJobs extends React.PureComponent {
             </Card.Title>
             <Card.Text>{job.description || <em>no description</em>}</Card.Text>
             <Card.Footer className="text-muted">
-              <span>{job.humanTime}</span>
-              <span className="float-right">
-                <em>{job.finalTraceback || ''}</em>
+              <span className="timestamp">{job.humanTime}</span>
+              <span className="status-traceback">
+                {(job.status === 'success'
+                  ? '\u{2705}'
+                  : <em>{job.finalTraceback || ''}</em>
+                )}
               </span>
             </Card.Footer>
           </Card.Body>

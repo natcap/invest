@@ -147,7 +147,7 @@ export function setupInvestRunHandlers(investExe) {
       // after an uncaught exception. It is not helpful to display to users
       // so we filter it out here.
       const dat = `${data}`
-        .split(os.EOL) // /\r\n|\r|\n/g
+        .split(os.EOL)
         .filter((line) => !line.match(/\[[0-9]+\] Failed to execute script/))
         .join(os.EOL);
       event.reply(`invest-stderr-${channel}`, `${dat}${os.EOL}`);
