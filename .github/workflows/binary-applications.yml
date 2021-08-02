@@ -141,7 +141,7 @@ jobs:
               uses: actions/upload-artifact@v2
               with:
                   name: InVEST-failed-windows-workspace
-                  path: ${{ env.GITHUB_WORKSPACE }}
+                  path: ${{ github.workspace }}
 
     build-mac-binaries:
         name: "Build mac binaries"
@@ -237,7 +237,7 @@ jobs:
               uses: actions/upload-artifact@v2
               with:
                   name: InVEST-failed-mac-workspace
-                  path: ${{ env.GITHUB_WORKSPACE }}
+                  path: ${{ github.workspace }}
 
     build-sampledata:
         name: Build sampledata archives
