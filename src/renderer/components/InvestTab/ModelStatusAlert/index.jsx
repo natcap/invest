@@ -48,11 +48,12 @@ export default function ModelStatusAlert(props) {
       </Alert>
     );
   }
+  return null;
 }
 
 ModelStatusAlert.propTypes = {
-  status: PropTypes.oneOf(['running', 'error', 'success']),
+  status: PropTypes.oneOf(['running', 'error', 'success']).isRequired,
   finalTraceback: PropTypes.string,
-  terminateInvestProcess: PropTypes.func,
-  handleOpenWorkspace: PropTypes.func,
+  terminateInvestProcess: PropTypes.func.isRequired,
+  handleOpenWorkspace: PropTypes.func.isRequired,
 };

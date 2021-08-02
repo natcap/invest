@@ -78,3 +78,7 @@ export const screen = {
     workAreaSize: { width: 800, height: 800 }
   })
 };
+
+export const shell = {
+  showItemInFolder: jest.fn()
+}

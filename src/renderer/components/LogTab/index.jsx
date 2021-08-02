@@ -8,10 +8,6 @@ import sanitizeHtml from 'sanitize-html';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
-import Alert from 'react-bootstrap/Alert';
-import Button from 'react-bootstrap/Button';
-
-import Portal from '../Portal';
 
 const logger = window.Workbench.getLogger('LogTab');
 
@@ -84,7 +80,6 @@ export default class LogTab extends React.Component {
       'invest-log-primary': new RegExp(this.props.pyModuleName),
     };
 
-    this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
     this.tailLogfile = this.tailLogfile.bind(this);
     this.unwatchLogfile = this.unwatchLogfile.bind(this);
   }
@@ -119,10 +114,6 @@ export default class LogTab extends React.Component {
     if (this.tail) {
       this.unwatchLogfile();
     }
-  }
-
-  handleOpenWorkspace() {
-    shell.showItemInFolder(this.props.logfile);
   }
 
   tailLogfile(logfile) {

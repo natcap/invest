@@ -1,5 +1,5 @@
 import React from 'react';
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, shell } from 'electron';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
@@ -113,6 +113,22 @@ describe('Sidebar Alert renders with data from a recent run', () => {
       .toHaveTextContent('Model Complete');
     expect(queryByText(job.finalTraceback))
       .toBeNull();
+  });
+
+  test('Open Workspace is available on success or error', async () => {
+    // const spy = jest.spyOn(shell, 'showItemInFolder');
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'success',
+      argsValues: {},
+      logfile: 'foo.txt',
+    });
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspace = await findByRole('button', { name: 'Open Workspace' })
+    openWorkspace.click();
+    expect(shell.showItemInFolder).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -1,7 +1,7 @@
 import path from 'path';
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, shell } from 'electron';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -41,6 +41,10 @@ async function investGetSpec(modelName) {
   return undefined;
 }
 
+function handleOpenWorkspace(logfile) {
+  shell.showItemInFolder(logfile);
+}
+
 /**
  * Render an invest model setup form, log display, etc.
  * Manage launching of an invest model in a child process.
@@ -57,8 +61,6 @@ export default class InvestTab extends React.Component {
       logStdErr: null, // stderr data from the invest subprocess
     };
 
-    // TODO: could use the jobID or workspaceHash, right?
-    this.ipcSuffix = window.crypto.getRandomValues(new Uint16Array(1))[0];
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
@@ -77,9 +79,9 @@ export default class InvestTab extends React.Component {
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeAllListeners(`invest-logging-${this.ipcSuffix}`);
-    ipcRenderer.removeAllListeners(`invest-stderr-${this.ipcSuffix}`);
-    ipcRenderer.removeAllListeners(`invest-exit-${this.ipcSuffix}`);
+    ipcRenderer.removeAllListeners(`invest-logging-${this.props.jobID}`);
+    ipcRenderer.removeAllListeners(`invest-stderr-${this.props.jobID}`);
+    ipcRenderer.removeAllListeners(`invest-exit-${this.props.jobID}`);
   }
 
   /** Spawn a child process to run an invest model via the invest CLI.
@@ -113,18 +115,18 @@ export default class InvestTab extends React.Component {
     // can display an appropriate visual cue when it's clicked
     updateJobProperty(jobID, 'status', 'running');
 
-    ipcRenderer.on(`invest-logging-${this.ipcSuffix}`, (event, logfile) => {
+    ipcRenderer.on(`invest-logging-${jobID}`, (event, logfile) => {
       updateJobProperty(jobID, 'logfile', logfile);
       this.switchTabs('log');
     });
-    ipcRenderer.on(`invest-stderr-${this.ipcSuffix}`, (event, data) => {
+    ipcRenderer.on(`invest-stderr-${jobID}`, (event, data) => {
       let stderr = Object.assign('', this.state.logStdErr);
       stderr += data;
       this.setState({
         logStdErr: stderr,
       });
     });
-    ipcRenderer.on(`invest-exit-${this.ipcSuffix}`, (event, code) => {
+    ipcRenderer.on(`invest-exit-${jobID}`, (event, code) => {
       // Invest CLI exits w/ code 1 when it catches errors,
       // Models exit w/ code 255 (on all OS?) when errors raise from execute()
       // Windows taskkill yields exit code 1
@@ -150,7 +152,7 @@ export default class InvestTab extends React.Component {
       this.state.modelSpec.module,
       args,
       investSettings.loggingLevel,
-      this.ipcSuffix
+      jobID
     );
   }
 
@@ -243,12 +245,18 @@ export default class InvestTab extends React.Component {
               className="sidebar-row sidebar-footer"
               id={sidebarFooterElementId}
             >
-              <ModelStatusAlert
-                status={status}
-                finalTraceback={finalTraceback}
-                handleOpenWorkspace={this.handleOpenWorkspace}
-                terminateInvestProcess={this.terminateInvestProcess}
-              />
+              {
+                status
+                  ? (
+                    <ModelStatusAlert
+                      status={status}
+                      finalTraceback={finalTraceback}
+                      handleOpenWorkspace={() => handleOpenWorkspace(logfile)}
+                      terminateInvestProcess={this.terminateInvestProcess}
+                    />
+                  )
+                  : null
+              }
             </div>
           </Col>
           <Col className="invest-main-col">
