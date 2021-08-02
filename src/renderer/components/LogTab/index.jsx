@@ -94,18 +94,9 @@ export default class LogTab extends React.Component {
   componentDidUpdate(prevProps) {
     // Re-executing a model will generate a new logfile
     // so need to update to tail the new file.
-    const { logfile, jobStatus } = this.props;
+    const { logfile } = this.props;
     if (logfile && (prevProps.logfile !== logfile)) {
       this.tailLogfile(logfile);
-    }
-    if ((jobStatus !== 'running') && (prevProps.jobStatus !== jobStatus)) {
-      // status changed from running to anything else.
-      // The invest log should be complete so it's good to unwatch it,
-      // but without a timeout sometimes the unwatch happened
-      // before invest was done writing to the file.
-      if (this.tail) {
-        setTimeout(() => this.unwatchLogfile(), 3000);
-      }
     }
   }
 
