@@ -232,12 +232,17 @@ jobs:
                   name: InVEST-dmg
                   path: dist/InVEST*.dmg
 
+            - name: Tar the workspace to preserve permissions
+              if: ${{ failure() }}
+              shell: bash -l {0}
+              run: tar -cvf InVEST-failed-mac-workspace.tar ${{ github.workspace }}
+
             - name: Upload workspace on failure
               if: ${{ failure() }}
               uses: actions/upload-artifact@v2
               with:
                   name: InVEST-failed-mac-workspace
-                  path: ${{ github.workspace }}
+                  path: InVEST-failed-mac-workspace.tar
 
     build-sampledata:
         name: Build sampledata archives
