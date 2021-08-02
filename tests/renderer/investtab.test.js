@@ -63,6 +63,11 @@ describe('Sidebar Alert renders with data from a recent run', () => {
     jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
   });
 
+  afterEach(() => {
+    // Since we're testing for number of times called
+    jest.clearAllMocks();
+  });
+
   afterAll(() => {
     jest.resetModules();
     jest.resetAllMocks();
