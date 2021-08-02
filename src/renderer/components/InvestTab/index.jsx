@@ -9,9 +9,8 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Nav from 'react-bootstrap/Nav';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import Alert from 'react-bootstrap/Alert';
-import Button from 'react-bootstrap/Button';
 
+import ModelStatusAlert from './ModelStatusAlert';
 import SetupTab from '../SetupTab';
 import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
@@ -205,48 +204,6 @@ export default class InvestTab extends React.Component {
     const sidebarSetupElementId = `sidebar-setup-${jobID}`;
     const sidebarFooterElementId = `sidebar-footer-${jobID}`;
 
-    let ModelStatusAlert;
-    const WorkspaceButton = (
-      <Button
-        variant="outline-dark"
-        onClick={this.handleOpenWorkspace}
-        disabled={status === 'running'}
-      >
-        Open Workspace
-      </Button>
-    );
-
-    const CancelButton = (
-      <Button
-        variant="outline-dark"
-        onClick={this.terminateInvestProcess}
-      >
-        Cancel Run
-      </Button>
-    );
-
-    if (status === 'running') {
-      ModelStatusAlert = (
-        <Alert variant="secondary">
-          {CancelButton}
-        </Alert>
-      );
-    } else if (status === 'error') {
-      ModelStatusAlert = (
-        <Alert variant="danger">
-          {finalTraceback}
-          {WorkspaceButton}
-        </Alert>
-      );
-    } else if (status === 'success') {
-      ModelStatusAlert = (
-        <Alert variant="success">
-          Model Complete
-          {WorkspaceButton}
-        </Alert>
-      );
-    }
-
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
         <Row className="flex-nowrap">
@@ -286,7 +243,12 @@ export default class InvestTab extends React.Component {
               className="sidebar-row sidebar-footer"
               id={sidebarFooterElementId}
             >
-              {ModelStatusAlert}
+              <ModelStatusAlert
+                status={status}
+                finalTraceback={finalTraceback}
+                handleOpenWorkspace={this.handleOpenWorkspace}
+                terminateInvestProcess={this.terminateInvestProcess}
+              />
             </div>
           </Col>
           <Col className="invest-main-col">
