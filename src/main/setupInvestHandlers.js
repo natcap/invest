@@ -151,7 +151,6 @@ export function setupInvestRunHandlers(investExe) {
         .filter((line) => !line.match(/\[[0-9]+\] Failed to execute script/))
         .join(os.EOL);
       event.reply(`invest-stderr-${channel}`, `${dat}${os.EOL}`);
-      // }
     });
 
     investRun.on('exit', (code) => {
