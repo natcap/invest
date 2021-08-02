@@ -49,7 +49,7 @@ export default class App extends React.Component {
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
     this.closeInvestModel = this.closeInvestModel.bind(this);
-    this.updateJobProperty = this.updateJobProperty.bind(this);
+    this.updateJobProperties = this.updateJobProperties.bind(this);
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
     this.storeDownloadDir = this.storeDownloadDir.bind(this);
@@ -159,9 +159,14 @@ export default class App extends React.Component {
     });
   }
 
-  updateJobProperty(id, property, value) {
+  /** Update properties of an open Invest job.
+   *
+   * @param {string} id - the unique identifier of an open job
+   * @param {obj} jobObj - key-value pairs of any job properties to be updated
+   */
+  updateJobProperties(id, jobObj) {
     const { openJobs } = this.state;
-    openJobs[id][property] = value;
+    openJobs[id] = { ...openJobs[id], ...jobObj };
     this.setState({
       openJobs: openJobs
     });
@@ -259,7 +264,7 @@ export default class App extends React.Component {
             jobID={id}
             investSettings={investSettings}
             saveJob={this.saveJob}
-            updateJobProperty={this.updateJobProperty}
+            updateJobProperties={this.updateJobProperties}
           />
         </TabPane>
       );

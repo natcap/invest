@@ -101,7 +101,7 @@ export default class InvestTab extends React.Component {
       jobID,
       investSettings,
       saveJob,
-      updateJobProperty,
+      updateJobProperties,
     } = this.props;
     const args = { ...argsValues };
     // Not strictly necessary, but resolving to a complete path
@@ -110,13 +110,15 @@ export default class InvestTab extends React.Component {
     // in part by it's workspace directory.
     args.workspace_dir = path.resolve(argsValues.workspace_dir);
 
-    updateJobProperty(jobID, 'argsValues', args);
-    // Setting this very early in the click handler so the Execute button
+    // Setting status very early in the click handler so the Execute button
     // can display an appropriate visual cue when it's clicked
-    updateJobProperty(jobID, 'status', 'running');
+    updateJobProperties(jobID, {
+      argsValues: args,
+      status: 'running',
+    });
 
     ipcRenderer.on(`invest-logging-${jobID}`, (event, logfile) => {
-      updateJobProperty(jobID, 'logfile', logfile);
+      updateJobProperties(jobID, { logfile: logfile });
       this.switchTabs('log');
     });
     ipcRenderer.on(`invest-stderr-${jobID}`, (event, data) => {
@@ -141,8 +143,10 @@ export default class InvestTab extends React.Component {
           i += 1;
         }
       }
-      updateJobProperty(jobID, 'status', status);
-      updateJobProperty(jobID, 'finalTraceback', finalTraceback);
+      updateJobProperties(jobID, {
+        status: status,
+        finalTraceback: finalTraceback,
+      });
       saveJob(jobID);
     });
 
@@ -157,7 +161,6 @@ export default class InvestTab extends React.Component {
   }
 
   terminateInvestProcess() {
-    // ipcRenderer.send(ipcMainChannels.INVEST_KILL, this.state.workspaceDir);
     // For the benefit of displaying user-feedback, mock some stdErr
     // here before sending the kill signal. This way the exit listener will
     // have some stderr data to work with.
@@ -305,5 +308,5 @@ InvestTab.propTypes = {
     loggingLevel: PropTypes.string,
   }).isRequired,
   saveJob: PropTypes.func.isRequired,
-  updateJobProperty: PropTypes.func.isRequired,
+  updateJobProperties: PropTypes.func.isRequired,
 };

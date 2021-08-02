@@ -37,7 +37,7 @@ function renderInvestTab(job = DEFAULT_JOB) {
       jobID="carbon456asdf"
       investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
       saveJob={() => {}}
-      updateJobProperty={() => {}}
+      updateJobProperties={() => {}}
     />
   );
   return utils;
