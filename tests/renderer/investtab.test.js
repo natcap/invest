@@ -115,12 +115,26 @@ describe('Sidebar Alert renders with data from a recent run', () => {
       .toBeNull();
   });
 
-  test('Open Workspace is available on success or error', async () => {
-    // const spy = jest.spyOn(shell, 'showItemInFolder');
+  test('Open Workspace button is available on success', async () => {
     const job = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Model',
       status: 'success',
+      argsValues: {},
+      logfile: 'foo.txt',
+    });
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspace = await findByRole('button', { name: 'Open Workspace' })
+    openWorkspace.click();
+    expect(shell.showItemInFolder).toHaveBeenCalledTimes(1);
+  });
+
+  test('Open Workspace button is available on error', async () => {
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'error',
       argsValues: {},
       logfile: 'foo.txt',
     });
