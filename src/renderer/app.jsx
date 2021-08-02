@@ -171,8 +171,7 @@ export default class App extends React.Component {
    *
    * And update the app's view of that store.
    *
-   * @param {string} jobID - an instance of InvestJob.
-   * // TODO: update param docs - can navID & workspaceHash be unified?
+   * @param {string} jobID - the unique identifier of an open job.
    */
   async saveJob(jobID) {
     const job = this.state.openJobs[jobID];
