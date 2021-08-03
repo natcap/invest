@@ -590,7 +590,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
             if aoi_geometry_prep.intersects(infrastructure_geometry):
                 intersection_geometry = aoi_geometry_shapely.intersection(
                     infrastructure_geometry)
-                damage_type = infrastructure_feature.GetField(type_index)
+                damage_type = int(infrastructure_feature.GetField(type_index))
                 damage = damage_type_map[damage_type]['damage']
                 total_damage += intersection_geometry.area * damage
 
