@@ -477,8 +477,8 @@ def check_percent(value, **kwargs):
     return None
 
 
-def check_code(value, **kwargs):
-    """Validate a code (an integer ID).
+def check_integer(value, **kwargs):
+    """Validate an integer.
 
     Args:
         value: A python value. This should be able to be cast to an int.
@@ -738,7 +738,7 @@ _VALIDATION_FUNCS = {
     'number': check_number,
     'ratio': check_ratio,
     'percent': check_percent,
-    'code': check_code,
+    'integer': check_integer,
     'option_string': check_option_string,
     'raster': functools.partial(timeout, check_raster),
     'vector': functools.partial(timeout, check_vector),

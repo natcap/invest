@@ -169,7 +169,7 @@ ARGS_SPEC = {
                 },
                 "raster_path": {
                     "type": "raster",
-                    "bands": {1: {"type": "code"}},
+                    "bands": {1: {"type": "integer"}},
                     "about": (
                         "Map of land use/land cover in the given snapshot "
                         "year. All values in this raster must have "
@@ -198,7 +198,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "code": {
-                    "type": "code",
+                    "type": "integer",
                     "about": (
                         "The landcover code used in the LULC snapshot rasters "
                         "to represent this landcover class.")},
@@ -295,7 +295,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lulc-class": {
-                    "type": "code",
+                    "type": "integer",
                     "about": (
                         "LULC codes matching the codes in the biophysical "
                         "table")},

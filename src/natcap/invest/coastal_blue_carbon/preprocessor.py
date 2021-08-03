@@ -33,7 +33,7 @@ ARGS_SPEC = {
                 "class is a coastal blue carbon habitat."),
             "columns": {
                 "code": {
-                    "type": "code",
+                    "type": "integer",
                     "about": (
                         "Land use/land cover code. Every value in the "
                         "snapshot LULC maps must have a corresponding entry "
@@ -57,7 +57,7 @@ ARGS_SPEC = {
                     "about": "Year to snapshot"},
                 "raster_path": {
                     "type": "raster",
-                    "bands": {1: {"type": "code"}},
+                    "bands": {1: {"type": "integer"}},
                     "about": (
                         "Map of land use/land cover in the snapshot year. All "
                         "values in this raster must have corresponding "

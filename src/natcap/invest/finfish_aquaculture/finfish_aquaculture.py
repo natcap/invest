@@ -29,7 +29,7 @@ ARGS_SPEC = {
             "type": "vector",
             "fields": {
                 "[FARM_ID]": {  # may be anything, will be selected as the farm_ID
-                    "type": "code",
+                    "type": "integer",
                     "about": (
                         "A user-defined ID field with a unique integer code "
                         "identifying each farm geometry.")

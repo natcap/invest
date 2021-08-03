@@ -94,7 +94,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lucode": {
-                    "type": "code",
+                    "type": "integer",
                     "about": (
                         "Land use/land cover code. Every value in the LULC "
                         "maps must have a corresponding entry in this column.")
