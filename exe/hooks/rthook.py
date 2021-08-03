@@ -16,4 +16,6 @@ if platform.system() == 'Darwin':
     # Rtree will look in this directory first for libspatialindex_c.dylib.
     # In response to issues with github mac binary builds:
     # https://github.com/natcap/invest/issues/594
+    # sys._MEIPASS is the path to where the pyinstalleri entrypoint bundle
+    # lives.  See the pyinstaller docs for more details.
     os.environ['SPATIALINDEX_C_LIBRARY'] = sys._MEIPASS
