@@ -310,7 +310,7 @@ ARGS_SPEC = {
         "grid_points_path": {
             "type": "csv",
             "columns": {
-                "id": {"type": "code", "about": (
+                "id": {"type": "integer", "about": (
                     "unique identifier for the point")},
                 "type": {
                     "type": "option_string",

@@ -48,7 +48,7 @@ ARGS_SPEC = {
         "landcover_to_crop_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
+                "lucode": {"type": "integer"},
                 "crop_name": {
                     "type": "option_string",
                     "options": {
@@ -116,7 +116,7 @@ ARGS_SPEC = {
                         "[CROP]_percentile_yield_table.csv": {
                             "type": "csv",
                             "columns": {
-                                "climate_bin": {"type": "code"},
+                                "climate_bin": {"type": "integer"},
                                 "yield_25th": {
                                     "type": "number",
                                     "units": u.metric_ton/u.hectare
@@ -143,7 +143,7 @@ ARGS_SPEC = {
                     "contents": {
                         "extendedclimatebins[CROP]": {
                             "type": "raster",
-                            "bands": {1: {"type": "code"}},
+                            "bands": {1: {"type": "integer"}},
                         }
                     }
                 },

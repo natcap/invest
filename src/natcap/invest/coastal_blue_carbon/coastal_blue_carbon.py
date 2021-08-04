@@ -164,7 +164,7 @@ ARGS_SPEC = {
                 "snapshot_year": {"type": "number", "units": u.year},
                 "raster_path": {
                     "type": "raster",
-                    "bands": {1: {"type": "code"}}
+                    "bands": {1: {"type": "integer"}}
                 }
             },
             "about": (
@@ -193,7 +193,7 @@ ARGS_SPEC = {
                     "type": "freestyle_string",
                     "about": "Textual description of the landcover class."},
                 "lulc-class": {
-                    "type": "code",
+                    "type": "integer",
                     "about": (
                         "The landcover code used in the LULC snapshot rasters "
                         "to represent this landcover class.")},
@@ -283,7 +283,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "lulc-class": {
-                    "type": "code",
+                    "type": "integer",
                     "about": (
                         "LULC codes matching the codes in the biophysical "
                         "table")},

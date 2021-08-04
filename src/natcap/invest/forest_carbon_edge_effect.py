@@ -62,7 +62,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
+                "lucode": {"type": "integer"},
                 "is_tropical_forest": {"type": "boolean"},
                 "c_above": {
                     "type": "number",

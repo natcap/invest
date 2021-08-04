@@ -9,7 +9,7 @@ import pint
 valid_nested_types = {
     'all': {
         'boolean',
-        'code',
+        'integer',
         'csv',
         'directory',
         'file',
@@ -21,9 +21,9 @@ valid_nested_types = {
         'ratio',
         'vector',
     },
-    'raster': {'code', 'number', 'ratio'},
+    'raster': {'integer', 'number', 'ratio'},
     'vector': {
-        'code',
+        'integer',
         'freestyle_string',
         'number',
         'option_string',
@@ -31,7 +31,7 @@ valid_nested_types = {
         'ratio'},
     'csv': {
         'boolean',
-        'code',
+        'integer',
         'freestyle_string',
         'number',
         'option_string',

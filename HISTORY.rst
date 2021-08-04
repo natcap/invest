@@ -113,6 +113,10 @@ Unreleased Changes (3.9.1)
       ``l_max`` in the ``args`` input and in the user interface.
 * Stormwater
     * Added this new model
+* Urban Flood Risk
+    * Fixed a bug where a String ``Type`` column in the infrastructure vector
+      would cause the aggregation step of the model to crash, even with the
+      correct integer value in the column.
 * Wind Energy
     * Raising ValueError when AOI does not intersect Wind Data points.
 
