@@ -1474,7 +1474,6 @@ class SpecUtilsTests(unittest.TestCase):
                 ('t * hr * ha / ha / MJ / mm', 't · h · ha / (ha · MJ · mm)'),
                 ('mm^3 / year', 'mm³/yr')
         ]:
-            print(unit_name)
             unit = spec_utils.u.Unit(unit_name)
             actual = spec_utils.format_unit(unit)
             self.assertEqual(expected, actual)
