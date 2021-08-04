@@ -25,11 +25,17 @@ u.define('survey_foot = 1200 / 3937 * meter = sft = us_survey_foot')
 # May be converted to weight or volume, but conversion factors are specific
 # to the substance. I couldn't find a definition of its dimensionality.
 u.define('international_unit = [biologic_amount] = iu = IU')
+# use 'h' not 'hr' as the symbol for hour, as per SI guidelines
+# overwrite the default use of the symbol 'h' for henries
+u.define('henry = weber / ampere')
+u.define('hour = 60 * minute = h = hr')
+# overwrite the year definition to use 'yr' rather than 'a' as default symbol
+u.define('year = 365.25 * day = yr = a = julian_year')
 # Use u.none for unitless measurements
 u.define('none = []')
 
-# Specs for common arg types ##################################################
 
+# Specs for common arg types ##################################################
 WORKSPACE = {
     "name": "Workspace",
     "about": (
@@ -160,47 +166,38 @@ POINTS = POINT | MULTIPOINT
 ALL_GEOMS = LINES | POLYGONS | POINTS
 
 
-def format_unit(unit, mode):
+def format_unit(unit):
     """Represent a pint Unit as user-friendly unicode text.
+
+    This attempts to follow the style guidelines from the NIST
+    Guide to the SI (https://www.nist.gov/pml/special-publication-811):
+    - Use standard symbols rather than spelling out
+    - Use '/' to represent division
+    - Use the center dot ' · ' to represent multiplication
+    - Combine denominators into one, surrounded by parentheses
 
     Args:
         unit (pint.Unit): the unit to format
 
     Returns:
-        String describing the unit. The first unit name is pluralized and
-        unicode superscript numbers are used for exponents.
+        String describing the unit.
     """
-    # pluralize the first unit so that it reads more naturally
-    custom_plurals = {
-        'foot': 'feet',
-        'currency': 'currency',
-        'degree_Celsius': 'degrees_Celsius'
+    custom_formats = {
+        u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)'
     }
-    unicode_exponents = {
-        '2': '²',
-        '3': '³'
-    }
-    units_string = str(unit)
-    if units_string == 'none':
-        return ''
+    if unit in custom_formats:
+        return custom_formats[unit]
 
-    words = units_string.split(' ')
-
-    # check if it has an irregular plural form
-    # if not, fall back to adding an 's' to the end
-    words[0] = custom_plurals.get(words[0], words[0] + 's')
-
-    units_string = ' '.join(words)
-    # pint separates words with underscores
-    units_string = units_string.replace('_', ' ')
-    # remove spaces around slashes
-    units_string = units_string.replace(' / ', '/')
-    # replace each exponent with a superscript: 'meters ** 3' -> 'meter³'
-    units_string = re.sub(
-        # match exponents as pint displays them: ' ** 3'
-        r' \*\* ([0-9]+)',
-        # capture the exponent number and replace it with a unicode exponent
-        # if we don't have a unicode exponent for it, fall back to ^ notation
-        lambda match: unicode_exponents.get(match[1], f'^{match[1]}'),
-        units_string)
-    return units_string
+    # look up the abbreviated symbol for each unit
+    # `formatter` expects an iterable of (unit, exponent) pairs, which lives in
+    # the pint.Unit's `_units` attribute.
+    unit_items = [(u.get_symbol(key), val) for key, val in unit._units.items()]
+    return pint.formatting.formatter(
+        unit_items,
+        as_ratio=True,
+        single_denominator=True,
+        product_fmt=" · ",
+        division_fmt='/',
+        power_fmt="{}{}",
+        parentheses_fmt="({})",
+        exp_call=pint.formatting._pretty_fmt_exponent)
