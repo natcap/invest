@@ -104,7 +104,7 @@ from osgeo import gdal
 
 from .. import utils
 from .. import spec_utils
-from ..spec_utils import u
+from ..spec_utils import u, REQUIRED_IF
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -389,8 +389,8 @@ ARGS_SPEC = {
             "required": "do_economic_analysis",
             "about": (
                 "Annual discount rate on the price of carbon. This is "
-                "compounded each year after the baseline year. Required if "
-                "Do Valuation is selected."),
+                "compounded each year after the baseline year. "
+                f"{REQUIRED_IF % 'Do Valuation'}"),
         },
     }
 }
